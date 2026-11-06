@@ -91,8 +91,8 @@ func (p *Panel) declare(r gfx.Rect, docked bool) {
 	}
 	tipper{p}.hover(l, hov, mx, my)
 	if over {
-		k.Add(uikit.Widget{ID: ids.DossierGear, R: gear, Label: "Card settings",
-			Tip: "Card settings\nChange what the card shows, its text and its colours.", Click: p.setupFn})
+		k.Add(uikit.Widget{ID: ids.DossierGear, R: gear, Label: p.a.T("Card settings"),
+			Tip: p.a.T("Card settings\nChange what the card shows, its text and its colours."), Click: p.setupFn})
 	}
 }
 

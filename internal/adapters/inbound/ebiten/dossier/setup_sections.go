@@ -11,6 +11,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 )
@@ -56,10 +57,15 @@ type Sections struct {
 
 func newSections(s *Setup) *Sections {
 	t := &Sections{s: s, cat: map[string]sheet.Entry{}, collapsed: map[string]bool{}, pal: map[string]color.RGBA{}}
-	for _, e := range sheet.Catalog() {
+	t.loadCat()
+	return t
+}
+
+// loadCat reads the element catalog in the current language.
+func (t *Sections) loadCat() {
+	for _, e := range sheet.Catalog(t.s.a) {
 		t.cat[e.Key] = e
 	}
-	return t
 }
 
 // Draw does nothing: Declare queues every paint through the kit.
@@ -173,10 +179,10 @@ func (t *Sections) nameOf(n config.HUDNode) string {
 	e, ok := t.cat[n.Kind]
 	label := e.Label
 	if !ok {
-		label = "Unknown: " + n.Kind
+		label = t.s.a.Tf("Unknown: %s", n.Kind)
 	}
 	if n.Def != "" {
-		if d, ok := sheet.LookupDef(n.Kind, n.Def); ok {
+		if d, ok := sheet.LookupDef(t.s.a, n.Kind, n.Def); ok {
 			label += ": " + d.Label
 		} else {
 			label += ": " + n.Def
@@ -206,13 +212,13 @@ func (t *Sections) tint(n config.HUDNode) color.RGBA {
 }
 
 // attrs are the words at a row's right edge (RHUD-334).
-func attrs(n config.HUDNode) string {
+func attrs(tr lang.Tr, n config.HUDNode) string {
 	var parts []string
 	if n.BarStyle != "" {
-		parts = append(parts, sheet.BarStyleLabel(n.BarStyle))
+		parts = append(parts, sheet.BarStyleLabel(tr, n.BarStyle))
 	}
 	if n.Fill {
-		parts = append(parts, "fills")
+		parts = append(parts, tr.T("fills"))
 	}
 	if n.Who != "" {
 		parts = append(parts, strings.Join(strings.Split(sheet.WhoSet(n), ""), " "))
@@ -222,11 +228,11 @@ func attrs(n config.HUDNode) string {
 
 func (t *Sections) tip(n config.HUDNode) string {
 	title := t.nameOf(n)
-	body := "Key: " + n.Kind
+	key := n.Kind
 	if n.Def != "" {
-		body += " / " + n.Def
+		key += " / " + n.Def
 	}
-	body += ". Built in."
+	body := t.s.a.Tf("Key: %s. Built in.", key)
 	if e, ok := t.cat[n.Kind]; ok && e.Tip != "" {
 		body = e.Tip + "\n" + body
 	}
@@ -236,6 +242,7 @@ func (t *Sections) tip(n config.HUDNode) string {
 // Declare lays the tab out in r and declares its widgets.
 func (t *Sections) Declare(r gfx.Rect) {
 	h := t.s.HUD()
+	t.loadCat()
 	t.sync(h)
 	t.colours(h)
 	if t.dirty {
@@ -249,7 +256,7 @@ func (t *Sections) Declare(r gfx.Rect) {
 
 	hs := gfx.Label
 	hs.Color = uikit.Heading
-	k.Label(left.X, left.Y, "Elements", hs)
+	k.Label(left.X, left.Y, t.s.a.T("Elements"), hs)
 	list := gfx.Rect{X: left.X, Y: left.Y + 24, W: left.W, H: max(40, left.H-24)}
 	sel := t.selIndex()
 	if k.List("sec.tree", list, len(t.rows), &sel, uikit.ListSpec{
@@ -288,7 +295,7 @@ func (t *Sections) drawRow(dst *ebiten.Image, i int, row gfx.Rect, hover, select
 		gfx.Text(dst, mark, x, y, st)
 	}
 	x += 12
-	at := attrs(rw.n)
+	at := attrs(t.s.a, rw.n)
 	dim := gfx.Small
 	dim.Color = uikit.TextDim
 	aw := float64(0)
@@ -299,7 +306,7 @@ func (t *Sections) drawRow(dst *ebiten.Image, i int, row gfx.Rect, hover, select
 	}
 	label := t.nameOf(rw.n)
 	if len(rw.path) == 0 {
-		label = "Whole card"
+		label = t.s.a.T("Whole card")
 	}
 	gfx.Text(dst, uikit.FitText(label, st, float32(float64(row.Right())-x-aw-6)), x, y, st)
 }
@@ -317,12 +324,12 @@ func (t *Sections) declareDetail(r gfx.Rect) {
 	area := k.ScrollArea("sec.detail", r, t.contentH, uikit.ScrollOpts{})
 	f := uikit.NewForm(area)
 	o := kitOwner{k}
-	mode := "card"
+	title := t.s.a.T("The card layout")
 	if t.docked {
-		mode = "pane"
+		title = t.s.a.T("The pane layout")
 	}
-	f.SectionTitle(o, "The "+mode+" layout")
-	t.textRow(f, "Edits show on the card at once. The Look tab switches between the pane and the floating card.")
+	f.SectionTitle(o, title)
+	t.textRow(f, t.s.a.T("Edits show on the card at once. The Look tab switches between the pane and the floating card."))
 
 	n := t.selected()
 	if n == nil {
@@ -331,9 +338,9 @@ func (t *Sections) declareDetail(r gfx.Rect) {
 	}
 	name := t.nameOf(*n)
 	if len(t.sel) == 0 {
-		name = "Whole card"
+		name = t.s.a.T("Whole card")
 	}
-	f.SectionTitle(o, "Selected")
+	f.SectionTitle(o, t.s.a.T("Selected"))
 	if row, ok := f.Row(20); ok {
 		st := gfx.Label
 		k.Label(row.X, row.Y, uikit.FitText(name, st, row.W), st)
@@ -344,12 +351,12 @@ func (t *Sections) declareDetail(r gfx.Rect) {
 	t.targetRows(f, o, *n)
 	t.defRows(f, *n)
 	f.Gap(6)
-	f.SectionTitle(o, "Back to the built-in layout")
+	f.SectionTitle(o, t.s.a.T("Back to the built-in layout"))
 	if row, ok := f.Row(secBtnH + 4); ok {
 		same := reflect.DeepEqual(t.work, defaultOf(t.docked)) && t.seen == nil
-		uikit.StyledButton(k, "sec.default", row.InsetXY(0, 1), "Use the built-in layout", uikit.BtnOpts{
-			Disabled: same, Reason: "The built-in layout is already in use.",
-			Tip: "Built-in layout\nThrows away your changes to this layout. Presets are kept.",
+		uikit.StyledButton(k, "sec.default", row.InsetXY(0, 1), t.s.a.T("Use the built-in layout"), uikit.BtnOpts{
+			Disabled: same, Reason: t.s.a.T("The built-in layout is already in use."),
+			Tip: t.s.a.T("Built-in layout\nThrows away your changes to this layout. Presets are kept."),
 		}, t.useDefault)
 	}
 	t.contentH = f.Content()
@@ -369,8 +376,8 @@ func (t *Sections) fillRow(f *uikit.Form, n config.HUDNode) {
 		return
 	}
 	v := n.Fill
-	f.Check(kitOwner{t.s.k}, "sec.fill", "Fill the space left over", &v, "",
-		"Fill\nA stack or panel that fills takes a share of the room the card has left.")
+	f.Check(kitOwner{t.s.k}, "sec.fill", t.s.a.T("Fill the space left over"), &v, "",
+		t.s.a.T("Fill\nA stack or panel that fills takes a share of the room the card has left."))
 	if v != n.Fill {
 		t.edit(func(root *config.HUDNode) ([]int, error) {
 			sheet.At(root, t.sel).Fill = v
@@ -380,26 +387,31 @@ func (t *Sections) fillRow(f *uikit.Form, n config.HUDNode) {
 }
 
 // whoNames are the four targets' words, in sheet.WhoLetters order (c s p w).
-var whoNames = [4]struct {
+func whoNames(tr lang.Tr) [4]struct {
 	who       sheet.Who
 	label, id string
-}{
-	{sheet.WhoColonist, "Colonists", "c"},
-	{sheet.WhoStranger, "Prisoners, guests and raiders", "s"},
-	{sheet.WhoPrisoner, "Your animals", "p"},
-	{sheet.WhoWild, "Wild creatures", "w"},
+} {
+	return [4]struct {
+		who       sheet.Who
+		label, id string
+	}{
+		{sheet.WhoColonist, tr.T("Colonists"), "c"},
+		{sheet.WhoStranger, tr.T("Prisoners, guests and raiders"), "s"},
+		{sheet.WhoPrisoner, tr.T("Your animals"), "p"},
+		{sheet.WhoWild, tr.T("Wild creatures"), "w"},
+	}
 }
 
 func (t *Sections) targetRows(f *uikit.Form, o kitOwner, n config.HUDNode) {
 	set := sheet.WhoSet(n)
-	for _, w := range whoNames {
+	for _, w := range whoNames(t.s.a) {
 		on := strings.Contains(set, w.id)
 		v := on
 		reason := ""
 		if on && len(set) == 1 {
-			reason = "At least one kind of target must stay on."
+			reason = t.s.a.T("At least one kind of target must stay on.")
 		}
-		f.Check(o, "sec.who."+w.id, "Shows for: "+w.label, &v, reason, "")
+		f.Check(o, "sec.who."+w.id, t.s.a.Tf("Shows for: %s", w.label), &v, reason, "")
 		if v != on {
 			who := w.who
 			t.edit(func(root *config.HUDNode) ([]int, error) {
@@ -414,10 +426,10 @@ func (t *Sections) defRows(f *uikit.Form, n config.HUDNode) {
 	if sheet.NeedsDef(n.Kind) {
 		if row, ok := f.Row(secBtnH + 4); ok {
 			cur := n.Def
-			if d, ok := sheet.LookupDef(n.Kind, n.Def); ok {
+			if d, ok := sheet.LookupDef(t.s.a, n.Kind, n.Def); ok {
 				cur = d.Label
 			}
-			uikit.StyledButton(k, "sec.def", row.InsetXY(0, 1), "Shows: "+cur, uikit.BtnOpts{Tip: "Which one\nChoose what this element shows."}, func() {
+			uikit.StyledButton(k, "sec.def", row.InsetXY(0, 1), t.s.a.Tf("Shows: %s", cur), uikit.BtnOpts{Tip: t.s.a.T("Which one\nChoose what this element shows.")}, func() {
 				t.defMenu(n.Kind, func(key string) {
 					t.edit(func(root *config.HUDNode) ([]int, error) {
 						sheet.At(root, t.sel).Def = key
@@ -429,11 +441,11 @@ func (t *Sections) defRows(f *uikit.Form, n config.HUDNode) {
 	}
 	if sheet.IsBar(n.Kind) {
 		if row, ok := f.Row(secBtnH + 4); ok {
-			cur := "Fades up"
+			cur := t.s.a.T("Fades up")
 			if n.BarStyle != "" {
-				cur = sheet.BarStyleLabel(n.BarStyle)
+				cur = sheet.BarStyleLabel(t.s.a, n.BarStyle)
 			}
-			uikit.StyledButton(k, "sec.style", row.InsetXY(0, 1), "Colours: "+cur, uikit.BtnOpts{Tip: "Bar colours\nHow the bar changes colour as it fills."}, func() {
+			uikit.StyledButton(k, "sec.style", row.InsetXY(0, 1), t.s.a.Tf("Colours: %s", cur), uikit.BtnOpts{Tip: t.s.a.T("Bar colours\nHow the bar changes colour as it fills.")}, func() {
 				t.styleMenu(func(s string) {
 					t.edit(func(root *config.HUDNode) ([]int, error) {
 						sheet.At(root, t.sel).BarStyle = s
@@ -458,9 +470,9 @@ func (t *Sections) orderRow(f *uikit.Form, n config.HUDNode) {
 	}
 	if len(n.Kids) > 0 {
 		if row, ok := f.Row(secBtnH + 4); ok {
-			label := "Fold away what it holds"
+			label := t.s.a.T("Fold away what it holds")
 			if t.collapsed[pathKey(t.sel)] {
-				label = "Show what it holds"
+				label = t.s.a.T("Show what it holds")
 			}
 			uikit.StyledButton(k, "sec.fold", row.InsetXY(0, 1), label, uikit.BtnOpts{}, func() {
 				key := pathKey(t.sel)
@@ -474,14 +486,14 @@ func (t *Sections) orderRow(f *uikit.Form, n config.HUDNode) {
 		return
 	}
 	cols := row.InsetXY(0, 1).Columns(3, 4)
-	const top = "The whole card cannot be moved or removed."
-	uikit.StyledButton(k, "sec.up", cols[0], "Up", uikit.BtnOpts{Disabled: root || first, Reason: ifElse(root, top, "It is already first.")}, func() {
+	top := t.s.a.T("The whole card cannot be moved or removed.")
+	uikit.StyledButton(k, "sec.up", cols[0], t.s.a.T("Up"), uikit.BtnOpts{Disabled: root || first, Reason: ifElse(root, top, t.s.a.T("It is already first."))}, func() {
 		t.edit(func(rt *config.HUDNode) ([]int, error) { p, _ := sheet.Move(rt, t.sel, -1); return p, nil })
 	})
-	uikit.StyledButton(k, "sec.down", cols[1], "Down", uikit.BtnOpts{Disabled: root || end, Reason: ifElse(root, top, "It is already last.")}, func() {
+	uikit.StyledButton(k, "sec.down", cols[1], t.s.a.T("Down"), uikit.BtnOpts{Disabled: root || end, Reason: ifElse(root, top, t.s.a.T("It is already last."))}, func() {
 		t.edit(func(rt *config.HUDNode) ([]int, error) { p, _ := sheet.Move(rt, t.sel, 1); return p, nil })
 	})
-	uikit.StyledButton(k, "sec.remove", cols[2], "Remove", uikit.BtnOpts{Style: uikit.BtnDanger, Disabled: root, Reason: top}, func() {
+	uikit.StyledButton(k, "sec.remove", cols[2], t.s.a.T("Remove"), uikit.BtnOpts{Style: uikit.BtnDanger, Disabled: root, Reason: top}, func() {
 		up := append([]int(nil), t.sel[:last]...)
 		t.edit(func(rt *config.HUDNode) ([]int, error) {
 			if !sheet.Remove(rt, t.sel) {
@@ -506,14 +518,14 @@ func (t *Sections) addRow(f *uikit.Form) {
 		return
 	}
 	cols := row.InsetXY(0, 1).Columns(3, 4)
-	uikit.StyledButton(k, "sec.add.layout", cols[0], "Add layout...", uikit.BtnOpts{Tip: "Add layout\nStacks, panels, rows, blank space and dividers."}, func() {
-		t.addMenu("Add a layout element", "layout")
+	uikit.StyledButton(k, "sec.add.layout", cols[0], t.s.a.T("Add layout..."), uikit.BtnOpts{Tip: t.s.a.T("Add layout\nStacks, panels, rows, blank space and dividers.")}, func() {
+		t.addMenu(t.s.a.T("Add a layout element"), "layout")
 	})
-	uikit.StyledButton(k, "sec.add.value", cols[1], "Add value...", uikit.BtnOpts{Tip: "Add a value\nA line of words, a menu, a skill, a training, a stat or a record."}, func() {
-		t.addMenu("Add a value", "values", "pickers", "generic")
+	uikit.StyledButton(k, "sec.add.value", cols[1], t.s.a.T("Add value..."), uikit.BtnOpts{Tip: t.s.a.T("Add a value\nA line of words, a menu, a skill, a training, a stat or a record.")}, func() {
+		t.addMenu(t.s.a.T("Add a value"), "values", "pickers", "generic")
 	})
-	uikit.StyledButton(k, "sec.add.bar", cols[2], "Add bar...", uikit.BtnOpts{Tip: "Add a bar\nA need or health bar, then how it is coloured."}, func() {
-		t.addMenu("Add a bar", "bars")
+	uikit.StyledButton(k, "sec.add.bar", cols[2], t.s.a.T("Add bar..."), uikit.BtnOpts{Tip: t.s.a.T("Add a bar\nA need or health bar, then how it is coloured.")}, func() {
+		t.addMenu(t.s.a.T("Add a bar"), "bars")
 	})
 }
 
@@ -527,23 +539,23 @@ func (t *Sections) useDefault() {
 			h.Layouts.Floating = nil
 		}
 	})
-	t.s.a.Hint("The built-in layout is back.")
+	t.s.a.Hint(t.s.a.T("The built-in layout is back."))
 }
 
 // edit applies f to a clone of the tree; if the result is no worse than it was
 // it becomes the working copy and goes into the settings, else a reason shows.
 func (t *Sections) edit(f func(root *config.HUDNode) ([]int, error)) {
 	w := cloneNode(t.work)
-	before := len(sheet.Validate(w))
+	before := len(sheet.Validate(t.s.a, w))
 	np, err := f(&w)
 	if err == nil {
-		if ps := sheet.Validate(w); len(ps) > before {
+		if ps := sheet.Validate(t.s.a, w); len(ps) > before {
 			err = errors.New(ps[before].Text)
 		}
 	}
 	if err != nil {
 		if errors.Is(err, errNoHolder) {
-			t.s.a.Hint(noHolderHint)
+			t.s.a.Hint(t.s.a.T("Nothing selected can hold that. Select a stack or panel first."))
 			return
 		}
 		t.s.a.Hint(err.Error())
@@ -587,10 +599,8 @@ func (t *Sections) place(root *config.HUDNode, n config.HUDNode) ([]int, error) 
 	return nil, errNoHolder
 }
 
-// errNoHolder is an addition with nowhere to go; the player reads noHolderHint.
+// errNoHolder is an addition with nowhere to go; the player reads a hint instead.
 var errNoHolder = errors.New("no selected node can hold the addition")
-
-const noHolderHint = "Nothing selected can hold that. Select a stack or panel first."
 
 type menuItem struct {
 	label, tip, off string
@@ -623,7 +633,7 @@ func (t *Sections) addMenu(title string, groups ...string) {
 	var keys []string
 	var items []menuItem
 	for _, g := range groups {
-		for _, e := range sheet.Catalog() {
+		for _, e := range sheet.Catalog(t.s.a) {
 			if e.Group != g {
 				continue
 			}
@@ -659,19 +669,19 @@ func (t *Sections) addKey(key string) {
 }
 
 func (t *Sections) defMenu(key string, pick func(def string)) {
-	defs := sheet.Defs(key)
+	defs := sheet.Defs(t.s.a, key)
 	items := make([]menuItem, len(defs))
 	for i, d := range defs {
-		items[i] = menuItem{label: d.Label, tip: "Key: " + key + " / " + d.Key + ". Built in."}
+		items[i] = menuItem{label: d.Label, tip: t.s.a.Tf("Key: %s. Built in.", key+" / "+d.Key)}
 	}
-	t.menu("sec.def", "Which one?", items, func(i int) { pick(defs[i].Key) })
+	t.menu("sec.def", t.s.a.T("Which one?"), items, func(i int) { pick(defs[i].Key) })
 }
 
 func (t *Sections) styleMenu(pick func(style string)) {
 	styles := sheet.BarStyles()
 	items := make([]menuItem, len(styles))
 	for i, s := range styles {
-		items[i] = menuItem{label: sheet.BarStyleLabel(s), tip: "Key: " + s + "."}
+		items[i] = menuItem{label: sheet.BarStyleLabel(t.s.a, s), tip: t.s.a.Tf("Key: %s.", s)}
 	}
-	t.menu("sec.style", "Bar colours", items, func(i int) { pick(styles[i]) })
+	t.menu("sec.style", t.s.a.T("Bar colours"), items, func(i int) { pick(styles[i]) })
 }

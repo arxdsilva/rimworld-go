@@ -10,7 +10,7 @@ import (
 func TestDefaultsAreValid(t *testing.T) {
 	t.Parallel()
 	for name, n := range map[string]config.HUDNode{"docked": DefaultDocked(), "floating": DefaultFloating()} {
-		if ps := Validate(n); len(ps) != 0 {
+		if ps := Validate(en, n); len(ps) != 0 {
 			t.Errorf("%s: %v", name, ps)
 		}
 		if nodes, depth := Count(n); nodes > config.HUDMaxNodes || depth > config.HUDMaxDepth {
@@ -127,7 +127,7 @@ func TestDefaultSkillsPairUp(t *testing.T) {
 			}
 		}
 	}
-	for _, d := range Defs("skill") {
+	for _, d := range Defs(en, "skill") {
 		if seen[d.Key] != 1 {
 			t.Errorf("skill %s shown %d times", d.Key, seen[d.Key])
 		}

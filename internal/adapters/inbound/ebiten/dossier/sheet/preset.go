@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	"rimworld-go/internal/platform/config"
@@ -74,7 +75,7 @@ func DecodePreset(data []byte) (Preset, error) {
 		if t.n == nil {
 			continue
 		}
-		if ps := Validate(*t.n); len(ps) > 0 {
+		if ps := Validate(lang.English{}, *t.n); len(ps) > 0 {
 			return Preset{}, fmt.Errorf("%w: %s layout: %s: %s", ErrPresetInvalid, t.name, ps[0].Path, ps[0].Text)
 		}
 	}

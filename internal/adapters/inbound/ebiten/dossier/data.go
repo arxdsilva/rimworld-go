@@ -110,14 +110,14 @@ func (p *Panel) title() {
 	d := &p.d
 	if d.animal {
 		d.tint = p.pal[sheet.RelationKey(sheet.AnimalRelation(d.a))]
-		d.titleTip = sheet.JoinTip(sheet.AnimalTip(d.a))
+		d.titleTip = sheet.JoinTip(sheet.AnimalTip(p.a, d.a))
 		if d.a.Tame {
 			d.titleTab = sheet.TabTraining
 		}
 		return
 	}
 	d.tint = p.pal[sheet.RelationKey(sheet.RelationOf(d.p, d.card))]
-	d.titleTip = sheet.JoinTip(sheet.BioTip(d.p, d.bio, d.card))
+	d.titleTip = sheet.JoinTip(sheet.BioTip(p.a, d.p, d.bio, d.card))
 	d.titleTab = sheet.TabSocial
 }
 

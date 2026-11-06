@@ -1,6 +1,7 @@
 package sheet
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 
 	"rimworld-go/internal/application/game"
@@ -79,10 +80,10 @@ func SkillValue(s game.SkillView, decimals bool) string {
 
 // SkillCell builds one skill entry. Its Tip leaves out the weapon line;
 // SkillTip with the weapon text adds it for the melee skill.
-func SkillCell(s game.SkillView, c dossierview.Card, decimals bool) Cell {
+func SkillCell(tr lang.Tr, s game.SkillView, c dossierview.Card, decimals bool) Cell {
 	st := SkillStateOf(s, c)
 	cell := Cell{Label: s.Label, Value: SkillValue(s, decimals), Pct: s.Level * 100 / skill.MaxLevel,
-		Tip: JoinTip(SkillTip(s, c, "")), Active: st == SkillActive}
+		Tip: JoinTip(SkillTip(tr, s, c, "")), Active: st == SkillActive}
 	if st == SkillOff {
 		cell.Tone = ToneOff
 		cell.Pct = 0
@@ -93,11 +94,11 @@ func SkillCell(s game.SkillView, c dossierview.Card, decimals bool) Cell {
 // TrainCell builds one training entry. A behaviour the species cannot learn
 // gives the zero Cell. Not wanted reads off; learned reads good and active
 // (bold).
-func TrainCell(t game.AnimalTrainingView) Cell {
+func TrainCell(tr lang.Tr, t game.AnimalTrainingView) Cell {
 	if !t.Allowed {
 		return Cell{}
 	}
-	cell := Cell{Label: t.Label, Value: strconv.Itoa(t.Steps) + " of " + strconv.Itoa(t.Needed), Tip: JoinTip(trainLines(t))}
+	cell := Cell{Label: t.Label, Value: lang.Tf(tr, "%d of %d", t.Steps, t.Needed), Tip: JoinTip(trainLines(tr, t))}
 	if t.Needed > 0 {
 		cell.Pct = min(t.Steps*100/t.Needed, 100)
 	}
@@ -105,7 +106,7 @@ func TrainCell(t game.AnimalTrainingView) Cell {
 	case !t.On && !t.Learned:
 		cell.Tone = ToneOff
 	case t.Learned:
-		cell.Tone, cell.Active, cell.Value, cell.Pct = ToneGood, true, "Learned", 100
+		cell.Tone, cell.Active, cell.Value, cell.Pct = ToneGood, true, tr.T("Learned"), 100
 	}
 	return cell
 }

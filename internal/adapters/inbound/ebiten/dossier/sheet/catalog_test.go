@@ -13,7 +13,7 @@ func TestCatalogCoversEveryKey(t *testing.T) {
 	t.Parallel()
 	keys := WidgetKeys()
 	var inCatalog []string
-	for _, e := range Catalog() {
+	for _, e := range Catalog(en) {
 		if e.Tip == "" || e.Label == "" || e.Group == "" {
 			t.Errorf("%s: missing text", e.Key)
 		}
@@ -31,7 +31,7 @@ func TestCatalogCoversEveryKey(t *testing.T) {
 		if e.NeedsDef != NeedsDef(e.Key) || e.Bar != IsBar(e.Key) {
 			t.Errorf("%s: flags disagree with the helpers", e.Key)
 		}
-		if e.NeedsDef && len(Defs(e.Key)) == 0 {
+		if e.NeedsDef && len(Defs(en, e.Key)) == 0 {
 			t.Errorf("%s needs a definition and has none", e.Key)
 		}
 	}
@@ -55,7 +55,7 @@ func TestCatalogCoversEveryKey(t *testing.T) {
 	for _, g := range Groups() {
 		groups[g] = true
 	}
-	for _, e := range Catalog() {
+	for _, e := range Catalog(en) {
 		if !groups[e.Group] {
 			t.Errorf("%s: group %s is not in Groups()", e.Key, e.Group)
 		}
@@ -64,17 +64,17 @@ func TestCatalogCoversEveryKey(t *testing.T) {
 
 func TestDefinitions(t *testing.T) {
 	t.Parallel()
-	if len(Defs("skill")) != int(skill.NumSkills) || Defs("skill")[0].Key != "shooting" {
+	if len(Defs(en, "skill")) != int(skill.NumSkills) || Defs(en, "skill")[0].Key != "shooting" {
 		t.Fatal("skills")
 	}
-	if len(Defs("train")) != 3 {
+	if len(Defs(en, "train")) != 3 {
 		t.Fatal("training: obedience, guard, release")
 	}
-	if len(Defs("tally")) != 2 || len(Defs("need_bar")) != 3 || Defs("doing") != nil {
+	if len(Defs(en, "tally")) != 2 || len(Defs(en, "need_bar")) != 3 || Defs(en, "doing") != nil {
 		t.Fatal("tally and need defs")
 	}
 	seen := map[string]bool{}
-	for _, d := range Defs("stat") {
+	for _, d := range Defs(en, "stat") {
 		if seen[d.Key] {
 			t.Errorf("duplicate stat key %s", d.Key)
 		}
@@ -92,19 +92,19 @@ func TestDefinitions(t *testing.T) {
 	if !seen["work_speed"] || !seen["shooting_accuracy"] {
 		t.Fatal("expected stat keys")
 	}
-	for _, d := range Defs("train") {
+	for _, d := range Defs(en, "train") {
 		sk, ok := TrainByKey(d.Key)
 		if !ok || TrainLabel(sk) != d.Label || TrainKey(sk) != d.Key {
 			t.Errorf("train %s", d.Key)
 		}
-		if TrainDesc(sk) == "" {
+		if TrainDesc(en, sk) == "" {
 			t.Errorf("train %s has no description", d.Key)
 		}
 	}
-	if _, ok := LookupDef("skill", "melee"); !ok {
+	if _, ok := LookupDef(en, "skill", "melee"); !ok {
 		t.Fatal("lookup")
 	}
-	if _, ok := LookupDef("skill", "work_speed"); ok {
+	if _, ok := LookupDef(en, "skill", "work_speed"); ok {
 		t.Fatal("a stat is not a skill")
 	}
 }

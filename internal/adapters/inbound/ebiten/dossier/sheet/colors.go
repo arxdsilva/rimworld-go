@@ -3,6 +3,7 @@ package sheet
 import (
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 	"strings"
 
@@ -30,16 +31,16 @@ func ValidBarStyle(s string) bool {
 }
 
 // BarStyleLabel is a style's name for the menu.
-func BarStyleLabel(s string) string {
+func BarStyleLabel(tr lang.Tr, s string) string {
 	switch s {
 	case BarFadeUp:
-		return "Low shades up to main"
+		return tr.T("Low shades up to main")
 	case BarLowOnly:
-		return "Low colour only"
+		return tr.T("Low colour only")
 	case BarFadeDown:
-		return "Main shades down to low"
+		return tr.T("Main shades down to low")
 	case BarMainOnly:
-		return "Main colour only"
+		return tr.T("Main colour only")
 	}
 	return ""
 }

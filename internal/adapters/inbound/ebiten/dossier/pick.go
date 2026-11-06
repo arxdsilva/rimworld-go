@@ -1,8 +1,6 @@
 package dossier
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -11,7 +9,6 @@ import (
 )
 
 const (
-	manageLabel    = "Manage..."
 	hourActivities = 4 // Anything, Work, Recreation, Sleep
 )
 
@@ -58,8 +55,8 @@ func (m menus) pickDiet() {
 			cur = i
 		}
 	}
-	opts = append(opts, manageLabel)
-	uikit.Picker(m.p.k, "dossier.diet", "Food policy", opts, cur, func(i int) { m.dietChoice(pols, i) })
+	opts = append(opts, m.p.a.T("Manage..."))
+	uikit.Picker(m.p.k, "dossier.diet", m.p.a.T("Food policy"), opts, cur, func(i int) { m.dietChoice(pols, i) })
 }
 
 // dietChoice runs option i of the food menu: a policy, or the editor.
@@ -77,7 +74,7 @@ func (m menus) pickArea() {
 	if m.p.sc == nil {
 		return
 	}
-	m.p.a.AreaPicker("Allowed area", m.p.sc.AreaOf(m.p.id), true, m.areaChoice)
+	m.p.a.AreaPicker(m.p.a.T("Allowed area"), m.p.sc.AreaOf(m.p.id), true, m.areaChoice)
 }
 
 // areaChoice assigns the chosen area.
@@ -91,8 +88,9 @@ func (m menus) pickHour() {
 		return
 	}
 	hour := m.p.sc.Hour()
-	opts := []string{"Anything", "Work", "Recreation", "Sleep", manageLabel}
-	uikit.Picker(m.p.k, "dossier.hour", "Hour "+strconv.Itoa(hour), opts, int(m.p.d.p.Activity),
+	tr := m.p.a
+	opts := []string{tr.T("Anything"), tr.T("Work"), tr.T("Recreation"), tr.T("Sleep"), tr.T("Manage...")}
+	uikit.Picker(m.p.k, "dossier.hour", tr.Tf("Hour %d", hour), opts, int(m.p.d.p.Activity),
 		func(i int) { m.hourChoice(hour, i) })
 }
 

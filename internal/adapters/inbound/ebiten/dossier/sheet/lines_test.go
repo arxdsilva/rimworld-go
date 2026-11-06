@@ -61,7 +61,7 @@ func TestBodyLineRungs(t *testing.T) {
 		{"critical edge 30", with(func(p *game.PawnView) { p.Health = 30 }), hv(), "Poor health", ToneWarning},
 	}
 	for _, c := range cases {
-		l := BodyLine(c.p, c.h)
+		l := BodyLine(en, c.p, c.h)
 		if l.Text != c.text || l.Tone != c.tone {
 			t.Errorf("%s: %q/%v, want %q/%v", c.name, l.Text, l.Tone, c.text, c.tone)
 		}
@@ -98,7 +98,7 @@ func TestBodyLineFirstMatchWins(t *testing.T) {
 			// set the lower one first so the higher cannot overwrite a status it relies on
 			ladder[lo].set(&p, &h)
 			ladder[hi].set(&p, &h)
-			if got := BodyLine(p, h).Text; got != ladder[hi].text {
+			if got := BodyLine(en, p, h).Text; got != ladder[hi].text {
 				t.Errorf("%s over %s: %q, want %q", ladder[hi].name, ladder[lo].name, got, ladder[hi].text)
 			}
 		}
@@ -153,7 +153,7 @@ func TestMindLineRungs(t *testing.T) {
 		{"miserable", pawn(10), dossierview.Card{}, "Miserable", ToneWarning},
 	}
 	for _, c := range cases {
-		l := MindLine(c.p, c.c)
+		l := MindLine(en, c.p, c.c)
 		if l.Text != c.text || l.Tone != c.tone {
 			t.Errorf("%s: %q/%v, want %q/%v", c.name, l.Text, l.Tone, c.text, c.tone)
 		}
@@ -178,12 +178,12 @@ func TestMindLineFirstMatchWins(t *testing.T) {
 		{func() { p.Mood = 80 }, "Inspired: y, under 1h left"},
 		{func() { p.Inspiration = "" }, "Joyful"},
 	}
-	if got := MindLine(p, c).Text; got != "Stunned for 1 s" {
+	if got := MindLine(en, p, c).Text; got != "Stunned for 1 s" {
 		t.Fatalf("%q", got)
 	}
 	for _, s := range steps {
 		s.strip()
-		if got := MindLine(p, c).Text; got != s.want {
+		if got := MindLine(en, p, c).Text; got != s.want {
 			t.Fatalf("got %q want %q", got, s.want)
 		}
 	}
@@ -193,14 +193,14 @@ func TestToneAndWordsAgree(t *testing.T) {
 	t.Parallel()
 	// every critical or warning line from the ladders above names its state
 	for _, p := range []game.PawnView{{Status: "dead"}, {Status: "downed"}, {Health: 10}, {Health: 50}, {Mood: 3}, {Wounded: true}, {MentalBreak: "x"}} {
-		for _, l := range []Line{BodyLine(p, game.HealthView{}), MindLine(p, dossierview.Card{})} {
+		for _, l := range []Line{BodyLine(en, p, game.HealthView{}), MindLine(en, p, dossierview.Card{})} {
 			if !WarnsInWords(l) {
 				t.Errorf("%+v: %q has tone %v and no matching words", p, l.Text, l.Tone)
 			}
 		}
 	}
 	for _, rel := range []dossierview.Relation{dossierview.RelationFoe, dossierview.RelationHeld} {
-		l := StandingLine(game.PawnView{Title: "x", Hostile: rel == dossierview.RelationFoe, Prisoner: rel == dossierview.RelationHeld}, game.BioView{}, dossierview.Card{})
+		l := StandingLine(en, game.PawnView{Title: "x", Hostile: rel == dossierview.RelationFoe, Prisoner: rel == dossierview.RelationHeld}, game.BioView{}, dossierview.Card{})
 		if !WarnsInWords(l) {
 			t.Errorf("relation %d: %q", rel, l.Text)
 		}
@@ -233,7 +233,7 @@ func TestStandingLine(t *testing.T) {
 		{"visitor flagged but card says own", game.PawnView{Visitor: true, Title: "Guest"}, own, "Drifter, Guest", ToneNeutral},
 	}
 	for _, c := range cases {
-		l := StandingLine(c.p, game.BioView{}, c.c)
+		l := StandingLine(en, c.p, game.BioView{}, c.c)
 		if l.Text != c.text || l.Tone != c.tone || l.Tab != TabBio {
 			t.Errorf("%s: %q/%v/%s, want %q/%v", c.name, l.Text, l.Tone, l.Tab, c.text, c.tone)
 		}
@@ -260,24 +260,24 @@ func TestAnimalKinds(t *testing.T) {
 		{"herd", game.AnimalView{Species: "deer", Tame: true, Herd: 4}, "Herd animal"},
 	}
 	for _, c := range cases {
-		if got := AnimalKind(c.a); got != c.want {
+		if got := AnimalKind(en, c.a); got != c.want {
 			t.Errorf("%s: %q want %q", c.name, got, c.want)
 		}
 	}
-	if got := AnimalKind(game.AnimalView{Species: "not_a_species"}); got != "Wild creature" {
+	if got := AnimalKind(en, game.AnimalView{Species: "not_a_species"}); got != "Wild creature" {
 		t.Errorf("unknown species: %q", got)
 	}
-	if got := AnimalKind(game.AnimalView{Species: "not_a_species", Tame: true}); got != "Tame animal" {
+	if got := AnimalKind(en, game.AnimalView{Species: "not_a_species", Tame: true}); got != "Tame animal" {
 		t.Errorf("unknown tame species: %q", got)
 	}
-	l := AnimalStandingLine(game.AnimalView{Species: "timber_wolf"}, dossierview.Card{})
+	l := AnimalStandingLine(en, game.AnimalView{Species: "timber_wolf"}, dossierview.Card{})
 	if l.Tone != ToneText {
 		t.Errorf("wild is plain text: %v", l.Tone)
 	}
-	if AnimalStandingLine(game.AnimalView{Tame: true}, dossierview.Card{}).Tone != ToneGood {
+	if AnimalStandingLine(en, game.AnimalView{Tame: true}, dossierview.Card{}).Tone != ToneGood {
 		t.Error("tame is the colony's")
 	}
-	if AnimalStandingLine(game.AnimalView{Hostile: true}, dossierview.Card{}).Tone != ToneCritical {
+	if AnimalStandingLine(en, game.AnimalView{Hostile: true}, dossierview.Card{}).Tone != ToneCritical {
 		t.Error("hostile")
 	}
 }
@@ -294,46 +294,46 @@ func TestIdentityLine(t *testing.T) {
 		{12, "Female, age 31 and 12 days"},
 	}
 	for _, c := range cases {
-		l := IdentityLine(game.PawnView{Sex: "female", AgeYears: 31}, game.BioView{}, dossierview.Card{AgeDayOfYear: c.doy})
+		l := IdentityLine(en, game.PawnView{Sex: "female", AgeYears: 31}, game.BioView{}, dossierview.Card{AgeDayOfYear: c.doy})
 		if l.Text != c.want || l.Tab != TabBio {
 			t.Errorf("%d: %q", c.doy, l.Text)
 		}
 	}
-	if got := IdentityLine(game.PawnView{AgeYears: 20}, game.BioView{}, own).Text; got != "Age 20, birthday today" {
+	if got := IdentityLine(en, game.PawnView{AgeYears: 20}, game.BioView{}, own).Text; got != "Age 20, birthday today" {
 		t.Errorf("no sex: %q", got)
 	}
 	a := game.AnimalView{Label: "arctic fox", Female: true, AgeDays: 60*2 + 12}
-	if got := AnimalIdentityLine(a, own).Text; got != "Female arctic fox, age 2 and 12 days" {
+	if got := AnimalIdentityLine(en, a, own).Text; got != "Female arctic fox, age 2 and 12 days" {
 		t.Errorf("%q", got)
 	}
 	a = game.AnimalView{Label: "deer", AgeDays: 1}
-	if got := AnimalIdentityLine(a, own).Text; got != "Male deer, age 1 day" {
+	if got := AnimalIdentityLine(en, a, own).Text; got != "Male deer, age 1 day" {
 		t.Errorf("%q", got)
 	}
 	a.AgeDays = 7
-	if got := AnimalIdentityLine(a, own).Text; got != "Male deer, age 7 days" {
+	if got := AnimalIdentityLine(en, a, own).Text; got != "Male deer, age 7 days" {
 		t.Errorf("%q", got)
 	}
 }
 
 func TestAnimalLines(t *testing.T) {
 	t.Parallel()
-	if l := AnimalBodyLine(game.AnimalView{Health: 100}); l.Text != "Healthy" || l.Tone != ToneGood {
+	if l := AnimalBodyLine(en, game.AnimalView{Health: 100}); l.Text != "Healthy" || l.Tone != ToneGood {
 		t.Errorf("%+v", l)
 	}
-	if l := AnimalBodyLine(game.AnimalView{Health: 100, Downed: true}); l.Text != "Downed" {
+	if l := AnimalBodyLine(en, game.AnimalView{Health: 100, Downed: true}); l.Text != "Downed" {
 		t.Errorf("%+v", l)
 	}
-	if l := AnimalBodyLine(game.AnimalView{Health: 10}); l.Tone != ToneCritical || !WarnsInWords(l) {
+	if l := AnimalBodyLine(en, game.AnimalView{Health: 10}); l.Tone != ToneCritical || !WarnsInWords(l) {
 		t.Errorf("%+v", l)
 	}
-	if l := AnimalMindLine(game.AnimalView{Stunned: true}, dossierview.Card{}); l.Text != "Stunned" || l.Tone != ToneCritical {
+	if l := AnimalMindLine(en, game.AnimalView{Stunned: true}, dossierview.Card{}); l.Text != "Stunned" || l.Tone != ToneCritical {
 		t.Errorf("%+v", l)
 	}
-	if l := AnimalMindLine(game.AnimalView{}, dossierview.Card{StunTicks: 90}); l.Text != "Stunned for 2 s" {
+	if l := AnimalMindLine(en, game.AnimalView{}, dossierview.Card{StunTicks: 90}); l.Text != "Stunned for 2 s" {
 		t.Errorf("%+v", l)
 	}
-	if l := AnimalMindLine(game.AnimalView{}, dossierview.Card{}); l.Text != "" {
+	if l := AnimalMindLine(en, game.AnimalView{}, dossierview.Card{}); l.Text != "" {
 		t.Errorf("a calm animal has nothing to say: %+v", l)
 	}
 }
@@ -360,82 +360,82 @@ func TestActivityLine(t *testing.T) {
 		{"idle", game.PawnView{}, card, "Idle", ToneOff},
 	}
 	for _, c := range cases {
-		l := ActivityLine(c.p, c.c)
+		l := ActivityLine(en, c.p, c.c)
 		if l.Text != c.want || l.Tone != c.tone || l.Tab != TabWork {
 			t.Errorf("%s: %+v", c.name, l)
 		}
 	}
-	tip := ActivityTip(dossierview.Card{WorkType: 4, ActiveSkill: 2})
+	tip := ActivityTip(en, dossierview.Card{WorkType: 4, ActiveSkill: 2})
 	if JoinTip(tip) != "Work: Construction\nDraws on Construction\nPractising Construction" {
 		t.Errorf("tip %q", JoinTip(tip))
 	}
-	if len(ActivityTip(card)) != 0 {
+	if len(ActivityTip(en, card)) != 0 {
 		t.Error("nothing to say without a work type or skill")
 	}
-	if l := AnimalActivityLine(game.AnimalView{State: "grazing"}, dossierview.Card{}); l.Text != "Grazing" {
+	if l := AnimalActivityLine(en, game.AnimalView{State: "grazing"}, dossierview.Card{}); l.Text != "Grazing" {
 		t.Errorf("%+v", l)
 	}
 }
 
 func TestOtherLines(t *testing.T) {
 	t.Parallel()
-	if QueuedLine(game.PawnView{}).Text != "" {
+	if QueuedLine(en, game.PawnView{}).Text != "" {
 		t.Error("nothing queued, nothing shown")
 	}
 	q := []game.QueuedOrderView{{Label: "Chop"}, {Label: "Haul"}, {Label: "Mine"}}
-	if got := QueuedLine(game.PawnView{QueuedOrders: q}).Text; got != "Next: Chop (+2)" {
+	if got := QueuedLine(en, game.PawnView{QueuedOrders: q}).Text; got != "Next: Chop (+2)" {
 		t.Error(got)
 	}
-	if got := QueuedLine(game.PawnView{QueuedOrders: q[:1]}).Text; got != "Next: Chop" {
+	if got := QueuedLine(en, game.PawnView{QueuedOrders: q[:1]}).Text; got != "Next: Chop" {
 		t.Error(got)
 	}
-	if got := EquippedLine(game.PawnView{Prisoner: true, Weapon: "rifle"}).Text; got != "Held captive" {
+	if got := EquippedLine(en, game.PawnView{Prisoner: true, Weapon: "rifle"}).Text; got != "Held captive" {
 		t.Error(got)
 	}
-	if got := EquippedLine(game.PawnView{Weapon: "rifle"}).Text; got != "Armed: rifle" {
+	if got := EquippedLine(en, game.PawnView{Weapon: "rifle"}).Text; got != "Armed: rifle" {
 		t.Error(got)
 	}
-	if got := EquippedLine(game.PawnView{Weapon: "fists"}).Text; got != "Unarmed" {
+	if got := EquippedLine(en, game.PawnView{Weapon: "fists"}).Text; got != "Unarmed" {
 		t.Error(got)
 	}
-	if CarryingLine(game.PawnView{}).Text != "" || CarryingLine(game.PawnView{Carrying: "pawn"}).Text != "Carrying a person" ||
-		CarryingLine(game.PawnView{Carrying: "wood"}).Text != "Carrying wood" {
+	if CarryingLine(en, game.PawnView{}).Text != "" || CarryingLine(en, game.PawnView{Carrying: "pawn"}).Text != "Carrying a person" ||
+		CarryingLine(en, game.PawnView{Carrying: "wood"}).Text != "Carrying wood" {
 		t.Error("carrying")
 	}
 	b := game.BioView{Traits: []game.TraitView{{Label: "Brave", Desc: "Does not flinch."}, {Label: "Lazy"}}}
-	if l := TraitsLine(b); l.Text != "Brave, Lazy" || !strings.Contains(l.Tip, "Does not flinch.") {
+	if l := TraitsLine(en, b); l.Text != "Brave, Lazy" || !strings.Contains(l.Tip, "Does not flinch.") {
 		t.Errorf("%+v", l)
 	}
-	if TraitsLine(game.BioView{}).Text != "" {
+	if TraitsLine(en, game.BioView{}).Text != "" {
 		t.Error("no traits, no line")
 	}
 	pr := game.PrisonerView{Resistance: 45}
-	if got := CaptiveLine(game.PawnView{Prisoner: true, GuestFaction: "Reach"}, pr, dossierview.Card{}).Text; got != "Resistance 45, from Reach" {
+	if got := CaptiveLine(en, game.PawnView{Prisoner: true, GuestFaction: "Reach"}, pr, dossierview.Card{}).Text; got != "Resistance 45, from Reach" {
 		t.Error(got)
 	}
-	if got := CaptiveLine(game.PawnView{Prisoner: true}, pr, dossierview.Card{}).Text; got != "Resistance 45, no faction" {
+	if got := CaptiveLine(en, game.PawnView{Prisoner: true}, pr, dossierview.Card{}).Text; got != "Resistance 45, no faction" {
 		t.Error(got)
 	}
-	if CaptiveLine(game.PawnView{}, pr, dossierview.Card{}).Text != "" {
+	if CaptiveLine(en, game.PawnView{}, pr, dossierview.Card{}).Text != "" {
 		t.Error("only prisoners")
 	}
-	if l := KeeperLine(game.AnimalView{Master: "Ana", Bond: "Ana"}); l.Text != "Master: Ana, bonded" || l.Tone != ToneGood {
+	if l := KeeperLine(en, game.AnimalView{Master: "Ana", Bond: "Ana"}); l.Text != "Master: Ana, bonded" || l.Tone != ToneGood {
 		t.Errorf("%+v", l)
 	}
-	if l := KeeperLine(game.AnimalView{Master: "Ana"}); l.Text != "Master: Ana" || l.Tone != ToneText {
+	if l := KeeperLine(en, game.AnimalView{Master: "Ana"}); l.Text != "Master: Ana" || l.Tone != ToneText {
 		t.Errorf("%+v", l)
 	}
-	if l := KeeperLine(game.AnimalView{}); l.Text != "No master" || l.Tone != ToneOff {
+	if l := KeeperLine(en, game.AnimalView{}); l.Text != "No master" || l.Tone != ToneOff {
 		t.Errorf("%+v", l)
 	}
-	if TallyLine(game.PawnView{Kills: 3}, "kills").Text != "Kills: 3" || TallyLine(game.PawnView{DamageDealt: 9}, "damage").Text != "Damage dealt: 9" ||
-		TallyLine(game.PawnView{}, "nope").Text != "" {
+	if TallyLine(en, game.PawnView{Kills: 3}, "kills").Text != "Kills: 3" || TallyLine(en, game.PawnView{DamageDealt: 9}, "damage").Text != "Damage dealt: 9" ||
+		TallyLine(en, game.PawnView{}, "nope").Text != "" {
 		t.Error("tally")
 	}
-	if l, v, ok := NeedValue(game.PawnView{Beauty: 70}, "beauty"); l != "Beauty" || v != 70 || !ok {
+	if l, v, ok := NeedValue(en, game.PawnView{Beauty: 70}, "beauty"); l != "Beauty" || v != 70 || !ok {
 		t.Error("need value")
 	}
-	if _, _, ok := NeedValue(game.PawnView{}, "nope"); ok {
+	if _, _, ok := NeedValue(en, game.PawnView{}, "nope"); ok {
 		t.Error("unknown need")
 	}
 }
@@ -461,7 +461,7 @@ func TestStatLines(t *testing.T) {
 	if StatLine(c, "work_speed", false).Text != "" {
 		t.Error("-1 hides the stat")
 	}
-	for _, d := range Defs("stat") {
+	for _, d := range Defs(en, "stat") {
 		id, _ := StatByKey(d.Key)
 		if FormatStat(id, 17, true) == "" {
 			t.Errorf("%s formats to nothing", d.Key)

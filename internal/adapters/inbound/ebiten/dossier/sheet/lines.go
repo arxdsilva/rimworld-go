@@ -2,9 +2,9 @@ package sheet
 
 import (
 	"sort"
-	"strconv"
 	"strings"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/dossierview"
 	"rimworld-go/internal/domain/animal"
@@ -68,7 +68,7 @@ func AnimalRelation(a game.AnimalView) dossierview.Relation {
 
 // StandingLine says who a person is to the colony and what they are:
 // "Prisoner, Convoy mechanic of Ashen Court".
-func StandingLine(p game.PawnView, b game.BioView, c dossierview.Card) Line {
+func StandingLine(tr lang.Tr, p game.PawnView, b game.BioView, c dossierview.Card) Line {
 	rel := RelationOf(p, c)
 	faction := c.Faction
 	if faction == "" {
@@ -77,15 +77,15 @@ func StandingLine(p game.PawnView, b game.BioView, c dossierview.Card) Line {
 	adj := ""
 	switch rel {
 	case dossierview.RelationFoe:
-		adj = "Hostile"
+		adj = tr.T("Hostile")
 	case dossierview.RelationHeld:
-		adj = "Prisoner"
+		adj = tr.T("Prisoner")
 	case dossierview.RelationAlly:
-		adj = "Allied"
+		adj = tr.T("Allied")
 	case dossierview.RelationNone:
-		adj = "Drifter"
+		adj = tr.T("Drifter")
 		if faction != "" {
-			adj = "Visitor"
+			adj = tr.T("Visitor")
 		}
 	}
 	kind := c.Role
@@ -94,116 +94,115 @@ func StandingLine(p game.PawnView, b game.BioView, c dossierview.Card) Line {
 	}
 	text := joinNonEmpty(", ", adj, kind)
 	if text == "" {
-		text = "Colonist"
+		text = tr.T("Colonist")
 	}
 	if faction != "" && rel != dossierview.RelationOwn {
-		text += " of " + faction
+		text = lang.Tf(tr, "%s of %s", text, faction)
 	}
-	return Line{Text: text, Tone: RelationTone(rel), Tab: TabBio, Tip: JoinTip(BioTip(p, b, c))}
+	return Line{Text: text, Tone: RelationTone(rel), Tab: TabBio, Tip: JoinTip(BioTip(tr, p, b, c))}
 }
 
 // AnimalKind is the creature's kind in words: "Wild predator", "Mech unit",
 // "Tame hunter", "Farm animal".
-func AnimalKind(a game.AnimalView) string {
+func AnimalKind(tr lang.Tr, a game.AnimalView) string {
 	sp, known := animal.ParseSpecies(a.Species)
 	insect := known && animal.AnatomyOf(sp) == body.Insect
 	switch {
 	case a.Mech:
 		if a.Hostile || !a.Tame {
-			return "Hostile mech unit"
+			return tr.T("Hostile mech unit")
 		}
-		return "Mech unit"
+		return tr.T("Mech unit")
 	case !a.Tame:
 		switch {
 		case a.Manhunter:
-			return "Manhunter"
+			return tr.T("Manhunter")
 		case known && animal.DefOf(sp).Predator:
-			return "Wild predator"
+			return tr.T("Wild predator")
 		case insect:
-			return "Wild insect"
+			return tr.T("Wild insect")
 		}
-		return "Wild creature"
+		return tr.T("Wild creature")
 	case a.Hunts:
-		return "Tame hunter"
+		return tr.T("Tame hunter")
 	case insect:
-		return "Tame insect"
+		return tr.T("Tame insect")
 	case a.Product != "":
-		return "Farm animal"
+		return tr.T("Farm animal")
 	case a.Herd != 0:
-		return "Herd animal"
+		return tr.T("Herd animal")
 	}
-	return "Tame animal"
+	return tr.T("Tame animal")
 }
 
 // AnimalStandingLine is StandingLine for a creature.
-func AnimalStandingLine(a game.AnimalView, c dossierview.Card) Line {
+func AnimalStandingLine(tr lang.Tr, a game.AnimalView, c dossierview.Card) Line {
 	rel := AnimalRelation(a)
-	text := AnimalKind(a)
+	text := AnimalKind(tr, a)
 	if c.Faction != "" {
-		text += " of " + c.Faction
+		text = lang.Tf(tr, "%s of %s", text, c.Faction)
 	}
-	return Line{Text: text, Tone: RelationTone(rel), Tab: TabBio, Tip: JoinTip(AnimalTip(a))}
+	return Line{Text: text, Tone: RelationTone(rel), Tab: TabBio, Tip: JoinTip(AnimalTip(tr, a))}
 }
 
 // ageText reads an age: "age 31, birthday today", "age 31 and 1 day".
-func ageText(years, dayOfYear int) string {
-	a := "age " + strconv.Itoa(years)
+func ageText(tr lang.Tr, years, dayOfYear int) string {
 	switch {
 	case dayOfYear <= 0 && years > 0:
-		return a + ", birthday today"
+		return lang.Tf(tr, "age %d, birthday today", years)
 	case dayOfYear == 1:
-		return a + " and 1 day"
+		return lang.Tf(tr, "age %d and 1 day", years)
 	case dayOfYear > 1:
-		return a + " and " + strconv.Itoa(dayOfYear) + " days"
+		return lang.Tf(tr, "age %d and %d days", years, dayOfYear)
 	}
-	return a
+	return lang.Tf(tr, "age %d", years)
 }
 
 // IdentityLine is a person's sex and age.
-func IdentityLine(p game.PawnView, b game.BioView, c dossierview.Card) Line {
-	text := joinNonEmpty(", ", capFirst(p.Sex), ageText(p.AgeYears, c.AgeDayOfYear))
+func IdentityLine(tr lang.Tr, p game.PawnView, b game.BioView, c dossierview.Card) Line {
+	text := joinNonEmpty(", ", capFirst(p.Sex), ageText(tr, p.AgeYears, c.AgeDayOfYear))
 	if p.Sex == "" {
-		text = capFirst(ageText(p.AgeYears, c.AgeDayOfYear))
+		text = capFirst(ageText(tr, p.AgeYears, c.AgeDayOfYear))
 	}
-	return Line{Text: text, Tone: RelationTone(RelationOf(p, c)), Tab: TabBio, Tip: JoinTip(BioTip(p, b, c))}
+	return Line{Text: text, Tone: RelationTone(RelationOf(p, c)), Tab: TabBio, Tip: JoinTip(BioTip(tr, p, b, c))}
 }
 
 // AnimalIdentityLine is a creature's sex, kind and age: "Female arctic fox,
 // age 1 and 12 days". The word for the kind is left out for people only.
-func AnimalIdentityLine(a game.AnimalView, c dossierview.Card) Line {
-	sex := "Male"
+func AnimalIdentityLine(tr lang.Tr, a game.AnimalView, c dossierview.Card) Line {
+	sex := tr.T("Male")
 	if a.Female {
-		sex = "Female"
+		sex = tr.T("Female")
 	}
 	years, doy := a.AgeDays/clock.DaysPerYear, a.AgeDays%clock.DaysPerYear
-	age := ageText(years, doy)
+	age := ageText(tr, years, doy)
 	if years == 0 {
-		age = "age " + strconv.Itoa(doy) + " days"
+		age = lang.Tf(tr, "age %d days", doy)
 		if doy == 1 {
-			age = "age 1 day"
+			age = tr.T("age 1 day")
 		}
 	}
-	text := sex + " " + a.Label + ", " + age
-	return Line{Text: text, Tone: RelationTone(AnimalRelation(a)), Tab: TabBio, Tip: JoinTip(AnimalTip(a))}
+	text := lang.Tf(tr, "%s %s, %s", sex, a.Label, age)
+	return Line{Text: text, Tone: RelationTone(AnimalRelation(a)), Tab: TabBio, Tip: JoinTip(AnimalTip(tr, a))}
 }
 
 // BodyLine is the worst thing wrong with a body, first match wins:
 // dead, bleeding out within a day, untended wounds, life-threatening
 // conditions, other conditions, downed, then how much health is left.
-func BodyLine(p game.PawnView, h game.HealthView) Line {
-	text, tone := bodyState(p, h)
-	return Line{Text: text, Tone: tone, Tab: TabHealth, Tip: JoinTip(HealthTip(h))}
+func BodyLine(tr lang.Tr, p game.PawnView, h game.HealthView) Line {
+	text, tone := bodyState(tr, p, h)
+	return Line{Text: text, Tone: tone, Tab: TabHealth, Tip: JoinTip(HealthTip(tr, h))}
 }
 
-func bodyState(p game.PawnView, h game.HealthView) (string, Tone) {
+func bodyState(tr lang.Tr, p game.PawnView, h game.HealthView) (string, Tone) {
 	if p.Status == "dead" || p.Embodied {
-		return "Dead", ToneCritical
+		return tr.T("Dead"), ToneCritical
 	}
 	if p.Bleeding && p.BleedDeathHours < clock.HoursPerDay {
 		if p.BleedDeathHours <= 0 {
-			return "Bleeding (death within the hour)", ToneCritical
+			return tr.T("Bleeding (death within the hour)"), ToneCritical
 		}
-		return "Bleeding (death in " + hoursText(p.BleedDeathHours) + ")", ToneCritical
+		return lang.Tf(tr, "Bleeding (death in %s)", hoursText(tr, p.BleedDeathHours)), ToneCritical
 	}
 	var due, losing, other []game.ConditionView
 	for _, cv := range h.Conditions {
@@ -218,34 +217,34 @@ func bodyState(p game.PawnView, h game.HealthView) (string, Tone) {
 	}
 	rows := len(h.Conditions) > 0
 	if len(due) > 0 || (!rows && p.Wounded) {
-		return untendedText(p, due, rows)
+		return untendedText(tr, p, due, rows)
 	}
 	if len(losing) > 0 || (!rows && p.InfectionLosing) {
 		if len(losing) == 1 {
-			return losing[0].Label + " (life-threatening)", ToneCritical
+			return lang.Tf(tr, "%s (life-threatening)", losing[0].Label), ToneCritical
 		}
 		if len(losing) == 0 {
-			return "Infection (life-threatening)", ToneCritical
+			return tr.T("Infection (life-threatening)"), ToneCritical
 		}
-		return strconv.Itoa(len(losing)) + " life-threatening conditions", ToneCritical
+		return lang.Tf(tr, "%d life-threatening conditions", len(losing)), ToneCritical
 	}
 	if len(other) > 0 || (!rows && p.Disease != "") {
-		return affectedText(p, other), ToneNeutral
+		return affectedText(tr, p, other), ToneNeutral
 	}
 	switch {
 	case p.Status == "downed":
-		return "Downed", ToneWarning
+		return tr.T("Downed"), ToneWarning
 	case p.Health < HealthCritical:
-		return "Gravely hurt", ToneCritical
+		return tr.T("Gravely hurt"), ToneCritical
 	case p.Health < HealthPoor:
-		return "Poor health", ToneWarning
+		return tr.T("Poor health"), ToneWarning
 	case p.Health > HealthGood:
-		return "Healthy", ToneGood
+		return tr.T("Healthy"), ToneGood
 	}
-	return "Stable", ToneNeutral
+	return tr.T("Stable"), ToneNeutral
 }
 
-func untendedText(p game.PawnView, due []game.ConditionView, rows bool) (string, Tone) {
+func untendedText(tr lang.Tr, p game.PawnView, due []game.ConditionView, rows bool) (string, Tone) {
 	n, nl := len(due), 0
 	for _, cv := range due {
 		if cv.Losing {
@@ -261,28 +260,28 @@ func untendedText(p game.PawnView, due []game.ConditionView, rows bool) (string,
 	var text string
 	switch {
 	case n == 1 && rows:
-		text = due[0].Label + " needs tending"
+		text = lang.Tf(tr, "%s needs tending", due[0].Label)
 	case n == 1:
-		text = "A wound needs tending"
+		text = tr.T("A wound needs tending")
 	default:
-		text = strconv.Itoa(n) + " wounds need tending"
+		text = lang.Tf(tr, "%d wounds need tending", n)
 	}
 	tone := ToneWarning
 	if nl > 0 {
 		tone = ToneCritical
 		switch {
 		case n == 1:
-			text += ", life-threatening"
+			text = lang.Tf(tr, "%s, life-threatening", text)
 		case nl == 1:
-			text += ", one life-threatening"
+			text = lang.Tf(tr, "%s, one life-threatening", text)
 		default:
-			text += ", " + strconv.Itoa(nl) + " life-threatening"
+			text = lang.Tf(tr, "%s, %d life-threatening", text, nl)
 		}
 	}
 	return text, tone
 }
 
-func affectedText(p game.PawnView, other []game.ConditionView) string {
+func affectedText(tr lang.Tr, p game.PawnView, other []game.ConditionView) string {
 	if len(other) == 0 {
 		return capFirst(p.Disease)
 	}
@@ -293,61 +292,61 @@ func affectedText(p game.PawnView, other []game.ConditionView) string {
 	case 2:
 		return other[0].Label + ", " + lowerFirst(other[1].Label)
 	}
-	return strconv.Itoa(len(other)) + " conditions"
+	return lang.Tf(tr, "%d conditions", len(other))
 }
 
 // AnimalBodyLine is BodyLine for a creature, which has only a hit-point
 // percentage and a downed flag.
-func AnimalBodyLine(a game.AnimalView) Line {
+func AnimalBodyLine(tr lang.Tr, a game.AnimalView) Line {
 	var text string
 	var tone Tone
 	switch {
 	case a.Downed:
-		text, tone = "Downed", ToneWarning
+		text, tone = tr.T("Downed"), ToneWarning
 	case a.Health < HealthCritical:
-		text, tone = "Gravely hurt", ToneCritical
+		text, tone = tr.T("Gravely hurt"), ToneCritical
 	case a.Health < HealthPoor:
-		text, tone = "Poor health", ToneWarning
+		text, tone = tr.T("Poor health"), ToneWarning
 	case a.Health > HealthGood:
-		text, tone = "Healthy", ToneGood
+		text, tone = tr.T("Healthy"), ToneGood
 	default:
-		text, tone = "Stable", ToneNeutral
+		text, tone = tr.T("Stable"), ToneNeutral
 	}
 	return Line{Text: text, Tone: tone}
 }
 
 // MindLine is the state of the mind, first match wins: stunned, staggered, a
 // break under way, a break close, inspiration, then how the mood reads.
-func MindLine(p game.PawnView, c dossierview.Card) Line {
-	text, tone := mindState(p, c)
-	return Line{Text: text, Tone: tone, Tab: TabNeeds, Tip: JoinTip(MindTip(p, c))}
+func MindLine(tr lang.Tr, p game.PawnView, c dossierview.Card) Line {
+	text, tone := mindState(tr, p, c)
+	return Line{Text: text, Tone: tone, Tab: TabNeeds, Tip: JoinTip(MindTip(tr, p, c))}
 }
 
-func mindState(p game.PawnView, c dossierview.Card) (string, Tone) {
+func mindState(tr lang.Tr, p game.PawnView, c dossierview.Card) (string, Tone) {
 	switch {
 	case c.StunTicks > 0:
-		return "Stunned for " + strconv.Itoa(secondsOf(c.StunTicks)) + " s", ToneCritical
+		return lang.Tf(tr, "Stunned for %d s", secondsOf(c.StunTicks)), ToneCritical
 	case c.StaggerTicks > 0:
-		return "Staggered for " + strconv.Itoa(secondsOf(c.StaggerTicks)) + " s", ToneWarning
+		return lang.Tf(tr, "Staggered for %d s", secondsOf(c.StaggerTicks)), ToneWarning
 	case p.Staggered:
-		return "Staggered", ToneWarning
+		return tr.T("Staggered"), ToneWarning
 	case p.MentalBreak != "":
 		tone := ToneWarning
 		if c.BreakTier == mentalbreak.Extreme {
 			tone = ToneCritical
 		}
-		return "Mental break: " + p.MentalBreak, tone
+		return lang.Tf(tr, "Mental break: %s", p.MentalBreak), tone
 	}
 	switch mentalbreak.TierAt(p.Mood, mentalbreak.Thresholds(c.BreakAt)) {
 	case mentalbreak.Extreme:
-		return "Near collapse", ToneCritical
+		return tr.T("Near collapse"), ToneCritical
 	case mentalbreak.Major:
-		return "Near a serious break", ToneWarning
+		return tr.T("Near a serious break"), ToneWarning
 	case mentalbreak.Minor:
-		return "Close to a minor break", ToneWarning
+		return tr.T("Close to a minor break"), ToneWarning
 	}
 	if p.Inspiration != "" {
-		return "Inspired: " + p.Inspiration + ", " + ticksText(p.InspirationTicks) + " left", ToneTop
+		return lang.Tf(tr, "Inspired: %s, %s left", p.Inspiration, ticksText(tr, p.InspirationTicks)), ToneTop
 	}
 	word := capFirst(mood.Label(p.Mood))
 	switch {
@@ -363,18 +362,18 @@ func mindState(p game.PawnView, c dossierview.Card) (string, Tone) {
 
 // AnimalMindLine is the mind state of a creature: stunned, staggered or
 // hunting colonists; otherwise nothing to say.
-func AnimalMindLine(a game.AnimalView, c dossierview.Card) Line {
+func AnimalMindLine(tr lang.Tr, a game.AnimalView, c dossierview.Card) Line {
 	switch {
 	case c.StunTicks > 0:
-		return Line{Text: "Stunned for " + strconv.Itoa(secondsOf(c.StunTicks)) + " s", Tone: ToneCritical}
+		return Line{Text: lang.Tf(tr, "Stunned for %d s", secondsOf(c.StunTicks)), Tone: ToneCritical}
 	case a.Stunned:
-		return Line{Text: "Stunned", Tone: ToneCritical}
+		return Line{Text: tr.T("Stunned"), Tone: ToneCritical}
 	case c.StaggerTicks > 0:
-		return Line{Text: "Staggered for " + strconv.Itoa(secondsOf(c.StaggerTicks)) + " s", Tone: ToneWarning}
+		return Line{Text: lang.Tf(tr, "Staggered for %d s", secondsOf(c.StaggerTicks)), Tone: ToneWarning}
 	case a.Staggered:
-		return Line{Text: "Staggered", Tone: ToneWarning}
+		return Line{Text: tr.T("Staggered"), Tone: ToneWarning}
 	case a.Manhunter:
-		return Line{Text: "Hunting colonists", Tone: ToneCritical}
+		return Line{Text: tr.T("Hunting colonists"), Tone: ToneCritical}
 	}
 	return Line{}
 }

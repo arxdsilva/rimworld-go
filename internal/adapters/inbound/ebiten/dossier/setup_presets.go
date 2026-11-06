@@ -117,7 +117,7 @@ func (t *Presets) Declare(r gfx.Rect) {
 
 	hs := gfx.Label
 	hs.Color = uikit.Heading
-	k.Label(left.X, left.Y, "Looks for the card", hs)
+	k.Label(left.X, left.Y, t.s.a.T("Looks for the card"), hs)
 	btnY := left.Bottom() - secBtnH
 	list := gfx.Rect{X: left.X, Y: left.Y + 24, W: left.W, H: max(40, btnY-left.Y-24-6)}
 	k.List("pre.list", list, len(t.entries), &t.sel, uikit.ListSpec{
@@ -131,12 +131,12 @@ func (t *Presets) Declare(r gfx.Rect) {
 
 	btns := gfx.Rect{X: left.X, Y: btnY, W: left.W, H: secBtnH}.Columns(2, 4)
 	e, has := t.chosen()
-	uikit.StyledButton(k, "pre.load", btns[0], "Use this look", uikit.BtnOpts{Style: uikit.BtnPrimary, Disabled: !has, Reason: "Choose a look from the list first."}, func() { t.load(e) })
-	reason := "Choose one of your own looks from the list first."
+	uikit.StyledButton(k, "pre.load", btns[0], t.s.a.T("Use this look"), uikit.BtnOpts{Style: uikit.BtnPrimary, Disabled: !has, Reason: t.s.a.T("Choose a look from the list first.")}, func() { t.load(e) })
+	reason := t.s.a.T("Choose one of your own looks from the list first.")
 	if has && e.builtIn {
-		reason = "A built-in look cannot be deleted."
+		reason = t.s.a.T("A built-in look cannot be deleted.")
 	}
-	uikit.StyledButton(k, "pre.delete", btns[1], "Delete", uikit.BtnOpts{Style: uikit.BtnDanger, Disabled: !has || e.builtIn || t.s.store == nil, Reason: reason}, func() { t.confirmDelete(e) })
+	uikit.StyledButton(k, "pre.delete", btns[1], t.s.a.T("Delete"), uikit.BtnOpts{Style: uikit.BtnDanger, Disabled: !has || e.builtIn || t.s.store == nil, Reason: reason}, func() { t.confirmDelete(e) })
 
 	t.declareRight(right, cur)
 }
@@ -151,11 +151,11 @@ func (t *Presets) chosen() (presetEntry, bool) {
 func (t *Presets) entryTip(e presetEntry) string {
 	switch {
 	case e.err != nil:
-		return e.label + "\nThis file cannot be used: " + e.err.Error()
+		return t.s.a.Tf("%s\nThis file cannot be used: %s", e.label, e.err.Error())
 	case e.builtIn:
-		return e.label + "\nA look that comes with the game."
+		return t.s.a.Tf("%s\nA look that comes with the game.", e.label)
 	}
-	return e.label + "\nOne of your own looks, kept in " + e.stem + ".json."
+	return t.s.a.Tf("%s\nOne of your own looks, kept in %s.json.", e.label, e.stem)
 }
 
 func (t *Presets) drawEntry(dst *ebiten.Image, i int, row gfx.Rect, hover, selected bool, cur string) {
@@ -169,17 +169,17 @@ func (t *Presets) drawEntry(dst *ebiten.Image, i int, row gfx.Rect, hover, selec
 	case hover:
 		uikit.FillRect(dst, row, uikit.BtnHover)
 	}
-	src := "yours"
+	src := t.s.a.T("yours")
 	if e.builtIn {
-		src = "built in"
+		src = t.s.a.T("built in")
 	}
 	st := gfx.Body
 	switch {
 	case e.err != nil:
-		st.Color, src = uikit.Danger, "cannot be read"
+		st.Color, src = uikit.Danger, t.s.a.T("cannot be read")
 	case cur != "" && e.label == cur:
 		st.Color = uikit.Accent
-		src += ", in use"
+		src = t.s.a.Tf("%s, in use", src)
 	}
 	dim := gfx.Small
 	dim.Color, dim.Align = uikit.TextDim, gfx.AlignRight
@@ -194,33 +194,33 @@ func (t *Presets) declareRight(r gfx.Rect, cur string) {
 	f := uikit.NewForm(area)
 	o := kitOwner{k}
 
-	f.SectionTitle(o, "In use")
-	words := "The card is set up by hand: no look is in use."
+	f.SectionTitle(o, t.s.a.T("In use"))
+	words := t.s.a.T("The card is set up by hand: no look is in use.")
 	if cur != "" {
-		words = "The card uses the look \"" + cur + "\". Any change to the card's sections puts it back to a hand-made one."
+		words = t.s.a.Tf("The card uses the look \"%s\". Any change to the card's sections puts it back to a hand-made one.", cur)
 	}
 	t.sectionText(f, words)
 
-	f.SectionTitle(o, "Keep the current look")
+	f.SectionTitle(o, t.s.a.T("Keep the current look"))
 	if row, ok := f.Row(30); ok {
 		k.TextField("pre.name", row.InsetXY(0, 2), &t.name, uikit.TextFieldSpec{
-			MaxLen: sheet.MaxPresetName, Placeholder: "A name for this look",
+			MaxLen: sheet.MaxPresetName, Placeholder: t.s.a.T("A name for this look"),
 			Valid: func(r rune) bool {
 				return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' || r == ' '
 			},
-			Tip: "Name\nLetters, digits, spaces, - and _. The built-in names are taken.",
+			Tip: t.s.a.T("Name\nLetters, digits, spaces, - and _. The built-in names are taken."),
 		})
 	}
 	flags := []struct {
 		id, label, tip string
 		v              *bool
 	}{
-		{"docked", "Pane sections", "The layout of the pane beside the tabs.", &t.flags.Docked},
-		{"floating", "Card sections", "The layout of the floating card.", &t.flags.Floating},
-		{"width", "How wide", "The pane's tab width and the card's width.", &t.flags.Width},
-		{"height", "How tall", "The pane's and the card's height.", &t.flags.Height},
-		{"tabs", "Tab count", "How many tabs the pane has room for.", &t.flags.Tabs},
-		{"text", "Type sizes", "The text sizes and spacing.", &t.flags.Text},
+		{"docked", t.s.a.T("Pane sections"), t.s.a.T("The layout of the pane beside the tabs."), &t.flags.Docked},
+		{"floating", t.s.a.T("Card sections"), t.s.a.T("The layout of the floating card."), &t.flags.Floating},
+		{"width", t.s.a.T("How wide"), t.s.a.T("The pane's tab width and the card's width."), &t.flags.Width},
+		{"height", t.s.a.T("How tall"), t.s.a.T("The pane's and the card's height."), &t.flags.Height},
+		{"tabs", t.s.a.T("Tab count"), t.s.a.T("How many tabs the pane has room for."), &t.flags.Tabs},
+		{"text", t.s.a.T("Type sizes"), t.s.a.T("The text sizes and spacing."), &t.flags.Text},
 	}
 	for i := 0; i < len(flags); i += 2 {
 		row, ok := f.Row(28)
@@ -228,29 +228,29 @@ func (t *Presets) declareRight(r gfx.Rect, cur string) {
 			continue
 		}
 		for j, c := range flags[i : i+2] {
-			k.Check("pre.keep."+c.id, row.Columns(2, 4)[j], c.label, c.v, uikit.CheckOpts{Tip: "Keep: " + c.label + "\n" + c.tip})
+			k.Check("pre.keep."+c.id, row.Columns(2, 4)[j], c.label, c.v, uikit.CheckOpts{Tip: t.s.a.Tf("Keep: %s\n%s", c.label, c.tip)})
 		}
 	}
 	if row, ok := f.Row(secBtnH + 6); ok {
-		uikit.StyledButton(k, "pre.save", row.InsetXY(0, 2), "Keep as a look", uikit.BtnOpts{Style: uikit.BtnPrimary, Disabled: t.saveBlock() != "", Reason: t.saveBlock()}, t.save)
+		uikit.StyledButton(k, "pre.save", row.InsetXY(0, 2), t.s.a.T("Keep as a look"), uikit.BtnOpts{Style: uikit.BtnPrimary, Disabled: t.saveBlock() != "", Reason: t.saveBlock()}, t.save)
 	}
 
 	f.Gap(6)
-	f.SectionTitle(o, "Files")
+	f.SectionTitle(o, t.s.a.T("Files"))
 	where := t.s.folder
 	if where == "" {
-		where = "(no folder in this run)"
+		where = t.s.a.T("(no folder in this run)")
 	}
-	t.sectionText(f, "Looks are kept in "+where+". Drop a file there and it shows here the next time this tab opens.")
+	t.sectionText(f, t.s.a.Tf("Looks are kept in %s. Drop a file there and it shows here the next time this tab opens.", where))
 	if t.listErr != "" {
-		t.sectionText(f, "The folder could not be read: "+t.listErr)
+		t.sectionText(f, t.s.a.Tf("The folder could not be read: %s", t.listErr))
 	}
 	if row, ok := f.Row(secBtnH + 6); ok {
 		reason := t.openErr
 		if t.s.open == nil || t.s.folder == "" {
-			reason = "This run has no folder to show."
+			reason = t.s.a.T("This run has no folder to show.")
 		}
-		uikit.StyledButton(k, "pre.folder", row.InsetXY(0, 2), "Show card files", uikit.BtnOpts{Disabled: reason != "", Reason: reason}, t.showFolder)
+		uikit.StyledButton(k, "pre.folder", row.InsetXY(0, 2), t.s.a.T("Show card files"), uikit.BtnOpts{Disabled: reason != "", Reason: reason}, t.showFolder)
 	}
 	t.contentH = f.Content()
 }
@@ -267,11 +267,11 @@ func (t *Presets) sectionText(f *uikit.Form, s string) {
 func (t *Presets) saveBlock() string {
 	switch {
 	case t.s.store == nil:
-		return "This run has nowhere to keep looks."
+		return t.s.a.T("This run has nowhere to keep looks.")
 	case sheet.ValidName(t.name) != nil:
 		return sheet.ValidName(t.name).Error() + "."
 	case t.flags == (sheet.SaveFlags{}):
-		return "Choose at least one part to keep."
+		return t.s.a.T("Choose at least one part to keep.")
 	}
 	stem, kept := sheet.Slug(t.name), 0
 	for _, e := range t.entries {
@@ -284,7 +284,7 @@ func (t *Presets) saveBlock() string {
 		}
 	}
 	if kept >= maxKept {
-		return "There is room for 100 looks; delete one first."
+		return t.s.a.T("There is room for 100 looks; delete one first.")
 	}
 	return ""
 }
@@ -301,7 +301,7 @@ func (t *Presets) save() {
 		err = t.s.store.Save(sheet.Slug(name), data)
 	}
 	if err != nil {
-		t.s.a.Hint("The look was not kept: " + err.Error())
+		t.s.a.Hint(t.s.a.Tf("The look was not kept: %s", err.Error()))
 		return
 	}
 	t.setUsing(name)
@@ -314,7 +314,7 @@ func (t *Presets) save() {
 			t.sel = i
 		}
 	}
-	t.s.a.Hint("Kept the look \"" + name + "\".")
+	t.s.a.Hint(t.s.a.Tf("Kept the look \"%s\".", name))
 }
 
 // setUsing names the look in use without touching the layouts (an Edit would
@@ -333,37 +333,37 @@ func (t *Presets) load(e presetEntry) {
 		st.HUD.Layouts, st.HUD.Preset = config.HUDLayouts{}, ""
 		t.s.pr.SetSettings(st)
 		t.s.p.Invalidate()
-		t.s.a.Hint("\"" + e.label + "\" cannot be used (" + e.err.Error() + "). The built-in card is back.")
+		t.s.a.Hint(t.s.a.Tf("\"%s\" cannot be used (%s). The built-in card is back.", e.label, e.err.Error()))
 		return
 	}
 	sheet.Apply(e.p, &st.HUD)
 	t.s.pr.SetSettings(st)
 	t.s.p.Invalidate()
-	msg := "Now using the look \"" + e.label + "\"."
+	msg := t.s.a.Tf("Now using the look \"%s\".", e.label)
 	if e.builtIn && e.label == "Standard" {
-		msg = "The standard card is back."
+		msg = t.s.a.T("The standard card is back.")
 	}
 	if sheet.IsOlder(e.p) {
-		msg += " It was made by an older game; check it over."
+		msg = t.s.a.Tf("%s It was made by an older game; check it over.", msg)
 	}
 	t.s.a.Hint(msg)
 }
 
 func (t *Presets) confirmDelete(e presetEntry) {
-	t.s.k.Confirm("pre.delete", "Delete this look?", "\""+e.label+"\" will be removed from the folder. The card keeps looking as it does now.", "Delete", true, func() {
+	t.s.k.Confirm("pre.delete", t.s.a.T("Delete this look?"), t.s.a.Tf("\"%s\" will be removed from the folder. The card keeps looking as it does now.", e.label), t.s.a.T("Delete"), true, func() {
 		if err := t.s.store.Delete(e.stem); err != nil {
-			t.s.a.Hint("Could not delete: " + err.Error())
+			t.s.a.Hint(t.s.a.Tf("Could not delete: %s", err.Error()))
 			return
 		}
 		t.sel = -1
 		t.refresh()
-		t.s.a.Hint("Deleted the look \"" + e.label + "\".")
+		t.s.a.Hint(t.s.a.Tf("Deleted the look \"%s\".", e.label))
 	})
 }
 
 func (t *Presets) showFolder() {
 	if err := t.s.open(t.s.folder); err != nil {
-		t.openErr = "The folder could not be shown: " + err.Error()
+		t.openErr = t.s.a.Tf("The folder could not be shown: %s", err.Error())
 		t.s.a.Hint(t.openErr)
 	}
 }

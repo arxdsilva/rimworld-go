@@ -196,7 +196,7 @@ func TestParseIDs(t *testing.T) {
 func TestTrainTipStartsWithTheAnimal(t *testing.T) {
 	t.Parallel()
 	a := game.AnimalView{Name: "Rex", Label: "dustbuck", Tame: true}
-	tip := TrainTip(a, game.AnimalTrainingView{Label: "Obedience", Needed: 3})
+	tip := TrainTip(en, a, game.AnimalTrainingView{Label: "Obedience", Needed: 3})
 	if len(tip) < 3 || !strings.HasPrefix(tip[0].Text, "Rex, dustbuck") {
 		t.Fatalf("tip %+v", tip)
 	}

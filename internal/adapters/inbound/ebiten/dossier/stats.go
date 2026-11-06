@@ -42,8 +42,8 @@ func (s statSheet) open() {
 	perCol := (len(rows) + 1) / 2
 	h := float32(uikit.ModalTitleH+uikit.ModalFooterH+2*uikit.ModalPad) + float32(perCol)*statRowH
 	s.p.k.Push(uikit.Modal{
-		ID: "dossier.stats", Title: name + ": stats", W: 520, H: h,
-		Buttons: []uikit.ModalButton{{ID: "dossier.stats.close", Label: "Close", Closes: true}},
+		ID: "dossier.stats", Title: s.p.a.Tf("%s: stats", name), W: 520, H: h,
+		Buttons: []uikit.ModalButton{{ID: "dossier.stats.close", Label: s.p.a.T("Close"), Closes: true}},
 		Draw: func(b gfx.Rect) {
 			s.p.k.Queue(func(dst *ebiten.Image) { s.draw(dst, b, rows, perCol) })
 		},

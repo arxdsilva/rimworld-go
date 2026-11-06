@@ -2,6 +2,7 @@ package sheet
 
 import (
 	"errors"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 	"strings"
 
@@ -262,49 +263,49 @@ func Count(n config.HUDNode) (nodes, depth int) {
 
 // Validate lists what is wrong with a stored tree. A tree with no problems
 // is safe to measure and draw.
-func Validate(n config.HUDNode) []Problem {
+func Validate(tr lang.Tr, n config.HUDNode) []Problem {
 	var out []Problem
 	if nodes, depth := Count(n); nodes > config.HUDMaxNodes || depth > config.HUDMaxDepth {
-		out = append(out, Problem{Path: "root", Text: "the tree is bigger than a card can hold"})
+		out = append(out, Problem{Path: "root", Text: tr.T("the tree is bigger than a card can hold")})
 		return out
 	}
-	validate(n, "root", &out)
+	validate(tr, n, "root", &out)
 	return out
 }
 
-func validate(n config.HUDNode, path string, out *[]Problem) {
+func validate(tr lang.Tr, n config.HUDNode, path string, out *[]Problem) {
 	bad := func(text string) { *out = append(*out, Problem{Path: path, Text: text}) }
 	switch {
 	case IsContainer(n.Kind):
 	case IsWidget(n.Kind):
 		if len(n.Kids) > 0 {
-			bad(n.Kind + " cannot hold anything")
+			bad(lang.Tf(tr, "%s cannot hold anything", n.Kind))
 		}
 	case n.Kind == "":
-		bad("an element with no name")
+		bad(tr.T("an element with no name"))
 	default:
-		bad("unknown element " + strconv.Quote(n.Kind))
+		bad(lang.Tf(tr, "unknown element %s", strconv.Quote(n.Kind)))
 	}
 	if strings.Trim(n.Who, WhoLetters) != "" || hasRepeat(n.Who) {
-		bad("targets must be some of c s p w, each once")
+		bad(tr.T("targets must be some of c s p w, each once"))
 	}
 	if NeedsDef(n.Kind) {
-		if _, ok := LookupDef(n.Kind, n.Def); !ok {
-			bad(n.Kind + " needs a known definition, not " + strconv.Quote(n.Def))
+		if _, ok := LookupDef(tr, n.Kind, n.Def); !ok {
+			bad(lang.Tf(tr, "%s needs a known definition, not %s", n.Kind, strconv.Quote(n.Def)))
 		}
 	}
 	if n.BarStyle != "" && (!IsBar(n.Kind) || !ValidBarStyle(n.BarStyle)) {
-		bad("bar style " + strconv.Quote(n.BarStyle) + " does not fit here")
+		bad(lang.Tf(tr, "bar style %s does not fit here", strconv.Quote(n.BarStyle)))
 	}
 	if n.Fill && !IsContainer(n.Kind) {
-		bad("only a column, strip or block can fill")
+		bad(tr.T("only a column, strip or block can fill"))
 	}
 	for i, k := range n.Kids {
 		kp := path + "." + strconv.Itoa(i)
 		if IsContainer(n.Kind) && !CanHold(n.Kind, k.Kind) && (IsContainer(k.Kind) || IsWidget(k.Kind)) {
-			*out = append(*out, Problem{Path: kp, Text: k.Kind + " cannot sit in a " + n.Kind})
+			*out = append(*out, Problem{Path: kp, Text: lang.Tf(tr, "%s cannot sit in a %s", k.Kind, n.Kind)})
 		}
-		validate(k, kp, out)
+		validate(tr, k, kp, out)
 	}
 }
 
@@ -373,7 +374,7 @@ func Remove(root *config.HUDNode, path []int) bool {
 func NewNode(key string) config.HUDNode {
 	n := config.HUDNode{Kind: key}
 	if NeedsDef(key) {
-		if ds := Defs(key); len(ds) > 0 {
+		if ds := Defs(lang.English{}, key); len(ds) > 0 {
 			n.Def = ds[0].Key
 		}
 	}

@@ -25,6 +25,7 @@ const (
 	tabSections
 	tabPresets
 	tabColours
+	tabCount
 )
 
 // Setup modal geometry (logical pixels).
@@ -36,8 +37,6 @@ const (
 )
 
 const setupID = "dossier.setup"
-
-var setupTabLabels = []string{"Look", "Sections", "Presets", "Colours"}
 
 // Setup is the setup modal. DOS-5 owns this file, setup_look.go and
 // setup_colours.go; DOS-6 owns the Sections and Presets tabs and reads the
@@ -101,18 +100,18 @@ func (s *Setup) Edit(f func(h *config.HUD)) {
 // Open shows the modal (the card's gear).
 func (s *Setup) Open() {
 	s.k.Push(uikit.Modal{
-		ID: setupID, Title: "Colonist card setup", W: setupW, H: setupH,
+		ID: setupID, Title: s.a.T("Colonist card setup"), W: setupW, H: setupH,
 		Draw: s.draw,
 		Buttons: []uikit.ModalButton{
-			{ID: "close", Label: "Close", Style: uikit.BtnPrimary, Closes: true},
-			{ID: "defaults", Label: "Back to defaults", Disabled: s.defaultsWhy, OnClick: s.askDefaults},
+			{ID: "close", Label: s.a.T("Close"), Style: uikit.BtnPrimary, Closes: true},
+			{ID: "defaults", Label: s.a.T("Back to defaults"), Disabled: s.defaultsWhy, OnClick: s.askDefaults},
 		},
 	})
 }
 
 // OpenAt shows the modal on a tab (0 Look, 1 Sections, 2 Presets, 3 Colours).
 func (s *Setup) OpenAt(tab int) {
-	s.tab = max(0, min(len(setupTabLabels)-1, tab))
+	s.tab = max(0, min(tabCount-1, tab))
 	s.Open()
 }
 
@@ -159,14 +158,14 @@ func (s *Setup) defaultsWhy() string {
 	if s.Changed() {
 		return ""
 	}
-	return "Nothing differs from the defaults."
+	return s.a.T("Nothing differs from the defaults.")
 }
 
 // askDefaults confirms, then puts every setting back.
 func (s *Setup) askDefaults() {
-	s.k.Confirm("dossier.setup.confirm", "Back to defaults",
-		"Every setting of the colonist card goes back to how a new game starts: the look, the layouts, the colours and the chosen preset. Presets you saved stay.",
-		"Back to defaults", true, func() {
+	s.k.Confirm("dossier.setup.confirm", s.a.T("Back to defaults"),
+		s.a.T("Every setting of the colonist card goes back to how a new game starts: the look, the layouts, the colours and the chosen preset. Presets you saved stay."),
+		s.a.T("Back to defaults"), true, func() {
 			d := s.defaults()
 			s.Edit(func(h *config.HUD) { *h = d })
 			s.col = colourTab{}
@@ -179,11 +178,11 @@ func (s *Setup) askDefaults() {
 // tab's content.
 func (s *Setup) draw(body gfx.Rect) {
 	bar := gfx.Rect{X: body.X, Y: body.Y, W: body.W, H: setupTabsH}
-	s.k.Tabs(setupID+".tabs", bar, setupTabLabels, &s.tab, uikit.TabsOpts{Tips: []string{
-		"Look\nSizes, places and text of the card.",
-		"Sections\nWhat the card shows and where.",
-		"Presets\nSave a card and load it again.",
-		"Colours\nThe card's colours.",
+	s.k.Tabs(setupID+".tabs", bar, []string{s.a.T("Look"), s.a.T("Sections"), s.a.T("Presets"), s.a.T("Colours")}, &s.tab, uikit.TabsOpts{Tips: []string{
+		s.a.T("Look\nSizes, places and text of the card."),
+		s.a.T("Sections\nWhat the card shows and where."),
+		s.a.T("Presets\nSave a card and load it again."),
+		s.a.T("Colours\nThe card's colours."),
 	}})
 	s.changedTag(bar)
 	c := gfx.Rect{X: body.X, Y: bar.Bottom() + setupTabGap, W: body.W, H: body.H - setupTabsH - setupTabGap}
@@ -204,9 +203,9 @@ func (s *Setup) draw(body gfx.Rect) {
 // changedTag says whether the settings differ from the defaults, at the right
 // of the tab strip.
 func (s *Setup) changedTag(bar gfx.Rect) {
-	text, col := "Same as the defaults", uikit.TextDim
+	text, col := s.a.T("Same as the defaults"), uikit.TextDim
 	if s.Changed() {
-		text, col = "Changed", uikit.Warning
+		text, col = s.a.T("Changed"), uikit.Warning
 	}
 	st := gfx.WithColor(gfx.Label, col)
 	st.Align = gfx.AlignRight

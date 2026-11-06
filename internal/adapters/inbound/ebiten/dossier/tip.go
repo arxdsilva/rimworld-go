@@ -104,35 +104,35 @@ func (t tipper) tipLines(it *item) []sheet.TipLine {
 		return []sheet.TipLine{{Text: it.plain}}
 	case tipBio:
 		if d.animal {
-			return sheet.AnimalTip(d.a)
+			return sheet.AnimalTip(t.p.a, d.a)
 		}
-		return sheet.BioTip(d.p, d.bio, d.card)
+		return sheet.BioTip(t.p.a, d.p, d.bio, d.card)
 	case tipHealth:
-		return sheet.HealthTip(d.health)
+		return sheet.HealthTip(t.p.a, d.health)
 	case tipMind:
-		return sheet.MindTip(d.p, d.card)
+		return sheet.MindTip(t.p.a, d.p, d.card)
 	case tipFood:
-		return sheet.FoodTip("", d.p.FoodPolicy, d.card)
+		return sheet.FoodTip(t.p.a, "", d.p.FoodPolicy, d.card)
 	case tipRest:
-		return sheet.RestTip(d.card)
+		return sheet.RestTip(t.p.a, d.card)
 	case tipFun:
-		return sheet.FunTip(d.p)
+		return sheet.FunTip(t.p.a, d.p)
 	case tipTraits:
-		return sheet.TraitsTip(d.bio)
+		return sheet.TraitsTip(t.p.a, d.bio)
 	case tipActivity:
-		return sheet.ActivityTip(d.card)
+		return sheet.ActivityTip(t.p.a, d.card)
 	case tipSkill:
 		if it.arg < len(d.bio.Skills) {
 			s := d.bio.Skills[it.arg]
 			weapon := ""
 			if s.Key == "melee" {
-				weapon = sheet.WeaponLine(d.p)
+				weapon = sheet.WeaponLine(t.p.a, d.p)
 			}
-			return sheet.SkillTip(s, d.card, weapon)
+			return sheet.SkillTip(t.p.a, s, d.card, weapon)
 		}
 	case tipTrain:
 		if it.arg < len(d.a.Training) {
-			return sheet.TrainTip(d.a, d.a.Training[it.arg])
+			return sheet.TrainTip(t.p.a, d.a, d.a.Training[it.arg])
 		}
 	}
 	return nil

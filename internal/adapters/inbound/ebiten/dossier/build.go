@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/platform/config"
@@ -101,35 +102,35 @@ func (b *builder) pawnWidget(n config.HUDNode, w float32) (item, bool) {
 		it.text = fit(pv.Name, it.st, w)
 		return it, pv.Name != ""
 	case "standing":
-		return b.text(sheet.StandingLine(pv, d.bio, c), b.body, tipBio, w)
+		return b.text(sheet.StandingLine(b.p.a, pv, d.bio, c), b.body, tipBio, w)
 	case "identity":
-		return b.text(sheet.IdentityLine(pv, d.bio, c), b.body, tipBio, w)
+		return b.text(sheet.IdentityLine(b.p.a, pv, d.bio, c), b.body, tipBio, w)
 	case "body_state":
-		return b.text(sheet.BodyLine(pv, d.health), b.body, tipHealth, w)
+		return b.text(sheet.BodyLine(b.p.a, pv, d.health), b.body, tipHealth, w)
 	case "mind_state":
-		return b.text(sheet.MindLine(pv, c), b.body, tipMind, w)
+		return b.text(sheet.MindLine(b.p.a, pv, c), b.body, tipMind, w)
 	case "doing":
-		return b.text(sheet.ActivityLine(pv, c), b.bold(), tipActivity, w)
+		return b.text(sheet.ActivityLine(b.p.a, pv, c), b.bold(), tipActivity, w)
 	case "next_up":
-		return b.text(sheet.QueuedLine(pv), b.body, tipNone, w)
+		return b.text(sheet.QueuedLine(b.p.a, pv), b.body, tipNone, w)
 	case "in_hand":
-		return b.text(sheet.EquippedLine(pv), b.body, tipNone, w)
+		return b.text(sheet.EquippedLine(b.p.a, pv), b.body, tipNone, w)
 	case "hauling":
-		return b.text(sheet.CarryingLine(pv), b.body, tipNone, w)
+		return b.text(sheet.CarryingLine(b.p.a, pv), b.body, tipNone, w)
 	case "traits":
-		return b.text(sheet.TraitsLine(d.bio), b.body, tipTraits, w)
+		return b.text(sheet.TraitsLine(b.p.a, d.bio), b.body, tipTraits, w)
 	case "captive":
-		return b.text(sheet.CaptiveLine(pv, d.pris, c), b.body, tipNone, w)
+		return b.text(sheet.CaptiveLine(b.p.a, pv, d.pris, c), b.body, tipNone, w)
 	case "tally":
-		return b.text(sheet.TallyLine(pv, n.Def), b.body, tipNone, w)
+		return b.text(sheet.TallyLine(b.p.a, pv, n.Def), b.body, tipNone, w)
 	case "stat":
 		return b.text(sheet.StatLine(c, n.Def, b.dec), b.body, tipNone, w)
 	case "notes":
 		return b.text(b.pawnNotes(), b.body, tipNone, w)
 	case "vigour_bar":
-		return b.bar("Health", pv.Health, n, w, tipHealth, sheet.TabHealth), true
+		return b.bar(b.p.a.T("Health"), pv.Health, n, w, tipHealth, sheet.TabHealth), true
 	case "mood_bar":
-		it := b.bar("Mood", pv.Mood, n, w, tipMind, sheet.TabNeeds)
+		it := b.bar(b.p.a.T("Mood"), pv.Mood, n, w, tipMind, sheet.TabNeeds)
 		at := [3]int{c.BreakAt.Minor, c.BreakAt.Major, c.BreakAt.Extreme}
 		for _, v := range at {
 			if v > 0 && v < 100 {
@@ -139,13 +140,13 @@ func (b *builder) pawnWidget(n config.HUDNode, w float32) (item, bool) {
 		}
 		return it, true
 	case "hunger_bar":
-		return b.bar("Food", pv.Hunger, n, w, tipFood, sheet.TabNeeds), true
+		return b.bar(b.p.a.T("Food"), pv.Hunger, n, w, tipFood, sheet.TabNeeds), true
 	case "rest_bar":
-		return b.bar("Rest", pv.Rest, n, w, tipRest, sheet.TabNeeds), true
+		return b.bar(b.p.a.T("Rest"), pv.Rest, n, w, tipRest, sheet.TabNeeds), true
 	case "fun_bar":
-		return b.bar("Recreation", pv.Recreation, n, w, tipFun, sheet.TabNeeds), true
+		return b.bar(b.p.a.T("Recreation"), pv.Recreation, n, w, tipFun, sheet.TabNeeds), true
 	case "need_bar":
-		label, pct, ok := sheet.NeedValue(pv, n.Def)
+		label, pct, ok := sheet.NeedValue(b.p.a, pv, n.Def)
 		if !ok {
 			return item{}, false
 		}
@@ -188,17 +189,17 @@ func (b *builder) animalWidget(n config.HUDNode, w float32) (item, bool) {
 		it.text = fit(name, it.st, w)
 		return it, name != ""
 	case "standing":
-		return b.text(sheet.AnimalStandingLine(av, c), b.body, tipBio, w)
+		return b.text(sheet.AnimalStandingLine(b.p.a, av, c), b.body, tipBio, w)
 	case "identity":
-		return b.text(sheet.AnimalIdentityLine(av, c), b.body, tipBio, w)
+		return b.text(sheet.AnimalIdentityLine(b.p.a, av, c), b.body, tipBio, w)
 	case "body_state":
-		return b.text(sheet.AnimalBodyLine(av), b.body, tipBio, w)
+		return b.text(sheet.AnimalBodyLine(b.p.a, av), b.body, tipBio, w)
 	case "mind_state":
-		return b.text(sheet.AnimalMindLine(av, c), b.body, tipNone, w)
+		return b.text(sheet.AnimalMindLine(b.p.a, av, c), b.body, tipNone, w)
 	case "doing":
-		return b.text(sheet.AnimalActivityLine(av, c), b.bold(), tipActivity, w)
+		return b.text(sheet.AnimalActivityLine(b.p.a, av, c), b.bold(), tipActivity, w)
 	case "keeper":
-		l := sheet.KeeperLine(av)
+		l := sheet.KeeperLine(b.p.a, av)
 		if l.Tab == "" && av.Tame {
 			l.Tab = sheet.TabTraining
 		}
@@ -208,11 +209,11 @@ func (b *builder) animalWidget(n config.HUDNode, w float32) (item, bool) {
 	case "notes":
 		return b.text(b.animalNotes(), b.body, tipNone, w)
 	case "vigour_bar":
-		return b.bar("Health", av.Health, n, w, tipBio, ""), true
+		return b.bar(b.p.a.T("Health"), av.Health, n, w, tipBio, ""), true
 	case "hunger_bar":
-		return b.bar("Food", av.Food, n, w, tipBio, ""), true
+		return b.bar(b.p.a.T("Food"), av.Food, n, w, tipBio, ""), true
 	case "rest_bar":
-		return b.bar("Rest", av.Rest, n, w, tipBio, ""), true
+		return b.bar(b.p.a.T("Rest"), av.Rest, n, w, tipBio, ""), true
 	case "train":
 		return b.train(n.Def, w)
 	case "diet_pick":
@@ -265,7 +266,7 @@ func (b *builder) skill(def string, w float32) (item, bool) {
 		if s.Key != def {
 			continue
 		}
-		cell := sheet.SkillCell(s, d.card, b.dec)
+		cell := sheet.SkillCell(b.p.a, s, d.card, b.dec)
 		key := sheet.SkillStateOf(s, d.card).Key()
 		it := b.cell(cell, key, w)
 		it.tip, it.arg, it.tab = tipSkill, i, sheet.TabBio
@@ -294,7 +295,7 @@ func (b *builder) train(def string, w float32) (item, bool) {
 		if t.Skill != int(sk) {
 			continue
 		}
-		cell := sheet.TrainCell(t)
+		cell := sheet.TrainCell(b.p.a, t)
 		if cell.Label == "" {
 			return item{}, false
 		}
@@ -340,9 +341,9 @@ func (b *builder) areaPick(w float32) item {
 	back = sheet.Lerp(b.col("picker_back"), back, 0.5)
 	if name == "" {
 		back = b.col("picker_back")
-		name = "Unrestricted"
+		name = b.p.a.T("Unrestricted")
 	}
-	return b.pick("Area: "+name, actArea, back, w)
+	return b.pick(b.p.a.Tf("Area: %s", name), actArea, back, w)
 }
 
 func (b *builder) hourPick(w float32) item {
@@ -356,7 +357,7 @@ func (b *builder) hourPick(w float32) item {
 	case schedule.Sleep:
 		back = sheet.Lerp(back, b.col("side_ally"), 0.35)
 	}
-	return b.pick("Hour "+strconv.Itoa(b.p.sc.Hour())+": "+act.String(), actHour, back, w)
+	return b.pick(b.p.a.Tf("Hour %d: %s", b.p.sc.Hour(), act.String()), actHour, back, w)
 }
 
 // areaLook is an area ref's name ("" unrestricted) and colour.
@@ -365,55 +366,55 @@ func (p *Panel) areaLook(ref int) (string, color.RGBA) {
 	case ref == 0 || ref == -1:
 		return "", color.RGBA{}
 	case ref == -2:
-		return "Home", p.pal["picker_back"]
+		return p.a.T("Home"), p.pal["picker_back"]
 	}
 	for _, a := range p.r.Areas() {
 		if int(a.ID) == ref {
 			return a.Name, color.RGBA{R: a.Color[0], G: a.Color[1], B: a.Color[2], A: 0xFF}
 		}
 	}
-	return "Area", p.pal["picker_back"]
+	return p.a.T("Area"), p.pal["picker_back"]
 }
 
 // pawnNotes are the short status notes of a person.
 func (b *builder) pawnNotes() sheet.Line {
-	pv := b.p.d.p
+	pv, tr := b.p.d.p, b.p.a
 	var parts []string
 	if pv.Drafted {
-		parts = append(parts, "drafted")
+		parts = append(parts, tr.T("drafted"))
 	}
 	if pv.Infection > 0 {
-		parts = append(parts, "infected "+strconv.Itoa(pv.Infection)+"%")
+		parts = append(parts, lang.Tf(tr, "infected %d%%", pv.Infection))
 	}
 	if pv.Malnutrition > 0 {
-		parts = append(parts, "malnourished")
+		parts = append(parts, tr.T("malnourished"))
 	}
 	if pv.ToxicBuildup > 0 {
-		parts = append(parts, "toxic buildup "+strconv.Itoa(pv.ToxicBuildup)+"%")
+		parts = append(parts, lang.Tf(tr, "toxic buildup %d%%", pv.ToxicBuildup))
 	}
 	if pv.Frostbite > 0 {
-		parts = append(parts, "frostbite")
+		parts = append(parts, tr.T("frostbite"))
 	}
 	return notes(parts)
 }
 
 func (b *builder) animalNotes() sheet.Line {
-	av := b.p.d.a
+	av, tr := b.p.d.a, b.p.a
 	var parts []string
 	if av.Pregnant {
-		parts = append(parts, "pregnant")
+		parts = append(parts, tr.T("pregnant"))
 	}
 	if av.Hunts && av.Tame {
-		parts = append(parts, "hunts when hungry")
+		parts = append(parts, tr.T("hunts when hungry"))
 	}
 	if av.Hypothermia > 0 {
-		parts = append(parts, "chilled")
+		parts = append(parts, tr.T("chilled"))
 	}
 	if av.Heatstroke > 0 {
-		parts = append(parts, "overheated")
+		parts = append(parts, tr.T("overheated"))
 	}
 	if av.ToxicBuildup > 0 {
-		parts = append(parts, "toxic buildup "+strconv.Itoa(av.ToxicBuildup)+"%")
+		parts = append(parts, lang.Tf(tr, "toxic buildup %d%%", av.ToxicBuildup))
 	}
 	return notes(parts)
 }
@@ -433,5 +434,5 @@ func (p *Panel) warnUnknown(key string) {
 		return
 	}
 	p.warned[key] = true
-	p.a.Hint("The card layout has an element it does not know: " + key)
+	p.a.Hint(p.a.Tf("The card layout has an element it does not know: %s", key))
 }

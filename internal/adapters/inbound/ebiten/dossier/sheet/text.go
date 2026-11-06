@@ -6,6 +6,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/domain/sim/clock"
 )
 
@@ -28,27 +29,27 @@ func lowerFirst(s string) string {
 }
 
 // hoursText reads whole hours as "3h" or "2d 3h".
-func hoursText(h int) string {
+func hoursText(tr lang.Tr, h int) string {
 	if h < 0 {
 		h = 0
 	}
 	if h < clock.HoursPerDay {
-		return strconv.Itoa(h) + "h"
+		return lang.Tf(tr, "%dh", h)
 	}
 	d, r := h/clock.HoursPerDay, h%clock.HoursPerDay
 	if r == 0 {
-		return strconv.Itoa(d) + "d"
+		return lang.Tf(tr, "%dd", d)
 	}
-	return strconv.Itoa(d) + "d " + strconv.Itoa(r) + "h"
+	return lang.Tf(tr, "%dd %dh", d, r)
 }
 
 // ticksText reads a span of ticks as hours ("under 1h", "5h", "1d 2h").
-func ticksText(t uint64) string {
+func ticksText(tr lang.Tr, t uint64) string {
 	h := int(t / clock.TicksPerHour)
 	if h < 1 {
-		return "under 1h"
+		return tr.T("under 1h")
 	}
-	return hoursText(h)
+	return hoursText(tr, h)
 }
 
 // secondsOf is a tick span rounded up to whole seconds.

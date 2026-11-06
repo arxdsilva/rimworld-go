@@ -131,7 +131,7 @@ func TestHeightsShareFill(t *testing.T) {
 func TestValidate(t *testing.T) {
 	t.Parallel()
 	good := box(KindColumn, box(KindBlock, box(KindLine, generic("skill", "melee"))), widget("doing"))
-	if ps := Validate(good); len(ps) != 0 {
+	if ps := Validate(en, good); len(ps) != 0 {
 		t.Fatalf("good tree: %v", ps)
 	}
 	bad := []struct {
@@ -152,28 +152,28 @@ func TestValidate(t *testing.T) {
 		{"fill on a widget", box(KindColumn, config.HUDNode{Kind: "doing", Fill: true})},
 	}
 	for _, c := range bad {
-		if len(Validate(c.n)) == 0 {
+		if len(Validate(en, c.n)) == 0 {
 			t.Errorf("%s: no problem reported", c.name)
 		}
 	}
-	if len(Validate(box(KindColumn, config.HUDNode{Kind: "mood_bar", BarStyle: BarFadeDown}))) != 0 {
+	if len(Validate(en, box(KindColumn, config.HUDNode{Kind: "mood_bar", BarStyle: BarFadeDown}))) != 0 {
 		t.Error("a bar style on a bar is fine")
 	}
 	deep := widget("doing")
 	for i := 0; i < config.HUDMaxDepth+1; i++ {
 		deep = box(KindColumn, deep)
 	}
-	if len(Validate(deep)) == 0 {
+	if len(Validate(en, deep)) == 0 {
 		t.Error("too deep")
 	}
 	wide := box(KindColumn)
 	for i := 0; i < config.HUDMaxNodes; i++ {
 		wide.Kids = append(wide.Kids, widget("rule"))
 	}
-	if len(Validate(wide)) == 0 {
+	if len(Validate(en, wide)) == 0 {
 		t.Error("too many nodes")
 	}
-	if ps := Validate(box(KindColumn, widget("zz"))); ps[0].Path != "root.0" {
+	if ps := Validate(en, box(KindColumn, widget("zz"))); ps[0].Path != "root.0" {
 		t.Errorf("path: %q", ps[0].Path)
 	}
 }
@@ -211,8 +211,8 @@ func TestEditing(t *testing.T) {
 	if err != nil || root.Kids[0].Kind != "skill" || root.Kids[0].Def != "shooting" || len(np) != 1 {
 		t.Fatalf("a new skill gets the first skill: %+v %v", root.Kids[0], err)
 	}
-	if len(Validate(root)) != 0 {
-		t.Fatalf("edited tree: %v", Validate(root))
+	if len(Validate(en, root)) != 0 {
+		t.Fatalf("edited tree: %v", Validate(en, root))
 	}
 }
 

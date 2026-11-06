@@ -91,7 +91,7 @@ func TestBarColorStyles(t *testing.T) {
 		}
 	}
 	for _, s := range BarStyles() {
-		if !ValidBarStyle(s) || BarStyleLabel(s) == "" {
+		if !ValidBarStyle(s) || BarStyleLabel(en, s) == "" {
 			t.Errorf("style %s", s)
 		}
 	}

@@ -182,6 +182,11 @@ func (h dossierHost) AreaPicker(title string, cur int, base bool, pick func(ref 
 // Hint shows why a click did nothing.
 func (h dossierHost) Hint(s string) { h.a.hint = s }
 
+// T and Tf are the language catalog.
+func (h dossierHost) T(src string) string { return h.a.shell.T(src) }
+
+func (h dossierHost) Tf(src string, args ...any) string { return h.a.shell.Tf(src, args...) }
+
 // ---- dossier.Prefs
 
 // Settings are the player's settings.

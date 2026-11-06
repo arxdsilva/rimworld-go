@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -47,7 +48,7 @@ func (p *Panel) tree(hud config.HUD, docked bool) config.HUDNode {
 	}
 	if hud.Layouts.Dropped && !p.warned[droppedLayoutKey] {
 		p.warned[droppedLayoutKey] = true
-		p.a.Hint("A saved card layout was too big to use, so the built-in one is back.")
+		p.a.Hint(p.a.T("A saved card layout was too big to use, so the built-in one is back."))
 	}
 	return sheet.Prune(root, p.d.who)
 }
@@ -74,22 +75,23 @@ func (p *Panel) warnTooTall(docked bool) {
 	}
 	p.warned[key] = true
 	if docked {
-		p.a.Hint("The card's layout doesn't fit the pane, so its last rows are hidden. Use the floating card or reset the card to default.")
+		p.a.Hint(p.a.T("The card's layout doesn't fit the pane, so its last rows are hidden. Use the floating card or reset the card to default."))
 		return
 	}
-	p.a.Hint("The card's layout doesn't fit the card, so its last rows are hidden. Make the card taller or reset it to default.")
+	p.a.Hint(p.a.T("The card's layout doesn't fit the card, so its last rows are hidden. Make the card taller or reset it to default."))
 }
 
 // warnBadLayout says once what is wrong with a stored tree (RHUD-057). The card
 // still draws it: what it can't read shows as a marker. An unknown element has
 // its own warning, warnUnknown, with its name.
 func (p *Panel) warnBadLayout(root config.HUDNode) {
-	for _, bad := range sheet.Validate(root) {
+	shown := sheet.Validate(p.a, root)
+	for i, bad := range sheet.Validate(lang.English{}, root) {
 		if strings.HasPrefix(bad.Text, "unknown element") || p.warned[bad.Text] {
 			continue
 		}
 		p.warned[bad.Text] = true
-		p.a.Hint("The saved card layout has a problem: " + bad.Text + ". The Sections tab or Back to defaults can fix it.")
+		p.a.Hint(p.a.Tf("The saved card layout has a problem: %s. The Sections tab or Back to defaults can fix it.", shown[i].Text))
 		return
 	}
 }

@@ -1,6 +1,7 @@
 package dossier
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/dossierview"
 	"rimworld-go/internal/domain/sim/command"
@@ -22,8 +23,10 @@ type Reader interface {
 	Areas() []game.AreaView
 }
 
-// Actions is what the card does.
+// Actions is what the card does. It carries the language catalog (ports.Texts)
+// the card and its setup modal write their words with.
 type Actions interface {
+	ports.Texts
 	Enqueue(command.Command)
 	OpenTab(name string)
 	ShowWindow(tab string)

@@ -24,7 +24,7 @@ func TestBuiltInsAreSoundAndNamed(t *testing.T) {
 			t.Errorf("%d: %q", i, p.Name)
 		}
 		for _, n := range []*config.HUDNode{p.Docked, p.Floating} {
-			if n == nil || len(Validate(*n)) != 0 {
+			if n == nil || len(Validate(en, *n)) != 0 {
 				t.Errorf("%s: bad tree", p.Name)
 			}
 		}
@@ -235,7 +235,7 @@ func FuzzPresetDecode(f *testing.F) {
 			if n == nil {
 				continue
 			}
-			if ps := Validate(*n); len(ps) != 0 {
+			if ps := Validate(en, *n); len(ps) != 0 {
 				t.Fatalf("accepted a tree with problems: %v", ps)
 			}
 			// pruning and measuring any accepted tree must be safe
