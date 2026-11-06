@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/platform/config"
 )
 
 func TestThreatPausesOnlyForNewDanger(t *testing.T) {
@@ -26,7 +27,7 @@ func TestThreatPausesOnlyForNewDanger(t *testing.T) {
 	if r.speed != speedNormal || r.speedRate() == "paused (threat)" {
 		t.Fatal("the same threat pauses once")
 	}
-	r.pauseOnThreat = false
+	r.smooth.Prefs.Mode = config.AutoPauseNever
 	w.Messages = append(w.Messages, game.MessageView{Tick: 20, Text: "wolves", Danger: true})
 	r.watchThreats(w)
 	if r.speed == speedPaused {

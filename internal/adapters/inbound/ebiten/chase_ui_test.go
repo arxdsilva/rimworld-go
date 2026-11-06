@@ -16,6 +16,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/config"
 )
 
 // PLAY-017 §11: an animal chasing a colonist is shown, not just announced.
@@ -422,7 +423,7 @@ func TestWatchThreatsShowsAnOffScreenChase(t *testing.T) {
 
 	// option off: no pause, no camera move
 	r, w = chaseCamera(52, 50, 50, 50)
-	r.pauseOnThreat = false
+	r.smooth.Prefs.Mode = config.AutoPauseNever
 	r.watchThreats(quiet)
 	before = r.cam
 	r.watchThreats(w)

@@ -20,6 +20,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/platform/config"
+
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
 	"rimworld-go/internal/application/game"
@@ -152,10 +154,9 @@ type Renderer struct {
 
 	selectClr color.RGBA
 
-	// threats: pause when one arrives (option), remembering the newest
-	// danger message already handled.
-	pauseOnThreat bool
-	threatPaused  bool
+	// threatPaused: the game paused itself for a threat (the HUD says so);
+	// the auto-pause mode is smooth.Prefs.Mode.
+	threatPaused bool
 
 	// Options (settings.go syncRenderer): particle and weather detail
 	// multiplier, edge-of-screen panning, and a capped lightning flash.
@@ -186,13 +187,13 @@ func New(sim Simulation) *Renderer {
 		vc.SetViewCache(true)
 	}
 	r := &Renderer{
-		game:          sim,
-		viewCached:    cached,
-		speed:         speedNormal,
-		pauseOnThreat: true,
-		fx:            1,
-		selectClr:     color.RGBA{R: 250, G: 220, B: 60, A: 255},
+		game:       sim,
+		viewCached: cached,
+		speed:      speedNormal,
+		fx:         1,
+		selectClr:  color.RGBA{R: 250, G: 220, B: 60, A: 255},
 	}
+	r.smooth.Prefs.Mode = config.AutoPauseThreat
 	var id game.MapID
 	if sim != nil {
 		id = sim.ViewedMap()
@@ -290,15 +291,22 @@ func (r *Renderer) syncPawns() {
 func (r *Renderer) togglePause() {
 	if r.speed == speedPaused {
 		r.speed = speedNormal
+		if p := &r.smooth.Prefs; p.UnpauseLast && p.LastSpeed > int(speedPaused) { // OPT-020
+			r.speed = speed(p.LastSpeed)
+		}
 		r.cueBus().Global("ui.resume")
 		return
 	}
+	r.smooth.Prefs.LastSpeed = int(r.speed)
 	r.speed = speedPaused
 	r.cueBus().Global("ui.pause")
 }
 
 // setSpeed picks a speed tier.
 func (r *Renderer) setSpeed(s speed) {
+	if s == speedPaused && r.speed != speedPaused {
+		r.smooth.Prefs.LastSpeed = int(r.speed)
+	}
 	r.speed = s
 	r.cueBus().Global("ui.speed")
 }
@@ -329,8 +337,10 @@ type camInput struct {
 // fastPanBoost is the pan speed multiplier while Shift is held.
 const fastPanBoost = 2.5
 
-// applyCamera pans and zooms by one frame of intent, then clamps.
-func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) {
+// applyCamera pans and zooms by one frame of intent, then clamps. It reports
+// a zoom-out notch at the zoom-out floor, which opens the world when the
+// player asked for that (OPT-024).
+func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) (toWorld bool) {
 	// The held direction is this Update's: clear the last one first, then
 	// push what is held now. It stays set through every Draw until the next
 	// Update (stepCamera steps with it), so a released key stops the push
@@ -342,6 +352,8 @@ func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) {
 	}
 	r.smooth.PushPan(in.dx, in.dy)
 	cx, cy := (v.X0+v.X1)/2, (v.Y0+v.Y1)/2
+	pf := &r.smooth.Prefs
+	toWorld = pf.WorldOut && camerapkgpkg.WantsWorld(r.cam.Zoom, r.MinZoomFor(v), r.smooth.Zooming, in.zoom < 0 || in.wheel < 0)
 	for ; in.zoom > 0; in.zoom-- {
 		r.smooth.ZoomAt(1+zoomStep, cx, cy)
 	}
@@ -349,17 +361,20 @@ func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) {
 		r.smooth.ZoomAt(1/(1+zoomStep), cx, cy)
 	}
 	if in.wheel != 0 {
-		r.smooth.ZoomAt(math.Pow(1+zoomStep, in.wheel), in.wx, in.wy)
+		ax, ay := camerapkgpkg.ZoomAnchor(!pf.CenterZoom, in.wx, in.wy, v) // OPT-021
+		r.smooth.ZoomAt(math.Pow(1+zoomStep, in.wheel), ax, ay)
 	}
 	if in.dragX != 0 || in.dragY != 0 { // the map follows the hand
-		r.cam.OffsetX -= in.dragX
-		r.cam.OffsetY -= in.dragY
+		k := camerapkgpkg.DragScale(pf.Drag) // OPT-023
+		r.cam.OffsetX -= in.dragX * k
+		r.cam.OffsetY -= in.dragY * k
 		r.smooth.Vx, r.smooth.Vy = 0, 0
 	}
 	r.ClampCamera(v)      // first-call centring and min-zoom guard
 	if r.smooth.Instant { // Reduced Motion: no easing, the whole step lands here; live play steps per Draw (stepCamera)
 		r.smooth.Step(1/float64(ebiten.TPS()), &r.cam, r.CamLimits(v))
 	}
+	return toWorld
 }
 
 // SyncDev adopts the screen's density (camera.Camera.SyncDev).
@@ -388,6 +403,7 @@ const camMaxDt = 0.1
 // so panning and zoom run at the display rate rather than at 60 TPS. Input
 // mapping in Update sees the previous Draw's camera: one frame of lag.
 func (r *Renderer) stepCamera(dt float64, v camerapkgpkg.Viewport) {
+	fxStep(r, dt)
 	if r.smooth.Instant || r.smooth.Idle() {
 		return
 	}

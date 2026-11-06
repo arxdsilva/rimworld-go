@@ -400,6 +400,9 @@ func (a *App) applySettings() {
 	if a.cfg.Window != nil {
 		a.cfg.Window(a.settings.Graphics.Fullscreen, a.settings.Graphics.VSync)
 	}
+	if a.cfg.Display != nil { // OPT-029: window size preset, borderless
+		a.cfg.Display(a.settings.Camera.Window, a.settings.Camera.Borderless)
+	}
 	a.syncRenderer()
 	a.cfg.Sound.SetVolumes(a.settings.Audio)
 }
@@ -411,7 +414,7 @@ func (a *App) syncRenderer() {
 		return
 	}
 	s := a.settings
-	r.pauseOnThreat = s.Gameplay.PauseOnThreat
+	started := r.smooth.Prefs.Started
 	r.fx = s.Graphics.FX()
 	applyGraphicsKnobs(r, s.Graphics)
 	r.edgeScroll = s.Gameplay.EdgeScroll && a.cfg.Capture == nil
@@ -421,6 +424,18 @@ func (a *App) syncRenderer() {
 	r.view.Prefs = render.Prefs{AnimalNames: s.Interface.AnimalNames, FarPawns: s.Interface.FarPawns, FarStyle: s.Interface.FarStyle,
 		PlantSway: s.Camera.PlantSway, HatsOnlyOnMap: s.Interface.HatsOnlyOnMap}
 	r.smooth.Instant = s.Accessibility.ReducedMotion // no eased pan or zoom
+	still := s.Accessibility.ReducedMotion || a.cfg.Capture != nil
+	pf := &r.smooth.Prefs
+	pf.CenterZoom, pf.Glide, pf.Drag = !s.Camera.ZoomToMouse, s.Camera.SmoothJumps && !still, s.Camera.DragPct
+	pf.WorldOut, pf.Shake, pf.Mode = s.Camera.ZoomOutToWorld, shakeStrength(s.Camera.ShakePct, still), s.General.AutoPause
+	pf.UnpauseLast, pf.Started = s.Interface.UnpauseSpeed == config.UnpauseLast, true
+	if still {
+		r.smooth.Fx.Clear()
+	}
+	if !started && s.General.PauseOnLoad && a.cfg.Capture == nil && r.game.Tick() > 0 { // OPT-004: a loaded game waits for the player
+		r.smooth.Prefs.LastSpeed = int(r.speed)
+		r.speed = speedPaused
+	}
 	r.overlays().TempDraw.Units = units.FromUnit(s.Gameplay.TempUnit)
 	if !s.Gameplay.DevMode && r.speed == speedUltra {
 		r.speed = speedVeryFast // ultrafast is a developer tier
@@ -436,4 +451,13 @@ func applyGraphicsKnobs(r *Renderer, g config.Graphics) {
 	r.lit.Off = !g.Lighting
 	r.water.Simple = g.Water == config.WaterSimple
 	r.pipe().LOD.Grass.Level = g.Grass
+}
+
+// shakeStrength is the shake multiplier for a percentage; reduced motion and
+// captures get none.
+func shakeStrength(pct int, still bool) float64 {
+	if still || pct <= 0 {
+		return 0
+	}
+	return float64(pct) / 100
 }

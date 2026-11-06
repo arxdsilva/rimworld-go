@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	"math"
+
+	camerapkgpkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
@@ -147,5 +150,39 @@ func (h overlayHost) flash(tick uint64) {
 	r := h.r
 	e := &r.env.Layer
 	e.FlashBucket, e.FlashAt, e.FlashSeen = tick/env.LightningBucket, r.present, true
+	r.smooth.Shake(lightningShake * camerapkgpkg.ScreenDev()) // OPT-027
 	r.cueBus().ThunderAt = r.present + cue.ThunderDelay(tick)
+}
+
+// Screen shake (OPT-027) and the glide of a camera jump (OPT-022) are the
+// camera's presentation offset (camera.Fx): fxStep runs it on the wall clock
+// once per Draw, fxBegin adds it to the camera for the frame's draws and
+// fxEnd takes it off, so selection, hit tests and saves see the real camera.
+const (
+	lightningShake = 7.0 // px at 100 %
+	blastShake     = 5.0 // px at 100 %, plus blastShakeR per tile of radius
+	blastShakeR    = 3.0
+	jumpTiles      = 6 // a camera move of more tiles than this in a frame is a jump
+)
+
+func fxStep(r *Renderer, dt float64) {
+	fx := &r.smooth.Fx
+	if r.reducedMotion {
+		fx.Clear()
+		return
+	}
+	fx.Step(math.Max(0, math.Min(dt, camMaxDt)))
+	fx.Observe(r.cam.OffsetX, r.cam.OffsetY, r.cam.Zoom, jumpTiles*r.cam.Tile(), r.smooth.Prefs.Glide)
+}
+
+func fxBegin(r *Renderer) {
+	if r != nil && r.smooth.Fx.Active() {
+		r.smooth.Fx.Apply(&r.cam.OffsetX, &r.cam.OffsetY)
+	}
+}
+
+func fxEnd(r *Renderer) {
+	if r != nil {
+		r.smooth.Fx.Restore(&r.cam.OffsetX, &r.cam.OffsetY)
+	}
 }

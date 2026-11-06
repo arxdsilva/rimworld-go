@@ -109,6 +109,9 @@ type AppConfig struct {
 	Settings options.Hooks
 	// Window applies fullscreen and VSync (nil: leave the window alone).
 	Window func(fullscreen, vsync bool)
+	// Display applies the window size preset (a config.WindowSizes entry,
+	// "" free) and borderless fullscreen (OPT-029; nil: leave it alone).
+	Display func(size string, borderless bool)
 	// Sound plays the client's audio (nil: silent).
 	Sound Sound
 	// Hardware reads the machine's memory and cores (PLAY-019): the first
@@ -910,7 +913,9 @@ func (a *App) Update() error {
 		a.handleColonyKeys() // hotkeys.go
 		a.renderer.wheelTaken = a.insp.Pawn().HandleLogWheel()
 		if a.cfg.Capture == nil && !a.world.Open() { // captures frame the camera themselves; the world view's camera is the globe's
-			a.renderer.applyCamera(a.mapViewport(), a.cameraInput(a.mapViewport())) // physical (camera.go)
+			if a.renderer.applyCamera(a.mapViewport(), a.cameraInput(a.mapViewport())) { // physical (camera.go)
+				a.world.Show("") // OPT-024: zooming out past the floor shows the world
+			}
 		}
 		a.win.Schedule().Drag()
 		a.win.Work().Drag()
@@ -995,12 +1000,14 @@ func (a *App) Draw(screen *ebiten.Image) {
 				a.beginWorldPass(dst)
 			}
 			gfx.SetPass("world")
+			fxBegin(a.renderer) // layers.go: shake and glide, for this frame's map and marks only
 			a.renderer.Draw(dst)
 			a.tools.DrawMapFields(dst) // mapfields_overlay.go: dev only
 			gfx.SetPass("hud")
 			if !a.chrome.Hidden {
 				a.drawMapOverlays(dst) // hud.go: selection marks, ghosts, the drag box
 			}
+			fxEnd(a.renderer)
 			if scaled {
 				a.endWorldPass()
 				gfx.CompositeWorld(screen, dst, a.scale.WorldK())

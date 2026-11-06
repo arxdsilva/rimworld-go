@@ -167,7 +167,12 @@ type Smooth struct {
 	Instant      bool
 	Speed        float64 // pan speed multiplier (Options); 0 means 1
 	Boost        float64 // fast-pan multiplier this frame (Shift); 0 means 1
+	Prefs        Prefs   // the camera and pause options (fx.go)
+	Fx           Fx      // the glide and shake added to a drawn frame (fx.go)
 }
+
+// Shake adds a screen shake of px physical pixels at the player's strength.
+func (s *Smooth) Shake(px float64) { s.Fx.Shake(px * s.Prefs.Shake) }
 
 // Halt stops all camera motion: pan velocity and input, and a zoom ease in
 // flight (the zoom stays where it is). A jump to a point calls it so the
