@@ -275,6 +275,7 @@ saveState.Bldgs[].V.Growth uint16
 saveState.Bldgs[].V.Hostile bool
 saveState.Bldgs[].V.Kind rimworld-go/internal/domain/building/construction.Kind = uint8
 saveState.Bldgs[].V.Medical bool
+saveState.Bldgs[].V.NoAutoRefuel bool
 saveState.Bldgs[].V.Occupant uint8
 saveState.Bldgs[].V.OffGrid bool
 saveState.Bldgs[].V.Plant uint8
