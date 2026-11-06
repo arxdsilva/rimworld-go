@@ -108,6 +108,7 @@ type figureDress struct {
 	Scarred bool
 	Raider  bool // hostile: maroon shirt and vest, slate trousers
 	Worn    bool
+	NoHat   bool // a portrait with Hats only on the map (OPT-014)
 }
 
 // figureLayers lists a pawn's sprites bottom first for look l in art
@@ -190,7 +191,7 @@ func figureLayers(art *artpkg.Catalog, l look.Look, fs string, d figureDress) []
 			out = append(out, portraitLayer{k, color.NRGBA{}})
 		}
 	}
-	if hat != "" {
+	if hat != "" && !d.NoHat {
 		out = append(out, portraitLayer{hat, pants})
 	}
 	return out
@@ -243,7 +244,12 @@ func drawPortrait(dst *ebiten.Image, art *artpkg.Catalog, l look.Look, scarred b
 // raider's maroon clothes, and a disfigured pawn's face scar over the
 // hair (under a hat) when the art has one.
 func pawnFigureLayers(c *artpkg.Catalog, p game.PawnView, fs string) []portraitLayer {
-	return figureLayers(c, p.Look, fs, figureDress{Apparel: p.Apparel, Scarred: p.Disfigured, Raider: p.Hostile, Worn: true})
+	return pawnDressLayers(c, p, fs, false)
+}
+
+// pawnDressLayers is pawnFigureLayers, without the hat when noHat.
+func pawnDressLayers(c *artpkg.Catalog, p game.PawnView, fs string, noHat bool) []portraitLayer {
+	return figureLayers(c, p.Look, fs, figureDress{Apparel: p.Apparel, Scarred: p.Disfigured, Raider: p.Hostile, Worn: true, NoHat: noHat})
 }
 
 // drawPawnBustArt draws the layered pawn's head and shoulders (the bust
@@ -256,14 +262,14 @@ func (r *Renderer) drawPawnBustArt(screen *ebiten.Image, p game.PawnView, x, y, 
 		return false
 	}
 	_, crop := pawnCrops(body)
-	drawPawnCropped(screen, r.art, p, body, crop, x, y, w, h)
+	drawPawnCropped(screen, r.art, p, body, crop, x, y, w, h, r.view.Prefs.HatsOnlyOnMap)
 	return true
 }
 
 // drawPawnCropped draws p's portrait layers (its south-facing figure,
 // pawnFigureLayers) cut to crop (canvas px of body's canvas) fitted into
-// the logical w x h box at (x, y).
-func drawPawnCropped(screen *ebiten.Image, c *artpkg.Catalog, p game.PawnView, body *artpkg.Sprite, crop image.Rectangle, x, y, w, h float64) {
+// the logical w x h box at (x, y); noHat leaves the hat off (OPT-014).
+func drawPawnCropped(screen *ebiten.Image, c *artpkg.Catalog, p game.PawnView, body *artpkg.Sprite, crop image.Rectangle, x, y, w, h float64, noHat bool) {
 	canvasW := float64(body.Meta.Canvas[0])
 	cw, ch := float64(crop.Dx()), float64(crop.Dy())
 	if cw <= 0 || ch <= 0 {
@@ -271,7 +277,7 @@ func drawPawnCropped(screen *ebiten.Image, c *artpkg.Catalog, p game.PawnView, b
 	}
 	s := math.Min(w/cw, h/ch)
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
-	for _, ly := range pawnFigureLayers(c, p, "south") {
+	for _, ly := range pawnDressLayers(c, p, "south", noHat) {
 		img := c.Image(ly.Key, ly.Tint)
 		if img == nil {
 			continue

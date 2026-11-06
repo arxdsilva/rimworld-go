@@ -144,6 +144,6 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 		return false
 	}
 	crop, _ := pawnCrops(body)
-	drawPawnCropped(screen, r.art, p, body, crop, x, y, w, h)
+	drawPawnCropped(screen, r.art, p, body, crop, x, y, w, h, false)
 	return true
 }
