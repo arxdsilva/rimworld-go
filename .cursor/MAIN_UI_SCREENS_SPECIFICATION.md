@@ -1786,44 +1786,44 @@ Settings live in `internal/platform/config` and are saved to
 `<user config dir>/rimworld-go/settings.json` (UI-012). They change
 presentation only, never the simulation; captures ignore them.
 
-OPT-* (`.cursor/OPTIONS_GAP_ANALYSIS.md`) adds the General, Interface
-and Developer tabs below; their rows are owed until checked.
+OPT-* (`.cursor/OPTIONS_GAP_ANALYSIS.md`) added the General, Interface
+and Developer tabs below.
 
 ## Tabs
 
 ### General
 
--   [ ] language (OPT-001: lists the catalogs in `assets/lang`);
--   [ ] restore all defaults, after a confirmation (OPT-002);
--   [ ] open the saves folder and the log folder (OPT-003);
--   [ ] pause on load (OPT-004);
--   [ ] automatic pause: never / major threat / any threat / any letter (OPT-005, replaces pause on threat);
--   [ ] autosaves kept, 1–25, rotating (OPT-006).
+-   [x] language (OPT-001: lists the catalogs in `assets/lang`; English only for now, every UI string goes through the catalog);
+-   [x] restore all defaults, after a confirmation (OPT-002);
+-   [x] open the saves folder and the log folder (OPT-003);
+-   [x] pause on load (OPT-004);
+-   [x] automatic pause: never / major threat / any threat / any letter (OPT-005, replaces pause on threat);
+-   [x] autosaves kept, 1–25, rotating (OPT-006).
 
 ### Interface
 
--   [ ] temperature unit adds Kelvin (OPT-007);
--   [ ] realtime clock; 12-hour clock (OPT-008);
--   [ ] animal names on the map: none / named tame / all tame (OPT-010);
--   [ ] colonist bar: weapons under portraits (never / drafted / always), mood fill, the bar itself, categorised resources (OPT-011…013);
--   [ ] headgear only on the map (OPT-014, N/A while no portrait draws headgear);
--   [ ] menu background: diorama / splash / random (OPT-015);
--   [ ] far-zoom pawn highlight: none / hostiles / all, as dots / silhouettes / both (OPT-016);
--   [ ] zoom to mouse, smooth camera jumps, drag sensitivity, zoom out to the world, remember draw styles, plant sway, screen shake 0–200 % (OPT-021…027);
--   [ ] custom cursor (OPT-028);
--   [ ] window size presets and borderless fullscreen (OPT-029);
--   [ ] speed after unpausing: normal / last speed (OPT-020);
--   [ ] preferred names for new colonists (OPT-032).
+-   [x] temperature unit adds Kelvin (OPT-007);
+-   [x] realtime clock; 12-hour clock (OPT-008);
+-   [x] animal names on the map: none / named tame / all tame (OPT-010);
+-   [x] colonist bar: weapons under portraits (never / drafted / always), mood fill, the bar itself, categorised resources (OPT-011…013);
+-   [x] headgear only on the map (OPT-014: the colonist bar portrait leaves the hat off);
+-   [x] menu background: diorama / splash / random (OPT-015);
+-   [x] far-zoom pawn highlight: none / hostiles / all, as dots / silhouettes / both (OPT-016);
+-   [x] zoom to mouse, smooth camera jumps, drag sensitivity, zoom out to the world, remember draw styles, plant sway, screen shake 0–200 % (OPT-021…027);
+-   [x] custom cursor (OPT-028);
+-   [x] window size presets and borderless fullscreen (OPT-029);
+-   [x] speed after unpausing: normal / last speed (OPT-020);
+-   [x] preferred names for new colonists (OPT-032).
 
 ### Developer
 
--   [ ] verbose log, open the log on warnings, close the log with Escape, pause on error (OPT-030);
--   [ ] test map sizes in the wizard (OPT-031).
+-   [x] verbose log, open the log on warnings, close the log with Escape, pause on error (OPT-030);
+-   [x] test map sizes in the wizard (OPT-031).
 
 ### Graphics
 
--   [x] window: fullscreen toggle (the window resizes freely; no
-    resolution presets);
+-   [x] window: fullscreen toggle, size presets and borderless
+    fullscreen (OPT-029; the window still resizes freely);
 -   [x] VSync (on by default since PERF-003; off from PERF-002 to then) and Frame cap (60 / 120 / 144 / Off; 120 on every display by default, paced by the client while VSync is off — PERF-002; off the colony — menu, wizard, loading — draws never exceed 60 fps, PERF-003);
 -   [x] UI scale (UI-024: Accessibility row Auto / 75–200 %; "Sharp on
     high-density screens" (HiDPI) on the Graphics tab; its value reads

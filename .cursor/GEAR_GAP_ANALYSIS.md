@@ -32,19 +32,19 @@ State: `open` owed to a later change; `kept` differs on purpose; `matches` alrea
 
 | Id | Gap | Wiki | Today | State |
 |---|---|---|---|---|
-| GEAR-001 | Mass carried | Mass of gear and inventory against carrying capacity, 75 × Manipulation × Body size | Pack only, `inspector/gear_rows.go:21`; pack limit 40 kg × Manipulation, `game/sense/pack.go:22,58` | open [GEAR-1]. The pack limit stays ours (what fits in a pack); the summary line uses the wiki capacity |
-| GEAR-002 | Overall armour | Shown on the tab (key names); no published formula | Per garment only, `gear_facts.go:85` | open [GEAR-1]. Our formula: each body part's armour after every covering layer, weighted by the part's coverage, capped at 200 % |
-| GEAR-003 | Row contents | Icon, label with quality, HP, mass, tainted mark | Text; ratty or tattered tag only | open [GEAR-2] |
-| GEAR-004 | Drop now | Drop from the tab; equipped and worn items take time; Shift queues | Unload hauls away, gated by a habit, `gear_rows.go:39` | open [GEAR-1, GEAR-2] |
-| GEAR-005 | Eat or take from inventory | "use (eat) food from the tab" | Automatic only, `sense/gear.go:75` | open [GEAR-1, GEAR-2] |
-| GEAR-006 | Info card | Per item (the installed game's tab) | None anywhere | open [GEAR-2] |
-| GEAR-007 | Forced garments | Forcing overrides the apparel policy | "(you chose this)", set only by Wear, `orders.go:434` | open [GEAR-1, GEAR-2]: lock toggle |
-| GEAR-008 | Who has the tab | Colonists, prisoners, pack animals, guests | Prisoner replaces Gear, `cmds_pawn.go:364`; no tab on animals | open [GEAR-2] |
-| GEAR-009 | Armour slows | Flak vest −0.12, flak pants −0.12, marine −0.25, cataphract −0.5, plate −0.8 cells/s | No gear term in speed, `game/skills.go:245` | open [GEAR-1]. Penalties add |
-| GEAR-010 | Coverage shown | Layers and body parts | Not drawn (UI checklist 760) | open [GEAR-2] |
+| GEAR-001 | Mass carried | Mass of gear and inventory against carrying capacity, 75 × Manipulation × Body size | Pack only, `inspector/gear_rows.go:21`; pack limit 40 kg × Manipulation, `game/sense/pack.go:22,58` | done [GEAR-1, GEAR-2] |
+| GEAR-002 | Overall armour | Shown on the tab (key names); no published formula | Per garment only, `gear_facts.go:85` | done [GEAR-1, GEAR-2] |
+| GEAR-003 | Row contents | Icon, label with quality, HP, mass, tainted mark | Text; ratty or tattered tag only | done [GEAR-1, GEAR-2] |
+| GEAR-004 | Drop now | Drop from the tab; equipped and worn items take time; Shift queues | Unload hauls away, gated by a habit, `gear_rows.go:39` | done [GEAR-1, GEAR-2] |
+| GEAR-005 | Eat or take from inventory | "use (eat) food from the tab" | Automatic only, `sense/gear.go:75` | done [GEAR-1, GEAR-2] |
+| GEAR-006 | Info card | Per item (the installed game's tab) | None anywhere | done [GEAR-1, GEAR-2] |
+| GEAR-007 | Forced garments | Forcing overrides the apparel policy | "(you chose this)", set only by Wear, `orders.go:434` | done [GEAR-1, GEAR-2] |
+| GEAR-008 | Who has the tab | Colonists, prisoners, pack animals, guests | Prisoner replaces Gear, `cmds_pawn.go:364`; no tab on animals | partial [GEAR-2]: prisoners (drop) and guests (read only) done; pack animals have no pack in their view yet |
+| GEAR-009 | Armour slows | Flak vest −0.12, flak pants −0.12, marine −0.25, cataphract −0.5, plate −0.8 cells/s | No gear term in speed, `game/skills.go:245` | done [GEAR-1, GEAR-2] |
+| GEAR-010 | Coverage shown | Layers and body parts | Not drawn (UI checklist 760) | done [GEAR-1, GEAR-2] |
 | GEAR-011 | Wear | Equip or wear from the item | Item pane, `item_inspector.go:150` | matches (UI 776 by the item pane) |
-| GEAR-012 | Smokepop count | | Not on the lines, `game.go:204` | open [GEAR-2] |
-| GEAR-013 | Overflow | All rows reachable | Rows past the panel are dropped, `gear_ui.go:129` | open [GEAR-2]: scroll |
+| GEAR-012 | Smokepop count | | Not on the lines, `game.go:204` | done [GEAR-1, GEAR-2] |
+| GEAR-013 | Overflow | All rows reachable | Rows past the panel are dropped, `gear_ui.go:129` | done [GEAR-1, GEAR-2] |
 | GEAR-101 | Quality factors | Armour 0.6–1.8, insulation 0.8–1.8 | `quality/quality.go:154-155` | matches |
 | GEAR-102 | Ratty and tattered | 20–50 % −3, below 20 % −5 | `item/condition.go:116`, `mood.go:266` | matches |
 | GEAR-103 | Tainted | −5 / −8 / −11 / −14 | `craft/garment.go:174` | matches |
@@ -54,11 +54,11 @@ State: `open` owed to a later change; `kept` differs on purpose; `matches` alrea
 
 | Id | Gap | Vanilla | Today | State |
 |---|---|---|---|---|
-| OUT-001 | Policies | Named; new, rename, copy and delete; four starting policies | None; dressing scores warmth only, `game/apparel.go:157` | open [GEAR-3] |
-| OUT-002 | Filter | Kinds, materials, HP range, quality range, tainted | `zone.Filter` and `zone.Special` can express all of it, `building/zone/filter.go:20`, `special.go:13` | open [GEAR-3] |
-| OUT-003 | Assignment | Per colonist, default for new ones | Assign has drug, care and food columns, `windows/assign.go:137` | open [GEAR-3] |
-| OUT-004 | Auto-dress keeps to it | Disallowed garments come off; forced ones stay | No policy | open [GEAR-3]: one slot per check, 2 h slot cooldown (`apparel.go:31`), no-flap test |
-| OUT-005 | Clear forced | From the Assign row | None | open [GEAR-3] |
+| OUT-001 | Policies | Named; new, rename, copy and delete; four starting policies | None; dressing scores warmth only, `game/apparel.go:157` | done [GEAR-3] |
+| OUT-002 | Filter | Kinds, materials, HP range, quality range, tainted | `zone.Filter` and `zone.Special` can express all of it, `building/zone/filter.go:20`, `special.go:13` | done [GEAR-3] |
+| OUT-003 | Assignment | Per colonist, default for new ones | Assign has drug, care and food columns, `windows/assign.go:137` | done [GEAR-3] |
+| OUT-004 | Auto-dress keeps to it | Disallowed garments come off; forced ones stay | No policy | done [GEAR-3] |
+| OUT-005 | Clear forced | From the Assign row | None | done [GEAR-3] |
 
 ## Proposed phases
 
