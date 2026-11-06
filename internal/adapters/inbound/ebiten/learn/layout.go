@@ -88,8 +88,8 @@ func (h *Helper) CardLayout(lay *Layout, hl hudlayout.Layout, row gfx.Rect) {
 		return
 	}
 	inner := float64(w - 2*learnCardPad)
-	lay.Body = gfx.WrapPx(lay.Open.Body(h.sh.KeyName), gfx.Body, inner)
-	lay.Goal = gfx.WrapPx("Try it: "+lay.Open.Goal, gfx.Small, inner)
+	lay.Body = gfx.WrapPx(lay.Open.Text(h.sh, h.sh.KeyName), gfx.Body, inner)
+	lay.Goal = gfx.WrapPx(h.sh.Tf("Try it: %s", h.sh.T(lay.Open.Goal)), gfx.Small, inner)
 	hgt := cardHeight(lay)
 	maxH := hl.Tabs.Y - 2*hudlayout.HudMargin
 	for hgt > maxH && len(lay.Body) > 1 { // a very short screen: cut the text
@@ -123,18 +123,18 @@ func (h *Helper) Buttons() []uikit.Button {
 	}
 	var out []uikit.Button
 	if lay.Open != nil && !lay.Card.Empty() {
-		b := uikit.AsButton(lay.GotIt, "learn.done."+lay.Open.ID, "Got it")
-		b.Tip = "Mark this lesson learned"
+		b := uikit.AsButton(lay.GotIt, "learn.done."+lay.Open.ID, h.sh.T("Got it"))
+		b.Tip = h.sh.T("Mark this lesson learned")
 		out = append(out, b)
 	}
 	for _, rw := range lay.Rows {
-		b := uikit.AsButton(rw.R, "learn.lesson."+rw.L.ID, rw.L.Title)
+		b := uikit.AsButton(rw.R, "learn.lesson."+rw.L.ID, h.sh.T(rw.L.Title))
 		b.Selected = lay.Open == rw.L
-		b.Tip = "Read this lesson"
+		b.Tip = h.sh.T("Read this lesson")
 		out = append(out, b)
 	}
-	t := uikit.AsButton(lay.Header, "learn.toggle", "Learning helper")
-	t.Tip = "Fold or unfold the lessons (Options › Gameplay turns them off)"
+	t := uikit.AsButton(lay.Header, "learn.toggle", h.sh.T("Learning helper"))
+	t.Tip = h.sh.T("Fold or unfold the lessons (Options › Gameplay turns them off)")
 	return append(out, t)
 }
 

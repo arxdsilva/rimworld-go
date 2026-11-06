@@ -50,5 +50,6 @@ type Shell interface {
 	ports.Sizer
 	ports.Settings
 	ports.Widgets
+	ports.Texts
 	Host
 }

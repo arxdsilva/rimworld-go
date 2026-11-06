@@ -109,9 +109,15 @@ type Peers interface {
 	DrawWeather(dst *ebiten.Image, x, y int, w game.WorldView)
 }
 
+// Screen is what the HUD draws with: the screen size and the text catalog.
+type Screen interface {
+	ports.Sizer
+	ports.Texts
+}
+
 // Shell composes the roles the HUD calls with its Host and Peers.
 type Shell interface {
-	ports.Sizer
+	Screen
 	ports.World
 	ports.View
 	ports.Overlays

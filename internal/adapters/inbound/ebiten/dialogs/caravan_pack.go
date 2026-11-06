@@ -57,7 +57,7 @@ func (dl *Dealings) caravanLoadLine(f *formCaravan) string {
 	if c > 0 {
 		load = int32(1000 * min(m, c) / c)
 	}
-	return fmt.Sprintf("%d / %d kg · about %.1f tiles a day", m, c, caravan.TilesPerDay(caravan.LoadFactor(load))) // on flat ground
+	return dl.sh.Tf("%d / %d kg · about %.1f tiles a day", m, c, caravan.TilesPerDay(caravan.LoadFactor(load))) // on flat ground
 }
 
 // caravanList is the command's Name: the colonists, the animals, then the
@@ -80,7 +80,7 @@ func (dl *Dealings) caravanList(f *formCaravan) string {
 func (dl *Dealings) caravanPacks(f *formCaravan, r gfx.Rect) {
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
 	h, rest := r.SplitV(26)
-	dl.kit().Label(h.X, h.Y, "Pack animals and goods", hs)
+	dl.kit().Label(h.X, h.Y, dl.sh.T("Pack animals and goods"), hs)
 	var rows []func(gfx.Rect)
 	for _, a := range dl.sh.World().Animals {
 		if !a.Tame {
@@ -93,7 +93,7 @@ func (dl *Dealings) caravanPacks(f *formCaravan, r gfx.Rect) {
 			if name == "" {
 				name = a.Species
 			}
-			if dl.kit().Check("form.animal."+strconv.FormatUint(uint64(a.ID), 10), rr, fmt.Sprintf("%s  (carries %d kg)", name, packKg(a.Species)), &on, uikit.CheckOpts{}) {
+			if dl.kit().Check("form.animal."+strconv.FormatUint(uint64(a.ID), 10), rr, dl.sh.Tf("%s  (carries %d kg)", name, packKg(a.Species)), &on, uikit.CheckOpts{}) {
 				f.beasts[a.ID] = on
 			}
 		})
@@ -105,7 +105,7 @@ func (dl *Dealings) caravanPacks(f *formCaravan, r gfx.Rect) {
 			v := f.goods[g.kind]
 			dl.kit().Label(rr.X, rr.Y+4, gfx.Ellipsize(fmt.Sprintf("%s (%d)", Capitalize(g.kind), g.qty), gfx.Body, float64(rr.W-190)), gfx.Body)
 			uikit.Stepper(dl.kit(), key, gfx.Rect{X: rr.Right() - 180, Y: rr.Y, W: 112, H: rr.H}, &v, 0, g.qty)
-			if dl.kit().Button(key+".all", gfx.Rect{X: rr.Right() - 62, Y: rr.Y, W: 58, H: rr.H}, "All", uikit.BtnOpts{}) {
+			if dl.kit().Button(key+".all", gfx.Rect{X: rr.Right() - 62, Y: rr.Y, W: 58, H: rr.H}, dl.sh.T("All"), uikit.BtnOpts{}) {
 				v = g.qty
 			}
 			if f.goods[g.kind] = v; v == 0 {
@@ -114,7 +114,7 @@ func (dl *Dealings) caravanPacks(f *formCaravan, r gfx.Rect) {
 		})
 	}
 	if len(rows) == 0 {
-		dl.kit().Label(rest.X, rest.Y, "No tame animals or loose goods.", uikit.DimText())
+		dl.kit().Label(rest.X, rest.Y, dl.sh.T("No tame animals or loose goods."), uikit.DimText())
 		return
 	}
 	dl.scrollRows("form.packs", rest, rows)

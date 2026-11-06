@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
@@ -71,10 +72,10 @@ const (
 	overdoseExtremeStage = 2
 )
 
-// BuildAlerts derives the current alerts from pawns and the world, most
+// BuildAlertsIn derives the current alerts from pawns and the world, most
 // urgent first: dangers before warnings, then by key.
-func BuildAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
-	out := raiseAlerts(pawns, w)
+func BuildAlertsIn(tr lang.Tr, pawns []game.PawnView, w game.WorldView) []Alert {
+	out := raiseAlertsIn(tr, pawns, w)
 	for i := range out {
 		al := &out[i]
 		al.Sev = SevWarning
@@ -93,7 +94,7 @@ func BuildAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 }
 
 // raiseAlerts collects the alerts in the order the checks run.
-func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
+func raiseAlertsIn(tr lang.Tr, pawns []game.PawnView, w game.WorldView) []Alert {
 	var out []Alert
 	allPawns := pawns // the chased colonist is named from the whole list
 	// raiders are listed with the colonists; split them off first
@@ -111,7 +112,7 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 		}
 	}
 	pawns = colonists
-	group := func(key string, danger bool, who []game.PawnView, one func(string) string, many string) {
+	group := func(key string, danger bool, who []game.PawnView, one func(string) string, many string) { // many is the translated format over the count
 		if len(who) == 0 {
 			return
 		}
@@ -119,7 +120,7 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 		if len(who) == 1 {
 			a.Label = one(who[0].Name)
 		} else {
-			a.Label = fmt.Sprintf("%d %s", len(who), many)
+			a.Label = fmt.Sprintf(many, len(who))
 		}
 		for _, p := range who {
 			a.Targets = append(a.Targets, [2]int{p.X, p.Y})
@@ -127,14 +128,14 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 		out = append(out, a)
 	}
 
-	if al, ok := hostileAlert(allPawns, w); ok {
+	if al, ok := hostileAlert(tr, allPawns, w); ok {
 		out = append(out, al)
 	}
 
-	if al, ok := FireAlert(w); ok {
+	if al, ok := FireAlertIn(tr, w); ok {
 		out = append(out, al)
 	}
-	out = append(out, AnimalAlerts(w)...)
+	out = append(out, AnimalAlertsIn(tr, w)...)
 
 	var rescue, starving, collapsed, unhappy, bleeding, infected, untended, diseased []game.PawnView
 	var overdosed, bedless []game.PawnView // MED-07, BED-3
@@ -175,34 +176,34 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 			unhappy = append(unhappy, p)
 		}
 	}
-	group("nobed", false, bedless, func(n string) string { return n + " needs a bed" }, "colonists need beds")
-	group("bleeding", true, bleeding, func(n string) string { return n + " is bleeding out" }, "colonists are bleeding out")
-	group("infection", false, infected, func(n string) string { return n + " is losing to an infection" }, "colonists are losing to infections")
+	group("nobed", false, bedless, func(n string) string { return lang.Tf(tr, "%s needs a bed", n) }, tr.T("%d colonists need beds"))
+	group("bleeding", true, bleeding, func(n string) string { return lang.Tf(tr, "%s is bleeding out", n) }, tr.T("%d colonists are bleeding out"))
+	group("infection", false, infected, func(n string) string { return lang.Tf(tr, "%s is losing to an infection", n) }, tr.T("%d colonists are losing to infections"))
 	if len(diseased) == 1 { // MED-04: one patient names the disease
 		p := diseased[0]
-		group("disease", false, diseased, func(n string) string { return n + " is sick: " + p.Disease }, "")
+		group("disease", false, diseased, func(n string) string { return lang.Tf(tr, "%s is sick: %s", n, p.Disease) }, "")
 	} else {
-		group("disease", false, diseased, nil, "colonists are sick")
+		group("disease", false, diseased, nil, tr.T("%d colonists are sick"))
 	}
-	group("overdose", overdoseDanger, overdosed, func(n string) string { return n + " has overdosed" }, "colonists have overdosed")
-	group("untended", false, untended, func(n string) string { return n + " has an untended wound" }, "colonists have untended wounds")
-	group("rescue", true, rescue, func(n string) string { return n + " needs rescue" }, "colonists need rescue")
-	group("starving", true, starving, func(n string) string { return n + " is starving" }, "colonists are starving")
-	group("collapsed", false, collapsed, func(n string) string { return n + " collapsed from exhaustion" }, "colonists collapsed")
+	group("overdose", overdoseDanger, overdosed, func(n string) string { return lang.Tf(tr, "%s has overdosed", n) }, tr.T("%d colonists have overdosed"))
+	group("untended", false, untended, func(n string) string { return lang.Tf(tr, "%s has an untended wound", n) }, tr.T("%d colonists have untended wounds"))
+	group("rescue", true, rescue, func(n string) string { return lang.Tf(tr, "%s needs rescue", n) }, tr.T("%d colonists need rescue"))
+	group("starving", true, starving, func(n string) string { return lang.Tf(tr, "%s is starving", n) }, tr.T("%d colonists are starving"))
+	group("collapsed", false, collapsed, func(n string) string { return lang.Tf(tr, "%s collapsed from exhaustion", n) }, tr.T("%d colonists collapsed"))
 	if alive > 0 && w.FoodDays < lowFoodDays {
-		out = append(out, Alert{Key: "food", Label: fmt.Sprintf("Low food (%d.%d days)", w.FoodDays/10, w.FoodDays%10)})
+		out = append(out, Alert{Key: "food", Label: lang.Tf(tr, "Low food (%d.%d days)", w.FoodDays/10, w.FoodDays%10)})
 	}
 
 	if len(raiders) > 0 {
-		label := "Raid: 1 raider"
+		label := tr.T("Raid: 1 raider")
 		if len(raiders) > 1 {
-			label = fmt.Sprintf("Raid: %d raiders", len(raiders))
+			label = lang.Tf(tr, "Raid: %d raiders", len(raiders))
 		}
 		switch plan {
 		case "siege":
-			label = fmt.Sprintf("Siege: %d raiders", len(raiders))
+			label = lang.Tf(tr, "Siege: %d raiders", len(raiders))
 		case "sappers":
-			label = fmt.Sprintf("Sappers: %d raiders", len(raiders))
+			label = lang.Tf(tr, "Sappers: %d raiders", len(raiders))
 		}
 		out = append(out, Alert{Key: "raid", Label: label, Danger: true, Targets: raiders})
 	}
@@ -214,9 +215,9 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 	}
 	if len(breaking) == 1 {
 		p := breaking[0]
-		out = append(out, Alert{Key: "break", Danger: true, Label: p.Name + ": mental break (" + p.MentalBreak + ")", Targets: [][2]int{{p.X, p.Y}}})
+		out = append(out, Alert{Key: "break", Danger: true, Label: lang.Tf(tr, "%s: mental break (%s)", p.Name, p.MentalBreak), Targets: [][2]int{{p.X, p.Y}}})
 	} else if len(breaking) > 1 {
-		group("break", true, breaking, func(n string) string { return n }, "colonists are having mental breaks")
+		group("break", true, breaking, func(n string) string { return n }, tr.T("%d colonists are having mental breaks"))
 	}
 	var hypo, heat []game.PawnView
 	for _, p := range pawns {
@@ -230,40 +231,40 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 			heat = append(heat, p)
 		}
 	}
-	group("hypothermia", true, hypo, func(n string) string { return n + " has hypothermia" }, "colonists have hypothermia")
-	group("heatstroke", true, heat, func(n string) string { return n + " has heatstroke" }, "colonists have heatstroke")
-	if al, ok := NotRecoveringAlert(pawns); ok { // alerts_exposure.go (AIL-004)
+	group("hypothermia", true, hypo, func(n string) string { return lang.Tf(tr, "%s has hypothermia", n) }, tr.T("%d colonists have hypothermia"))
+	group("heatstroke", true, heat, func(n string) string { return lang.Tf(tr, "%s has heatstroke", n) }, tr.T("%d colonists have heatstroke"))
+	if al, ok := NotRecoveringAlertIn(tr, pawns); ok { // alerts_exposure.go (AIL-004)
 		out = append(out, al)
 	}
-	if al, ok := NeedWarmClothesAlert(pawns, w); ok { // alerts_temp.go (TEMP-5)
+	if al, ok := NeedWarmClothesAlertIn(tr, pawns, w); ok { // alerts_temp.go (TEMP-5)
 		out = append(out, al)
 	}
-	if al, ok := ColdAnimalAlert(w); ok {
+	if al, ok := ColdAnimalAlertIn(tr, w); ok {
 		out = append(out, al)
 	}
-	if al, ok := noFuelAlert(w); ok { // alerts_power.go: campfires, torches, generators
+	if al, ok := noFuelAlert(tr, w); ok { // alerts_power.go: campfires, torches, generators
 		out = append(out, al)
 	}
-	out = append(out, brownoutAlerts(w)...) // alerts_power.go (PLAY-021)
-	if al, ok := FishDyingAlert(w); ok {    // alerts_tank.go (FISH)
+	out = append(out, brownoutAlerts(tr, w)...) // alerts_power.go (PLAY-021)
+	if al, ok := FishDyingAlertIn(tr, w); ok {  // alerts_tank.go (FISH)
 		out = append(out, al)
 	}
-	if al, ok := notConnectedAlert(w); ok {
+	if al, ok := notConnectedAlert(tr, w); ok {
 		out = append(out, al)
 	}
 	if al, ok := spoilingAlert(w); ok {
 		out = append(out, al)
 	}
-	if al, ok := WaitingFramesAlert(w); ok {
+	if al, ok := WaitingFramesAlertIn(tr, w); ok {
 		out = append(out, al)
 	}
-	out = append(out, shipAlerts(w)...) // ending.go (AX-8): the reactor's countdown, a ready ship
-	group("unhappy", false, unhappy, func(n string) string { return n + " is unhappy" }, "colonists are unhappy")
-	if al, ok := GoneAlert(w); ok { // ending.go (MAP-19)
+	out = append(out, shipAlerts(tr, w)...) // ending.go (AX-8): the reactor's countdown, a ready ship
+	group("unhappy", false, unhappy, func(n string) string { return lang.Tf(tr, "%s is unhappy", n) }, tr.T("%d colonists are unhappy"))
+	if al, ok := GoneAlertIn(tr, w); ok { // ending.go (MAP-19)
 		out = append(out, al)
 	}
 	if w.ResearchAlert { // RSCH-2: the game raises it (a bench and a researcher, no project)
-		out = append(out, Alert{Key: ResearchAlertKey, Label: "Need research project"})
+		out = append(out, Alert{Key: ResearchAlertKey, Label: tr.T("Need research project")})
 	}
 	return out
 }
@@ -276,7 +277,7 @@ const ResearchAlertKey = "research"
 // animal says what it is and, when it is chasing someone, whom ("A timber
 // wolf is chasing Ada!"); several are only counted. pawns is every pawn
 // the target may be among.
-func hostileAlert(pawns []game.PawnView, w game.WorldView) (Alert, bool) {
+func hostileAlert(tr lang.Tr, pawns []game.PawnView, w game.WorldView) (Alert, bool) {
 	var targets [][2]int
 	var first game.AnimalView
 	for _, an := range w.Animals {
@@ -291,24 +292,24 @@ func hostileAlert(pawns []game.PawnView, w game.WorldView) (Alert, bool) {
 	if len(targets) == 0 {
 		return Alert{}, false
 	}
-	label := withArticle(speciesLabel(first)) + " is attacking!"
+	label := lang.Tf(tr, "%s is attacking!", withArticle(tr, speciesLabel(first)))
 	if first.TargetID != 0 {
 		if p, ok := creature.ChasedPawn(pawns, first.TargetID); ok && p.Name != "" {
-			label = withArticle(speciesLabel(first)) + " is chasing " + p.Name + "!"
+			label = lang.Tf(tr, "%s is chasing %s!", withArticle(tr, speciesLabel(first)), p.Name)
 		}
 	}
 	if len(targets) > 1 {
-		label = fmt.Sprintf("%d animals are attacking!", len(targets))
+		label = lang.Tf(tr, "%d animals are attacking!", len(targets))
 	}
 	return Alert{Key: "hostile", Label: label, Danger: true, Targets: targets}, true
 }
 
 // withArticle puts "A" or "An" before a noun phrase ("An arctic fox").
-func withArticle(noun string) string {
+func withArticle(tr lang.Tr, noun string) string {
 	if noun != "" && strings.ContainsRune("aeiouAEIOU", rune(noun[0])) {
-		return "An " + noun
+		return lang.Tf(tr, "An %s", noun)
 	}
-	return "A " + noun
+	return lang.Tf(tr, "A %s", noun)
 }
 
 // Current is the alerts now, most urgent first (BuildAlerts over every
@@ -325,14 +326,14 @@ func (c Alerts) Current() []Alert {
 	if m := &c.alerts; env.ViewCached && m.ok && m.key == k {
 		return m.out
 	}
-	out := BuildAlerts(snap, w)                             // colonists and raiders: raiseAlerts splits them
-	if extra := TradeAlertsFrom(env.Game); len(extra) > 0 { // alerts_trade.go (PLAY-024)
+	out := BuildAlertsIn(c.sh, snap, w)                             // colonists and raiders: raiseAlerts splits them
+	if extra := TradeAlertsFromIn(c.sh, env.Game); len(extra) > 0 { // alerts_trade.go (PLAY-024)
 		for i := range extra {
 			extra[i].Sev, extra[i].Explain = SevWarning, AlertExplain(extra[i].Key)
 		}
 		out = append(out, extra...)
 	}
-	out = markMaps(out, env.Game)
+	out = markMaps(c.sh, out, env.Game)
 	c.alerts = alertsMemo{key: k, out: out, ok: true}
 	return out
 }
@@ -343,7 +344,7 @@ const MapThreatKey = "mapthreat"
 
 // markMaps stamps every alert with the viewed map and appends "Threat on
 // <label>" for each other open map with hostiles (MAP-1).
-func markMaps(out []Alert, g Reader) []Alert {
+func markMaps(tr lang.Tr, out []Alert, g Reader) []Alert {
 	viewed := g.ViewedMap()
 	for i := range out {
 		out[i].Map = viewed
@@ -357,7 +358,7 @@ func markMaps(out []Alert, g Reader) []Alert {
 			continue
 		}
 		out = append(out, Alert{
-			Key: MapThreatKey + "." + strconv.FormatUint(uint64(m.ID), 10), Label: "Threat on " + m.Label,
+			Key: MapThreatKey + "." + strconv.FormatUint(uint64(m.ID), 10), Label: lang.Tf(tr, "Threat on %s", m.Label),
 			Danger: true, Sev: SevDanger, Explain: AlertExplain(MapThreatKey),
 			Targets: [][2]int{{-1, -1}}, Map: m.ID, Cross: true,
 		})
@@ -413,10 +414,10 @@ type AlertRow struct {
 	Hidden []Alert // what the "+N more" row stands for
 }
 
-// AlertRowLabel is the text a row shows.
-func AlertRowLabel(r AlertRow) string {
+// AlertRowLabelIn is the text a row shows.
+func AlertRowLabelIn(tr lang.Tr, r AlertRow) string {
 	if r.More > 0 {
-		return fmt.Sprintf("+%d more", r.More)
+		return lang.Tf(tr, "+%d more", r.More)
 	}
 	return r.Al.Label
 }
@@ -509,7 +510,7 @@ func (c Alerts) DrawIn(screen *ebiten.Image, l hudlayout.Layout) {
 			border = creature.Fade(edge, 0.5)
 		}
 		uikit.StrokeRect(screen, r, border)
-		gfx.Text(screen, uikit.FitText(AlertRowLabel(row), gfx.Body, r.W-20), float64(r.X)+12, float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, text))
+		gfx.Text(screen, uikit.FitText(AlertRowLabelIn(c.sh, row), gfx.Body, r.W-20), float64(r.X)+12, float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, text))
 	}
 }
 
@@ -561,10 +562,10 @@ const hungryAlertBelow = 25
 // penFullDiv: a pen holding more animals than its cells / this is full.
 const penFullDiv = 4
 
-// AnimalAlerts are the animal ecology alerts, derived from the read
+// AnimalAlertsIn are the animal ecology alerts, derived from the read
 // model: hungry tame animals, wild animals eating crops, timbergnaws
 // eating trees and full pens.
-func AnimalAlerts(w game.WorldView) []Alert {
+func AnimalAlertsIn(tr lang.Tr, w game.WorldView) []Alert {
 	var out []Alert
 	var hungry, raiders, gnaws [][2]int
 	growCells := map[[2]int]bool{}
@@ -587,29 +588,29 @@ func AnimalAlerts(w game.WorldView) []Alert {
 		}
 	}
 	if len(hungry) > 0 {
-		label := "Animals hungry"
+		label := tr.T("Animals hungry")
 		if len(hungry) > 1 {
-			label = fmt.Sprintf("Animals hungry (%d)", len(hungry))
+			label = lang.Tf(tr, "Animals hungry (%d)", len(hungry))
 		}
 		out = append(out, Alert{Key: "animalhungry", Label: label, Targets: hungry})
 	}
 	if len(raiders) > 0 {
-		out = append(out, Alert{Key: "cropraid", Label: "Wild animals eating crops", Danger: true, Targets: raiders})
+		out = append(out, Alert{Key: "cropraid", Label: tr.T("Wild animals eating crops"), Danger: true, Targets: raiders})
 	}
 	if len(gnaws) > 0 {
-		label := "Timbergnaws eating trees"
+		label := tr.T("Timbergnaws eating trees")
 		if w.TreesFelled > 0 {
-			label = fmt.Sprintf("Timbergnaws eating trees (%d felled)", w.TreesFelled)
+			label = lang.Tf(tr, "Timbergnaws eating trees (%d felled)", w.TreesFelled)
 		}
 		out = append(out, Alert{Key: "timbergnaw", Label: label, Targets: gnaws})
 	}
-	out = append(out, penAlerts(w)...)
+	out = append(out, penAlerts(tr, w)...)
 	return out
 }
 
-// FireAlert is "Fire in the colony!" (PLAY-015) while any fire burns
+// FireAlertIn is "Fire in the colony!" (PLAY-015) while any fire burns
 // inside Home; clicking cycles the burning Home cells.
-func FireAlert(w game.WorldView) (Alert, bool) {
+func FireAlertIn(tr lang.Tr, w game.WorldView) (Alert, bool) {
 	var at [][2]int
 	for _, f := range w.Fires {
 		if i := f.Y*w.TerrainW + f.X; f.X >= 0 && f.X < w.TerrainW && i >= 0 && i < len(w.Home) && w.Home[i] != 0 {
@@ -619,13 +620,13 @@ func FireAlert(w game.WorldView) (Alert, bool) {
 	if len(at) == 0 {
 		return Alert{}, false
 	}
-	return Alert{Key: "fire", Label: "Fire in the colony!", Danger: true, Targets: at}, true
+	return Alert{Key: "fire", Label: tr.T("Fire in the colony!"), Danger: true, Targets: at}, true
 }
 
 // penAlerts are the pen alerts (PLAY-015): each open pen ("Pen 2 is
 // open"), each pen holding more tame animals than its cells / penFullDiv,
 // and the livestock with no pen ("Unpenned livestock: N").
-func penAlerts(w game.WorldView) []Alert {
+func penAlerts(tr lang.Tr, w game.WorldView) []Alert {
 	var out []Alert
 	inBits := func(b []uint64, x, y int) bool {
 		i := y*w.TerrainW + x
@@ -633,7 +634,7 @@ func penAlerts(w game.WorldView) []Alert {
 	}
 	for _, p := range w.Pens {
 		if !p.Enclosed {
-			out = append(out, Alert{Key: fmt.Sprintf("penopen.%d", p.ID), Label: p.Name + " is open",
+			out = append(out, Alert{Key: fmt.Sprintf("penopen.%d", p.ID), Label: lang.Tf(tr, "%s is open", p.Name),
 				Danger: true, Targets: [][2]int{{p.X, p.Y}}})
 			continue
 		}
@@ -649,7 +650,7 @@ func penAlerts(w game.WorldView) []Alert {
 		}
 		if len(pos) > cells/penFullDiv {
 			out = append(out, Alert{Key: fmt.Sprintf("penfull.%d", p.ID),
-				Label:   fmt.Sprintf("%s full: %d animals in %d tiles", p.Name, len(pos), cells),
+				Label:   lang.Tf(tr, "%s full: %d animals in %d tiles", p.Name, len(pos), cells),
 				Targets: pos})
 		}
 	}
@@ -660,14 +661,14 @@ func penAlerts(w game.WorldView) []Alert {
 		}
 	}
 	if len(roaming) > 0 {
-		out = append(out, Alert{Key: "unpenned", Label: fmt.Sprintf("Unpenned livestock: %d", len(roaming)), Targets: roaming})
+		out = append(out, Alert{Key: "unpenned", Label: lang.Tf(tr, "Unpenned livestock: %d", len(roaming)), Targets: roaming})
 	}
 	return out
 }
 
-// WaitingFramesAlert flags blueprints whose material is not in stock
+// WaitingFramesAlertIn flags blueprints whose material is not in stock
 // anywhere (the frame status starts with "No "): clicking cycles them.
-func WaitingFramesAlert(w game.WorldView) (Alert, bool) {
+func WaitingFramesAlertIn(tr lang.Tr, w game.WorldView) (Alert, bool) {
 	var at [][2]int
 	for _, f := range w.Frames {
 		if strings.HasPrefix(f.Status, "No ") {
@@ -677,7 +678,7 @@ func WaitingFramesAlert(w game.WorldView) (Alert, bool) {
 	if len(at) == 0 {
 		return Alert{}, false
 	}
-	return Alert{Key: "waitingframes", Label: fmt.Sprintf("Blueprints waiting for materials (%d)", len(at)), Targets: at}, true
+	return Alert{Key: "waitingframes", Label: lang.Tf(tr, "Blueprints waiting for materials (%d)", len(at)), Targets: at}, true
 }
 
 // alertExplanations say, for each alert key, what is wrong and what to do

@@ -1,8 +1,7 @@
 package hud
 
 import (
-	"fmt"
-
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/world/biome"
 )
@@ -33,9 +32,9 @@ func ComingLow(w game.WorldView) (low int, ok bool) {
 	return 0, false
 }
 
-// NeedWarmClothesAlert lists the colonists who would be cold in the coming
+// NeedWarmClothesAlertIn lists the colonists who would be cold in the coming
 // season's low in what they wear now.
-func NeedWarmClothesAlert(pawns []game.PawnView, w game.WorldView) (Alert, bool) {
+func NeedWarmClothesAlertIn(tr lang.Tr, pawns []game.PawnView, w game.WorldView) (Alert, bool) {
 	low, ok := ComingLow(w)
 	if !ok {
 		return Alert{}, false
@@ -55,13 +54,13 @@ func NeedWarmClothesAlert(pawns []game.PawnView, w game.WorldView) (Alert, bool)
 	case 0:
 		return Alert{}, false
 	case 1:
-		return Alert{Key: "warmclothes", Label: name + " needs warm clothes", Targets: at}, true
+		return Alert{Key: "warmclothes", Label: lang.Tf(tr, "%s needs warm clothes", name), Targets: at}, true
 	}
-	return Alert{Key: "warmclothes", Label: fmt.Sprintf("%d colonists need warm clothes", len(at)), Targets: at}, true
+	return Alert{Key: "warmclothes", Label: lang.Tf(tr, "%d colonists need warm clothes", len(at)), Targets: at}, true
 }
 
-// ColdAnimalAlert lists the tame animals with hypothermia.
-func ColdAnimalAlert(w game.WorldView) (Alert, bool) {
+// ColdAnimalAlertIn lists the tame animals with hypothermia.
+func ColdAnimalAlertIn(tr lang.Tr, w game.WorldView) (Alert, bool) {
 	var at [][2]int
 	for _, an := range w.Animals {
 		if an.Tame && an.Hypothermia >= animalColdAlert {
@@ -72,7 +71,7 @@ func ColdAnimalAlert(w game.WorldView) (Alert, bool) {
 	case 0:
 		return Alert{}, false
 	case 1:
-		return Alert{Key: "animalcold", Label: "Hypothermic animal", Targets: at}, true
+		return Alert{Key: "animalcold", Label: tr.T("Hypothermic animal"), Targets: at}, true
 	}
-	return Alert{Key: "animalcold", Label: fmt.Sprintf("Hypothermic animals (%d)", len(at)), Targets: at}, true
+	return Alert{Key: "animalcold", Label: lang.Tf(tr, "Hypothermic animals (%d)", len(at)), Targets: at}, true
 }

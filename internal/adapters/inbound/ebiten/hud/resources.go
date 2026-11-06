@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
@@ -52,6 +53,7 @@ type resKey struct {
 	ver                                    int
 	food, wood, stone, steel, silver, gold int
 	foodDays                               int
+	langProbe                              string // a translated word: a language change rebuilds the rows
 }
 
 // resourcesState is this region's presentation state (Chrome.res).
@@ -71,12 +73,15 @@ const FoodDaysKind = "food_days"
 // FoodDaysRow is the readout row of days (tenths): "3.4 d" with the hover
 // label "Days of food: 3.4"; ok is false while the colony has no food
 // reading (FoodDays 0 before the simulation fills it).
-func FoodDaysRow(tenths int) (ResRow, bool) {
+func FoodDaysRow(tenths int) (ResRow, bool) { return FoodDaysRowIn(en, tenths) }
+
+// FoodDaysRowIn is FoodDaysRow in tr's language.
+func FoodDaysRowIn(tr lang.Tr, tenths int) (ResRow, bool) {
 	if tenths <= 0 {
 		return ResRow{}, false
 	}
 	days := strconv.Itoa(tenths/10) + "." + strconv.Itoa(tenths%10)
-	return ResRow{Kind: FoodDaysKind, Label: "Days of food: " + days, Text: days + " d"}, true
+	return ResRow{Kind: FoodDaysKind, Label: lang.Tf(tr, "Days of food: %s", days), Text: lang.Tf(tr, "%s d", days)}, true
 }
 
 // ---- rows ------------------------------------------------------------------
@@ -85,18 +90,18 @@ func FoodDaysRow(tenths int) (ResRow, bool) {
 // stockpile counts: the loose-stack totals (food, wood, stone, steel, and
 // silver and gold once mined). They stand in while Stored is empty, so the
 // list never goes blank.
-func legacyStored(w game.WorldView) []game.StoredResourceView {
+func legacyStored(tr lang.Tr, w game.WorldView) []game.StoredResourceView {
 	out := []game.StoredResourceView{
-		{Kind: "food", Label: "Food", Category: "Food", Qty: w.Food},
-		{Kind: "wood", Label: "Wood", Category: "Materials", Qty: w.Wood},
-		{Kind: "stone", Label: "Stone", Category: "Materials", Qty: w.Stone},
-		{Kind: "steel", Label: "Steel", Category: "Materials", Qty: w.Steel},
+		{Kind: "food", Label: tr.T("Food"), Category: "Food", Qty: w.Food},
+		{Kind: "wood", Label: tr.T("Wood"), Category: "Materials", Qty: w.Wood},
+		{Kind: "stone", Label: tr.T("Stone"), Category: "Materials", Qty: w.Stone},
+		{Kind: "steel", Label: tr.T("Steel"), Category: "Materials", Qty: w.Steel},
 	}
 	if w.Silver > 0 {
-		out = append(out, game.StoredResourceView{Kind: "silver", Label: "Silver", Category: "Materials", Qty: w.Silver})
+		out = append(out, game.StoredResourceView{Kind: "silver", Label: tr.T("Silver"), Category: "Materials", Qty: w.Silver})
 	}
 	if w.Gold > 0 {
-		out = append(out, game.StoredResourceView{Kind: "gold", Label: "Gold", Category: "Materials", Qty: w.Gold})
+		out = append(out, game.StoredResourceView{Kind: "gold", Label: tr.T("Gold"), Category: "Materials", Qty: w.Gold})
 	}
 	return out
 }
@@ -105,6 +110,11 @@ func legacyStored(w game.WorldView) []game.StoredResourceView {
 // when there are none), flat, or grouped under headers in category order.
 // A group in collapsed shows only its header.
 func BuildResourceRows(w game.WorldView, categorised bool, collapsed map[string]bool) []ResRow {
+	return BuildResourceRowsIn(en, w, categorised, collapsed)
+}
+
+// BuildResourceRowsIn is BuildResourceRows in tr's language.
+func BuildResourceRowsIn(tr lang.Tr, w game.WorldView, categorised bool, collapsed map[string]bool) []ResRow {
 	src := make([]game.StoredResourceView, 0, len(w.Stored))
 	for _, s := range w.Stored {
 		if s.Qty > 0 {
@@ -112,7 +122,7 @@ func BuildResourceRows(w game.WorldView, categorised bool, collapsed map[string]
 		}
 	}
 	if len(src) == 0 {
-		src = legacyStored(w)
+		src = legacyStored(tr, w)
 	}
 	rows := make([]ResRow, 0, len(src)+8)
 	if !categorised {
@@ -155,7 +165,7 @@ func (c Resources) Rows() []ResRow {
 	st := &c.res
 	k := resKey{
 		n: len(w.Stored), cat: c.sh.Settings().Gameplay.CategorizedResources, ver: st.ver,
-		food: w.Food, wood: w.Wood, stone: w.Stone, steel: w.Steel, silver: w.Silver, gold: w.Gold, foodDays: w.FoodDays,
+		food: w.Food, wood: w.Wood, stone: w.Stone, steel: w.Steel, silver: w.Silver, gold: w.Gold, foodDays: w.FoodDays, langProbe: c.sh.T("Food"),
 	}
 	if len(w.Stored) > 0 {
 		k.first = &w.Stored[0]
@@ -167,8 +177,8 @@ func (c Resources) Rows() []ResRow {
 		return st.rows
 	}
 	st.key, st.built = k, true
-	st.rows = BuildResourceRows(w, k.cat, st.collapsed)
-	if r, ok := FoodDaysRow(w.FoodDays); ok {
+	st.rows = BuildResourceRowsIn(c.sh, w, k.cat, st.collapsed)
+	if r, ok := FoodDaysRowIn(c.sh, w.FoodDays); ok {
 		st.rows = append([]ResRow{r}, st.rows...)
 	}
 	return st.rows

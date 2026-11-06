@@ -1,10 +1,10 @@
 package hud
 
 import (
-	"fmt"
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -38,24 +38,23 @@ const (
 	goneLoadReason = "Commitment: one timeline"
 )
 
-// endingTitle and endingText are the ship ending's original prose.
-const (
-	endingTitle = "Beyond the sky"
-	endingText  = "The engines thundered and the ship climbed until the sky turned black. Below, the colony grew small: " +
-		"its fields, its graves, the walls that held through every raid. Asleep in their caskets, the travellers dream " +
-		"of a world where they can begin again. Their story here is complete."
-)
+// The ship ending's original prose.
+func endingTitle(tr lang.Tr) string { return tr.T("Beyond the sky") }
 
-// goneTitle and goneText are the everyone-gone screen's original prose.
-const (
-	goneTitle = "Nobody left"
-	goneText  = "The last of the colony is gone: fallen, taken or lost beyond the horizon. The fires have burned down and the " +
-		"doors stand open to the wind. Nothing here answers to you any more, but the world carries on and you may watch it."
-)
+func endingText(tr lang.Tr) string {
+	return tr.T("The engines thundered and the ship climbed until the sky turned black. Below, the colony grew small: its fields, its graves, the walls that held through every raid. Asleep in their caskets, the travellers dream of a world where they can begin again. Their story here is complete.")
+}
+
+// The everyone-gone screen's original prose.
+func goneTitle(tr lang.Tr) string { return tr.T("Nobody left") }
+
+func goneText(tr lang.Tr) string {
+	return tr.T("The last of the colony is gone: fallen, taken or lost beyond the horizon. The fires have burned down and the doors stand open to the wind. Nothing here answers to you any more, but the world carries on and you may watch it.")
+}
 
 // shipAlerts are the reactor's countdown (with the raids it draws) and a
 // ship ready to launch.
-func shipAlerts(w game.WorldView) []Alert {
+func shipAlerts(tr lang.Tr, w game.WorldView) []Alert {
 	if w.AX.ShipLaunched || w.AX.ShipID == 0 {
 		return nil
 	}
@@ -67,9 +66,9 @@ func shipAlerts(w game.WorldView) []Alert {
 	}
 	switch {
 	case w.AX.Countdown > 0:
-		return []Alert{{Key: ShipWakingAlertKey, Label: "Ship reactor waking: " + countdown(w.AX.Countdown), Targets: at}}
+		return []Alert{{Key: ShipWakingAlertKey, Label: lang.Tf(tr, "Ship reactor waking: %s", countdown(tr, w.AX.Countdown)), Targets: at}}
 	case len(w.AX.LaunchIssues) == 0:
-		return []Alert{{Key: ShipReadyAlertKey, Label: "Ship ready to launch", Targets: at}}
+		return []Alert{{Key: ShipReadyAlertKey, Label: tr.T("Ship ready to launch"), Targets: at}}
 	}
 	return nil
 }
@@ -77,29 +76,32 @@ func shipAlerts(w game.WorldView) []Alert {
 // GoneAlert is "Nobody left" while everyone is gone (MAP-19), with the wait
 // for new wanderers when that option exists in this game. A click reopens the
 // everyone-gone screen, so Keep watching never loses the way back.
-func GoneAlert(w game.WorldView) (Alert, bool) {
+func GoneAlert(w game.WorldView) (Alert, bool) { return GoneAlertIn(en, w) }
+
+// GoneAlertIn is GoneAlert in tr's language.
+func GoneAlertIn(tr lang.Tr, w game.WorldView) (Alert, bool) {
 	ax := w.AX
 	if !ax.EveryoneGone {
 		return Alert{}, false
 	}
-	label := goneTitle
+	label := goneTitle(tr)
 	switch {
 	case ax.WanderersMax == 0 || ax.WanderersLeft == 0: // no such option, or all seven groups used
 	case ax.WanderersOK:
-		label += ": new wanderers can come"
+		label += tr.T(": new wanderers can come")
 	default:
-		label += ": wanderers in " + countdown(ax.WanderersIn)
+		label += lang.Tf(tr, ": wanderers in %s", countdown(tr, ax.WanderersIn))
 	}
 	return Alert{Key: GoneAlertKey, Label: label}, true
 }
 
 // countdown is ticks as days and hours ("12 days 4 hours").
-func countdown(ticks int) string {
+func countdown(tr lang.Tr, ticks int) string {
 	d, h := ticks/clock.TicksPerDay, (ticks%clock.TicksPerDay)/clock.TicksPerHour
 	if d > 0 {
-		return fmt.Sprintf("%dd %dh", d, h)
+		return lang.Tf(tr, "%dd %dh", d, h)
 	}
-	return fmt.Sprintf("%dh", max(h, 1))
+	return lang.Tf(tr, "%dh", max(h, 1))
 }
 
 // declareEnding opens the ending screen once a session when the ship has
@@ -132,8 +134,8 @@ func (c Right) declareGone(w game.WorldView, st *rightState) {
 
 // EndingLines are the ending screen's lines below its prose: who left,
 // who stayed, how long the colony stood and what it learned.
-func EndingLines(w game.WorldView, pawns []game.PawnView, now clock.Tick) []string {
-	out := []string{"Aboard the ship: " + strings.Join(w.AX.Escaped, ", ")}
+func EndingLines(tr lang.Tr, w game.WorldView, pawns []game.PawnView, now clock.Tick) []string {
+	out := []string{lang.Tf(tr, "Aboard the ship: %s", strings.Join(w.AX.Escaped, ", "))}
 	var stayed []string
 	for _, p := range pawns {
 		if !p.Hostile && !p.Prisoner && p.Status != "dead" {
@@ -141,43 +143,43 @@ func EndingLines(w game.WorldView, pawns []game.PawnView, now clock.Tick) []stri
 		}
 	}
 	if len(stayed) > 0 {
-		out = append(out, "Left behind: "+strings.Join(stayed, ", "))
+		out = append(out, lang.Tf(tr, "Left behind: %s", strings.Join(stayed, ", ")))
 	}
-	return append(out, standingLine(w, now))
+	return append(out, standingLine(tr, w, now))
 }
 
 // standingLine is how long the colony stood and what it learned.
-func standingLine(w game.WorldView, now clock.Tick) string {
+func standingLine(tr lang.Tr, w game.WorldView, now clock.Tick) string {
 	done := 0
 	for _, r := range w.Research {
 		if r.Done {
 			done++
 		}
 	}
-	return fmt.Sprintf("The colony stood %d days and finished %d research projects.", int(now)/clock.TicksPerDay, done)
+	return lang.Tf(tr, "The colony stood %d days and finished %d research projects.", int(now)/clock.TicksPerDay, done)
 }
 
 // openEnding pushes the ending screen.
 func (c Right) openEnding(w game.WorldView) {
-	buttons := []uikit.ModalButton{{ID: EndingWatchID, Label: "Keep watching", Style: uikit.BtnPrimary, Closes: true}}
+	buttons := []uikit.ModalButton{{ID: EndingWatchID, Label: c.sh.T("Keep watching"), Style: uikit.BtnPrimary, Closes: true}}
 	if d, ok := c.sh.(ports.Dispatcher); ok {
 		if w.AX.EveryoneGone { // MAP-22: all aboard: new wanderers may still come (wiki: Ending)
 			buttons = c.wanderersButton(buttons, w, d)
 		}
-		buttons = append(buttons, uikit.ModalButton{ID: EndingMenuID, Label: "Main menu", Closes: true,
+		buttons = append(buttons, uikit.ModalButton{ID: EndingMenuID, Label: c.sh.T("Main menu"), Closes: true,
 			OnClick: func() { d.Do(ports.ReturnToMenu{}) }})
 	}
-	c.pushEnding(EndingModalID, endingTitle, endingText, EndingLines(w, c.sh.Pawns(), c.sh.Tick()), buttons)
+	c.pushEnding(EndingModalID, endingTitle(c.sh), endingText(c.sh), EndingLines(c.sh, w, c.sh.Pawns(), c.sh.Tick()), buttons)
 }
 
 // openGone pushes the everyone-gone screen: Keep watching, New wanderers
 // (off until the wait is over), Load game (off
 // in a commitment colony, as in the pause menu) and Main menu.
 func (c Right) openGone(w game.WorldView) {
-	buttons := []uikit.ModalButton{{ID: GoneWatchID, Label: "Keep watching", Style: uikit.BtnPrimary, Closes: true}}
+	buttons := []uikit.ModalButton{{ID: GoneWatchID, Label: c.sh.T("Keep watching"), Style: uikit.BtnPrimary, Closes: true}}
 	if d, ok := c.sh.(ports.Dispatcher); ok {
 		buttons = c.wanderersButton(buttons, w, d)
-		buttons = append(buttons, uikit.ModalButton{ID: GoneLoadID, Label: "Load game", Closes: true,
+		buttons = append(buttons, uikit.ModalButton{ID: GoneLoadID, Label: c.sh.T("Load game"), Closes: true,
 			Disabled: func() string {
 				if s, ok := c.sh.Env().Game.(storyReader); ok && s.Story().Commitment {
 					return goneLoadReason
@@ -185,10 +187,10 @@ func (c Right) openGone(w game.WorldView) {
 				return ""
 			},
 			OnClick: func() { d.Do(ports.Push{Screen: ports.ScreenLoad}) }},
-			uikit.ModalButton{ID: GoneMenuID, Label: "Main menu", Closes: true,
+			uikit.ModalButton{ID: GoneMenuID, Label: c.sh.T("Main menu"), Closes: true,
 				OnClick: func() { d.Do(ports.ReturnToMenu{}) }})
 	}
-	c.pushEnding(GoneModalID, goneTitle, goneText, []string{standingLine(w, c.sh.Tick())}, buttons)
+	c.pushEnding(GoneModalID, goneTitle(c.sh), goneText(c.sh), []string{standingLine(c.sh, w, c.sh.Tick())}, buttons)
 }
 
 // wanderersButton appends New wanderers (MAP-19), in a game made from a Setup.
@@ -196,7 +198,7 @@ func (c Right) wanderersButton(buttons []uikit.ModalButton, w game.WorldView, d 
 	if w.AX.WanderersMax == 0 {
 		return buttons
 	}
-	return append(buttons, uikit.ModalButton{ID: GoneWanderersID, Label: "New wanderers", Closes: true,
+	return append(buttons, uikit.ModalButton{ID: GoneWanderersID, Label: c.sh.T("New wanderers"), Closes: true,
 		Disabled: c.wanderersReason,
 		OnClick:  func() { d.Do(ports.OpenWanderers{}) }})
 }
@@ -209,7 +211,7 @@ func (c Right) wanderersReason() string {
 	case ax.WanderersLeft == 0:
 		return "No more groups"
 	case !ax.WanderersOK:
-		return "In " + countdown(ax.WanderersIn)
+		return c.sh.Tf("In %s", countdown(c.sh, ax.WanderersIn))
 	}
 	return ""
 }

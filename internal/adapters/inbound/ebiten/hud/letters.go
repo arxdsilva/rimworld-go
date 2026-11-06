@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -94,12 +95,15 @@ type LetterRow struct {
 }
 
 // LetterRowLabel is the text a row shows.
-func LetterRowLabel(r LetterRow) string {
+func LetterRowLabel(r LetterRow) string { return LetterRowLabelIn(en, r) }
+
+// LetterRowLabelIn is LetterRowLabel in tr's language.
+func LetterRowLabelIn(tr lang.Tr, r LetterRow) string {
 	if r.Older > 0 {
-		return fmt.Sprintf("+%d older", r.Older)
+		return lang.Tf(tr, "+%d older", r.Older)
 	}
 	if r.Letter.Title == "" {
-		return "Letter"
+		return tr.T("Letter")
 	}
 	return r.Letter.Title
 }
@@ -148,7 +152,7 @@ func (c Right) letterButtonsIn(l hudlayout.Layout) []uikit.Button {
 		if row.Older > 0 {
 			id = row.Opens // RHUD-474: the bundle opens the newest folded letter
 		}
-		out = append(out, uikit.Button{ID: ids.PrefixLetter + strconv.FormatUint(id, 10), Label: LetterRowLabel(row),
+		out = append(out, uikit.Button{ID: ids.PrefixLetter + strconv.FormatUint(id, 10), Label: LetterRowLabelIn(c.sh, row),
 			X: row.R.X, Y: row.R.Y, W: row.R.W, H: row.R.H})
 	}
 	return out
@@ -274,7 +278,7 @@ func (c Right) OpenLetter(m game.MessageView) {
 func (c Right) openLetterView(l game.LetterView) {
 	title := l.Title
 	if title == "" {
-		title = "Letter"
+		title = c.sh.T("Letter")
 	}
 	if l.ID != 0 {
 		c.session().read[l.ID] = true
@@ -305,13 +309,13 @@ func (c Right) openLetterView(l game.LetterView) {
 // (MAP-08), Give and Refuse (command.EncounterAnswer); then "Jump to" when
 // the letter has a place.
 func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
-	buttons := []uikit.ModalButton{{ID: "continue", Label: "Continue", Style: uikit.BtnPrimary, Closes: true}}
+	buttons := []uikit.ModalButton{{ID: "continue", Label: c.sh.T("Continue"), Style: uikit.BtnPrimary, Closes: true}}
 	if l.JoinOffer && l.ID != 0 {
 		buttons = []uikit.ModalButton{
-			{ID: "accept", Label: "Accept", Style: uikit.BtnPrimary, Closes: true, OnClick: func() {
+			{ID: "accept", Label: c.sh.T("Accept"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() {
 				c.sh.Enqueue(command.Command{Kind: command.AcceptLetter, Target: l.ID})
 			}},
-			{ID: "decline", Label: "Decline", Closes: true, OnClick: func() { c.dismissLetter(l.ID) }},
+			{ID: "decline", Label: c.sh.T("Decline"), Closes: true, OnClick: func() { c.dismissLetter(l.ID) }},
 		}
 	}
 	if l.Demand && l.ID != 0 {
@@ -319,12 +323,12 @@ func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 			c.sh.Enqueue(command.Command{Kind: command.EncounterAnswer, Target: l.ID, Mode: mode})
 		}
 		buttons = []uikit.ModalButton{
-			{ID: "give", Label: "Give", Style: uikit.BtnPrimary, Closes: true, OnClick: func() { answer(0) }},
-			{ID: "refuse", Label: "Refuse", Closes: true, OnClick: func() { answer(1) }},
+			{ID: "give", Label: c.sh.T("Give"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() { answer(0) }},
+			{ID: "refuse", Label: c.sh.T("Refuse"), Closes: true, OnClick: func() { answer(1) }},
 		}
 	}
 	if letterHasPlace(l) {
-		buttons = append(buttons, uikit.ModalButton{ID: "jump", Label: "Jump to", Closes: true, OnClick: func() { c.jumpToLetter(l) }})
+		buttons = append(buttons, uikit.ModalButton{ID: "jump", Label: c.sh.T("Jump to"), Closes: true, OnClick: func() { c.jumpToLetter(l) }})
 	}
 	return buttons
 }
@@ -341,7 +345,7 @@ func (c Right) drawLetters(screen *ebiten.Image, l hudlayout.Layout) {
 		if row.Older > 0 {
 			uikit.FillRect(screen, r, uikit.Panel)
 			uikit.StrokeRect(screen, r, creature.Fade(uikit.PanelBorder, 0.7))
-			gfx.Text(screen, LetterRowLabel(row), float64(r.X)+letterPadX+letterBarW, float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, uikit.TextDim))
+			gfx.Text(screen, LetterRowLabelIn(c.sh, row), float64(r.X)+letterPadX+letterBarW, float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, uikit.TextDim))
 			continue
 		}
 		k := LetterKinds[LetterKind(row.Letter.Kind)]
@@ -371,6 +375,6 @@ func (c Right) drawLetters(screen *ebiten.Image, l hudlayout.Layout) {
 		if c.LetterRead(row.Letter.ID) {
 			text = uikit.TextDim
 		}
-		gfx.Text(screen, uikit.FitText(LetterRowLabel(row), gfx.Body, r.Right()-tx-letterPadX), float64(tx), float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, text))
+		gfx.Text(screen, uikit.FitText(LetterRowLabelIn(c.sh, row), gfx.Body, r.Right()-tx-letterPadX), float64(tx), float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, text))
 	}
 }

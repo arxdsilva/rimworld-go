@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"strings"
@@ -60,8 +61,6 @@ const (
 	DossierButtonID  = "hud.dossier" // the colonist card's dock toggle (RHUD-039)
 	HomeAutoButtonID = "hud.homeauto"
 	PowerButtonID    = "hud.power"
-
-	roofLegendTxt = "Roof: blue built · slate natural · dashed planned · hatched removal"
 )
 
 // GlobalToggle is one overlay toggle. The legacy five route through the
@@ -381,14 +380,14 @@ func (c Global) Declare(sw, sh int) {
 		u.Add(uikit.Widget{ID: tg.ID, Label: tg.Short, R: rows.Toggles[i], Tip: tg.tip(c), Click: func() { tg.run(c) }})
 	}
 	w := c.sh.World()
-	u.Tip("hud.tip.hour", rows.Hour, "Time\n"+c.TimeText())
+	u.Tip("hud.tip.hour", rows.Hour, c.sh.T("Time\n")+c.TimeText())
 	u.Tip("hud.tip.date", rows.Date, c.dateTip(w))
 	if !rows.Weather.Empty() {
-		u.Tip("hud.tip.weather", rows.Weather, "Weather\nThe sky and the wind (the arrow shows where it blows).")
+		u.Tip("hud.tip.weather", rows.Weather, c.sh.T("Weather\nThe sky and the wind (the arrow shows where it blows)."))
 	}
-	u.Tip("hud.tip.temp", rows.Temp, "Temperature\nThe air under the cursor: indoors inside a room, outdoors elsewhere. Over the HUD it shows the outdoor temperature.")
+	u.Tip("hud.tip.temp", rows.Temp, c.sh.T("Temperature\nThe air under the cursor: indoors inside a room, outdoors elsewhere. Over the HUD it shows the outdoor temperature."))
 	if !rows.Reason.Empty() {
-		u.Tip("hud.tip.reason", rows.Reason, "Paused\n"+c.sh.PauseReason())
+		u.Tip("hud.tip.reason", rows.Reason, c.sh.T("Paused\n")+c.sh.PauseReason())
 	}
 }
 
@@ -411,20 +410,25 @@ func (c Global) TimeText() string {
 // HourLine is the clock and the schedule's current activity.
 func (c Global) HourLine() string {
 	in := c.sh.Settings().Interface
-	return gfx.Ellipsize(hourLine(c.sh.Date(), c.sh.Env().Wall, in.ClockRealtime, in.Clock12h, c.activity()), gfx.Body, GlobalInnerW)
+	return gfx.Ellipsize(hourLineIn(c.sh, c.sh.Date(), c.sh.Env().Wall, in.ClockRealtime, in.Clock12h, c.activity()), gfx.Body, GlobalInnerW)
 }
 
 // DateLine is the calendar date and the season.
 func (c Global) DateLine() string {
-	return DateSeasonLine(c.sh.Date(), c.sh.World().Season, GlobalInnerW)
+	return DateSeasonLineIn(c.sh, c.sh.Date(), c.sh.World().Season, GlobalInnerW)
 }
 
 // DateSeasonLine is the date and the season in at most maxW px: the long
 // form, else a compact one.
 func DateSeasonLine(d clock.Date, season string, maxW float64) string {
+	return DateSeasonLineIn(en, d, season, maxW)
+}
+
+// DateSeasonLineIn is DateSeasonLine in tr's language.
+func DateSeasonLineIn(tr lang.Tr, d clock.Date, season string, maxW float64) string {
 	forms := []string{
-		fmt.Sprintf("Day %d, Quadrum %d, Year %d", d.Day+1, d.Quadrum+1, d.Year+1),
-		fmt.Sprintf("D%d Q%d Y%d", d.Day+1, d.Quadrum+1, d.Year+1),
+		lang.Tf(tr, "Day %d, Quadrum %d, Year %d", d.Day+1, d.Quadrum+1, d.Year+1),
+		lang.Tf(tr, "D%d Q%d Y%d", d.Day+1, d.Quadrum+1, d.Year+1),
 	}
 	var s string
 	for _, f := range forms {
@@ -442,11 +446,11 @@ func DateSeasonLine(d clock.Date, season string, maxW float64) string {
 // dateTip is the date row's hover card: the biome and its climate, else
 // the full date.
 func (c Global) dateTip(w game.WorldView) string {
-	lines := BiomeTooltip(w)
+	lines := BiomeTooltipIn(c.sh, w)
 	if len(lines) == 0 {
-		return "Date\n" + c.sh.Date().String()
+		return c.sh.T("Date\n") + c.sh.Date().String()
 	}
-	return SeasonText(w, c.sh.Env().Units) + "\n" + strings.Join(lines[1:], "\n")
+	return SeasonTextIn(c.sh, w, c.sh.Env().Units) + "\n" + strings.Join(lines[1:], "\n")
 }
 
 // FmtDegrees is a temperature in tenths of a degree C as "18 °C" in unit
@@ -462,9 +466,9 @@ func (c Global) TemperatureLine() string {
 		t = c.sh.Env().Game.TemperatureAt(tx, ty)
 		_, indoors = tileTemp(w, tx, ty)
 	}
-	where := "Outdoors"
+	where := c.sh.T("Outdoors")
 	if indoors {
-		where = "Indoors"
+		where = c.sh.T("Indoors")
 	}
 	return where + " " + FmtDegrees(c.sh.Env().Units, t)
 }
@@ -536,7 +540,7 @@ func (c Global) RoofLegend() string {
 	if !c.live() || !c.sh.RoofShown() {
 		return ""
 	}
-	return roofLegendTxt
+	return c.sh.T("Roof: blue built · slate natural · dashed planned · hatched removal")
 }
 
 // HomeLabelAt is "Home area" when the tile is in the Home area (SIM-021).

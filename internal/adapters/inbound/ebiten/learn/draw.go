@@ -1,13 +1,13 @@
 package learn
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 )
 
@@ -49,10 +49,10 @@ func (h *Helper) Draw(screen *ebiten.Image) {
 		gfx.FillRect(screen, p.X+1, p.Y+1, p.W-2, learnHeaderH-1, fade(uikit.TutorHeading, 0.14), false)
 	}
 	hy := float64(p.Y) + (learnHeaderH-gfx.LineH(gfx.Label))/2
-	gfx.Text(screen, "Learning helper", float64(p.X)+10, hy, gfx.WithColor(gfx.Label, uikit.TutorHeading))
-	right := "Done!"
+	gfx.Text(screen, h.sh.T("Learning helper"), float64(p.X)+10, hy, gfx.WithColor(gfx.Label, uikit.TutorHeading))
+	right := h.sh.T("Done!")
 	if !flashing {
-		right = fmt.Sprintf("%d left", h.count())
+		right = h.sh.Tf("%d left", h.count())
 	}
 	st := gfx.WithColor(gfx.Small, uikit.TutorText)
 	st.Align = gfx.AlignRight
@@ -60,16 +60,16 @@ func (h *Helper) Draw(screen *ebiten.Image) {
 	drawChevron(screen, p.Right()-16, p.Y+learnHeaderH/2, collapsed)
 
 	if !collapsed {
-		drawRows(screen, lay, mx, my)
-		note := fmt.Sprintf("%d of %d learned", h.total()-h.count(), h.total())
+		drawRows(screen, h.sh, lay, mx, my)
+		note := h.sh.Tf("%d of %d learned", h.total()-h.count(), h.total())
 		nst := gfx.WithColor(gfx.Small, mix(uikit.TutorText, uikit.TutorPanel, 0.2))
 		if flashing {
-			note, nst = "Done: "+flashTitle, gfx.WithColor(gfx.Small, uikit.TutorHeading)
+			note, nst = h.sh.Tf("Done: %s", flashTitle), gfx.WithColor(gfx.Small, uikit.TutorHeading)
 		}
 		gfx.Text(screen, uikit.FitText(note, nst, p.W-20), float64(p.X)+10, float64(lay.Footer.Y)+(learnFooterH-gfx.LineH(gfx.Small))/2, nst)
 	}
 	if lay.Open != nil && !lay.Card.Empty() {
-		drawCard(screen, lay, mx, my)
+		drawCard(screen, h.sh, lay, mx, my)
 	}
 }
 
@@ -86,7 +86,7 @@ func drawChevron(screen *ebiten.Image, cx, cy float32, collapsed bool) {
 }
 
 // drawRows draws the listed lessons.
-func drawRows(screen *ebiten.Image, lay Layout, mx, my int) {
+func drawRows(screen *ebiten.Image, tr lang.Tr, lay Layout, mx, my int) {
 	dark := mix(uikit.TutorPanel, color.RGBA{A: 0xFF}, 0.28)
 	for _, rw := range lay.Rows {
 		r := rw.R
@@ -107,19 +107,19 @@ func drawRows(screen *ebiten.Image, lay Layout, mx, my int) {
 		inner := r.W - learnRowPad*2
 		block := gfx.LineH(gfx.Label) + gfx.LineH(gfx.Small)
 		ty := float64(r.Y) + (float64(r.H)-block)/2
-		gfx.Text(screen, uikit.FitText(rw.L.Title, gfx.Label, inner), float64(r.X)+learnRowPad, ty, gfx.WithColor(gfx.Label, uikit.TutorHeading))
-		gfx.Text(screen, uikit.FitText(rw.L.Goal, gfx.Small, inner), float64(r.X)+learnRowPad, ty+gfx.LineH(gfx.Label), gfx.WithColor(gfx.Small, uikit.TutorText))
+		gfx.Text(screen, uikit.FitText(tr.T(rw.L.Title), gfx.Label, inner), float64(r.X)+learnRowPad, ty, gfx.WithColor(gfx.Label, uikit.TutorHeading))
+		gfx.Text(screen, uikit.FitText(tr.T(rw.L.Goal), gfx.Small, inner), float64(r.X)+learnRowPad, ty+gfx.LineH(gfx.Label), gfx.WithColor(gfx.Small, uikit.TutorText))
 	}
 }
 
 // drawCard draws the detail card of the open lesson.
-func drawCard(screen *ebiten.Image, lay Layout, mx, my int) {
+func drawCard(screen *ebiten.Image, tr lang.Tr, lay Layout, mx, my int) {
 	c := lay.Card
 	gfx.FillRect(screen, c.X, c.Y, c.W, c.H, uikit.TutorPanel, false)
 	gfx.StrokeRect(screen, c.X, c.Y, c.W, c.H, 1, uikit.TutorBorder, false)
 	x := float64(c.X) + learnCardPad
 	y := float64(c.Y) + learnCardPad
-	gfx.Text(screen, uikit.FitText(lay.Open.Title, gfx.Label, c.W-2*learnCardPad), x, y, gfx.WithColor(gfx.Label, uikit.TutorHeading))
+	gfx.Text(screen, uikit.FitText(tr.T(lay.Open.Title), gfx.Label, c.W-2*learnCardPad), x, y, gfx.WithColor(gfx.Label, uikit.TutorHeading))
 	y += float64(gfx.LineStep(gfx.Label)) + 6
 	for _, ln := range lay.Body {
 		gfx.Text(screen, ln, x, y, gfx.WithColor(gfx.Body, uikit.TutorText))
@@ -138,5 +138,5 @@ func drawCard(screen *ebiten.Image, lay Layout, mx, my int) {
 	gfx.FillRect(screen, g.X, g.Y, g.W, g.H, fill, false)
 	gfx.StrokeRect(screen, g.X, g.Y, g.W, g.H, 1, uikit.TutorBorder, false)
 	cx, cy := g.Center()
-	uikit.DrawCentered(screen, "Got it", float64(cx), float64(cy), gfx.WithColor(gfx.Label, uikit.TutorHeading))
+	uikit.DrawCentered(screen, tr.T("Got it"), float64(cx), float64(cy), gfx.WithColor(gfx.Label, uikit.TutorHeading))
 }

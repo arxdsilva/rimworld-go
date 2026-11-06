@@ -236,14 +236,14 @@ func (dl *Dealings) openTrade(v game.TradeView) {
 	d := newTradeDraft(v)
 	dl.trade = d
 	dl.kit().Push(uikit.Modal{
-		ID: TradeModalID, Title: "Trade with " + v.Trader, W: tradeModalW, H: tradeModalH,
+		ID: TradeModalID, Title: dl.sh.Tf("Trade with %s", v.Trader), W: tradeModalW, H: tradeModalH,
 		Draw:    func(body gfx.Rect) { dl.tradeBody(d, body) },
 		OnClose: dl.dismissTrade,
 		Buttons: []uikit.ModalButton{
-			{ID: "accept", Label: "Accept", Style: uikit.BtnPrimary,
+			{ID: "accept", Label: dl.sh.T("Accept"), Style: uikit.BtnPrimary,
 				Disabled: d.reason, OnClick: func() { dl.proposeTrade(d) }},
-			{ID: "reset", Label: "Reset", OnClick: func() { clear(d.net) }},
-			{ID: "cancel", Label: "Cancel", Closes: true, OnClick: dl.dismissTrade},
+			{ID: "reset", Label: dl.sh.T("Reset"), OnClick: func() { clear(d.net) }},
+			{ID: "cancel", Label: dl.sh.T("Cancel"), Closes: true, OnClick: dl.dismissTrade},
 		},
 	})
 }
@@ -303,10 +303,10 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
 	kind := v.TraderKind
 	if v.Orbital {
-		kind += " (orbital ship)"
+		kind += dl.sh.T(" (orbital ship)")
 	}
-	dl.kit().Label(body.X, body.Y, fmt.Sprintf("%s · %s · %s · goodwill %d", v.Trader, kind, v.Faction, v.Goodwill), hs)
-	dl.kit().Label(body.X, body.Y+22, fmt.Sprintf("%s negotiates (Social %d) · Price modifier %+d%% · leaves in %d h",
+	dl.kit().Label(body.X, body.Y, dl.sh.Tf("%s · %s · %s · goodwill %d", v.Trader, kind, v.Faction, v.Goodwill), hs)
+	dl.kit().Label(body.X, body.Y+22, dl.sh.Tf("%s negotiates (Social %d) · Price modifier %+d%% · leaves in %d h",
 		v.NegotiatorName, v.Social, v.PriceModPct, v.HoursLeft), uikit.DimText())
 
 	top := body.Y + 50
@@ -333,18 +333,18 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 	colName := gfx.Rect{X: x, Y: 0, W: body.Right() - x - uikit.ScrollBarW, H: 0}
 
 	hd := gfx.WithColor(gfx.Small, uikit.TextDim)
-	dl.kit().Label(colPrice.X, top+4, "Sell for", hd)
-	dl.kit().Label(colQty.X+4, top+4, "Colony", hd)
-	dl.kit().Label(colSell.X, top+4, "Give to trader", hd)
-	dl.kit().Label(colAmt.X+8, top+4, "Amount", hd)
-	dl.kit().Label(colBuy.X, top+4, "Take from trader", hd)
-	dl.kit().Label(colTQty.X+2, top+4, "Trader", hd)
-	dl.kit().Label(colTPrice.X+4, top+4, "Buy for", hd)
-	dl.kit().Label(colName.X, top+4, "Goods", hd)
+	dl.kit().Label(colPrice.X, top+4, dl.sh.T("Sell for"), hd)
+	dl.kit().Label(colQty.X+4, top+4, dl.sh.T("Colony"), hd)
+	dl.kit().Label(colSell.X, top+4, dl.sh.T("Give to trader"), hd)
+	dl.kit().Label(colAmt.X+8, top+4, dl.sh.T("Amount"), hd)
+	dl.kit().Label(colBuy.X, top+4, dl.sh.T("Take from trader"), hd)
+	dl.kit().Label(colTQty.X+2, top+4, dl.sh.T("Trader"), hd)
+	dl.kit().Label(colTPrice.X+4, top+4, dl.sh.T("Buy for"), hd)
+	dl.kit().Label(colName.X, top+4, dl.sh.T("Goods"), hd)
 
 	lines := TradeLines(v.Rows)
 	if len(lines) == 0 {
-		dl.kit().Label(table.X, table.Y+6, "Neither side has anything to trade.", uikit.DimText())
+		dl.kit().Label(table.X, table.Y+6, dl.sh.T("Neither side has anything to trade."), uikit.DimText())
 	}
 	area := dl.kit().ScrollArea("trade.rows", table, float32(len(lines)*tradeRowH), uikit.ScrollOpts{Step: tradeRowH * 2})
 	y := area.View.Y - area.Off
@@ -363,27 +363,27 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 
 	// summary
 	total := d.totalC()
-	verb := "You pay"
+	verb := dl.sh.T("You pay")
 	if total < 0 {
-		verb = "You receive"
+		verb = dl.sh.T("You receive")
 	}
-	dl.kit().Label(sum.X, sum.Y, fmt.Sprintf("%s %s silver", verb, SilverText(mathx.Abs(total))), gfx.Label)
-	if dl.kit().Check("trade.gift", gfx.Rect{X: sum.X, Y: sum.Y + 26, W: 220, H: 22}, "Gift (no payment)", &d.gift,
-		uikit.CheckOpts{Tip: "Gift\nGive goods away for goodwill instead of trading."}) {
+	dl.kit().Label(sum.X, sum.Y, dl.sh.Tf("%s %s silver", verb, SilverText(mathx.Abs(total))), gfx.Label)
+	if dl.kit().Check("trade.gift", gfx.Rect{X: sum.X, Y: sum.Y + 26, W: 220, H: 22}, dl.sh.T("Gift (no payment)"), &d.gift,
+		uikit.CheckOpts{Tip: dl.sh.T("Gift\nGive goods away for goodwill instead of trading.")}) {
 		d.setGift(d.gift)
 	}
 	if d.gift {
-		dl.kit().Label(sum.X+240, sum.Y+30, fmt.Sprintf("Goodwill %d -> %d", v.Goodwill, v.Goodwill+faction.GiftGoodwill(d.giftSilver())), gfx.Body)
+		dl.kit().Label(sum.X+240, sum.Y+30, dl.sh.Tf("Goodwill %d -> %d", v.Goodwill, v.Goodwill+faction.GiftGoodwill(d.giftSilver())), gfx.Body)
 	} else {
 		after := gfx.WithColor(gfx.Body, uikit.Text)
 		if d.colonyAfterC() < 0 {
 			after = gfx.WithColor(gfx.Body, uikit.Danger)
 		}
-		dl.kit().Label(sum.X+240, sum.Y+30, "Colony silver after: "+SilverText(d.colonyAfterC()), after)
-		dl.kit().Label(sum.X+500, sum.Y+30, "Trader silver after: "+SilverText(d.traderAfterC()), uikit.DimText())
+		dl.kit().Label(sum.X+240, sum.Y+30, dl.sh.Tf("Colony silver after: %s", SilverText(d.colonyAfterC())), after)
+		dl.kit().Label(sum.X+500, sum.Y+30, dl.sh.Tf("Trader silver after: %s", SilverText(d.traderAfterC())), uikit.DimText())
 	}
 	if v.Reason != "" {
-		dl.kit().Label(sum.X, sum.Y+58, "Refused: "+v.Reason, gfx.WithColor(gfx.Body, uikit.Danger))
+		dl.kit().Label(sum.X, sum.Y+58, dl.sh.Tf("Refused: %s", v.Reason), gfx.WithColor(gfx.Body, uikit.Danger))
 	}
 }
 

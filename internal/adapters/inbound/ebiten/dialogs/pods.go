@@ -51,12 +51,12 @@ type goodsRow struct {
 func (dl *Dealings) OpenLoadPods(pod entity.EntityID) {
 	f := &podLoad{pod: pod, pawns: map[entity.EntityID]bool{}, beasts: map[entity.EntityID]bool{}, goods: map[string]int{}}
 	dl.kit().Push(uikit.Modal{
-		ID: LoadPodsID, Title: "Load transport pods", W: loadPodsW, H: loadPodsH,
+		ID: LoadPodsID, Title: dl.sh.T("Load transport pods"), W: loadPodsW, H: loadPodsH,
 		Draw: func(body gfx.Rect) { dl.loadPodsBody(f, body) },
 		Buttons: []uikit.ModalButton{
-			{ID: "pods.load", Label: "Load", Style: uikit.BtnPrimary, Closes: true,
+			{ID: "pods.load", Label: dl.sh.T("Load"), Style: uikit.BtnPrimary, Closes: true,
 				Disabled: func() string { return dl.loadReason(f) }, OnClick: func() { dl.sendLoad(f) }},
-			{ID: "pods.cancel", Label: "Cancel", Closes: true},
+			{ID: "pods.cancel", Label: dl.sh.T("Cancel"), Closes: true},
 		},
 	})
 }
@@ -209,14 +209,14 @@ func (dl *Dealings) loadPodsBody(f *podLoad, body gfx.Rect) {
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
 	right, foot := right.SplitV(right.H - 48)
 	lh, lrest := left.SplitV(26)
-	dl.kit().Label(lh.X, lh.Y, "Colonists and animals", hs)
+	dl.kit().Label(lh.X, lh.Y, dl.sh.T("Colonists and animals"), hs)
 	var rows []func(r gfx.Rect)
 	for _, p := range dl.sh.Pawns() {
 		p := p
 		why := caravanPickReason(p)
 		rows = append(rows, func(rr gfx.Rect) {
 			on := f.pawns[p.ID] && why == ""
-			if dl.kit().Check(fmt.Sprintf("pods.pawn.%d", p.ID), rr, pawnLabel(p)+fmt.Sprintf("  (%d kg)", caravan.HumanMassKg), &on,
+			if dl.kit().Check(fmt.Sprintf("pods.pawn.%d", p.ID), rr, pawnLabel(dl.sh, p)+dl.sh.Tf("  (%d kg)", caravan.HumanMassKg), &on,
 				uikit.CheckOpts{Disabled: why != "", Reason: why}) {
 				f.pawns[p.ID] = on
 			}
@@ -233,7 +233,7 @@ func (dl *Dealings) loadPodsBody(f *podLoad, body gfx.Rect) {
 			if name == "" {
 				name = a.Species
 			}
-			if dl.kit().Check(fmt.Sprintf("pods.animal.%d", a.ID), rr, fmt.Sprintf("%s  (%d kg)", name, AnimalKg(a.Species)), &on, uikit.CheckOpts{}) {
+			if dl.kit().Check(fmt.Sprintf("pods.animal.%d", a.ID), rr, dl.sh.Tf("%s  (%d kg)", name, AnimalKg(a.Species)), &on, uikit.CheckOpts{}) {
 				f.beasts[a.ID] = on
 			}
 		})
@@ -241,16 +241,16 @@ func (dl *Dealings) loadPodsBody(f *podLoad, body gfx.Rect) {
 	dl.scrollRows("pods.who", lrest, rows)
 
 	gh, grest := right.SplitV(26)
-	dl.kit().Label(gh.X, gh.Y, "Goods", hs)
+	dl.kit().Label(gh.X, gh.Y, dl.sh.T("Goods"), hs)
 	goods := dl.goodsRows()
 	rows = nil
 	for _, g := range goods {
 		g := g
 		rows = append(rows, func(rr gfx.Rect) {
 			v := f.goods[g.kind]
-			dl.kit().Label(rr.X, rr.Y+4, gfx.Ellipsize(fmt.Sprintf("%s  (%d here)", Capitalize(g.kind), g.qty), gfx.Body, float64(rr.W-260)), gfx.Body)
+			dl.kit().Label(rr.X, rr.Y+4, gfx.Ellipsize(dl.sh.Tf("%s  (%d here)", Capitalize(g.kind), g.qty), gfx.Body, float64(rr.W-260)), gfx.Body)
 			uikit.Stepper(dl.kit(), "pods.goods."+strings.ReplaceAll(g.kind, " ", "_"), gfx.Rect{X: rr.Right() - 200, Y: rr.Y, W: 112, H: rr.H}, &v, 0, g.qty)
-			if dl.kit().Button("pods.goods."+strings.ReplaceAll(g.kind, " ", "_")+".all", gfx.Rect{X: rr.Right() - 80, Y: rr.Y, W: 72, H: rr.H}, "All", uikit.BtnOpts{}) {
+			if dl.kit().Button("pods.goods."+strings.ReplaceAll(g.kind, " ", "_")+".all", gfx.Rect{X: rr.Right() - 80, Y: rr.Y, W: 72, H: rr.H}, dl.sh.T("All"), uikit.BtnOpts{}) {
 				v = g.qty
 			}
 			f.goods[g.kind] = v
@@ -260,7 +260,7 @@ func (dl *Dealings) loadPodsBody(f *podLoad, body gfx.Rect) {
 		})
 	}
 	if len(goods) == 0 {
-		dl.kit().Label(grest.X, grest.Y, "No loose goods on the map.", uikit.DimText())
+		dl.kit().Label(grest.X, grest.Y, dl.sh.T("No loose goods on the map."), uikit.DimText())
 	}
 	dl.scrollRows("pods.goods", grest, rows)
 
@@ -270,8 +270,8 @@ func (dl *Dealings) loadPodsBody(f *podLoad, body gfx.Rect) {
 	if kg > b.AX.CapKg {
 		st = gfx.WithColor(gfx.Body, uikit.Danger)
 	}
-	dl.kit().Label(foot.X, foot.Y+6, fmt.Sprintf("Mass  %d / %d kg  (aboard %d kg)", kg, b.AX.CapKg, b.AX.LoadKg), st)
-	dl.kit().Label(foot.X, foot.Y+28, "Colonists walk in themselves; haulers bring the goods and lead the animals.", gfx.WithColor(gfx.Small, uikit.TextDim))
+	dl.kit().Label(foot.X, foot.Y+6, dl.sh.Tf("Mass  %d / %d kg  (aboard %d kg)", kg, b.AX.CapKg, b.AX.LoadKg), st)
+	dl.kit().Label(foot.X, foot.Y+28, dl.sh.T("Colonists walk in themselves; haulers bring the goods and lead the animals."), gfx.WithColor(gfx.Small, uikit.TextDim))
 }
 
 // scrollRows declares rows of formRowH in a scroll area over r.

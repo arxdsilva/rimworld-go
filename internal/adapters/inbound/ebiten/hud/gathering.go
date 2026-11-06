@@ -3,6 +3,7 @@ package hud
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 
@@ -29,16 +30,19 @@ const (
 
 // GatheringText is the banner line for v ("Wedding of Ada and Bo:
 // ceremony", "Party hosted by Ada: under way").
-func GatheringText(v game.GatheringView) string {
+func GatheringText(v game.GatheringView) string { return GatheringTextIn(en, v) }
+
+// GatheringTextIn is GatheringText in tr's language.
+func GatheringTextIn(tr lang.Tr, v game.GatheringView) string {
 	hosts := strings.Join(v.Hosts, " and ")
 	var s string
 	switch v.Kind {
 	case "wedding":
-		s = "Wedding of " + hosts
+		s = lang.Tf(tr, "Wedding of %s", hosts)
 	default:
-		s = "Party"
+		s = tr.T("Party")
 		if hosts != "" {
-			s += " hosted by " + hosts
+			s += lang.Tf(tr, " hosted by %s", hosts)
 		}
 	}
 	if v.Phase != "" {
@@ -68,7 +72,7 @@ func (c Banner) LineIn(sw int, l hudlayout.Layout) (string, gfx.Rect, bool) {
 	if len(vs) == 0 {
 		return "", gfx.Rect{}, false
 	}
-	s := GatheringText(vs[0])
+	s := GatheringTextIn(c.sh, vs[0])
 	room := float32(sw) - 2*(2*hudlayout.HudMargin+hudlayout.RightW)
 	w := min(gfx.TextW(s, gfx.Body)+2*gatherBannerPad, max(room, 120))
 	y := float32(hudlayout.HudMargin)
@@ -84,7 +88,7 @@ func (c Banner) LineIn(sw int, l hudlayout.Layout) (string, gfx.Rect, bool) {
 // Declare declares the banner's tooltip (call from the colony UI).
 func (c Banner) Declare(sw int) {
 	if s, r, ok := c.Line(sw); ok {
-		c.kit().Tip("hud.gathering", r, s+"\nFree colonists join in; a threat or a drafted host calls it off.")
+		c.kit().Tip("hud.gathering", r, s+c.sh.T("\nFree colonists join in; a threat or a drafted host calls it off."))
 	}
 }
 

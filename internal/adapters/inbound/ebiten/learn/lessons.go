@@ -1,8 +1,7 @@
 package learn
 
 import (
-	"fmt"
-
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
@@ -21,9 +20,9 @@ type Lesson struct {
 	ID    string // saved in Gameplay.LearnedLessons: never change one
 	Title string // the row's heading
 	Goal  string // one line: what to do (the row's second line)
-	// Body is the detail card's text: 2-3 short sentences. It takes the
-	// key namer so it can show the player's live key bindings.
-	Body func(key KeyFunc) string
+	// Text is the detail card's text: 2-3 short sentences, translated by tr.
+	// It takes the key namer so it can show the player's live key bindings.
+	Text func(tr lang.Tr, key KeyFunc) string
 	// OnCmd reports the lesson done by a command the player sent; m is the
 	// helper's memory of earlier ones (nil: no command finishes it).
 	OnCmd func(m *Memo, c command.Command) bool
@@ -34,6 +33,9 @@ type Lesson struct {
 	// that does not is neither shown nor counted.
 	Needs func(config.Settings) bool
 }
+
+// Body is the detail card's text in English.
+func (l *Lesson) Body(key KeyFunc) string { return l.Text(en, key) }
 
 // Memo is what the helper remembers of the commands so far, for the
 // lessons that take two steps.
@@ -68,61 +70,51 @@ func cmdIn(c command.Command, kinds ...command.Kind) bool {
 	return false
 }
 
+// en marks the English source text of a lesson; the helper translates it
+// where it draws.
+var en lang.English
+
 // Catalog is every lesson, in the order they are offered.
 var Catalog = []Lesson{
-	{ID: "camera", Title: "Look around", Goal: "Pan or zoom the map.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Move the view with %s %s %s %s, or hold the middle mouse button and drag. "+
-			"Scroll the wheel to zoom in on a colonist or out to see the whole colony. "+
-			"Hold Shift while panning to move faster.",
+	{ID: "camera", Title: en.T("Look around"), Goal: en.T("Pan or zoom the map."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Move the view with %s %s %s %s, or hold the middle mouse button and drag. Scroll the wheel to zoom in on a colonist or out to see the whole colony. Hold Shift while panning to move faster.",
 			key(input.CamUp), key(input.CamLeft), key(input.CamDown), key(input.CamRight))
 	},
 		OnUI: func(f Frame) bool { return f.Panned }},
 
-	{ID: "select", Title: "Select things", Goal: "Click a colonist or anything on the map.", Body: func(KeyFunc) string {
-		return "Click a colonist, animal, plant, item or building to see its details and commands at the lower left. " +
-			"Drag a box on the map to select several colonists at once. " +
-			"Click a portrait along the top to jump to that colonist."
+	{ID: "select", Title: en.T("Select things"), Goal: en.T("Click a colonist or anything on the map."), Text: func(tr lang.Tr, _ KeyFunc) string {
+		return tr.T("Click a colonist, animal, plant, item or building to see its details and commands at the lower left. Drag a box on the map to select several colonists at once. Click a portrait along the top to jump to that colonist.")
 	},
 		OnUI: func(f Frame) bool { return f.Selected }},
 
-	{ID: "build", Title: "Build with the Architect", Goal: "Place a blueprint on the map.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Open the Architect with %s, pick a category, then a tool. "+
-			"Click or drag on the map to place blueprints; colonists haul the materials and build them when they have time. "+
-			"Right-click or press Escape to put the tool away.", key(input.TabArchitect))
+	{ID: "build", Title: en.T("Build with the Architect"), Goal: en.T("Place a blueprint on the map."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Open the Architect with %s, pick a category, then a tool. Click or drag on the map to place blueprints; colonists haul the materials and build them when they have time. Right-click or press Escape to put the tool away.", key(input.TabArchitect))
 	},
 		OnCmd: func(_ *Memo, c command.Command) bool {
 			return cmdIn(c, command.DesignateBuild, command.DesignateWall, command.DesignateBed)
 		}},
 
-	{ID: "zones", Title: "Stockpiles and fields", Goal: "Paint a stockpile or a growing zone.", Body: func(KeyFunc) string {
-		return "The Architect's Zones category paints areas on the ground. " +
-			"A stockpile is where colonists carry loose goods, and a growing zone is soil sown with the crop you pick. " +
-			"Paint a stockpile near your door and a growing zone on fertile ground."
+	{ID: "zones", Title: en.T("Stockpiles and fields"), Goal: en.T("Paint a stockpile or a growing zone."), Text: func(tr lang.Tr, _ KeyFunc) string {
+		return tr.T("The Architect's Zones category paints areas on the ground. A stockpile is where colonists carry loose goods, and a growing zone is soil sown with the crop you pick. Paint a stockpile near your door and a growing zone on fertile ground.")
 	},
 		OnCmd: func(_ *Memo, c command.Command) bool {
 			return cmdIn(c, command.DesignateStockpile, command.DesignateGrowZone)
 		}},
 
-	{ID: "work", Title: "Set work priorities", Goal: "Change a priority in the Work tab.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Open the Work tab with %s. "+
-			"Each column is a kind of job and each cell is one colonist's priority: 1 is done first, 4 last, and an empty cell means never. "+
-			"Click a cell to cycle it.", key(input.TabWork))
+	{ID: "work", Title: en.T("Set work priorities"), Goal: en.T("Change a priority in the Work tab."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Open the Work tab with %s. Each column is a kind of job and each cell is one colonist's priority: 1 is done first, 4 last, and an empty cell means never. Click a cell to cycle it.", key(input.TabWork))
 	},
 		OnCmd: func(_ *Memo, c command.Command) bool {
 			return cmdIn(c, command.SetWorkPriority, command.SetWorkEnabled)
 		}},
 
-	{ID: "schedule", Title: "Plan the day", Goal: "Paint some hours in the Schedule tab.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Open the Schedule tab with %s. "+
-			"Each row is a colonist and each cell an hour of the day: pick a brush such as work, recreation or sleep, then click or drag across cells. "+
-			"Colonists follow the plan hour by hour.", key(input.TabSchedule))
+	{ID: "schedule", Title: en.T("Plan the day"), Goal: en.T("Paint some hours in the Schedule tab."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Open the Schedule tab with %s. Each row is a colonist and each cell an hour of the day: pick a brush such as work, recreation or sleep, then click or drag across cells. Colonists follow the plan hour by hour.", key(input.TabSchedule))
 	},
 		OnCmd: func(_ *Memo, c command.Command) bool { return cmdIn(c, command.SetSchedule) }},
 
-	{ID: "draft", Title: "Draft and move", Goal: "Draft a colonist, then move it.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Select a colonist and press %s to draft them. "+
-			"A drafted colonist drops their routine and obeys you: right-click the ground to send them there. "+
-			"Press %s again to send them back to work.", key(input.Draft), key(input.Draft))
+	{ID: "draft", Title: en.T("Draft and move"), Goal: en.T("Draft a colonist, then move it."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Select a colonist and press %s to draft them. A drafted colonist drops their routine and obeys you: right-click the ground to send them there. Press %s again to send them back to work.", key(input.Draft), key(input.Draft))
 	},
 		OnCmd: func(m *Memo, c command.Command) bool {
 			switch c.Kind {
@@ -136,59 +128,46 @@ var Catalog = []Lesson{
 			return false
 		}},
 
-	{ID: "forbid", Title: "Forbid and haul", Goal: "Forbid a stack, or mark one for hauling.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Select a stack of items and press %s to forbid it; colonists leave forbidden goods alone until you allow them again. "+
-			"Goods lying outside a stockpile are not carried anywhere until you mark them with a Haul button. "+
-			"The Architect's Orders category has a Haul tool for whole areas.", key(input.Forbid))
+	{ID: "forbid", Title: en.T("Forbid and haul"), Goal: en.T("Forbid a stack, or mark one for hauling."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Select a stack of items and press %s to forbid it; colonists leave forbidden goods alone until you allow them again. Goods lying outside a stockpile are not carried anywhere until you mark them with a Haul button. The Architect's Orders category has a Haul tool for whole areas.", key(input.Forbid))
 	},
 		OnCmd: func(_ *Memo, c command.Command) bool {
 			return c.Enabled && cmdIn(c, command.SetForbidden, command.DesignateForbid, command.DesignateHaul, command.SetHaulMark)
 		}},
 
-	{ID: "research", Title: "Start research", Goal: "Pick a research project.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Open the Research tab with %s, select a project in the tree and press Start research. "+
-			"Research needs a research bench that can work it and a colonist with Research work turned on. "+
-			"Finished projects open up new options.", key(input.TabResearch))
+	{ID: "research", Title: en.T("Start research"), Goal: en.T("Pick a research project."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Open the Research tab with %s, select a project in the tree and press Start research. Research needs a research bench that can work it and a colonist with Research work turned on. Finished projects open up new options.", key(input.TabResearch))
 	},
 		OnCmd: func(_ *Memo, c command.Command) bool { return cmdIn(c, command.SetResearch) }},
 
-	{ID: "speed", Title: "Control time", Goal: "Pause, or change the game speed.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Press %s to pause and think, and %s, %s and %s for normal, fast and superfast speed. "+
-			"The game pauses itself when danger arrives unless you turn Pause on threat off in Options. "+
-			"Orders you give while paused still take effect.",
+	{ID: "speed", Title: en.T("Control time"), Goal: en.T("Pause, or change the game speed."), Text: func(tr lang.Tr, key KeyFunc) string {
+		return lang.Tf(tr, "Press %s to pause and think, and %s, %s and %s for normal, fast and superfast speed. The game pauses itself when danger arrives unless you turn Pause on threat off in Options. Orders you give while paused still take effect.",
 			key(input.Pause), key(input.Speed1), key(input.Speed2), key(input.Speed3))
 	},
 		OnUI: func(f Frame) bool { return f.SpeedSet }},
 
-	{ID: "dossier_hover", Title: "Read the colonist card", Goal: "Rest the pointer on a colonist's card.", Needs: cardOn, Body: func(KeyFunc) string {
-		return "Select a colonist and the card shows their state, needs and work at a glance. " +
-			"Rest the pointer on a line and a tip says where its number comes from. " +
-			"Some lines also open what they name when you click them."
+	{ID: "dossier_hover", Title: en.T("Read the colonist card"), Goal: en.T("Rest the pointer on a colonist's card."), Needs: cardOn, Text: func(tr lang.Tr, _ KeyFunc) string {
+		return tr.T("Select a colonist and the card shows their state, needs and work at a glance. Rest the pointer on a line and a tip says where its number comes from. Some lines also open what they name when you click them.")
 	},
 		OnUI: func(f Frame) bool { return f.CardRead }},
 
-	{ID: "dossier_gear", Title: "Open the card settings", Goal: "Click the gear on the colonist card.", Needs: cardOn, Body: func(KeyFunc) string {
-		return "A small gear shows on the card while the pointer is over it. " +
-			"It opens the setup window, where every change reaches the card at once and nothing touches the colony."
+	{ID: "dossier_gear", Title: en.T("Open the card settings"), Goal: en.T("Click the gear on the colonist card."), Needs: cardOn, Text: func(tr lang.Tr, _ KeyFunc) string {
+		return tr.T("A small gear shows on the card while the pointer is over it. It opens the setup window, where every change reaches the card at once and nothing touches the colony.")
 	},
 		OnUI: func(f Frame) bool { return f.SetupOpened }},
 
-	{ID: "dossier_look", Title: "Settings on the Look tab", Goal: "Read the Look tab of the card setup.", Needs: cardOn, Body: func(KeyFunc) string {
-		return "The Look tab sets where the card sits, how big it is, its text and how often it refreshes. " +
-			"A greyed row says why it is off right now. " +
-			"Back to defaults puts everything as it was."
+	{ID: "dossier_look", Title: en.T("Settings on the Look tab"), Goal: en.T("Read the Look tab of the card setup."), Needs: cardOn, Text: func(tr lang.Tr, _ KeyFunc) string {
+		return tr.T("The Look tab sets where the card sits, how big it is, its text and how often it refreshes. A greyed row says why it is off right now. Back to defaults puts everything as it was.")
 	},
 		OnUI: func(f Frame) bool { return f.LookRead }},
 
-	{ID: "dossier_sections", Title: "Sections and presets", Goal: "Open the Sections or Presets tab.", Needs: cardOn, Body: func(KeyFunc) string {
-		return "Sections lists what the card shows and in what order, and you can move, remove or add any line. " +
-			"Presets keeps a card you like as a file, to load again or to pass to a friend."
+	{ID: "dossier_sections", Title: en.T("Sections and presets"), Goal: en.T("Open the Sections or Presets tab."), Needs: cardOn, Text: func(tr lang.Tr, _ KeyFunc) string {
+		return tr.T("Sections lists what the card shows and in what order, and you can move, remove or add any line. Presets keeps a card you like as a file, to load again or to pass to a friend.")
 	},
 		OnUI: func(f Frame) bool { return f.LayoutsSeen }},
 
-	{ID: "dossier_close", Title: "Close the setup window", Goal: "Press Close when you are done.", Needs: cardOn, Body: func(KeyFunc) string {
-		return "Your changes are already kept, so Close only puts the window away. " +
-			"The card stays as you left it in every colony, and a switch in Options turns it off if you prefer the plain pane."
+	{ID: "dossier_close", Title: en.T("Close the setup window"), Goal: en.T("Press Close when you are done."), Needs: cardOn, Text: func(tr lang.Tr, _ KeyFunc) string {
+		return tr.T("Your changes are already kept, so Close only puts the window away. The card stays as you left it in every colony, and a switch in Options turns it off if you prefer the plain pane.")
 	},
 		OnUI: func(f Frame) bool { return f.SetupClosed }},
 }

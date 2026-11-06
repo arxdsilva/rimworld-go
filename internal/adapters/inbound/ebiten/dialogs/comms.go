@@ -6,6 +6,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
@@ -54,10 +55,10 @@ func (dl *Dealings) openComms(v game.CommsView) {
 	d := &commsDraft{view: v, gift: map[int]int{}}
 	dl.comms = d
 	dl.kit().Push(uikit.Modal{
-		ID: CommsModalID, Title: "Radio console", W: commsModalW, H: commsModalH,
+		ID: CommsModalID, Title: dl.sh.T("Radio console"), W: commsModalW, H: commsModalH,
 		Draw:    func(body gfx.Rect) { dl.commsBody(d, body) },
 		OnClose: dl.dismissComms,
-		Buttons: []uikit.ModalButton{{ID: "close", Label: "Close", Closes: true, OnClick: dl.dismissComms}},
+		Buttons: []uikit.ModalButton{{ID: "close", Label: dl.sh.T("Close"), Closes: true, OnClick: dl.dismissComms}},
 	})
 }
 
@@ -70,20 +71,20 @@ func (dl *Dealings) dismissComms() {
 }
 
 // commsActionLabel is a button label with its goodwill cost.
-func commsActionLabel(base string, act game.CommsActionView) string {
+func commsActionLabel(tr lang.Tr, base string, act game.CommsActionView) string {
 	if act.Cost > 0 {
-		return fmt.Sprintf("%s · %d goodwill", base, act.Cost)
+		return lang.Tf(tr, "%s · %d goodwill", base, act.Cost)
 	}
 	return base
 }
 
 // commsReason is the action's blocked reason, with a fallback.
-func commsReason(act game.CommsActionView) string {
+func commsReason(tr lang.Tr, act game.CommsActionView) string {
 	if act.Allowed {
 		return ""
 	}
 	if act.Reason == "" {
-		return "Not available."
+		return tr.T("Not available.")
 	}
 	return act.Reason
 }
@@ -91,13 +92,13 @@ func commsReason(act game.CommsActionView) string {
 // commsBody declares the header, the faction rows and the orbital row.
 func (dl *Dealings) commsBody(d *commsDraft, body gfx.Rect) {
 	v := d.view
-	dl.kit().Label(body.X, body.Y, fmt.Sprintf("%s is at the console · %d silver within reach of a trade beacon", v.OperatorName, v.BeaconSilver), gfx.Label)
+	dl.kit().Label(body.X, body.Y, dl.sh.Tf("%s is at the console · %d silver within reach of a trade beacon", v.OperatorName, v.BeaconSilver), gfx.Label)
 	orbH := float32(64)
 	list := gfx.Rect{X: body.X, Y: body.Y + 28, W: body.W, H: body.H - 28 - orbH - 8}
 	orb := gfx.Rect{X: body.X, Y: body.Bottom() - orbH, W: body.W, H: orbH}
 
 	if len(v.Factions) == 0 {
-		dl.kit().Label(list.X, list.Y+6, "No other faction answers on the radio.", uikit.DimText())
+		dl.kit().Label(list.X, list.Y+6, dl.sh.T("No other faction answers on the radio."), uikit.DimText())
 	}
 	area := dl.kit().ScrollArea("comms.rows", list, float32(len(v.Factions)*commsRowH), uikit.ScrollOpts{Step: commsRowH})
 	y := area.View.Y - area.Off
@@ -111,22 +112,22 @@ func (dl *Dealings) commsBody(d *commsDraft, body gfx.Rect) {
 	}
 
 	dl.kit().Queue(func(dst *ebiten.Image) { uikit.StrokeRect(dst, orb, uikit.PanelBorder) })
-	dl.kit().Label(orb.X+10, orb.Y+8, "Orbital trader", gfx.WithColor(gfx.Label, uikit.Heading))
+	dl.kit().Label(orb.X+10, orb.Y+8, dl.sh.T("Orbital trader"), gfx.WithColor(gfx.Label, uikit.Heading))
 	o := v.Orbital
 	if !o.Present {
-		dl.kit().Label(orb.X+10, orb.Y+32, "No ship in range", uikit.DimText())
+		dl.kit().Label(orb.X+10, orb.Y+32, dl.sh.T("No ship in range"), uikit.DimText())
 		return
 	}
-	dl.kit().Label(orb.X+150, orb.Y+8, fmt.Sprintf("%s · %s · leaves in %d h", o.Ship, o.Kind, o.HoursLeft), gfx.Body)
+	dl.kit().Label(orb.X+150, orb.Y+8, dl.sh.Tf("%s · %s · leaves in %d h", o.Ship, o.Kind, o.HoursLeft), gfx.Body)
 	why := ""
 	if !o.CallOK {
 		why = o.CallReason
 		if why == "" {
-			why = "Not available."
+			why = dl.sh.T("Not available.")
 		}
 		dl.kit().Label(orb.X+10, orb.Y+42, why, uikit.DimText())
 	}
-	if dl.kit().Button("comms.call", gfx.Rect{X: orb.Right() - 190, Y: orb.Y + 14, W: 180, H: 32}, "Call trade ship", uikit.BtnOpts{
+	if dl.kit().Button("comms.call", gfx.Rect{X: orb.Right() - 190, Y: orb.Y + 14, W: 180, H: 32}, dl.sh.T("Call trade ship"), uikit.BtnOpts{
 		Style: uikit.BtnPrimary, Disabled: why != "", Reason: why}) {
 		dl.sh.Enqueue(command.Command{Kind: command.CommsCallTrader})
 	}
@@ -148,7 +149,7 @@ func (dl *Dealings) commsFaction(d *commsDraft, f game.CommsFactionView, r gfx.R
 	dl.kit().Queue(func(dst *ebiten.Image) { goodwillBar(dst, bar, f.Goodwill) })
 	dl.kit().Label(bar.Right()+8, r.Y+8, fmt.Sprintf("%+d", f.Goodwill), gfx.Body)
 	if f.Relation == "hostile" {
-		dl.kit().Label(r.X+10, r.Y+40, "Hostile: they will not answer requests.", uikit.DimText())
+		dl.kit().Label(r.X+10, r.Y+40, dl.sh.T("Hostile: they will not answer requests."), uikit.DimText())
 		return
 	}
 	id := f.ID
@@ -156,29 +157,29 @@ func (dl *Dealings) commsFaction(d *commsDraft, f game.CommsFactionView, r gfx.R
 	h := float32(30)
 	amount := d.giftOf(id)
 	gift := f.Gift
-	why := commsReason(gift)
+	why := commsReason(dl.sh, gift)
 	if gift.Allowed && d.view.BeaconSilver < 1 {
-		why = "No silver within reach of a trade beacon."
+		why = dl.sh.T("No silver within reach of a trade beacon.")
 	}
-	if dl.kit().Button(fmt.Sprintf("comms.%d.giftless", id), gfx.Rect{X: r.X + 10, Y: by, W: 30, H: h}, "-", uikit.BtnOpts{Disabled: amount <= 1, Reason: "Least is 1 silver."}) {
+	if dl.kit().Button(fmt.Sprintf("comms.%d.giftless", id), gfx.Rect{X: r.X + 10, Y: by, W: 30, H: h}, "-", uikit.BtnOpts{Disabled: amount <= 1, Reason: dl.sh.T("Least is 1 silver.")}) {
 		d.stepGift(id, -CommsGiftStep*qtyMult(dl.kit()))
 	}
 	dl.kit().Label(r.X+46, by+7, fmt.Sprintf("%d", amount), gfx.Label)
 	if dl.kit().Button(fmt.Sprintf("comms.%d.giftmore", id), gfx.Rect{X: r.X + 86, Y: by, W: 30, H: h}, "+", uikit.BtnOpts{
-		Disabled: amount >= d.view.BeaconSilver, Reason: "That is all the silver in reach."}) {
+		Disabled: amount >= d.view.BeaconSilver, Reason: dl.sh.T("That is all the silver in reach.")}) {
 		d.stepGift(id, CommsGiftStep*qtyMult(dl.kit()))
 	}
 	earn := faction.GiftGoodwill(amount)
-	if dl.kit().Button(fmt.Sprintf("comms.%d.gift", id), gfx.Rect{X: r.X + 124, Y: by, W: 170, H: h}, "Gift silver", uikit.BtnOpts{
-		Disabled: why != "", Reason: why, Tip: fmt.Sprintf("Gift\nGives %d silver for about %+d goodwill.", amount, earn)}) {
+	if dl.kit().Button(fmt.Sprintf("comms.%d.gift", id), gfx.Rect{X: r.X + 124, Y: by, W: 170, H: h}, dl.sh.T("Gift silver"), uikit.BtnOpts{
+		Disabled: why != "", Reason: why, Tip: dl.sh.Tf("Gift\nGives %d silver for about %+d goodwill.", amount, earn)}) {
 		dl.sh.Enqueue(command.Command{Kind: command.CommsGift, Index: id, Count: amount})
 	}
-	cWhy, aWhy := commsReason(f.Caravan), commsReason(f.Aid)
-	if dl.kit().Button(fmt.Sprintf("comms.%d.caravan", id), gfx.Rect{X: r.X + 304, Y: by, W: 210, H: h}, commsActionLabel("Request caravan", f.Caravan), uikit.BtnOpts{
+	cWhy, aWhy := commsReason(dl.sh, f.Caravan), commsReason(dl.sh, f.Aid)
+	if dl.kit().Button(fmt.Sprintf("comms.%d.caravan", id), gfx.Rect{X: r.X + 304, Y: by, W: 210, H: h}, commsActionLabel(dl.sh, dl.sh.T("Request caravan"), f.Caravan), uikit.BtnOpts{
 		Disabled: cWhy != "", Reason: cWhy}) {
 		dl.sh.Enqueue(command.Command{Kind: command.CommsRequestCaravan, Index: id})
 	}
-	if dl.kit().Button(fmt.Sprintf("comms.%d.aid", id), gfx.Rect{X: r.X + 524, Y: by, W: 190, H: h}, commsActionLabel("Request aid", f.Aid), uikit.BtnOpts{
+	if dl.kit().Button(fmt.Sprintf("comms.%d.aid", id), gfx.Rect{X: r.X + 524, Y: by, W: 190, H: h}, commsActionLabel(dl.sh, dl.sh.T("Request aid"), f.Aid), uikit.BtnOpts{
 		Disabled: aWhy != "", Reason: aWhy}) {
 		dl.sh.Enqueue(command.Command{Kind: command.CommsRequestAid, Index: id})
 	}

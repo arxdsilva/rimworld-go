@@ -39,6 +39,7 @@ type Shell interface {
 	ports.World
 	ports.Speed
 	ports.Widgets
+	ports.Texts
 	Host
 }
 

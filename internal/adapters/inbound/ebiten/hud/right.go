@@ -1,7 +1,6 @@
 package hud
 
 import (
-	"fmt"
 	"image/color"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
@@ -151,14 +150,14 @@ func (c Right) Hover(l hudlayout.Layout) (RightCard, gfx.Rect, bool) {
 				}
 				lines = append(lines, h.Label)
 			}
-			return RightCard{Title: fmt.Sprintf("%d more alerts", row.More), Body: strings.Join(lines, "\n"), Clr: uikit.PanelBorder}, row.R, true
+			return RightCard{Title: c.sh.Tf("%d more alerts", row.More), Body: strings.Join(lines, "\n"), Clr: uikit.PanelBorder}, row.R, true
 		}
 		al := row.Al
 		body := al.Explain
 		if n := len(al.Targets); n > 1 {
-			body += fmt.Sprintf("\n\nClick to see the next of %d places, right-click for the previous one.", n)
+			body += c.sh.Tf("\n\nClick to see the next of %d places, right-click for the previous one.", n)
 		} else if n == 1 {
-			body += "\n\nClick to look at it."
+			body += c.sh.T("\n\nClick to look at it.")
 		}
 		clr := uikit.Warning
 		if al.Sev == SevDanger {
@@ -171,14 +170,14 @@ func (c Right) Hover(l hudlayout.Layout) (RightCard, gfx.Rect, bool) {
 			continue
 		}
 		if row.Older > 0 {
-			return RightCard{Title: fmt.Sprintf("%d older letters", row.Older),
-				Body: "Right-click a letter to dismiss it and bring an older one back.", Clr: uikit.PanelBorder}, row.R, true
+			return RightCard{Title: c.sh.Tf("%d older letters", row.Older),
+				Body: c.sh.T("Right-click a letter to dismiss it and bring an older one back."), Clr: uikit.PanelBorder}, row.R, true
 		}
 		text := row.Letter.Text
 		if r := []rune(text); len(r) > 240 {
 			text = string(r[:240]) + "..."
 		}
-		return RightCard{Title: LetterRowLabel(row), Body: text + "\n\nClick to read it, right-click to dismiss it.",
+		return RightCard{Title: LetterRowLabelIn(c.sh, row), Body: text + c.sh.T("\n\nClick to read it, right-click to dismiss it."),
 			Clr: LetterColor(row.Letter.Kind)}, row.R, true
 	}
 	return RightCard{}, gfx.Rect{}, false

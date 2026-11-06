@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/mapnav"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
@@ -44,18 +45,24 @@ const (
 )
 
 // PawnLabel is a colonist's display name ("Colonist 7" when it has none).
-func PawnLabel(p game.PawnView) string {
+func PawnLabel(p game.PawnView) string { return PawnLabelIn(en, p) }
+
+// PawnLabelIn is PawnLabel in tr's language.
+func PawnLabelIn(tr lang.Tr, p game.PawnView) string {
 	if p.Name != "" {
 		return p.Name
 	}
-	return fmt.Sprintf("Colonist %d", p.ID)
+	return lang.Tf(tr, "Colonist %d", p.ID)
 }
 
 // BarTip is a colonist bar slot's hover line: the name, the age and the
 // adulthood title ("Ada, 31, Convoy mechanic"); a legacy colonist has
 // neither, so only the name.
-func BarTip(p game.PawnView) string {
-	parts := []string{PawnLabel(p)}
+func BarTip(p game.PawnView) string { return BarTipIn(en, p) }
+
+// BarTipIn is BarTip in tr's language.
+func BarTipIn(tr lang.Tr, p game.PawnView) string {
+	parts := []string{PawnLabelIn(tr, p)}
 	if p.AgeYears > 0 {
 		parts = append(parts, strconv.Itoa(p.AgeYears))
 	}
@@ -129,50 +136,59 @@ func (s BarStatus) iconKey() string {
 
 // The marks, most urgent first: a card shows as many as fit, in this order.
 var (
-	stMental   = BarStatus{Key: "mental", Label: "mental break", tone: uikit.Danger}
-	stDowned   = BarStatus{Key: "downed", Label: "downed", tone: uikit.Danger}
-	stBurning  = BarStatus{Key: "burning", Label: "on fire", tone: uikit.Warning}
-	stFighting = BarStatus{Key: "fighting", Label: "fighting", tone: uikit.Warning}
-	stFleeing  = BarStatus{Key: "fleeing", Label: "fleeing", tone: uikit.Warning}
-	stDrafted  = BarStatus{Key: "drafted", icon: "draft", Label: "drafted", tone: uikit.Accent}
-	stSleeping = BarStatus{Key: "sleeping", Label: "sleeping", tone: uikit.LetterInfo}
-	stIdle     = BarStatus{Key: "idle", Label: "idle", tone: uikit.TextDim}
+	stMental   = BarStatus{Key: "mental", Label: en.T("mental break"), tone: uikit.Danger}
+	stDowned   = BarStatus{Key: "downed", Label: en.T("downed"), tone: uikit.Danger}
+	stBurning  = BarStatus{Key: "burning", Label: en.T("on fire"), tone: uikit.Warning}
+	stFighting = BarStatus{Key: "fighting", Label: en.T("fighting"), tone: uikit.Warning}
+	stFleeing  = BarStatus{Key: "fleeing", Label: en.T("fleeing"), tone: uikit.Warning}
+	stDrafted  = BarStatus{Key: "drafted", icon: "draft", Label: en.T("drafted"), tone: uikit.Accent}
+	stSleeping = BarStatus{Key: "sleeping", Label: en.T("sleeping"), tone: uikit.LetterInfo}
+	stIdle     = BarStatus{Key: "idle", Label: en.T("idle"), tone: uikit.TextDim}
 	// StatusCaravan marks a colonist travelling with a caravan. Caravan
 	// members are not in Colonists() yet, so nothing raises it; it shows the
 	// generic caravan icon until its own art lands.
-	StatusCaravan = BarStatus{Key: "caravan", icon: "caravan", Label: "in a caravan", tone: uikit.LetterInfo}
+	StatusCaravan = BarStatus{Key: "caravan", icon: "caravan", Label: en.T("in a caravan"), tone: uikit.LetterInfo}
 )
 
 // BarStatuses are the marks for p, most urgent first. onFire: standing in
 // a fire (PawnView has no burning flag); idle: idle for the whole hold.
 func BarStatuses(p game.PawnView, onFire, idle bool) []BarStatus {
+	return BarStatusesIn(en, p, onFire, idle)
+}
+
+// BarStatusesIn is BarStatuses with the labels in tr's language.
+func BarStatusesIn(tr lang.Tr, p game.PawnView, onFire, idle bool) []BarStatus {
 	var out []BarStatus
+	add := func(s BarStatus) {
+		s.Label = tr.T(s.Label)
+		out = append(out, s)
+	}
 	downed := p.Status == "downed"
 	if p.MentalBreak != "" {
 		m := stMental
-		m.Label = "mental break: " + p.MentalBreak
+		m.Label = lang.Tf(tr, "mental break: %s", p.MentalBreak)
 		out = append(out, m)
 	}
 	if downed {
-		out = append(out, stDowned)
+		add(stDowned)
 	}
 	if onFire {
-		out = append(out, stBurning)
+		add(stBurning)
 	}
 	if p.Action == game.ActionMelee || p.Action == game.ActionAim {
-		out = append(out, stFighting)
+		add(stFighting)
 	}
 	if p.Fleeing && !p.Hostile {
-		out = append(out, stFleeing)
+		add(stFleeing)
 	}
 	if p.Drafted {
-		out = append(out, stDrafted)
+		add(stDrafted)
 	}
 	if p.Lying && p.Status == "alive" { // Lying is "downed or asleep"
-		out = append(out, stSleeping)
+		add(stSleeping)
 	}
 	if idle && !downed {
-		out = append(out, stIdle)
+		add(stIdle)
 	}
 	return out
 }
@@ -226,12 +242,12 @@ func (c ColonistBar) statusesWith(p game.PawnView, fires []game.FireView) []BarS
 	if g := c.sh.Env().Game; g != nil && p.Map != g.ViewedMap() {
 		fires = nil // the fires are the viewed map's
 	}
-	return BarStatuses(p, onFire(fires, p), held)
+	return BarStatusesIn(c.sh, p, onFire(fires, p), held)
 }
 
 // barSlotTip is the hover line of p's slot: barTip, then the marks.
-func barSlotTip(p game.PawnView, sts []BarStatus) string {
-	tip := BarTip(p)
+func barSlotTip(tr lang.Tr, p game.PawnView, sts []BarStatus) string {
+	tip := BarTipIn(tr, p)
 	if len(sts) == 0 {
 		return tip
 	}
@@ -318,7 +334,7 @@ func (c ColonistBar) Buttons(sw, sh int) []uikit.Button {
 		slot := l.BarSlots[i]
 		out = append(out, uikit.Button{
 			ID:       BarSlotID(p.ID),
-			Tip:      barSlotTip(p, c.statusesWith(p, fires)),
+			Tip:      barSlotTip(c.sh, p, c.statusesWith(p, fires)),
 			X:        slot.X,
 			Y:        slot.Y,
 			W:        slot.W,
@@ -333,7 +349,7 @@ func (c ColonistBar) Buttons(sw, sh int) []uikit.Button {
 			break
 		}
 		out = append(out, uikit.Button{
-			ID: BarMapID(gs[i].Map), Tip: groupTip(gs[i]),
+			ID: BarMapID(gs[i].Map), Tip: groupTip(c.sh, gs[i]),
 			X: g.Frame.X, Y: g.Frame.Y, W: g.Frame.W, H: g.Frame.H, Selected: gs[i].Current,
 		})
 	}
@@ -360,7 +376,7 @@ func (c ColonistBar) Declare(sw, sh int) {
 	}
 	c.kit().Add(uikit.Widget{
 		ID: BarMoreID, Label: fmt.Sprintf("+%d", l.BarMore), R: slot,
-		Tip:   fmt.Sprintf("%d more colonists\nClick to select the next one that has no slot.", l.BarMore),
+		Tip:   c.sh.Tf("%d more colonists\nClick to select the next one that has no slot.", l.BarMore),
 		Click: c.cycleHidden,
 	})
 }
@@ -493,10 +509,10 @@ func BarMapOf(id string) (game.MapID, bool) {
 }
 
 // groupTip is a map frame's hover card.
-func groupTip(g mapnav.Group) string {
-	tip := g.Label + "\nClick to switch to this map."
+func groupTip(tr lang.Tr, g mapnav.Group) string {
+	tip := g.Label + tr.T("\nClick to switch to this map.")
 	if g.Threat {
-		tip += "\nHostiles are on it."
+		tip += tr.T("\nHostiles are on it.")
 	}
 	return tip
 }
@@ -566,7 +582,7 @@ func (c ColonistBar) drawCard(screen *ebiten.Image, card barCard, p game.PawnVie
 		gfx.FillRect(screen, slot.X, card.name.Y, slot.W, slot.Bottom()-card.name.Y, creature.Fade(uikit.Space, 0.5), false) // a quiet plate: the name reads over any mood
 		st := gfx.WithColor(gfx.Small, uikit.Text)
 		st.Align = gfx.AlignCenter
-		gfx.Text(screen, gfx.Ellipsize(PawnLabel(p), gfx.Small, float64(card.name.W)), float64(card.name.X+card.name.W/2), float64(card.name.Y), st)
+		gfx.Text(screen, gfx.Ellipsize(PawnLabelIn(c.sh, p), gfx.Small, float64(card.name.W)), float64(card.name.X+card.name.W/2), float64(card.name.Y), st)
 	}
 	if selected { // unmistakable: a 2 px accent frame inside the card
 		gfx.StrokeRect(screen, slot.X+1, slot.Y+1, slot.W-2, slot.H-2, 2, uikit.Accent, false)

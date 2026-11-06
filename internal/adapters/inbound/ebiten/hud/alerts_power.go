@@ -1,10 +1,10 @@
 package hud
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 )
 
@@ -21,7 +21,7 @@ const (
 // brownoutAlerts raises "Brownout" (a danger) for each net that sheds
 // devices: it names the device drawing the most and targets the shed ones.
 // With more than one grid the label says which (by order in the list).
-func brownoutAlerts(w game.WorldView) []Alert {
+func brownoutAlerts(tr lang.Tr, w game.WorldView) []Alert {
 	var out []Alert
 	for idx, n := range w.PowerNets {
 		if !n.Brownout {
@@ -42,14 +42,14 @@ func brownoutAlerts(w game.WorldView) []Alert {
 				shed = append(shed, [2]int{b.X, b.Y})
 			}
 		}
-		label := "Brownout"
+		label := tr.T("Brownout")
 		if len(w.PowerNets) > 1 {
-			label = fmt.Sprintf("Brownout on grid %d", idx+1)
+			label = lang.Tf(tr, "Brownout on grid %d", idx+1)
 		}
 		if biggest != "" {
-			label += ": " + biggest + " draws most"
+			label += lang.Tf(tr, ": %s draws most", biggest)
 		} else {
-			label += ": devices shed"
+			label += tr.T(": devices shed")
 		}
 		if len(shed) == 0 {
 			shed = all // nothing marked as shed: the grid's consumers are the ones to look at
@@ -61,7 +61,7 @@ func brownoutAlerts(w game.WorldView) []Alert {
 
 // notConnectedAlert raises "Not connected" (a warning) for devices (of any
 // role) no grid reaches, targeting them.
-func notConnectedAlert(w game.WorldView) (Alert, bool) {
+func notConnectedAlert(tr lang.Tr, w game.WorldView) (Alert, bool) {
 	var at [][2]int
 	kind := ""
 	for i := range w.Buildings {
@@ -76,15 +76,15 @@ func notConnectedAlert(w game.WorldView) (Alert, bool) {
 	case 0:
 		return Alert{}, false
 	case 1:
-		return Alert{Key: "notconnected", Label: titleCase(kind) + " not connected", Targets: at}, true
+		return Alert{Key: "notconnected", Label: lang.Tf(tr, "%s not connected", titleCase(kind)), Targets: at}, true
 	}
-	return Alert{Key: "notconnected", Label: fmt.Sprintf("%d devices not connected", len(at)), Targets: at}, true
+	return Alert{Key: "notconnected", Label: lang.Tf(tr, "%d devices not connected", len(at)), Targets: at}, true
 }
 
 // noFuelAlert raises "out of wood" for every fire that burned out: a
 // campfire, a torch lamp, a wood-fired generator. The label names the one
 // kind, or counts a mixed lot.
-func noFuelAlert(w game.WorldView) (Alert, bool) {
+func noFuelAlert(tr lang.Tr, w game.WorldView) (Alert, bool) {
 	var at [][2]int
 	var kinds []string
 	for i := range w.Buildings {
@@ -103,9 +103,9 @@ func noFuelAlert(w game.WorldView) (Alert, bool) {
 	case len(at) == 0:
 		return Alert{}, false
 	case len(kinds) > 1:
-		return Alert{Key: "nofuel", Label: fmt.Sprintf("Out of wood (%d)", len(at)), Targets: at}, true
+		return Alert{Key: "nofuel", Label: lang.Tf(tr, "Out of wood (%d)", len(at)), Targets: at}, true
 	case len(at) == 1:
-		return Alert{Key: "nofuel", Label: titleCase(kinds[0]) + " out of wood", Targets: at}, true
+		return Alert{Key: "nofuel", Label: lang.Tf(tr, "%s out of wood", titleCase(kinds[0])), Targets: at}, true
 	}
-	return Alert{Key: "nofuel", Label: fmt.Sprintf("%d %ss out of wood", len(at), kinds[0]), Targets: at}, true
+	return Alert{Key: "nofuel", Label: lang.Tf(tr, "%d %ss out of wood", len(at), kinds[0]), Targets: at}, true
 }

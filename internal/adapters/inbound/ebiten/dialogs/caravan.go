@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -47,12 +48,12 @@ type formCaravan struct {
 func (dl *Dealings) OpenFormCaravan(globePick func() int) {
 	f := &formCaravan{picked: map[entity.EntityID]bool{}, beasts: map[entity.EntityID]bool{}, goods: map[string]int{}, dest: globePick(), globe: globePick}
 	dl.kit().Push(uikit.Modal{
-		ID: FormCaravanID, Title: "Form caravan", W: formCaravanW, H: formCaravanH,
+		ID: FormCaravanID, Title: dl.sh.T("Form caravan"), W: formCaravanW, H: formCaravanH,
 		Draw: func(body gfx.Rect) { dl.formCaravanBody(f, body) },
 		Buttons: []uikit.ModalButton{
-			{ID: "form.send", Label: "Send", Style: uikit.BtnPrimary, Closes: true,
+			{ID: "form.send", Label: dl.sh.T("Send"), Style: uikit.BtnPrimary, Closes: true,
 				Disabled: func() string { return dl.formReason(f) }, OnClick: func() { dl.sendCaravan(f) }},
-			{ID: "form.cancel", Label: "Cancel", Closes: true},
+			{ID: "form.cancel", Label: dl.sh.T("Cancel"), Closes: true},
 		},
 	})
 }
@@ -129,7 +130,7 @@ func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
 	dl.caravanPacks(f, mid) // caravan_pack.go (AX-9): pack animals and goods
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
 	lh, lrest := left.SplitV(26)
-	dl.kit().Label(lh.X, lh.Y, "Colonists", hs)
+	dl.kit().Label(lh.X, lh.Y, dl.sh.T("Colonists"), hs)
 	var pawns []game.PawnView
 	for _, p := range dl.sh.Pawns() {
 		if p.Status != "dead" {
@@ -138,7 +139,7 @@ func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
 	}
 	lrest, summary := lrest.SplitV(lrest.H - 56)
 	if len(pawns) == 0 {
-		dl.kit().Label(lrest.X, lrest.Y, "No colonists.", uikit.DimText())
+		dl.kit().Label(lrest.X, lrest.Y, dl.sh.T("No colonists."), uikit.DimText())
 	} else {
 		area := dl.kit().ScrollArea("form.members", lrest, float32(len(pawns)*formRowH), uikit.ScrollOpts{Step: formRowH * 2})
 		y := area.View.Y - area.Off
@@ -150,17 +151,17 @@ func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
 			}
 			why := caravanPickReason(p)
 			on := f.picked[p.ID] && why == ""
-			if dl.kit().Check(fmt.Sprintf("form.member.%d", p.ID), rr, pawnLabel(p), &on, uikit.CheckOpts{Disabled: why != "", Reason: why}) {
+			if dl.kit().Check(fmt.Sprintf("form.member.%d", p.ID), rr, pawnLabel(dl.sh, p), &on, uikit.CheckOpts{Disabled: why != "", Reason: why}) {
 				f.picked[p.ID] = on
 			}
 		}
 	}
 	n := len(f.members())
-	dl.kit().Label(summary.X, summary.Y+6, fmt.Sprintf("%d colonist(s) · %s · 5 days of food", n, dl.caravanLoadLine(f)), gfx.Small)
-	dl.kit().Label(summary.X, summary.Y+26, "They gather at a hitching spot if there is one, then leave by the map edge; a friendly settlement hosts them a day.", gfx.WithColor(gfx.Small, uikit.TextDim))
+	dl.kit().Label(summary.X, summary.Y+6, dl.sh.Tf("%d colonist(s) · %s · 5 days of food", n, dl.caravanLoadLine(f)), gfx.Small)
+	dl.kit().Label(summary.X, summary.Y+26, dl.sh.T("They gather at a hitching spot if there is one, then leave by the map edge; a friendly settlement hosts them a day."), gfx.WithColor(gfx.Small, uikit.TextDim))
 
 	rh, rrest := right.SplitV(26)
-	dl.kit().Label(rh.X, rh.Y, "Destination", hs)
+	dl.kit().Label(rh.X, rh.Y, dl.sh.T("Destination"), hs)
 	sites := dl.sh.Sites()
 	rows := len(sites) + 1
 	area := dl.kit().ScrollArea("form.dests", rrest, float32(rows*formRowH), uikit.ScrollOpts{Step: formRowH * 2})
@@ -172,9 +173,9 @@ func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
 	}
 	if rr, vis := row(); vis {
 		picked := f.globe()
-		label, why := "Tile picked on the globe", "Click a tile on the World tab's globe first."
+		label, why := dl.sh.T("Tile picked on the globe"), "Click a tile on the World tab's globe first."
 		if picked >= 0 {
-			label, why = fmt.Sprintf("Tile %d (picked on the globe)", picked), ""
+			label, why = dl.sh.Tf("Tile %d (picked on the globe)", picked), ""
 		}
 		if dl.kit().Button("form.dest.picked", rr, label, uikit.BtnOpts{Disabled: why != "", Reason: why, Selected: why == "" && f.dest == picked}) {
 			f.dest = picked
@@ -233,9 +234,9 @@ func CaravanTitle(c game.CaravanView) string {
 }
 
 // pawnLabel is the colonist's name in lists.
-func pawnLabel(p game.PawnView) string {
+func pawnLabel(tr lang.Tr, p game.PawnView) string {
 	if p.Name != "" {
 		return p.Name
 	}
-	return fmt.Sprintf("Colonist %d", p.ID)
+	return lang.Tf(tr, "Colonist %d", p.ID)
 }

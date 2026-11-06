@@ -103,12 +103,12 @@ func (dl *Dealings) OpenWanderers() {
 	}
 	dl.wand = d
 	dl.kit().Push(uikit.Modal{
-		ID: WanderersID, Title: "New wanderers", W: wanderersW, H: wanderersH,
+		ID: WanderersID, Title: dl.sh.T("New wanderers"), W: wanderersW, H: wanderersH,
 		Draw: func(body gfx.Rect) { dl.wanderersBody(d, body) },
 		Buttons: []uikit.ModalButton{
-			{ID: WanderersStartID, Label: "Start", Style: uikit.BtnPrimary, Closes: true,
+			{ID: WanderersStartID, Label: dl.sh.T("Start"), Style: uikit.BtnPrimary, Closes: true,
 				Disabled: func() string { return dl.wanderersReason(d) }, OnClick: func() { dl.startWanderers(d) }},
-			{ID: WanderersCancelID, Label: "Cancel", Closes: true, OnClick: dl.closeWanderers},
+			{ID: WanderersCancelID, Label: dl.sh.T("Cancel"), Closes: true, OnClick: dl.closeWanderers},
 		},
 		OnClose: dl.closeWanderers,
 	})
@@ -173,7 +173,7 @@ func (dl *Dealings) wanderersBody(d *wandererDraft, body gfx.Rect) {
 	right.X += 12
 	right.W -= 12
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
-	k.Label(left.X, left.Y, fmt.Sprintf("Group (%d groups left)", ax.WanderersLeft), hs)
+	k.Label(left.X, left.Y, dl.sh.Tf("Group (%d groups left)", ax.WanderersLeft), hs)
 	size := d.n
 	uikit.Stepper(k, WanderersSizeID, gfx.Rect{X: left.X, Y: left.Y + 22, W: 140, H: 28}, &size, 1, len(d.slots))
 	d.n = size
@@ -183,10 +183,10 @@ func (dl *Dealings) wanderersBody(d *wandererDraft, body gfx.Rect) {
 		row := gfx.Rect{X: left.X, Y: y, W: left.W - 84, H: wandererRowH - 4}
 		b := d.slots[i].bio
 		label := fmt.Sprintf("%s, %d", wandererName(b), b.AgeYears)
-		if k.Button(WandererRowID(i), row, label, uikit.BtnOpts{Selected: i == d.sel, Tip: "Show this person's card."}) {
+		if k.Button(WandererRowID(i), row, label, uikit.BtnOpts{Selected: i == d.sel, Tip: dl.sh.T("Show this person's card.")}) {
 			d.sel = i
 		}
-		if k.Button(WandererRerollID(i), gfx.Rect{X: row.Right() + 6, Y: y, W: 72, H: row.H}, "Reroll", uikit.BtnOpts{Tip: "Reroll\nTrade this person for someone new."}) {
+		if k.Button(WandererRerollID(i), gfx.Rect{X: row.Right() + 6, Y: y, W: 72, H: row.H}, dl.sh.T("Reroll"), uikit.BtnOpts{Tip: dl.sh.T("Reroll\nTrade this person for someone new.")}) {
 			d.roll(i, ax.WanderersRules)
 			d.sel = i
 		}
@@ -221,13 +221,13 @@ func (dl *Dealings) wandererCard(b game.BioView, in gfx.Rect) {
 	y := in.Y
 	k.Label(in.X, y, full, gfx.WithColor(gfx.Body, uikit.Heading))
 	y += 22
-	k.Label(in.X, y, fmt.Sprintf("%s, age %d. Build: %s.", b.Sex, b.AgeYears, b.Build), uikit.DimText())
+	k.Label(in.X, y, dl.sh.Tf("%s, age %d. Build: %s.", b.Sex, b.AgeYears, b.Build), uikit.DimText())
 	y += 22
 	for _, l := range [][2]string{{"Childhood", b.Childhood}, {"Adulthood", b.Adulthood}} {
 		k.Label(in.X, y, l[0]+": "+gfx.Ellipsize(l[1], gfx.Body, wide-90), gfx.Body)
 		y += 20
 	}
-	traits := "none"
+	traits := dl.sh.T("none")
 	if len(b.Traits) > 0 {
 		names := make([]string, len(b.Traits))
 		for i, t := range b.Traits {
@@ -235,14 +235,14 @@ func (dl *Dealings) wandererCard(b game.BioView, in gfx.Rect) {
 		}
 		traits = strings.Join(names, ", ")
 	}
-	k.Label(in.X, y, "Traits: "+gfx.Ellipsize(traits, gfx.Body, wide-70), gfx.Body)
+	k.Label(in.X, y, dl.sh.Tf("Traits: %s", gfx.Ellipsize(traits, gfx.Body, wide-70)), gfx.Body)
 	y += 20
 	if len(b.Incapable) > 0 {
-		k.Label(in.X, y, "Incapable of: "+gfx.Ellipsize(strings.Join(b.Incapable, ", "), gfx.Body, wide-110), gfx.WithColor(gfx.Body, uikit.Danger))
+		k.Label(in.X, y, dl.sh.Tf("Incapable of: %s", gfx.Ellipsize(strings.Join(b.Incapable, ", "), gfx.Body, wide-110)), gfx.WithColor(gfx.Body, uikit.Danger))
 		y += 20
 	}
 	y = max(y, in.Y+wandererPortraitH) + 8
-	k.Label(in.X, y, "Skills", gfx.WithColor(gfx.Label, uikit.Heading))
+	k.Label(in.X, y, dl.sh.T("Skills"), gfx.WithColor(gfx.Label, uikit.Heading))
 	y += 22
 	for _, s := range b.Skills {
 		if y+wandererSkillRowH > in.Bottom() {

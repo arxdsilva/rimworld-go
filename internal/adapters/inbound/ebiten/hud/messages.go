@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -202,7 +203,7 @@ func (c Right) MessageRows(l hudlayout.Layout) []MessageRow {
 		if y+hudlayout.MsgRowH > l.Messages.Bottom()+0.01 {
 			break
 		}
-		w := min(gfx.TextW(MessageLine(lm.m), MessageStyle(lm.m))+2*messagePadX+messageEdgeW, l.Messages.W)
+		w := min(gfx.TextW(MessageLineIn(c.sh, lm.m), MessageStyle(lm.m))+2*messagePadX+messageEdgeW, l.Messages.W)
 		rows = append(rows, MessageRow{R: gfx.Rect{X: l.Messages.Right() - w, Y: y, W: w, H: hudlayout.MsgRowH}, Msg: lm.m, Idx: i, Alpha: MessageAlpha(lm.age)})
 	}
 	return rows
@@ -314,16 +315,19 @@ func (c Right) DrawMessagesIn(screen *ebiten.Image, l hudlayout.Layout) {
 			base = uikit.Text
 		}
 		st.Color = fadeColor(base, k)
-		line := uikit.FitText(MessageLine(row.Msg), st, r.W-2*messagePadX-messageEdgeW)
+		line := uikit.FitText(MessageLineIn(c.sh, row.Msg), st, r.W-2*messagePadX-messageEdgeW)
 		gfx.Text(screen, line, float64(r.X+messageEdgeW+messagePadX), float64(r.Y)+(float64(r.H)-gfx.LineH(st))/2, st)
 	}
 }
 
 // MessageLine is a notice's one line: a letter (the intro, extreme
 // weather) opens in its own window, so the strip only names it.
-func MessageLine(m game.MessageView) string {
+func MessageLine(m game.MessageView) string { return MessageLineIn(en, m) }
+
+// MessageLineIn is MessageLine in tr's language.
+func MessageLineIn(tr lang.Tr, m game.MessageView) string {
 	if m.Letter && m.Title != "" {
-		return "Letter: " + m.Title
+		return lang.Tf(tr, "Letter: %s", m.Title)
 	}
 	return m.Text
 }

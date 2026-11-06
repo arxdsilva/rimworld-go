@@ -166,7 +166,7 @@ func (h *Helper) Tracking() bool {
 // that, and it happens in the middle of play.
 func (h *Helper) save(s config.Settings) {
 	if err := h.sh.Save(s); err != nil {
-		h.sh.Hint("settings not saved: " + err.Error())
+		h.sh.Hint(h.sh.Tf("settings not saved: %s", err.Error()))
 	}
 }
 
@@ -197,7 +197,7 @@ func (h *Helper) Flash() (string, bool) {
 		return "", false
 	}
 	if l := ByID(st.flashID); l != nil {
-		return l.Title, true
+		return h.sh.T(l.Title), true
 	}
 	return "", false
 }
