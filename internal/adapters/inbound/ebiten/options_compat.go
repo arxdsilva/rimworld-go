@@ -6,6 +6,7 @@ import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
@@ -417,6 +418,8 @@ func (a *App) syncRenderer() {
 	r.smooth.Speed = float64(s.Gameplay.PanSpeed) / 100
 	r.reducedFlashing = s.Accessibility.ReducedFlashing
 	r.reducedMotion = s.Accessibility.ReducedMotion
+	r.view.Prefs = render.Prefs{AnimalNames: s.Interface.AnimalNames, FarPawns: s.Interface.FarPawns, FarStyle: s.Interface.FarStyle,
+		PlantSway: s.Camera.PlantSway, HatsOnlyOnMap: s.Interface.HatsOnlyOnMap}
 	r.smooth.Instant = s.Accessibility.ReducedMotion // no eased pan or zoom
 	r.overlays().TempDraw.Units = units.FromUnit(s.Gameplay.TempUnit)
 	if !s.Gameplay.DevMode && r.speed == speedUltra {

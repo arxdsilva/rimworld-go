@@ -38,11 +38,22 @@ type View struct {
 	ReducedMotion   bool
 	ReducedFlashing bool
 	Cached          bool // the sim caches its read models, so identity memos hold
+	Prefs           Prefs
 
 	Selected  entity.EntityID
 	HasSelect bool
 
 	Trace *Trace // nil in production
+}
+
+// Prefs are the map-side Options rows the layers read (config.Interface
+// and config.Camera, OPT-010, 014, 016, 026). The root sets them when the
+// settings change (syncRenderer), not per frame.
+type Prefs struct {
+	AnimalNames        string // config.AnimalNameModes
+	FarPawns, FarStyle string // config.FarPawnModes, config.FarStyles
+	PlantSway          bool
+	HatsOnlyOnMap      bool
 }
 
 // Trace is the renderer's test hooks: which ground layers drew in what
