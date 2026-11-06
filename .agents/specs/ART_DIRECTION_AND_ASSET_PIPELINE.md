@@ -1462,10 +1462,8 @@ doing its job.
 
 Normative key list for the social and host-system feature set
 (`.agents/specs/SOCIAL_SYSTEM_CONTRACT.md`). Status: the assets exist (ART-019, see
-`.agents/handoffs/ART.md#art-019-social-host-assets`); the six order icons and the face-scar overlay are not wired yet, see the checklists. When an asset lands, move its tool to `archTools`
-(TestPendingArtToolsLackArt fails until you do), add its keys to the
-renderer's sprite lookups, and only then let `TestGeneratedArtCoversRenderer`
-cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
+`.agents/handoffs/ART.md#art-019-social-host-assets`); the six order icons and the face-scar overlay are not wired yet, see the checklists. When an asset is wired, add its keys to the
+renderer's sprite lookups so `TestGeneratedArtCoversRenderer` covers it. Every family follows §12-§17 (pivots, palette, outline rules) and
 §24 metadata; all designs original.
 
 - **Furniture / markings** (rotatable ones in four facings):

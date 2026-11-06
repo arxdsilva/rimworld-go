@@ -6,7 +6,7 @@ CMDS     := game simulate benchmark replay contentlint
 all: fmt vet lint arch test build
 
 .PHONY: arch
-arch:  ## the SOLID guard (.agents/specs/SOLID_GO.md §8): type, interface and package size, init(), globals, import direction
+arch:  ## the SOLID guard (.agents/specs/SOLID_GO.md §8) and the .agents layout guard (agents_test.go)
 	go test -count=1 ./internal/arch/
 
 .PHONY: build

@@ -193,7 +193,7 @@ Limits: 40 methods per type, 25 fields per type with behaviour, 8 methods per in
 
 ## Proposed split
 
-Parallel workers (PARALLEL_WORK §0). Areas: domain, application, renderer/UI adapter, art pipeline, docs. Run `make agent-budget` first; art agents are about 3 GiB each (Blender), so at most the number it prints, started a few minutes apart. Agents run `GOFLAGS=-p=2` and their own targeted tests; only the lead runs the whole ebiten package. Every agent leaves a handoff in `.agents/handoffs/NST-<id>.md`.
+Parallel workers (PARALLEL_WORK §0). Areas: domain, application, renderer/UI adapter, art pipeline, docs. Run `make agent-budget` first; art agents are about 3 GiB each (Blender), so at most the number it prints, started a few minutes apart. Agents run `GOFLAGS=-p=2` and their own targeted tests; only the lead runs the whole ebiten package. Every agent appends its section to `.agents/handoffs/STORAGE.md`.
 
 ### Wave 0: the lead, alone (the contract)
 
