@@ -176,6 +176,7 @@ func (h senseGear) SetOutfit(id entity.EntityID, o craft.Outfit) { h.g.apparel[i
 func (h senseGear) MayDose(id entity.EntityID, k item.Kind) bool {
 	return slices.Contains(doseOf(h.g).Allowed(id), k)
 }
+func (h senseGear) Breaking(id entity.EntityID) bool { return h.g.breaking(id) } // GEAR-1: no gear orders in a break
 
 // layOn sets st down at (x, y) on map m, merging as anything set down does, with
 // everything it was (its make, a book's title, its rot) kept.

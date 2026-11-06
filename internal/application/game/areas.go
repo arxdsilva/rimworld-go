@@ -35,8 +35,7 @@ import (
 
 const (
 	areaNameMax = 24
-	// areaDefaultName names an area created unnamed
-	// ("Area 1").
+	// areaDefaultName names an area created unnamed ("Area 1").
 	areaDefaultName = "Area %d"
 )
 

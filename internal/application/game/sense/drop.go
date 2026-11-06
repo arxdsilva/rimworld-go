@@ -52,6 +52,9 @@ type GearOrders interface {
 	SetOutfit(id entity.EntityID, o craft.Outfit)
 	// MayDose: id's drug policy lets it take k now.
 	MayDose(id entity.EntityID, k item.Kind) bool
+	// Breaking: id is in a mental break, and takes no gear orders until it
+	// passes.
+	Breaking(id entity.EntityID) bool
 }
 
 // ModeAny is DropWhy's mode for the pawn alone: may anything of it be dropped.
@@ -79,6 +82,7 @@ const (
 	WhyInedible  = "Can't be eaten"
 	WhyCaptive   = "Prisoners don't take orders"
 	WhyNoGarment = "Not wearing that"
+	WhyBreak     = "In a mental break"
 )
 
 // DropWhy is why id may not drop the thing a DropGear names ("" it may);
@@ -89,6 +93,8 @@ func (g Gear) DropWhy(id entity.EntityID, mode, index int) string {
 		return WhyNotOurs
 	case !up:
 		return WhyDown
+	case g.r.Breaking(id):
+		return WhyBreak
 	}
 	ok := false
 	switch mode {
@@ -156,6 +162,8 @@ func (g Gear) EatWhy(id entity.EntityID, entry uint32) string {
 		return WhyNotOurs
 	case !up:
 		return WhyDown
+	case g.r.Breaking(id):
+		return WhyBreak
 	}
 	e, ok := entryOf(g.s.Packs[id], int(entry))
 	switch k := e.Stack.Kind; {
@@ -214,6 +222,9 @@ func (g Gear) Consume(id entity.EntityID, entry uint32) string {
 func (g Gear) Lock(id entity.EntityID, n int, on bool) string {
 	if s, _ := g.side(id); s != SideColonist {
 		return WhyNotOurs
+	}
+	if g.r.Breaking(id) {
+		return WhyBreak
 	}
 	slot, ok := g.r.Worn(id, max(n, 0))
 	if !ok || n < 0 {

@@ -14,9 +14,11 @@ import (
 
 // orders is the Gear tab's side of the errand game (GearOrders).
 type orders struct {
-	prisoner, fallen, noDose bool
-	outfit                   craft.Outfit
+	prisoner, fallen, noDose, broken bool
+	outfit                           craft.Outfit
 }
+
+func (o *orders) Breaking(entity.EntityID) bool { return o.broken }
 
 func (o *orders) Up(entity.EntityID) bool                     { return !o.fallen }
 func (o *orders) Prisoner(entity.EntityID) bool               { return o.prisoner }
@@ -137,6 +139,8 @@ func TestDropRefusals(t *testing.T) {
 		{"guest or hostile", nil, 7, modeWeapon, 0, WhyNotOurs},
 		{"downed", func(e *errand) { e.fallen = true }, 1, modeWeapon, 0, WhyDown},
 		{"downed, the pawn alone", func(e *errand) { e.fallen = true }, 1, ModeAny, 0, WhyDown},
+		{"mental break", func(e *errand) { e.broken = true }, 1, modeWeapon, 0, WhyBreak},
+		{"mental break, the pawn alone", func(e *errand) { e.broken = true }, 1, ModeAny, 0, WhyBreak},
 		{"no such entry", nil, 1, modePack, 99, WhyGone},
 		{"negative entry", nil, 1, modePack, -1, WhyGone},
 		{"negative garment", nil, 1, modeApparel, -1, WhyGone},
