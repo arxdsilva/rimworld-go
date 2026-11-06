@@ -91,14 +91,21 @@ type Host interface {
 
 // Shell composes the roles the feature calls with its Host.
 type Shell interface {
-	ports.Sizer
+	Chrome
 	ports.Commands
 	ports.World
 	ports.PawnSel
 	ports.Widgets
-	ports.Dispatcher
 	Labels
 	Host
+}
+
+// Chrome is the shell's window-sized plumbing: the screen size, the
+// navigation intents and the text catalog (OPT-001).
+type Chrome interface {
+	ports.Sizer
+	ports.Dispatcher
+	ports.Texts
 }
 
 // Set is the colony's main-tab windows (ARCH-005): which one is open, the

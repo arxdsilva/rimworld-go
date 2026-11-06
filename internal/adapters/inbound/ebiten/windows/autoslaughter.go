@@ -86,25 +86,25 @@ func (w Animals) OpenAutoSlaughter() {
 		return
 	}
 	w.OpenKit(uikit.Modal{
-		ID: AutoSlaughterModalID, Title: "Auto-slaughter", W: autoW, H: autoH, Anchor: w.Anchor,
+		ID: AutoSlaughterModalID, Title: w.sh.T("Auto-slaughter"), W: autoW, H: autoH, Anchor: w.Anchor,
 		Draw: func(body gfx.Rect) { w.autoBody(body) },
 	})
 }
 
 func (w Animals) autoBody(body gfx.Rect) {
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
-	w.kit().Label(body.X, body.Y, "Species", hs)
-	for i, h := range []string{"Males", "Females", "Young"} {
+	w.kit().Label(body.X, body.Y, w.sh.T("Species"), hs)
+	for i, h := range []string{w.sh.T("Males"), w.sh.T("Females"), w.sh.T("Young")} {
 		w.kit().Label(body.X+autoNameW+float32(i)*autoCellW, body.Y, h, hs)
 	}
-	if w.kit().Button("autoslaughter.back", gfx.Rect{X: body.Right() - 90, Y: body.Y - 2, W: 90, H: 24}, "Animals", uikit.BtnOpts{Tip: "Back to the Animals window."}) {
+	if w.kit().Button("autoslaughter.back", gfx.Rect{X: body.Right() - 90, Y: body.Y - 2, W: 90, H: 24}, w.sh.T("Animals"), uikit.BtnOpts{Tip: w.sh.T("Back to the Animals window.")}) {
 		w.CloseQuietly()
 		w.Show("animals")
 		return
 	}
 	rows := AutoRows(w.tame(), w.sh.World().AutoSlaughter)
 	if len(rows) == 0 {
-		w.kit().Label(body.X, body.Y+32, "No tame animals yet.", uikit.DimText())
+		w.kit().Label(body.X, body.Y+32, w.sh.T("No tame animals yet."), uikit.DimText())
 		return
 	}
 	list := gfx.Rect{X: body.X, Y: body.Y + 28, W: body.W, H: body.H - 28}
@@ -117,7 +117,7 @@ func (w Animals) autoBody(body gfx.Rect) {
 		w.kit().Label(area.View.X, y+5, gfx.Ellipsize(row.label, gfx.Body, autoNameW-8), gfx.Body)
 		for f := 0; f < 3; f++ {
 			x := area.View.X + autoNameW + float32(f)*autoCellW
-			text := "none"
+			text := w.sh.T("none")
 			if row.caps[f] >= 0 {
 				text = fmt.Sprint(row.caps[f])
 			}
@@ -125,7 +125,7 @@ func (w Animals) autoBody(body gfx.Rect) {
 				nv, ok := StepCap(row.caps[f], up)
 				bx := x + float32(j)*(autoCellW-26)
 				if w.kit().Button(AutoSlaughterStepID(row.species, f, up), gfx.Rect{X: bx, Y: y, W: 24, H: 24}, map[bool]string{false: "-", true: "+"}[up],
-					uikit.BtnOpts{Disabled: !ok, Reason: "limit"}) {
+					uikit.BtnOpts{Disabled: !ok, Reason: w.sh.T("limit")}) {
 					c := row.caps
 					c[f] = nv
 					w.sh.Enqueue(command.Command{Kind: command.SetAutoSlaughter, Name: row.species, X: c[0], Y: c[1], X2: c[2]})

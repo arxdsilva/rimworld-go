@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/drug"
@@ -34,8 +35,10 @@ const (
 	assignCareW   = 120 // MED-03: the medical care column
 )
 
-const assignCareTip = "Medical care\n" +
-	"How much care this colonist gets: no care, care without medicine, herbal or less, industrial or less, or the best medicine there is. A click picks the next level."
+// careTip, drugTip: the Medical and Drugs columns' tips, on header and cells.
+func (w Assign) careTip() string {
+	return w.sh.T("Medical care\nHow much care this colonist gets: no care, care without medicine, herbal or less, industrial or less, or the best medicine there is. A click picks the next level.")
+}
 
 // defaultCareReader is the read model of the default care row
 // (consumer-owned; the game implements it): each group's default care
@@ -59,12 +62,9 @@ func AssignDefCareID(g medcare.Group) string { return "assign.defcare." + strcon
 // AssignPresets is the cycle order of the drug policy button.
 var AssignPresets = []drug.Preset{drug.NoDrugs, drug.SocialDrinking, drug.Unrestricted, drug.MoodLift}
 
-const assignDrugTip = "Drug policy\n" +
-	"No drugs: never takes any, even when hooked.\n" +
-	"Social drinking: a beer now and then when bored.\n" +
-	"Unrestricted: any recreational drug when bored.\n" +
-	"Mood lift: a beer only while mood is below 50 and not already recovering.\n" +
-	"A colonist hooked on a drug seeks it when the craving starts, unless set to no drugs. Abstainers never take drugs for fun."
+func (w Assign) drugTip() string {
+	return w.sh.T("Drug policy\nNo drugs: never takes any, even when hooked.\nSocial drinking: a beer now and then when bored.\nUnrestricted: any recreational drug when bored.\nMood lift: a beer only while mood is below 50 and not already recovering.\nA colonist hooked on a drug seeks it when the craving starts, unless set to no drugs. Abstainers never take drugs for fun.")
+}
 
 // drugPolicyReader is the read model the tab needs (consumer-owned; the
 // game implements it). A simulation without it shows the column disabled.
@@ -82,7 +82,7 @@ func (w Assign) Launch() {
 		return
 	}
 	w.OpenKit(uikit.Modal{
-		ID: AssignModalID, Title: "Assign", W: assignW, H: assignH, Anchor: w.Anchor,
+		ID: AssignModalID, Title: w.sh.T("Assign"), W: assignW, H: assignH, Anchor: w.Anchor,
 		Draw: func(body gfx.Rect) { w.body(body) },
 	})
 }
@@ -142,30 +142,30 @@ func (w Assign) body(body gfx.Rect) {
 	head, rest := body.SplitV(assignHeadH)
 	cols := newAssignCols(body.W)
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
-	w.kit().Label(head.X, head.Y, "Colonist", hs)
-	w.kit().Label(head.X+cols.drugX, head.Y, "Drugs", hs)
-	w.kit().Tip("assign.head.drugs", gfx.Rect{X: head.X + cols.drugX, Y: head.Y, W: 120, H: head.H}, assignDrugTip)
-	w.kit().Label(head.X+cols.careX, head.Y, "Medical", hs)
-	w.kit().Tip("assign.head.care", gfx.Rect{X: head.X + cols.careX, Y: head.Y, W: 120, H: head.H}, assignCareTip)
-	w.kit().Label(head.X+cols.foodX, head.Y, "Food", hs)
-	w.kit().Tip("assign.head.food", gfx.Rect{X: head.X + cols.foodX, Y: head.Y, W: 120, H: head.H}, assignFoodTip)
+	w.kit().Label(head.X, head.Y, w.sh.T("Colonist"), hs)
+	w.kit().Label(head.X+cols.drugX, head.Y, w.sh.T("Drugs"), hs)
+	w.kit().Tip("assign.head.drugs", gfx.Rect{X: head.X + cols.drugX, Y: head.Y, W: 120, H: head.H}, w.drugTip())
+	w.kit().Label(head.X+cols.careX, head.Y, w.sh.T("Medical"), hs)
+	w.kit().Tip("assign.head.care", gfx.Rect{X: head.X + cols.careX, Y: head.Y, W: 120, H: head.H}, w.careTip())
+	w.kit().Label(head.X+cols.foodX, head.Y, w.sh.T("Food"), hs)
+	w.kit().Tip("assign.head.food", gfx.Rect{X: head.X + cols.foodX, Y: head.Y, W: 120, H: head.H}, w.foodTip())
 	if w.outfitHead(head, cols) { // GEAR-3: the Apparel header opens the policy editor
 		return
 	}
 	rest, foot := rest.SplitV(rest.H - 2*AssignRowH) // MED-03: the default care row
 	w.defaultCare(foot)
-	if w.kit().Button(AssignFoodEditID, gfx.Rect{X: foot.Right() - 250, Y: foot.Y, W: 120, H: AssignRowH - 4}, "Food policies",
-		uikit.BtnOpts{Tip: "Food policies\nMake and edit what each colonist, prisoner and animal may eat."}) {
+	if w.kit().Button(AssignFoodEditID, gfx.Rect{X: foot.Right() - 250, Y: foot.Y, W: 120, H: AssignRowH - 4}, w.sh.T("Food policies"),
+		uikit.BtnOpts{Tip: w.sh.T("Food policies\nMake and edit what each colonist, prisoner and animal may eat.")}) {
 		w.OpenFoodPolicies()
 		return
 	}
-	if w.kit().Button("assign.areas", gfx.Rect{X: foot.Right() - 120, Y: foot.Y, W: 120, H: AssignRowH - 4}, "Manage areas",
-		uikit.BtnOpts{Tip: "Allowed areas\nMake, rename, invert and delete areas. Pick a colonist's area in the Schedule tab, an animal's in the Animals tab."}) {
+	if w.kit().Button("assign.areas", gfx.Rect{X: foot.Right() - 120, Y: foot.Y, W: 120, H: AssignRowH - 4}, w.sh.T("Manage areas"),
+		uikit.BtnOpts{Tip: w.sh.T("Allowed areas\nMake, rename, invert and delete areas. Pick a colonist's area in the Schedule tab, an animal's in the Animals tab.")}) {
 		w.sh.ManageAreas() // the Architect's area manager
 	}
 	rows := w.rows()
 	if len(rows) == 0 {
-		w.kit().Label(rest.X, rest.Y+6, "No colonists.", uikit.DimText())
+		w.kit().Label(rest.X, rest.Y+6, w.sh.T("No colonists."), uikit.DimText())
 		return
 	}
 	area := w.kit().ScrollArea("assign.rows", rest, float32(len(rows)*AssignRowH), uikit.ScrollOpts{Step: AssignRowH * 2})
@@ -183,10 +183,10 @@ func (w Assign) body(body gfx.Rect) {
 		br := gfx.Rect{X: rr.X + cols.drugX, Y: rr.Y, W: min(cols.drugW, rr.W-cols.drugX), H: rr.H}
 		id := AssignDrugID(r.id)
 		if !r.known {
-			w.kit().Button(id, br, "-", uikit.BtnOpts{Disabled: true, Reason: "Drug policies are not available in this game."})
+			w.kit().Button(id, br, "-", uikit.BtnOpts{Disabled: true, Reason: w.sh.T("Drug policies are not available in this game.")})
 			continue
 		}
-		if w.kit().Button(id, br, PresetLabel(r.policy), uikit.BtnOpts{Tip: assignDrugTip}) {
+		if w.kit().Button(id, br, PresetLabel(r.policy), uikit.BtnOpts{Tip: w.drugTip()}) {
 			next := NextPreset(r.policy)
 			w.sh.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(r.id), Mode: uint8(next)})
 			w.armCell(paintDrug, id, int(next))
@@ -197,7 +197,7 @@ func (w Assign) body(body gfx.Rect) {
 // careButton is a colonist's medical care button (MED-03).
 func (w Assign) careButton(r assignRow, rr gfx.Rect, cols assignCols) {
 	cr := gfx.Rect{X: rr.X + cols.careX, Y: rr.Y, W: min(cols.careW, rr.W-cols.careX), H: rr.H}
-	if w.kit().Button(AssignCareID(r.id), cr, r.care.Label(), uikit.BtnOpts{Tip: assignCareTip}) {
+	if w.kit().Button(AssignCareID(r.id), cr, r.care.Label(), uikit.BtnOpts{Tip: w.careTip()}) {
 		next := NextCare(r.care)
 		w.sh.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(next)})
 		w.armCell(paintCare, AssignCareID(r.id), int(next))
@@ -207,7 +207,7 @@ func (w Assign) careButton(r assignRow, rr gfx.Rect, cols assignCols) {
 // defaultCare is the default care row: "Default care" and a button
 // per group showing its level; a click picks the next level.
 func (w Assign) defaultCare(r gfx.Rect) {
-	w.kit().Label(r.X, r.Y+6, "Default medical care", gfx.WithColor(gfx.Label, uikit.Heading))
+	w.kit().Label(r.X, r.Y+6, w.sh.T("Default medical care"), gfx.WithColor(gfx.Label, uikit.Heading))
 	rd, known := w.sh.Env().Game.(defaultCareReader)
 	var def [medcare.NumGroups]uint8
 	if known {
@@ -218,9 +218,9 @@ func (w Assign) defaultCare(r gfx.Rect) {
 	for g := medcare.Group(0); g < medcare.NumGroups; g++ {
 		br := gfx.Rect{X: r.X + float32(g)*bw, Y: y, W: bw - 6, H: AssignRowH - 4}
 		cur := medcare.Policy(def[g])
-		tip := "Default care: " + g.Label() + "\nNow " + cur.Label() + ". Anyone in this group without a level of its own gets it. A click picks the next level."
+		tip := lang.Tf(w.sh, "Default care: %s\nNow %s. Anyone in this group without a level of its own gets it. A click picks the next level.", g.Label(), cur.Label())
 		if !known {
-			w.kit().Button(AssignDefCareID(g), br, g.Label(), uikit.BtnOpts{Disabled: true, Reason: "Default care is not available in this game."})
+			w.kit().Button(AssignDefCareID(g), br, g.Label(), uikit.BtnOpts{Disabled: true, Reason: w.sh.T("Default care is not available in this game.")})
 			continue
 		}
 		if w.kit().Button(AssignDefCareID(g), br, g.Label()+": "+w.sh.CareShort(cur), uikit.BtnOpts{Tip: tip}) {

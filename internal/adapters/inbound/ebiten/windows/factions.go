@@ -7,6 +7,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/faction"
 )
@@ -37,7 +38,7 @@ func (w Factions) Launch() {
 	}
 	sel := 0
 	w.OpenKit(uikit.Modal{
-		ID: ColFacModalID, Title: "Factions", W: colFacW, H: colFacH, Anchor: w.Anchor,
+		ID: ColFacModalID, Title: w.sh.T("Factions"), W: colFacW, H: colFacH, Anchor: w.Anchor,
 		Draw: func(body gfx.Rect) { w.body(body, &sel) },
 	})
 }
@@ -73,7 +74,7 @@ func (w Factions) detail(r gfx.Rect, row Faction) {
 	y += 20
 	rs := gfx.Label
 	rs.Color = row.Color
-	w.kit().Label(left.X, y, fmt.Sprintf("%s  (goodwill %s)", row.Standing, goodwillText(row.Goodwill)), rs)
+	w.kit().Label(left.X, y, lang.Tf(w.sh, "%s  (goodwill %s)", row.Standing, goodwillText(row.Goodwill)), rs)
 	y += 22
 	ds := gfx.Small
 	ds.Color = uikit.TextDim
@@ -81,18 +82,18 @@ func (w Factions) detail(r gfx.Rect, row Faction) {
 
 	// The sparkline.
 	capR := gfx.Rect{X: chartR.X + 12, Y: chartR.Y, W: chartR.W - 12, H: 18}
-	w.kit().Label(capR.X, capR.Y, "Goodwill, last 60 days", gfx.Label)
+	w.kit().Label(capR.X, capR.Y, w.sh.T("Goodwill, last 60 days"), gfx.Label)
 	plot := gfx.Rect{X: capR.X + colFacAxisW, Y: capR.Y + 24, W: capR.W - colFacAxisW - 4, H: colFacChartH}
 	hist, relc := row.History, goodwillLineColor(row)
-	u.Queue(func(dst *ebiten.Image) { DrawGoodwillChart(dst, plot, hist, relc) })
-	w.kit().Tip("colfac.chart", plot, "Goodwill history\nOne point a day, from -100 (hostile) to +100 (friendly). Raids defeated and gifts move it; it drifts back toward the faction's usual mood.")
+	u.Queue(func(dst *ebiten.Image) { drawGoodwillChart(w.sh, dst, plot, hist, relc) })
+	w.kit().Tip("colfac.chart", plot, w.sh.T("Goodwill history\nOne point a day, from -100 (hostile) to +100 (friendly). Raids defeated and gifts move it; it drifts back toward the faction's usual mood."))
 
 	// The events.
 	ex := evR.X + 12
-	w.kit().Label(ex, evR.Y, "Recent events", gfx.Label)
+	w.kit().Label(ex, evR.Y, w.sh.T("Recent events"), gfx.Label)
 	ey := evR.Y + 24
 	if len(row.Events) == 0 {
-		w.kit().Label(ex, ey, "Nothing has moved their goodwill yet.", uikit.DimText())
+		w.kit().Label(ex, ey, w.sh.T("Nothing has moved their goodwill yet."), uikit.DimText())
 		return
 	}
 	for i := len(row.Events) - 1; i >= 0; i-- { // newest first
@@ -134,6 +135,10 @@ func ChartPoints(hist []int, plot gfx.Rect) [][2]float32 {
 // DrawGoodwillChart draws the history line over a -100..+100 scale with the
 // zero line and the hostile / friendly bands marked.
 func DrawGoodwillChart(dst *ebiten.Image, plot gfx.Rect, hist []int, line color.RGBA) {
+	drawGoodwillChart(lang.English{}, dst, plot, hist, line)
+}
+
+func drawGoodwillChart(tr lang.Tr, dst *ebiten.Image, plot gfx.Rect, hist []int, line color.RGBA) {
 	uikit.FillRect(dst, plot, uikit.Field)
 	uikit.StrokeRect(dst, plot, uikit.PanelBorder)
 	ls := gfx.Small
@@ -151,7 +156,7 @@ func DrawGoodwillChart(dst *ebiten.Image, plot gfx.Rect, hist []int, line color.
 	if len(hist) == 0 {
 		cs := uikit.DimText()
 		cs.Align = gfx.AlignCenter
-		gfx.Text(dst, "No history yet.", float64(plot.X+plot.W/2), float64(plot.Y+plot.H/2)-gfx.LineH(cs)/2, cs)
+		gfx.Text(dst, tr.T("No history yet."), float64(plot.X+plot.W/2), float64(plot.Y+plot.H/2)-gfx.LineH(cs)/2, cs)
 		return
 	}
 	pts := ChartPoints(hist, plot)
@@ -162,9 +167,9 @@ func DrawGoodwillChart(dst *ebiten.Image, plot gfx.Rect, hist []int, line color.
 	gfx.FillCircle(dst, last[0], last[1], 3, line, true)
 	es := gfx.Small
 	es.Color = uikit.TextDim
-	gfx.Text(dst, "60 days ago", float64(plot.X), float64(plot.Bottom())+3, es)
+	gfx.Text(dst, tr.T("60 days ago"), float64(plot.X), float64(plot.Bottom())+3, es)
 	es.Align = gfx.AlignRight
-	gfx.Text(dst, "today", float64(plot.Right()), float64(plot.Bottom())+3, es)
+	gfx.Text(dst, tr.T("today"), float64(plot.Right()), float64(plot.Bottom())+3, es)
 }
 
 // goodwillAxis labels an axis value: "+50", "0", "-100".

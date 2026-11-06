@@ -7,7 +7,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - `Set` (30 methods, 24 exported): the kit window, `Want`, `Rect`, `Anchor`, `Buttons`, `Click`, `Show`, `Declare`, `Draw`, and the wild-row focus cycle (`focus`).
 - Seven window types, each `struct{*Set}`: `Work`, `Schedule`, `Assign`, `Animals` (14 methods), `Research` (16: the RSCH-2 tech tree; its state is `researchState` in `research_tree.go`, the layout `layoutTree` in `research_layout.go`, the info panel in `research_panel.go`), `History`, `Factions`. The launch method is `Launch`, not `Open`, so it does not hide the field.
 - Interfaces: `Reader` (`Wildlife`, `History`, `IncapableReason`), `Labels` (7: `PawnLabel`, `AnimalLabel`, `AnimalHealth`, `CareShort`, `Factions`, `DrawAnimalIcon`, `DrawPassion`), `Host` (7: `Env`, `WindowRect`, `CenterOnMap`, `AreaDropdown`, `ManageAreas`, `Float`, `FactionsTable`).
-- `Shell` = `Sizer + Commands + World + PawnSel + Widgets + Dispatcher + Labels + Host`.
+- `Shell` = `Chrome (Sizer + Dispatcher + Texts) + Commands + World + PawnSel + Widgets + Labels + Host`. Every label goes through `Shell.T`/`lang.Tf` (OPT-001); the exported text helpers (`AnimalDoing`, `FollowCell`, `DrawGoodwillChart`, ...) keep their English signatures and wrap an unexported `tr lang.Tr` variant; the Work header texts live in `Work.help`/`colName` (`WorkHelp`/`WorkColumns` stay the English reference).
 
 ## Allowed Dependencies
 - Leaves: `art`, `gfx`, `ids`, `inputframe`, `ports`, `uikit`.

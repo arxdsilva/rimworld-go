@@ -24,8 +24,6 @@ const (
 	AssignApparelEditID = "assign.apparelpolicies"
 	assignOutfitPrefix  = "assign.apparel."
 	assignClearPrefix   = "assign.clearforced."
-	assignApparelTip    = "Apparel policy\nWhich garments this colonist may wear. A click picks the next policy; the Apparel header opens the policy editor."
-	assignClearTip      = "Clear forced\nLet this colonist choose again what to wear: every garment you picked by hand is released."
 )
 
 // AssignApparelID is a colonist's apparel policy button id; AssignClearID
@@ -102,7 +100,7 @@ func (w Assign) outfitHead(head gfx.Rect, cols assignCols) bool {
 		return false
 	}
 	r.Y -= 2
-	if w.kit().Button(AssignApparelEditID, r, "Apparel", uikit.BtnOpts{Tip: "Apparel policies\nMake and edit which garments, materials, wear and quality each colonist may put on."}) {
+	if w.kit().Button(AssignApparelEditID, r, w.sh.T("Apparel"), uikit.BtnOpts{Tip: w.sh.T("Apparel policies\nMake and edit which garments, materials, wear and quality each colonist may put on.")}) {
 		w.OpenApparelPolicies()
 		return true
 	}
@@ -115,11 +113,11 @@ func (w Assign) outfitCells(p game.PawnView, rr gfx.Rect, cols assignCols) {
 		w.apparelButton(p, br)
 	}
 	if cr, ok := cell(rr, cols.clrX, cols.clrW); ok {
-		o := uikit.BtnOpts{Tip: assignClearTip}
+		o := uikit.BtnOpts{Tip: w.sh.T("Clear forced\nLet this colonist choose again what to wear: every garment you picked by hand is released.")}
 		if !anyForced(p.ApparelForced) {
-			o.Disabled, o.Reason = true, "Nothing this colonist wears was picked by hand."
+			o.Disabled, o.Reason = true, w.sh.T("Nothing this colonist wears was picked by hand.")
 		}
-		if w.kit().Button(AssignClearID(uint64(p.ID)), cr, "Clear forced", o) {
+		if w.kit().Button(AssignClearID(uint64(p.ID)), cr, w.sh.T("Clear forced"), o) {
 			w.sh.Enqueue(command.Command{Kind: command.ClearForcedApparel, Pawn: uint64(p.ID)})
 		}
 	}
@@ -144,10 +142,10 @@ func (w Assign) apparelButton(p game.PawnView, br gfx.Rect) {
 	}
 	next, ok := NextApparelPolicy(ps, p.Gear.ApparelPolicy)
 	if !ok {
-		w.kit().Button(id, br, "-", uikit.BtnOpts{Disabled: true, Reason: "Apparel policies are not available in this game."})
+		w.kit().Button(id, br, "-", uikit.BtnOpts{Disabled: true, Reason: w.sh.T("Apparel policies are not available in this game.")})
 		return
 	}
-	if w.kit().Button(id, br, gfx.Ellipsize(label, gfx.Body, float64(br.W)-12), uikit.BtnOpts{Tip: assignApparelTip}) {
+	if w.kit().Button(id, br, gfx.Ellipsize(label, gfx.Body, float64(br.W)-12), uikit.BtnOpts{Tip: w.sh.T("Apparel policy\nWhich garments this colonist may wear. A click picks the next policy; the Apparel header opens the policy editor.")}) {
 		w.sh.Enqueue(command.Command{Kind: command.SetApparelPolicy, Pawn: uint64(p.ID), Index: next})
 		w.armCell(paintOutfit, id, next)
 	}

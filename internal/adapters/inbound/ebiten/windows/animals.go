@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -162,12 +163,12 @@ func (w Animals) Buttons() []uikit.Button {
 	r := w.Rect()
 	cols := animalColsFor(r.W, w.Wild)
 	out := []uikit.Button{
-		{ID: "animals.view.colony", Label: "Colony", X: r.X + r.W - 190, Y: r.Y + 6, W: 84, H: 24, Selected: !w.Wild},
-		{ID: "animals.view.wild", Label: "Wild", X: r.X + r.W - 100, Y: r.Y + 6, W: 84, H: 24, Selected: w.Wild},
+		{ID: "animals.view.colony", Label: w.sh.T("Colony"), X: r.X + r.W - 190, Y: r.Y + 6, W: 84, H: 24, Selected: !w.Wild},
+		{ID: "animals.view.wild", Label: w.sh.T("Wild"), X: r.X + r.W - 100, Y: r.Y + 6, W: 84, H: 24, Selected: w.Wild},
 	}
 	if !w.Wild {
-		out = append(out, uikit.Button{ID: AutoSlaughterBtnID, Label: "Auto-slaughter", X: r.X + r.W - 330, Y: r.Y + 6, W: 130, H: 24,
-			Tip: "Auto-slaughter\nKeep each tame species at a herd size: handlers slaughter the surplus once a day."})
+		out = append(out, uikit.Button{ID: AutoSlaughterBtnID, Label: w.sh.T("Auto-slaughter"), X: r.X + r.W - 330, Y: r.Y + 6, W: 130, H: 24,
+			Tip: w.sh.T("Auto-slaughter\nKeep each tame species at a herd size: handlers slaughter the surplus once a day.")})
 	}
 	if w.Wild {
 		for i, row := range w.wildlife() {
@@ -177,9 +178,9 @@ func (w Animals) Buttons() []uikit.Button {
 			}
 			out = append(out,
 				uikit.Button{ID: "animals.focus." + row.Species, X: r.X + 12, Y: y, W: float32(cols.at(wildBtn) - 24), H: animalRowH - 2},
-				uikit.Button{ID: "animals.wild.hunt." + row.Species, Label: "Hunt all", X: r.X + float32(cols.at(wildBtn)), Y: y, W: 90, H: 24, Selected: row.Hunted > 0},
-				uikit.Button{ID: "animals.wild.tame." + row.Species, Label: "Tame one", X: r.X + float32(cols.at(wildBtn)) + 96, Y: y, W: 90, H: 24, Selected: row.TameMarked > 0},
-				uikit.Button{ID: "animals.wild.cancel." + row.Species, Label: "Cancel", X: r.X + float32(cols.at(wildBtn)) + 192, Y: y, W: 80, H: 24},
+				uikit.Button{ID: "animals.wild.hunt." + row.Species, Label: w.sh.T("Hunt all"), X: r.X + float32(cols.at(wildBtn)), Y: y, W: 90, H: 24, Selected: row.Hunted > 0},
+				uikit.Button{ID: "animals.wild.tame." + row.Species, Label: w.sh.T("Tame one"), X: r.X + float32(cols.at(wildBtn)) + 96, Y: y, W: 90, H: 24, Selected: row.TameMarked > 0},
+				uikit.Button{ID: "animals.wild.cancel." + row.Species, Label: w.sh.T("Cancel"), X: r.X + float32(cols.at(wildBtn)) + 192, Y: y, W: 80, H: 24},
 			)
 		}
 		return out
@@ -190,15 +191,15 @@ func (w Animals) Buttons() []uikit.Button {
 			break
 		}
 		id := strconv.FormatUint(uint64(an.ID), 10)
-		slaughter := "Slaughter"
+		slaughter := w.sh.T("Slaughter")
 		if an.Designated {
-			slaughter = "Spare"
+			slaughter = w.sh.T("Spare")
 		}
 		out = append(out,
 			uikit.Button{ID: "animals.master." + id, Label: AnimalMasterCell(an), X: r.X + float32(cols.at(colMaster)) - 2, Y: y, W: 88, H: 24,
-				Tip: "Master\nPick the colonist who handles this animal."},
+				Tip: w.sh.T("Master\nPick the colonist who handles this animal.")},
 			uikit.Button{ID: "animals.slaughter." + id, Label: slaughter, X: r.X + float32(cols.at(colBtn)), Y: y, W: 100, H: 24, Selected: an.Designated},
-			uikit.Button{ID: "animals.release." + id, Label: "Release", X: r.X + float32(cols.at(colBtn)) + 106, Y: y, W: 90, H: 24},
+			uikit.Button{ID: "animals.release." + id, Label: w.sh.T("Release"), X: r.X + float32(cols.at(colBtn)) + 106, Y: y, W: 90, H: 24},
 		)
 		if cols.shown(colDiet) {
 			label := an.FoodPolicy
@@ -206,12 +207,12 @@ func (w Animals) Buttons() []uikit.Button {
 				label = "-"
 			}
 			out = append(out, uikit.Button{ID: AnimalDietID(an.ID), Label: label, X: r.X + float32(cols.at(colDiet)), Y: y, W: dietW, H: 24,
-				Tip: "Food policy\nWhat this animal may eat. A click picks the next policy."})
+				Tip: w.sh.T("Food policy\nWhat this animal may eat. A click picks the next policy.")})
 		}
 		if an.CanFollow { // PLAY-015: follow the drafted master, on or off
-			out = append(out, uikit.Button{ID: "animals.follow." + id, Label: FollowCell(an), X: r.X + float32(cols.at(colFollow)) - 2, Y: y,
+			out = append(out, uikit.Button{ID: "animals.follow." + id, Label: animalFollowCell(w.sh, an), X: r.X + float32(cols.at(colFollow)) - 2, Y: y,
 				W: colArea - colFollow - 8, H: 24, Selected: an.Follows,
-				Tip: "Follow drafted\nWhether it follows its master while the master is drafted."})
+				Tip: w.sh.T("Follow drafted\nWhether it follows its master while the master is drafted.")})
 		}
 	}
 	return out
@@ -257,9 +258,9 @@ func (w Animals) Click(id string) {
 			}
 			w.sh.Enqueue(c)
 		case "release":
-			uikit.ConfirmIf(w.sh.Kit(), "animals.release.confirm", "Release this animal?",
-				"It goes wild again and is no longer yours. A bonded colonist will mind.",
-				"Release", true, func() { w.sh.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n}) })
+			uikit.ConfirmIf(w.sh.Kit(), "animals.release.confirm", w.sh.T("Release this animal?"),
+				w.sh.T("It goes wild again and is no longer yours. A bonded colonist will mind."),
+				w.sh.T("Release"), true, func() { w.sh.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n}) })
 		case "diet":
 			if next, ok := NextFoodPolicy(w.sh.World().FoodPolicies, an.FoodPolicy); ok {
 				w.sh.Enqueue(command.Command{Kind: command.SetFoodPolicy, Pawn: n, Index: next})
@@ -342,9 +343,9 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 			marked++
 		}
 	}
-	title := fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(w.tame()), marked, len(wv.Pens)+CountZones(wv, game.ZonePen))
+	title := lang.Tf(w.sh, "Animals  (%d tame, %d marked for taming, %d pens)", len(w.tame()), marked, len(wv.Pens)+CountZones(wv, game.ZonePen))
 	if w.Wild {
-		title = fmt.Sprintf("Wildlife  (%d species)", len(w.wildlife()))
+		title = lang.Tf(w.sh, "Wildlife  (%d species)", len(w.wildlife()))
 	}
 	gfx.Text(screen, gfx.Ellipsize(title, gfx.Label, float64(r.W)-12-200), float64(r.X)+12, float64(r.Y)+8, gfx.Label)
 	mx, my := w.sh.Cursor()
@@ -366,13 +367,13 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 	x0, y0 := int(r.X), int(r.Y)
 	cols := animalColsFor(r.W, false)
-	uikit.DrawFitSmall(screen, "Tame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector.", float64(x0+12), float64(y0+34), float64(r.W)-24, gfx.Body)
+	uikit.DrawFitSmall(screen, w.sh.T("Tame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector."), float64(x0+12), float64(y0+34), float64(r.W)-24, gfx.Body)
 	head := y0 + animalsRowTop - 22
 	for _, h := range []struct {
 		x int
 		s string
-	}{{colName, "Name"}, {colSpecies, "Species"}, {colSex, "Sex"}, {colAge, "Age"}, {colFood, "Food"},
-		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colMaster, "Master"}, {colFollow, "Follow"}, {colArea, "Area / Pen"}, {colTrain, "Training"}, {colDoing, "Doing"}, {colDiet, "Diet"}} {
+	}{{colName, w.sh.T("Name")}, {colSpecies, w.sh.T("Species")}, {colSex, w.sh.T("Sex")}, {colAge, w.sh.T("Age")}, {colFood, w.sh.T("Food")},
+		{colProduct, w.sh.T("Product")}, {colPreg, w.sh.T("Preg.")}, {colHealth, w.sh.T("Health")}, {colMaster, w.sh.T("Master")}, {colFollow, w.sh.T("Follow")}, {colArea, w.sh.T("Area / Pen")}, {colTrain, w.sh.T("Training")}, {colDoing, w.sh.T("Doing")}, {colDiet, w.sh.T("Diet")}} {
 		if cols.shown(h.x) {
 			uikit.DrawLabel(screen, x0+cols.at(h.x), head, h.s)
 		}
@@ -388,10 +389,10 @@ func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 		uikit.DrawLabelClip(screen, x0+cols.at(colName), ty, colSpecies-colName-6, an.Name)
 		uikit.DrawLabelClip(screen, x0+cols.at(colSpecies), ty, colSex-colSpecies-6, w.sh.AnimalLabel(an))
 		if cols.shown(colSex) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colSex), ty, colAge-colSex-4, AnimalSexLetter(an))
+			uikit.DrawLabelClip(screen, x0+cols.at(colSex), ty, colAge-colSex-4, animalSexLetter(w.sh, an))
 		}
 		if cols.shown(colAge) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colAge), ty, colFood-colAge-6, AnimalAgeText(an))
+			uikit.DrawLabelClip(screen, x0+cols.at(colAge), ty, colFood-colAge-6, animalAgeText(w.sh, an))
 		}
 		if hasNeeds(an) {
 			drawMiniBar(screen, x0+cols.at(colFood), y+8, 70, 10, an.Food, an.Food < hungryBelow)
@@ -400,36 +401,36 @@ func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 			uikit.DrawLabelClip(screen, x0+cols.at(colProduct), ty, colPreg-colProduct-6, AnimalProductText(an))
 		}
 		if cols.shown(colPreg) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colPreg), ty, colHealth-colPreg-6, AnimalPregCell(an))
+			uikit.DrawLabelClip(screen, x0+cols.at(colPreg), ty, colHealth-colPreg-6, animalPregCell(w.sh, an))
 		}
 		uikit.DrawLabelClip(screen, x0+cols.at(colHealth), ty, colMaster-colHealth-6, w.sh.AnimalHealth(an))
 		if !an.CanFollow { // trained animals get the on/off toggle button
-			uikit.DrawLabelClip(screen, x0+cols.at(colFollow), ty, colArea-colFollow-6, FollowCell(an))
+			uikit.DrawLabelClip(screen, x0+cols.at(colFollow), ty, colArea-colFollow-6, animalFollowCell(w.sh, an))
 		}
 		if an.Penned { // area animals have the dropdown widget (animalsTabUI)
-			uikit.DrawLabelClip(screen, x0+cols.at(colArea), ty, colTrain-colArea-6, AnimalAreaCell(an, ""))
+			uikit.DrawLabelClip(screen, x0+cols.at(colArea), ty, colTrain-colArea-6, animalAreaCell(w.sh, an, ""))
 		}
 		if cols.shown(colTrain) {
 			uikit.DrawLabelClip(screen, x0+cols.at(colTrain), ty, colDoing-colTrain-6, AnimalTrainingCell(an))
 		}
 		if cols.shown(colDoing) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colDoing), ty, colBtn-colDoing-8, AnimalDoing(an))
+			uikit.DrawLabelClip(screen, x0+cols.at(colDoing), ty, colBtn-colDoing-8, animalDoing(w.sh, an))
 		}
 	}
 	if len(list) == 0 {
-		uikit.DrawLabel(screen, int(r.X)+52, int(r.Y)+animalsRowTop, "No tame animals yet.")
+		uikit.DrawLabel(screen, int(r.X)+52, int(r.Y)+animalsRowTop, w.sh.T("No tame animals yet."))
 	}
 }
 
 func (w Animals) drawWild(screen *ebiten.Image, r uikit.Button) {
 	x0, y0 := int(r.X), int(r.Y)
 	cols := animalColsFor(r.W, true)
-	uikit.DrawFitSmall(screen, "Wild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal.", float64(x0+12), float64(y0+34), float64(r.W)-24, gfx.Body)
+	uikit.DrawFitSmall(screen, w.sh.T("Wild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal."), float64(x0+12), float64(y0+34), float64(r.W)-24, gfx.Body)
 	head := y0 + animalsRowTop - 22
 	for _, h := range []struct {
 		x int
 		s string
-	}{{wildLabel, "Species"}, {wildCount, "Count"}, {wildDiet, "Diet"}, {wildPred, "Pred."}, {wildTame, "Tame chance"}, {wildMeat, "Meat each"}, {wildMarks, "Marked"}} {
+	}{{wildLabel, w.sh.T("Species")}, {wildCount, w.sh.T("Count")}, {wildDiet, w.sh.T("Diet")}, {wildPred, w.sh.T("Pred.")}, {wildTame, w.sh.T("Tame chance")}, {wildMeat, w.sh.T("Meat each")}, {wildMarks, w.sh.T("Marked")}} {
 		if cols.shown(h.x) {
 			uikit.DrawLabel(screen, x0+cols.at(h.x), head, h.s)
 		}
@@ -443,7 +444,7 @@ func (w Animals) drawWild(screen *ebiten.Image, r uikit.Button) {
 		w.sh.DrawAnimalIcon(screen, game.AnimalView{Species: row.Species, Label: row.Label}, float64(r.X)+16, float64(y), 26)
 		ty := y + 6
 		uikit.DrawLabelClip(screen, x0+wildLabel, ty, wildCount-wildLabel-6, row.Label)
-		uikit.DrawLabelClip(screen, x0+cols.at(wildCount), ty, wildDiet-wildCount-6, fmt.Sprintf("x%d", row.Count))
+		uikit.DrawLabelClip(screen, x0+cols.at(wildCount), ty, wildDiet-wildCount-6, lang.Tf(w.sh, "x%d", row.Count))
 		if cols.shown(wildDiet) {
 			uikit.DrawLabelClip(screen, x0+cols.at(wildDiet), ty, wildPred-wildDiet-6, row.Diet)
 		}
@@ -455,11 +456,11 @@ func (w Animals) drawWild(screen *ebiten.Image, r uikit.Button) {
 			uikit.DrawLabelClip(screen, x0+cols.at(wildMeat), ty, wildMarks-wildMeat-6, strconv.Itoa(row.Meat))
 		}
 		if cols.shown(wildMarks) {
-			uikit.DrawLabelClip(screen, x0+cols.at(wildMarks), ty, wildBtn-wildMarks-8, fmt.Sprintf("hunt %d, tame %d", row.Hunted, row.TameMarked))
+			uikit.DrawLabelClip(screen, x0+cols.at(wildMarks), ty, wildBtn-wildMarks-8, lang.Tf(w.sh, "hunt %d, tame %d", row.Hunted, row.TameMarked))
 		}
 	}
 	if len(rows) == 0 {
-		uikit.DrawLabel(screen, x0+52, y0+animalsRowTop, "No wild animals in sight.")
+		uikit.DrawLabel(screen, x0+52, y0+animalsRowTop, w.sh.T("No wild animals in sight."))
 	}
 }
 
@@ -471,22 +472,26 @@ func hasNeeds(an game.AnimalView) bool { return an.State != "" }
 const hungryBelow = 25
 
 // AnimalSexLetter is "F" or "M".
-func AnimalSexLetter(an game.AnimalView) string {
+func AnimalSexLetter(an game.AnimalView) string { return animalSexLetter(lang.English{}, an) }
+
+func animalSexLetter(tr lang.Tr, an game.AnimalView) string {
 	if an.Female {
-		return "F"
+		return tr.T("F")
 	}
-	return "M"
+	return tr.T("M")
 }
 
 // AnimalAgeText is the age in days, "young" ones marked.
-func AnimalAgeText(an game.AnimalView) string {
+func AnimalAgeText(an game.AnimalView) string { return animalAgeText(lang.English{}, an) }
+
+func animalAgeText(tr lang.Tr, an game.AnimalView) string {
 	if !hasNeeds(an) && an.AgeDays == 0 {
 		return "-"
 	}
 	if !an.Adult {
-		return fmt.Sprintf("%dd (young)", an.AgeDays)
+		return lang.Tf(tr, "%dd (young)", an.AgeDays)
 	}
-	return fmt.Sprintf("%dd", an.AgeDays)
+	return lang.Tf(tr, "%dd", an.AgeDays)
 }
 
 // AnimalProductText is "milk 70%" or "-".
@@ -498,12 +503,14 @@ func AnimalProductText(an game.AnimalView) string {
 }
 
 // AnimalPregCell is the Colony list's pregnancy column.
-func AnimalPregCell(an game.AnimalView) string {
+func AnimalPregCell(an game.AnimalView) string { return animalPregCell(lang.English{}, an) }
+
+func animalPregCell(tr lang.Tr, an game.AnimalView) string {
 	if an.Pregnant {
 		return fmt.Sprintf("%d%%", an.PregPct)
 	}
 	if an.EggsFertile {
-		return "eggs"
+		return tr.T("eggs")
 	}
 	return "-"
 }
@@ -532,12 +539,14 @@ func AnimalTrainingCell(an game.AnimalView) string {
 }
 
 // AnimalDoing is what the Colony list's last column says.
-func AnimalDoing(an game.AnimalView) string {
+func AnimalDoing(an game.AnimalView) string { return animalDoing(lang.English{}, an) }
+
+func animalDoing(tr lang.Tr, an game.AnimalView) string {
 	switch {
 	case an.Downed: // too hurt to stand (it may also be marked)
-		return "Downed"
+		return tr.T("Downed")
 	case an.Designated:
-		return "marked for slaughter"
+		return tr.T("marked for slaughter")
 	case an.State != "":
 		return an.State
 	}
@@ -584,23 +593,29 @@ func CountZones(w game.WorldView, kind string) int {
 
 // FollowCell is the Follow column: "on"/"off" for an animal trained to
 // follow its drafted master (the player's setting), else "-".
-func FollowCell(an game.AnimalView) string {
+func FollowCell(an game.AnimalView) string { return animalFollowCell(lang.English{}, an) }
+
+func animalFollowCell(tr lang.Tr, an game.AnimalView) string {
 	switch {
 	case !an.CanFollow:
 		return "-"
 	case an.Follows:
-		return "on"
+		return tr.T("on")
 	}
-	return "off"
+	return tr.T("off")
 }
 
 // AnimalAreaCell is the Area / Pen column's text: a penned animal's pen
 // ("Pen 1", "Roaming", "Being roped"), else its allowed area.
 // area is the allowed area's name (the shell knows the areas).
 func AnimalAreaCell(an game.AnimalView, area string) string {
+	return animalAreaCell(lang.English{}, an, area)
+}
+
+func animalAreaCell(tr lang.Tr, an game.AnimalView, area string) string {
 	if an.Penned {
 		if an.Pen == "" {
-			return "Roaming"
+			return tr.T("Roaming")
 		}
 		return an.Pen
 	}
@@ -643,7 +658,7 @@ func (w Animals) masterMenu(an game.AnimalView) {
 		}
 		opts = append(opts, o)
 	}
-	opts = append(opts, game.OrderOption{Label: "No master", Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
+	opts = append(opts, game.OrderOption{Label: w.sh.T("No master"), Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
 	r := w.Rect()
 	cols := animalColsFor(r.W, false)
 	for i, t := range w.tame() {

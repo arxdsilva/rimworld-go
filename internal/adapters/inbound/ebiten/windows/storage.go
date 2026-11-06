@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -73,7 +74,7 @@ func (w Storage) Open(id uint16) {
 		w.storage.name = z.Name
 	}
 	w.OpenKit(uikit.Modal{
-		ID: StorageModalID, Title: "Storage settings", W: storageW, H: storageH, Anchor: w.Anchor,
+		ID: StorageModalID, Title: w.sh.T("Storage settings"), W: storageW, H: storageH, Anchor: w.Anchor,
 		Draw: func(body gfx.Rect) { w.body(body) },
 	})
 }
@@ -101,7 +102,7 @@ func (w Storage) zoneExists(id uint16) bool {
 func (w Storage) body(body gfx.Rect) {
 	z, ok := w.storageZone()
 	if !ok {
-		w.kit().Label(body.X, body.Y, "This storage zone is gone.", uikit.DimText())
+		w.kit().Label(body.X, body.Y, w.sh.T("This storage zone is gone."), uikit.DimText())
 		return
 	}
 	st := w.storage
@@ -111,38 +112,38 @@ func (w Storage) body(body gfx.Rect) {
 	zid := z.ID
 	field := gfx.Rect{X: body.X, Y: body.Y, W: body.W - 150, H: 26}
 	if _, committed := w.kit().TextField("storage.name", field, &st.name, uikit.TextFieldSpec{
-		MaxLen: game.ZoneNameMax, Placeholder: "Name", Normalize: strings.TrimSpace}); committed {
+		MaxLen: game.ZoneNameMax, Placeholder: w.sh.T("Name"), Normalize: strings.TrimSpace}); committed {
 		w.sh.Enqueue(command.Command{Kind: command.RenameZone, Target: uint64(zid), Name: st.name})
 	}
 	copyR := gfx.Rect{X: field.Right() + 6, Y: body.Y, W: 66, H: 26}
 	pasteR := gfx.Rect{X: copyR.Right() + 6, Y: body.Y, W: 66, H: 26}
-	if w.kit().Button("storage.copy", copyR, "Copy", uikit.BtnOpts{Tip: "Copy settings\nRemember this zone's allowed items, special filters and priority."}) {
+	if w.kit().Button("storage.copy", copyR, w.sh.T("Copy"), uikit.BtnOpts{Tip: w.sh.T("Copy settings\nRemember this zone's allowed items, special filters and priority.")}) {
 		st.clip = zid
 	}
-	paste := uikit.BtnOpts{Tip: "Paste settings\nApply the copied zone's allowed items, special filters and priority here."}
+	paste := uikit.BtnOpts{Tip: w.sh.T("Paste settings\nApply the copied zone's allowed items, special filters and priority here.")}
 	switch {
 	case st.clip == 0:
-		paste.Disabled, paste.Reason = true, "nothing copied yet"
+		paste.Disabled, paste.Reason = true, w.sh.T("nothing copied yet")
 	case st.clip == zid:
-		paste.Disabled, paste.Reason = true, "this is the copied zone"
+		paste.Disabled, paste.Reason = true, w.sh.T("this is the copied zone")
 	case !w.zoneExists(st.clip):
-		paste.Disabled, paste.Reason = true, "the copied zone is gone"
+		paste.Disabled, paste.Reason = true, w.sh.T("the copied zone is gone")
 	}
-	if w.kit().Button("storage.paste", pasteR, "Paste", paste) {
+	if w.kit().Button("storage.paste", pasteR, w.sh.T("Paste"), paste) {
 		w.sh.Enqueue(command.Command{Kind: command.PasteStockpile, Target: uint64(zid), Zone: uint64(st.clip)})
 	}
 	w.priorityRow(body, z)
 	row2 := body.Y + storageHeadH*2
 	allR := gfx.Rect{X: body.X, Y: row2, W: 80, H: 26}
 	clrR := gfx.Rect{X: allR.Right() + 6, Y: row2, W: 80, H: 26}
-	if w.kit().Button("storage.allow_all", allR, "Allow all", uikit.BtnOpts{Tip: "Allow every item kind in this storage."}) {
+	if w.kit().Button("storage.allow_all", allR, w.sh.T("Allow all"), uikit.BtnOpts{Tip: w.sh.T("Allow every item kind in this storage.")}) {
 		w.sendRoots(z.ID, true)
 	}
-	if w.kit().Button("storage.clear_all", clrR, "Clear all", uikit.BtnOpts{Tip: "Forbid every item kind in this storage."}) {
+	if w.kit().Button("storage.clear_all", clrR, w.sh.T("Clear all"), uikit.BtnOpts{Tip: w.sh.T("Forbid every item kind in this storage.")}) {
 		w.sendRoots(z.ID, false)
 	}
 	find := gfx.Rect{X: clrR.Right() + 6, Y: row2, W: body.Right() - clrR.Right() - 6, H: 26}
-	w.kit().TextField("storage.search", find, &st.find, uikit.TextFieldSpec{MaxLen: 24, Placeholder: "Search", Normalize: strings.TrimSpace})
+	w.kit().TextField("storage.search", find, &st.find, uikit.TextFieldSpec{MaxLen: 24, Placeholder: w.sh.T("Search"), Normalize: strings.TrimSpace})
 	w.storage.find = st.find
 	top := float32(storageHeadH*3 + 4)
 	list := gfx.Rect{X: body.X, Y: body.Y + top, W: body.W, H: body.H - top}
@@ -243,7 +244,7 @@ func (w Storage) tree(r gfx.Rect, z game.ZoneView, open map[string]bool) {
 		}
 		x := area.View.X + float32(row.depth*storageIndent)
 		if row.head {
-			w.kit().Label(x+4, y+4, row.label, uikit.DimText())
+			w.kit().Label(x+4, y+4, w.rowLabel(row), uikit.DimText())
 			continue
 		}
 		if row.rng != 0 {
@@ -256,14 +257,14 @@ func (w Storage) tree(r gfx.Rect, z game.ZoneView, open map[string]bool) {
 			if open[row.path] {
 				mark = "-"
 			}
-			if w.kit().Button("storage.expand."+row.path, tw, mark, uikit.BtnOpts{Tip: "Show or hide the items in " + row.label}) {
+			if w.kit().Button("storage.expand."+row.path, tw, mark, uikit.BtnOpts{Tip: lang.Tf(w.sh, "Show or hide the items in %s", row.label)}) {
 				open[row.path] = !open[row.path]
 			}
 			x += 26
 		}
 		on, label := row.on, row.label
 		if row.partial {
-			label += "  (some)"
+			label = lang.Tf(w.sh, "%s  (some)", label)
 		}
 		cr := gfx.Rect{X: x, Y: y, W: area.View.Right() - x, H: storageRowH}
 		if w.kit().Check(row.id, cr, label, &on, uikit.CheckOpts{}) {
@@ -281,12 +282,34 @@ func (w Storage) sendNode(zid uint16, row treeRow, on bool) {
 	w.sh.Enqueue(command.Command{Kind: command.SetStockpileFilter, Target: uint64(zid), Name: row.path, Enabled: on})
 }
 
+// rowLabel is a tree line's text: the fixed headings and range names are
+// translated here (treeRows keeps the English the tests read).
+func (w Storage) rowLabel(row treeRow) string {
+	switch row.id {
+	case "storage.h.items":
+		return w.sh.T("Allowed items")
+	case "storage.h.special":
+		return w.sh.T("Special filters")
+	case "storage.special.hp":
+		return w.sh.T("Hit points %")
+	case "storage.special.quality":
+		return w.sh.T("Quality")
+	}
+	return row.label
+}
+
+// qualityNames are storageQualities in the player's language.
+func (w Storage) qualityNames() [len(storageQualities)]string {
+	return [...]string{w.sh.T("awful"), w.sh.T("poor"), w.sh.T("normal"), w.sh.T("good"), w.sh.T("excellent"), w.sh.T("masterwork"), w.sh.T("legendary")}
+}
+
 // rangeRow declares a range line: the label and a - / + pair for each end.
 // A click sends SetStockpileSpecial with the new X..X2.
 func (w Storage) rangeRow(x, y, width float32, z game.ZoneView, row treeRow) {
-	text := fmt.Sprintf("%s  %d-%d", row.label, row.lo, row.hi)
+	text := fmt.Sprintf("%s  %d-%d", w.rowLabel(row), row.lo, row.hi)
 	if row.rng == specialQuality {
-		text = fmt.Sprintf("%s  %s - %s", row.label, storageQualities[row.lo], storageQualities[row.hi])
+		q := w.qualityNames()
+		text = fmt.Sprintf("%s  %s - %s", w.rowLabel(row), q[row.lo], q[row.hi])
 	}
 	w.kit().Label(x+4, y+4, text, uikit.DimText())
 	step, max := 1, qualityMax
@@ -306,7 +329,7 @@ func (w Storage) rangeRow(x, y, width float32, z game.ZoneView, row treeRow) {
 		}
 		ok := lo >= 0 && hi <= max && lo <= hi
 		r := gfx.Rect{X: bx + float32(i)*24, Y: y, W: 22, H: storageRowH}
-		if w.kit().Button(row.id+"."+d.id, r, d.mark, uikit.BtnOpts{Disabled: !ok, Reason: "out of range"}) {
+		if w.kit().Button(row.id+"."+d.id, r, d.mark, uikit.BtnOpts{Disabled: !ok, Reason: w.sh.T("out of range")}) {
 			w.sh.Enqueue(command.Command{Kind: command.SetStockpileSpecial, Target: uint64(z.ID), Index: row.rng, X: lo, Y: 0, X2: hi})
 		}
 	}
@@ -322,10 +345,10 @@ func (w Storage) priorityRow(body gfx.Rect, z game.ZoneView) {
 		cur = "Normal"
 	}
 	const cw = 76
-	w.kit().Label(body.X, body.Y+storageHeadH+6, "Priority", uikit.DimText())
+	w.kit().Label(body.X, body.Y+storageHeadH+6, w.sh.T("Priority"), uikit.DimText())
 	for i, n := range names {
 		r := gfx.Rect{X: body.X + 56 + float32(i)*(cw+2), Y: body.Y + storageHeadH, W: cw, H: 24}
-		if w.kit().Button("storage.priority."+n, r, n, uikit.BtnOpts{Disabled: n == cur, Reason: "already " + strings.ToLower(n), Tip: "Haulers fill higher-priority storage first."}) {
+		if w.kit().Button("storage.priority."+n, r, n, uikit.BtnOpts{Disabled: n == cur, Reason: lang.Tf(w.sh, "already %s", strings.ToLower(n)), Tip: w.sh.T("Haulers fill higher-priority storage first.")}) {
 			w.sh.Enqueue(command.Command{Kind: command.SetZonePriority, Target: uint64(z.ID), Index: i})
 		}
 	}

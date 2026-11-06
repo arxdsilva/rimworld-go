@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
@@ -75,9 +76,6 @@ const (
 	workCellW = 46 // wide enough for the skill level, the priority and the passion glyph
 )
 
-// workHint is the header's one-line legend.
-const workHint = "1 = do first ... 4 = do last, - = never; ties: left first; click a cell to change"
-
 // WorkColSkill is the skill each work column trains and is paced by
 // (NG-1 §2.12); Firefighting, Hauling and Cleaning have none.
 var WorkColSkill = [...]struct {
@@ -126,7 +124,7 @@ func (w Work) incapable(p game.PawnView, col int) (string, bool) {
 		why = w.sh.Env().Game.IncapableReason(p.ID, work.Type(col))
 	}
 	if why == "" {
-		why = "Incapable"
+		why = w.sh.T("Incapable")
 	}
 	return why, true
 }
@@ -155,32 +153,109 @@ func WorkCellRect(r uikit.Button, row, col int) gfx.Rect {
 // workRowShown reports the row fits the panel.
 func workRowShown(r uikit.Button, row int) bool { return int(r.Y)+48+row*workRowH <= int(r.Y+r.H)-20 }
 
+// hint is the header's one-line legend.
+func (w Work) hint() string {
+	return w.sh.T("1 = do first ... 4 = do last, - = never; ties: left first; click a cell to change")
+}
+
+// help is the header hover card of work column col, in the player's
+// language (WorkHelp holds the English for tests and captures).
+func (w Work) help(col int) string {
+	switch col {
+	case 0:
+		return w.sh.T("Firefighting\nBeat out fires inside the Home area and your allowed area. No skill.")
+	case 1:
+		return w.sh.T("Doctor\nTend the wounded and the sick, and carry the downed to bed. Skill: Medicine.")
+	case 2:
+		return w.sh.T("Growing\nSow and harvest crops in growing zones, and fell zone trees. Skill: Plants.")
+	case 3:
+		return w.sh.T("Cooking\nCook meals at a stove or campfire and butcher animals. Skill: Cooking.")
+	case 4:
+		return w.sh.T("Building\nBuild, deconstruct, repair, roof and smooth, and deliver materials to sites. Skill: Construction.")
+	case 5:
+		return w.sh.T("Hunting\nHunt wild animals with a rifle, or a melee weapon. Skill: Shooting (Melee).")
+	case 6:
+		return w.sh.T("Hauling\nCarry items to stockpiles and frames, fill hoppers, refuel. No skill.")
+	case 7:
+		return w.sh.T("Cleaning\nSweep dirt and filth off the Home area. No skill.")
+	case 8:
+		return w.sh.T("Research\nStudy at a research bench. Skill: Intellectual.")
+	case 9:
+		return w.sh.T("Mining\nDig out rock and ore. Skill: Mining.")
+	case 10:
+		return w.sh.T("Crafting\nWork at benches: workbench, tailoring, stonecutting. Skill: Crafting.")
+	case 11:
+		return w.sh.T("Handling\nTame, milk, shear and collect from animals. Skill: Animals.")
+	case 12:
+		return w.sh.T("Warden\nChat with prisoners, recruit them and bring them food. Off unless you turn it on. Skill: Social.")
+	case 13:
+		return w.sh.T("Plant cutting\nCut marked plants and grass, harvest wild plants, fell marked trees, clear blight. Skill: Plants.")
+	}
+	return ""
+}
+
+// colName is the header abbreviation of work column col (WorkColumns holds
+// the English).
+func (w Work) colName(col int) string {
+	switch col {
+	case 0:
+		return w.sh.T("FF")
+	case 1:
+		return w.sh.T("Doc")
+	case 2:
+		return w.sh.T("Grow")
+	case 3:
+		return w.sh.T("Cook")
+	case 4:
+		return w.sh.T("Bld")
+	case 5:
+		return w.sh.T("Hunt")
+	case 6:
+		return w.sh.T("Haul")
+	case 7:
+		return w.sh.T("Cln")
+	case 8:
+		return w.sh.T("Rsh")
+	case 9:
+		return w.sh.T("Mine")
+	case 10:
+		return w.sh.T("Crft")
+	case 11:
+		return w.sh.T("Hndl")
+	case 12:
+		return w.sh.T("Ward")
+	case 13:
+		return w.sh.T("Cut")
+	}
+	return ""
+}
+
 // workCellTip is the hover card of a live cell: priority, skill, passion.
 func (w Work) cellTip(p game.PawnView, col int) string {
-	name := WorkHelp[col]
+	name := w.help(col)
 	name, _, _ = strings.Cut(name, "\n")
 	tip := w.sh.PawnLabel(p) + ": " + name + "\n"
 	if pr := WorkPriority(p, col); pr > 0 {
-		tip += fmt.Sprintf("Priority %d (1 first, 4 last). ", pr)
+		tip += lang.Tf(w.sh, "Priority %d (1 first, 4 last). ", pr)
 	} else {
-		tip += "Never. "
+		tip += w.sh.T("Never. ")
 	}
 	if col < len(WorkColSkill) && WorkColSkill[col].OK {
 		sk := WorkColSkill[col].Skill
-		tip += fmt.Sprintf("%s level %d, %s.", sk.Label(), p.SkillLv[sk], passionName(int(p.Passion[sk])))
+		tip += lang.Tf(w.sh, "%s level %d, %s.", sk.Label(), p.SkillLv[sk], passionName(w.sh, int(p.Passion[sk])))
 	}
 	return tip
 }
 
 // passionName is "no passion", "minor passion" or "major passion".
-func passionName(p int) string {
+func passionName(tr lang.Tr, p int) string {
 	switch p {
 	case 1:
-		return "minor passion"
+		return tr.T("minor passion")
 	case 2:
-		return "major passion"
+		return tr.T("major passion")
 	}
-	return "no passion"
+	return tr.T("no passion")
 }
 
 // Tips declares the Work tab's hover cards: each column header names
@@ -193,7 +268,7 @@ func (w Work) Tips(sw, sh int) {
 	for _, t := range work.Order {
 		col := int(t)
 		cr := WorkCellRect(r, 0, col)
-		w.kit().Tip("work.hdr."+uikit.Num(col), gfx.Rect{X: cr.X, Y: r.Y + 22, W: cr.W, H: 22}, WorkHelp[col])
+		w.kit().Tip("work.hdr."+uikit.Num(col), gfx.Rect{X: cr.X, Y: r.Y + 22, W: cr.W, H: 22}, w.help(col))
 	}
 	for row, p := range w.sh.Pawns() {
 		if !workRowShown(r, row) {
@@ -219,7 +294,7 @@ func (w Work) want() (float32, float32) {
 	if w.live() {
 		n = len(w.sh.Pawns())
 	}
-	hint := 12 + gfx.TextW("Work priorities", gfx.Label) + 16 + gfx.TextW(workHint, gfx.Small) + 12
+	hint := 12 + gfx.TextW(w.sh.T("Work priorities"), gfx.Label) + 16 + gfx.TextW(w.hint(), gfx.Small) + 12
 	return max(float32(12+WorkNameW+len(WorkColumns)*workCellW+8), float32(hint)), float32(max(160, 48+n*workRowH+20))
 }
 
@@ -292,13 +367,13 @@ func WorkTypeForCol(col int) (command.WorkType, bool) {
 func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 	r := w.Rect()
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
-	gfx.Text(screen, "Work priorities", float64(r.X)+12, float64(r.Y)+8, gfx.WithColor(gfx.Label, uikit.Heading))
-	hintX := float64(r.X) + 12 + float64(gfx.TextW("Work priorities", gfx.Label)) + 16
-	gfx.Text(screen, gfx.Ellipsize(workHint, gfx.Small, float64(r.X+r.W)-12-hintX),
+	gfx.Text(screen, w.sh.T("Work priorities"), float64(r.X)+12, float64(r.Y)+8, gfx.WithColor(gfx.Label, uikit.Heading))
+	hintX := float64(r.X) + 12 + float64(gfx.TextW(w.sh.T("Work priorities"), gfx.Label)) + 16
+	gfx.Text(screen, gfx.Ellipsize(w.hint(), gfx.Small, float64(r.X+r.W)-12-hintX),
 		hintX, float64(r.Y)+8+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
 	hx := int(r.X) + 12 + WorkNameW
-	for i, col := range WorkColumns {
-		gfx.Text(screen, col, float64(hx+workSlot(i)*workCellW)+float64(workCellW-4)/2, float64(r.Y)+28, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter})
+	for i := range WorkColumns {
+		gfx.Text(screen, w.colName(i), float64(hx+workSlot(i)*workCellW)+float64(workCellW-4)/2, float64(r.Y)+28, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter})
 	}
 	pawns := w.sh.Pawns()
 	for row, p := range pawns {

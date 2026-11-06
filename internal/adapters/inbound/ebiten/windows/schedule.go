@@ -97,9 +97,9 @@ func (w Schedule) want() (float32, float32) {
 func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 	r := w.Rect()
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
-	gfx.Text(screen, "Schedule", float64(r.X)+12, float64(r.Y)+6, gfx.WithColor(gfx.Label, uikit.Heading))
-	hintX := float64(r.X) + 12 + float64(gfx.TextW("Schedule", gfx.Label)) + 16
-	gfx.Text(screen, gfx.Ellipsize("pick an activity, then click or drag across the hours", gfx.Small, float64(r.X+r.W)-12-hintX),
+	gfx.Text(screen, w.sh.T("Schedule"), float64(r.X)+12, float64(r.Y)+6, gfx.WithColor(gfx.Label, uikit.Heading))
+	hintX := float64(r.X) + 12 + float64(gfx.TextW(w.sh.T("Schedule"), gfx.Label)) + 16
+	gfx.Text(screen, gfx.Ellipsize(w.sh.T("pick an activity, then click or drag across the hours"), gfx.Small, float64(r.X+r.W)-12-hintX),
 		hintX, float64(r.Y)+6+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
 	mx, my := w.sh.Cursor()
 	for _, b := range w.buttons() {
@@ -124,7 +124,7 @@ func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 		if y > int(r.Y+r.H)-20 {
 			break
 		}
-		name := "Everyone"
+		name := w.sh.T("Everyone")
 		grid := w.sh.World().Schedule
 		if p, ok := byID[id]; ok {
 			name, grid = w.sh.PawnLabel(p), p.Schedule

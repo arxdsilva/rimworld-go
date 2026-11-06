@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	rlab "rimworld-go/internal/application/game/research"
@@ -53,11 +54,11 @@ func panelRed() color.RGBA  { return uikit.Danger }
 func panelDone() color.RGBA { return uikit.Good }
 
 // researchETA is the time left at today's pace in words.
-func researchETA(hours int) string {
+func researchETA(tr lang.Tr, hours int) string {
 	if hours < 48 {
-		return "About " + strconv.Itoa(hours) + " hours to go at today's pace"
+		return lang.Tf(tr, "About %d hours to go at today's pace", hours)
 	}
-	return "About " + strconv.Itoa((hours+12)/24) + " days to go at today's pace"
+	return lang.Tf(tr, "About %d days to go at today's pace", (hours+12)/24)
 }
 
 // benchParts splits the bench tier in words into the bench and the
@@ -81,19 +82,20 @@ func upperFirst(s string) string {
 }
 
 // needsFirst is why a locked project cannot start.
-func needsFirst(v game.ResearchView) string {
+func needsFirst(tr lang.Tr, v game.ResearchView) string {
 	switch {
 	case len(v.Requires) > 0:
-		return "Needs " + strings.Join(v.Requires, ", ") + " first"
+		return lang.Tf(tr, "Needs %s first", strings.Join(v.Requires, ", "))
 	case len(v.Hidden) > 0:
-		return "Needs " + strings.Join(v.Hidden, ", ") + " first"
+		return lang.Tf(tr, "Needs %s first", strings.Join(v.Hidden, ", "))
 	}
-	return "Not available yet"
+	return tr.T("Not available yet")
 }
 
 // buildPanel remakes the panel's lines for the selected project at body
 // width w.
 func (st *researchState) buildPanel(w float32) {
+	tr := st.tr
 	p := &st.panel
 	p.dirty, p.w, p.bench = false, w, st.hasBench
 	p.rows, p.h = p.rows[:0], 0
@@ -108,7 +110,7 @@ func (st *researchState) buildPanel(w float32) {
 	gap := func(h float32) { p.h += h }
 	p.startShown = st.sel >= 0 && st.sel < len(st.nodes)
 	if !p.startShown {
-		add("Pick a project in the tree to see what it needs and unlocks.", gfx.Small, uikit.TextDim)
+		add(tr.T("Pick a project in the tree to see what it needs and unlocks."), gfx.Small, uikit.TextDim)
 		return
 	}
 	n := &st.nodes[st.sel]
@@ -118,24 +120,24 @@ func (st *researchState) buildPanel(w float32) {
 	gap(4)
 	add(v.Desc, gfx.Small, uikit.Text)
 	gap(8)
-	prog := "Progress: " + strconv.Itoa(researchDone(v)) + " / " + strconv.Itoa(researchCost(v))
+	prog := lang.Tf(tr, "Progress: %d / %d", researchDone(v), researchCost(v))
 	if !v.Done {
-		prog += " (" + strconv.Itoa(researchPct(v)) + "%)"
+		prog = lang.Tf(tr, "%s (%d%%)", prog, researchPct(v))
 	}
 	add(prog, gfx.Body, uikit.Text)
 	if v.ETAHours > 0 && !v.Done {
-		add(researchETA(v.ETAHours), gfx.Small, uikit.TextDim)
+		add(researchETA(tr, v.ETAHours), gfx.Small, uikit.TextDim)
 	}
 	gap(8)
-	add("Prerequisites", gfx.Label, uikit.Heading)
+	add(tr.T("Prerequisites"), gfx.Label, uikit.Heading)
 	if len(n.pre) == 0 {
-		add("None", gfx.Small, uikit.TextDim)
+		add(tr.T("None"), gfx.Small, uikit.TextDim)
 	}
 	for _, j := range n.pre {
 		pv := st.nodes[j].v
 		ts, word := gfx.WithColor(gfx.Body, uikit.Text), ""
 		if pv.Done {
-			ts.Color, word = panelDone(), " (finished)"
+			ts.Color, word = panelDone(), tr.T(" (finished)")
 		}
 		h := gfx.LineStep(ts) + 2
 		jj := j
@@ -144,7 +146,7 @@ func (st *researchState) buildPanel(w float32) {
 		p.h += h
 	}
 	if len(v.Hidden) > 0 {
-		add("Also needs: "+strings.Join(v.Hidden, ", "), gfx.Small, uikit.TextDim)
+		add(lang.Tf(tr, "Also needs: %s", strings.Join(v.Hidden, ", ")), gfx.Small, uikit.TextDim)
 	}
 	gap(8)
 	bench, facility := benchParts(v)
@@ -153,34 +155,34 @@ func (st *researchState) buildPanel(w float32) {
 	if v.BenchMissing == rlab.MissingBench || v.BenchMissing == rlab.MissingHiTech {
 		c = panelRed()
 	}
-	add("Bench: "+bench, gfx.Body, c)
+	add(lang.Tf(tr, "Bench: %s", bench), gfx.Body, c)
 	if facility != "" {
 		c = uikit.Text
 		if analyzer {
 			c = panelRed()
 		}
-		add("Facility: "+facility, gfx.Body, c)
+		add(lang.Tf(tr, "Facility: %s", facility), gfx.Body, c)
 	}
 	if v.BenchMissing != "" && !v.Done {
 		add(upperFirst(v.BenchMissing)+".", gfx.Small, panelRed())
 	}
 	gap(8)
-	add("Unlocks", gfx.Label, uikit.Heading)
+	add(tr.T("Unlocks"), gfx.Label, uikit.Heading)
 	if len(v.Unlocks) == 0 {
-		add("Nothing new to build", gfx.Small, uikit.TextDim)
+		add(tr.T("Nothing new to build"), gfx.Small, uikit.TextDim)
 	} else {
 		add(strings.Join(v.Unlocks, ", "), gfx.Small, uikit.Text)
 	}
-	p.startLabel, p.startReason, p.startOff = "Start research", "", false
+	p.startLabel, p.startReason, p.startOff = tr.T("Start research"), "", false
 	p.finishReason, p.finishOff = "", false
 	switch {
 	case v.Done:
-		p.startLabel, p.startReason, p.startOff = "Finished", v.Label+" is already researched", true
+		p.startLabel, p.startReason, p.startOff = tr.T("Finished"), lang.Tf(tr, "%s is already researched", v.Label), true
 		p.finishReason, p.finishOff = p.startReason, true
 	case v.Current:
-		p.startLabel, p.startReason, p.startOff = "Researching", v.Label+" is the project under way", true
+		p.startLabel, p.startReason, p.startOff = tr.T("Researching"), lang.Tf(tr, "%s is the project under way", v.Label), true
 	case !v.Available:
-		p.startReason, p.startOff = needsFirst(v), true
+		p.startReason, p.startOff = needsFirst(tr, v), true
 		p.finishReason, p.finishOff = p.startReason, true
 	}
 }

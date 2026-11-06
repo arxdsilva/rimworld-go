@@ -22,7 +22,6 @@ const (
 	historyRowH    = 22
 	historyTabH    = 28
 	historyWhenW   = 120
-	historyEmpty   = "Nothing noteworthy has happened yet."
 )
 
 // rowStripe shades every other row (the Bio tab's stripe).
@@ -60,7 +59,7 @@ func (w History) Launch() {
 		return
 	}
 	w.OpenKit(uikit.Modal{
-		ID: HistoryModalID, Title: "History", W: 640, H: 520, Anchor: w.Anchor,
+		ID: HistoryModalID, Title: w.sh.T("History"), W: 640, H: 520, Anchor: w.Anchor,
 		Draw: func(body gfx.Rect) { w.body(body) },
 	})
 }
@@ -71,7 +70,7 @@ func (w History) body(body gfx.Rect) {
 		return
 	}
 	strip := gfx.Rect{X: body.X, Y: body.Y, W: body.W, H: historyTabH}
-	w.kit().Tabs("history.tabs", strip, []string{"Events", "Combat", "Records"}, &w.histTab, uikit.TabsOpts{})
+	w.kit().Tabs("history.tabs", strip, []string{w.sh.T("Events"), w.sh.T("Combat"), w.sh.T("Records")}, &w.histTab, uikit.TabsOpts{})
 	body = gfx.Rect{X: body.X, Y: body.Y + historyTabH + 6, W: body.W, H: body.H - historyTabH - 6}
 	switch w.histTab {
 	case 1:
@@ -83,7 +82,7 @@ func (w History) body(body gfx.Rect) {
 	}
 	rows := HistoryRows(w.sh.Env().Game.History())
 	if len(rows) == 0 {
-		w.kit().Label(body.X, body.Y, historyEmpty, uikit.DimText())
+		w.kit().Label(body.X, body.Y, w.sh.T("Nothing noteworthy has happened yet."), uikit.DimText())
 		return
 	}
 	area := w.kit().ScrollArea("history.list", body, float32(len(rows))*historyRowH, uikit.ScrollOpts{Step: historyRowH * 2, Focusable: true})

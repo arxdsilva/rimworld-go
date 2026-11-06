@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/gearview"
@@ -82,7 +83,7 @@ func (w Assign) OpenApparelPolicies() {
 	}
 	w.outfit.open = map[string]bool{}
 	w.OpenKit(uikit.Modal{
-		ID: ApparelPolicyModalID, Title: "Apparel policies", W: apparelPolicyW, H: apparelPolicyH, Anchor: w.Anchor,
+		ID: ApparelPolicyModalID, Title: w.sh.T("Apparel policies"), W: apparelPolicyW, H: apparelPolicyH, Anchor: w.Anchor,
 		Draw: func(body gfx.Rect) { w.apparelBody(body) },
 	})
 }
@@ -93,7 +94,7 @@ func (w Assign) apparelBody(body gfx.Rect) {
 	st := w.outfit
 	ps := w.sh.World().Gear.Policies
 	if len(ps) == 0 {
-		w.kit().Label(body.X, body.Y, "Apparel policies are not available in this game.", uikit.DimText())
+		w.kit().Label(body.X, body.Y, w.sh.T("Apparel policies are not available in this game."), uikit.DimText())
 		return
 	}
 	cur := ps[0]
@@ -105,14 +106,14 @@ func (w Assign) apparelBody(body gfx.Rect) {
 		st.name, st.last = cur.Name, cur.ID
 		st.hp, st.qlt = apparelRange{}, apparelRange{}
 	}
-	if w.kit().Button(ApparelBackID, gfx.Rect{X: body.Right() - 80, Y: body.Y - 2, W: 80, H: apparelCtlH}, "Assign", uikit.BtnOpts{Tip: "Back to the Assign window."}) {
+	if w.kit().Button(ApparelBackID, gfx.Rect{X: body.Right() - 80, Y: body.Y - 2, W: 80, H: apparelCtlH}, w.sh.T("Assign"), uikit.BtnOpts{Tip: w.sh.T("Back to the Assign window.")}) {
 		w.Launch()
 		return
 	}
 	w.apparelList(body, ps, cur)
 	right := gfx.Rect{X: body.X + apparelListW + 12, Y: body.Y, W: body.W - apparelListW - 12 - 88, H: body.H}
 	field := gfx.Rect{X: right.X, Y: right.Y, W: right.W, H: apparelCtlH}
-	if _, committed := w.kit().TextField(ApparelNameID, field, &st.name, uikit.TextFieldSpec{MaxLen: apparelNameMax, Placeholder: "Name", Normalize: trimName}); committed {
+	if _, committed := w.kit().TextField(ApparelNameID, field, &st.name, uikit.TextFieldSpec{MaxLen: apparelNameMax, Placeholder: w.sh.T("Name"), Normalize: trimName}); committed {
 		if st.name == "" { // an empty name is refused on commit: the old one comes back
 			st.name = cur.Name
 		} else {
@@ -141,26 +142,26 @@ func (w Assign) apparelList(body gfx.Rect, ps []gearview.Policy, cur gearview.Po
 		if p.Default {
 			label += " *"
 		}
-		if w.kit().Button(ApparelSelectID(p.ID), r, gfx.Ellipsize(label, gfx.Body, float64(r.W)-12), uikit.BtnOpts{Selected: p.ID == cur.ID, Tip: "Edit " + p.Name}) {
+		if w.kit().Button(ApparelSelectID(p.ID), r, gfx.Ellipsize(label, gfx.Body, float64(r.W)-12), uikit.BtnOpts{Selected: p.ID == cur.ID, Tip: lang.Tf(w.sh, "Edit %s", p.Name)}) {
 			st.sel = p.ID
 		}
 	}
-	w.kit().Label(body.X, body.Y+4, "Policies (* default)", uikit.DimText())
+	w.kit().Label(body.X, body.Y+4, w.sh.T("Policies (* default)"), uikit.DimText())
 	half := float32(apparelListW-6) / 2
-	if w.kit().Button(ApparelNewID, gfx.Rect{X: body.X, Y: by, W: half, H: apparelCtlH}, "New", uikit.BtnOpts{Tip: "New policy\nMake a policy that allows every garment."}) {
+	if w.kit().Button(ApparelNewID, gfx.Rect{X: body.X, Y: by, W: half, H: apparelCtlH}, w.sh.T("New"), uikit.BtnOpts{Tip: w.sh.T("New policy\nMake a policy that allows every garment.")}) {
 		w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyCreate, Index: -1, Name: apparelNewName})
 	}
-	if w.kit().Button(ApparelCopyID, gfx.Rect{X: body.X + half + 6, Y: by, W: half, H: apparelCtlH}, "Copy", uikit.BtnOpts{Tip: "Copy policy\nMake a policy as a copy of the selected one."}) {
+	if w.kit().Button(ApparelCopyID, gfx.Rect{X: body.X + half + 6, Y: by, W: half, H: apparelCtlH}, w.sh.T("Copy"), uikit.BtnOpts{Tip: w.sh.T("Copy policy\nMake a policy as a copy of the selected one.")}) {
 		w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyCreate, Index: int(cur.ID), Name: cur.Name})
 	}
-	del := uikit.BtnOpts{Tip: "Delete policy\nIts wearers fall back to the default policy."}
+	del := uikit.BtnOpts{Tip: w.sh.T("Delete policy\nIts wearers fall back to the default policy.")}
 	switch {
 	case cur.Default:
-		del.Disabled, del.Reason = true, "The default policy stays. Make another one the default first."
+		del.Disabled, del.Reason = true, w.sh.T("The default policy stays. Make another one the default first.")
 	case len(ps) <= 1:
-		del.Disabled, del.Reason = true, "The last policy stays."
+		del.Disabled, del.Reason = true, w.sh.T("The last policy stays.")
 	}
-	if w.kit().Button(ApparelDeleteID, gfx.Rect{X: body.X, Y: by + apparelCtlH + 4, W: apparelListW, H: apparelCtlH}, "Delete", del) {
+	if w.kit().Button(ApparelDeleteID, gfx.Rect{X: body.X, Y: by + apparelCtlH + 4, W: apparelListW, H: apparelCtlH}, w.sh.T("Delete"), del) {
 		w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyDelete, Index: int(cur.ID)})
 		st.sel = ps[0].ID
 	}
@@ -169,11 +170,11 @@ func (w Assign) apparelList(body gfx.Rect, ps []gearview.Policy, cur gearview.Po
 // apparelDefault is the "default for new colonists" toggle.
 func (w Assign) apparelDefault(r gfx.Rect, cur gearview.Policy) {
 	on := cur.Default
-	o := uikit.CheckOpts{Tip: "Default policy\nColonists who join later start on the default policy."}
+	o := uikit.CheckOpts{Tip: w.sh.T("Default policy\nColonists who join later start on the default policy.")}
 	if cur.Default {
-		o.Disabled, o.Reason = true, "This is the default. Make another policy the default to change it."
+		o.Disabled, o.Reason = true, w.sh.T("This is the default. Make another policy the default to change it.")
 	}
-	if w.kit().Check(ApparelDefaultID, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: apparelCtlH}, "Default for new colonists", &on, o) {
+	if w.kit().Check(ApparelDefaultID, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: apparelCtlH}, w.sh.T("Default for new colonists"), &on, o) {
 		w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyDefault, Index: int(cur.ID)})
 	}
 }
@@ -182,19 +183,19 @@ func (w Assign) apparelDefault(r gfx.Rect, cur gearview.Policy) {
 // toggle in r (three rows).
 func (w Assign) apparelRanges(r gfx.Rect, cur gearview.Policy) {
 	st := w.outfit
-	w.rangeRow(gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: apparelCtlH}, "Hit points", &st.hp, [2]int{cur.HPMin, cur.HPMax},
+	w.rangeRow(gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: apparelCtlH}, w.sh.T("Hit points"), &st.hp, [2]int{cur.HPMin, cur.HPMax},
 		[2]string{ApparelHPMinID, ApparelHPMaxID}, 0, 100, func(v float64) string { return strconv.Itoa(int(v)) + "%" },
 		func(lo, hi int) {
 			w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyHP, Index: int(cur.ID), X: lo, Y: hi})
 		})
-	w.rangeRow(gfx.Rect{X: r.X, Y: r.Y + apparelCtlH + 4, W: r.W, H: apparelCtlH}, "Quality", &st.qlt, [2]int{int(cur.QualityMin), int(cur.QualityMax)},
+	w.rangeRow(gfx.Rect{X: r.X, Y: r.Y + apparelCtlH + 4, W: r.W, H: apparelCtlH}, w.sh.T("Quality"), &st.qlt, [2]int{int(cur.QualityMin), int(cur.QualityMax)},
 		[2]string{ApparelQualMinID, ApparelQualMaxID}, 0, int(quality.Legendary), func(v float64) string { return quality.Level(v).String() },
 		func(lo, hi int) {
 			w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyQuality, Index: int(cur.ID), X: lo, Y: hi})
 		})
 	allowed := !cur.NoTainted
-	if w.kit().Check(ApparelTaintedID, gfx.Rect{X: r.X, Y: r.Y + 2*(apparelCtlH+4), W: r.W, H: apparelCtlH}, "Allow tainted garments (worn by the dead)", &allowed,
-		uikit.CheckOpts{Tip: "Tainted garments\nClothes taken from a corpse make the wearer uneasy. Off: they are never put on."}) {
+	if w.kit().Check(ApparelTaintedID, gfx.Rect{X: r.X, Y: r.Y + 2*(apparelCtlH+4), W: r.W, H: apparelCtlH}, w.sh.T("Allow tainted garments (worn by the dead)"), &allowed,
+		uikit.CheckOpts{Tip: w.sh.T("Tainted garments\nClothes taken from a corpse make the wearer uneasy. Off: they are never put on.")}) {
 		w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyTainted, Index: int(cur.ID), Enabled: cur.NoTainted})
 	}
 }
@@ -218,10 +219,10 @@ func (w Assign) rangeRow(r gfx.Rect, label string, d *apparelRange, view [2]int,
 	spec := func(title string) uikit.SliderSpec {
 		return uikit.SliderSpec{Min: float64(lo), Max: float64(hi), Step: 1, Format: format, Title: title}
 	}
-	if w.kit().SliderInt(ids[0], gfx.Rect{X: sx, Y: r.Y, W: sw, H: r.H}, &d.lo, spec("Lowest "+strings.ToLower(label))) {
+	if w.kit().SliderInt(ids[0], gfx.Rect{X: sx, Y: r.Y, W: sw, H: r.H}, &d.lo, spec(lang.Tf(w.sh, "Lowest %s", strings.ToLower(label)))) {
 		d.hi, d.dirty = max(d.hi, d.lo), true
 	}
-	if w.kit().SliderInt(ids[1], gfx.Rect{X: sx + sw + 8, Y: r.Y, W: sw, H: r.H}, &d.hi, spec("Highest "+strings.ToLower(label))) {
+	if w.kit().SliderInt(ids[1], gfx.Rect{X: sx + sw + 8, Y: r.Y, W: sw, H: r.H}, &d.hi, spec(lang.Tf(w.sh, "Highest %s", strings.ToLower(label)))) {
 		d.lo, d.dirty = min(d.lo, d.hi), true
 	}
 	if d.dirty && !held {
@@ -286,13 +287,13 @@ func apparelMaterials() []string {
 // materials of policy p.
 func (w Assign) apparelTree(r gfx.Rect, p gearview.Policy) {
 	st := w.outfit
-	w.kit().Label(r.X, r.Y+2, "Allowed garments", uikit.DimText())
+	w.kit().Label(r.X, r.Y+2, w.sh.T("Allowed garments"), uikit.DimText())
 	allow := gfx.Rect{X: r.Right() - 170, Y: r.Y, W: 82, H: apparelCtlH}
 	clear := gfx.Rect{X: r.Right() - 84, Y: r.Y, W: 82, H: apparelCtlH}
-	if w.kit().Button(ApparelAllowAllID, allow, "Allow all", uikit.BtnOpts{Tip: "Allow every garment."}) {
+	if w.kit().Button(ApparelAllowAllID, allow, w.sh.T("Allow all"), uikit.BtnOpts{Tip: w.sh.T("Allow every garment.")}) {
 		w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyAllow, Index: int(p.ID), Name: apparelRoot, Enabled: true})
 	}
-	if w.kit().Button(ApparelClearAllID, clear, "Clear all", uikit.BtnOpts{Tip: "Forbid every garment."}) {
+	if w.kit().Button(ApparelClearAllID, clear, w.sh.T("Clear all"), uikit.BtnOpts{Tip: w.sh.T("Forbid every garment.")}) {
 		w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyAllow, Index: int(p.ID), Name: apparelRoot, Enabled: false})
 	}
 	list := gfx.Rect{X: r.X, Y: r.Y + apparelCtlH + 4, W: r.W, H: max(0, r.H-apparelCtlH-4)}
@@ -311,11 +312,11 @@ func (w Assign) apparelTree(r gfx.Rect, p gearview.Policy) {
 func (w Assign) apparelLine(row apparelRow, p gearview.Policy, st *outfitState, r gfx.Rect) {
 	switch {
 	case row.head != "":
-		w.kit().Label(r.X, r.Y+4, row.head, gfx.WithColor(gfx.Label, uikit.Heading))
+		w.kit().Label(r.X, r.Y+4, w.sh.T("Materials"), gfx.WithColor(gfx.Label, uikit.Heading))
 	case row.stuff != "":
 		was := hasName(p.Stuffs, row.stuff)
 		on := was
-		if w.kit().Check(apparelStuffPrefix+row.stuff, r, titleCase(row.stuff), &on, uikit.CheckOpts{Tip: "Material\nAllow garments made of " + row.stuff + "."}) {
+		if w.kit().Check(apparelStuffPrefix+row.stuff, r, titleCase(row.stuff), &on, uikit.CheckOpts{Tip: lang.Tf(w.sh, "Material\nAllow garments made of %s.", row.stuff)}) {
 			w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyStuff, Index: int(p.ID), Name: row.stuff, Enabled: !was})
 		}
 	default:
@@ -326,14 +327,14 @@ func (w Assign) apparelLine(row apparelRow, p gearview.Policy, st *outfitState, 
 			if st.open[n.Path] {
 				mark = "-"
 			}
-			if w.kit().Button(apparelExpandPfx+n.Path, gfx.Rect{X: x, Y: r.Y, W: 22, H: apparelRowH}, mark, uikit.BtnOpts{Tip: "Show or hide the garments in " + n.Label}) {
+			if w.kit().Button(apparelExpandPfx+n.Path, gfx.Rect{X: x, Y: r.Y, W: 22, H: apparelRowH}, mark, uikit.BtnOpts{Tip: lang.Tf(w.sh, "Show or hide the garments in %s", n.Label)}) {
 				st.open[n.Path] = !st.open[n.Path]
 			}
 			x += 26
 		}
 		on, label := n.On, n.Label
 		if n.Partial {
-			label += "  (some)"
+			label = lang.Tf(w.sh, "%s  (some)", label)
 		}
 		if w.kit().Check(apparelFilterPfx+n.Path, gfx.Rect{X: x, Y: r.Y, W: r.Right() - x, H: apparelRowH}, label, &on, uikit.CheckOpts{}) {
 			w.sh.Enqueue(command.Command{Kind: command.EditApparelPolicy, Mode: command.ApparelPolicyAllow, Index: int(p.ID), Name: n.Path, Enabled: !n.On})

@@ -14,8 +14,6 @@ import (
 // The History window's Records tab (CBT-5 UI): each colonist's kills and
 // damage dealt (PawnView.Kills, DamageDealt), most kills first. Read-only.
 
-const recordsEmpty = "No colonist has fought yet."
-
 // recordRow is one colonist's combat record.
 type recordRow struct {
 	Name          string
@@ -49,7 +47,7 @@ func RecordRows(pawns []game.PawnView, label func(game.PawnView) string) []recor
 func (w History) recordsList(body gfx.Rect) {
 	rows := RecordRows(w.sh.Pawns(), w.sh.PawnLabel)
 	if len(rows) == 0 {
-		w.kit().Label(body.X, body.Y, recordsEmpty, uikit.DimText())
+		w.kit().Label(body.X, body.Y, w.sh.T("No colonist has fought yet."), uikit.DimText())
 		return
 	}
 	area := w.kit().ScrollArea("history.records", body, float32(len(rows)+1)*historyRowH, uikit.ScrollOpts{Step: historyRowH * 2, Focusable: true})

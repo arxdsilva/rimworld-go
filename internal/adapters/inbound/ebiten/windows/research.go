@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -112,7 +113,7 @@ func (w Research) Declare(sw, sh int) {
 	modal := len(k.Modals) > 0
 	if !g.search.Empty() {
 		before := st.query
-		changed, committed := k.TextField(researchSearchID, g.search, &st.query, uikit.TextFieldSpec{MaxLen: 32, Placeholder: "Search"})
+		changed, committed := k.TextField(researchSearchID, g.search, &st.query, uikit.TextFieldSpec{MaxLen: 32, Placeholder: w.sh.T("Search")})
 		// typing edits st.query in the kit's text input, before this call,
 		// so the value alone cannot tell a change: trust the field's events
 		if changed || committed || st.query != before {
@@ -184,17 +185,17 @@ func (w Research) draw(screen *ebiten.Image, sw, sh int) {
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
 	g := w.geometry()
 	mx, my := w.sh.Cursor()
-	gfx.Text(screen, "Research", float64(r.X)+12, float64(r.Y)+6, gfx.WithColor(gfx.Label, uikit.Heading))
-	hintX := float64(r.X) + 12 + float64(gfx.TextW("Research", gfx.Label)) + 16
+	gfx.Text(screen, w.sh.T("Research"), float64(r.X)+12, float64(r.Y)+6, gfx.WithColor(gfx.Label, uikit.Heading))
+	hintX := float64(r.X) + 12 + float64(gfx.TextW(w.sh.T("Research"), gfx.Label)) + 16
 	hint, c := w.headline(st)
 	if right := float64(r.X+r.W) - 12; right-hintX > 40 {
 		gfx.Text(screen, gfx.Ellipsize(hint, gfx.Small, right-hintX), hintX, float64(r.Y)+6+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2,
 			gfx.WithColor(gfx.Small, c))
 	}
 	if st.qlow != "" && !g.search.Empty() {
-		s := "no match"
+		s := w.sh.T("no match")
 		if st.matches > 0 {
-			s = strconv.Itoa(st.matches) + " found"
+			s = lang.Tf(w.sh, "%d found", st.matches)
 		}
 		if tw := gfx.TextW(s, gfx.Small); g.search.X-tw-8 > g.right.X {
 			gfx.Text(screen, s, float64(g.search.X-tw-8), float64(g.search.Y)+(rtSearchH-gfx.LineH(gfx.Small))/2,
@@ -209,14 +210,14 @@ func (w Research) draw(screen *ebiten.Image, sw, sh int) {
 // project under way.
 func (w Research) headline(st *researchState) (string, color.RGBA) {
 	if !st.hasBench {
-		return "No research bench yet: build one from Architect > Production.", uikit.Warning
+		return w.sh.T("No research bench yet: build one from Architect > Production."), uikit.Warning
 	}
 	for i := range st.nodes {
 		if v := st.nodes[i].v; v.Current {
 			return st.nodes[i].sub, uikit.TextDim
 		}
 	}
-	return "No project under way: select one and press Start research.", uikit.Warning
+	return w.sh.T("No project under way: select one and press Start research."), uikit.Warning
 }
 
 // isResearchBench reports the building kind is a research bench of any

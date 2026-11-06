@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/research"
@@ -108,6 +109,7 @@ type researchState struct {
 	match       []bool
 	matches     int
 
+	tr       lang.Tr                    // the shell, for the cached texts
 	benchSrc listKey[game.BuildingView] // the building list hasBench was read from
 	hasBench bool
 
@@ -148,6 +150,7 @@ func (w *Set) rs() *researchState {
 	if w.research == nil {
 		w.research = &researchState{sel: -1}
 	}
+	w.research.tr = w.sh
 	return w.research
 }
 
@@ -166,7 +169,7 @@ func (st *researchState) refresh(views []game.ResearchView) {
 		st.rebuild(views)
 	}
 	for i := range views {
-		st.nodes[i].update(views[i])
+		st.nodes[i].update(st.tr, views[i])
 	}
 	st.panel.dirty = true
 	st.searchAgain()
@@ -237,7 +240,7 @@ func (st *researchState) rebuild(views []game.ResearchView) {
 }
 
 // update remakes the node's texts when its view's shown fields changed.
-func (n *rtNode) update(v game.ResearchView) {
+func (n *rtNode) update(tr lang.Tr, v game.ResearchView) {
 	o := n.v
 	n.v = v
 	if n.label != "" && o.Label == v.Label && o.Progress == v.Progress && o.Cost == v.Cost && o.CostNow == v.CostNow &&
@@ -245,7 +248,7 @@ func (n *rtNode) update(v game.ResearchView) {
 		return
 	}
 	n.label = gfx.Ellipsize(v.Label, gfx.Label, rtNodeW-12)
-	n.sub = nodeSub(v)
+	n.sub = nodeSub(tr, v)
 	n.tip = gfx.Ellipsize(v.Desc, gfx.Body, 420)
 	n.find = strings.ToLower(v.Label + "\n" + strings.Join(v.Unlocks, "\n"))
 }
@@ -279,16 +282,16 @@ func researchDone(v game.ResearchView) int {
 
 // nodeSub is a box's second line: its state in words, so no state is
 // told by colour alone.
-func nodeSub(v game.ResearchView) string {
+func nodeSub(tr lang.Tr, v game.ResearchView) string {
 	switch {
 	case v.Done:
-		return "Finished"
+		return tr.T("Finished")
 	case v.Current:
-		return "Researching " + strconv.Itoa(researchPct(v)) + "%"
+		return lang.Tf(tr, "Researching %d%%", researchPct(v))
 	case !v.Available:
-		return "Locked · " + strconv.Itoa(researchCost(v))
+		return lang.Tf(tr, "Locked · %d", researchCost(v))
 	case v.Progress > 0:
-		return strconv.Itoa(researchPct(v)) + "% of " + strconv.Itoa(researchCost(v))
+		return lang.Tf(tr, "%d%% of %d", researchPct(v), researchCost(v))
 	}
 	return strconv.Itoa(researchCost(v))
 }

@@ -12,8 +12,6 @@ import (
 // The History window's Combat tab (DEF-4): the recent combat events from
 // WorldView.CombatLog, newest first, read-only.
 
-const combatEmpty = "No fighting lately."
-
 // combatRow is one displayed combat event.
 type combatRow struct{ When, Text string }
 
@@ -48,7 +46,7 @@ func CombatRows(world any) []combatRow {
 func (w History) combatList(body gfx.Rect) {
 	rows := CombatRows(w.sh.World())
 	if len(rows) == 0 {
-		w.kit().Label(body.X, body.Y, combatEmpty, uikit.DimText())
+		w.kit().Label(body.X, body.Y, w.sh.T("No fighting lately."), uikit.DimText())
 		return
 	}
 	area := w.kit().ScrollArea("history.combat", body, float32(len(rows))*historyRowH, uikit.ScrollOpts{Step: historyRowH * 2, Focusable: true})
