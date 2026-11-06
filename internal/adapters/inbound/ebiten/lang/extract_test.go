@@ -19,8 +19,8 @@ var update = flag.Bool("update", false, "rewrite assets/lang/en.json from the cl
 // template translators copy; run with -update after adding text.
 func TestCatalogIsCurrent(t *testing.T) {
 	t.Parallel()
-	files := parseClient(t)
-	want := renderEnglish(t, catalogKeys(files))
+	keys := catalogKeys(parseClient(t))
+	want := renderEnglish(t, keys)
 	file := filepath.Join(repoRoot(t), "assets", "lang", EnglishCode+".json")
 	if *update {
 		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {

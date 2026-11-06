@@ -9,15 +9,15 @@ import (
 	"testing"
 )
 
-// guardFails turns TestUITextIsTranslatable from a report into a failure.
-// OPT-3 flips it once every package draws its text through T/Tf.
-const guardFails = false
+// guardFails turns TestUITextIsTranslatable from a report into a failure:
+// every package draws its text through T/Tf (OPT-001, Wave 3).
+const guardFails = true
 
 var viaNames = [viaKinds]string{"call", "field", "var", "return"}
 
 // TestUITextIsTranslatable reports, per package, the string literals the
-// client draws without T/Tf (OPT-3 is planned from it). It fails only once
-// guardFails is flipped; lang/exempt.txt lists ids and developer text.
+// client draws without T/Tf, and fails on any (guardFails); lang/exempt.txt
+// lists ids and developer text.
 //
 // The count is a floor: the guard reads syntax only, so text built far
 // from where it is drawn is missed. "all" is every letter-bearing literal

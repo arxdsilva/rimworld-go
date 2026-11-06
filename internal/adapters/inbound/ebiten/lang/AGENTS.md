@@ -21,8 +21,8 @@ The client's translation layer (OPT-001, `.cursor/OPTIONS_GAP_ANALYSIS.md` "Tran
 
 ## Invariants
 - No package state: the catalog is a value the shell holds in a `Live`.
-- `assets/lang/en.json` is generated: `go test ./internal/adapters/inbound/ebiten/lang -run TestCatalogIsCurrent -update` after adding `T`/`Tf` calls. It fails while stale.
-- `TestUITextIsTranslatable` counts literals drawn without `T`/`Tf` (sinks seeded from `gfx`/`uikit`, helpers that forward a string parameter found automatically, `Label`/`Tip`/… fields, locals, constants, drawn returns). It reports only until OPT-3 flips `guardFails`. `LANG_GUARD_LIST=<pkg|all>` lists the sites.
+- `assets/lang/en.json` is generated: `go test ./internal/adapters/inbound/ebiten/lang -run TestCatalogIsCurrent -update` after adding `T`/`Tf` calls. It fails while stale. A key is the literal a call carries or a string constant of the caller's own package (`T(pausedLabel)`); a key held in a variable or another package's constant never reaches the template, so pass the literal or a local constant.
+- `TestUITextIsTranslatable` counts literals drawn without `T`/`Tf` (sinks seeded from `gfx`/`uikit`, helpers that forward a string parameter found automatically, `Label`/`Tip`/… fields, locals, constants, drawn returns). It fails on any open site (`guardFails`, on since Wave 3 of OPT-001); an id, unit glyph or developer text goes in `exempt.txt` with its reason instead. `LANG_GUARD_LIST=<pkg|all>` lists the sites.
 - `TestCatalogGlyphs`: every rune in `en.json` must be in both Noto Sans faces; other catalogs' missing runes are reported (CJK needs a font of its own).
 
 ## Hot Paths
