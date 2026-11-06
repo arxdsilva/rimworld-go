@@ -12,7 +12,7 @@ func swayPose(on bool, present uint64) float64 {
 	var e Sky
 	e.SetWeather(game.WorldView{WindX: 2, WindY: 0.5})
 	v := &render.View{Cam: camera.Camera{Zoom: 1}, Present: present}
-	v.Prefs.PlantSway = on
+	v.Prefs.StillPlants = !on
 	return e.PlantPose(v, 5, 5, KindGrass, 0, 1).Skew
 }
 

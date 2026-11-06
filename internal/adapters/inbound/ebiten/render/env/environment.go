@@ -227,7 +227,7 @@ func envTime(v *render.View) float64 { return float64(v.Present) / 60 }
 // presentation clock, or a fixed instant when Plant sway is off, so every
 // plant holds the pose the wind gives it at that instant.
 func swayTime(v *render.View) float64 {
-	if !v.Prefs.PlantSway {
+	if v.Prefs.StillPlants {
 		return 0
 	}
 	return envTime(v)

@@ -423,7 +423,7 @@ func (a *App) syncRenderer() {
 	r.reducedFlashing = s.Accessibility.ReducedFlashing
 	r.reducedMotion = s.Accessibility.ReducedMotion
 	r.view.Prefs = render.Prefs{AnimalNames: s.Interface.AnimalNames, FarPawns: s.Interface.FarPawns, FarStyle: s.Interface.FarStyle,
-		PlantSway: s.Camera.PlantSway, HatsOnlyOnMap: s.Interface.HatsOnlyOnMap}
+		StillPlants: !s.Camera.PlantSway, HatsOnlyOnMap: s.Interface.HatsOnlyOnMap}
 	r.smooth.Instant = s.Accessibility.ReducedMotion // no eased pan or zoom
 	still := s.Accessibility.ReducedMotion || a.cfg.Capture != nil
 	pf := &r.smooth.Prefs

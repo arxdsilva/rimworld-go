@@ -52,7 +52,7 @@ type View struct {
 type Prefs struct {
 	AnimalNames        string // config.AnimalNameModes
 	FarPawns, FarStyle string // config.FarPawnModes, config.FarStyles
-	PlantSway          bool
+	StillPlants        bool   // Plant sway off; the zero View sways
 	HatsOnlyOnMap      bool
 }
 
