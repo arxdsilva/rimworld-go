@@ -32,6 +32,9 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Shooting gap analysis (accuracy inputs, aim, trait numbers, interception, shot information), SHT rows | `SHOOTING_GAP_ANALYSIS.md` |
 | Mining gap analysis (work and yield by level, ore, cave-ins, veins, deep drill, infestation, risk preview), MIN rows | `MINING_GAP_ANALYSIS.md` |
 | Rescue gap analysis (transport pod crash, animal rescue, bed and capture rules), RSC rows | `RESCUE_GAP_ANALYSIS.md` |
+| Gear tab and outfits gap analysis (mass, armour totals, drop and eat from the tab, forced garments, info card, apparel policies), GEAR and OUT rows | `GEAR_GAP_ANALYSIS.md` |
+| Options gap analysis (every vanilla option, the translation layer), OPT rows | `OPTIONS_GAP_ANALYSIS.md` |
+| Ailments gap analysis (exposure victims held down, stand-up checks, condition audit), AIL rows | `AILMENTS_GAP_ANALYSIS.md` |
 | Mouse controls gap analysis (double click, Shift, box, group actions, right click, drag painting, multipliers), CTL rows | `MOUSE_CONTROLS_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |

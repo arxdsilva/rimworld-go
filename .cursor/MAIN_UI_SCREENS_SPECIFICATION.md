@@ -772,6 +772,15 @@ Manage and inspect equipment, apparel and carried items.
 -   inventory;
 -   carrying capacity/mass where applicable.
 
+GEAR-* (`.cursor/GEAR_GAP_ANALYSIS.md`): summary lines first (mass
+carried against carrying capacity, comfortable range, overall armour
+Sharp / Blunt / Heat, move speed), then Equipment, Apparel in layer
+order, and the pack. Each row: icon, label with quality, HP %, mass,
+tainted mark; Info, Drop (Shift queues), Lock on apparel, Eat on pack
+food and drugs, Unload while that habit is on. The list scrolls. The tab
+shows on colonists, on prisoners beside the Prisoner tab (drop allowed),
+on pack animals, and read-only on guests.
+
 ## Actions
 
 -   equip;
@@ -1777,7 +1786,39 @@ Settings live in `internal/platform/config` and are saved to
 `<user config dir>/rimworld-go/settings.json` (UI-012). They change
 presentation only, never the simulation; captures ignore them.
 
+OPT-* (`.cursor/OPTIONS_GAP_ANALYSIS.md`) adds the General, Interface
+and Developer tabs below; their rows are owed until checked.
+
 ## Tabs
+
+### General
+
+-   [ ] language (OPT-001: lists the catalogs in `assets/lang`);
+-   [ ] restore all defaults, after a confirmation (OPT-002);
+-   [ ] open the saves folder and the log folder (OPT-003);
+-   [ ] pause on load (OPT-004);
+-   [ ] automatic pause: never / major threat / any threat / any letter (OPT-005, replaces pause on threat);
+-   [ ] autosaves kept, 1–25, rotating (OPT-006).
+
+### Interface
+
+-   [ ] temperature unit adds Kelvin (OPT-007);
+-   [ ] realtime clock; 12-hour clock (OPT-008);
+-   [ ] animal names on the map: none / named tame / all tame (OPT-010);
+-   [ ] colonist bar: weapons under portraits (never / drafted / always), mood fill, the bar itself, categorised resources (OPT-011…013);
+-   [ ] headgear only on the map (OPT-014, N/A while no portrait draws headgear);
+-   [ ] menu background: diorama / splash / random (OPT-015);
+-   [ ] far-zoom pawn highlight: none / hostiles / all, as dots / silhouettes / both (OPT-016);
+-   [ ] zoom to mouse, smooth camera jumps, drag sensitivity, zoom out to the world, remember draw styles, plant sway, screen shake 0–200 % (OPT-021…027);
+-   [ ] custom cursor (OPT-028);
+-   [ ] window size presets and borderless fullscreen (OPT-029);
+-   [ ] speed after unpausing: normal / last speed (OPT-020);
+-   [ ] preferred names for new colonists (OPT-032).
+
+### Developer
+
+-   [ ] verbose log, open the log on warnings, close the log with Escape, pause on error (OPT-030);
+-   [ ] test map sizes in the wizard (OPT-031).
 
 ### Graphics
 
@@ -1804,7 +1845,7 @@ presentation only, never the simulation; captures ignore them.
     filtering; the HUD, labels and text stay native; never below one
     pixel per point; preset High Full, Medium 3/4 on 2× displays, Low
     Full; cost tooltip, applied live);
--   [ ] far-zoom detail.
+-   [ ] far-zoom detail (OPT-016).
 
 ### Audio
 
@@ -1823,9 +1864,9 @@ presentation only, never the simulation; captures ignore them.
 -   [x] camera pan speed;
 -   [x] developer mode (UI-016: ultrafast, tick step, debug actions, log, inspector);
 -   [x] share detailed usage data (on by default; basic data is always sent, see the README);
--   [ ] speed behavior;
--   [ ] confirmations;
--   [ ] learning helper.
+-   [ ] speed behavior (OPT-020);
+-   [ ] confirmations (OPT-019: deconstruct, release an animal);
+-   [x] learning helper (switch and Reset lessons).
 
 ### Controls
 
@@ -1843,11 +1884,12 @@ presentation only, never the simulation; captures ignore them.
 -   [x] colonist card: on or off, where it sits, the pane's height, and where a floating card starts;
 
 -   [x] text/UI scale (UI-024: one UI scale row, Auto or 75–200 %, text included);
--   [ ] color-vision support;
+-   [ ] color-vision support (OPT-018);
 -   [x] reduced effects/flashing (Reduced flashing caps lightning; Reduced
     motion freezes the menu drift, drops embers and dust, and snaps the
     camera);
--   [ ] tooltip delay;
+-   [ ] tooltip delay (OPT-017);
+-   [ ] larger small text (OPT-009);
 -   [ ] other supported accessibility options.
 
 ------------------------------------------------------------------------
