@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -515,7 +516,8 @@ func (o *Zones) DrawFenceRun(v *render.View, b *gfx.TriBatch, run EdgeRun, tile 
 
 // ZoneLabelText is a zone's one-per-zone map label: the player's name for
 // it, else its crop or kind.
-func ZoneLabelText(z game.ZoneView) string {
+func ZoneLabelText(z game.ZoneView, tr ...lang.Tr) string {
+	t := TrOf(tr)
 	if z.Name != "" {
 		return z.Name
 	}
@@ -524,13 +526,13 @@ func ZoneLabelText(z game.ZoneView) string {
 		if z.Crop != "" {
 			return strings.ToUpper(z.Crop[:1]) + z.Crop[1:]
 		}
-		return "Growing"
+		return t.T("Growing")
 	case game.ZonePen:
-		return "Pen"
+		return t.T("Pen")
 	case game.ZoneDump:
-		return "Dumping"
+		return t.T("Dumping")
 	}
-	return "Stockpile"
+	return t.T("Stockpile")
 }
 
 // Zone label metrics (PLAY-017), in logical pixels.
@@ -652,7 +654,7 @@ func (o *Zones) ZoneLabelPlanFor(v *render.View, z game.ZoneView, g *ZoneGeom, t
 	bw, bh = float64(g.MaxX-g.MinX+1)*tile, float64(g.MaxY-g.MinY+1)*tile
 	ax, ay := v.WorldToScreenF(g.Ax, g.Ay)
 	k := 1 / gfx.MapUIScale() // also from Update (ZoneLabelAt), outside the world pass
-	return ZoneLabelLayout(ZoneLabelText(z), bw*k, bh*k, float64(ax)*k, float64(ay)*k, ZoneLabelCap(tile*k)), ox, oy, bw, bh
+	return ZoneLabelLayout(ZoneLabelText(z, o.Host.Tr), bw*k, bh*k, float64(ax)*k, float64(ay)*k, ZoneLabelCap(tile*k)), ox, oy, bw, bh
 }
 
 // DrawZoneLabel names a zone once, in the middle of it, on a dark plate.

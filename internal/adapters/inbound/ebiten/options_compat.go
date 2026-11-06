@@ -47,6 +47,11 @@ type optionsHost struct{ a *App }
 
 var _ options.Host = optionsHost{}
 
+// T and Tf serve the catalog (ports.Texts) as the Host's own.
+func (h optionsHost) T(src string) string { return h.a.shell.T(src) }
+
+func (h optionsHost) Tf(src string, args ...any) string { return h.a.shell.Tf(src, args...) }
+
 // optionsShell is the feature's view of the App: the ports roles plus its
 // Host, Saver and Story.
 type optionsShell struct {
@@ -208,12 +213,12 @@ func (s optionsStory) OpenCustom(v game.StoryView, accept func(difficulty.Settin
 	cd := wizardpkg.CustomDiff{S: v.Difficulty, From: from}
 	formH := new(float32)
 	a.uiPushModal(modal{
-		ID: options.StCustomMod, Title: "Custom difficulty", W: wizardpkg.DiffModalW, H: wizardpkg.DiffModalH,
+		ID: options.StCustomMod, Title: a.shell.T("Custom difficulty"), W: wizardpkg.DiffModalW, H: wizardpkg.DiffModalH,
 		Draw: func(a *App, body gfx.Rect) { a.storyCustomBody(body, &cd, formH) },
 		Buttons: []uikit.ModalButton{
-			{ID: "accept", Label: "Accept", Style: uikit.BtnPrimary, Closes: true, OnClick: func() { accept(cd.S) }},
-			{ID: "reset", Label: "Reset", OnClick: func() { cd.S = difficulty.Of(cd.From) }},
-			{ID: "cancel", Label: "Cancel", Closes: true},
+			{ID: "accept", Label: a.shell.T("Accept"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() { accept(cd.S) }},
+			{ID: "reset", Label: a.shell.T("Reset"), OnClick: func() { cd.S = difficulty.Of(cd.From) }},
+			{ID: "cancel", Label: a.shell.T("Cancel"), Closes: true},
 		},
 	})
 }
@@ -223,13 +228,13 @@ func (s optionsStory) OpenCustom(v game.StoryView, accept func(difficulty.Settin
 func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *float32) {
 	top, rest := body.SplitV(wizardpkg.DiffTopRowH)
 	lab := uikit.DimText()
-	a.uiSt().Label(top.X, top.Y+(top.H-float32(gfx.LineH(lab)))/2, "Start from:", lab)
+	a.uiSt().Label(top.X, top.Y+(top.H-float32(gfx.LineH(lab)))/2, a.shell.T("Start from:"), lab)
 	names := make([]string, 0, int(difficulty.Custom))
 	for _, n := range difficulty.Presets() {
 		names = append(names, n.Label)
 	}
-	a.ngChoice("diff.from", gfx.Rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, "Start from", names, int(cd.From), "", func(i int) { cd.From = difficulty.Preset(i) })
-	a.ngButton("diff.copy", gfx.Rect{X: top.X + 272, Y: top.Y + 2, W: 150, H: top.H - 4}, "Copy", uikit.BtnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
+	a.ngChoice("diff.from", gfx.Rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, a.shell.T("Start from"), names, int(cd.From), "", func(i int) { cd.From = difficulty.Preset(i) })
+	a.ngButton("diff.copy", gfx.Rect{X: top.X + 272, Y: top.Y + 2, W: 150, H: top.H - 4}, a.shell.T("Copy"), uikit.BtnOpts{Tip: a.shell.T("Copy\nCopy every value of the preset into Custom.")},
 		func() { cd.S = difficulty.Of(cd.From) })
 
 	area := a.uiSt().ScrollArea(options.StFormID, rest, *formH, uikit.ScrollOpts{Step: 40})
@@ -238,22 +243,22 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 	right := &uikit.Form{View: area.View, X: area.View.X + 4 + colW + wizardpkg.DiffColGap, W: colW, Off: area.Off}
 	s := &cd.S
 
-	left.SectionTitle(a, "Threats")
-	a.diffSlider(left, "ts", "Threat scale", &s.ThreatScale, "ts", wizardpkg.PctText, "", "Threat scale\nHow big raids and packs are, as a share of the normal size.")
-	a.diffCheck(left, "bt", "Big threats", &s.BigThreats, "", "Big threats\nRaids and packs. Off leaves only small events.")
-	a.diffStepper(left, "pd", "Peaceful start (days)", &s.PeacefulDays, 0, 30, "Peaceful start\nDays at the start with no big threat.")
-	a.diffCheck(left, "ph", "Predators hunt colonists", &s.PredatorsHuntColonists, "", "Predators\nWild predators may attack colonists, not only prey.")
-	a.diffSlider(left, "ar", "Hostile wildlife revenge", &s.AnimalRevenge, "ar", wizardpkg.PctText, "", "Revenge\nHow fiercely wild animals fight back when hurt.")
+	left.SectionTitle(a, a.shell.T("Threats"))
+	a.diffSlider(left, "ts", a.shell.T("Threat scale"), &s.ThreatScale, "ts", wizardpkg.PctText, "", a.shell.T("Threat scale\nHow big raids and packs are, as a share of the normal size."))
+	a.diffCheck(left, "bt", a.shell.T("Big threats"), &s.BigThreats, "", a.shell.T("Big threats\nRaids and packs. Off leaves only small events."))
+	a.diffStepper(left, "pd", a.shell.T("Peaceful start (days)"), &s.PeacefulDays, 0, 30, a.shell.T("Peaceful start\nDays at the start with no big threat."))
+	a.diffCheck(left, "ph", a.shell.T("Predators hunt colonists"), &s.PredatorsHuntColonists, "", a.shell.T("Predators\nWild predators may attack colonists, not only prey."))
+	a.diffSlider(left, "ar", a.shell.T("Hostile wildlife revenge"), &s.AnimalRevenge, "ar", wizardpkg.PctText, "", a.shell.T("Revenge\nHow fiercely wild animals fight back when hurt."))
 	left.Gap(8)
 
-	left.SectionTitle(a, "Escalation")
-	a.diffCheck(left, "ad", "Adaptation", &s.Adaptation, "", "Adaptation\nThreats grow while the colony loses nobody, and ease after a death.")
+	left.SectionTitle(a, a.shell.T("Escalation"))
+	a.diffCheck(left, "ad", a.shell.T("Adaptation"), &s.Adaptation, "", a.shell.T("Adaptation\nThreats grow while the colony loses nobody, and ease after a death."))
 	adaptOff := ""
 	if !s.Adaptation {
-		adaptOff = "Only used with adaptation"
+		adaptOff = a.shell.T("Only used with adaptation")
 	}
-	a.diffSlider(left, "as", "Adaptation strength", &s.AdaptStrength, "as", wizardpkg.PctText, adaptOff, "Adaptation strength\nHow far adaptation can move the threat size.")
-	a.diffCheck(left, "te", "Time-based escalation", &s.TimeEscalation, "", "Time-based escalation\nThreats also grow with the years that pass.")
+	a.diffSlider(left, "as", a.shell.T("Adaptation strength"), &s.AdaptStrength, "as", wizardpkg.PctText, adaptOff, a.shell.T("Adaptation strength\nHow far adaptation can move the threat size."))
+	a.diffCheck(left, "te", a.shell.T("Time-based escalation"), &s.TimeEscalation, "", a.shell.T("Time-based escalation\nThreats also grow with the years that pass."))
 	if !s.TimeEscalation {
 		s.IgnoreWealth = false
 	}
@@ -261,30 +266,30 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 	if !s.TimeEscalation {
 		timeOff = wizardpkg.DisabledNote
 	}
-	a.diffSlider(left, "ep", "Escalation per year", &s.EscPerYear, "ep", wizardpkg.PctText, timeOff, "Escalation per year\nHow much the threat size grows each year.")
-	a.diffCheck(left, "iw", "Ignore wealth", &s.IgnoreWealth, timeOff, "Ignore wealth\nThreat size follows time and people only, not what you own.")
+	a.diffSlider(left, "ep", a.shell.T("Escalation per year"), &s.EscPerYear, "ep", wizardpkg.PctText, timeOff, a.shell.T("Escalation per year\nHow much the threat size grows each year."))
+	a.diffCheck(left, "iw", a.shell.T("Ignore wealth"), &s.IgnoreWealth, timeOff, a.shell.T("Ignore wealth\nThreat size follows time and people only, not what you own."))
 
-	right.SectionTitle(a, "Economy")
-	a.diffSlider(right, "cy", "Crop yield", &s.CropYield, "cy", wizardpkg.PctText, "", "")
-	a.diffSlider(right, "my", "Mining yield", &s.MineYield, "my", wizardpkg.PctText, "", "")
-	a.diffSlider(right, "by", "Butchering yield", &s.ButcherYield, "by", wizardpkg.PctText, "", "")
-	a.diffSlider(right, "rs", "Research speed", &s.ResearchSpeed, "rs", wizardpkg.PctText, "", "")
+	right.SectionTitle(a, a.shell.T("Economy"))
+	a.diffSlider(right, "cy", a.shell.T("Crop yield"), &s.CropYield, "cy", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "my", a.shell.T("Mining yield"), &s.MineYield, "my", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "by", a.shell.T("Butchering yield"), &s.ButcherYield, "by", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "rs", a.shell.T("Research speed"), &s.ResearchSpeed, "rs", wizardpkg.PctText, "", "")
 	right.Gap(8)
 
-	right.SectionTitle(a, "Health and mind")
-	a.diffSlider(right, "mo", "Mood offset", &s.MoodOffset, "mo", wizardpkg.SignedText, "", "Mood offset\nAdded to every colonist's mood.")
-	a.diffSlider(right, "if", "Infection chance", &s.Infection, "if", wizardpkg.PctText, "", "")
-	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", wizardpkg.PctText, "", wizardpkg.DiseaseFreqTip)
+	right.SectionTitle(a, a.shell.T("Health and mind"))
+	a.diffSlider(right, "mo", a.shell.T("Mood offset"), &s.MoodOffset, "mo", wizardpkg.SignedText, "", a.shell.T("Mood offset\nAdded to every colonist's mood."))
+	a.diffSlider(right, "if", a.shell.T("Infection chance"), &s.Infection, "if", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "df", a.shell.T("Disease frequency"), &s.DiseaseFreq, "df", wizardpkg.PctText, "", wizardpkg.DiseaseFreqTip)
 	if row, ok := right.Row(18); ok {
 		ns := gfx.Small
 		ns.Color = uikit.TextDim
 		a.uiSt().Label(row.X, row.Y, wizardpkg.DiseaseFreqNote, ns)
 	}
-	a.diffSlider(right, "pt", "Pain tolerance offset", &s.PainTolerance, "pt", wizardpkg.SignedText, "", "")
+	a.diffSlider(right, "pt", a.shell.T("Pain tolerance offset"), &s.PainTolerance, "pt", wizardpkg.SignedText, "", "")
 	right.Gap(8)
 
-	right.SectionTitle(a, "Nature")
-	a.diffCheck(right, "ew", "Extreme weather", &s.ExtremeWeather, "", "Extreme weather\nHeat waves and cold snaps.")
+	right.SectionTitle(a, a.shell.T("Nature"))
+	a.diffCheck(right, "ew", a.shell.T("Extreme weather"), &s.ExtremeWeather, "", a.shell.T("Extreme weather\nHeat waves and cold snaps."))
 
 	*formH = max(left.Content(), right.Content())
 }

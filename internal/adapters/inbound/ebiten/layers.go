@@ -58,6 +58,7 @@ func (r *Renderer) pipe() *world.Pipeline {
 			BuildKey: world.BuildSprite,
 			HitAge:   h.hitAge,
 			Flash:    h.flash,
+			Tr:       r.scenes.tr,
 		}
 		wp.Creatures, wp.Overlays = c, o
 		r.wp = wp

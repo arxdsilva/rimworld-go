@@ -13,16 +13,16 @@ func (a *App) drawBoot(screen *ebiten.Image, sw, sh int) {
 		phase = len(bootPhases) - 1
 	}
 	body := []string{
-		"initializing...",
+		a.shell.T("initializing..."),
 		"",
-		"phase: " + bootPhases[phase],
+		a.shell.Tf("phase: %s", bootPhases[phase]),
 		fmtProgress(phase+1, len(bootPhases)),
 	}
 	if a.artWarn != "" {
-		body = append(body, "", "warning: "+a.artWarn)
+		body = append(body, "", a.shell.Tf("warning: %s", a.artWarn))
 	}
 	a.fillMenu(screen, sw, sh, "rimworld-go", body, bodyDefaultX)
-	gfx.Text(screen, "escape to skip", 56, float64(sh-40), gfx.WithColor(gfx.Small, uikit.TextDim))
+	gfx.Text(screen, a.shell.T("escape to skip"), 56, float64(sh-40), gfx.WithColor(gfx.Small, uikit.TextDim))
 }
 
 func fmtProgress(n, total int) string {

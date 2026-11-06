@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -12,6 +13,15 @@ import (
 
 // listRow is a row that cycles through string values; name gives each
 // value's label (nil: the value with a capital).
+// trOf is the first catalog of an optional trailing argument, English when
+// there is none (tests and tools build rows without a screen).
+func trOf(tr []lang.Tr) lang.Tr {
+	if len(tr) > 0 && tr[0] != nil {
+		return tr[0]
+	}
+	return lang.English{}
+}
+
 func listRow(key, label, tip string, get func(*config.Settings) *string, values []string, name func(string) string) OptionRow {
 	if name == nil {
 		name = titleCase

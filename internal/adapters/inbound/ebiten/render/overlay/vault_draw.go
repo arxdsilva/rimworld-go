@@ -1,6 +1,7 @@
 package overlay
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -32,19 +33,20 @@ func CasketSpriteFor(sealed bool) string {
 }
 
 // CasketTitle is the inspector title ("" for other buildings).
-func CasketTitle(b game.BuildingView) string {
+func CasketTitle(b game.BuildingView, tr ...lang.Tr) string {
 	if b.Kind != CasketKind {
 		return ""
 	}
-	return CasketTitleFor(CasketSealed(b))
+	return CasketTitleFor(CasketSealed(b), tr...)
 }
 
 // CasketTitleFor is the casket inspector title by sealed state.
-func CasketTitleFor(sealed bool) string {
+func CasketTitleFor(sealed bool, tr ...lang.Tr) string {
+	t := TrOf(tr)
 	if sealed {
-		return "Sleeper casket (sealed)"
+		return t.T("Sleeper casket (sealed)")
 	}
-	return "Sleeper casket (open)"
+	return t.T("Sleeper casket (open)")
 }
 
 // CasketMemo remembers which caskets were sealed last frame.

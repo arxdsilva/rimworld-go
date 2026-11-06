@@ -16,9 +16,9 @@ import (
 
 // generalRows are the General tab's rows (OPT-002…006, 028, 032). The
 // Language row (OPT-001) joins the first column with the translation layer.
-func generalRows() []OptionRow {
+func generalRows(t lang.Tr) []OptionRow {
 	return []OptionRow{
-		languageRow(),
+		languageRow(t),
 		withTip(toggleRow("pauseonload", "Pause on load", func(s *config.Settings) *bool { return &s.General.PauseOnLoad }),
 			"A loaded game starts paused, so you can look around before time moves."),
 		listRow("autopause", "Automatic pause", "What pauses the game by itself: nothing, major threats, any threat, or any letter.",
@@ -28,8 +28,8 @@ func generalRows() []OptionRow {
 			func(n int) string { return fmt.Sprintf("%d", n) }),
 		withTip(toggleRow("customcursor", "Custom cursor", func(s *config.Settings) *bool { return &s.Camera.CustomCursor }),
 			"Draws the game's own pointer instead of the system one."),
-		{Key: "names", Label: "Preferred names", kind: rowChoice, run: editNames,
-			Tip:   "Names the new colony screen gives your colonists first, in order. Open to edit the list.",
+		{Key: "names", Label: t.T("Preferred names"), kind: rowChoice, run: editNames,
+			Tip:   t.T("Names the new colony screen gives your colonists first, in order. Open to edit the list."),
 			value: func(s config.Settings) string { return namesLabel(s.General.PreferredNames) }},
 		col2(actionRow("savesfolder", "Saves folder", "Opens the folder that holds your saved games in the file browser.", "Open",
 			func(o *Screen) { openFolder(o, "saves") })),
@@ -80,19 +80,19 @@ func openFolder(o *Screen, kind string) {
 		open = openfolder.Open
 	}
 	if err := open(path); err != nil {
-		o.sh.Hint("cannot open the " + kind + " folder: " + err.Error())
+		o.sh.Hint(o.sh.Tf("cannot open the %s folder: %s", kind, err.Error()))
 		return
 	}
-	o.sh.Hint("opened " + path)
+	o.sh.Hint(o.sh.Tf("opened %s", path))
 }
 
 // Restore defaults (OPT-002).
 
 // askRestore asks before putting every option back.
 func askRestore(o *Screen) {
-	o.sh.Kit().Confirm("options.restore", "Restore all defaults?",
-		"Every option goes back to how it was at first start, graphics included (they are detected again). Key bindings, lessons you finished and your other progress stay.",
-		"Restore", true, func() { restoreDefaults(o) })
+	o.sh.Kit().Confirm("options.restore", o.sh.T("Restore all defaults?"),
+		o.sh.T("Every option goes back to how it was at first start, graphics included (they are detected again). Key bindings, lessons you finished and your other progress stay."),
+		o.sh.T("Restore"), true, func() { restoreDefaults(o) })
 }
 
 // restoreDefaults replaces the settings with the defaults, keeping what is
@@ -166,16 +166,16 @@ func editNames(o *Screen) {
 	o.namesDraft = strings.Join(o.sh.Settings().General.PreferredNames, ", ")
 	k := o.sh.Kit()
 	const w = 520
-	k.Push(uikit.Modal{ID: namesModalID, Title: "Preferred names", W: w, H: uikit.ModalTitleH + uikit.ModalFooterH + 2*uikit.ModalPad + 96,
+	k.Push(uikit.Modal{ID: namesModalID, Title: o.sh.T("Preferred names"), W: w, H: uikit.ModalTitleH + uikit.ModalFooterH + 2*uikit.ModalPad + 96,
 		Draw: func(body gfx.Rect) {
 			uikit.TextLines(k, body.X, body.Y, body.W,
-				fmt.Sprintf("Names for new colonists, separated by commas (up to %d). Names already in use are skipped.", maxPreferredNames), uikit.DimText())
+				o.sh.Tf("Names for new colonists, separated by commas (up to %d). Names already in use are skipped.", maxPreferredNames), uikit.DimText())
 			k.TextField(namesModalID+".field", gfx.Rect{X: body.X, Y: body.Y + 52, W: body.W, H: 34}, &o.namesDraft,
 				uikit.TextFieldSpec{MaxLen: maxPreferredNames * (maxNameRunes + 2), Valid: nameRune, Placeholder: "Ada, Bo, Chidi"})
 		},
 		Buttons: []uikit.ModalButton{
-			{ID: "ok", Label: "Save", Style: uikit.BtnPrimary, Closes: true, OnClick: func() { saveNames(o) }},
-			{ID: "cancel", Label: "Cancel", Closes: true},
+			{ID: "ok", Label: o.sh.T("Save"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() { saveNames(o) }},
+			{ID: "cancel", Label: o.sh.T("Cancel"), Closes: true},
 		}})
 }
 
@@ -187,9 +187,9 @@ func saveNames(o *Screen) {
 
 // languageRow cycles the catalogs found in Env.LangDir (OPT-001), showing
 // each one's own name; the root loads the catalog when the setting changes.
-func languageRow() OptionRow {
-	return OptionRow{Key: "language", Label: "Language", kind: rowChoice,
-		Tip:   "The language of the interface. Only the catalogs found next to the game are listed.",
+func languageRow(t lang.Tr) OptionRow {
+	return OptionRow{Key: "language", Label: t.T("Language"), kind: rowChoice,
+		Tip:   t.T("The language of the interface. Only the catalogs found next to the game are listed."),
 		value: func(s config.Settings) string { return langName(nil, s.General.Language) },
 		live: func(o *Screen) string {
 			return langName(lang.Codes(o.sh.Env().LangDir), o.sh.Settings().General.Language)

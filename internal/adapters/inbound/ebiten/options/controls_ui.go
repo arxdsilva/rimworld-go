@@ -1,7 +1,6 @@
 package options
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -14,7 +13,7 @@ import (
 
 // Options › Controls (UI-016, MAIN_UI §42 Controls): every action grouped
 // by category on pages that fit the screen, two key slots each. Click a
-// slot and press a key ("press a key..."): Esc cancels, Backspace clears.
+// slot and press a key (s.sh.T("press a key...")): Esc cancels, Backspace clears.
 // A key another action uses asks before swapping. Reset to defaults.
 // Every change is saved through SetSettings.
 
@@ -73,11 +72,11 @@ func (s *Screen) controlsButtons(sw, sh int) []uikit.Button {
 			bt := uikit.Button{ID: CtlSlotID(d.ID, slot), Label: label, X: float32(ctlSlotX + slot*(ctlSlotW+8)), Y: y, W: ctlSlotW, H: ctlBtnH}
 			switch {
 			case rb.On && rb.act == d.ID && rb.slot == slot:
-				bt.Label, bt.Selected = "press a key...", true
+				bt.Label, bt.Selected = s.sh.T("press a key..."), true
 			case d.Fixed && slot > 0:
 				continue
 			case d.Fixed:
-				bt.Disabled, bt.Reason, bt.Quiet = true, "held with the mouse; not rebindable", true
+				bt.Disabled, bt.Reason, bt.Quiet = true, s.sh.T("held with the mouse; not rebindable"), true
 			}
 			out = append(out, bt)
 		}
@@ -85,14 +84,14 @@ func (s *Screen) controlsButtons(sw, sh int) []uikit.Button {
 	if p := rb.Pending; p != nil {
 		y := float32(ctlTop + ctlRowsPerPage(sh)*ctlRowH + 2)
 		out = append(out,
-			uikit.Button{ID: "options.ctl.swap", Label: "Swap", X: float32(sw) - 260, Y: y, W: 90, H: ctlBtnH},
-			uikit.Button{ID: "options.ctl.keep", Label: "Cancel", X: float32(sw) - 162, Y: y, W: 90, H: ctlBtnH})
+			uikit.Button{ID: "options.ctl.swap", Label: s.sh.T("Swap"), X: float32(sw) - 260, Y: y, W: 90, H: ctlBtnH},
+			uikit.Button{ID: "options.ctl.keep", Label: s.sh.T("Cancel"), X: float32(sw) - 162, Y: y, W: 90, H: ctlBtnH})
 	}
 	fy := footerY(sh)
 	out = append(out,
-		uikit.Button{ID: "options.ctl.prev", Label: "< Prev", X: 196, Y: fy, W: 90, H: 36, Disabled: rb.Page == 0, Quiet: true, Reason: "first page"},
-		uikit.Button{ID: "options.ctl.next", Label: "Next >", X: 294, Y: fy, W: 90, H: 36, Disabled: rb.Page >= CtlPages(sh)-1, Quiet: true, Reason: "last page"},
-		uikit.Button{ID: "options.ctl.reset", Label: "Reset to defaults", X: float32(sw) - 220, Y: fy, W: 180, H: 36})
+		uikit.Button{ID: "options.ctl.prev", Label: s.sh.T("< Prev"), X: 196, Y: fy, W: 90, H: 36, Disabled: rb.Page == 0, Quiet: true, Reason: s.sh.T("first page")},
+		uikit.Button{ID: "options.ctl.next", Label: s.sh.T("Next >"), X: 294, Y: fy, W: 90, H: 36, Disabled: rb.Page >= CtlPages(sh)-1, Quiet: true, Reason: s.sh.T("last page")},
+		uikit.Button{ID: "options.ctl.reset", Label: s.sh.T("Reset to defaults"), X: float32(sw) - 220, Y: fy, W: 180, H: 36})
 	return out
 }
 
@@ -177,9 +176,9 @@ func (s *Screen) drawControls(screen *ebiten.Image, sw, sh int) {
 		all := input.Defs()
 		prev = all[rb.Page*ctlRowsPerPage(sh)-1].Category
 	}
-	gfx.Text(screen, "Category", ctlCatX, ctlTop-20, gfx.Label)
-	gfx.Text(screen, "Action", ctlLabelX, ctlTop-20, gfx.Label)
-	gfx.Text(screen, "Keys (click to change)", ctlSlotX+4, ctlTop-20, gfx.Label)
+	gfx.Text(screen, s.sh.T("Category"), ctlCatX, ctlTop-20, gfx.Label)
+	gfx.Text(screen, s.sh.T("Action"), ctlLabelX, ctlTop-20, gfx.Label)
+	gfx.Text(screen, s.sh.T("Keys (click to change)"), ctlSlotX+4, ctlTop-20, gfx.Label)
 	for i, d := range defs {
 		y := ctlTop + i*ctlRowH + 5
 		if d.Category != prev {
@@ -192,7 +191,7 @@ func (s *Screen) drawControls(screen *ebiten.Image, sw, sh int) {
 		}
 		uikit.DrawLabelClip(screen, ctlLabelX, y, ctlSlotX-ctlLabelX-8, label)
 	}
-	status := fmt.Sprintf("Page %d of %d", rb.Page+1, CtlPages(sh))
+	status := s.sh.Tf("Page %d of %d", rb.Page+1, CtlPages(sh))
 	switch {
 	case rb.Pending != nil:
 		p := rb.Pending
@@ -202,12 +201,12 @@ func (s *Screen) drawControls(screen *ebiten.Image, sw, sh int) {
 				names = append(names, d.Label)
 			}
 		}
-		status = fmt.Sprintf("%s is used by %s. Swap?", p.key.Label(), strings.Join(names, ", "))
+		status = s.sh.Tf("%s is used by %s. Swap?", p.key.Label(), strings.Join(names, ", "))
 	case rb.On:
-		status = "Press a key (with Shift/Ctrl/Alt if you like). Esc cancels, Backspace clears."
+		status = s.sh.T("Press a key (with Shift/Ctrl/Alt if you like). Esc cancels, Backspace clears.")
 	case len(input.Conflicts(b)) > 0:
 		c := input.Conflicts(b)[0]
-		status = fmt.Sprintf("Conflict: %s is bound twice (%s, %s)", c.Key.Label(), c.A, c.B)
+		status = s.sh.Tf("Conflict: %s is bound twice (%s, %s)", c.Key.Label(), c.A, c.B)
 	}
 	uikit.DrawLabelClip(screen, ctlCatX, ctlTop+ctlRowsPerPage(sh)*ctlRowH+7, sw-2*ctlCatX, status)
 	mx, my := s.sh.Cursor()
@@ -217,6 +216,6 @@ func (s *Screen) drawControls(screen *ebiten.Image, sw, sh int) {
 // drawButtons paints buttons with the one under (mx, my) hovered.
 func (s *Screen) drawButtons(screen *ebiten.Image, buttons []uikit.Button, mx, my int) {
 	for _, b := range buttons {
-		uikit.DrawButton(screen, b, b.Contains(mx, my))
+		uikit.DrawButton(screen, b, b.Contains(mx, my), s.sh)
 	}
 }

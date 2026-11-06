@@ -40,8 +40,8 @@ func (a *App) zoneCommands(id uint16) []inspector.Button {
 	}
 	if z.Kind == game.ZoneStockpile || z.Kind == game.ZoneDump {
 		zid := z.ID
-		out = append(out, a.zonePriorityCmd(z), inspector.Button{ID: "cmd.zone.storage", Label: "Settings", Single: true, Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
-			Desc: "Choose which items this storage accepts, set special filters, copy and paste settings, and rename it.",
+		out = append(out, a.zonePriorityCmd(z), inspector.Button{ID: "cmd.zone.storage", Label: a.shell.T("Settings"), Single: true, Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
+			Desc: a.shell.T("Choose which items this storage accepts, set special filters, copy and paste settings, and rename it."),
 			Run:  func() { a.win.Storage().Open(zid) }})
 	}
 	return append(out, a.zoneExpandCmd(), a.zoneShrinkCmd(), a.zoneDeleteCmd(z), a.zoneHideCmd(z), a.zoneRenameCmd(z))
@@ -80,8 +80,8 @@ func (a *App) zoneCropCmd(z game.ZoneView) inspector.Button {
 		}
 		return opts
 	}
-	return inspector.Button{ID: "cmd.zone.crop", Label: "Plant: " + architect.ZoneCropName(cur), Icon: a.zoneCropIcon(cur),
-		Desc: "Pick what this zone grows. Colonists harvest or cut the old plants and sow the new crop.",
+	return inspector.Button{ID: "cmd.zone.crop", Label: a.shell.Tf("Plant: %s", architect.ZoneCropName(cur)), Icon: a.zoneCropIcon(cur),
+		Desc: a.shell.T("Pick what this zone grows. Colonists harvest or cut the old plants and sow the new crop."),
 		Menu: true, Options: options, Run: zoneMenu(a, "cmd.zone.crop", options)}
 }
 
@@ -97,13 +97,13 @@ func (a *App) zonePriorityCmd(z game.ZoneView) inspector.Button {
 		for i, n := range names {
 			opts[i] = inspector.Option{Label: n, Run: func() { a.pickZonePriority(zid, cur, names, i) }}
 			if n == cur {
-				opts[i].Label += " (current)"
+				opts[i].Label += a.shell.T(" (current)")
 			}
 		}
 		return opts
 	}
-	return inspector.Button{ID: "cmd.zone.priority", Label: "Priority: " + cur, Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
-		Desc: "Haulers fill higher-priority storage first and carry things up from lower-priority storage when there is room.",
+	return inspector.Button{ID: "cmd.zone.priority", Label: a.shell.Tf("Priority: %s", cur), Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
+		Desc: a.shell.T("Haulers fill higher-priority storage first and carry things up from lower-priority storage when there is room."),
 		Menu: true, Options: options, Run: zoneMenu(a, "cmd.zone.priority", options)}
 }
 
@@ -136,10 +136,10 @@ func (a *App) zoneCropEntries(cur string) ([]game.OrderOption, []string) {
 	for _, c := range architect.ZoneSpecies() {
 		o := game.OrderOption{Label: architect.CropLabel(c.Name)}
 		if c.Name == cur {
-			o.Label += " (current)"
+			o.Label += a.shell.T(" (current)")
 		}
 		if p := a.win.Research().LockedBy("crop:" + c.Name); p != "" {
-			o.Disabled, o.Reason = true, "Needs research: "+p
+			o.Disabled, o.Reason = true, a.shell.Tf("Needs research: %s", p)
 		}
 		out = append(out, o)
 		names = append(names, c.Name)
@@ -163,13 +163,13 @@ func (a *App) pickZoneCrop(zid uint16, cur, name string) {
 // zoneSowCmd is the Allow sowing toggle.
 func (a *App) zoneSowCmd(z game.ZoneView) inspector.Button {
 	zid, allowed := z.ID, !z.NoSow
-	c := inspector.Button{ID: "cmd.zone.sow", Label: "Allow sowing", Icon: a.zoneIcon("zone_sow", "zone_grow"), Toggle: true, On: allowed,
-		Desc: "Colonists sow this zone. Turn it off to stop sowing here; harvesting goes on.",
+	c := inspector.Button{ID: "cmd.zone.sow", Label: a.shell.T("Allow sowing"), Icon: a.zoneIcon("zone_sow", "zone_grow"), Toggle: true, On: allowed,
+		Desc: a.shell.T("Colonists sow this zone. Turn it off to stop sowing here; harvesting goes on."),
 		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.SetZoneSow, Target: uint64(zid), Enabled: !allowed})
 		}}
 	if !allowed {
-		c.Desc = "Sowing is off here: nobody sows this zone. Harvesting goes on. Turn it on to sow again."
+		c.Desc = a.shell.T("Sowing is off here: nobody sows this zone. Harvesting goes on. Turn it on to sow again.")
 	}
 	return c
 }
@@ -177,38 +177,38 @@ func (a *App) zoneSowCmd(z game.ZoneView) inspector.Button {
 // zoneCutCmd is the Allow cutting toggle.
 func (a *App) zoneCutCmd(z game.ZoneView) inspector.Button {
 	zid, allowed := z.ID, !z.NoCut
-	c := inspector.Button{ID: "cmd.zone.cut", Label: "Allow cutting", Icon: a.zoneIcon("zone_cut", "order_cut"), Toggle: true, On: allowed,
-		Desc: "Growers cut the other plants in the way and chop trees here. Turn it off to leave them; their tiles stay unsown.",
+	c := inspector.Button{ID: "cmd.zone.cut", Label: a.shell.T("Allow cutting"), Icon: a.zoneIcon("zone_cut", "order_cut"), Toggle: true, On: allowed,
+		Desc: a.shell.T("Growers cut the other plants in the way and chop trees here. Turn it off to leave them; their tiles stay unsown."),
 		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.SetZoneCut, Target: uint64(zid), Enabled: !allowed})
 		}}
 	if !allowed {
-		c.Desc = "Cutting is off here: growers leave other plants and trees alone, so their tiles stay unsown. Turn it on to clear them."
+		c.Desc = a.shell.T("Cutting is off here: growers leave other plants and trees alone, so their tiles stay unsown. Turn it on to clear them.")
 	}
 	return c
 }
 
 // zoneExpandCmd starts the Expand tool.
 func (a *App) zoneExpandCmd() inspector.Button {
-	return inspector.Button{ID: "cmd.zone.expand", Label: "Expand", Single: true, Icon: a.zoneIcon("zone_expand", "zone_grow"),
+	return inspector.Button{ID: "cmd.zone.expand", Label: a.shell.T("Expand"), Single: true, Icon: a.zoneIcon("zone_expand", "zone_grow"),
 		Toggle: true, On: a.arch.Zones.On(architect.ZoneToolExpand),
-		Desc: "Drag a rectangle to add tiles to this zone. Stays on until right-click or Esc.",
+		Desc: a.shell.T("Drag a rectangle to add tiles to this zone. Stays on until right-click or Esc."),
 		Run:  func() { a.arch.Zones.Start(architect.ZoneToolExpand) }}
 }
 
 // zoneShrinkCmd starts the Shrink tool.
 func (a *App) zoneShrinkCmd() inspector.Button {
-	return inspector.Button{ID: "cmd.zone.shrink", Label: "Shrink", Single: true, Icon: a.zoneIcon("zone_shrink", "plan_clear"),
+	return inspector.Button{ID: "cmd.zone.shrink", Label: a.shell.T("Shrink"), Single: true, Icon: a.zoneIcon("zone_shrink", "plan_clear"),
 		Toggle: true, On: a.arch.Zones.On(architect.ZoneToolShrink),
-		Desc: "Drag a rectangle to remove this zone's tiles (a click removes one). Other zones are untouched. Stays on until right-click or Esc.",
+		Desc: a.shell.T("Drag a rectangle to remove this zone's tiles (a click removes one). Other zones are untouched. Stays on until right-click or Esc."),
 		Run:  func() { a.arch.Zones.Start(architect.ZoneToolShrink) }}
 }
 
 // zoneDeleteCmd deletes the zone at once.
 func (a *App) zoneDeleteCmd(z game.ZoneView) inspector.Button {
 	zid := z.ID
-	return inspector.Button{ID: "cmd.zone.delete", Label: "Delete", Icon: a.zoneIcon("zone_delete", "order_cancel"),
-		Desc: "Remove the whole zone. Its plants and items stay where they are.",
+	return inspector.Button{ID: "cmd.zone.delete", Label: a.shell.T("Delete"), Icon: a.zoneIcon("zone_delete", "order_cancel"),
+		Desc: a.shell.T("Remove the whole zone. Its plants and items stay where they are."),
 		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.DeleteZone, Target: uint64(zid)})
 			a.arch.Zones.Clear()
@@ -218,21 +218,21 @@ func (a *App) zoneDeleteCmd(z game.ZoneView) inspector.Button {
 // zoneHideCmd is the Hide toggle: the zone's overlay on the map.
 func (a *App) zoneHideCmd(z game.ZoneView) inspector.Button {
 	zid, hidden := z.ID, z.Hidden
-	c := inspector.Button{ID: "cmd.zone.hide", Label: "Hide", Icon: a.zoneIcon("zone_hide", "order_forbid"), Toggle: true, On: hidden,
-		Desc: "Hide this zone's fill, outline and name on the map. It keeps working; click its tiles to select it.",
+	c := inspector.Button{ID: "cmd.zone.hide", Label: a.shell.T("Hide"), Icon: a.zoneIcon("zone_hide", "order_forbid"), Toggle: true, On: hidden,
+		Desc: a.shell.T("Hide this zone's fill, outline and name on the map. It keeps working; click its tiles to select it."),
 		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.SetZoneHidden, Target: uint64(zid), Enabled: !hidden})
 		}}
 	if hidden {
-		c.Desc = "This zone's overlay is hidden on the map while it is not selected. Turn it off to show it again."
+		c.Desc = a.shell.T("This zone's overlay is hidden on the map while it is not selected. Turn it off to show it again.")
 	}
 	return c
 }
 
 // zoneRenameCmd opens the name dialog.
 func (a *App) zoneRenameCmd(z game.ZoneView) inspector.Button {
-	return inspector.Button{ID: "cmd.zone.rename", Label: "Rename", Single: true, Icon: a.zoneIcon("zone_rename"),
-		Desc: "Give this zone a name of your own. It shows on the map and in this pane.",
+	return inspector.Button{ID: "cmd.zone.rename", Label: a.shell.T("Rename"), Single: true, Icon: a.zoneIcon("zone_rename"),
+		Desc: a.shell.T("Give this zone a name of your own. It shows on the map and in this pane."),
 		Run:  func() { a.openZoneRename(z) }}
 }
 
@@ -251,9 +251,9 @@ func (a *App) openZoneRename(z game.ZoneView) {
 		a.shell.Enqueue(command.Command{Kind: command.RenameZone, Target: uint64(zid), Name: zoneRenameName(name)})
 	}
 	a.uiPushModal(modal{
-		ID: zoneRenameModalID, Title: "Rename " + strings.ToLower(architect.ZoneKindName(z)), W: 380, H: 150,
+		ID: zoneRenameModalID, Title: a.shell.Tf("Rename %s", strings.ToLower(architect.ZoneKindName(z))), W: 380, H: 150,
 		Draw: func(a *App, body gfx.Rect) {
-			a.uiSt().Label(body.X, body.Y, "Name it, or leave it empty for the default.", uikit.DimText())
+			a.uiSt().Label(body.X, body.Y, a.shell.T("Name it, or leave it empty for the default."), uikit.DimText())
 			if !focused { // the field takes the keyboard on its first frame
 				focused = true
 				a.uiSt().TabTo = zoneRenameFieldID
@@ -266,8 +266,8 @@ func (a *App) openZoneRename(z game.ZoneView) {
 			}
 		},
 		Buttons: []uikit.ModalButton{
-			{ID: "ok", Label: "Rename", Style: uikit.BtnPrimary, Closes: true, OnClick: func() { send(a) }},
-			{ID: "cancel", Label: "Cancel", Closes: true},
+			{ID: "ok", Label: a.shell.T("Rename"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() { send(a) }},
+			{ID: "cancel", Label: a.shell.T("Cancel"), Closes: true},
 		},
 	})
 }

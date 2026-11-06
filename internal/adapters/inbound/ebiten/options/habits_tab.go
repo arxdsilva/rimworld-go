@@ -6,6 +6,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/command"
@@ -51,16 +52,17 @@ type habitGroup struct {
 
 // habitGroups are the tab's sections, in order. Every toggle appears once
 // (TestHabitsRowsCoverEveryToggle).
-func habitGroups() []habitGroup {
+func habitGroups(tr ...lang.Tr) []habitGroup {
+	t := trOf(tr)
 	return []habitGroup{
-		{Title: "Free time", Toggles: []habitToggle{
+		{Title: t.T("Free time"), Toggles: []habitToggle{
 			{gameplay.OutdoorsJoy, "Seek the outdoors for fun", "Colonists whose recreation runs low look for fun under open sky first."},
 			{gameplay.JoyTopOff, "Top up recreation sooner", "Once a colonist has had a good break, the wish for another comes back at a lower level."},
 			{gameplay.RelaxDrink, "Finish a drink while relaxing", "A drink taken to unwind is carried along and finished once it will not be wasted."},
 			{gameplay.ShelterWander, "Wander under a roof in bad weather", "When it is unpleasant outside, idle colonists stroll indoors instead."},
 			{gameplay.PoliteWander, "Stay out of private rooms when idle", "Idle colonists avoid bedrooms they do not own, hospitals, cells and cold stores."},
 		}},
-		{Title: "Food and drugs", Toggles: []habitToggle{
+		{Title: t.T("Food and drugs"), Toggles: []habitToggle{
 			{gameplay.SpareMeal, "Carry a spare meal", "A colonist with a free moment and a full-enough belly picks up a meal for later."},
 			{gameplay.SeparateMeals, "Keep tainted meals apart", "Meals made with disliked ingredients no longer stack with clean ones."},
 			{gameplay.OddMeatNormal, "Treat insect meat as ordinary", "Meals with insect meat stack with the rest instead of counting as tainted."},
@@ -70,7 +72,7 @@ func habitGroups() []habitGroup {
 			{gameplay.AnyDrugFromPack, "Take drugs from the pack", "A colonist may use a dose it is carrying before looking around the colony."},
 			{gameplay.SickGifts, "Bring comfort to the sick", "A visit to a sick friend may become feeding them a treat."},
 		}},
-		{Title: "Tidying", Toggles: []habitToggle{
+		{Title: t.T("Tidying"), Toggles: []habitToggle{
 			{gameplay.CleanBeforeWork, "Clean before working", "Colonists sweep up the filth around a workplace before they start, and after delivering food."},
 			{gameplay.CleanBeforeBill, "Clean before crafting", "Between gathering ingredients and crafting, the area around the bench is cleaned."},
 			{gameplay.BenchCleanToggle, "Let each bench opt out of cleaning", "Adds a per-bench switch; benches switched off are never cleaned around."},
@@ -83,7 +85,7 @@ func habitGroups() []habitGroup {
 			{gameplay.TidyBench, "Cells cleaned before crafting", "The most filthy cells cleaned around a bench before the bill starts.", ""},
 			{gameplay.TidyTend, "Cells cleaned after tending", "The most filthy cells a doctor cleans after a treatment. Unlimited cleans the whole room.", "Unlimited"},
 		}},
-		{Title: "Hauling and crafting", Toggles: []habitToggle{
+		{Title: t.T("Hauling and crafting"), Toggles: []habitToggle{
 			{gameplay.HaulAllIngredients, "Pack every ingredient first", "Crafters collect all the ingredients into their pack, then lay them out at the bench."},
 			{gameplay.RespectCapacity, "Respect what a colonist can carry", "Collecting stops when the pack is full; the rest is fetched on another trip."},
 			{gameplay.SpoilingIngredients, "Use ingredients that spoil first", "Bills pick the ingredients closest to going off, wherever they are stored."},
@@ -112,20 +114,20 @@ func (o *Screen) habitsTab(sw, sh int) {
 	top := float32(optTabY + OptBtnH + 16)
 	c := gfx.Rect{X: panel.X + 16, Y: top, W: panel.W - 32, H: panel.Bottom() - top - 16}
 	if !o.sh.Env().Running {
-		uikit.TextLines(k, c.X, c.Y, c.W, "Habits are rules of a colony and are saved with it, so they can only be changed while a colony is running. Open Options from the pause menu in a game to change them.", uikit.DimText())
+		uikit.TextLines(k, c.X, c.Y, c.W, o.sh.T("Habits are rules of a colony and are saved with it, so they can only be changed while a colony is running. Open Options from the pause menu in a game to change them."), uikit.DimText())
 		return
 	}
 	rules := o.sh.Rules()
-	uikit.TextLines(k, c.X, c.Y+6, c.W-190, "How your colonists go about their day. Changes apply at once and are saved with this colony.", uikit.DimText())
+	uikit.TextLines(k, c.X, c.Y+6, c.W-190, o.sh.T("How your colonists go about their day. Changes apply at once and are saved with this colony."), uikit.DimText())
 	isDefault := o.habitsAreDefault(rules)
-	uikit.StyledButton(k, habitsDefault, gfx.Rect{X: c.Right() - 170, Y: c.Y, W: 170, H: 28}, "Back to defaults",
-		uikit.BtnOpts{Disabled: isDefault, Reason: "Every habit already has its default value.",
-			Tip: "Back to defaults\nPut every habit and limit back to how a new colony starts."},
+	uikit.StyledButton(k, habitsDefault, gfx.Rect{X: c.Right() - 170, Y: c.Y, W: 170, H: 28}, o.sh.T("Back to defaults"),
+		uikit.BtnOpts{Disabled: isDefault, Reason: o.sh.T("Every habit already has its default value."),
+			Tip: o.sh.T("Back to defaults\nPut every habit and limit back to how a new colony starts.")},
 		func() { o.habitsReset(o.sh.Rules()) })
 
 	area := k.ScrollArea(habitsID+".scroll", gfx.Rect{X: c.X, Y: c.Y + 36, W: c.W, H: c.H - 36}, habitsContentH(), uikit.ScrollOpts{Step: 40, Focusable: true})
 	f := uikit.NewForm(area)
-	for _, g := range habitGroups() {
+	for _, g := range habitGroups(o.sh) {
 		f.SectionTitle(o.sh, g.Title)
 		for _, t := range g.Toggles {
 			o.habitCheck(f, rules, t)
@@ -177,7 +179,7 @@ func (o *Screen) habitCheck(f *uikit.Form, rules gameplay.Settings, t habitToggl
 	on := rules.On(t.T)
 	shown := on
 	id := habitsID + ".t" + strconv.Itoa(int(t.T))
-	if o.sh.Kit().Check(id, row, t.Label, &shown, uikit.CheckOpts{Tip: t.Label + "\n" + t.Tip}) {
+	if o.sh.Kit().Check(id, row, o.sh.T(t.Label), &shown, uikit.CheckOpts{Tip: o.sh.T(t.Label) + "\n" + o.sh.T(t.Tip)}) {
 		o.setToggle(t.T, !on)
 	}
 }
@@ -192,15 +194,15 @@ func (o *Screen) habitStepper(f *uikit.Form, rules gameplay.Settings, l habitLim
 	k := o.sh.Kit()
 	v := rules.LimitOf(l.L)
 	id := habitsID + ".l" + strconv.Itoa(int(l.L))
-	k.Label(row.X, row.Y+(row.H-float32(gfx.LineH(gfx.Body)))/2, l.Label, gfx.Body)
-	k.Tip(id+".tip", gfx.Rect{X: row.X, Y: row.Y, W: row.W - 2*habitBtnW - habitValW - 8, H: row.H}, l.Label+"\n"+l.Tip)
+	k.Label(row.X, row.Y+(row.H-float32(gfx.LineH(gfx.Body)))/2, o.sh.T(l.Label), gfx.Body)
+	k.Tip(id+".tip", gfx.Rect{X: row.X, Y: row.Y, W: row.W - 2*habitBtnW - habitValW - 8, H: row.H}, o.sh.T(l.Label)+"\n"+o.sh.T(l.Tip))
 	x := row.Right() - 2*habitBtnW - habitValW
 	by := row.Y + 2
 	bh := row.H - 4
 	uikit.StyledButton(k, id+".dec", gfx.Rect{X: x, Y: by, W: habitBtnW, H: bh}, "-",
-		uikit.BtnOpts{Disabled: v <= 0, Reason: "The minimum is 0."}, func() { o.setLimit(l.L, v-1) })
+		uikit.BtnOpts{Disabled: v <= 0, Reason: o.sh.T("The minimum is 0.")}, func() { o.setLimit(l.L, v-1) })
 	uikit.StyledButton(k, id+".inc", gfx.Rect{X: x + habitBtnW + habitValW, Y: by, W: habitBtnW, H: bh}, "+",
-		uikit.BtnOpts{Disabled: v >= gameplay.MaxLimit, Reason: "The maximum is " + strconv.Itoa(gameplay.MaxLimit) + "."}, func() { o.setLimit(l.L, v+1) })
+		uikit.BtnOpts{Disabled: v >= gameplay.MaxLimit, Reason: o.sh.Tf("The maximum is %d.", gameplay.MaxLimit)}, func() { o.setLimit(l.L, v+1) })
 	text := HabitLimitText(v, l.Zero)
 	cx := float64(x + habitBtnW + habitValW/2)
 	cy := float64(by) + (float64(bh)-gfx.LineH(gfx.Label))/2

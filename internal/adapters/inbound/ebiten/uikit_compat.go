@@ -37,7 +37,7 @@ func (h uiHost) ReducedMotion() bool       { return h.a.settings.Accessibility.R
 // canvas. It runs on every frame read and writes only on a change.
 func syncKit(a *App) {
 	i := a.settings.Interface
-	acc := uikit.Access{Set: true, TooltipDelayMS: i.TooltipDelayMS, ColorVision: i.ColorVision, Confirm: i.Confirm}
+	acc := uikit.Access{Set: true, TooltipDelayMS: i.TooltipDelayMS, ColorVision: i.ColorVision, Confirm: i.Confirm, Tr: &a.shell.shellTexts}
 	if a.ui.Access != acc {
 		a.ui.Access = acc
 	}

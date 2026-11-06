@@ -1,13 +1,13 @@
 package uikit
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 )
 
 // The composites the setup screens and the Options story tab share: a
@@ -176,8 +176,8 @@ func StyledButton(k *Kit, id string, r gfx.Rect, label string, o BtnOpts, fn fun
 func Stepper(k *Kit, id string, r gfx.Rect, v *int, lo, hi int) {
 	*v = max(lo, min(hi, *v))
 	bw := float32(28)
-	StyledButton(k, id+".dec", gfx.Rect{X: r.X, Y: r.Y, W: bw, H: r.H}, "-", BtnOpts{Disabled: *v <= lo, Reason: fmt.Sprintf("The minimum is %d.", lo)}, func() { *v = max(lo, *v-QtyStep(k.in().Ctrl(), k.in().Shift())) })
-	StyledButton(k, id+".inc", gfx.Rect{X: r.X + bw + 56, Y: r.Y, W: bw, H: r.H}, "+", BtnOpts{Disabled: *v >= hi, Reason: fmt.Sprintf("The maximum is %d.", hi)}, func() { *v = min(hi, *v+QtyStep(k.in().Ctrl(), k.in().Shift())) })
+	StyledButton(k, id+".dec", gfx.Rect{X: r.X, Y: r.Y, W: bw, H: r.H}, "-", BtnOpts{Disabled: *v <= lo, Reason: lang.Tf(tk(k), "The minimum is %d.", lo)}, func() { *v = max(lo, *v-QtyStep(k.in().Ctrl(), k.in().Shift())) })
+	StyledButton(k, id+".inc", gfx.Rect{X: r.X + bw + 56, Y: r.Y, W: bw, H: r.H}, "+", BtnOpts{Disabled: *v >= hi, Reason: lang.Tf(tk(k), "The maximum is %d.", hi)}, func() { *v = min(hi, *v+QtyStep(k.in().Ctrl(), k.in().Shift())) })
 	val := *v
 	k.Queue(func(dst *ebiten.Image) {
 		st := gfx.Label

@@ -50,6 +50,7 @@ type Env struct {
 // Host is what the screen needs of the program that no ports role
 // carries.
 type Host interface {
+	ports.Texts
 	// Env is the program as of now.
 	Env() Env
 	// SetSettings applies changed settings everywhere (renderer, window,

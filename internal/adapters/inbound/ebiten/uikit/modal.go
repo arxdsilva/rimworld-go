@@ -146,7 +146,7 @@ func (k *Kit) RunModals(closeModal func(id string)) {
 		k.Queue(func(dst *ebiten.Image) { FillRect(dst, gfx.WinRect(sw, sh), ModalDim) })
 		k.modalChrome(m, frame, titleR)
 		n := len(k.Modals)
-		if k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: "Close"}) {
+		if k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: tk(k).T("Close")}) {
 			k.CloseTop()
 			return
 		}
@@ -175,7 +175,7 @@ func (k *Kit) RunWindow(m Modal, closeX, dismiss func()) {
 	sw, sh := k.host.Size()
 	frame, titleR, body, footer := layout(sw, sh, m)
 	k.modalChrome(m, frame, titleR)
-	if k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: "Close"}) {
+	if k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: tk(k).T("Close")}) {
 		closeX()
 		return
 	}
@@ -245,7 +245,7 @@ func (k *Kit) Confirm(id, title, body, okLabel string, danger bool, onOK func())
 		},
 		Buttons: []ModalButton{
 			{ID: "ok", Label: okLabel, Style: style, Closes: true, OnClick: onOK},
-			{ID: "cancel", Label: "Cancel", Closes: true},
+			{ID: "cancel", Label: tk(k).T("Cancel"), Closes: true},
 		},
 	})
 }

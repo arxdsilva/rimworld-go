@@ -3,6 +3,7 @@ package uikit
 import (
 	"image/color"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
@@ -275,14 +276,15 @@ func ButtonColors(b Button, hover bool) (fill, border, label color.RGBA) {
 	return Btn, BtnBorder, Text
 }
 
-func DrawButton(dst *ebiten.Image, b Button, hover bool) {
+func DrawButton(dst *ebiten.Image, b Button, hover bool, tr ...lang.Tr) {
+	t := trOf(tr).T("  (disabled)")
 	fill, border, _ := ButtonColors(b, hover)
 	gfx.FillRect(dst, b.X, b.Y, b.W, b.H, fill, false)
 	gfx.StrokeRect(dst, b.X, b.Y, b.W, b.H, 1, border, false)
 	label := b.Label
 	if b.Disabled && label != "" && !b.Quiet {
-		if w, _ := gfx.Measure(label+"  (disabled)", gfx.Body); w <= float64(b.W)-16 {
-			label += "  (disabled)" // else the dimmed fill and the hover reason say it
+		if w, _ := gfx.Measure(label+t, gfx.Body); w <= float64(b.W)-16 {
+			label += t // else the dimmed fill and the hover reason say it
 		}
 	}
 	drawButtonLabel(dst, label, b)

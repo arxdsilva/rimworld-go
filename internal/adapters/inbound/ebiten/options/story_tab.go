@@ -76,7 +76,7 @@ func (o *Screen) storyTab(sw, sh int) {
 	top := float32(optTabY + OptBtnH + 16)
 	c := gfx.Rect{X: panel.X + 16, Y: top, W: panel.W - 32, H: panel.Bottom() - top - 16}
 	if v.Preset == "" {
-		uikit.TextLines(o.sh.Kit(), c.X, c.Y, c.W, "This colony started without a storyteller (the classic start), so there is nothing to change here.", uikit.DimText())
+		uikit.TextLines(o.sh.Kit(), c.X, c.Y, c.W, o.sh.T("This colony started without a storyteller (the classic start), so there is nothing to change here."), uikit.DimText())
 		return
 	}
 	left, mid, right := storyCols(c)
@@ -94,7 +94,7 @@ func headingStyle() gfx.TextStyle {
 // storytellerColumn lists the storytellers as compact cards.
 func (o *Screen) storytellerColumn(r gfx.Rect, v game.StoryView) {
 	u := o.sh.Kit()
-	u.Label(r.X, r.Y, "Storyteller", headingStyle())
+	u.Label(r.X, r.Y, o.sh.T("Storyteller"), headingStyle())
 	for i, p := range storyteller.Profiles() {
 		cr := gfx.Rect{X: r.X, Y: r.Y + stHeadH + float32(i)*(stCardH+stCardGap), W: r.W, H: stCardH}
 		if cr.Bottom() > r.Bottom() {
@@ -116,7 +116,7 @@ func (o *Screen) storytellerColumn(r gfx.Rect, v game.StoryView) {
 // difficultyColumn is the difficulty radio and the Customize button.
 func (o *Screen) difficultyColumn(r gfx.Rect, v game.StoryView) {
 	u := o.sh.Kit()
-	u.Label(r.X, r.Y, "Difficulty", headingStyle())
+	u.Label(r.X, r.Y, o.sh.T("Difficulty"), headingStyle())
 	cur, known := difficulty.Parse(v.Preset)
 	if !known {
 		cur = difficulty.NumPresets // none selected
@@ -132,13 +132,13 @@ func (o *Screen) difficultyColumn(r gfx.Rect, v game.StoryView) {
 		rows = append(rows, row{"opt.diff." + n.Key, n.Label, n.Desc, o.sh.PresetTip(n), n.Preset, gfx.Rect{X: r.X, Y: y, W: r.W, H: stDiffRowH}})
 		y += stDiffRowH
 	}
-	rows = append(rows, row{StCustomID, "Custom", "Every value set by hand.", "Custom\nSet every value yourself in the Custom Difficulty dialog.", difficulty.Custom, gfx.Rect{X: r.X, Y: y, W: r.W, H: stDiffRowH}})
+	rows = append(rows, row{StCustomID, o.sh.T("Custom"), o.sh.T("Every value set by hand."), o.sh.T("Custom\nSet every value yourself in the Custom Difficulty dialog."), difficulty.Custom, gfx.Rect{X: r.X, Y: y, W: r.W, H: stDiffRowH}})
 
 	// The Customize button first, so it takes its click before the row.
 	if cur == difficulty.Custom {
 		cr := rows[len(rows)-1].r
-		uikit.StyledButton(u, "opt.diff.customize", gfx.Rect{X: cr.Right() - 112, Y: cr.Y + 10, W: 104, H: 24}, "Customize...",
-			uikit.BtnOpts{Tip: "Customize\nEdit every difficulty value."}, func() { o.OpenStoryCustom(v) })
+		uikit.StyledButton(u, "opt.diff.customize", gfx.Rect{X: cr.Right() - 112, Y: cr.Y + 10, W: 104, H: 24}, o.sh.T("Customize..."),
+			uikit.BtnOpts{Tip: o.sh.T("Customize\nEdit every difficulty value.")}, func() { o.OpenStoryCustom(v) })
 	}
 	for _, rw := range rows {
 		click := func() {
@@ -183,7 +183,7 @@ func paintDiffRow(dst *ebiten.Image, r gfx.Rect, label, desc string, selected, h
 // the story so far.
 func (o *Screen) saveModeColumn(r gfx.Rect, v game.StoryView) {
 	k := o.sh.Kit()
-	k.Label(r.X, r.Y, "Save mode", headingStyle())
+	k.Label(r.X, r.Y, o.sh.T("Save mode"), headingStyle())
 	label, text := o.sh.SaveMode(v.Commitment)
 	y := r.Y + stHeadH
 	k.Label(r.X, y, label, gfx.Label)
@@ -191,9 +191,9 @@ func (o *Screen) saveModeColumn(r gfx.Rect, v game.StoryView) {
 	y += uikit.TextLines(k, r.X, y, r.W, text, uikit.DimText()) + 8
 	ns := gfx.Small
 	ns.Color = uikit.Warning
-	y += uikit.TextLines(k, r.X, y, r.W, "Fixed when the colony started. It can't be changed.", ns) + 24
+	y += uikit.TextLines(k, r.X, y, r.W, o.sh.T("Fixed when the colony started. It can't be changed."), ns) + 24
 
-	k.Label(r.X, y, "Now", headingStyle())
+	k.Label(r.X, y, o.sh.T("Now"), headingStyle())
 	y += stHeadH
 	for _, l := range StorySummary(v) {
 		y += uikit.TextLines(k, r.X, y, r.W, l, gfx.Body) + 4

@@ -557,6 +557,7 @@ func (a *App) startSession(sim Simulation) {
 	a.ord.CloseFloat()
 	a.insp.Tab = "character"
 	a.renderer = New(sim)
+	a.renderer.scenes.tr = &a.shell.shellTexts
 	a.renderer.cueBus().SoundHas = a.cfg.Sound.Has // animal voices fall back by what exists
 	a.renderer.art = a.art
 	a.dos = newDossier(a) // over this session's art
@@ -684,7 +685,7 @@ func (a *App) layoutButtons(sw, sh int) []uikit.Button {
 
 func (a *App) drawButtons(screen *ebiten.Image, buttons []uikit.Button, mx, my int) {
 	for _, b := range buttons {
-		uikit.DrawButton(screen, b, b.Contains(mx, my))
+		uikit.DrawButton(screen, b, b.Contains(mx, my), &a.shell.shellTexts)
 	}
 }
 

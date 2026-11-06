@@ -3,13 +3,14 @@ package options
 import (
 	"fmt"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/platform/config"
 )
 
 // interfaceRows are the Interface tab's rows (OPT-007…013, 015, 016, 019,
 // 020, 026). Two columns of seven fit a 960x540 window.
-func interfaceRows() []OptionRow {
+func interfaceRows(t lang.Tr) []OptionRow {
 	i := func(s *config.Settings) *config.Interface { return &s.Interface }
 	return []OptionRow{
 		withTip(toggleRow("clockrealtime", "Real-time clock", func(s *config.Settings) *bool { return &i(s).ClockRealtime }),
@@ -26,7 +27,7 @@ func interfaceRows() []OptionRow {
 			"The row of colonist portraits along the top of the map."),
 		withTip(toggleRow("categorized", "Group resources", func(s *config.Settings) *bool { return &s.Gameplay.CategorizedResources }),
 			"Group the resource list by category."),
-		col2(tempUnitRow()),
+		col2(tempUnitRow(t)),
 		col2(withTip(toggleRow("confirm", "Confirm removal", func(s *config.Settings) *bool { return &i(s).Confirm }),
 			"Ask first when you deconstruct a building or release an animal.")),
 		col2(listRow("unpausespeed", "Speed after pause", "The speed Space resumes at: normal speed, or the speed you paused from.",
@@ -42,11 +43,22 @@ func interfaceRows() []OptionRow {
 	}
 }
 
+// tempUnitName is the unit's long name in the catalog's language.
+func tempUnitName(t lang.Tr, unit string) string {
+	switch units.FromUnit(unit).Name() {
+	case "Fahrenheit":
+		return t.T("Fahrenheit")
+	case "Kelvin":
+		return t.T("Kelvin")
+	}
+	return t.T("Celsius")
+}
+
 // tempUnitRow cycles Celsius, Fahrenheit and Kelvin (OPT-007).
-func tempUnitRow() OptionRow {
-	return OptionRow{Key: "tempunit", Label: "Temperature unit", kind: rowChoice,
-		Tip:   "How temperatures read everywhere: degrees Celsius, degrees Fahrenheit or kelvin.",
-		value: func(s config.Settings) string { return units.FromUnit(s.Gameplay.TempUnit).Name() },
+func tempUnitRow(t lang.Tr) OptionRow {
+	return OptionRow{Key: "tempunit", Label: t.T("Temperature unit"), kind: rowChoice,
+		Tip:   t.T("How temperatures read everywhere: degrees Celsius, degrees Fahrenheit or kelvin."),
+		value: func(s config.Settings) string { return tempUnitName(t, s.Gameplay.TempUnit) },
 		apply: func(s *config.Settings, _ int) {
 			s.Gameplay.TempUnit = map[string]string{"": units.UnitF, units.UnitF: units.UnitK}[s.Gameplay.TempUnit]
 		}}

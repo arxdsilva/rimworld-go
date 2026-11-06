@@ -41,10 +41,10 @@ func (s *Screen) SaveNow(slot string) bool {
 		return false
 	}
 	if err := s.sh.Save(slot); err != nil {
-		s.sh.Hint("save failed: " + err.Error())
+		s.sh.Hint(s.sh.Tf("save failed: %s", err.Error()))
 		return false
 	}
-	s.sh.Hint("saved " + slot)
+	s.sh.Hint(s.sh.Tf("saved %s", slot))
 	return true
 }
 
@@ -153,7 +153,7 @@ func (s *Screen) RefreshSlots() {
 	}
 	slots, err := s.sh.List()
 	if err != nil {
-		s.sh.Hint("cannot read saves: " + err.Error())
+		s.sh.Hint(s.sh.Tf("cannot read saves: %s", err.Error()))
 		return
 	}
 	s.Slots = slots
@@ -171,17 +171,17 @@ func (s *Screen) LoadSlot(i int) {
 	}
 	sl := s.Slots[i]
 	if sl.Err != "" {
-		s.sh.Hint("cannot load: " + sl.Err)
+		s.sh.Hint(s.sh.Tf("cannot load: %s", sl.Err))
 		return
 	}
 	slot, tick, err := s.sh.Load(sl.Path)
 	if err != nil {
-		s.sh.Hint("load failed: " + err.Error())
+		s.sh.Hint(s.sh.Tf("load failed: %s", err.Error()))
 		return
 	}
 	s.SaveSlot = baseSlot(slot)
 	s.AutosaveDay = int(tick) / 60000
-	s.sh.Hint("loaded " + sl.Name)
+	s.sh.Hint(s.sh.Tf("loaded %s", sl.Name))
 }
 
 const (
@@ -217,7 +217,7 @@ func (s *Screen) slotWindow() (start, n, pages int) {
 // LoadButtons are the Load screen's buttons: Back, then one per slot shown,
 // then, when the list is longer than a page, the row that turns the page.
 func (s *Screen) LoadButtons(sw, sh int) []uikit.Button {
-	out := []uikit.Button{{ID: "load.back", Label: "Back", X: 40, Y: footerY(sh), W: 140, H: 36}}
+	out := []uikit.Button{{ID: "load.back", Label: s.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36}}
 	x := float32(sw)/2 - 300
 	start, n, pages := s.slotWindow()
 	for j := 0; j < n; j++ {
@@ -230,7 +230,7 @@ func (s *Screen) LoadButtons(sw, sh int) []uikit.Button {
 	if pages > 1 {
 		page := start/(slotRows-1) + 1
 		out = append(out, uikit.Button{ID: ids.PrefixLoadSlot + strconv.Itoa(slotNextPage),
-			Label: fmt.Sprintf("More saves (page %d of %d)", page, pages),
+			Label: s.sh.Tf("More saves (page %d of %d)", page, pages),
 			X:     x, Y: float32(120 + n*(slotRowH+6)), W: 600, H: slotRowH})
 	}
 	return out
@@ -240,10 +240,10 @@ func (s *Screen) LoadButtons(sw, sh int) []uikit.Button {
 func (s *Screen) DrawLoad(screen *ebiten.Image, sw, sh int) {
 	body := []string{}
 	if len(s.Slots) == 0 {
-		body = append(body, "No saves yet.", "", "Save from the pause menu (Esc) while playing; the game also", "autosaves every morning at 06:00.")
+		body = append(body, s.sh.T("No saves yet."), "", s.sh.T("Save from the pause menu (Esc) while playing; the game also"), s.sh.T("autosaves every morning at 06:00."))
 	}
 	buttons := s.LoadButtons(sw, sh)
-	s.sh.PaintMenu(screen, sw, sh, "Load Game", body, buttons)
+	s.sh.PaintMenu(screen, sw, sh, s.sh.T("Load Game"), body, buttons)
 	start, n, _ := s.slotWindow()
 	for j := 0; j < n; j++ {
 		sl := s.Slots[start+j]
@@ -256,17 +256,17 @@ func (s *Screen) DrawLoad(screen *ebiten.Image, sw, sh int) {
 			right -= float64(gfx.TextW(when, gfx.Small)) + 16
 		}
 		if sl.Ending != "" {
-			gfx.Text(screen, EndingTag, right, by+4, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.Good, Align: gfx.AlignRight})
-			right -= float64(gfx.TextW(EndingTag, gfx.Small)) + 16
+			gfx.Text(screen, s.sh.T(EndingTag), right, by+4, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.Good, Align: gfx.AlignRight})
+			right -= float64(gfx.TextW(s.sh.T(EndingTag), gfx.Small)) + 16
 		}
 		if sl.Commitment {
-			gfx.Text(screen, commitTag, right, by+4, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.Accent, Align: gfx.AlignRight})
-			right -= float64(gfx.TextW(commitTag, gfx.Small)) + 16
+			gfx.Text(screen, s.sh.T(commitTag), right, by+4, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.Accent, Align: gfx.AlignRight})
+			right -= float64(gfx.TextW(s.sh.T(commitTag), gfx.Small)) + 16
 		}
 		gfx.Text(screen, gfx.Ellipsize(sl.Name, gfx.Label, right-bx-12), bx+12, by+3, gfx.Label)
-		sub, c := fmt.Sprintf("%s  %d colonists", sl.Date, sl.Colonists), color.Color(uikit.TextDim)
+		sub, c := s.sh.Tf("%s  %d colonists", sl.Date, sl.Colonists), color.Color(uikit.TextDim)
 		if sl.Err != "" {
-			sub, c = "cannot load: "+sl.Err, uikit.Danger
+			sub, c = s.sh.Tf("cannot load: %s", sl.Err), uikit.Danger
 		}
 		gfx.Text(screen, gfx.Ellipsize(sub, gfx.Small, float64(b.W)-24), bx+12, by+float64(b.H)-gfx.LineH(gfx.Small)-2, gfx.WithColor(gfx.Small, c))
 	}

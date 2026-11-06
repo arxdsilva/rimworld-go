@@ -2,6 +2,7 @@ package options
 
 import (
 	"errors"
+	"fmt"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/domain/sim/clock"
@@ -58,3 +59,8 @@ func (f *fakeShell) Load(path string) (string, clock.Tick, error) {
 	f.loaded = append(f.loaded, path)
 	return "colony-autosave", clock.Tick(3 * clock.TicksPerDay), f.loadErr
 }
+
+// T and Tf are the English catalog: the tests read the source text.
+func (f *fakeShell) T(src string) string { return src }
+
+func (f *fakeShell) Tf(src string, args ...any) string { return fmt.Sprintf(src, args...) }

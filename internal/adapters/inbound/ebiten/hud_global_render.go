@@ -168,15 +168,15 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v camerapkg.Viewport) {
 // window went to the background, or a threat arrived. "" otherwise.
 func (a *App) speedReason() string {
 	if a.bg.paused {
-		return bgPausedLabel
+		return a.shell.T(bgPausedLabel)
 	}
 	r := a.renderer
 	if r == nil {
 		return ""
 	}
-	r.speedRate() // drops a stale threat flag once the game runs again
+	r.speedRate(a.shell) // drops a stale threat flag once the game runs again
 	if r.threatPaused && r.speed == speedPaused {
-		return "Paused (threat)"
+		return a.shell.T("Paused (threat)")
 	}
 	return ""
 }

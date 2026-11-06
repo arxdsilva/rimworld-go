@@ -1,6 +1,9 @@
 package uikit
 
-import "image/color"
+import (
+	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
+)
 
 // Accessibility settings the kit honours (OPT-017, OPT-018, OPT-019). The
 // host copies them from the player's Interface settings into Kit.Access
@@ -27,6 +30,9 @@ type Access struct {
 	ColorVision string
 	// Confirm asks before deconstructing and releasing an animal.
 	Confirm bool
+	// Tr is the catalog the kit's own words ("Close", "Cancel") go
+	// through (nil: English).
+	Tr lang.Tr
 }
 
 // TipFrames is the tooltip delay in frames at 60 updates per second.

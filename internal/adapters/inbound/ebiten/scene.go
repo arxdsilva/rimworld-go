@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	minimappkg "rimworld-go/internal/adapters/inbound/ebiten/render/minimap"
@@ -76,6 +77,8 @@ type sceneSet struct {
 	// (VIEW-001): applied when the scene is made, kept for the next save
 	// until its camera is placed.
 	resume map[game.MapID]camerapkg.View
+	// tr is the shell's catalog for the overlays' words (nil: English).
+	tr lang.Tr
 }
 
 // start makes id's scene the Renderer's (New, tests).

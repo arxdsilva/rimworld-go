@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -26,14 +27,15 @@ const (
 )
 
 // cardRows are the card's rows, in the second column.
-func cardRows() []OptionRow {
+func cardRows(tr ...lang.Tr) []OptionRow {
+	t := trOf(tr)
 	return []OptionRow{
-		{Key: "card", Label: "Colonist card", kind: rowToggle, Col: 1,
-			Tip:   "A card of the selected colonist or animal: needs, skills, health and standing at a glance. Its gear opens the card's setup.",
+		{Key: "card", Label: t.T("Colonist card"), kind: rowToggle, Col: 1,
+			Tip:   t.T("A card of the selected colonist or animal: needs, skills, health and standing at a glance. Its gear opens the card's setup."),
 			value: func(s config.Settings) string { return onOff(s.HUD.Enabled) },
 			apply: func(s *config.Settings, _ int) { s.HUD.Enabled = !s.HUD.Enabled }},
-		{Key: "carddock", Label: "Card sits", kind: rowChoice, Col: 1,
-			Tip: "In the inspector pane, or floating over the map.",
+		{Key: "carddock", Label: t.T("Card sits"), kind: rowChoice, Col: 1,
+			Tip: t.T("In the inspector pane, or floating over the map."),
 			value: func(s config.Settings) string {
 				if s.HUD.Docked {
 					return "In the pane"
@@ -41,8 +43,8 @@ func cardRows() []OptionRow {
 				return "Over the map"
 			},
 			apply: func(s *config.Settings, _ int) { s.HUD.Docked = !s.HUD.Docked }},
-		{Key: "cardheight", Label: "Pane height", kind: rowStep, Col: 1,
-			Tip:   "How tall the inspector pane is while it holds the card, as a share of the screen with its tabs. It grows with the screen and never passes 30%.",
+		{Key: "cardheight", Label: t.T("Pane height"), kind: rowStep, Col: 1,
+			Tip:   t.T("How tall the inspector pane is while it holds the card, as a share of the screen with its tabs. It grows with the screen and never passes 30%."),
 			value: func(s config.Settings) string { return paneShare(s.HUD.Pane.Height) },
 			frac: func(s config.Settings) float64 {
 				return float64(s.HUD.Pane.Height-config.HUDPaneMinH) / (config.HUDPaneMaxH - config.HUDPaneMinH)
@@ -50,8 +52,8 @@ func cardRows() []OptionRow {
 			apply: func(s *config.Settings, d int) {
 				s.HUD.Pane.Height = max(config.HUDPaneMinH, min(config.HUDPaneMaxH, s.HUD.Pane.Height+d*cardHeightStep))
 			}},
-		{Key: "cardspot", Label: "Floating card at", kind: rowChoice, Col: 1,
-			Tip:   "Where on the screen a floating card starts. Its nudge is in the card's setup.",
+		{Key: "cardspot", Label: t.T("Floating card at"), kind: rowChoice, Col: 1,
+			Tip:   t.T("Where on the screen a floating card starts. Its nudge is in the card's setup."),
 			value: func(s config.Settings) string { return cardAnchors[max(0, min(len(cardAnchors)-1, s.HUD.Card.Anchor))] },
 			apply: func(s *config.Settings, _ int) { s.HUD.Card.Anchor = (s.HUD.Card.Anchor + 1) % len(cardAnchors) }},
 	}

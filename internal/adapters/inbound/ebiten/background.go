@@ -148,7 +148,7 @@ func (a *App) capBackgroundDraw() {
 // (threat)" when a threat paused the game).
 func (a *App) speedLabel() string {
 	if a.bg.paused {
-		return bgPausedLabel
+		return a.shell.T(bgPausedLabel)
 	}
-	return a.renderer.speedRate()
+	return a.renderer.speedRate(a.shell)
 }

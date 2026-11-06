@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	camerapkgpkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/platform/config"
 )
@@ -111,10 +112,10 @@ func (r *Renderer) onThreatPause(w game.WorldView, tick uint64) {
 }
 
 // speedRate is the HUD speed label, saying why the game paused itself.
-func (r *Renderer) speedRate() string {
+func (r *Renderer) speedRate(tr ...lang.Tr) string {
 	if r.threatPaused && r.speed == speedPaused {
-		return "paused (threat)"
+		return firstTr(tr).T("paused (threat)")
 	}
 	r.threatPaused = false
-	return r.speed.rate()
+	return r.speed.rate(tr...)
 }

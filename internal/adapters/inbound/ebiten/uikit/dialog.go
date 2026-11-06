@@ -2,6 +2,7 @@ package uikit
 
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -52,16 +53,17 @@ func FooterNext(footer gfx.Rect) gfx.Rect {
 func TooSmall(sw, sh int) bool { return sw < MinSetupW || sh < MinSetupH }
 
 // DrawTooSmall dims the window and says it is too small for the screen.
-func DrawTooSmall(dst *ebiten.Image, sw, sh int) {
+func DrawTooSmall(dst *ebiten.Image, sw, sh int, tr ...lang.Tr) {
+	t := trOf(tr)
 	gfx.FillRect(dst, 0, 0, float32(sw), float32(sh), Dim, false)
 	st := gfx.Large
 	st.Align = gfx.AlignCenter
 	cx, cy := float32(sw)/2, float32(sh)/2
-	gfx.Text(dst, "Window too small", float64(cx), float64(cy)-gfx.LineH(st), st)
+	gfx.Text(dst, t.T("Window too small"), float64(cx), float64(cy)-gfx.LineH(st), st)
 	sub := gfx.Body
 	sub.Align = gfx.AlignCenter
 	sub.Color = TextDim
-	gfx.Text(dst, "Enlarge the window to at least 1280 x 720 or lower the UI scale.", float64(cx), float64(cy)+4, sub)
+	gfx.Text(dst, t.T("Enlarge the window to at least 1280 x 720 or lower the UI scale."), float64(cx), float64(cy)+4, sub)
 }
 
 // AsButton is the rect as a button with id and label (the kit's type).

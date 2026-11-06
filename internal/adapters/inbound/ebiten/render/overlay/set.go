@@ -17,6 +17,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
@@ -64,6 +65,9 @@ type Host struct {
 	// Flash shows a sim lightning strike of tick: the flash and the
 	// thunder that rolls in after it.
 	Flash func(tick uint64)
+	// Tr is the catalog the overlays' own words (zone names, casket titles)
+	// go through; nil is English.
+	Tr lang.Tr
 }
 
 // Chunks is the frame's chunk lists and visible tile range, the world

@@ -5,11 +5,11 @@
 package ebiten
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	camerapkgpkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
@@ -83,26 +83,27 @@ func (s speed) ticksPerFrame() int {
 	}
 }
 
-func (s speed) label() string {
+func (s speed) label(tr ...lang.Tr) string {
+	t := firstTr(tr)
 	switch s {
 	case speedNormal:
-		return "normal"
+		return t.T("normal")
 	case speedFast:
-		return "fast"
+		return t.T("fast")
 	case speedVeryFast:
-		return "superfast"
+		return t.T("superfast")
 	case speedUltra:
-		return "ultrafast"
+		return t.T("ultrafast")
 	default:
-		return "paused"
+		return t.T("paused")
 	}
 }
 
-func (s speed) rate() string {
+func (s speed) rate(tr ...lang.Tr) string {
 	if n := s.ticksPerFrame(); n > 0 {
-		return fmt.Sprintf("%s %dx", s.label(), n)
+		return lang.Tf(firstTr(tr), "%s %dx", s.label(tr...), n)
 	}
-	return "paused"
+	return firstTr(tr).T("paused")
 }
 
 type pawnVisual struct {

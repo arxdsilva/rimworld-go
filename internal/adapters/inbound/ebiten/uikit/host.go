@@ -1,6 +1,9 @@
 package uikit
 
-import "rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+import (
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
+)
 
 // Host is what the kit needs of the program around it: this Update's
 // input, the cursor, the screen size, a frame counter, key repeat, the UI
@@ -29,6 +32,23 @@ func New(h Host) *Kit { return &Kit{host: h} }
 
 // Bind sets the kit's host (a zero Kit embedded in its host binds late).
 func (k *Kit) Bind(h Host) { k.host = h }
+
+// tk is the kit's catalog as a lang.Tr (English while Tr is unset).
+func tk(k *Kit) lang.Tr {
+	if k == nil || k.Access.Tr == nil {
+		return lang.English{}
+	}
+	return k.Access.Tr
+}
+
+// trOf is the first catalog of an optional trailing argument (English when
+// none), for the free drawing helpers that have no Kit.
+func trOf(tr []lang.Tr) lang.Tr {
+	if len(tr) > 0 && tr[0] != nil {
+		return tr[0]
+	}
+	return lang.English{}
+}
 
 // Bound reports the kit has a host.
 func (k *Kit) Bound() bool { return k.host != nil }

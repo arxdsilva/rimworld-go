@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
@@ -85,27 +86,38 @@ var windArrows = [8]string{"→", "↘", "↓", "↙", "←", "↖", "↑", "↗
 
 // weatherLabel is the HUD weather readout, e.g. "Rain ↗ 2.1": the kind,
 // an arrow the way the wind blows and its speed in tiles per second.
-func weatherLabel(w game.WorldView) string {
+func weatherLabel(w game.WorldView, tr ...lang.Tr) string {
 	if w.Weather == "" {
 		return ""
 	}
 	name := strings.ToUpper(w.Weather[:1]) + w.Weather[1:]
 	s := math.Hypot(w.WindX, w.WindY)
-	if s < 0.05 {
-		return name + ", calm"
+	if weatherCalm(w) {
+		return lang.Tf(firstTr(tr), "%s, calm", name)
 	}
 	oct := int(math.Round(math.Atan2(w.WindY, w.WindX)/(math.Pi/4))) & 7
 	return fmt.Sprintf("%s %s %.1f", name, windArrows[oct], s)
 }
 
+// weatherCalm reports the wind is too light for an arrow.
+func weatherCalm(w game.WorldView) bool { return math.Hypot(w.WindX, w.WindY) < 0.05 }
+
+// firstTr is the catalog a helper was handed, English when it was not.
+func firstTr(tr []lang.Tr) lang.Tr {
+	if len(tr) > 0 && tr[0] != nil {
+		return tr[0]
+	}
+	return lang.English{}
+}
+
 // weatherLabelW is the logical width drawWeatherLabel takes: the name, the
 // arrow's room and the speed; a calm label is plain text.
-func weatherLabelW(w game.WorldView) float32 {
-	lbl := weatherLabel(w)
+func weatherLabelW(w game.WorldView, tr ...lang.Tr) float32 {
+	lbl := weatherLabel(w, tr...)
 	if lbl == "" {
 		return 0
 	}
-	if strings.HasSuffix(lbl, ", calm") {
+	if weatherCalm(w) {
 		return gfx.TextW(lbl, gfx.Body)
 	}
 	name, rest, _ := strings.Cut(lbl, " ")
@@ -114,8 +126,8 @@ func weatherLabelW(w game.WorldView) float32 {
 }
 
 // drawWeatherLabelRight is drawWeatherLabel with its right edge at x.
-func drawWeatherLabelRight(screen *ebiten.Image, x, y int, w game.WorldView) {
-	drawWeatherLabel(screen, x-int(weatherLabelW(w)+0.5), y, w)
+func drawWeatherLabelRight(screen *ebiten.Image, x, y int, w game.WorldView, tr ...lang.Tr) {
+	drawWeatherLabel(screen, x-int(weatherLabelW(w, tr...)+0.5), y, w, tr...)
 }
 
 // drawWeatherLabel draws weatherLabel at the logical position (x, y). The
@@ -123,12 +135,12 @@ func drawWeatherLabelRight(screen *ebiten.Image, x, y int, w game.WorldView) {
 // way, between the measured name and the speed. It is HUD, so every stroke
 // goes through the canvas (uiLine): raw vector calls here ignored the UI
 // scale and left the arrow behind at 1.5x and 2x (PLAY-017).
-func drawWeatherLabel(screen *ebiten.Image, x, y int, w game.WorldView) {
-	lbl := weatherLabel(w)
+func drawWeatherLabel(screen *ebiten.Image, x, y int, w game.WorldView, tr ...lang.Tr) {
+	lbl := weatherLabel(w, tr...)
 	if lbl == "" {
 		return
 	}
-	if strings.HasSuffix(lbl, ", calm") {
+	if weatherCalm(w) {
 		uikit.DrawLabel(screen, x, y, lbl)
 		return
 	}
