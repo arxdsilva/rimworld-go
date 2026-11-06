@@ -34,6 +34,13 @@ The state hash changes for any colony or raid where someone wears a flak vest, f
   - A pawn with no bio.
   - A real 32-cell walk, bare against plate (≈ 1/0.826 of the time).
 
+## Measurements
+`go test -race -bench 'TickGrown/250|TickRaid' -benchtime 300x -count 3`, M2 Max, with other agents also running:
+- Grown 250: 3.07–3.30 ms/tick before and 2.20–2.25 after. The gap is machine load, not this change.
+- Raid 500: 3.25–4.81 ms/tick before and 3.21–3.68 after.
+- Allocations are 6 per op in both runs.
+- The raid's steady bytes per tick moved from 5701 to 5646, because the raiders now walk slower.
+
 ## Gaps
 - No UI. GEAR-2 draws the tab.
 - Cataphract armour isn't mapped: we have no such kind.
