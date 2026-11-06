@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"slices"
 
 	"rimworld-go/internal/application/game"
@@ -48,15 +49,15 @@ func forbiddable(b game.BuildingView) bool {
 
 // forbidCommand is the Forbid toggle of building b: SetForbidden for the
 // building, the command an item stack uses.
-func forbidCommand(b game.BuildingView) Button {
-	c := Button{ID: BuildingForbidID, Label: "Forbid", Icon: "order_forbid", Toggle: true, On: b.Forbidden, Hotkey: input.Forbid,
-		Desc: "Colonists leave it alone: no using, no work on it.",
+func forbidCommand(tr lang.Tr, b game.BuildingView) Button {
+	c := Button{ID: BuildingForbidID, Label: tr.T("Forbid"), Icon: "order_forbid", Toggle: true, On: b.Forbidden, Hotkey: input.Forbid,
+		Desc: tr.T("Colonists leave it alone: no using, no work on it."),
 		Cmds: []command.Command{{Kind: command.SetForbidden, Target: uint64(b.ID), Enabled: !b.Forbidden}}}
 	if k, ok := construction.Parse(b.Kind); ok && k.IsDoor() { // a door: Forbid shuts it to colonists, Allow opens it again
-		c.Desc = "Forbid: colonists keep out and path around this door.\nAllow: colonists may use it again."
+		c.Desc = tr.T("Forbid: colonists keep out and path around this door.\nAllow: colonists may use it again.")
 	}
 	if b.Forbidden { // STK-AL: the toggle reads what a click does, as an item's does
-		c.Label, c.Icon = "Allow", "order_allow"
+		c.Label, c.Icon = tr.T("Allow"), "order_allow"
 	}
 	return c
 }

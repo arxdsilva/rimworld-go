@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -55,11 +56,11 @@ func TestWeaponTitleAndTip(t *testing.T) {
 	if got := WeaponTitle(p); got != "Steel longsword (good)" {
 		t.Fatalf("title %q", got)
 	}
-	tip := WeaponTip(p)
+	tip := WeaponTip(lang.English{}, p)
 	if !strings.Contains(tip, "Damage 23") || !strings.Contains(tip, "cooldown 2.6s") || !strings.Contains(tip, "per second") {
 		t.Fatalf("tip %q", tip)
 	}
-	if WeaponTip(game.PawnView{}) != "" || WeaponTitle(game.PawnView{Weapon: "fists"}) != "fists" {
+	if WeaponTip(lang.English{}, game.PawnView{}) != "" || WeaponTitle(game.PawnView{Weapon: "fists"}) != "fists" {
 		t.Fatal("unarmed")
 	}
 }
@@ -67,10 +68,10 @@ func TestWeaponTitleAndTip(t *testing.T) {
 func TestCombatExtraLines(t *testing.T) {
 	t.Parallel()
 	p := game.PawnView{Kills: 2, DamageDealt: 55, Spare: "knife"}
-	if got := strings.Join(CombatExtraLines(p), "|"); got != "Spare weapon: knife|Kills 2   Damage dealt 55" {
+	if got := strings.Join(CombatExtraLines(lang.English{}, p), "|"); got != "Spare weapon: knife|Kills 2   Damage dealt 55" {
 		t.Fatalf("lines %q", got)
 	}
-	if len(CombatExtraLines(game.PawnView{})) != 0 {
+	if len(CombatExtraLines(lang.English{}, game.PawnView{})) != 0 {
 		t.Fatal("no record, no lines")
 	}
 }
@@ -92,7 +93,7 @@ func TestStatLines(t *testing.T) {
 			t.Fatalf("%q lacks %q", got, w)
 		}
 	}
-	melee := WeaponLines(game.PawnView{WeaponStats: weapon.View{Name: "Club", Melee: true, Cooldown: 90}})
+	melee := WeaponLines(lang.English{}, game.PawnView{WeaponStats: weapon.View{Name: "Club", Melee: true, Cooldown: 90}})
 	if len(melee) != 2 || strings.Contains(strings.Join(melee, "|"), "Accuracy") {
 		t.Fatal(melee)
 	}
@@ -321,7 +322,7 @@ func TestTabFitsAtUIScales(t *testing.T) {
 		if _, ok := f.kit.Find(DropID("pack", 13)); !ok {
 			t.Errorf("scale %v (%dx%d, panel %+v): the last pack row is out of reach", s, sw, sh, r)
 		}
-		ac := accessOf(p, true)
+		ac := accessOf(lang.English{}, p, true)
 		for _, row := range rows {
 			if row.Item() && r.W-uikit.ScrollBarW-iconSz-6-buttonsW(row, ac) < 120 {
 				t.Errorf("scale %v: %q has under 120 px of label", s, row.Label)

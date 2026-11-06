@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -61,8 +62,10 @@ func BioName(b game.BioView) string {
 }
 
 // bioInfoLine is "Female, age 31, Average build".
-func BioInfoLine(b game.BioView) string {
-	return fmt.Sprintf("%s, age %d, %s build", b.Sex, b.AgeYears, strings.ToLower(b.Build))
+func BioInfoLine(b game.BioView) string { return bioInfoLine(lang.English{}, b) }
+
+func bioInfoLine(tr lang.Tr, b game.BioView) string {
+	return lang.Tf(tr, "%s, age %d, %s build", b.Sex, b.AgeYears, strings.ToLower(b.Build))
 }
 
 // bioIncapable is the short "Violence, Hauling" text of the incapable list
@@ -92,15 +95,19 @@ func WeekText(xp int) string {
 // bioSkillTip is a skill row's hover card: the character screen's card
 // plus this week's learning and progress to the next level.
 func BioSkillTip(base string, s game.SkillView, week int) string {
+	return bioSkillTip(lang.English{}, base, s, week)
+}
+
+func bioSkillTip(tr lang.Tr, base string, s game.SkillView, week int) string {
 	t := base
 	if s.Incapable {
 		return t
 	}
-	t += fmt.Sprintf(" %d%% of the way to the next level.", s.XPPct)
+	t += lang.Tf(tr, " %d%% of the way to the next level.", s.XPPct)
 	if week > 0 {
-		t += fmt.Sprintf(" Learned %d experience in the last 7 days.", week)
+		t += lang.Tf(tr, " Learned %d experience in the last 7 days.", week)
 	} else {
-		t += " Nothing learned in the last 7 days."
+		t += tr.T(" Nothing learned in the last 7 days.")
 	}
 	return t
 }
@@ -119,7 +126,7 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 	in := r
 	b, ok := a.sim().Bio(p.ID)
 	if !ok {
-		a.kit().Label(in.X, in.Y, "No biography for this colonist.", uikit.DimText())
+		a.kit().Label(in.X, in.Y, a.shell.T("No biography for this colonist."), uikit.DimText())
 		return
 	}
 	card, _ := a.sim().Dossier(p.ID)
@@ -146,7 +153,7 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 		a.kit().Label(tx, y, l, nm)
 		y += float32(gfx.LineH(nm))
 	}
-	a.kit().Label(tx, y+2, uikit.FitText(BioInfoLine(b), uikit.DimText(), in.Right()-tx), uikit.DimText())
+	a.kit().Label(tx, y+2, uikit.FitText(bioInfoLine(a.shell, b), uikit.DimText(), in.Right()-tx), uikit.DimText())
 	y += 28
 	a.shell.Backstory(tx, y, in.Right()-tx, "Childhood", b.Childhood, b.ChildhoodDesc, "bio.child")
 	y += 20
@@ -163,14 +170,14 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 		col = uikit.Danger
 	}
 	iy := y
-	a.kit().Label(in.X, iy, "Incapable of:", gfx.Label)
+	a.kit().Label(in.X, iy, a.shell.T("Incapable of:"), gfx.Label)
 	u.Queue(func(dst *ebiten.Image) {
 		st := gfx.Body
 		st.Color = col
 		gfx.Text(dst, uikit.FitText(short, st, in.W-104), float64(in.X+104), float64(iy), st)
 	})
 	if full != "" {
-		a.kit().Tip("bio.incap", gfx.Rect{X: in.X, Y: iy, W: in.W, H: 18}, "Incapable of\n"+full)
+		a.kit().Tip("bio.incap", gfx.Rect{X: in.X, Y: iy, W: in.W, H: 18}, a.shell.T("Incapable of\n")+full)
 	}
 	y += 22
 
@@ -193,17 +200,17 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 
 	if len(rel) > 0 {
 		ry := in.Bottom() - condH - relH + 2
-		a.kit().Label(in.X, ry, "Relations:", gfx.Label)
+		a.kit().Label(in.X, ry, a.shell.T("Relations:"), gfx.Label)
 		rs := gfx.Small
 		rs.Color = uikit.TextDim
 		for i, ln := range rel {
 			a.kit().Label(in.X+74, ry+1+float32(i)*14, uikit.FitText(ln, rs, in.W-74), rs)
 		}
-		a.kit().Tip("bio.relations", gfx.Rect{X: in.X, Y: ry, W: in.W, H: relH}, "Relations\n"+strings.Join(rel, "\n")+"\nSee the Social tab for opinions.")
+		a.kit().Tip("bio.relations", gfx.Rect{X: in.X, Y: ry, W: in.W, H: relH}, a.shell.T("Relations\n")+strings.Join(rel, "\n")+a.shell.T("\nSee the Social tab for opinions."))
 	}
 	cy := in.Bottom() - condH + 2
-	a.kit().Label(in.X, cy, "Health:", gfx.Label)
-	text, st := "No conditions", gfx.Small
+	a.kit().Label(in.X, cy, a.shell.T("Health:"), gfx.Label)
+	text, st := a.shell.T("No conditions"), gfx.Small
 	st.Color = uikit.TextDim
 	if len(b.Conditions) > 0 {
 		text, st.Color = strings.Join(b.Conditions, "\n"), uikit.Warning
@@ -236,7 +243,7 @@ func (a Tabs) bioSkills(r gfx.Rect, b game.BioView, week [skill.NumSkills]int, r
 	}
 	for i := range b.Skills {
 		if row := rowAt(i).Intersect(view); !row.Empty() {
-			a.kit().Tip(fmt.Sprintf("bio.skill.%d", i), row, BioSkillTip(a.skillTip(b.Skills[i]), b.Skills[i], week[i]))
+			a.kit().Tip(fmt.Sprintf("bio.skill.%d", i), row, bioSkillTip(a.shell, a.skillTip(b.Skills[i]), b.Skills[i], week[i]))
 		}
 	}
 	const (
@@ -252,13 +259,13 @@ func (a Tabs) bioSkills(r gfx.Rect, b game.BioView, week [skill.NumSkills]int, r
 		uikit.FillRect(dst, hr, uikit.Btn)
 		uikit.StrokeRect(dst, hr, uikit.BtnBorder)
 		hy := float64(r.Y) + (bioHdrH-gfx.LineH(hs))/2
-		gfx.Text(dst, "Skill", float64(r.X+8), hy, hs)
-		gfx.Text(dst, "Passion", float64(r.X+passX-14), hy, hs)
+		gfx.Text(dst, a.shell.T("Skill"), float64(r.X+8), hy, hs)
+		gfx.Text(dst, a.shell.T("Passion"), float64(r.X+passX-14), hy, hs)
 		lh := hs
 		lh.Align = gfx.AlignRight
-		gfx.Text(dst, "Lvl", float64(r.X+lvlX+10), hy, lh)
-		gfx.Text(dst, "Experience", float64(r.X+barX), hy, hs)
-		gfx.Text(dst, "This week", float64(view.Right()-6), hy, lh)
+		gfx.Text(dst, a.shell.T("Lvl"), float64(r.X+lvlX+10), hy, lh)
+		gfx.Text(dst, a.shell.T("Experience"), float64(r.X+barX), hy, hs)
+		gfx.Text(dst, a.shell.T("This week"), float64(view.Right()-6), hy, lh)
 		body := gfx.ClipTo(dst, view)
 		for i, s := range b.Skills {
 			row := rowAt(i)
@@ -284,7 +291,7 @@ func (a Tabs) bioSkills(r gfx.Rect, b game.BioView, week [skill.NumSkills]int, r
 			lt.Align = gfx.AlignRight
 			gfx.Text(body, a.skillLevel(s), float64(row.X+lvlX+10), ty, lt)
 			if s.Incapable {
-				gfx.Text(body, "incapable", float64(row.X+barX), ty, st)
+				gfx.Text(body, a.shell.T("incapable"), float64(row.X+barX), ty, st)
 				continue
 			}
 			bar := gfx.Rect{X: row.X + barX, Y: row.Y + (row.H-6)/2, W: barW, H: 6}

@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"sort"
 	"strings"
 
@@ -48,8 +49,6 @@ const (
 	HealthAddID     = "health.op.add"
 	HealthPickID    = "health.addop"
 	HealthPickList  = "health.addop.list"
-	healthNoInjury  = "No injuries."
-	healthNoOps     = "No operations queued."
 	healthPickW     = 420
 	healthPickH     = 380
 	healthOpsShare  = 0.32 // of the tab's height, for the operations block
@@ -69,18 +68,20 @@ func HealthUpID(i int) string   { return fmt.Sprintf("health.op.up.%d", i) }
 func HealthDownID(i int) string { return fmt.Sprintf("health.op.down.%d", i) }
 
 // careShort is a care level's button label (the full label is its tip).
-func CareShort(p medcare.Policy) string {
+func CareShort(p medcare.Policy) string { return careShortIn(lang.English{}, p) }
+
+func careShortIn(tr lang.Tr, p medcare.Policy) string {
 	switch p {
 	case medcare.NoCare:
-		return "None"
+		return tr.T("None")
 	case medcare.NoMeds:
-		return "No meds"
+		return tr.T("No meds")
 	case medcare.HerbalMax:
-		return "Herbal"
+		return tr.T("Herbal")
 	case medcare.IndustrialMax:
-		return "Industrial"
+		return tr.T("Industrial")
 	}
-	return "Best"
+	return tr.T("Best")
 }
 
 // careIcon is a care level's glyph (ui_icon/care_*, ART-026).
@@ -99,19 +100,21 @@ func careIcon(p medcare.Policy) string {
 }
 
 // careTip is a care level's hover card.
-func careTip(p medcare.Policy) string {
+func careTip(p medcare.Policy) string { return careTipIn(lang.English{}, p) }
+
+func careTipIn(tr lang.Tr, p medcare.Policy) string {
 	var body string
 	switch p {
 	case medcare.NoCare:
-		body = "No doctor tends this patient. A downed patient is still carried to bed."
+		body = tr.T("No doctor tends this patient. A downed patient is still carried to bed.")
 	case medcare.NoMeds:
-		body = "Tended, but never with medicine."
+		body = tr.T("Tended, but never with medicine.")
 	case medcare.HerbalMax:
-		body = "Tended with herbal medicine at most."
+		body = tr.T("Tended with herbal medicine at most.")
 	case medcare.IndustrialMax:
-		body = "Tended with industrial or herbal medicine."
+		body = tr.T("Tended with industrial or herbal medicine.")
 	default:
-		body = "Tended with the best medicine there is."
+		body = tr.T("Tended with the best medicine there is.")
 	}
 	return p.Label() + "\n" + body
 }
@@ -203,7 +206,7 @@ func (a Tabs) healthCare(p game.PawnView, r gfx.Rect, h game.HealthView) {
 	}
 	care := gfx.Label
 	care.Color = uikit.TextDim
-	a.kit().Label(r.X, r.Y+(r.H-float32(gfx.LineH(care)))/2, "Care", care)
+	a.kit().Label(r.X, r.Y+(r.H-float32(gfx.LineH(care)))/2, a.shell.T("Care"), care)
 	x := r.X + 40
 	w := r.Right() - x
 	if !p.Prisoner && !p.Visitor {
@@ -213,8 +216,8 @@ func (a Tabs) healthCare(p game.PawnView, r gfx.Rect, h game.HealthView) {
 	u := a.kit()
 	for c := medcare.Policy(0); c < medcare.NumPolicies; c++ {
 		cur := medcare.Policy(h.Care) == c
-		if a.kit().Button(HealthCareID(c), gfx.Rect{X: x, Y: r.Y, W: bw - 2, H: r.H}, CareShort(c),
-			uikit.BtnOpts{Selected: cur, Tip: careTip(c), Disabled: dead, Reason: reason}) && !cur {
+		if a.kit().Button(HealthCareID(c), gfx.Rect{X: x, Y: r.Y, W: bw - 2, H: r.H}, careShortIn(a.shell, c),
+			uikit.BtnOpts{Selected: cur, Tip: careTipIn(a.shell, c), Disabled: dead, Reason: reason}) && !cur {
 			a.shell.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(p.ID), Mode: uint8(c)})
 		}
 		if a.sim() != nil && a.env().MapArt != nil && bw >= 2*r.H {
@@ -230,7 +233,7 @@ func (a Tabs) healthCare(p game.PawnView, r gfx.Rect, h game.HealthView) {
 	}
 	on := h.SelfTend
 	st := selfTendState(a.Pane, p)
-	if a.kit().Check(HealthSelfID, gfx.Rect{X: r.Right() - healthSelfW, Y: r.Y, W: healthSelfW, H: r.H}, "Self-tend", &on,
+	if a.kit().Check(HealthSelfID, gfx.Rect{X: r.Right() - healthSelfW, Y: r.Y, W: healthSelfW, H: r.H}, a.shell.T("Self-tend"), &on,
 		uikit.CheckOpts{Disabled: st.reason != "", Reason: st.reason, Tip: st.tip}) {
 		a.Card().setSelfTend(p, on)
 	}
@@ -268,27 +271,29 @@ func HealthStateColor(h game.HealthView) color.RGBA {
 }
 
 // healthStateTip is the hover card of the headline.
-func healthStateTip(h game.HealthView) string {
+func healthStateTip(tr lang.Tr, h game.HealthView) string {
 	switch {
 	case h.BleedPerDay > 0:
-		return fmt.Sprintf("%s\nOpen wounds lose %d%% of the blood a day. Untended, the blood runs out in about %d hours. A tend stops the bleeding.",
+		return lang.Tf(tr, "%s\nOpen wounds lose %d%% of the blood a day. Untended, the blood runs out in about %d hours. A tend stops the bleeding.",
 			h.State, h.BleedPerDay, h.DeathInHours)
 	case strings.HasSuffix(h.State, ": losing") && h.DeathInHours >= 0:
-		return fmt.Sprintf("%s\nAt this rate it kills in about %d hours, before immunity builds. A better tend slows it.", h.State, h.DeathInHours)
+		return lang.Tf(tr, "%s\nAt this rate it kills in about %d hours, before immunity builds. A better tend slows it.", h.State, h.DeathInHours)
 	case strings.HasSuffix(h.State, ": winning"):
-		return h.State + "\nImmunity should build before it gets worse. Keep it tended."
+		return h.State + tr.T("\nImmunity should build before it gets worse. Keep it tended.")
 	}
-	return h.State + "\nNothing is bleeding."
+	return h.State + tr.T("\nNothing is bleeding.")
 }
 
 // healthCondDue is a condition row's tend marker: "needs tend now",
 // "needs tend in Nh", or "" for one that takes no tending.
-func HealthCondDue(c game.ConditionView) string {
+func HealthCondDue(c game.ConditionView) string { return healthCondDue(lang.English{}, c) }
+
+func healthCondDue(tr lang.Tr, c game.ConditionView) string {
 	switch {
 	case c.Due:
-		return "needs tend now"
+		return tr.T("needs tend now")
 	case c.DueInHours > 0:
-		return fmt.Sprintf("needs tend in %dh", c.DueInHours)
+		return lang.Tf(tr, "needs tend in %dh", c.DueInHours)
 	}
 	return ""
 }
@@ -297,7 +302,7 @@ func HealthCondDue(c game.ConditionView) string {
 // each condition's name and tend marker, then its severity bar (danger)
 // over its immunity bar (good), with the tooltip from the view.
 func (a Tabs) healthConds(r gfx.Rect, conds []game.ConditionView) {
-	a.kit().Label(r.X, r.Y, "Conditions", gfx.Label)
+	a.kit().Label(r.X, r.Y, a.shell.T("Conditions"), gfx.Label)
 	y := r.Y + float32(gfx.LineStep(gfx.Label)) + 2
 	step := float32(gfx.LineStep(gfx.Body))
 	u := a.kit()
@@ -310,7 +315,7 @@ func (a Tabs) healthConds(r gfx.Rect, conds []game.ConditionView) {
 		if c.Losing {
 			st.Color = uikit.Danger
 		}
-		due := HealthCondDue(c)
+		due := healthCondDue(a.shell, c)
 		a.kit().Label(r.X, y, uikit.FitText(c.Label, st, r.W-120), st)
 		if due != "" {
 			ds := gfx.Small
@@ -344,10 +349,10 @@ func (a Tabs) healthConds(r gfx.Rect, conds []game.ConditionView) {
 }
 
 // healthBloodTip is the hover card of the blood loss row.
-func healthBloodTip(h game.HealthView) string {
-	t := fmt.Sprintf("Blood loss %d%%\nAt 15%% it starts to cloud the mind; at 60%% the pawn collapses; at 100%% it dies.", h.BloodLossPct)
+func healthBloodTip(tr lang.Tr, h game.HealthView) string {
+	t := lang.Tf(tr, "Blood loss %d%%\nAt 15%% it starts to cloud the mind; at 60%% the pawn collapses; at 100%% it dies.", h.BloodLossPct)
 	if h.BleedPerDay == 0 {
-		t += " The body makes about a third of its blood back a day while nothing bleeds."
+		t += tr.T(" The body makes about a third of its blood back a day while nothing bleeds.")
 	}
 	return t
 }
@@ -362,7 +367,7 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 		st := gfx.Body
 		st.Color = HealthStateColor(h)
 		a.kit().Label(r.X, y, uikit.FitText(h.State, st, r.W-4), st)
-		u.Add(uikit.Widget{ID: HealthStateID, R: gfx.Rect{X: r.X, Y: y, W: r.W, H: step}, Label: h.State, Tip: healthStateTip(h)})
+		u.Add(uikit.Widget{ID: HealthStateID, R: gfx.Rect{X: r.X, Y: y, W: r.W, H: step}, Label: h.State, Tip: healthStateTip(a.shell, h)})
 		y += step + 2
 	}
 	if (h.BloodLossPct > 0 || h.BleedPerDay > 0) && y+step+healthBloodBarH+2 <= r.Bottom() {
@@ -370,8 +375,8 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 		if h.BleedPerDay > 0 || h.BloodLossPct >= 60 {
 			c = uikit.Danger
 		}
-		label := fmt.Sprintf("Blood loss: %d%%", h.BloodLossPct)
-		a.kit().Label(r.X, y, uikit.FitText("Blood loss", gfx.Body, r.W-48), gfx.Body)
+		label := a.shell.Tf(a.shell.T("Blood loss: %d%%"), h.BloodLossPct)
+		a.kit().Label(r.X, y, uikit.FitText(a.shell.T("Blood loss"), gfx.Body, r.W-48), gfx.Body)
 		st := gfx.Body
 		st.Color, st.Align = c, gfx.AlignRight
 		a.kit().Label(r.Right()-4, y, fmt.Sprintf("%d%%", h.BloodLossPct), st)
@@ -384,7 +389,7 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 				uikit.FillRect(dst, fill, c)
 			}
 		})
-		u.Add(uikit.Widget{ID: HealthBloodID, R: gfx.Rect{X: r.X, Y: y, W: r.W, H: step + healthBloodBarH}, Label: label, Tip: healthBloodTip(h)})
+		u.Add(uikit.Widget{ID: HealthBloodID, R: gfx.Rect{X: r.X, Y: y, W: r.W, H: step + healthBloodBarH}, Label: label, Tip: healthBloodTip(a.shell, h)})
 		y += step + healthBloodBarH + 4
 	}
 	line := func(label string, pct int, c color.RGBA) {
@@ -411,7 +416,7 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 	}
 	if len(h.Drugs) > 0 && y+2*step <= r.Bottom() {
 		y += 4
-		a.kit().Label(r.X, y, "Drugs", gfx.Label)
+		a.kit().Label(r.X, y, a.shell.T("Drugs"), gfx.Label)
 		y += float32(gfx.LineStep(gfx.Label))
 		for _, d := range h.Drugs {
 			line(d.Label, d.Pct, uikit.Text)
@@ -426,12 +431,12 @@ func healthPartLine(p game.PartView) string {
 
 // healthParts is the scrollable list of hurt, missing and artificial parts.
 func (a Tabs) healthParts(r gfx.Rect, parts []game.PartView) {
-	a.kit().Label(r.X, r.Y, "Body", gfx.Label)
+	a.kit().Label(r.X, r.Y, a.shell.T("Body"), gfx.Label)
 	r.Y += float32(gfx.LineStep(gfx.Label)) + 2
 	r.H -= float32(gfx.LineStep(gfx.Label)) + 2
 	rows := hurtParts(parts)
 	if len(rows) == 0 {
-		a.kit().Label(r.X, r.Y, healthNoInjury, uikit.DimText())
+		a.kit().Label(r.X, r.Y, a.shell.T("No injuries."), uikit.DimText())
 		return
 	}
 	u := a.kit()
@@ -497,7 +502,7 @@ func paintPartRow(dst *ebiten.Image, row gfx.Rect, p game.PartView, stripe bool)
 // row and the Add operation button.
 func (a Tabs) healthOps(p game.PawnView, r gfx.Rect, h game.HealthView) {
 	dead := p.Status == "dead"
-	a.kit().Label(r.X, r.Y+4, "Operations", gfx.Label)
+	a.kit().Label(r.X, r.Y+4, a.shell.T("Operations"), gfx.Label)
 	addR := gfx.Rect{X: r.Right() - 132, Y: r.Y, W: 132, H: 24}
 	reason := ""
 	switch {
@@ -506,13 +511,13 @@ func (a Tabs) healthOps(p game.PawnView, r gfx.Rect, h game.HealthView) {
 	case len(PickerOptions(h)) == 0:
 		reason = "No operation fits this body."
 	}
-	if a.kit().Button(HealthAddID, addR, "Add operation", uikit.BtnOpts{Disabled: reason != "", Reason: reason,
-		Tip: "Add operation\nQueue surgery for a doctor: fit an implant or remove one, amputate, harvest or transplant an organ, anesthetize or euthanize. Each uses medicine."}) {
+	if a.kit().Button(HealthAddID, addR, a.shell.T("Add operation"), uikit.BtnOpts{Disabled: reason != "", Reason: reason,
+		Tip: a.shell.T("Add operation\nQueue surgery for a doctor: fit an implant or remove one, amputate, harvest or transplant an organ, anesthetize or euthanize. Each uses medicine.")}) {
 		a.openHealthPicker(p.ID)
 	}
 	y := r.Y + 30
 	if len(h.Operations) == 0 {
-		a.kit().Label(r.X, y, healthNoOps, uikit.DimText())
+		a.kit().Label(r.X, y, a.shell.T("No operations queued."), uikit.DimText())
 		return
 	}
 	for _, op := range h.Operations {
@@ -551,15 +556,15 @@ func (a Tabs) healthOps(p game.PawnView, r gfx.Rect, h game.HealthView) {
 			downWhy = "Already last."
 		}
 		if a.healthArrow(HealthUpID(op.Slot), upR, true, uikit.BtnOpts{Disabled: upWhy != "", Reason: upWhy,
-			Tip: "Move up\nDo " + op.Label + " sooner."}) {
+			Tip: a.shell.T("Move up\nDo ") + op.Label + a.shell.T(" sooner.")}) {
 			a.shell.Enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: -1})
 		}
 		if a.healthArrow(HealthDownID(op.Slot), downR, false, uikit.BtnOpts{Disabled: downWhy != "", Reason: downWhy,
-			Tip: "Move down\nDo " + op.Label + " later."}) {
+			Tip: a.shell.T("Move down\nDo ") + op.Label + a.shell.T(" later.")}) {
 			a.shell.Enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: 1})
 		}
-		if a.kit().Button(HealthRemoveID(op.Slot), gfx.Rect{X: r.Right() - 80, Y: y, W: 80, H: healthOpRowH - 2}, "Cancel",
-			uikit.BtnOpts{Style: uikit.BtnDanger, Tip: "Cancel\nTake " + op.Label + " off the queue."}) {
+		if a.kit().Button(HealthRemoveID(op.Slot), gfx.Rect{X: r.Right() - 80, Y: y, W: 80, H: healthOpRowH - 2}, a.shell.T("Cancel"),
+			uikit.BtnOpts{Style: uikit.BtnDanger, Tip: a.shell.T("Cancel\nTake ") + op.Label + a.shell.T(" off the queue.")}) {
 			a.shell.Enqueue(command.Command{Kind: command.RemoveOperation, Pawn: uint64(p.ID), Index: op.Slot})
 		}
 		y += healthOpRowH
@@ -681,14 +686,14 @@ func (a Tabs) openHealthPicker(id entity.EntityID) {
 		return PickerOptions(h)
 	}
 	a.kit().Push(uikit.Modal{
-		ID: HealthPickID, Title: "Add operation", W: healthPickW, H: healthPickH,
+		ID: HealthPickID, Title: a.shell.T("Add operation"), W: healthPickW, H: healthPickH,
 		Draw: func(r gfx.Rect) {
 			opts := options()
 			if sel >= len(opts) {
 				sel = -1
 			}
 			if len(opts) == 0 {
-				a.kit().Label(r.X, r.Y, "No operation fits this body.", uikit.DimText())
+				a.kit().Label(r.X, r.Y, a.shell.T("No operation fits this body."), uikit.DimText())
 				return
 			}
 			a.kit().List(HealthPickList, r, len(opts), &sel, uikit.ListSpec{
@@ -701,7 +706,7 @@ func (a Tabs) openHealthPicker(id entity.EntityID) {
 			})
 		},
 		Buttons: []uikit.ModalButton{
-			{ID: "health.addop.ok", Label: "Add", Style: uikit.BtnPrimary, Closes: true,
+			{ID: "health.addop.ok", Label: a.shell.T("Add"), Style: uikit.BtnPrimary, Closes: true,
 				Disabled: func() string {
 					if sel < 0 || sel >= len(options()) {
 						return "Pick an operation first."
@@ -717,7 +722,7 @@ func (a Tabs) openHealthPicker(id entity.EntityID) {
 					a.shell.Enqueue(command.Command{Kind: command.AddOperation, Pawn: uint64(id),
 						Index: int(o.Op), Build: uint8(o.Part), Stuff: uint8(o.Item)})
 				}},
-			{ID: "health.addop.cancel", Label: "Cancel", Closes: true},
+			{ID: "health.addop.cancel", Label: a.shell.T("Cancel"), Closes: true},
 		},
 	})
 }

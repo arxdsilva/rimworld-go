@@ -39,6 +39,7 @@ func (h gearHost) Image(key string) *ebiten.Image {
 
 func (h gearHost) ItemImage(kind string) *ebiten.Image { return h.Image(world.ItemSprite(kind)) }
 
+func (h gearHost) T(src string) string            { return h.p.shell.T(src) }
 func (h gearHost) Temp(tenths int) string         { return h.p.shell.Temp(tenths) }
 func (h gearHost) LayerOrder(worn []string) []int { return GearLayerOrder(worn) }
 func (h gearHost) LayerTag(name string) string    { return GearLayerTag(name) }

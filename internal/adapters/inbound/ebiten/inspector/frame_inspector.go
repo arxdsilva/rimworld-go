@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -97,8 +98,11 @@ func frameMinutes(left int) int {
 	return (left + per - 1) / per
 }
 
-func BuildInfo(f game.FrameView, w game.WorldView) frameInfo {
-	in := frameInfo{Title: FrameName(f) + " (blueprint)"}
+// BuildInfo is buildInfo in English.
+func BuildInfo(f game.FrameView, w game.WorldView) frameInfo { return buildInfo(lang.English{}, f, w) }
+
+func buildInfo(tr lang.Tr, f game.FrameView, w game.WorldView) frameInfo {
+	in := frameInfo{Title: FrameName(f) + tr.T(" (blueprint)")}
 	if frameStarted(f) {
 		in.Title = FrameName(f) + " (frame)"
 	}

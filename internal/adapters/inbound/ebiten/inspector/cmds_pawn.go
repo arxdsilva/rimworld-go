@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -48,13 +49,13 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 		return nil
 	}
 	draft := Button{
-		ID: ids.PawnDraft, Label: "Draft", Icon: "draft", Hotkey: input.Draft, Toggle: true, On: p.Drafted,
-		Desc: "Take direct control. A drafted colonist drops their work and obeys orders: right-click to move or attack. " +
-			"Undraft to send them back to their schedule.",
+		ID: ids.PawnDraft, Label: a.shell.T("Draft"), Icon: "draft", Hotkey: input.Draft, Toggle: true, On: p.Drafted,
+		Desc: a.shell.T("Take direct control. A drafted colonist drops their work and obeys orders: right-click to move or attack. ") +
+			a.shell.T("Undraft to send them back to their schedule."),
 	}
 	clear := Button{
-		ID: ids.PawnClearOrders, Label: "Clear orders", Icon: "clear_orders",
-		Desc: "Cancel the current order and everything queued behind it.",
+		ID: ids.PawnClearOrders, Label: a.shell.T("Clear orders"), Icon: "clear_orders",
+		Desc: a.shell.T("Cancel the current order and everything queued behind it."),
 	}
 	switch {
 	case p.Status != "alive":
@@ -70,11 +71,11 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 	}
 	out = append(out, a.Tabs().prisonerCommands(p)...) // prisoner_ui.go: Capture / Arrest
 	if p.Weapon != "" && p.Weapon != "fists" {         // nothing to drop when unarmed
-		out = append(out, dropWeaponCommand(p))
+		out = append(out, dropWeaponCommand(a.shell, p))
 	}
-	out = append(out, smokepopCommand(p)...)
+	out = append(out, smokepopCommand(a.shell, p)...)
 	out = append(out, threatCommand(p)...)
-	if c, ok := stripCommand(p); ok { // cmds_orders.go (AX-1)
+	if c, ok := stripCommand(a.shell, p); ok { // cmds_orders.go (AX-1)
 		out = append(out, c)
 	}
 	return out
@@ -85,9 +86,9 @@ const DropWeaponID = "cmd.pawn.dropweapon"
 
 // dropWeaponCommand is Drop weapon: the colonist puts the weapon down where
 // they stand (DropWeapon), to be picked up again by anyone.
-func dropWeaponCommand(p game.PawnView) Button {
-	c := Button{ID: DropWeaponID, Label: "Drop weapon", Icon: "equip",
-		Desc: "Drop weapon\nPut the wielded weapon down where this colonist stands.",
+func dropWeaponCommand(tr lang.Tr, p game.PawnView) Button {
+	c := Button{ID: DropWeaponID, Label: tr.T("Drop weapon"), Icon: "equip",
+		Desc: tr.T("Drop weapon\nPut the wielded weapon down where this colonist stands."),
 		Cmds: []command.Command{{Kind: command.DropWeapon, Pawn: uint64(p.ID)}}}
 	switch {
 	case p.Status != "alive":
@@ -108,8 +109,8 @@ func (a Pawn) bedRestCommand(p game.PawnView) (Button, bool) {
 	}
 	id := p.ID
 	return Button{
-		ID: "cmd.pawn.bedrest", Label: "Rest when hurt", Icon: "bed_rest", Toggle: true, On: p.RestWhenHurt,
-		Desc: "Lie in bed to heal when in pain, wounded or sick.",
+		ID: "cmd.pawn.bedrest", Label: a.shell.T("Rest when hurt"), Icon: "bed_rest", Toggle: true, On: p.RestWhenHurt,
+		Desc: a.shell.T("Lie in bed to heal when in pain, wounded or sick."),
 		Run: func() {
 			if pv, ok := a.pawnView(id); ok {
 				a.shell.Enqueue(command.Command{Kind: command.SetPawnBedRest, Target: uint64(id), Enabled: !pv.RestWhenHurt})
@@ -124,8 +125,8 @@ func (a Pawn) bedRestCommand(p game.PawnView) (Button, bool) {
 func (a Pawn) equipCommand(p game.PawnView) Button {
 	id := p.ID
 	c := Button{
-		ID: "cmd.pawn.equip", Label: "Equip", Icon: "equip",
-		Desc: "Equip nearby\nPick up a weapon or put on a garment lying within reach. Right-click, or use the arrow, to choose which.",
+		ID: "cmd.pawn.equip", Label: a.shell.T("Equip"), Icon: "equip",
+		Desc: a.shell.T("Equip nearby\nPick up a weapon or put on a garment lying within reach. Right-click, or use the arrow, to choose which."),
 		Options: func() []Option {
 			pv, ok := a.pawnView(id)
 			if !ok {
@@ -160,7 +161,7 @@ func (a Pawn) PawnPane(id entity.EntityID) Spec {
 	return Spec{
 		Title:    a.shell.PawnLabel(p),
 		Subtitle: PawnSubtitle(p),
-		Bars:     pawnBars(p),
+		Bars:     pawnBars(a.shell, p),
 		Chips:    a.pawnChips(p),
 		Lines:    a.PawnLines(p),
 		Tabs:     a.pawnTabs(p),
@@ -194,12 +195,12 @@ func PawnSubtitle(p game.PawnView) string {
 }
 
 // pawnBars are the pane's compact bars: health, mood, food and rest.
-func pawnBars(p game.PawnView) []Bar {
+func pawnBars(tr lang.Tr, p game.PawnView) []Bar {
 	return []Bar{
-		{Label: "Health", Pct: barPct(p.Health), Color: HealthColor(p.Health)},
-		{Label: "Mood", Pct: barPct(p.Mood), Color: MoodColor(p.Mood)},
-		{Label: "Food", Pct: barPct(p.Hunger), Color: needColor(p.Hunger)},
-		{Label: "Rest", Pct: barPct(p.Rest), Color: needColor(p.Rest)},
+		{Label: tr.T("Health"), Pct: barPct(p.Health), Color: HealthColor(p.Health)},
+		{Label: tr.T("Mood"), Pct: barPct(p.Mood), Color: MoodColor(p.Mood)},
+		{Label: tr.T("Food"), Pct: barPct(p.Hunger), Color: needColor(p.Hunger)},
+		{Label: tr.T("Rest"), Pct: barPct(p.Rest), Color: needColor(p.Rest)},
 	}
 }
 
@@ -216,8 +217,8 @@ func (a Pawn) pawnChips(p game.PawnView) []Chip {
 	if !p.Prisoner {
 		out = append(out, Chip{
 			ID:    ids.TabSchedule,
-			Label: "Schedule: " + p.Activity.String(),
-			Tip:   "Schedule\nWhat " + a.shell.PawnLabel(p) + " is scheduled to do this hour. Click to open the Schedule tab.",
+			Label: a.shell.T("Schedule: ") + p.Activity.String(),
+			Tip:   a.shell.T("Schedule\nWhat ") + a.shell.PawnLabel(p) + a.shell.T(" is scheduled to do this hour. Click to open the Schedule tab."),
 		})
 	}
 	return out
@@ -355,27 +356,27 @@ func wearingSummary(p game.PawnView) string {
 // Prisoner declare widget-kit bodies.
 func (a Pawn) pawnTabs(p game.PawnView) []Tab {
 	id := p.ID
-	bio := Tab{ID: "inspector.bio", Label: "Bio", WantW: bioWantW, WantH: bioWantH,
+	bio := Tab{ID: "inspector.bio", Label: a.shell.T("Bio"), WantW: bioWantW, WantH: bioWantH,
 		Declare: func(r gfx.Rect) { a.Tabs().bioTab(id, r) }}
 	if !HasBio(p) {
 		bio.Disabled, bio.Reason = true, "No biography for this colonist"
 	}
-	gearTabs := []Tab{{ID: "inspector.gear", Label: "Gear", WantW: gear.WantW, WantH: gear.WantH,
+	gearTabs := []Tab{{ID: "inspector.gear", Label: a.shell.T("Gear"), WantW: gear.WantW, WantH: gear.WantH,
 		Declare: func(r gfx.Rect) { a.Tabs().gearTabBody(id, r) }}} // inspector/gear (GEAR-2)
 	if a.Tabs().isPrisoner(id) { // GEAR-008: a prisoner keeps Gear beside Prisoner
-		gearTabs = append(gearTabs, Tab{ID: PrisonerTabID, Label: "Prisoner", WantW: prisonerWantW, WantH: prisonerWantH,
+		gearTabs = append(gearTabs, Tab{ID: PrisonerTabID, Label: a.shell.T("Prisoner"), WantW: prisonerWantW, WantH: prisonerWantH,
 			Declare: func(r gfx.Rect) { a.Tabs().prisonerTabBody(id, r) }})
 	}
 	return append([]Tab{
-		{ID: "inspector.needs", Label: "Needs", WantW: needsWantW, WantH: needsWantH,
+		{ID: "inspector.needs", Label: a.shell.T("Needs"), WantW: needsWantW, WantH: needsWantH,
 			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawNeedsTab(screen, id, r) }},
 		bio,
-		{ID: "inspector.health", Label: "Health", WantW: healthWantW, WantH: healthWantH,
+		{ID: "inspector.health", Label: a.shell.T("Health"), WantW: healthWantW, WantH: healthWantH,
 			Declare: func(r gfx.Rect) { a.Tabs().kitTabBody(id, "health", r) }},
-		{ID: "inspector.social", Label: "Social", WantW: socialWantW, WantH: socialWantH,
+		{ID: "inspector.social", Label: a.shell.T("Social"), WantW: socialWantW, WantH: socialWantH,
 			Declare: func(r gfx.Rect) { a.Tabs().kitTabBody(id, "social", r) }},
 	}, append(gearTabs,
-		Tab{ID: "inspector.log", Label: "Log", WantW: logWantW, WantH: logWantH,
+		Tab{ID: "inspector.log", Label: a.shell.T("Log"), WantW: logWantW, WantH: logWantH,
 			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawPawnLog(screen, id, r) }})...)
 }
 

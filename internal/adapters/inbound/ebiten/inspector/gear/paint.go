@@ -7,20 +7,21 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 )
 
 // paintRow draws one row into rr (dst is clipped to the scroll view): a
 // heading with its rule, a line, a charge bar, or an item with its sprite,
 // label, facts and tainted mark. textW is the room left of its buttons.
-func paintRow(dst *ebiten.Image, r Row, rr gfx.Rect, img *ebiten.Image, textW float32, warn color.RGBA) {
+func paintRow(tr lang.Tr, dst *ebiten.Image, r Row, rr gfx.Rect, img *ebiten.Image, textW float32, warn color.RGBA) {
 	x, y := float64(rr.X), float64(rr.Y)
 	switch {
 	case r.kind == rowHead:
 		gfx.Text(dst, r.Label, x, y+3, gfx.WithColor(gfx.Label, uikit.Heading))
 		uikit.FillRect(dst, gfx.Rect{X: rr.X, Y: rr.Bottom() - 2, W: rr.W, H: 1}, uikit.BtnBorder)
 	case r.kind == rowItem:
-		paintItem(dst, r, rr, img, textW, warn)
+		paintItem(tr, dst, r, rr, img, textW, warn)
 	case r.Bar > 0:
 		gfx.Text(dst, fmt.Sprintf("%s  %d%%", r.Label, r.Bar), x, y+2, gfx.Small)
 		const lw = 100
@@ -39,7 +40,7 @@ func paintRow(dst *ebiten.Image, r Row, rr gfx.Rect, img *ebiten.Image, textW fl
 	}
 }
 
-func paintItem(dst *ebiten.Image, r Row, rr gfx.Rect, img *ebiten.Image, textW float32, warn color.RGBA) {
+func paintItem(tr lang.Tr, dst *ebiten.Image, r Row, rr gfx.Rect, img *ebiten.Image, textW float32, warn color.RGBA) {
 	if img != nil {
 		gfx.Icon(dst, img, float64(rr.X)+1, float64(rr.Y+(rr.H-iconSz)/2), iconSz)
 	}
@@ -50,7 +51,7 @@ func paintItem(dst *ebiten.Image, r Row, rr gfx.Rect, img *ebiten.Image, textW f
 	dim := gfx.WithColor(gfx.Small, uikit.TextDim)
 	facts := r.Facts
 	if r.Forced {
-		facts = joinFacts(facts, "locked")
+		facts = joinFacts(facts, tr.T("locked"))
 	}
 	if facts != "" {
 		facts = gfx.Ellipsize(facts, dim, float64(textW))
@@ -61,7 +62,7 @@ func paintItem(dst *ebiten.Image, r Row, rr gfx.Rect, img *ebiten.Image, textW f
 		if facts != "" {
 			fx += float64(gfx.TextW(facts+"   ", dim))
 		}
-		gfx.Text(dst, "tainted", fx, ty, gfx.WithColor(gfx.Small, warn))
+		gfx.Text(dst, tr.T("tainted"), fx, ty, gfx.WithColor(gfx.Small, warn))
 	}
 }
 

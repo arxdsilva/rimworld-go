@@ -1,6 +1,7 @@
 package inspector
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 	"testing"
 
@@ -51,11 +52,11 @@ func TestDefenceCommandsToggle(t *testing.T) {
 
 func TestDropWeaponCommand(t *testing.T) {
 	t.Parallel()
-	armed := dropWeaponCommand(game.PawnView{ID: 4, Status: "alive", Weapon: "rifle"})
+	armed := dropWeaponCommand(lang.English{}, game.PawnView{ID: 4, Status: "alive", Weapon: "rifle"})
 	if armed.Disabled || len(armed.Cmds) != 1 || armed.Cmds[0].Kind != command.DropWeapon || armed.Cmds[0].Pawn != 4 {
 		t.Errorf("armed = %+v", armed)
 	}
-	if c := dropWeaponCommand(game.PawnView{Status: "alive", Weapon: "fists"}); !c.Disabled {
+	if c := dropWeaponCommand(lang.English{}, game.PawnView{Status: "alive", Weapon: "fists"}); !c.Disabled {
 		t.Errorf("unarmed should be disabled: %+v", c)
 	}
 }

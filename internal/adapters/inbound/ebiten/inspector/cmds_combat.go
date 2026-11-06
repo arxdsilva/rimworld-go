@@ -1,7 +1,7 @@
 package inspector
 
 import (
-	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
@@ -28,16 +28,16 @@ func (a Pawn) combatCommands(p game.PawnView) []Button {
 	}
 	id := p.ID
 	out := []Button{
-		{ID: FireAtWillID, Label: "Fire at will", Icon: "order_attack", Toggle: true, On: p.FireAtWill,
-			Desc: "Shoot at hostiles in range without being ordered to. Turn it off to fire only on your orders.",
+		{ID: FireAtWillID, Label: a.shell.T("Fire at will"), Icon: "order_attack", Toggle: true, On: p.FireAtWill,
+			Desc: a.shell.T("Shoot at hostiles in range without being ordered to. Turn it off to fire only on your orders."),
 			Cmds: []command.Command{{Kind: command.SetFireAtWill, Pawn: uint64(id), Enabled: !p.FireAtWill}}},
-		{ID: HoldPositionID, Label: "Hold position", Icon: "draft", Toggle: true, On: p.HoldPosition,
-			Desc: "Stay on this tile and do not chase targets.",
+		{ID: HoldPositionID, Label: a.shell.T("Hold position"), Icon: "draft", Toggle: true, On: p.HoldPosition,
+			Desc: a.shell.T("Stay on this tile and do not chase targets."),
 			Cmds: []command.Command{{Kind: command.SetHoldPosition, Pawn: uint64(id), Enabled: !p.HoldPosition}}},
 	}
 	if p.Grenades > 0 {
-		out = append(out, Button{ID: ThrowGrenadeID, Label: "Throw grenade", Icon: "order_attack",
-			Desc: fmt.Sprintf("Click a tile on the map to throw a grenade there (%d carried). Esc or a right click cancels.", p.Grenades),
+		out = append(out, Button{ID: ThrowGrenadeID, Label: a.shell.T("Throw grenade"), Icon: "order_attack",
+			Desc: a.shell.Tf(a.shell.T("Click a tile on the map to throw a grenade there (%d carried). Esc or a right click cancels."), p.Grenades),
 			Run:  func() { a.shell.Do(ports.AimGrenade{Pawn: id}) }})
 	}
 	return out
@@ -61,7 +61,9 @@ var threatResponses = [...]struct{ name, tip string }{
 
 // threatCommand is the colonist's Threat response button: each click moves
 // to the next response (default, flee, attack, ignore). Colonists only.
-func threatCommand(p game.PawnView) []Button {
+func threatCommand(p game.PawnView) []Button { return threatCommandIn(lang.English{}, p) }
+
+func threatCommandIn(tr lang.Tr, p game.PawnView) []Button {
 	if p.Hostile || p.Prisoner || p.Visitor || p.Status != "alive" {
 		return nil
 	}
@@ -72,18 +74,18 @@ func threatCommand(p game.PawnView) []Button {
 		}
 	}
 	next := (cur + 1) % len(threatResponses)
-	return []Button{{ID: ThreatID, Label: "Threat: " + threatResponses[cur].name, Icon: "order_attack",
-		Desc: "Threat response: " + threatResponses[cur].tip + "\nClick for " + threatResponses[next].name + ": " + threatResponses[next].tip,
+	return []Button{{ID: ThreatID, Label: tr.T("Threat: ") + threatResponses[cur].name, Icon: "order_attack",
+		Desc: tr.T("Threat response: ") + threatResponses[cur].tip + tr.T("\nClick for ") + threatResponses[next].name + ": " + threatResponses[next].tip,
 		Cmds: []command.Command{{Kind: command.SetThreatResponse, Pawn: uint64(p.ID), X: next}}}}
 }
 
 // smokepopCommand is Use smokepop, for a colonist wearing a pack: the
 // colonist sets it off where it stands.
-func smokepopCommand(p game.PawnView) []Button {
+func smokepopCommand(tr lang.Tr, p game.PawnView) []Button {
 	if p.Smokepops <= 0 || p.Hostile || p.Status != "alive" {
 		return nil
 	}
-	return []Button{{ID: SmokepopID, Label: "Use smokepop", Icon: "order_attack",
-		Desc: fmt.Sprintf("Smokepop\nPop a smokepop pack where this colonist stands: the cloud blocks shots (%d left).", p.Smokepops),
+	return []Button{{ID: SmokepopID, Label: tr.T("Use smokepop"), Icon: "order_attack",
+		Desc: lang.Tf(tr, "Smokepop\nPop a smokepop pack where this colonist stands: the cloud blocks shots (%d left).", p.Smokepops),
 		Cmds: []command.Command{{Kind: command.PopSmokepop, Pawn: uint64(p.ID)}}}}
 }

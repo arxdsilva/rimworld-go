@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -31,12 +32,12 @@ const BenchCleanID = "cmd.bench_clean"
 
 // benchCleanCommands is CSE-019: with the Habits rule on, each bench has a
 // switch for whether its room gets a tidy before its bills.
-func benchCleanCommands(rules gameplay.Settings, b game.BuildingView) []Button {
+func benchCleanCommands(tr lang.Tr, rules gameplay.Settings, b game.BuildingView) []Button {
 	if !b.Bench || !rules.On(gameplay.BenchCleanToggle) {
 		return nil
 	}
-	return []Button{{ID: BenchCleanID, Label: "Tidy before bills", Icon: "home", Toggle: true, On: !b.CleanOff,
-		Desc: "On: colonists sweep this room before working here. Off: they get straight to the bill.",
+	return []Button{{ID: BenchCleanID, Label: tr.T("Tidy before bills"), Icon: "home", Toggle: true, On: !b.CleanOff,
+		Desc: tr.T("On: colonists sweep this room before working here. Off: they get straight to the bill."),
 		Cmds: []command.Command{{Kind: command.SetBenchClean, Target: uint64(b.ID), Enabled: b.CleanOff}}}}
 }
 
@@ -78,7 +79,7 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		return nil
 	}
 	if b.Hostile {
-		return enemyCommands(b, a.shell.Hostiles())
+		return enemyCommands(a.shell, b, a.shell.Hostiles())
 	}
 	var out []Button
 	if !isPenMarker(b) {
@@ -86,34 +87,34 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		out = append(out, a.bedCommands(b)...)
 		out = append(out, a.CasketCommands(b)...)
 		out = append(out, a.defenceCommands(b)...) // cmds_defence.go (DEF-3)
-		out = append(out, benchCleanCommands(a.shell.World().Gameplay, b)...)
+		out = append(out, benchCleanCommands(a.shell, a.shell.World().Gameplay, b)...)
 		if forbiddable(b) {
-			out = append(out, forbidCommand(b))
+			out = append(out, forbidCommand(a.shell, b))
 		}
 		out = append(out, a.powerCommandsIn(a.env().Units, b)...) // cmds_power.go (PLAY-021)
 		out = append(out, ventCommands(b)...)                     // temp_ui.go (TEMP-5)
-		out = append(out, potCommands(b)...)                      // ax2.go (AX-2)
+		out = append(out, potCommands(a.shell, b)...)             // ax2.go (AX-2)
 		out = append(out, a.MoveCommands(b)...)
-		out = append(out, orderCommands(a, b)...)           // cmds_orders.go (AX-1): uninstall, open a grave
-		out = append(out, shipCommands(a, b)...)            // ax8.go (AX-8): reactor, sleeper, launch
-		out = append(out, TravelCommands(a.shell.Do, b)...) // ax9.go (AX-9): casket, pods, scanner
+		out = append(out, orderCommands(a, b)...)                    // cmds_orders.go (AX-1): uninstall, open a grave
+		out = append(out, shipCommands(a, b)...)                     // ax8.go (AX-8): reactor, sleeper, launch
+		out = append(out, TravelCommands(a.shell, a.shell.Do, b)...) // ax9.go (AX-9): casket, pods, scanner
 	}
 	if !b.Deconstruct {
-		out = append(out, Button{ID: "bldg.deconstruct", Label: "Deconstruct", Icon: "order_deconstruct",
-			Desc: "Have a colonist take this building down."})
+		out = append(out, Button{ID: "bldg.deconstruct", Label: a.shell.T("Deconstruct"), Icon: "order_deconstruct",
+			Desc: a.shell.T("Have a colonist take this building down.")})
 	}
 	return out
 }
 
 // moveCommands are Move, Copy and, while a move is pending, Cancel move.
 func (a Building) MoveCommands(b game.BuildingView) []Button {
-	mv := Button{ID: "bldg.move", Label: "Move", Icon: "move", Single: true,
-		Desc: "Pick a new spot; it is reinstalled there, keeping its bills, fuel and owners."}
+	mv := Button{ID: "bldg.move", Label: a.shell.T("Move"), Icon: "move", Single: true,
+		Desc: a.shell.T("Pick a new spot; it is reinstalled there, keeping its bills, fuel and owners.")}
 	if movable, _ := a.shell.MoveState(b); !movable {
 		mv.Disabled, mv.Reason = true, "can't be moved"
 	}
-	cp := Button{ID: "bldg.copy", Label: "Copy", Icon: "copy", Single: true,
-		Desc: "Open the Architect with this building's tool, material and facing."}
+	cp := Button{ID: "bldg.copy", Label: a.shell.T("Copy"), Icon: "copy", Single: true,
+		Desc: a.shell.T("Open the Architect with this building's tool, material and facing.")}
 	if p := a.shell.LockedBy("build:" + b.Kind); p != "" {
 		cp.Disabled, cp.Reason = true, "needs research: "+p
 	} else if !a.shell.Buildable(b.Kind) {
@@ -121,8 +122,8 @@ func (a Building) MoveCommands(b game.BuildingView) []Button {
 	}
 	out := []Button{mv, cp}
 	if b.MovingTo != nil {
-		out = append(out, Button{ID: "bldg.cancelmove", Label: "Cancel move", Icon: "order_cancel",
-			Desc: "Leave it where it stands."})
+		out = append(out, Button{ID: "bldg.cancelmove", Label: a.shell.T("Cancel move"), Icon: "order_cancel",
+			Desc: a.shell.T("Leave it where it stands.")})
 	}
 	return out
 }
@@ -135,7 +136,7 @@ func (a Building) BuildingPane(id entity.EntityID) Spec {
 	}
 	p := Spec{Title: BuildingTitle(b), Subtitle: fmt.Sprintf("tile (%d, %d)", b.X, b.Y), Close: "bldg.close"}
 	if b.HPPct > 0 {
-		p.Bars = append(p.Bars, Bar{Label: "Health", Pct: bldgPct(b.HPPct), Color: healthBarColor(b.HPPct)})
+		p.Bars = append(p.Bars, Bar{Label: a.shell.T("Health"), Pct: bldgPct(b.HPPct), Color: healthBarColor(b.HPPct)})
 	}
 	if isPenMarker(b) {
 		p.Title = "Pen marker"
@@ -159,12 +160,12 @@ func (a Building) BuildingPane(id entity.EntityID) Spec {
 func (a Building) buildingBars(b game.BuildingView) []Bar {
 	var out []Bar
 	if b.Fuel {
-		out = append(out, Bar{Label: "Fuel", Pct: bldgPct(b.FuelPct), Color: uikit.Warning})
+		out = append(out, Bar{Label: a.shell.T("Fuel"), Pct: bldgPct(b.FuelPct), Color: uikit.Warning})
 	}
 	if IsTrough(b) && b.TroughCap > 0 {
-		out = append(out, Bar{Label: "Feed", Pct: bldgPct(b.TroughFill * 100 / b.TroughCap), Color: uikit.Accent})
+		out = append(out, Bar{Label: a.shell.T("Feed"), Pct: bldgPct(b.TroughFill * 100 / b.TroughCap), Color: uikit.Accent})
 	}
-	return append(out, powerBars(b)...)
+	return append(out, powerBars(a.shell, b)...)
 }
 
 // buildingLines are the status lines: what the legacy panel said, one per
@@ -238,8 +239,8 @@ func (a Thing) FrameCommands(id entity.EntityID) []Button {
 	if _, ok := a.frameView(id); !ok {
 		return nil
 	}
-	return []Button{{ID: "frame.cancel", Label: "Cancel", Icon: "order_cancel",
-		Desc: "Cancel this blueprint."}}
+	return []Button{{ID: "frame.cancel", Label: a.shell.T("Cancel"), Icon: "order_cancel",
+		Desc: a.shell.T("Cancel this blueprint.")}}
 }
 
 // framePane is blueprint id's pane: what is being built, its status,
@@ -249,11 +250,11 @@ func (a Thing) FramePane(id entity.EntityID) Spec {
 	if !ok {
 		return Spec{}
 	}
-	in := BuildInfo(f, a.shell.World())
+	in := buildInfo(a.shell, f, a.shell.World())
 	p := Spec{Title: in.Title, Subtitle: in.Foot, Close: "frame.close"}
 	p.Lines = append(p.Lines, "Status: "+in.Status)
 	if in.Material != "" {
-		p.Bars = append(p.Bars, Bar{Label: "Materials", Pct: bldgFracPct(in.MatFrac), Color: uikit.Accent})
+		p.Bars = append(p.Bars, Bar{Label: a.shell.T("Materials"), Pct: bldgFracPct(in.MatFrac), Color: uikit.Accent})
 		p.Lines = append(p.Lines, "Materials  "+in.Material)
 		if in.Stock != "" {
 			p.Lines = append(p.Lines, "In stock  "+in.Stock)
@@ -261,7 +262,7 @@ func (a Thing) FramePane(id entity.EntityID) Spec {
 	}
 	p.Lines = append(p.Lines, frameExtraLines(f)...) // ax4.go (AX-4): secondary materials
 	if in.Work != "" {
-		p.Bars = append(p.Bars, Bar{Label: "Work", Pct: bldgFracPct(in.WorkFrac), Color: uikit.Good})
+		p.Bars = append(p.Bars, Bar{Label: a.shell.T("Work"), Pct: bldgFracPct(in.WorkFrac), Color: uikit.Good})
 		p.Lines = append(p.Lines, "Work  "+in.Work)
 	}
 	p.Lines = append(p.Lines, in.People)

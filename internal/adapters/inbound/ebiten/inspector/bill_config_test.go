@@ -1,6 +1,7 @@
 package inspector
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 	"strings"
 	"testing"
@@ -84,7 +85,7 @@ func TestBillsBodyShowsWorkerProgressAndReason(t *testing.T) {
 		}
 		return BillExtra{}
 	}
-	body := BillsBodyWith(b, 600, extra)
+	body := BillsBodyWith(lang.English{}, b, 600, extra)
 	if !strings.Contains(body.Labels[0].Text, "[Ada 40%]") {
 		t.Errorf("row 0 = %q", body.Labels[0].Text)
 	}
@@ -254,7 +255,7 @@ func TestBedStatsLinesAndForbidToggle(t *testing.T) {
 	if bedStatLines(game.BuildingView{Kind: "wall"}) != nil {
 		t.Error("a wall has no bed stats")
 	}
-	fb := forbidCommand(bed)
+	fb := forbidCommand(lang.English{}, bed)
 	if fb.On || len(fb.Cmds) != 1 {
 		t.Fatalf("forbid button = %+v", fb)
 	}
@@ -262,7 +263,7 @@ func TestBedStatsLinesAndForbidToggle(t *testing.T) {
 		t.Errorf("forbid command = %+v", c)
 	}
 	bed.Forbidden = true
-	if fb = forbidCommand(bed); !fb.On || fb.Cmds[0].Enabled {
+	if fb = forbidCommand(lang.English{}, bed); !fb.On || fb.Cmds[0].Enabled {
 		t.Errorf("a forbidden building's toggle allows it: %+v", fb)
 	}
 	found := false

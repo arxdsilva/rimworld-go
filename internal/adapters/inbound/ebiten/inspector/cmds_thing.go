@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 	"strings"
 
@@ -249,15 +250,15 @@ func (a Animal) AnimalPane(id entity.EntityID) Spec {
 	}
 	sp := Spec{Title: animalPaneTitle(an), Subtitle: animalSubtitle(an), Close: "animal.close",
 		Lines: a.AnimalPaneLines(an)}
-	sp.Bars = []Bar{{Label: "Health", Pct: an.Health, Color: thingBarColor(an.Health)}}
+	sp.Bars = []Bar{{Label: a.shell.T("Health"), Pct: an.Health, Color: thingBarColor(an.Health)}}
 	if AnimalHasNeeds(an) {
 		sp.Bars = append(sp.Bars,
-			Bar{Label: "Food", Pct: an.Food, Color: uikit.Accent},
-			Bar{Label: "Rest", Pct: an.Rest, Color: uikit.LetterInfo})
+			Bar{Label: a.shell.T("Food"), Pct: an.Food, Color: uikit.Accent},
+			Bar{Label: a.shell.T("Rest"), Pct: an.Rest, Color: uikit.LetterInfo})
 	}
 	if an.Tame && !an.Penned {
 		label, tip := a.shell.AreaLabel(an.AreaRef)
-		sp.Chips = []Chip{{ID: "animal.area", Label: "Area: " + label, Tip: tip}}
+		sp.Chips = []Chip{{ID: "animal.area", Label: a.shell.T("Area: ") + label, Tip: tip}}
 	}
 	sp.Tabs = a.animalTabs(an)
 	return sp
@@ -278,10 +279,10 @@ func (a Animal) AnimalCommands(id entity.EntityID) []Button {
 	if !ok {
 		return nil
 	}
-	out := []Button{animalHuntCmd(an)}
+	out := []Button{animalHuntCmd(a.shell, an)}
 	if an.Tame {
-		out = append(out, Button{ID: "animal.release", Label: "Release", Icon: "release",
-			Desc: "Turn it loose. It goes wild again, and a bonded colonist will mind."})
+		out = append(out, Button{ID: "animal.release", Label: a.shell.T("Release"), Icon: "release",
+			Desc: a.shell.T("Turn it loose. It goes wild again, and a bonded colonist will mind.")})
 		out = append(out, a.animalMasterCmd(an))
 		out = append(out, a.animalCareCmd(an)) // animal_inspector.go (MED-09)
 		for _, t := range animalTrainable(an) {
@@ -296,9 +297,9 @@ func (a Animal) AnimalCommands(id entity.EntityID) []Button {
 }
 
 // animalHuntCmd is Hunt (wild), Slaughter (tame) or their cancel.
-func animalHuntCmd(an game.AnimalView) Button {
-	c := Button{ID: "animal.hunt", Label: "Hunt", Icon: "order_hunt", Toggle: true, On: an.Designated,
-		Desc: "Mark it for hunting. A colonist kills it and the meat is hauled home."}
+func animalHuntCmd(tr lang.Tr, an game.AnimalView) Button {
+	c := Button{ID: "animal.hunt", Label: tr.T("Hunt"), Icon: "order_hunt", Toggle: true, On: an.Designated,
+		Desc: tr.T("Mark it for hunting. A colonist kills it and the meat is hauled home.")}
 	switch {
 	case an.Designated:
 		c.Label, c.Desc = "Cancel hunt", "Take the mark off: nobody will kill it."
@@ -314,8 +315,8 @@ func animalHuntCmd(an game.AnimalView) Button {
 // animalTameCmd is Tame or Cancel tame; a species that is never tamed, or
 // one already marked for hunting, says why it is off.
 func (a Animal) animalTameCmd(an game.AnimalView) Button {
-	c := Button{ID: "animal.tame", Label: "Tame", Icon: "order_tame", Toggle: true, On: an.TameMark,
-		Desc: "Mark it for taming. A colonist keeps trying until it trusts the colony."}
+	c := Button{ID: "animal.tame", Label: a.shell.T("Tame"), Icon: "order_tame", Toggle: true, On: an.TameMark,
+		Desc: a.shell.T("Mark it for taming. A colonist keeps trying until it trusts the colony.")}
 	row, known := a.shell.WildRow(an.Species)
 	if known && row.TameChance > 0 {
 		c.Desc = fmt.Sprintf("Mark it for taming. A colonist keeps trying until it trusts the colony (about %d%% per attempt).", row.TameChance)
@@ -342,7 +343,7 @@ func (a Animal) animalMasterOrders(an game.AnimalView) []game.OrderOption {
 		}
 		opts = append(opts, o)
 	}
-	return append(opts, game.OrderOption{Label: "No master", Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
+	return append(opts, game.OrderOption{Label: a.shell.T("No master"), Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
 }
 
 // animalMasterCmd picks the animal's master. Its options are the colonists;
@@ -358,7 +359,7 @@ func (a Animal) animalMasterCmd(an game.AnimalView) Button {
 	if an.Master != "" {
 		desc += " Now: " + an.Master + "."
 	}
-	return Button{ID: "cmd.animal.master", Label: "Master", Desc: desc,
+	return Button{ID: "cmd.animal.master", Label: a.shell.T("Master"), Desc: desc,
 		Options: func() []Option { return opts },
 		Run: func() { // listed above the cursor, like the options menu
 			mx, my := a.shell.Cursor()
@@ -378,11 +379,11 @@ func animalTrainCmd(t game.AnimalTrainingView) Button {
 // animalTabs are the animal's pane tabs: its Log and, for a tame one that
 // can learn, Training.
 func (a Animal) animalTabs(an game.AnimalView) []Tab {
-	tabs := []Tab{{ID: "inspector.log", Label: "Log", WantW: animalTabW, WantH: animalLogTabH,
+	tabs := []Tab{{ID: "inspector.log", Label: a.shell.T("Log"), WantW: animalTabW, WantH: animalLogTabH,
 		Declare: func(r gfx.Rect) { a.declareAnimalLog(an, r) },
 		Draw:    func(screen *ebiten.Image, r gfx.Rect) { a.drawAnimalLogTab(screen, an, r) }}}
 	if an.Tame && len(animalTrainable(an)) > 0 {
-		tabs = append(tabs, Tab{ID: "inspector.training", Label: "Training", WantW: animalTabW,
+		tabs = append(tabs, Tab{ID: "inspector.training", Label: a.shell.T("Training"), WantW: animalTabW,
 			WantH: animalTrainingTabH(an),
 			Draw:  func(screen *ebiten.Image, r gfx.Rect) { a.drawAnimalTrainingTab(screen, an, r) }})
 	}
@@ -402,7 +403,7 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 		lines = append(lines[:1:1], append([]string{rot}, lines[1:]...)...)
 	}
 	title := gear.QualifiedTitle(ItemTitle(it), it.Stuff, it.Quality)
-	lines = append(gear.ItemFactLines(it), lines...)
+	lines = append(gear.ItemFactLines(a.shell, it), lines...)
 	if ln := CrateLine(it); ln != "" { // cmds_orders.go (AX-1)
 		lines = append(lines, ln)
 	}
@@ -435,16 +436,16 @@ func (a Thing) ItemCommands(id entity.EntityID) []Button {
 	if !ok {
 		return nil
 	}
-	forbid := Button{ID: "item.forbid", Label: "Forbid", Icon: "order_forbid", Toggle: true, On: it.Forbidden,
-		Hotkey: input.Forbid, Desc: "Colonists leave it alone: no hauling, eating or using."}
+	forbid := Button{ID: "item.forbid", Label: a.shell.T("Forbid"), Icon: "order_forbid", Toggle: true, On: it.Forbidden,
+		Hotkey: input.Forbid, Desc: a.shell.T("Colonists leave it alone: no hauling, eating or using.")}
 	if it.Forbidden {
 		forbid.Label, forbid.Icon = "Allow", "order_allow"
 		forbid.Desc = "Let colonists haul, eat and use it again."
 	}
 	out := []Button{forbid}
 	if it.Unclaimed {
-		mark := Button{ID: "item.haulmark", Label: "Mark for hauling", Icon: "order_haul", Toggle: true, On: it.HaulMarked,
-			Desc: "Colonists will haul it to a stockpile. Marking a forbidden stack allows it."}
+		mark := Button{ID: "item.haulmark", Label: a.shell.T("Mark for hauling"), Icon: "order_haul", Toggle: true, On: it.HaulMarked,
+			Desc: a.shell.T("Colonists will haul it to a stockpile. Marking a forbidden stack allows it.")}
 		if it.HaulMarked {
 			mark.Label, mark.Desc = "Unmark", "Colonists leave it where it lies."
 		}
@@ -475,7 +476,7 @@ func (a Thing) PlantPane(id entity.EntityID) Spec {
 		col = uikit.Warning // a roof, a lamp or a fire is needed
 	}
 	return Spec{Title: PlantTitle(p), Subtitle: plantSubtitle(p), Close: "plant.close",
-		Bars:  []Bar{{Label: "Growth", Pct: p.Growth, Color: col}},
+		Bars:  []Bar{{Label: a.shell.T("Growth"), Pct: p.Growth, Color: col}},
 		Lines: PlantPaneLines(p, gv)}
 }
 
@@ -488,8 +489,8 @@ func (a Thing) PlantCommands(id entity.EntityID) []Button {
 	}
 	var out []Button
 	if !isTree(p) {
-		h := Button{ID: "plant.harvest", Label: "Harvest", Icon: "order_harvest", Toggle: true, On: p.Designated,
-			Desc: "Mark it for harvest. A colonist picks it when it is ripe."}
+		h := Button{ID: "plant.harvest", Label: a.shell.T("Harvest"), Icon: "order_harvest", Toggle: true, On: p.Designated,
+			Desc: a.shell.T("Mark it for harvest. A colonist picks it when it is ripe.")}
 		switch {
 		case p.Designated:
 			h.Label, h.Desc = "Cancel harvest", "Take the mark off: nobody will pick it."
@@ -498,8 +499,8 @@ func (a Thing) PlantCommands(id entity.EntityID) []Button {
 		}
 		out = append(out, h)
 	}
-	cut := Button{ID: "plant.cut", Label: "Cut", Icon: "order_cut", Toggle: true, On: p.Cut,
-		Desc: "Mark it for cutting. A colonist cuts it down."}
+	cut := Button{ID: "plant.cut", Label: a.shell.T("Cut"), Icon: "order_cut", Toggle: true, On: p.Cut,
+		Desc: a.shell.T("Mark it for cutting. A colonist cuts it down.")}
 	if isTree(p) {
 		cut.Label, cut.Desc = "Chop", "Mark it for chopping. A colonist fells it for wood."
 	}
@@ -509,8 +510,8 @@ func (a Thing) PlantCommands(id entity.EntityID) []Button {
 	out = append(out, cut)
 	if p.Blighted || len(CutBlightCmds(a.shell.World().Plants)) > 0 {
 		cmds := CutBlightCmds(a.shell.World().Plants)
-		b := Button{ID: CutBlightID, Label: "Cut all blight", Icon: "order_cut", Cmds: cmds,
-			Desc: "Mark every blighted plant on the map for cutting, to stop the spread."}
+		b := Button{ID: CutBlightID, Label: a.shell.T("Cut all blight"), Icon: "order_cut", Cmds: cmds,
+			Desc: a.shell.T("Mark every blighted plant on the map for cutting, to stop the spread.")}
 		if len(cmds) == 0 {
 			b.Disabled, b.Reason = true, "no blighted plants left to mark"
 		}

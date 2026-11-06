@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"reflect"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 	"strings"
 
@@ -129,17 +130,17 @@ func billIngredientCmd(b game.BuildingView, i int, item uint8, allowed bool) com
 var billStoreLabels = [...]string{"Best stockpile", "Drop on floor", "Specific stockpile"}
 
 // zoneLabel names stockpile z.
-func zoneLabel(z game.ZoneView) string {
+func zoneLabel(tr lang.Tr, z game.ZoneView) string {
 	if z.Name != "" {
 		return z.Name
 	}
 	switch z.Kind {
 	case game.ZoneShelf:
-		return "Shelf " + strconv.Itoa(int(z.ID))
+		return tr.T("Shelf ") + strconv.Itoa(int(z.ID))
 	case game.ZoneDump:
-		return "Dumping stockpile " + strconv.Itoa(int(z.ID))
+		return tr.T("Dumping stockpile ") + strconv.Itoa(int(z.ID))
 	}
-	return "Stockpile " + strconv.Itoa(int(z.ID))
+	return tr.T("Stockpile ") + strconv.Itoa(int(z.ID))
 }
 
 // billSource reads BillView.Source (the storage zone or group the bench
@@ -155,11 +156,11 @@ func billSource(bl game.BillView) uint64 {
 	return 0
 }
 
-func radiusText(r int) string {
+func radiusText(tr lang.Tr, r int) string {
 	if r <= 0 {
-		return "unlimited"
+		return tr.T("unlimited")
 	}
-	return fmt.Sprintf("%d tiles", r)
+	return lang.Tf(tr, "%d tiles", r)
 }
 
 // openBillConfig opens the settings dialog of bill i on bench b.
@@ -175,9 +176,9 @@ func (a Bills) openBillConfigWith(b game.BuildingView, i int, cfg BillSettings) 
 	mode := b.Bills[i].ModeID
 	cfg.Source = billSource(b.Bills[i])
 	a.kit().Push(uikit.Modal{
-		ID: BillCfgModalID, Title: "Bill: " + b.Bills[i].Label, W: 460, H: 560,
+		ID: BillCfgModalID, Title: a.shell.T("Bill: ") + b.Bills[i].Label, W: 460, H: 560,
 		Draw:    func(body gfx.Rect) { a.billConfigBody(body, b, i, mode, &cfg) },
-		Buttons: []uikit.ModalButton{{ID: "bill.cfg.done", Label: "Done", Style: uikit.BtnPrimary, Closes: true}},
+		Buttons: []uikit.ModalButton{{ID: "bill.cfg.done", Label: a.shell.T("Done"), Style: uikit.BtnPrimary, Closes: true}},
 	})
 }
 
@@ -245,35 +246,35 @@ func (a Bills) billConfigBody(body gfx.Rect, b game.BuildingView, i int, mode ui
 		func(j int) { cfg.Store = uint8(j); send() })
 	if cfg.Store == StoreSpecific {
 		if len(zones) == 0 {
-			k.Label(x, y, "No stockpiles yet.", uikit.DimText())
+			k.Label(x, y, a.shell.T("No stockpiles yet."), uikit.DimText())
 			y += billCfgRowH
 		}
 		chips(len(zones), func(j int) string { return "bill.cfg.zone." + strconv.Itoa(int(zones[j].ID)) },
-			func(j int) string { return zoneLabel(zones[j]) }, func(j int) bool { return cfg.Zone == uint64(zones[j].ID) },
+			func(j int) string { return zoneLabel(a.shell, zones[j]) }, func(j int) bool { return cfg.Zone == uint64(zones[j].ID) },
 			func(j int) { cfg.Zone = uint64(zones[j].ID); send() })
 	}
 
 	label("Ingredients")
-	stepper("bill.cfg.radius", "Search radius", radiusText(cfg.Radius),
+	stepper("bill.cfg.radius", "Search radius", radiusText(a.shell, cfg.Radius),
 		func() { cfg.Radius = max(0, cfg.Radius-step); send() },
 		func() { cfg.Radius = min(billRadiusMax, cfg.Radius+step); send() })
-	if k.Button("bill.cfg.radius.unlimited", gfx.Rect{X: x, Y: y, W: 100, H: billCfgChipH}, "Unlimited", uikit.BtnOpts{Selected: cfg.Radius <= 0}) {
+	if k.Button("bill.cfg.radius.unlimited", gfx.Rect{X: x, Y: y, W: 100, H: billCfgChipH}, a.shell.T("Unlimited"), uikit.BtnOpts{Selected: cfg.Radius <= 0}) {
 		cfg.Radius = 0
 		send()
 	}
 	y += billCfgRowH
 	label("Take from")
 	src := cfg.Source
-	srcName := "Anywhere"
+	srcName := a.shell.T("Anywhere")
 	for _, z := range zones {
 		if uint64(z.ID) == src {
-			srcName = zoneLabel(z)
+			srcName = zoneLabel(a.shell, z)
 		}
 	}
-	if k.Button("bill.cfg.source", gfx.Rect{X: x, Y: y, W: min(w, 240), H: billCfgChipH}, srcName+" v", uikit.BtnOpts{Tip: "Take ingredients only from this storage."}) {
-		entries := []game.OrderOption{{Label: "Anywhere"}}
+	if k.Button("bill.cfg.source", gfx.Rect{X: x, Y: y, W: min(w, 240), H: billCfgChipH}, srcName+a.shell.T(" v"), uikit.BtnOpts{Tip: a.shell.T("Take ingredients only from this storage.")}) {
+		entries := []game.OrderOption{{Label: a.shell.T("Anywhere")}}
 		for _, z := range zones {
-			entries = append(entries, game.OrderOption{Label: zoneLabel(z)})
+			entries = append(entries, game.OrderOption{Label: zoneLabel(a.shell, z)})
 		}
 		mx, my := a.shell.Cursor()
 		a.shell.Pick(float32(mx), float32(my), false, entries, func(j int) {

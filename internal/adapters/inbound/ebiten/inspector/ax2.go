@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	"rimworld-go/internal/application/game"
@@ -53,7 +54,7 @@ func ax2Lines(b game.BuildingView) []string {
 
 // potCommands are a plant pot's sow buttons, one per plant: the plant it
 // holds is on, and clicking it empties the pot.
-func potCommands(b game.BuildingView) []Button {
+func potCommands(tr lang.Tr, b game.BuildingView) []Button {
 	if b.Kind != plantPotKind {
 		return nil
 	}
@@ -64,8 +65,8 @@ func potCommands(b game.BuildingView) []Button {
 		if on {
 			next = construction.PotNone
 		}
-		out = append(out, Button{ID: PotSowPrefix + name, Label: "Sow " + name, Icon: "plant_pot", Toggle: true, On: on,
-			Desc: fmt.Sprintf("Have a grower sow a %s here (beauty %d when grown). It grows in light; frost kills it and it is sown again. On: click to empty the pot.", name, p.DefOf().Beauty),
+		out = append(out, Button{ID: PotSowPrefix + name, Label: tr.T("Sow ") + name, Icon: "plant_pot", Toggle: true, On: on,
+			Desc: lang.Tf(tr, "Have a grower sow a %s here (beauty %d when grown). It grows in light; frost kills it and it is sown again. On: click to empty the pot.", name, p.DefOf().Beauty),
 			Cmds: []command.Command{{Kind: command.SetPotPlant, Target: uint64(b.ID), Build: uint8(next)}}})
 	}
 	return out

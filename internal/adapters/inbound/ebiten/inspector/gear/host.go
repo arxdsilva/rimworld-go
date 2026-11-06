@@ -11,6 +11,7 @@ package gear
 import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 )
@@ -37,6 +38,8 @@ type Host interface {
 // Facts are the inspector's garment and temperature formatting the tab
 // borrows (temp_ui.go, TEMP-5).
 type Facts interface {
+	// Tr translates the tab's text.
+	lang.Tr
 	// Temp formats tenths of a degree C in the player's unit.
 	Temp(tenths int) string
 	// LayerOrder is the indices of worn in layer order, skin out.

@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
@@ -31,10 +32,6 @@ const (
 
 // reactorWarning is the explicit warning before the countdown (MAIN_UI
 // §37: reactor activation warns of the defence it starts).
-const reactorWarning = "Waking the reactor takes 15 days, and its call carries far: raiders and machines will come for it, " +
-	"again and again, until it is fully awake. If the reactor is destroyed, the waking is lost and must begin again.\n\n" +
-	"Start the reactor now?"
-
 // IsShipPart reports one of the escape ship's six part kinds.
 func IsShipPart(kind string) bool {
 	switch kind {
@@ -104,8 +101,8 @@ func shipCommands(a Building, b game.BuildingView) []Button {
 	}
 	var out []Button
 	if b.Kind == "ship reactor" {
-		s := Button{ID: StartReactorBtnID, Label: "Start reactor", Icon: "ship_reactor",
-			Desc: "Begin the reactor's 15-day waking. Raiders and machines will come until it is awake.",
+		s := Button{ID: StartReactorBtnID, Label: a.shell.T("Start reactor"), Icon: "ship_reactor",
+			Desc: a.shell.T("Begin the reactor's 15-day waking. Raiders and machines will come until it is awake."),
 			Run:  func() { warnReactor(a, b) }}
 		if b.AX.Countdown >= 0 {
 			s.Disabled, s.Reason = true, "already started"
@@ -113,12 +110,12 @@ func shipCommands(a Building, b game.BuildingView) []Button {
 		out = append(out, s)
 	}
 	if b.Kind == "ship stasis casket" && b.AX.Sleeper != "" {
-		out = append(out, Button{ID: WakeSleeperBtnID, Label: "Wake sleeper", Icon: "ship_casket",
-			Desc: b.AX.Sleeper + " climbs out of the casket and walks again.",
+		out = append(out, Button{ID: WakeSleeperBtnID, Label: a.shell.T("Wake sleeper"), Icon: "ship_casket",
+			Desc: b.AX.Sleeper + a.shell.T(" climbs out of the casket and walks again."),
 			Cmds: []command.Command{{Kind: command.LeaveShip, Target: uint64(b.ID)}}})
 	}
-	l := Button{ID: LaunchShipBtnID, Label: "Launch ship", Icon: "ship_engine",
-		Desc: "Lift the ship off the planet with everyone asleep in its caskets. This ends the colony's story.",
+	l := Button{ID: LaunchShipBtnID, Label: a.shell.T("Launch ship"), Icon: "ship_engine",
+		Desc: a.shell.T("Lift the ship off the planet with everyone asleep in its caskets. This ends the colony's story."),
 		Run:  func() { confirmLaunch(a, b) }}
 	w := a.shell.World()
 	if b.AX.ShipID == w.AX.ShipID && len(w.AX.LaunchIssues) > 0 {
@@ -137,14 +134,15 @@ func confirmLaunch(a Building, b game.BuildingView) {
 			aboard = append(aboard, v.AX.Sleeper)
 		}
 	}
-	text := "The ship will leave with " + strings.Join(aboard, ", ") + " asleep aboard. Everyone else stays behind, " +
-		"and this colony's story ends.\n\nLaunch the ship now?"
-	shipConfirm(a, LaunchModalID, "Launch the ship?", text, LaunchOKID, "Launch", command.Command{Kind: command.LaunchShip, Target: uint64(b.ID)})
+	text := lang.Tf(a.shell, "The ship will leave with %s asleep aboard. Everyone else stays behind, and this colony's story ends.\n\nLaunch the ship now?", strings.Join(aboard, ", "))
+	shipConfirm(a, LaunchModalID, a.shell.T("Launch the ship?"), text, LaunchOKID, a.shell.T("Launch"), command.Command{Kind: command.LaunchShip, Target: uint64(b.ID)})
 }
 
 // warnReactor asks before the reactor starts (the raids it draws).
 func warnReactor(a Building, b game.BuildingView) {
-	shipConfirm(a, ReactorWarnModalID, "Start the ship reactor?", reactorWarning, ReactorWarnOKID, "Start reactor",
+	shipConfirm(a, ReactorWarnModalID, a.shell.T("Start the ship reactor?"),
+		a.shell.T("Waking the reactor takes 15 days, and its call carries far: raiders and machines will come for it, again and again, until it is fully awake. If the reactor is destroyed, the waking is lost and must begin again.\n\nStart the reactor now?"),
+		ReactorWarnOKID, a.shell.T("Start reactor"),
 		command.Command{Kind: command.StartReactor, Target: uint64(b.ID)})
 }
 
@@ -163,7 +161,7 @@ func shipConfirm(a Building, id, title, text, okID, okLabel string, c command.Co
 		},
 		Buttons: []uikit.ModalButton{
 			{ID: okID, Label: okLabel, Style: uikit.BtnPrimary, Closes: true, OnClick: func() { a.shell.Enqueue(c) }},
-			{ID: "cancel", Label: "Cancel", Closes: true},
+			{ID: "cancel", Label: a.shell.T("Cancel"), Closes: true},
 		},
 	})
 }

@@ -1,6 +1,7 @@
 package inspector
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 	"testing"
 
@@ -80,11 +81,11 @@ func TestDoorForbidToggle(t *testing.T) {
 	if !forbiddable(d) {
 		t.Fatal("a door is forbiddable")
 	}
-	if c := forbidCommand(d); c.Label != "Forbid" || c.On || !c.Cmds[0].Enabled {
+	if c := forbidCommand(lang.English{}, d); c.Label != "Forbid" || c.On || !c.Cmds[0].Enabled {
 		t.Fatalf("open door %+v", c)
 	}
 	d.Forbidden = true
-	if c := forbidCommand(d); c.Label != "Allow" || !c.On || c.Cmds[0].Enabled {
+	if c := forbidCommand(lang.English{}, d); c.Label != "Allow" || !c.On || c.Cmds[0].Enabled {
 		t.Fatalf("forbidden door %+v", c)
 	}
 }

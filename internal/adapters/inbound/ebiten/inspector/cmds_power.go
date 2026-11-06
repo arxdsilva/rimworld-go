@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
@@ -62,7 +63,7 @@ func isPowerDevice(b game.BuildingView) bool {
 }
 
 // reconnectReason is why Reconnect cannot be pressed on b ("" when it can).
-func reconnectReason(b game.BuildingView) string {
+func reconnectReason(tr lang.Tr, b game.BuildingView) string {
 	switch {
 	case !b.HasLink && b.PowerNet == 0:
 		return "No grid in range."
@@ -76,10 +77,10 @@ func reconnectReason(b game.BuildingView) string {
 
 // reconnectButton is b's Reconnect: wire it to the next grid in range at
 // once (command.ReconnectPower), no colonist needed.
-func reconnectButton(b game.BuildingView) Button {
-	r := reconnectReason(b)
-	return Button{ID: PowerReconnectCmdID, Label: "Reconnect", Icon: "power_reconnect",
-		Desc:     "Wire this to the next grid in range, at once. No colonist is needed.",
+func reconnectButton(tr lang.Tr, b game.BuildingView) Button {
+	r := reconnectReason(tr, b)
+	return Button{ID: PowerReconnectCmdID, Label: tr.T("Reconnect"), Icon: "power_reconnect",
+		Desc:     tr.T("Wire this to the next grid in range, at once. No colonist is needed."),
 		Disabled: r != "", Reason: r,
 		Cmds: []command.Command{{Kind: command.ReconnectPower, Target: uint64(b.ID)}}}
 }
@@ -214,9 +215,9 @@ func gridLine(n game.PowerNetView) string {
 
 // powerBars are b's electricity bars: a battery's charge. (A generator's
 // and a torch's fuel is the Fuel bar every burner has.)
-func powerBars(b game.BuildingView) []Bar {
+func powerBars(tr lang.Tr, b game.BuildingView) []Bar {
 	if b.PowerRole == powerStorage && b.CapWh > 0 {
-		return []Bar{{Label: "Charge", Pct: bldgPct(b.StoredWh * 100 / b.CapWh), Color: uikit.Accent}}
+		return []Bar{{Label: tr.T("Charge"), Pct: bldgPct(b.StoredWh * 100 / b.CapWh), Color: uikit.Accent}}
 	}
 	return nil
 }
@@ -256,22 +257,22 @@ func (a Building) powerCommandsIn(u units.Temp, b game.BuildingView) []Button {
 		if b.PowerWantOn != b.PowerOn {
 			desc += " A flick is pending."
 		}
-		out = append(out, Button{ID: powerToggleCmdID, Label: "Power", Icon: "power_toggle", Hotkey: input.Power,
+		out = append(out, Button{ID: powerToggleCmdID, Label: a.shell.T("Power"), Icon: "power_toggle", Hotkey: input.Power,
 			Toggle: true, On: b.PowerWantOn, Desc: desc,
 			Cmds: []command.Command{{Kind: command.SetPowerWanted, Target: uint64(b.ID), Enabled: !b.PowerWantOn}}})
 	}
 	if isPowerDevice(b) {
-		out = append(out, reconnectButton(b))
+		out = append(out, reconnectButton(a.shell, b))
 	}
 	if isThermostatBldg(b) {
 		now := FmtTargetIn(u, b.ThermoTarget)
 		down, up := thermoStepLabels(u)
 		out = append(out,
 			Button{ID: powerDownCmdID, Label: down, Icon: "thermostat_down",
-				Desc: "Lower the target temperature by " + u.Step() + ". It is " + now + " now.",
+				Desc: a.shell.Tf("Lower the target temperature by %s. It is %s now.", u.Step(), now),
 				Cmds: []command.Command{{Kind: command.SetThermostat, Target: uint64(b.ID), Count: b.ThermoTarget - powerThermoStep}}},
 			Button{ID: powerUpCmdID, Label: up, Icon: "thermostat_up",
-				Desc: "Raise the target temperature by " + u.Step() + ". It is " + now + " now.",
+				Desc: a.shell.Tf("Raise the target temperature by %s. It is %s now.", u.Step(), now),
 				Cmds: []command.Command{{Kind: command.SetThermostat, Target: uint64(b.ID), Count: b.ThermoTarget + powerThermoStep}}})
 	}
 	return out

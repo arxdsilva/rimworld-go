@@ -10,6 +10,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -119,9 +120,9 @@ func (a Animal) ApplyAnimalClick(id string) {
 		a.shell.Enqueue(c)
 	case "animal.release":
 		c := command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)}
-		uikit.ConfirmIf(a.kit(), "animal.release.confirm", "Release this animal?",
-			"It goes wild again and is no longer yours. A bonded colonist will mind.",
-			"Release", true, func() { a.shell.Enqueue(c) })
+		uikit.ConfirmIf(a.kit(), "animal.release.confirm", a.shell.T("Release this animal?"),
+			a.shell.T("It goes wild again and is no longer yours. A bonded colonist will mind."),
+			a.shell.T("Release"), true, func() { a.shell.Enqueue(c) })
 	case "animal.area": // the pane's allowed-area chip (a tame animal that is not penned)
 		if an.Tame && !an.Penned {
 			a.shell.AreaPicker("Allowed area", an.AreaRef, true, func(ref int) { a.shell.AssignArea(an.ID, ref) })
@@ -287,9 +288,6 @@ const (
 	AnimalLogID     = "pane.animal.log" // the Log tab's scroll area
 )
 
-const trainingIntro = "Handlers train an animal in these skills while they are on. " +
-	"Turn each on or off with its command button."
-
 // animalLogRows are the Log tab's rows, wrapped for a body w px wide.
 func animalLogRows(an game.AnimalView, w float32) []string {
 	return WrapLogRows(an.Log, float64(w-uikit.ScrollBarW)-4)
@@ -307,7 +305,7 @@ func (a Animal) declareAnimalLog(an game.AnimalView, inner gfx.Rect) {
 func (a Animal) drawAnimalLogTab(screen *ebiten.Image, an game.AnimalView, inner gfx.Rect) {
 	rows := animalLogRows(an, inner.W)
 	if len(rows) == 0 {
-		gfx.Text(screen, logEmptyText, float64(inner.X), float64(inner.Y), gfx.WithColor(LogStyle, uikit.TextDim))
+		gfx.Text(screen, a.shell.T("Nothing has happened yet."), float64(inner.X), float64(inner.Y), gfx.WithColor(LogStyle, uikit.TextDim))
 		return
 	}
 	lh := logLineH()
@@ -328,14 +326,14 @@ func animalTrainingTabH(an game.AnimalView) float32 {
 }
 
 // trainState is a skill row's state word.
-func trainState(t game.AnimalTrainingView) string {
+func trainState(tr lang.Tr, t game.AnimalTrainingView) string {
 	switch {
 	case t.Learned:
-		return "learned"
+		return tr.T("learned")
 	case t.On:
-		return "training"
+		return tr.T("training")
 	}
-	return "off"
+	return tr.T("off")
 }
 
 // drawAnimalTrainingTab is the Training tab body: one row per learnable
@@ -343,7 +341,7 @@ func trainState(t game.AnimalTrainingView) string {
 func (a Animal) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, inner gfx.Rect) {
 	x, y := float64(inner.X), float64(inner.Y)
 	dim := gfx.WithColor(gfx.Small, uikit.TextDim)
-	for i, ln := range gfx.WrapPx(trainingIntro, dim, float64(inner.W)) {
+	for i, ln := range gfx.WrapPx(a.shell.T("Handlers train an animal in these skills while they are on. Turn each on or off with its command button."), dim, float64(inner.W)) {
 		if i > 1 {
 			break
 		}
@@ -361,7 +359,7 @@ func (a Animal) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, 
 			}
 			uikit.FillRect(screen, gfx.Rect{X: bx, Y: by, W: animalTrainBarW * float32(min(t.Steps, t.Needed)) / float32(t.Needed), H: animalTrainBarH}, fill)
 		}
-		gfx.Text(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(t)), float64(bx)+animalTrainBarW+10, y+(animalTrainRowH-gfx.LineH(gfx.Small))/2, dim)
+		gfx.Text(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(a.shell, t)), float64(bx)+animalTrainBarW+10, y+(animalTrainRowH-gfx.LineH(gfx.Small))/2, dim)
 		y += animalTrainRowH
 	}
 }
@@ -465,9 +463,9 @@ func (a Animal) animalCareCmd(an game.AnimalView) Button {
 		orders = append(orders, game.OrderOption{Label: label, Cmd: cmd})
 		opts = append(opts, Option{Label: label, Cmd: &cmd})
 	}
-	return Button{ID: "cmd.animal.care", Label: "Care: " + CareShort(cur),
+	return Button{ID: "cmd.animal.care", Label: a.shell.T("Care: ") + careShortIn(a.shell, cur),
 		Icon:    strings.TrimPrefix(careIcon(cur), "ui_icon/"),
-		Desc:    "Pick how a doctor treats it. " + careTip(cur),
+		Desc:    a.shell.T("Pick how a doctor treats it. ") + careTipIn(a.shell, cur),
 		Options: func() []Option { return opts },
 		Run: func() {
 			mx, my := a.shell.Cursor()

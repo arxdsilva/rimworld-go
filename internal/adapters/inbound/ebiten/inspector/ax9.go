@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
@@ -75,10 +76,10 @@ func TravelLines(b game.BuildingView) []string {
 
 // TravelCommands are a travel building's buttons; do hands the shell an
 // intent (a free function: Building is at its method budget).
-func TravelCommands(do func(ports.Intent), b game.BuildingView) []Button {
+func TravelCommands(tr lang.Tr, do func(ports.Intent), b game.BuildingView) []Button {
 	switch b.Kind {
 	case stasisCasketKind:
-		e := Button{ID: EjectCasketBtnID, Label: "Eject", Icon: "stasis_casket", Desc: "Open the casket: the sleeper climbs out at once.",
+		e := Button{ID: EjectCasketBtnID, Label: tr.T("Eject"), Icon: "stasis_casket", Desc: tr.T("Open the casket: the sleeper climbs out at once."),
 			Cmds: []command.Command{{Kind: command.EjectCasket, Target: uint64(b.ID)}}}
 		if b.AX.Sleeper == "" {
 			e.Disabled, e.Reason, e.Cmds = true, "the casket is empty", nil
@@ -86,17 +87,17 @@ func TravelCommands(do func(ports.Intent), b game.BuildingView) []Button {
 		return []Button{e}
 	case transportPodKind:
 		pod := b.ID
-		load := Button{ID: LoadPodsBtnID, Label: "Load pods", Icon: "transport_pod",
-			Desc: "Pick colonists, animals and goods for this pod group (150 kg a pod).", Run: func() { do(ports.LoadPods{Pod: pod}) }}
-		launch := Button{ID: LaunchPodsBtnID, Label: "Launch", Icon: "pod_launcher",
-			Desc: "Pick a world tile in range on the World tab and how the pods land there.", Run: func() { do(ports.LaunchPods{Pod: pod}) }}
+		load := Button{ID: LoadPodsBtnID, Label: tr.T("Load pods"), Icon: "transport_pod",
+			Desc: tr.T("Pick colonists, animals and goods for this pod group (150 kg a pod)."), Run: func() { do(ports.LoadPods{Pod: pod}) }}
+		launch := Button{ID: LaunchPodsBtnID, Label: tr.T("Launch"), Icon: "pod_launcher",
+			Desc: tr.T("Pick a world tile in range on the World tab and how the pods land there."), Run: func() { do(ports.LaunchPods{Pod: pod}) }}
 		switch {
 		case b.AX.LoadKg <= 0:
 			launch.Disabled, launch.Reason, launch.Run = true, "the pods are empty", nil
 		case b.AX.Range <= 0:
 			launch.Disabled, launch.Reason, launch.Run = true, "no fuelled launcher beside every pod", nil
 		}
-		unload := Button{ID: UnloadPodsBtnID, Label: "Unload", Icon: "order_cancel", Desc: "Set everything aboard down beside the pods and drop the load list.",
+		unload := Button{ID: UnloadPodsBtnID, Label: tr.T("Unload"), Icon: "order_cancel", Desc: tr.T("Set everything aboard down beside the pods and drop the load list."),
 			Cmds: []command.Command{{Kind: command.LoadPods, Target: uint64(b.ID)}}}
 		return []Button{load, launch, unload}
 	case mineralScannerKind:
@@ -105,15 +106,15 @@ func TravelCommands(do func(ports.Intent), b game.BuildingView) []Button {
 			label = "Target: " + b.AX.ScanFor
 		}
 		return []Button{{ID: ScanTargetBtnID, Label: label, Icon: "mineral_scanner",
-			Desc:    "Choose the mineral the scanner looks for (any finds the common ones most often).",
-			Options: func() []Option { return scanOptions(uint64(b.ID)) }}}
+			Desc:    tr.T("Choose the mineral the scanner looks for (any finds the common ones most often)."),
+			Options: func() []Option { return scanOptions(tr, uint64(b.ID)) }}}
 	}
 	return nil
 }
 
 // scanOptions are the scanner target menu's rows: any, then each mineral.
-func scanOptions(id uint64) []Option {
-	out := []Option{{Label: "Any mineral", Cmd: &command.Command{Kind: command.SetScannerTarget, Target: id}}}
+func scanOptions(tr lang.Tr, id uint64) []Option {
+	out := []Option{{Label: tr.T("Any mineral"), Cmd: &command.Command{Kind: command.SetScannerTarget, Target: id}}}
 	for _, k := range ScanMinerals() {
 		out = append(out, Option{Label: Capitalize(k.String()), Cmd: &command.Command{Kind: command.SetScannerTarget, Target: id, Stuff: uint8(k)}})
 	}

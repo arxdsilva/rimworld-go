@@ -7,6 +7,7 @@ package inspector
 // Reinstall placement intent); the panes only read views.
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -36,8 +37,8 @@ func unmarkCmd(o command.Order, x, y int) command.Command {
 func orderCommands(a Building, b game.BuildingView) []Button {
 	var out []Button
 	if movable, _ := a.shell.MoveState(b); movable && !b.Ruin {
-		u := Button{ID: UninstallBtnID, Label: "Uninstall", Icon: "order_uninstall", Toggle: true, On: b.AX.Uninstall,
-			Desc: "A builder packs it into a crate that keeps its material, quality and wear, to haul, sell or reinstall.",
+		u := Button{ID: UninstallBtnID, Label: a.shell.T("Uninstall"), Icon: "order_uninstall", Toggle: true, On: b.AX.Uninstall,
+			Desc: a.shell.T("A builder packs it into a crate that keeps its material, quality and wear, to haul, sell or reinstall."),
 			Cmds: []command.Command{footprintCmd(command.DesignateUninstall, b, true)}}
 		if b.AX.Uninstall {
 			u.Label, u.Desc = "Cancel uninstall", "Leave it standing."
@@ -49,8 +50,8 @@ func orderCommands(a Building, b game.BuildingView) []Button {
 		out = append(out, u)
 	}
 	if (b.Kind == "grave" || b.Kind == "sarcophagus") && b.Occupant != "" {
-		o := Button{ID: OpenGraveBtnID, Label: "Open", Icon: "order_open", Toggle: true, On: b.AX.OpenMarked,
-			Desc: "A hauler opens it and lifts the body out beside it, unburied again.",
+		o := Button{ID: OpenGraveBtnID, Label: a.shell.T("Open"), Icon: "order_open", Toggle: true, On: b.AX.OpenMarked,
+			Desc: a.shell.T("A hauler opens it and lifts the body out beside it, unburied again."),
 			Cmds: []command.Command{footprintCmd(command.DesignateOpen, b, true)}}
 		if b.AX.OpenMarked {
 			o.Label, o.Desc = "Cancel open", "Let the dead rest."
@@ -86,8 +87,8 @@ func (a Thing) crateCommands(it game.ItemView) []Button {
 	if it.AX.Building == "" {
 		return nil
 	}
-	c := Button{ID: ReinstallBtnID, Label: "Reinstall", Icon: "order_uninstall", Single: true,
-		Desc: "Pick a spot for the " + it.AX.Building + ": a builder carries the crate there and installs it.",
+	c := Button{ID: ReinstallBtnID, Label: a.shell.T("Reinstall"), Icon: "order_uninstall", Single: true,
+		Desc: a.shell.T("Pick a spot for the ") + it.AX.Building + a.shell.T(": a builder carries the crate there and installs it."),
 		Run:  func() { a.shell.Do(ports.ReinstallCrate{ID: it.ID}) }}
 	if it.Carried {
 		c.Disabled, c.Reason = true, "being carried"
@@ -96,12 +97,12 @@ func (a Thing) crateCommands(it game.ItemView) []Button {
 }
 
 // stripCommand is a downed person's Strip toggle (ok false: not downed).
-func stripCommand(p game.PawnView) (Button, bool) {
+func stripCommand(tr lang.Tr, p game.PawnView) (Button, bool) {
 	if p.Status != "downed" {
 		return Button{}, false
 	}
-	c := Button{ID: StripBtnID, Label: "Strip", Icon: "order_strip", Toggle: true, On: p.AX.StripMarked,
-		Desc: "A hauler takes off what this person wears and carries; it drops beside them.",
+	c := Button{ID: StripBtnID, Label: tr.T("Strip"), Icon: "order_strip", Toggle: true, On: p.AX.StripMarked,
+		Desc: tr.T("A hauler takes off what this person wears and carries; it drops beside them."),
 		Cmds: []command.Command{{Kind: command.DesignateStrip, X: p.X, Y: p.Y, X2: p.X, Y2: p.Y, Enabled: true}}}
 	if p.AX.StripMarked {
 		c.Label, c.Desc = "Cancel strip", "Leave them dressed."

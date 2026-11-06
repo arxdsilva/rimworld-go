@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 	"strings"
 
@@ -37,10 +38,10 @@ func (a Building) openBillPicker(b game.BuildingView) {
 	recipes := a.RecipesFor(b.Kind)
 	sel := -1
 	a.kit().Push(uikit.Modal{
-		ID: BillPickID, Title: "Add bill", W: 360, H: 380,
+		ID: BillPickID, Title: a.shell.T("Add bill"), W: 360, H: 380,
 		Draw: func(r gfx.Rect) {
 			if len(recipes) == 0 {
-				a.kit().Label(r.X, r.Y, "This bench has no recipes.", uikit.DimText())
+				a.kit().Label(r.X, r.Y, a.shell.T("This bench has no recipes."), uikit.DimText())
 				return
 			}
 			a.kit().List(BillPickList, r, len(recipes), &sel, uikit.ListSpec{
@@ -56,7 +57,7 @@ func (a Building) openBillPicker(b game.BuildingView) {
 			})
 		},
 		Buttons: []uikit.ModalButton{
-			{ID: "bill.picker.ok", Label: "Add", Style: uikit.BtnPrimary, Closes: true,
+			{ID: "bill.picker.ok", Label: a.shell.T("Add"), Style: uikit.BtnPrimary, Closes: true,
 				Disabled: func() string {
 					if sel < 0 || sel >= len(recipes) {
 						return "Pick a recipe first."
@@ -68,7 +69,7 @@ func (a Building) openBillPicker(b game.BuildingView) {
 						a.ApplyBuildingClick("bill.add." + strconv.Itoa(int(recipes[sel].ID)))
 					}
 				}},
-			{ID: "bill.picker.cancel", Label: "Cancel", Closes: true},
+			{ID: "bill.picker.cancel", Label: a.shell.T("Cancel"), Closes: true},
 		},
 	})
 }
@@ -177,7 +178,7 @@ const billPasteX = billAddW + 6
 // billsTab is the Bills tab of bench b.
 func (a Building) billsTab(b game.BuildingView) Tab {
 	id := b.ID
-	return Tab{ID: "inspector.bills", Label: "Bills", WantW: billsPanelW, WantH: billsPanelH(len(b.Bills)),
+	return Tab{ID: "inspector.bills", Label: a.shell.T("Bills"), WantW: billsPanelW, WantH: billsPanelH(len(b.Bills)),
 		Declare: func(r gfx.Rect) { a.BillsTabUI(id, r) }}
 }
 
@@ -191,14 +192,14 @@ func billsLayout(r gfx.Rect) (list, add gfx.Rect) {
 // billsBody lays out bench b's bills, viewW wide: a line of text and the
 // five buttons (fewer, more, mode, pause, delete) per bill.
 func BillsBody(b game.BuildingView, viewW float32) TabBody {
-	return BillsBodyWith(b, viewW, nil)
+	return BillsBodyWith(lang.English{}, b, viewW, nil)
 }
 
 // BillsBodyWith is BillsBody with each bill's worker line (extra may be nil).
-func BillsBodyWith(b game.BuildingView, viewW float32, extra func(i int) BillExtra) TabBody {
+func BillsBodyWith(tr lang.Tr, b game.BuildingView, viewW float32, extra func(i int) BillExtra) TabBody {
 	var body TabBody
 	if len(b.Bills) == 0 {
-		body.Labels = []tabLabel{{Text: "No bills yet - add one below.", x: 8, y: 4, w: viewW - 8, st: gfx.Body}}
+		body.Labels = []tabLabel{{Text: tr.T("No bills yet - add one below."), x: 8, y: 4, w: viewW - 8, st: gfx.Body}}
 		body.H = BillRowH
 		return body
 	}
@@ -214,21 +215,21 @@ func BillsBodyWith(b game.BuildingView, viewW float32, extra func(i int) BillExt
 			line += extra(i).Line()
 		}
 		body.Labels = append(body.Labels, tabLabel{Text: line, x: 8, y: y + 2, w: x - 8 - bodyGap, st: gfx.Body})
-		up := uikit.Button{ID: "bill.up." + ix, Label: "^", X: x + 154, Y: y, W: 22, H: billBtnH, Tip: "Move up"}
-		dn := uikit.Button{ID: "bill.dn." + ix, Label: "v", X: x + 178, Y: y, W: 22, H: billBtnH, Tip: "Move down"}
+		up := uikit.Button{ID: "bill.up." + ix, Label: "^", X: x + 154, Y: y, W: 22, H: billBtnH, Tip: tr.T("Move up")}
+		dn := uikit.Button{ID: "bill.dn." + ix, Label: "v", X: x + 178, Y: y, W: 22, H: billBtnH, Tip: tr.T("Move down")}
 		if i == 0 {
-			up.Disabled, up.Reason = true, "Already first"
+			up.Disabled, up.Reason = true, tr.T("Already first")
 		}
 		if i == len(b.Bills)-1 {
-			dn.Disabled, dn.Reason = true, "Already last"
+			dn.Disabled, dn.Reason = true, tr.T("Already last")
 		}
 		body.Buttons = append(body.Buttons,
-			uikit.Button{ID: "bill.minus." + ix, Label: "-", X: x, Y: y, W: 22, H: billBtnH, Tip: "Fewer (Ctrl x10, Shift x100, both x1000)"},
-			uikit.Button{ID: "bill.plus." + ix, Label: "+", X: x + 24, Y: y, W: 22, H: billBtnH, Tip: "More (Ctrl x10, Shift x100, both x1000)"},
+			uikit.Button{ID: "bill.minus." + ix, Label: "-", X: x, Y: y, W: 22, H: billBtnH, Tip: tr.T("Fewer (Ctrl x10, Shift x100, both x1000)")},
+			uikit.Button{ID: "bill.plus." + ix, Label: "+", X: x + 24, Y: y, W: 22, H: billBtnH, Tip: tr.T("More (Ctrl x10, Shift x100, both x1000)")},
 			uikit.Button{ID: "bill.mode." + ix, Label: "M", X: x + 48, Y: y, W: 22, H: billBtnH},
 			uikit.Button{ID: "bill.pause." + ix, Label: "||", X: x + 72, Y: y, W: 26, H: billBtnH, Selected: bl.Suspended},
-			uikit.Button{ID: "bill.cfg." + ix, Label: "...", X: x + 100, Y: y, W: 26, H: billBtnH, Tip: "Bill settings\nStore mode, radius, skill range, worker, ingredients."},
-			uikit.Button{ID: "bill.copy." + ix, Label: "C", X: x + 128, Y: y, W: 22, H: billBtnH, Tip: "Copy this bill"},
+			uikit.Button{ID: "bill.cfg." + ix, Label: "...", X: x + 100, Y: y, W: 26, H: billBtnH, Tip: tr.T("Bill settings\nStore mode, radius, skill range, worker, ingredients.")},
+			uikit.Button{ID: "bill.copy." + ix, Label: "C", X: x + 128, Y: y, W: 22, H: billBtnH, Tip: tr.T("Copy this bill")},
 			up, dn,
 			uikit.Button{ID: "bill.del." + ix, Label: "x", X: x + 202, Y: y, W: 22, H: billBtnH},
 		)
@@ -246,13 +247,13 @@ func (a Building) BillsTabUI(id entity.EntityID, r gfx.Rect) {
 		return
 	}
 	list, add := billsLayout(r)
-	a.declareTabBody("bill.rows", list, BillsBodyWith(b, list.W-uikit.ScrollBarW, func(i int) BillExtra { return billExtra(b.Bills[i]) }), a.ApplyBuildingClick)
+	a.declareTabBody("bill.rows", list, BillsBodyWith(a.shell, b, list.W-uikit.ScrollBarW, func(i int) BillExtra { return billExtra(b.Bills[i]) }), a.ApplyBuildingClick)
 	paste := gfx.Rect{X: add.X + billPasteX, Y: add.Y, W: billAddW, H: add.H}
 	block := a.Bills().pasteBlock(b)
-	if a.kit().Button(BillPasteBtn, paste, "Paste bill", uikit.BtnOpts{Disabled: block != "", Reason: block, Tip: "Paste bill\nAdd the copied bill with its settings."}) {
+	if a.kit().Button(BillPasteBtn, paste, a.shell.T("Paste bill"), uikit.BtnOpts{Disabled: block != "", Reason: block, Tip: a.shell.T("Paste bill\nAdd the copied bill with its settings.")}) {
 		a.ApplyBuildingClick(BillPasteBtn)
 	}
-	if a.kit().Button(BillPickBtn, add, "+ Add bill", uikit.BtnOpts{Tip: "Add bill\nPick a recipe for this bench."}) {
+	if a.kit().Button(BillPickBtn, add, a.shell.T("+ Add bill"), uikit.BtnOpts{Tip: a.shell.T("Add bill\nPick a recipe for this bench.")}) {
 		a.ApplyBuildingClick(BillPickBtn)
 	}
 }
@@ -323,9 +324,9 @@ func (a Building) ApplyBuildingClick(id string) {
 	if id == "bldg.deconstruct" {
 		c := command.Command{Kind: command.DesignateDeconstruct, X: b.X, Y: b.Y,
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1}
-		uikit.ConfirmIf(a.kit(), "bldg.deconstruct.confirm", "Deconstruct this building?",
-			"Colonists will take it apart and return part of what it cost. The building is gone once they finish.",
-			"Deconstruct", true, func() { a.shell.Enqueue(c) })
+		uikit.ConfirmIf(a.kit(), "bldg.deconstruct.confirm", a.shell.T("Deconstruct this building?"),
+			a.shell.T("Colonists will take it apart and return part of what it cost. The building is gone once they finish."),
+			a.shell.T("Deconstruct"), true, func() { a.shell.Enqueue(c) })
 		return
 	}
 	if a.applyBedClick(id, b) || a.ApplyCasketClick(id, b) || a.applyPenClick(id, b) {
@@ -342,7 +343,7 @@ func (a Building) ApplyBuildingClick(id string) {
 		a.shell.Move(b, true)
 		return
 	case BuildingForbidID: // building_stats.go (BED-1)
-		for _, c := range forbidCommand(b).Cmds {
+		for _, c := range forbidCommand(a.shell, b).Cmds {
 			a.shell.Enqueue(c)
 		}
 		return
@@ -437,12 +438,12 @@ func BedOwnerID(slot int) string { return "bldg.bed.owner." + strconv.Itoa(slot)
 func (a Building) bedOwnerName(b game.BuildingView, slot int) string {
 	id := BedOwner(b, slot)
 	if id == 0 {
-		return "nobody"
+		return a.shell.T("nobody")
 	}
 	if who := a.PawnName(id); who != "" {
 		return who
 	}
-	return "someone"
+	return a.shell.T("someone")
 }
 
 // bedLines are a bed's owner lines, the prisoner mark and the medical mark.
@@ -480,21 +481,21 @@ func (a Building) bedCommands(b game.BuildingView) []Button {
 			label = fmt.Sprintf("Owner %d", slot+1)
 		}
 		owner := Button{ID: BedOwnerID(slot), Label: label, Single: true,
-			Desc: "Choose who sleeps here. Now: " + a.bedOwnerName(b, slot) + "."}
+			Desc: a.shell.T("Choose who sleeps here. Now: ") + a.bedOwnerName(b, slot) + "."}
 		if b.Medical {
 			owner.Disabled, owner.Reason = true, "Medical beds have no owner"
 		}
 		out = append(out, owner)
 	}
-	pr := Button{ID: "bldg.bed.prisoners", Label: "Prisoners", Toggle: true,
-		Desc: "Only prisoners sleep here."}
+	pr := Button{ID: "bldg.bed.prisoners", Label: a.shell.T("Prisoners"), Toggle: true,
+		Desc: a.shell.T("Only prisoners sleep here.")}
 	if rd, ok := a.sim().(bedPrisonReader); ok {
 		pr.On = rd.BedForPrisoners(b.ID)
 	} else {
 		pr.Disabled, pr.Reason = true, "Prisoner beds are not available in this game."
 	}
-	med := Button{ID: BedMedicalID, Label: "Medical", Icon: "hospital_bed", Toggle: true, On: b.Medical,
-		Desc: "Only the sick and injured rest here. Healthy colonists sleep elsewhere."}
+	med := Button{ID: BedMedicalID, Label: a.shell.T("Medical"), Icon: "hospital_bed", Toggle: true, On: b.Medical,
+		Desc: a.shell.T("Only the sick and injured rest here. Healthy colonists sleep elsewhere.")}
 	return append(out, pr, med)
 }
 
@@ -537,9 +538,9 @@ func (a Building) applyBedClick(id string, b game.BuildingView) bool {
 // openBedOwnerPicker lists the living colonists (and nobody) for slot.
 func (a Building) openBedOwnerPicker(bed entity.EntityID, slot int) {
 	a.kit().Push(uikit.Modal{
-		ID: BedOwnerModalID, Title: "Bed owner", W: 320, H: 420,
+		ID: BedOwnerModalID, Title: a.shell.T("Bed owner"), W: 320, H: 420,
 		Draw:    func(body gfx.Rect) { a.bedOwnerBody(body, bed, slot) },
-		Buttons: []uikit.ModalButton{{ID: "close", Label: "Cancel", Style: uikit.BtnNormal, Closes: true}},
+		Buttons: []uikit.ModalButton{{ID: "close", Label: a.shell.T("Cancel"), Style: uikit.BtnNormal, Closes: true}},
 	})
 }
 

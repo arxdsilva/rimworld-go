@@ -7,6 +7,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/sim/command"
@@ -15,6 +16,7 @@ import (
 // fake is the tab's Host and Facts for unit tests: no art, a recorded
 // command and intent list, a fixed screen for the kit.
 type fake struct {
+	lang.English
 	kit       *uikit.Kit
 	frame     inputframe.Frame
 	cmds      []command.Command

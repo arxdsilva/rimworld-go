@@ -6,6 +6,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -54,18 +55,18 @@ type access struct {
 	broken   string // a mental break: every action is refused with this
 }
 
-func accessOf(p game.PawnView, unloading bool) access {
+func accessOf(tr lang.Tr, p game.PawnView, unloading bool) access {
 	a := access{readOnly: p.Hostile || p.Ally || p.Visitor && !p.Prisoner}
 	a.lock = !a.readOnly && !p.Prisoner
 	a.unload = unloading && !a.readOnly && !p.Prisoner && p.Status == "alive"
 	if p.MentalBreak != "" {
-		a.broken = "In a mental break (" + p.MentalBreak + "): no gear orders until it passes."
+		a.broken = lang.Tf(tr, "In a mental break (%s): no gear orders until it passes.", p.MentalBreak)
 	}
 	return a
 }
 
 // ReadOnly reports the tab offers p no actions (a guest or visitor).
-func ReadOnly(p game.PawnView) bool { return accessOf(p, false).readOnly }
+func ReadOnly(p game.PawnView) bool { return accessOf(lang.English{}, p, false).readOnly }
 
 func rowH(r Row) float32 {
 	switch {
@@ -115,7 +116,7 @@ func (t Tab) Declare(p game.PawnView, r gfx.Rect) {
 		}
 		vis = append(vis, shown{row, rr, img})
 	}
-	ac := accessOf(p, t.h.Unloading())
+	ac := accessOf(t.f, p, t.h.Unloading())
 	warn := k.Access.Palette().Warning
 	textW := func(r Row) float32 {
 		if r.kind != rowItem {
@@ -126,7 +127,7 @@ func (t Tab) Declare(p game.PawnView, r gfx.Rect) {
 	k.Queue(func(dst *ebiten.Image) {
 		sub := gfx.ClipTo(dst, view)
 		for _, s := range vis {
-			paintRow(sub, s.row, s.rect, s.img, textW(s.row), warn)
+			paintRow(t.f, sub, s.row, s.rect, s.img, textW(s.row), warn)
 		}
 	})
 	for i, s := range vis {
@@ -172,13 +173,13 @@ func (t Tab) buttons(p game.PawnView, r Row, rr gfx.Rect, ac access) {
 	}
 	id := p.ID
 	if t.iconButton(InfoID(r.What, r.N), next(btnSz), "ui_icon/gear_info", "i",
-		uikit.BtnOpts{Tip: "Info\nWhat this is, in full.", NoFocus: true}) {
+		uikit.BtnOpts{Tip: t.f.T("Info\nWhat this is, in full."), NoFocus: true}) {
 		t.h.Do(ports.OpenInfoCard{Pawn: id, Mode: r.Mode, Index: r.N})
 	}
 	if ac.readOnly {
 		return
 	}
-	drop := uikit.BtnOpts{Tip: "Drop\nPut it down here and now. Shift-click to do it after the queued orders.", NoFocus: true}
+	drop := uikit.BtnOpts{Tip: t.f.T("Drop\nPut it down here and now. Shift-click to do it after the queued orders."), NoFocus: true}
 	switch {
 	case ac.broken != "":
 		drop.Disabled, drop.Reason = true, ac.broken
@@ -201,10 +202,10 @@ func (t Tab) buttons(p game.PawnView, r Row, rr gfx.Rect, ac access) {
 
 func (t Tab) lockButton(id entity.EntityID, r Row, br gfx.Rect, ac access) {
 	o := uikit.BtnOpts{Selected: r.Forced, NoFocus: true,
-		Tip: "Lock\nKeep it on: the apparel policy will not take it off."}
+		Tip: t.f.T("Lock\nKeep it on: the apparel policy will not take it off.")}
 	key, fb := "ui_icon/gear_unlock", "L"
 	if r.Forced {
-		key, o.Tip = "ui_icon/gear_lock", "Unlock\nLet the apparel policy decide about it again."
+		key, o.Tip = "ui_icon/gear_lock", t.f.T("Unlock\nLet the apparel policy decide about it again.")
 	}
 	if ac.broken != "" {
 		o.Disabled, o.Reason = true, ac.broken
@@ -215,9 +216,9 @@ func (t Tab) lockButton(id entity.EntityID, r Row, br gfx.Rect, ac access) {
 }
 
 func (t Tab) eatButton(id entity.EntityID, r Row, br gfx.Rect, ac access) {
-	o := uikit.BtnOpts{NoFocus: true, Tip: "Eat\nEat it now, where they stand."}
+	o := uikit.BtnOpts{NoFocus: true, Tip: t.f.T("Eat\nEat it now, where they stand.")}
 	if r.Use == gearview.UseDrug {
-		o.Tip = "Take\nTake one dose now. The drug policy still applies."
+		o.Tip = t.f.T("Take\nTake one dose now. The drug policy still applies.")
 	}
 	switch {
 	case ac.broken != "":
@@ -232,9 +233,9 @@ func (t Tab) eatButton(id entity.EntityID, r Row, br gfx.Rect, ac access) {
 
 // unloadButton is CSE-038's Unload (Cancel on a marked pack entry).
 func (t Tab) unloadButton(p game.PawnView, r Row, br gfx.Rect, ac access) {
-	label, tip := "Unload", "Unload\nPut this away: in a stockpile if the colony has room, else on the ground beside "+p.Name+"."
+	label, tip := t.f.T("Unload"), lang.Tf(t.f, "Unload\nPut this away: in a stockpile if the colony has room, else on the ground beside %s.", p.Name)
 	if r.Marked {
-		label, tip = "Cancel", "Cancel\nLeave this in the pack."
+		label, tip = t.f.T("Cancel"), t.f.T("Cancel\nLeave this in the pack.")
 	}
 	o := uikit.BtnOpts{Tip: tip, NoFocus: true}
 	if ac.broken != "" {
