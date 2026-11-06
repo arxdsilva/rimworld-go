@@ -121,7 +121,16 @@ type mossReport struct {
 	Device     string  `json:"device"`
 	GenSeconds float64 `json:"gen_seconds"`
 	Peak       float64 `json:"peak"`
+	Onset      float64 `json:"onset_s"` // where the clip starts in the model's 30 s, when it started late
 	MaxRSSGB   float64 `json:"maxrss_gb"`
+}
+
+// onsetNote says where a late sound was cut from, or nothing.
+func onsetNote(at float64) string {
+	if at <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(", cut from %.2f s", at)
 }
 
 // lastReport finds the runner's JSON report: the last line that parses.
@@ -267,8 +276,8 @@ func (a *app) generateMoss(p Prompts, todo []Sound, skips []skip, l *Ledger) err
 		}
 		made++
 		rep, _ := lastReport(out)
-		fmt.Fprintf(a.stdout, "%s take %d: %.1f s, seed %d, made in %.0f s on %s -> %s\n",
-			s.ID, n, s.Seconds, seed, rep.GenSeconds, rep.Device, a.ledgerPath(raw))
+		fmt.Fprintf(a.stdout, "%s take %d: %.1f s, seed %d, made in %.0f s on %s%s -> %s\n",
+			s.ID, n, s.Seconds, seed, rep.GenSeconds, rep.Device, onsetNote(rep.Onset), a.ledgerPath(raw))
 		if _, ok := events[eventOf(s.ID)]; !ok {
 			continue
 		}

@@ -47,6 +47,33 @@ def patch_for_mps():
     wan_audio_dit.precompute_freqs_cis = precompute_freqs_cis
 
 
+SILENT_PEAK = 0.01  # -40 dBFS: a crop this quiet holds no sound, only the noise floor
+ONSET_SHARE = 0.1   # the sound starts at the first block reaching a tenth of the take's peak
+PREROLL_S = 0.02
+
+
+def crop(full, sr, seconds):
+    """Cut `seconds` from the 30 s the model always makes.
+
+    From the start when the start has sound, as the pipeline does. Otherwise
+    the model put the sound later (1 to 8 s in seen takes), so cut from just
+    before its onset. Returns the clip and where it starts, in seconds.
+    """
+    import numpy as np
+    n = int(sr * seconds)
+    head = full[:n]
+    if float(np.abs(head).max(initial=0.0)) >= SILENT_PEAK:
+        return head, 0.0
+    peak = float(np.abs(full).max(initial=0.0))
+    if peak < SILENT_PEAK:
+        return head, 0.0  # silent throughout: leave it for sfxgen to reject
+    block = max(1, sr // 100)
+    loud = np.flatnonzero(np.abs(full) >= ONSET_SHARE * peak)
+    start = max(0, (int(loud[0]) // block) * block - int(PREROLL_S * sr))
+    start = min(start, max(0, len(full) - n))
+    return full[start:start + n], start / sr
+
+
 def maxrss_bytes():
     rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return rss if sys.platform == "darwin" else rss * 1024  # Linux reports KiB
@@ -88,17 +115,22 @@ def main():
     pipe = MossSoundEffectPipeline.from_pretrained(args.model, torch_dtype=torch.bfloat16, device=device)
     load_s = time.time() - t0
     t1 = time.time()
-    audio = pipe(prompt=args.prompt, seconds=args.seconds, num_inference_steps=args.steps,
+    # The pipeline adds " duration: X.Xs" and crops to the first X s; ask for the
+    # whole window with the same words so crop() can move to a late onset.
+    seconds = round(args.seconds, 1)
+    audio = pipe(prompt=f"{args.prompt.strip()} duration: {seconds:.1f}s", append_duration_suffix=False,
+                 seconds=pipe.max_inference_seconds, num_inference_steps=args.steps,
                  cfg_scale=args.cfg, seed=args.seed, progress_bar_cmd=lambda x: x)
     if device == "mps":
         torch.mps.synchronize()
     a = audio.float()
     if bool(torch.isnan(a).any()):
         sys.exit("the model produced NaN samples")
+    clip, onset = crop(a[0, 0].cpu().numpy(), pipe.sample_rate, seconds)
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    sf.write(args.out, a[0, 0].cpu().numpy(), pipe.sample_rate, subtype="PCM_24")
+    sf.write(args.out, clip, pipe.sample_rate, subtype="PCM_24")
     print(json.dumps({"device": device, "load_seconds": round(load_s, 1), "gen_seconds": round(time.time() - t1, 1),
-                      "sample_rate": pipe.sample_rate, "peak": round(float(a.abs().max()), 4),
+                      "sample_rate": pipe.sample_rate, "peak": round(float(abs(clip).max()), 4), "onset_s": round(onset, 2),
                       "maxrss_gb": round(maxrss_bytes() / 1e9, 2)}), flush=True)
 
 

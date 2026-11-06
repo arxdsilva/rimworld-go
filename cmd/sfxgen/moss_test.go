@@ -291,9 +291,12 @@ func TestParseVMStatAndReport(t *testing.T) {
 	if _, err := parseVMStat("nothing"); err == nil {
 		t.Fatal("garbage parsed")
 	}
-	r, ok := lastReport([]byte("noise {not json\n{\"device\":\"cpu\",\"gen_seconds\":1}\n{\"device\":\"mps\",\"gen_seconds\":2.5}\ntrailing\n"))
-	if !ok || r.Device != "mps" || r.GenSeconds != 2.5 {
+	r, ok := lastReport([]byte("noise {not json\n{\"device\":\"cpu\",\"gen_seconds\":1}\n{\"device\":\"mps\",\"gen_seconds\":2.5,\"onset_s\":7.48}\ntrailing\n"))
+	if !ok || r.Device != "mps" || r.GenSeconds != 2.5 || r.Onset != 7.48 {
 		t.Fatalf("lastReport = %+v %v", r, ok)
+	}
+	if onsetNote(0) != "" || onsetNote(7.48) != ", cut from 7.48 s" {
+		t.Fatalf("onsetNote = %q, %q", onsetNote(0), onsetNote(7.48))
 	}
 }
 
