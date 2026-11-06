@@ -1,6 +1,6 @@
 ---
 name: rimworld-go-creatures
-description: Add, change or remove an animal or creature in rimworld-go with the same full setup every time — roster row, simulation numbers, art from the animal rig, the four generated sounds (call, attack, hurt, death; local MOSS by default) and every hook that makes it live in play. Use whenever a species, creature, monster, insect, bird or pet is created, renamed, redesigned or retired.
+description: Add, change or retire an animal or creature in rimworld-go: roster row, art from the animal rig, four generated sounds, and hooks. Use for any species change.
 ---
 
 # Creatures: the one setup every species gets
@@ -14,17 +14,17 @@ Canonical sources (read by section, never paste whole files):
 | Roster (sim, binding) | `internal/domain/animal/animal.go` — `Roster` rows, `buildDef` formulas |
 | Roster (art, mirror) | `assets/source/blender/artlib/families/animal_roster.py` |
 | Art rules | ART spec §11 / §11.1 (roster, originals rule, sprite set), §16.2 (blood), §6.1 (creatures cast no shadow, 2026-10-31) |
-| Sound rules | `.agents/handoffs/SND-001-audio-runtime.md` (addendum: animal voices), `SND-003-animal-voices.md` once written; plan of record for ids, fallback, spending |
-| Wildlife behaviour | `.agents/handoffs/SIM-019-wildlife.md` |
+| Sound rules | SND-001 (audio runtime, addendum: animal voices) and SND-003 (animal voices) in `.agents/handoffs/SND.md`; plan of record for ids, fallback, spending |
+| Wildlife behaviour | SIM-019 in `.agents/handoffs/SIM.md` |
 
 ## Hard rules
 
-1. **Originals only.** Never reproduce RimWorld-invented creatures (names, look, sounds or balance). Real animals are fine; fictional roles get our own design and name (see ART §11.1). Prompts and blurbs never name RimWorld creatures.
+1. **Originals only** (`.agents/specs/CLEAN_ROOM.md`). Never reproduce RimWorld-invented creatures (names, look, sounds or balance numbers). Real animals are fine; fictional roles get our own design and name (see ART §11.1). Prompts and blurbs never name RimWorld creatures.
 2. **Append-only roster.** New species go before `numSpecies`; never reorder or delete a value (saves store the uint8). Retire a species by aliasing its key in `ParseSpecies`, not by removing its slot.
 3. **One key everywhere.** The snake_case roster key is the sim name, the art key (`animal/<key>_…`), the sound key (`animal.<key>.<event>`), the icon (`ui_icon/<key>`), the corpse (`item/corpse_<key>_v0..v2`) and the blurb key. Go roster and Python roster list the same keys in the same order.
 4. **Our own numbers.** Stats come from `buildDef` (size × behaviour classes). Add a per-species override only when the brief demands it, documented in the override map.
-5. **Every creature has its four voices** — `call`, `attack`, `hurt`, `die` — generated, reviewed and approved (below). Until approved, the voice-group placeholder plays; that is a temporary state recorded in the handoff, never the end state.
-6. **MOSS by default, ElevenLabs only with approved spending.** `cmd/sfxgen` generates with the local open-source MOSS-SoundEffect v2.0 model (`-backend moss`, the default since the user's decision of 2026-10-31): free, one take at a time (about 4 min and 16–22 GB each; it waits for 24 GB free), every take logged in the ledger with `backend: moss` and its seed. ElevenLabs (`-backend elevenlabs`) costs credits: dry-run first, the user approves each batch, every take is logged, the reserve is never crossed, at most one retry per sound. Never print, log or commit the API key. The model, its venv and cache stay outside the repo (`~/.cache/rimworld-go/moss` or `-moss-python`/`-moss-model`).
+5. **Every creature has its four voices** — `call`, `attack`, `hurt`, `die` — generated, reviewed and approved (below). Until approved, the voice-group placeholder plays; that is a temporary state recorded in the ledger, never the end state.
+6. **MOSS by default, ElevenLabs only with approved spending.** `cmd/sfxgen` generates with the local open-source MOSS-SoundEffect v2.0 model (`-backend moss`, the default since the user's decision of 2026-10-31): free, one take at a time (about 4 min and 16–22 GB each; it waits for 24 GB free), every take logged in the ledger with `backend: moss` and its seed. ElevenLabs (`-backend elevenlabs`) costs credits: dry-run first, the user approves each batch, every take is logged, the reserve is never crossed, at most one retry per sound. Never print, log or commit the API key or the MOSS model/venv; paid generation stays above the credit reserve. The model, its venv and cache stay outside the repo (`~/.cache/rimworld-go/moss` or `-moss-python`/`-moss-model`).
 
 ## Checklist (do all, in this order)
 
@@ -55,7 +55,7 @@ Canonical sources (read by section, never paste whole files):
 
 ### 5. Close out
 - [ ] Full gates (`.agents/specs/PARALLEL_WORK.md` §5): build, fmt, vet, lint, `-race`, determinism ×3, `make art-check`, `make audio-check`, benchmarks.
-- [ ] Handoff note (species, art review, sounds generated/approved with backend, seeds or credits spent) and checklist boxes (vanilla Animals / Wildlife, UI/UX animals tab) — `[x]`/`[-]`/`[!]` honestly.
+- [ ] Ledger section (`.agents/templates/HANDOFF.md`: species, art review, sounds generated/approved with backend, seeds or credits spent) and checklist boxes (vanilla Animals / Wildlife, UI/UX animals tab) — `[x]`/`[-]`/`[!]` honestly.
 
 ## Tests that enforce this (must stay green; never weaken)
 | Test | Catches |

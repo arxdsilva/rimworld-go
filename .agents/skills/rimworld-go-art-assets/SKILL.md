@@ -1,36 +1,17 @@
 ---
 name: rimworld-go-art-assets
-description: Create, change, or review rimworld-go sprites, icons, UI chrome, palettes, pivots, atlases, renderer presentation, plugin assets, and the asset pipeline using the canonical art-direction spec. Use whenever player-visible art or asset-pipeline tooling is in scope.
+description: Make or review rimworld-go sprites, icons, UI chrome, palettes, pivots, atlases and asset-pipeline tooling. Use when player-visible art is in scope.
 ---
 
-# Art Direction & Asset Pipeline
+# Art direction and asset pipeline
 
-Canonical spec: `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`.
+Spec: `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` (ART). Read by section; skip for headless work with no visual output. Applies to world sprites, terrain, buildings, plants, pawns, animals, items; UI chrome, icons, portraits, emblems; palettes, pivots, metadata, atlases, validators; renderer presentation; plugin asset packs; AI-assisted concept art. Pixels, texture handles, camera and animation stay out of `internal/domain`.
 
-Do not paste that file into prompts. Read it by section. Do not load it for headless simulation-only work with no visual output.
+## Load
 
-## When this skill applies
-
-Use for:
-
-- world sprites, terrain, buildings, plants, pawns, animals, items, weapons, apparel;
-- UI chrome, icons, overlays, portraits, faction emblems;
-- palettes, pivots, tint masks, metadata, atlases, validators, exporters;
-- renderer presentation that chooses how those assets appear;
-- plugin/mod asset packs;
-- AI-assisted concept art for this game.
-
-Do not use as a license to put sprites, texture handles, or animation clocks in `internal/domain`.
-
-## Required context
-
-Always:
-
-- root `AGENTS.md`;
-- this skill;
-- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` §1 (definition of done), §2 (principles), §35 (acceptance).
-
-Then only the sections that match the asset family:
+- Root `AGENTS.md`; ART §1 Definition of done, §2 Principles, §35 Acceptance.
+- Clean room: `.agents/specs/CLEAN_ROOM.md` (never trace, extract, recolor or reconstruct RimWorld art, nor use it as image-to-image input).
+- Then only the family sections:
 
 | Family | Sections |
 |---|---|
@@ -47,83 +28,36 @@ Then only the sections that match the asset family:
 | Tests / QA / task contract | §29–§30 |
 | Parallel ownership / waves / prototype gate | §31–§34 |
 
-Also load:
+- `assets/AGENTS.md` when it exists; the matching backlog row (`.agents/backlog/`); the named screen in MAIN_UI when chrome or icons belong to one; neighbouring assets, templates and palettes of the family.
 
-- `assets/AGENTS.md` when that package exists;
-- matching item(s) in `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` (rendering/content) or `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (UI chrome/icons);
-- matching named screen in `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` when chrome/icons belong to a player-facing screen;
-- existing templates, palettes, and neighboring assets in the same family.
+## Flow
 
-## Clean-room
+requirement -> original brief -> shared template + palette -> source art -> metadata -> validate / export / atlas -> renderer consumes generated assets + `RenderSnapshot`. Domain owns footprint, IDs and state, not pixels. Animation timing never decides simulation outcomes. Visual variation keys off world seed, tile, EntityID and category; visual RNG never feeds the simulation.
 
-Never trace, extract, recolor, vectorize, or closely reconstruct proprietary RimWorld sprites, textures, icons, UI art, or other copyrighted assets. Do not use extracted RimWorld assets as image-to-image inputs.
+## Steps
 
-Reproduce readability and design principles, not proprietary artwork.
-
-## Architecture
-
-```text
-gameplay requirement
--> original brief
--> shared template + palette
--> source art
--> metadata
--> validate / export / atlas
--> renderer consumes generated assets + RenderSnapshot
-```
-
-- Domain owns logical footprint, IDs, and simulation state — not pixels.
-- Renderer/UI adapters own sprites, atlases, camera, interpolation, and zoom LOD.
-- Animation timing never determines simulation outcomes.
-- Visual variation keys off world seed, tile, EntityID, and category; visual RNG must not feed authoritative simulation.
-
-## Workflow
-
-1. Identify asset family, gameplay purpose, template, and logical footprint.
-2. Confirm Wave 0 contracts (scale, camera, pivots, outlines, palettes, light, naming, metadata) exist; if not, freeze those before bulk production.
-3. Honor the §34 prototype gate: do not bulk-produce a family until the vertical-slice scene exists.
-4. Search existing templates, palettes, and IDs before inventing new ones.
-5. Author original source under `assets/source/`; never hand-patch `assets/generated/` when source exists.
+1. Identify family, gameplay purpose, template, logical footprint.
+2. Confirm the Wave 0 contracts (scale, camera, pivots, outlines, palettes, light, naming, metadata) exist; freeze them before bulk production.
+3. Honour the ART §34 prototype gate: no bulk production before the vertical-slice scene exists.
+4. Search existing templates, palettes and IDs first.
+5. Author source under `assets/source/`; never hand-patch `assets/generated/` when source exists.
 6. Write sidecar metadata (footprint, pivot, attachments, tint regions, export).
-7. Validate with `assettool` / `contentlint` when those tools exist.
-8. Inspect in the real renderer at normal gameplay zoom, on light and dark terrain.
-9. Update matching ART wave checkboxes in `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` (`[x]` / `[-]` / `[!]`).
-10. If the work also maps to a vanilla or UI checklist item, update that checkbox in the same change.
-11. Delete every asset, alias, metadata file and loader the change leaves unused (spec §25 housekeeping); `make art-check` must report no orphans.
-12. Plants and grass: no contour (`outline_width=0`, spec §9).
-13. Pawns are limbless (round head, body capsule; attachments `head`, `hold`, `back`; S/E/N rendered, west mirrored; no frames). Camera, lean and outline values live in `artlib/contracts.py` (spec §5-6, ART-025); never hard-code them.
-14. Write a concise handoff including visual/art impact.
+7. Validate with `assettool` / `contentlint` where they exist.
+8. Inspect in the real renderer at gameplay zoom, on light and dark terrain.
+9. Tick the matching ART wave checkboxes and any vanilla/UI backlog row (root `AGENTS.md` checkbox rule).
+10. Delete every asset, alias, metadata file and loader the change leaves unused (ART §25); `make art-check` reports no orphans.
+11. Plants and grass: no contour, `outline_width=0` (ART §9).
+12. Pawns are limbless (round head, body capsule; attachments `head`, `hold`, `back`; S/E/N rendered, west mirrored; no frames). Camera, lean and outline values live in `artlib/contracts.py` (ART §5–6, ART-025); never hard-code them.
+13. Append a section to the family ledger (`.agents/templates/HANDOFF.md`) with the visual impact.
 
 ## Task packet extras
 
-In addition to the standard packet, every art task states:
-
-```text
-asset family:
-template:
-logical footprint:
-required variants:
-material regions / palette:
-attachments / pivots:
-allowed files:
-forbidden files:
-existing references:
-```
+On top of `.agents/templates/TASK_PACKET.md`: asset family, template, logical footprint, required variants, material regions / palette, attachments / pivots, existing references.
 
 ## Parallel ownership
 
-After shared contracts are frozen, split by family (furniture vs plants vs weapons vs icons). Do not let parallel agents redefine pawn proportions, tile scale, palette, camera, pivots, or building perspective. One integration pass owns validation, contact sheets, and style-drift rejection.
+After contracts freeze, split by family (furniture, plants, weapons, icons). Parallel agents never redefine pawn proportions, tile scale, palette, camera, pivots or building perspective. One integration pass owns validation, contact sheets and style-drift rejection.
 
 ## Completion gate
 
-An art/visual change is done only when:
-
-- original (clean-room);
-- readable at normal gameplay zoom;
-- canonical scale, pivot, palette, light, and perspective;
-- metadata valid;
-- validator/tests pass;
-- inspected in-game, not only in an editor;
-- editable source committed where applicable;
-- ART wave (and any matching gameplay/UI checklist) checkbox updated;
-- handoff written.
+Original (clean room); readable at gameplay zoom; canonical scale, pivot, palette, light, perspective; metadata valid; validators pass; inspected in-game; editable source committed; checkboxes updated; ledger section appended.

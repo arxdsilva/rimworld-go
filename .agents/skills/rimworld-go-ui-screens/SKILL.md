@@ -1,42 +1,16 @@
 ---
 name: rimworld-go-ui-screens
-description: Implement or review rimworld-go player-facing screens, windows, overlays, HUD layout, navigation, inspectors, and management tables using the canonical main-screens spec. Use whenever a named screen or its shared navigation/chrome is in scope.
+description: Build or review rimworld-go screens, windows, overlays, HUD, navigation and management tables. Use when a named screen or shared chrome is in scope.
 ---
 
-# Main UI Screens
+# Main UI screens
 
-Canonical spec: `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`.
+Spec: `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` (MAIN_UI). Read by section; skip for headless work with no screen. Covers boot and menus, colony HUD, inspectors and pawn tabs, architect, work/schedule/assign, production, research, animals, prisoners, trade, factions, history, quests, alerts, world map, caravans, pods, endgame, pause/save/load/options, tutorial, plugins, developer tools, large-colony management, search, shared navigation and window/modal/overlay rules. Widgets, focus and layout never enter `internal/domain`.
 
-Ordered backlog: `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`.
+## Load
 
-Visual chrome/icons: `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` via `rimworld-go-art-assets`.
-
-Do not paste the screens spec into prompts. Read it by section. Do not load it for headless simulation-only work with no screen.
-
-## When this skill applies
-
-Use for:
-
-- boot, menus, new-game flow, pause/save/load/options;
-- main colony HUD, camera/selection/time chrome, colonist bar;
-- inspectors, pawn tabs, architect, work/schedule/assign, production, research;
-- animals, wildlife, prisoners, trade, factions, history, quests, alerts;
-- world map, caravans, transport pods, endgame, victory;
-- tutorial/help, plugin manager, developer/debug/profiler;
-- large-colony management, global search/command palette;
-- shared navigation, window/modal/overlay rules.
-
-Do not put screen widgets, focus, or layout into `internal/domain`. Screens consume read models and emit typed commands.
-
-## Required context
-
-Always:
-
-- root `AGENTS.md`;
-- this skill;
-- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` §0 (architecture), §58 (screen vs window vs overlay), §59 (definition of done).
-
-Then only the screen family for the task:
+- Root `AGENTS.md`; MAIN_UI §0 Architecture (read model -> screen -> typed command; the canonical flow), §58 Screen vs window vs overlay, §59 Definition of done.
+- Then only the screen family:
 
 | Family | Sections |
 |---|---|
@@ -54,64 +28,32 @@ Then only the screen family for the task:
 | Plugins | §45–§48 |
 | Developer / profiler | §49–§53 |
 | Large colony / search | §54–§55 |
-| Implementation waves / navigation / inventory | §56–§57, §60 |
+| Waves / navigation / inventory | §56–§57, §60 |
 
-Also load:
+- The matching rows of `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` and the vanilla checklist; ART sections (via `rimworld-go-art-assets`) when chrome or icons are new; the presentation package `AGENTS.md` and its read-model and command interfaces.
 
-- matching item(s) in `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`;
-- matching gameplay item(s) in `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`;
-- named ART_DIRECTION sections when the screen includes original chrome/icons;
-- presentation package `AGENTS.md` and existing read-model / command interfaces.
+## Rules local to screens
 
-## Architecture
+- Search, filter and sort against presentation data, never a per-frame world scan (MASTER §55, §78).
+- Screen animation never affects simulation. Plugin content appears through registries, not switches.
+- Tables that can reach hundreds of rows are virtualized.
+- Disabled actions explain why. Escape closes the topmost modal or panel first.
 
-```text
-gameplay feature
--> read model / RenderSnapshot
--> screen (adapter)
--> typed CommandEnvelope
--> application / domain
-```
+## Steps
 
-- No screen mutates authoritative simulation state.
-- Search/filter/sort against presentation data, not a per-frame world scan.
-- Screen animations never affect simulation.
-- Plugin content appears through registries, not hardcoded switches.
-- Tables that can grow to hundreds of rows are virtualized.
-- Disabled actions explain why. Escape closes the topmost modal/panel first.
-
-## Workflow
-
-1. Identify the named screen (or shared primitive) and whether it is a full screen, window/panel, overlay, or modal (§58).
-2. Confirm Wave UI-0 framework (primitives, focus, window/modal, tooltips, virtual lists, snapshot boundary, command gateway) exists; if not, build that before a later-wave screen.
+1. Name the screen or shared primitive and its form: screen, window/panel, overlay or modal (§58).
+2. Confirm the Wave UI-0 framework exists (primitives, focus, window/modal, tooltips, virtual lists, snapshot boundary, command gateway); build it before any later-wave screen.
 3. Restate Purpose / Entry / Information / Actions / Commands / States from the named section as acceptance criteria.
 4. Implement against read models and typed commands only.
-5. Cover empty, error, disabled, stale EntityID, and large-colony states.
-6. If chrome/icons are new, follow `rimworld-go-art-assets`.
-7. Update matching checkboxes in `MAIN_UI_SCREENS_SPECIFICATION.md` (§56 waves and §0/§59 items), plus the UI/UX and vanilla checklists when those items land.
-8. Write a concise handoff including screen/UI impact.
+5. Cover empty, error, disabled, stale EntityID and large-colony states.
+6. Follow `rimworld-go-art-assets` for new chrome or icons.
+7. Tick the MAIN_UI wave (§56) and DoD (§0/§59) items, and the UI/UX and vanilla rows (root `AGENTS.md` checkbox rule).
+8. Append a section to the family ledger (`.agents/templates/HANDOFF.md`) with the screen impact.
 
 ## Task packet extras
 
-```text
-screen:
-form (screen / window / overlay / modal):
-entry / navigation:
-commands emitted:
-read models consumed:
-scale requirement:
-```
+On top of `.agents/templates/TASK_PACKET.md`: screen, form (screen / window / overlay / modal), entry / navigation, commands emitted, read models consumed, scale requirement.
 
 ## Completion gate
 
-A screen is done only when §59 is met, including:
-
-- underlying gameplay exists;
-- read models + typed commands;
-- navigation, Escape/back, focus, empty/error/disabled states;
-- virtualized large lists;
-- no per-frame world scan;
-- tests where practical;
-- visual acceptance screenshot/scenario;
-- matching checkboxes updated;
-- handoff written.
+MAIN_UI §59 is met: the underlying gameplay exists; read models and typed commands; navigation, Escape/back, focus, and empty/error/disabled states; virtualized large lists; no per-frame world scan; tests where practical; a visual acceptance screenshot or scenario; checkboxes updated; ledger section appended.
