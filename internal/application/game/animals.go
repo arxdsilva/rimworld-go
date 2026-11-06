@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
@@ -874,12 +875,12 @@ func (g *Game) animalViews() []AnimalView {
 			continue
 		}
 		p, _ := g.positions.Get(id)
-		sv := speciesViewOf(a.Species) // animal_view_species.go
+		sv := animalview.Of(a.Species)
 		out = append(out, AnimalView{
-			ID: id, Species: a.Species.String(), Label: sv.label, X: p.X, Y: p.Y,
-			Attack: sv.attack, Female: animalFemale(id, a),
-			Size:       sv.size,
-			Health:     a.HP() * 100 / sv.maxHP,
+			ID: id, Species: a.Species.String(), Label: sv.Label, X: p.X, Y: p.Y,
+			Attack: sv.Attack, Female: animalFemale(id, a),
+			Size:       sv.Size,
+			Health:     a.HP() * 100 / sv.MaxHP,
 			Mode:       a.Mode.String(),
 			Designated: a.Designated,
 			Hostile:    g.hostile(a) || a.Enraged(uint64(g.clock.Now())),

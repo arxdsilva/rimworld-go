@@ -3,6 +3,7 @@ package ebiten
 import (
 	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/mapnav"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
@@ -46,6 +47,7 @@ type shell struct {
 	shellWidgets
 	shellSaves
 	shellDispatch
+	shellTexts
 
 	screens map[ports.Screen]func(a *App, sw, sh int) // uiBegin: each screen's widgets
 	routes  []clickRoute                              // applyClick: by id or prefix, in order
@@ -55,7 +57,7 @@ func newShell(a *App) shell {
 	return shell{
 		shellHint{a}, shellSize{a}, shellCmd{a}, shellWorld{a}, shellView{a}, shellSel{a},
 		shellOverlay{a}, shellSpeed{a}, shellSettings{a}, shellPanels{a}, shellWidgets{a}, shellSaves{a}, shellDispatch{a},
-		screenTable(), clickRoutes(),
+		shellTexts{&lang.Live{}}, screenTable(), clickRoutes(),
 	}
 }
 
@@ -348,6 +350,18 @@ func (s shellSaves) RefreshSlots()           { s.a.opt.RefreshSlots() }
 func (s shellSaves) LoadSlot(i int)          { s.a.opt.LoadSlot(i) }
 func (s shellSaves) NewestSlot() int         { return s.a.newestSlot() }
 
+// ---- Texts
+
+// shellTexts serves the current catalog (lang.Live: English until the
+// Language option sets one, OPT-001).
+type shellTexts struct{ live *lang.Live }
+
+// T translates src.
+func (s shellTexts) T(src string) string { return s.live.T(src) }
+
+// Tf formats src's translation with args.
+func (s shellTexts) Tf(src string, args ...any) string { return s.live.Tf(src, args...) }
+
 // ---- Dispatcher
 
 type shellDispatch struct{ a *App }
@@ -395,6 +409,8 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.world.Show(it.Select) // worldview
 	case ports.CloseWorld:
 		a.world.Close()
+	case ports.OpenInfoCard:
+		// GEAR-006 contract: the Info window (W2-INFO) handles it.
 	case ports.Push:
 		a.apply(intent{kind: intentPush, screen: it.Screen})
 	case ports.Back:

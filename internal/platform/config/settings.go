@@ -28,7 +28,9 @@ import (
 // Version 8 added the colonist card (RHUD); its fields decode over the defaults.
 // Version 9 made its docked pane compact (at most 30 % of the screen);
 // Normalize moves the values still at the old defaults.
-const SettingsVersion = 9
+// Version 10 added the General, Interface, Camera and Developer groups
+// (prefs.go, OPT-*); AutoPause takes over from PauseOnThreat.
+const SettingsVersion = 10
 
 // MaxLearnedLessons caps the learning helper's done list.
 const MaxLearnedLessons = 64
@@ -43,6 +45,10 @@ type Settings struct {
 	Controls      Controls      `json:"controls"`
 	Telemetry     Telemetry     `json:"telemetry"`
 	HUD           HUD           `json:"hud"`
+	General       General       `json:"general"`
+	Interface     Interface     `json:"interface"`
+	Camera        Camera        `json:"camera"`
+	Developer     Developer     `json:"developer"`
 }
 
 // Telemetry is the usage data the game sends (usagehttp). Basic data is
@@ -116,6 +122,8 @@ var AutosaveChoices = []int{1, 3, 7, 0}
 
 // Gameplay are conveniences that never change the simulation's rules.
 type Gameplay struct {
+	// PauseOnThreat is read only to migrate a file older than version 10
+	// into General.AutoPause.
 	PauseOnThreat bool `json:"pause_on_threat"`
 	AutosaveDays  int  `json:"autosave_days"`
 	EdgeScroll    bool `json:"edge_scroll"`
@@ -145,7 +153,8 @@ type Gameplay struct {
 	LastSaveMode    string `json:"last_save_mode,omitempty"`
 	RunOnStart      bool   `json:"run_on_start,omitempty"`
 	BirthdayLetters bool   `json:"birthday_letters,omitempty"`
-	// TempUnit is how temperatures read: "" Celsius, "F" Fahrenheit (WG-16).
+	// TempUnit is how temperatures read: "" Celsius, "F" Fahrenheit (WG-16),
+	// "K" Kelvin (TempKelvin, OPT-007).
 	TempUnit string `json:"temp_unit,omitempty"`
 	// MaxColonies caps the permanent colonies a player may hold at once
 	// (MAP-06; wiki: Colony, default 1, up to 5); 0 means the default.
@@ -208,6 +217,9 @@ func Defaults() Settings {
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
 		Telemetry:     Telemetry{Advanced: true},
 		HUD:           defaultHUD(),
+		General:       defaultGeneral(),
+		Interface:     defaultInterface(),
+		Camera:        defaultCamera(),
 	}
 }
 
@@ -246,6 +258,7 @@ func (s Settings) Normalize() Settings {
 			s.Graphics.VSync = true
 		}
 	}
+	s = s.normalizePrefs(s.Version < 10)
 	s.Version = SettingsVersion
 	s.HUD = s.HUD.normalize()
 	s.Gameplay.LearnedLessons = dedupeLessons(s.Gameplay.LearnedLessons)

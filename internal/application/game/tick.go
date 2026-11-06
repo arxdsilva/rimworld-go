@@ -94,7 +94,7 @@ func (g *Game) applyOne(c command.Command) {
 		command.ProposeTrade, command.CloseTrade, command.CommsCallTrader, command.CommsGift,
 		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms: // trade_session.go, comms.go (PLAY-024)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
-	case command.SetGameplayToggle, command.SetGameplayLimit, command.SetBenchClean, command.MarkUnload:
+	case command.SetGameplayToggle, command.SetGameplayLimit, command.SetBenchClean, command.MarkUnload, command.DropGear, command.ConsumeFromPack, command.SetApparelForced:
 		senseOf(g).Apply(c) // game/sense (CSE)
 	case command.SetName:
 		applySetName(g, c) // bio_view.go (RHUD-025)

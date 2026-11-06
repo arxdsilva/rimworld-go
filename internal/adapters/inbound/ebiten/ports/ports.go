@@ -101,6 +101,14 @@ type Settings interface {
 	KeyHint(input.Action) string
 }
 
+// Texts translates player-facing text (OPT-001, package lang): T(src)
+// with the English source as the key, Tf(src, args...) formatting the
+// translation. English returns the source unchanged.
+type Texts interface {
+	T(src string) string
+	Tf(src string, args ...any) string
+}
+
 // Panels is what the HUD chrome reads about the colony's open panels.
 type Panels interface {
 	ArchitectOpen() bool
@@ -195,6 +203,16 @@ type SwitchMap struct{ Map game.MapID }
 type OpenWorld struct{ Select string }
 type CloseWorld struct{}
 
+// OpenInfoCard opens the read-only Info window (GEAR-006) on one thing: a
+// pawn's gear row (Pawn, with Mode and Index as command.MarkUnload's), a
+// map item or building (ID), or, with neither, an item kind name (Kind).
+type OpenInfoCard struct {
+	Pawn, ID entity.EntityID
+	Mode     uint8
+	Index    int
+	Kind     string
+}
+
 func (OpenArchitect) isIntent()   {}
 func (CloseArchitect) isIntent()  {}
 func (PresetBuildTool) isIntent() {}
@@ -214,6 +232,7 @@ func (JumpTo) isIntent()          {}
 func (SwitchMap) isIntent()       {}
 func (OpenWorld) isIntent()       {}
 func (CloseWorld) isIntent()      {}
+func (OpenInfoCard) isIntent()    {}
 
 // Screen is a full-screen route of the client (presentation only; it never
 // exists in the domain). The root's screenID is this type.

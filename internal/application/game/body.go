@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/gearview"
 	"rimworld-go/internal/application/game/hit"
 	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/ai/job"
@@ -493,3 +494,6 @@ func (h hitHarm) Hold(id entity.EntityID, until uint64) {
 		h.g.jobs.Set(id, j)
 	}
 }
+
+// gearFacts is PawnView.Gear's mass, armour and speed (GEAR-1 contract: zero until game/gearfacts).
+func gearFacts(*Game, entity.EntityID) gearview.Pawn { return gearview.Pawn{} }

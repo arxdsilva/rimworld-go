@@ -217,6 +217,12 @@ type WornView struct {
 	HP, MaxHP            int
 	Tainted              bool
 	Ratty, Tattered      bool
+	// GEAR-1 contract (zero until game/gearfacts fills them): the garment's
+	// mass in grams, the body parts it covers ("torso, arms"), and what it
+	// adds to move speed in percent (negative slows, GEAR-009).
+	Grams   int
+	Cover   string
+	MovePct int
 }
 
 // Views lists the outfit's garments in slot order (nil: none on).

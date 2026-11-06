@@ -412,6 +412,36 @@ const (
 	// SetColonistOrder moves colonist Pawn to place Count on the colonist bar
 	// (CTL-011). The order is the player's: no AI or work reads it.
 	SetColonistOrder
+	// GEAR-1 contract (game/sense, GEAR_GAP_ANALYSIS.md; ignored until
+	// GEAR-1). DropGear: Pawn drops, at its feet, Mode 0 pack entry Index,
+	// 1 apparel slot Index (taken off first), 2 its weapon, 3 its spare
+	// weapon (MarkUnload's modes); Queue appends it to the pawn's order
+	// queue. ConsumeFromPack: Pawn eats or takes pack entry Index.
+	// SetApparelForced: Pawn's apparel slot Index is forced (Enabled), so
+	// its apparel policy can't take it off, or released.
+	DropGear
+	ConsumeFromPack
+	SetApparelForced
+	// GEAR-3 contract (game/outfit; ignored until GEAR-3).
+	// SetApparelPolicy gives colonist Pawn apparel policy Index (a policy
+	// id). EditApparelPolicy edits policy Index by Mode (ApparelPolicy*
+	// below). ClearForcedApparel releases every forced garment on Pawn.
+	SetApparelPolicy
+	EditApparelPolicy
+	ClearForcedApparel
+)
+
+// EditApparelPolicy modes (Command.Mode), GEAR-3 contract.
+const (
+	ApparelPolicyAllow   uint8 = iota // allow (Enabled) or forbid Name, an apparel kind name or a filter-tree category path
+	ApparelPolicyStuff                // allow (Enabled) or forbid material Name (a stuff kind name)
+	ApparelPolicyCreate               // add a policy named Name (Index: the policy to copy, -1 none)
+	ApparelPolicyRename               // name it Name
+	ApparelPolicyDelete               // remove it; its users move to the default policy
+	ApparelPolicyHP                   // allowed hit points, X to Y percent
+	ApparelPolicyQuality              // allowed quality, X to Y (quality.Level values)
+	ApparelPolicyTainted              // allow tainted garments (Enabled)
+	ApparelPolicyDefault              // new colonists get it
 )
 
 // LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).

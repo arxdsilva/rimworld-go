@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/gearview"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/application/game/raid"
@@ -287,9 +288,10 @@ type PawnView struct {
 	// FOOD-0 contract ("" and 0 until FOOD-4 and FOOD-1): food policy name, malnutrition percent.
 	FoodPolicy   string
 	Malnutrition int
-	ToxicBuildup int         // FOOD-6: toxic buildup percent (body/cond_toxic.go)
-	Frostbite    int         // TEMP-3: parts with an open frostbite (body.Frostbite wounds)
-	AX           axview.Pawn // AX-0 contract (zero until its owners fill it)
+	ToxicBuildup int           // FOOD-6: toxic buildup percent (body/cond_toxic.go)
+	Frostbite    int           // TEMP-3: parts with an open frostbite (body.Frostbite wounds)
+	AX           axview.Pawn   // AX-0 contract (zero until its owners fill it)
+	Gear         gearview.Pawn // GEAR-1/GEAR-3 contract (zero until its owners fill it)
 }
 
 // ItemView is a ground stack.
@@ -556,6 +558,7 @@ type PackItemView struct {
 	Name   string
 	Qty    int
 	Unload bool
+	Gear   gearview.Pack // GEAR-1 contract (game/sense)
 }
 
 // WorldView is the non-pawn read model for HUD and the map.
@@ -713,9 +716,10 @@ type WorldView struct {
 	// TempVer, the temperature overlay's cache key: it changes whenever a cell's air may have (game/thermo).
 	ClimateEvent              string
 	ClimateEventEnds, TempVer uint64
-	ResearchAlert             bool         // RSCH-1: no project picked while one is open, a bench stands and a colonist can research
-	TechLevel                 string       // RSCH-1: the colony's tech level (research.TechLevel's name; it prices projects)
-	AX                        axview.World // AX-0 contract (zero until its owners fill it)
+	ResearchAlert             bool           // RSCH-1: no project picked while one is open, a bench stands and a colonist can research
+	TechLevel                 string         // RSCH-1: the colony's tech level (research.TechLevel's name; it prices projects)
+	AX                        axview.World   // AX-0 contract (zero until its owners fill it)
+	Gear                      gearview.World // GEAR-3 contract (game/outfit)
 }
 
 // FoodPolicyView is one food policy: its id, name and allowed kind names.
@@ -1401,6 +1405,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.WeaponQuality, pv.WeaponStuff, pv.Spare, pv.ShieldPct, pv.Smokepops, pv.Kills, pv.DamageDealt = gv.Quality, gv.Stuff, gv.Spare, gv.ShieldPct, gv.Smokepops, gv.Kills, gv.Damage
 		pv.ThreatResponse = g.combat.Drafts.Response(id).String()
 		pv.Pack, pv.PackGrams, pv.PackLimitGrams = packView(g, id) // sense_gear_host.go (CSE-036)
+		pv.Gear = outfitView(g, id, gearFacts(g, id))              // body.go: game/gearfacts (GEAR-1); apparel.go: game/outfit (GEAR-3)
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
@@ -1504,7 +1509,8 @@ func (g *Game) world() WorldView {
 	// plant_view.go): with the view cache on, each keeps its last slice
 	// while it reads the same (PERF-002).
 	g.fillItemViews(&w)
-	fillDietView(g, &w) // food.go (FOOD-4): food policies, days of food
+	fillDietView(g, &w)     // food.go (FOOD-4): food policies, days of food
+	w.Gear = outfitWorld(g) // apparel.go: game/outfit (GEAR-3)
 	w.SkyEvent, w.SkyEventEnds = g.incidents.SkyView(uint64(g.clock.Now()))
 	w.ClimateEvent, w.ClimateEventEnds = g.incidents.ClimateView(uint64(g.clock.Now())) // TEMP-2 (incident/climate.go)
 	w.Extreme = w.ClimateEvent

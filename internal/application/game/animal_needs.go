@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/animal"
@@ -1013,7 +1014,7 @@ func (g *Game) fillAnimalNeeds(av *AnimalView, a animal.State) {
 	if !a.HasSex || animal.NeedsFree(a.Species) {
 		av.Food, av.Rest = 100, 100
 	}
-	av.Diet = speciesViewOf(a.Species).diet // animal_view_species.go
+	av.Diet = animalview.Of(a.Species).Diet
 	av.Hunts = a.Tame && animal.DefOf(a.Species).Predator
 	av.Leaving = a.Leaving || a.Mode == animal.Leave
 	av.Herd = a.Herd

@@ -76,6 +76,8 @@ func (s *Sense) Apply(c command.Command) {
 		s.Tidy.SetBench(entity.EntityID(c.Target), c.Enabled)
 	case command.MarkUnload:
 		s.Gear.Mark(entity.EntityID(c.Pawn), int(c.Mode), c.Index, c.Enabled)
+	case command.DropGear, command.ConsumeFromPack, command.SetApparelForced:
+		// GEAR-1 contract: ignored until GEAR-1 (GEAR_GAP_ANALYSIS.md).
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/gearview"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/economy/item"
@@ -438,3 +439,9 @@ func (g *Game) apparelKinds() []item.Kind {
 	}
 	return x.kinds
 }
+
+// outfitView adds the apparel policy to v (GEAR-3 contract: unchanged until game/outfit).
+func outfitView(_ *Game, _ entity.EntityID, v gearview.Pawn) gearview.Pawn { return v }
+
+// outfitWorld is WorldView.Gear (GEAR-3 contract: zero until game/outfit).
+func outfitWorld(*Game) gearview.World { return gearview.World{} }
