@@ -810,6 +810,7 @@ understandable.
 -   [x] **Combat log** (wave E U5: History window Combat tab, `windows/combat_log.go`, from `WorldView.CombatLog`, 64 entries)
 -   [x] **Emergency tend** (MED-03: drafted right-click "Tend <name>" on a wounded colonist or prisoner)
 -   [x] **Rescue/capture contextual commands** (SIM-062: select a colonist, right-click a pawn: "Rescue <name>", "Capture <name>", "Arrest <name>", "Prioritize tending <name>" (undrafted) or "Tend <name>" (drafted); disabled rows give the reason (no free bed, no free prisoner bed, carried by, cannot reach); Shift queues; journeys `TestJourneyOrders{RescueDowned,CaptureFromMenu,ArrestFromMenu,PrioritizeTend,RescueQueued}`)
+-   [x] **Prioritize refueling** (REF-1: select a colonist, right-click a burner: "Prioritize refueling <building>" fills it to full whatever its auto refuel setting; disabled rows say already full, no free wood/chemfuel, cannot reach, in use by, hauling disabled; Shift queues; `TestJourneyOrdersPrioritizeRefuel`)
 
 ## 13.3 Targeting feedback
 
@@ -843,6 +844,7 @@ understandable.
 ## 14.1 Workbench inspector
 
 -   [x] **Power/operational state** (PLAY-021: the building pane says Uses/Produces N W, the grid balance and stored energy, a switch Closed/Open, a thermostat target and whether it works now, flick pending; the Power toggle (V))
+-   [x] **Auto refuel switch** (REF-1: a burner's pane has an "Auto refuel" toggle (`bldg.autorefuel`, the fuel's icon) sending `SetAutoRefuel`; the fuel line says "auto refuel off"; `TestJourneyBuildingAutoRefuelToggle`)
 -   [-] **Interaction status** (work spot outlined on selection)
 -   [x] **Door forbid** (CBT-5: the door pane Forbid/Allow toggle, `bldg.forbid`; STK-AL: F key, Allow label, marker and pane line)
 -   [x] **Door, turret and mortar controls** (DEF-3 U4: `inspector/cmds_defence.go`: door Hold open, turret Hold fire, mortar Set target and Clear target; barrel, shells and target lines; mortar aim mode in `orders/mortar_aim.go`: next map click sends SetMortarTarget with the single selected colonist, right-click or Esc cancels, aim marker drawn)

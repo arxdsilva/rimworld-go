@@ -1312,6 +1312,10 @@ treatment, and surgery are major colony-management systems.
     -   Wind state and obstruction rules.
 -   [x] **Fuel consumption** (PLAY-021: one fuel table for campfires, torch lamps and wood-fired generators, refuelled by haulers; a generator burns only while running)
     -   Refuel jobs for generators/devices.
+    -   [x] **Ordered refuel** (REF-1, `REFUEL_GAP_ANALYSIS.md`: right-click "Prioritize refueling <building>" fills any burner not full, with disabled reasons)
+    -   [x] **Auto refuel switch** (REF-1: per-burner toggle; off, haulers leave it to ordered refuels; haulers also skip hostile burners)
+    -   [ ] **Target fuel level** (REF-2: no published numbers; ours always fills to full)
+    -   [ ] **Eject fuel** (REF-2: fueled stove)
 
 ------------------------------------------------------------------------
 

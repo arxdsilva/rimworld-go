@@ -542,6 +542,7 @@ Disabled commands show reason.
   - **Move:** a ghost placement mode that reinstalls the same building, keeping its bills, fuel and owners.
   - **Copy:** the Architect, preset to that building.
   - **Uninstall (AX-1):** a toggle that marks it to be packed into a crated building; a filled grave also offers **Open**, a downed person **Strip**.
+  - **Auto refuel (REF-1):** a burner's toggle (`bldg.autorefuel`, the icon of the fuel it burns) sending `SetAutoRefuel`. Off, haulers leave it alone and only an ordered refuel feeds it; the fuel line adds "auto refuel off". Not on a fish tank or a hostile building.
 - **Crated building (AX-1):** the item panel names what it holds; **Reinstall** runs the Move ghost for the packed kind and sends `Reinstall`.
 - **Action availability:** actions come from the same options as the right-click menu, and disabled ones show the simulation's reason.
 - **Paused play:** every action applies at once while paused.
@@ -559,6 +560,7 @@ Disabled commands show reason.
 - **Command buttons:** the action bar became square command buttons right of the pane (icon, label, hotkey, disabled reason in the tooltip), wrapping upward.
   - Hotkeys follow declaration order; dedicated keys stay (R draft, F forbid).
   - Per-colonist choices are options: right-click or the corner arrow. These cover Equip/Wear/Eat/Haul on items, "Now by…" on plants, the trough filter and an animal's master.
+  - Right-clicking a burner offers "Prioritize refueling <building>" (REF-1, `OrderRefuel`): the colonist fills it to full now; disabled rows give the simulation's reason (already full, no free wood or chemfuel, cannot reach, in use by, hauling disabled).
   - A group selection merges its members' commands: a toggle shows mixed, and a command is disabled only when it is for every member. A menu merges to the options every member has, and the pick runs on each; a command for one thing (Move, Copy, Settings) leaves the grid.
 - **Nothing selected:** the hovered cell's details show as text at the lower-left.
 
