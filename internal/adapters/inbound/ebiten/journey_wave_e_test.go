@@ -227,6 +227,12 @@ func TestJourneyDropPodRaidDefended(t *testing.T) {
 	for i := 0; i < 12000; i++ {
 		careFeed(j)
 		j.update(1)
+		if j.a.renderer.speed == speedPaused {
+			// A new threat letter mid-raid (a colonist kidnapped) pauses
+			// the game again under the default automatic pause (OPT-005);
+			// the player resumes, as here.
+			j.key("Digit3", 0)
+		}
 		landed, any := weHostileArrival(j)
 		sawArrival, sawLanded = sawArrival || any, sawLanded || landed
 		rs := weRaiders(j)
