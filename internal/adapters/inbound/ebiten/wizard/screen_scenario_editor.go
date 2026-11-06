@@ -253,7 +253,7 @@ func (w editorPage) editorUI(sw, sh int) {
 
 	// Right column: live preview and validation.
 	w.kit().Panel(L.preview)
-	w.detailView("sced.preview", L.preview, ed.Def, ScenarioLines(ed.Def))
+	w.detailView("sced.preview", L.preview, ed.Def, ScenarioLinesIn(w.sh, ed.Def))
 	w.validationPanel(ed, L.problems, probs)
 
 	done := uikit.BtnOpts{}

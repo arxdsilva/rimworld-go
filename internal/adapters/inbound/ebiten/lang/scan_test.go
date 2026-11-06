@@ -150,6 +150,15 @@ func strLit(e ast.Expr) (string, bool) {
 // translateKey is the source key a T/Tf call carries: x.T(lit),
 // x.Tf(lit, …), lang.Tf(tr, lit, …) or Tf(tr, lit, …) inside lang.
 func translateKey(f *srcFile, call *ast.CallExpr) (string, bool) {
+	if arg := translateArg(f, call); arg != nil {
+		return strLit(arg)
+	}
+	return "", false
+}
+
+// translateArg is the expression a T/Tf call translates (nil when call is
+// neither): the literal, or the constant or variable that holds the key.
+func translateArg(f *srcFile, call *ast.CallExpr) ast.Expr {
 	var name string
 	pkgFunc := false
 	switch fn := call.Fun.(type) {
@@ -161,17 +170,17 @@ func translateKey(f *srcFile, call *ast.CallExpr) (string, bool) {
 			pkgFunc = true
 		}
 	default:
-		return "", false
+		return nil
 	}
 	switch {
 	case name == "T" && !pkgFunc && len(call.Args) == 1:
-		return strLit(call.Args[0])
+		return call.Args[0]
 	case name == "Tf" && pkgFunc && len(call.Args) >= 2:
-		return strLit(call.Args[1])
+		return call.Args[1]
 	case name == "Tf" && !pkgFunc && len(call.Args) >= 1:
-		return strLit(call.Args[0])
+		return call.Args[0]
 	}
-	return "", false
+	return nil
 }
 
 // isTranslate reports whether call is a T or Tf call, literal or not.

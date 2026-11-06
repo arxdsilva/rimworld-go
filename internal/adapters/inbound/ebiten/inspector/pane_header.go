@@ -138,7 +138,7 @@ func (c CardPane) headButtons(spec Spec) []headButton {
 		if colonist(p) {
 			out = append(out, c.renameButton(p.ID, c.shell.PawnLabel(p)))
 		}
-		if th := threatCommand(p); len(th) == 1 {
+		if th := threatCommandIn(c.shell, p); len(th) == 1 {
 			out = append(out, c.threatButton(p, th[0]))
 		}
 		if !p.Hostile {
@@ -233,7 +233,7 @@ func (c CardPane) threatButton(p game.PawnView, b Button) headButton {
 // careButton opens the care level picker (RHUD-019, 020).
 func (c CardPane) careButton(id entity.EntityID, name string, cur medcare.Policy, dead bool) headButton {
 	b := headButton{id: HeadCareID, label: "+", icon: careIcon(cur),
-		tip: fmt.Sprintf("Medical care for %s: %s\n%s", name, cur.Label(), careTip(cur)),
+		tip: fmt.Sprintf("Medical care for %s: %s\n%s", name, cur.Label(), careTipIn(c.shell, cur)),
 		run: func() { c.pickCare(id, cur) }}
 	if dead {
 		b.reason = "The dead need no care."

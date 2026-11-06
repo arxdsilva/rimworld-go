@@ -17,9 +17,6 @@ import (
 // that rectangle). Until the body and social milestones fill the read
 // models, ok is false and the tab says so.
 
-// noDataYet is what a tab shows while its read model has nothing.
-const noDataYet = "No data yet."
-
 // kitTabOn reports a widget-kit tab (Health or Social) is the one showing
 // for the selected colonist.
 func (a Tabs) KitTabOn() bool {

@@ -407,7 +407,7 @@ func (a *Pane) DrawPane(screen *ebiten.Image) {
 	}
 	mx, my := a.shell.Cursor()
 	for _, b := range a.paneTabButtons(l.PaneTabs, spec) {
-		uikit.DrawButton(screen, b, b.Contains(mx, my))
+		uikit.DrawButton(screen, b, b.Contains(mx, my), a.shell)
 	}
 	if t, open := a.openTabOf(spec); open && !l.Expanded.Empty() {
 		uikit.DrawPanel(screen, l.Expanded.X, l.Expanded.Y, l.Expanded.W, l.Expanded.H)
@@ -438,7 +438,7 @@ func (a *Pane) DrawPane(screen *ebiten.Image) {
 		gfx.Text(screen, gfx.Ellipsize(spec.Subtitle, gfx.Body, float64(g.TitleW)), x, y, gfx.WithColor(gfx.Body, uikit.TextDim))
 	}
 	if spec.Close != "" {
-		uikit.DrawButton(screen, uikit.AsButton(g.Close, spec.Close, "X"), g.Close.Hit(mx, my))
+		uikit.DrawButton(screen, uikit.AsButton(g.Close, spec.Close, "X"), g.Close.Hit(mx, my), a.shell)
 	}
 	for i, r := range g.Bars {
 		drawPaneBar(screen, r, spec.Bars[i])
@@ -447,7 +447,7 @@ func (a *Pane) DrawPane(screen *ebiten.Image) {
 		c := spec.Chips[i]
 		b := uikit.AsButton(r, c.ID, c.Label)
 		b.Disabled, b.Quiet = c.Disabled, true
-		uikit.DrawButton(screen, b, b.Contains(mx, my))
+		uikit.DrawButton(screen, b, b.Contains(mx, my), a.shell)
 	}
 	if a.Card().drawBody(screen, spec, g) || g.Body.Empty() {
 		return

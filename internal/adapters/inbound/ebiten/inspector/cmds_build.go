@@ -134,7 +134,7 @@ func (a Building) BuildingPane(id entity.EntityID) Spec {
 	if !ok {
 		return Spec{}
 	}
-	p := Spec{Title: BuildingTitle(b), Subtitle: fmt.Sprintf("tile (%d, %d)", b.X, b.Y), Close: "bldg.close"}
+	p := Spec{Title: BuildingTitleIn(a.shell, b), Subtitle: fmt.Sprintf("tile (%d, %d)", b.X, b.Y), Close: "bldg.close"}
 	if b.HPPct > 0 {
 		p.Bars = append(p.Bars, Bar{Label: a.shell.T("Health"), Pct: bldgPct(b.HPPct), Color: healthBarColor(b.HPPct)})
 	}

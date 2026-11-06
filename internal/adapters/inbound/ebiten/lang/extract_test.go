@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"go/ast"
+	"go/token"
 	"os"
 	"path/filepath"
 	"slices"
@@ -18,18 +19,8 @@ var update = flag.Bool("update", false, "rewrite assets/lang/en.json from the cl
 // template translators copy; run with -update after adding text.
 func TestCatalogIsCurrent(t *testing.T) {
 	t.Parallel()
-	keys := map[string]bool{}
-	for _, f := range parseClient(t) {
-		ast.Inspect(f.ast, func(n ast.Node) bool {
-			if call, ok := n.(*ast.CallExpr); ok {
-				if k, ok := translateKey(f, call); ok && k != "" {
-					keys[k] = true
-				}
-			}
-			return true
-		})
-	}
-	want := renderEnglish(t, keys)
+	files := parseClient(t)
+	want := renderEnglish(t, catalogKeys(files))
 	file := filepath.Join(repoRoot(t), "assets", "lang", EnglishCode+".json")
 	if *update {
 		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
@@ -47,6 +38,58 @@ func TestCatalogIsCurrent(t *testing.T) {
 	if !bytes.Equal(got, want) {
 		t.Fatalf("assets/lang/en.json is stale (%d keys in the code); run go test ./%s/lang -run TestCatalogIsCurrent -update", len(keys), ebitenRel)
 	}
+}
+
+// catalogKeys is every key the client translates: the literal a T/Tf call
+// carries, or the string constant of its own package it names (T(pausedLabel)).
+func catalogKeys(files []*srcFile) map[string]bool {
+	consts := stringConsts(files)
+	keys := map[string]bool{}
+	for _, f := range files {
+		ast.Inspect(f.ast, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			k, ok := translateKey(f, call)
+			if id, isID := translateArg(f, call).(*ast.Ident); !ok && isID {
+				k, ok = consts[f.pkg][id.Name]
+			}
+			if ok && k != "" {
+				keys[k] = true
+			}
+			return true
+		})
+	}
+	return keys
+}
+
+// stringConsts is each package's string constants: pkg -> name -> value.
+func stringConsts(files []*srcFile) map[string]map[string]string {
+	out := map[string]map[string]string{}
+	for _, f := range files {
+		for _, d := range f.ast.Decls {
+			g, ok := d.(*ast.GenDecl)
+			if !ok || g.Tok != token.CONST {
+				continue
+			}
+			for _, spec := range g.Specs {
+				vs := spec.(*ast.ValueSpec)
+				for i, n := range vs.Names {
+					if i >= len(vs.Values) {
+						continue
+					}
+					if v, ok := strLit(vs.Values[i]); ok {
+						if out[f.pkg] == nil {
+							out[f.pkg] = map[string]string{}
+						}
+						out[f.pkg][n.Name] = v
+					}
+				}
+			}
+		}
+	}
+	return out
 }
 
 // renderEnglish writes the English template: _meta first, then every key
@@ -92,6 +135,10 @@ func f(tx tr, l lang.Tr) {
 	_ = tx.Other("Nope")
 }`
 	f := parseOne(t, src)
+	cf := parseOne(t, "package x\nconst paused = \"Paused\"\nfunc g(tx tr) { _ = tx.T(paused); _ = tx.T(other) }")
+	if got := catalogKeys([]*srcFile{cf}); len(got) != 1 || !got["Paused"] {
+		t.Fatalf("constant keys %v, want Paused", got)
+	}
 	var got []string
 	ast.Inspect(f.ast, func(n ast.Node) bool {
 		if call, ok := n.(*ast.CallExpr); ok {

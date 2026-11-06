@@ -545,7 +545,7 @@ func (w landingPage) drawLanding(screen *ebiten.Image, sw, sh int) {
 	if g == nil || uikit.TooSmall(sw, sh) {
 		w.DrawBackdrop(screen, sw, sh, ng.Planet)
 		if uikit.TooSmall(sw, sh) {
-			uikit.DrawTooSmall(screen, sw, sh)
+			uikit.DrawTooSmall(screen, sw, sh, w.sh)
 		}
 		return
 	}

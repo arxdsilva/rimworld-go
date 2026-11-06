@@ -57,11 +57,11 @@ func areaByID(areas []game.AreaView, id int) (game.AreaView, bool) {
 // AreaRefLabel is the dropdown text for a ref: "Unrestricted", "Home" or
 // the area's name (a ref to a vanished area reads Unrestricted).
 func AreaRefLabel(areas []game.AreaView, ref int) string {
-	return areaRefLabel(lang.English{}, areas, ref)
+	return AreaRefLabelIn(lang.English{}, areas, ref)
 }
 
-// areaRefLabel is AreaRefLabel in tr's language.
-func areaRefLabel(tr lang.Tr, areas []game.AreaView, ref int) string {
+// AreaRefLabelIn is AreaRefLabel in tr's language.
+func AreaRefLabelIn(tr lang.Tr, areas []game.AreaView, ref int) string {
 	switch ref = areaRef(ref); ref {
 	case command.AreaHome:
 		return tr.T("Home")
@@ -185,8 +185,8 @@ func (a *Areas) Dropdown(id string, r gfx.Rect, ref int, pick func(ref int)) {
 	}
 	k := a.sh.Kit()
 	areas := sim.Areas()
-	label := areaRefLabel(a.sh, areas, ref)
-	if k.Button(id, r, label+"  v", uikit.BtnOpts{Tip: assignAreaTip(a.sh)}) {
+	label := AreaRefLabelIn(a.sh, areas, ref)
+	if k.Button(id, r, label+"  v", uikit.BtnOpts{Tip: AssignAreaTipIn(a.sh)}) {
 		a.OpenPicker(a.sh.T("Allowed area"), ref, true, pick)
 	}
 	if ar, ok := areaByID(areas, areaRef(ref)); ok {
@@ -197,11 +197,8 @@ func (a *Areas) Dropdown(id string, r gfx.Rect, ref int, pick func(ref int)) {
 	}
 }
 
-// AssignAreaTip is the allowed-area selector's hover card.
-var AssignAreaTip = assignAreaTip(lang.English{})
-
-// assignAreaTip is AssignAreaTip in tr's language.
-func assignAreaTip(tr lang.Tr) string {
+// AssignAreaTipIn is the allowed-area selector's hover card in tr's language.
+func AssignAreaTipIn(tr lang.Tr) string {
 	return tr.T("Allowed area\n") +
 		tr.T("Where it may go: Unrestricted, Home, or a painted area. Outside it, work and wandering are avoided. ") +
 		tr.T("Drafted colonists and direct orders ignore it.")

@@ -90,7 +90,7 @@ func (h hudHost) DrawPawnBust(dst *ebiten.Image, p game.PawnView, x, y, w, ht fl
 }
 
 func (h hudHost) DrawWeather(dst *ebiten.Image, x, y int, w game.WorldView) {
-	drawWeatherLabelRight(dst, x, y, w)
+	drawWeatherLabelRight(dst, x, y, w, &h.a.shell.shellTexts)
 }
 
 // TabOn reports tab id's window (or the Architect) is the one open.

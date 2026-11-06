@@ -123,7 +123,10 @@ func (a Building) SelectBuildingAt(tx, ty int) bool {
 
 func (a Building) ClearBuilding() { a.sel.HasBuilding = false }
 
-func BuildingTitle(b game.BuildingView) string {
+func BuildingTitle(b game.BuildingView) string { return BuildingTitleIn(lang.English{}, b) }
+
+// BuildingTitleIn is BuildingTitle with the casket title in tr's language.
+func BuildingTitleIn(tr lang.Tr, b game.BuildingView) string {
 	if t := ruinedFloorTitle(b); b.Ruin && t != "" { // floor_title.go (AX-3)
 		return t
 	}
@@ -133,7 +136,7 @@ func BuildingTitle(b game.BuildingView) string {
 	if b.Kind == overlay.BridgeKind {
 		return "Wooden bridge"
 	}
-	if t := overlay.CasketTitle(b); t != "" {
+	if t := overlay.CasketTitle(b, tr); t != "" {
 		return t
 	}
 	if b.Kind == "carpet" && strings.HasSuffix(b.Stuff, " carpet") {

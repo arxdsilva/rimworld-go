@@ -51,12 +51,14 @@ func (h architectHost) Env() architect.Env {
 	return e
 }
 
-func (h architectHost) ChromeHit(mx, my, sw, sh int) bool        { return h.a.colonyChromeHit(mx, my, sw, sh) }
-func (h architectHost) Layout() hudlayout.Layout                 { return h.a.hud() }
-func (h architectHost) CloseFloat()                              { h.a.ord.CloseFloat() }
-func (h architectHost) SyncOverlays()                            { h.a.syncRoofForce() }
-func (h architectHost) LockedBy(key string) string               { return h.a.win.Research().LockedBy(key) }
-func (h architectHost) BuildingTitle(b game.BuildingView) string { return inspector.BuildingTitle(b) }
+func (h architectHost) ChromeHit(mx, my, sw, sh int) bool { return h.a.colonyChromeHit(mx, my, sw, sh) }
+func (h architectHost) Layout() hudlayout.Layout          { return h.a.hud() }
+func (h architectHost) CloseFloat()                       { h.a.ord.CloseFloat() }
+func (h architectHost) SyncOverlays()                     { h.a.syncRoofForce() }
+func (h architectHost) LockedBy(key string) string        { return h.a.win.Research().LockedBy(key) }
+func (h architectHost) BuildingTitle(b game.BuildingView) string {
+	return inspector.BuildingTitleIn(&h.a.shell.shellTexts, b)
+}
 
 // ---- architect.Map
 

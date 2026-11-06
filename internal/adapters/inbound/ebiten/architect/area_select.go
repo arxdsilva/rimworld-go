@@ -92,7 +92,7 @@ func (a *Areas) Chip(p game.PawnView) (Chip, bool) {
 	if !known {
 		return Chip{}, false
 	}
-	return Chip{ID: AreaChipID, Label: a.sh.Tf("Area: %s", areaRefLabel(a.sh, sim.Areas(), ref)), Tip: assignAreaTip(a.sh)}, true
+	return Chip{ID: AreaChipID, Label: a.sh.Tf("Area: %s", AreaRefLabelIn(a.sh, sim.Areas(), ref)), Tip: AssignAreaTipIn(a.sh)}, true
 }
 
 // inspectorChip answers the pane's area chip: a widget with the chip's

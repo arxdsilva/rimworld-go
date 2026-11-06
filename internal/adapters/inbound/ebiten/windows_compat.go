@@ -141,18 +141,21 @@ func (h worldHost) SettleReason(id uint64) (string, bool) {
 
 // ---- windows.Labels
 
-func (h windowsHost) PawnLabel(p game.PawnView) string       { return hud.PawnLabel(p) }
+func (h windowsHost) PawnLabel(p game.PawnView) string {
+	return hud.PawnLabelIn(&h.a.shell.shellTexts, p)
+}
 func (h windowsHost) AnimalLabel(an game.AnimalView) string  { return inspector.AnimalLabel(an) }
 func (h windowsHost) AnimalHealth(an game.AnimalView) string { return inspector.AnimalHealthCell(an) }
 func (h windowsHost) CareShort(p medcare.Policy) string      { return inspector.CareShort(p) }
 
 func (h windowsHost) Factions() []windows.Faction {
 	rows := h.colonyRows()
+	tr := &h.a.shell.shellTexts
 	out := make([]windows.Faction, len(rows))
 	for i, r := range rows {
 		out[i] = windows.Faction{
 			Name: r.Name, TypeLabel: r.TypeLabel, Tech: r.Tech, Goodwill: r.Goodwill, Relation: r.Relation,
-			Standing: wizardpkg.RelationLabel(r.Relation), Color: wizardpkg.RelationColor(r.Relation), Tip: wizardpkg.GoodwillTip(r.FacRow),
+			Standing: wizardpkg.RelationLabelIn(tr, r.Relation), Color: wizardpkg.RelationColor(r.Relation), Tip: wizardpkg.GoodwillTipIn(tr, r.FacRow),
 			History: r.History, Events: r.Events,
 		}
 	}

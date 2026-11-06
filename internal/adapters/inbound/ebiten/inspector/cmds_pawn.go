@@ -74,7 +74,7 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 		out = append(out, dropWeaponCommand(a.shell, p))
 	}
 	out = append(out, smokepopCommand(a.shell, p)...)
-	out = append(out, threatCommand(p)...)
+	out = append(out, threatCommandIn(a.shell, p)...)
 	if c, ok := stripCommand(a.shell, p); ok { // cmds_orders.go (AX-1)
 		out = append(out, c)
 	}

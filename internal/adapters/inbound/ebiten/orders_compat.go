@@ -60,7 +60,9 @@ func (h ordersHost) CenterOnMap(wx, wy float64) {
 		h.a.centerOnMap(wx, wy)
 	}
 }
-func (h ordersHost) BuildingTitle(b game.BuildingView) string { return inspector.BuildingTitle(b) }
+func (h ordersHost) BuildingTitle(b game.BuildingView) string {
+	return inspector.BuildingTitleIn(&h.a.shell.shellTexts, b)
+}
 
 type formationMove struct {
 	pawn entity.EntityID

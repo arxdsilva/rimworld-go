@@ -76,7 +76,7 @@ func (a Commands) kindRows(k selection.Kind) []groupRow {
 		}
 	case selection.Building:
 		for _, b := range a.sel.SelectedBuildings() {
-			s := fmt.Sprintf("%s (%d, %d)", BuildingTitle(b), b.X, b.Y)
+			s := fmt.Sprintf("%s (%d, %d)", BuildingTitleIn(a.shell, b), b.X, b.Y)
 			if b.Forbidden {
 				s += ", forbidden"
 			}
@@ -88,7 +88,7 @@ func (a Commands) kindRows(k selection.Kind) []groupRow {
 	case selection.Frame:
 		w := a.shell.World()
 		for _, f := range a.sel.SelectedFrames() {
-			out = append(out, groupRow{f.ID, k, fmt.Sprintf("%s (%d, %d)", BuildInfo(f, w).Title, f.X, f.Y)})
+			out = append(out, groupRow{f.ID, k, fmt.Sprintf("%s (%d, %d)", buildInfo(a.shell, f, w).Title, f.X, f.Y)})
 		}
 	case selection.Zone:
 		for _, z := range a.sel.SelectedZones() {
@@ -124,7 +124,7 @@ func (a Commands) groupNoun(k selection.Kind, n int) string {
 func (a Commands) sameBuildingNoun(fallback string) string {
 	title := ""
 	for _, b := range a.sel.SelectedBuildings() {
-		t := strings.ToLower(BuildingTitle(b))
+		t := strings.ToLower(BuildingTitleIn(a.shell, b))
 		if title != "" && t != title {
 			return fallback
 		}

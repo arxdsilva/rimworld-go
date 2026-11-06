@@ -375,7 +375,7 @@ func (w *Flow) drawNGFrame(screen *ebiten.Image, sw, sh int, title string) {
 	}
 	w.DrawBackdrop(screen, sw, sh, p)
 	if uikit.TooSmall(sw, sh) {
-		uikit.DrawTooSmall(screen, sw, sh)
+		uikit.DrawTooSmall(screen, sw, sh, w.sh)
 		return
 	}
 	frame, titleR, _, footer := uikit.DialogFrame(sw, sh)

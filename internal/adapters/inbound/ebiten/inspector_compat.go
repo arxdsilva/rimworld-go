@@ -91,7 +91,8 @@ func (h inspectorHost) AreaLabel(ref int) (label, tip string) {
 	if r := h.a.renderer; r != nil {
 		areas = r.game.Areas()
 	}
-	return architect.AreaRefLabel(areas, ref), architect.AssignAreaTip
+	tr := &h.a.shell.shellTexts
+	return architect.AreaRefLabelIn(tr, areas, ref), architect.AssignAreaTipIn(tr)
 }
 
 func (h inspectorHost) Move(b game.BuildingView, cancel bool) {
@@ -106,7 +107,9 @@ func (h inspectorHost) Move(b game.BuildingView, cancel bool) {
 
 // ---- inspector.Labels
 
-func (h inspectorHost) PawnLabel(p game.PawnView) string { return hud.PawnLabel(p) }
+func (h inspectorHost) PawnLabel(p game.PawnView) string {
+	return hud.PawnLabelIn(&h.a.shell.shellTexts, p)
+}
 func (h inspectorHost) Temp(tenths int) string {
 	return hud.FmtTemp(units.FromUnit(h.a.settings.Gameplay.TempUnit), tenths)
 }
@@ -115,7 +118,7 @@ func (h inspectorHost) WildRow(species string) (game.WildlifeRow, bool) {
 }
 func (h inspectorHost) AnimalBlurb(species string) string { return windows.AnimalBlurb(species) }
 func (h inspectorHost) Skill(s game.SkillView) (level, tip string) {
-	return wizard.SkillLevelText(s), wizard.SkillTip(s)
+	return wizard.SkillLevelText(s), wizard.SkillTipIn(&h.a.shell.shellTexts, s)
 }
 func (h inspectorHost) Traits(x, y, w float32, v game.CandidateView) float32 {
 	return h.a.wiz.TraitChips(x, y, w, v)
