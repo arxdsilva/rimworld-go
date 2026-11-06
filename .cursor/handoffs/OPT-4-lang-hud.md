@@ -18,13 +18,18 @@ OPT-001, Wave 4, client half. W4-SIMTEXT fills `Msg` on the game side, and the c
     - `msgfmt.Of`/`Plain` calls;
     - `MessageView`/`LetterView` `Title:` literals;
     - `sense.Why*`.
-  - en.json has about 220 simulation keys.
+  - en.json has about 220 simulation keys. After W4-SIMTEXT (80ffbf6a0) it has 334:
+    - The extractor reads each sub-package's host signature from its `deps.go`, finding the format, title, text and args by parameter name.
+    - It follows `notice` and `pawnLetterf`.
+    - It resolves same-package and qualified constants, literals joined with `+`, and a local variable assigned literal formats.
+    - It skips bare `"%s"`.
 - Tests:
   - `lang`: `TestMsgIsTheTextInEnglishAndTranslatesFormatAndArgs`, `TestSimKeysSeeEveryForm`.
   - `hud`: `TestMessagesAndLettersGoThroughTheCatalog`, `TestLetterWindowAndCardTranslate`. They use hand-built views with and without `Msg`, in English and in a fake French.
   - `inspector/gear`: `TestRefusalReasonsAreTranslated`.
 
 ## Gaps
-- A letter whose text is put together outside a poster (for example `fmt.Sprintf` handed to `h.Letter`) is keyed on its finished sentence, which no template can hold. W4-SIMTEXT is converting those to `letterf`.
+- 27 posts still pass finished text, built at run time, so they are keyed on the whole sentence and no template can hold them. `TestCatalogIsCurrent -v` lists them. They include mental breaks, animal deaths, raid steals and arson, frost notices, wedding text, research letters, visit turns and settlement letters (see `OPT-001-w4-simtext.md` for why each stayed).
+- One false match: `g.exposure[id].Note(...)` (heat.go) shares its name with a host's `Note` and adds no key.
 - The developer panels (`devtools/panels.go`) stay in English, as `exempt.txt` says.
 - Item and species names inside arguments are translated only when they are keys. Nothing extracts them yet.

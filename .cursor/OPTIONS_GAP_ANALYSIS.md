@@ -26,7 +26,7 @@ The phase is in brackets. `open` is owed; `kept` differs on purpose.
 
 | Id | Vanilla | Today | State |
 |---|---|---|---|
-| OPT-001 | Language | No translation layer; about 3,566 UI literals in 428 files; the simulation sends English (`MessageView`, `LetterView`, `Reason`, `item.Kind.String`) | partial: catalog, Language row and every UI string done [OPT-1, Wave 3]; simulation messages and letters [Wave 4] |
+| OPT-001 | Language | No translation layer; about 3,566 UI literals in 428 files; the simulation sends English (`MessageView`, `LetterView`, `Reason`, `item.Kind.String`) | partial: catalog, Language row, every UI string, and the simulation's messages and letters as format and arguments done [OPT-1, Wave 3, OPT-4, OPT-001-w4-simtext]. Missing: 27 posts keyed on finished text (mental breaks, raid log text, frost, weddings, research letters), and item and species names inside arguments |
 | OPT-002 | Restore defaults | None | done [OPT-1] |
 | OPT-003 | Open save and log folders | None | done [OPT-1]: `cmd/game` writes `game.log` (the last run kept as `game-prev.log`) |
 | OPT-004 | Pause on load | A load starts at normal speed, `renderer.go:191` | done [OPT-1] |
