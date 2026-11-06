@@ -133,7 +133,7 @@ func TestOptionsTemperatureUnitAndMaxColonies(t *testing.T) {
 	store := &fakeSettings{s: config.Defaults()}
 	a := optionsApp(store)
 	click(t, a, "menu.options")
-	click(t, a, "options.tab.gameplay")
+	click(t, a, "options.tab.interface")
 	if a.settings.Gameplay.TempUnit != "" {
 		t.Fatalf("unit starts as %q", a.settings.Gameplay.TempUnit)
 	}
@@ -142,9 +142,14 @@ func TestOptionsTemperatureUnitAndMaxColonies(t *testing.T) {
 		t.Fatalf("unit after one click: %q (stored %q)", a.settings.Gameplay.TempUnit, store.s.Gameplay.TempUnit)
 	}
 	click(t, a, "options.tempunit")
-	if a.settings.Gameplay.TempUnit != "" {
-		t.Fatal("a second click goes back to Celsius")
+	if a.settings.Gameplay.TempUnit != config.TempKelvin {
+		t.Fatalf("a second click: %q, want Kelvin", a.settings.Gameplay.TempUnit)
 	}
+	click(t, a, "options.tempunit")
+	if a.settings.Gameplay.TempUnit != "" {
+		t.Fatal("a third click goes back to Celsius")
+	}
+	click(t, a, "options.tab.gameplay")
 	n := a.settings.Gameplay.Colonies()
 	click(t, a, "options.maxcolonies.inc")
 	if got := a.settings.Gameplay.Colonies(); got != min(n+1, config.MaxColoniesLimit) {

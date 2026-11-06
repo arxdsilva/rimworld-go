@@ -293,6 +293,7 @@ func TestJourneyGlobeOptionsUnitAndColonies(t *testing.T) {
 	if got := j.a.settings.Gameplay.Colonies(); got != n+1 {
 		t.Fatalf("max colonies %d -> %d, want +1", n, got)
 	}
+	j.clickID("options.tab.interface") // the unit row is on Interface (OPT-007)
 	j.clickID("options.tempunit")
 	if j.a.settings.Gameplay.TempUnit != units.UnitF {
 		t.Fatalf("unit %q after the click, want Fahrenheit", j.a.settings.Gameplay.TempUnit)

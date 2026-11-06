@@ -35,19 +35,22 @@ func TestThreatPausesOnlyForNewDanger(t *testing.T) {
 	}
 }
 
-func TestOptionsTogglePauseOnThreat(t *testing.T) {
+// TestOptionsCyclesAutoPause: General › Automatic pause (OPT-005) steps
+// through its modes and wraps.
+func TestOptionsCyclesAutoPause(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
 	click(t, a, "menu.options")
-	click(t, a, "options.tab.gameplay")
-	click(t, a, "options.pausethreat")
-	if a.settings.Gameplay.PauseOnThreat {
-		t.Fatal("toggle off")
+	click(t, a, "options.tab.general")
+	if a.settings.General.AutoPause != config.AutoPauseMajor {
+		t.Fatalf("starts at %q", a.settings.General.AutoPause)
 	}
-	click(t, a, "options.pausethreat")
-	if !a.settings.Gameplay.PauseOnThreat {
-		t.Fatal("toggle back on")
+	for _, want := range []string{config.AutoPauseThreat, config.AutoPauseLetter, config.AutoPauseNever, config.AutoPauseMajor} {
+		click(t, a, "options.autopause")
+		if a.settings.General.AutoPause != want {
+			t.Fatalf("after a click %q, want %q", a.settings.General.AutoPause, want)
+		}
 	}
 }
 
