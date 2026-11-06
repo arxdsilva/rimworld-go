@@ -146,13 +146,10 @@ type Gameplay struct {
 	// DevMode turns on the developer keys: ultrafast speed, single-tick
 	// stepping, debug actions, the debug log and the debug inspector.
 	DevMode bool `json:"dev_mode"`
-	// NG-1: the last new-game choices (pre-filled next time), whether a new
-	// colony starts running instead of paused, and birthday letters.
+	// NG-1: the last new-game choices (pre-filled next time).
 	LastStoryteller string `json:"last_storyteller,omitempty"`
 	LastDifficulty  string `json:"last_difficulty,omitempty"`
 	LastSaveMode    string `json:"last_save_mode,omitempty"`
-	RunOnStart      bool   `json:"run_on_start,omitempty"`
-	BirthdayLetters bool   `json:"birthday_letters,omitempty"`
 	// TempUnit is how temperatures read: "" Celsius, "F" Fahrenheit (WG-16),
 	// "K" Kelvin (TempKelvin, OPT-007).
 	TempUnit string `json:"temp_unit,omitempty"`
