@@ -187,7 +187,7 @@ func (g *Game) animalPathQuery(tame, phase bool) pathing.Query {
 		slot, ver = 1, g.structVer
 	}
 	c := &g.animalQ[slot]
-	if c.ok && c.fgen == f.gen && c.bver == ver && !selfCheck() {
+	if c.ok && c.fgen == f.gen && c.bver == ver && !checkIndex(g) {
 		return c.q
 	}
 	base := phaseBase
@@ -239,7 +239,7 @@ func (q flapQuery) Walkable(x, y int) bool {
 }
 func (q flapQuery) BlockedBits() []uint64 { return q.g.layerBits(region.Colonist) }
 func (q flapQuery) Reach(sx, sy, tx, ty int) bool {
-	return q.g.noRegions() || checkReach(q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+	return q.g.noRegions() || checkReach(q.g, q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
 }
 
 // colonistGrid is the walkability people plan with: the grid, or with animal

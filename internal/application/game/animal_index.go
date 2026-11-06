@@ -252,7 +252,7 @@ func (g *Game) food() *foodIndex {
 	if !fx.plantsOK || fx.plantGen != g.idx.jobs.plantGen || fx.plantSrc != g.plants || fx.plantW != w || fx.plantH != h {
 		g.fillFoodPlants(&fx.plants, w, h)
 		fx.plantsOK, fx.plantGen, fx.plantSrc, fx.plantW, fx.plantH = true, g.idx.jobs.plantGen, g.plants, w, h
-	} else if selfCheck() {
+	} else if checkIndex(g) {
 		var fresh bucketGrid[entity.EntityID]
 		g.fillFoodPlants(&fresh, w, h)
 		if !slices.Equal(fresh.start, fx.plants.start) || !slices.Equal(fresh.ents, fx.plants.ents) {

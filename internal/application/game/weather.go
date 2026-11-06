@@ -34,7 +34,7 @@ const (
 func (g *Game) weatherSeed() uint64 {
 	c := &g.seedCache // cached per structVer, which every terrain change bumps
 	if c.ok && c.ver == g.structVer {
-		if selfCheck() && c.seed != g.scanWeatherSeed() {
+		if checkIndex(g) && c.seed != g.scanWeatherSeed() {
 			panic("weatherSeed: terrain changed without a structVer bump")
 		}
 		return c.seed

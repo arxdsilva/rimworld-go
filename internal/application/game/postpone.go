@@ -217,7 +217,7 @@ func (g *Game) postponedFor(id entity.EntityID, kind job.Kind, target entity.Ent
 	g.postSync()
 	k := postKey{id, kind, target, x, y}
 	if len(p.kinds[postPawnKind{id, kind}]) == 0 {
-		if selfCheck() {
+		if checkIndex(g) {
 			if _, ok := p.m[k]; ok {
 				panic(fmt.Sprintf("postponedFor(%v): unlisted entry", k))
 			}

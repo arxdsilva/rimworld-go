@@ -87,7 +87,7 @@ func (g *Game) reachable(id entity.EntityID, x, y int) bool {
 		return ok
 	}
 	ok := g.reachRegions(id, x, y)
-	if selfCheck() {
+	if checkIndex(g) {
 		if _, want := g.pathToVia(id, x, y, false); want != ok {
 			panic(fmt.Sprintf("regions: reachable(%d, %d, %d) = %v, A* says %v", id, x, y, ok, want))
 		}

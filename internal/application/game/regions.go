@@ -222,8 +222,8 @@ type plainQuery struct{ pathing.Query }
 // with a full search.
 // It is generic so a query is boxed only when it is checked (a Reach
 // call stays allocation-free).
-func checkReach[Q pathing.Query](q Q, sx, sy, tx, ty int, got bool) bool {
-	if !got && selfCheck() {
+func checkReach[Q pathing.Query](g *Game, q Q, sx, sy, tx, ty int, got bool) bool {
+	if !got && checkIndex(g) {
 		if _, ok := pathing.Find(plainQuery{q}, sx, sy, tx, ty); ok {
 			panic("regions: Reach said no, A* found a path")
 		}
@@ -243,7 +243,7 @@ func (q colonyQuery) Reach(sx, sy, tx, ty int) bool {
 	if q.g.noRegions() {
 		return true
 	}
-	return checkReach(q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+	return checkReach(q.g, q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
 }
 
 // hostileReady reports that h's door set is the current one the regions
@@ -260,7 +260,7 @@ func (h hostileMap) Reach(sx, sy, tx, ty int) bool {
 	if !h.regionsReady() {
 		return true
 	}
-	return checkReach(h, sx, sy, tx, ty, h.g.regs.m.Reach(region.Hostile, sx, sy, tx, ty))
+	return checkReach(h.g, h, sx, sy, tx, ty, h.g.regs.m.Reach(region.Hostile, sx, sy, tx, ty))
 }
 
 func (h hostileMap) BlockedBits() []uint64 {
@@ -280,7 +280,7 @@ func (s sapperMap) Reach(sx, sy, tx, ty int) bool {
 	if !s.regionsReady() {
 		return true
 	}
-	return checkReach(s, sx, sy, tx, ty, s.g.regs.m.Reach(region.Sapper, sx, sy, tx, ty))
+	return checkReach(s.g, s, sx, sy, tx, ty, s.g.regs.m.Reach(region.Sapper, sx, sy, tx, ty))
 }
 
 func (s sapperMap) BlockedBits() []uint64 {
@@ -319,7 +319,7 @@ func (q fenceQuery) Reach(sx, sy, tx, ty int) bool {
 	if !ok {
 		return true
 	}
-	return checkReach(q, sx, sy, tx, ty, q.g.regionsNow().Reach(l, sx, sy, tx, ty))
+	return checkReach(q.g, q, sx, sy, tx, ty, q.g.regionsNow().Reach(l, sx, sy, tx, ty))
 }
 
 func (q fenceQuery) BlockedBits() []uint64 {
@@ -338,7 +338,7 @@ func (c crowdCost) Reach(sx, sy, tx, ty int) bool {
 		return q.Reach(sx, sy, tx, ty)
 	case *grid.Grid:
 		if q == c.g.grid && !c.g.noRegions() {
-			return checkReach(q, sx, sy, tx, ty, c.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+			return checkReach(c.g, q, sx, sy, tx, ty, c.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
 		}
 	}
 	return true

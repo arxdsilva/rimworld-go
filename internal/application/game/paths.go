@@ -46,8 +46,8 @@ func (r reachCheck) ok(x, y int) bool {
 		return true
 	}
 	ok := r.m.Reach(r.l, r.pos.X, r.pos.Y, x, y)
-	if !ok && selfCheck() {
-		checkReach(r.g.pathQuery(r.id), r.pos.X, r.pos.Y, x, y, ok)
+	if !ok && checkIndex(r.g) {
+		checkReach(r.g, r.g.pathQuery(r.id), r.pos.X, r.pos.Y, x, y, ok)
 	}
 	return ok
 }
@@ -87,7 +87,7 @@ func (g *Game) findPath(id entity.EntityID, q pathing.Query, sx, sy, tx, ty int)
 	}
 	allow, ok := g.regionsNow().Corridor(g.moverLayer(id), sx, sy, tx, ty)
 	if !ok {
-		return checkReachPath(q, sx, sy, tx, ty)
+		return checkReachPath(g, q, sx, sy, tx, ty)
 	}
 	if p, ok := g.searcher().FindIn(q, allow, sx, sy, tx, ty); ok {
 		return p, true
@@ -105,8 +105,8 @@ func (g *Game) findPathVia(id entity.EntityID, q pathing.Query, regions bool, sx
 
 // checkReachPath is a corridor's "no route": under the test self-check it
 // is proven with a full search.
-func checkReachPath(q pathing.Query, sx, sy, tx, ty int) ([]pathing.Point, bool) {
-	checkReach(q, sx, sy, tx, ty, false)
+func checkReachPath(g *Game, q pathing.Query, sx, sy, tx, ty int) ([]pathing.Point, bool) {
+	checkReach(g, q, sx, sy, tx, ty, false)
 	return nil, false
 }
 

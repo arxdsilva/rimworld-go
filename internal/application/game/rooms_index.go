@@ -187,7 +187,7 @@ func (g *Game) rebuildRoomsIncremental() {
 		stats[r].contents = room.Contents{Cells: int(c.Cells), Floored: int(c.Smooth)}
 	}
 	g.countRoomBuildings(grid, stats)
-	if selfCheck() {
+	if checkIndex(g) {
 		g.checkRoomsAgainstDetect(grid, stats)
 	}
 	if now := g.clock.Now(); full { // game/thermo carries the air across

@@ -457,7 +457,7 @@ func (g *Game) kitOf(n int) []item.Kind { return kit.Legacy(n, g.rng.IntN) }
 // sapperMap is the map as sappers see it when planning a tunnel: walls,
 // doors and rock all give way; traps are stepped around.
 func sapperBreaks(g *Game) tileSet {
-	return g.sapperSet.get(g.structVer, func() tileSet {
+	return g.sapperSet.get(g, g.structVer, func() tileSet {
 		set := slices.Clone(g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap))
 		w := g.grid.Width()
 		for y := 0; y < g.grid.Height(); y++ {
@@ -608,7 +608,7 @@ func fillRaidView(g *Game, w *WorldView) {
 // sapperTraps: sappers step around every spike trap and the buried
 // charges they know of (wiki: Spike trap, about 30 %; fixed per charge).
 func sapperTraps(g *Game) tileSet {
-	return g.cellSet([4]uint64{3: 1 << 62}).get(g.structVer, func() tileSet {
+	return g.cellSet([4]uint64{3: 1 << 62}).get(g, g.structVer, func() tileSet {
 		set := slices.Clone(g.buildingCells(construction.SpikeTrap))
 		w := g.grid.Width()
 		for _, id := range g.bldgIDs {

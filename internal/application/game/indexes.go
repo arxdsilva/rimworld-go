@@ -30,20 +30,22 @@ import (
 // first-in-list order exactly. An index is (re)built from the id lists on
 // first use, and whenever the store behind it was replaced (Load).
 //
-// Tests switch on indexSelfCheck (scale_golden_test.go), which checks
-// every indexed answer against the original scan and panics on a
-// difference, across the whole game test suite.
+// Tests switch on indexSelfCheck (scale_golden_test.go), which checks every indexed
+// answer against the original scan and panics on a difference, across the game suite.
 var indexSelfCheck bool
 
-// selfCheckEvery: check one indexed answer in this many (tests under the
-// race detector sample, which keeps the suite's run time in bounds).
+// selfCheckEvery: check one indexed answer in this many (fewer under -race, for time).
 var selfCheckEvery uint64 = 1
 
-var selfCheckN atomic.Uint64
-
-// selfCheck reports whether this lookup is checked against the scan.
+var selfCheckN atomic.Uint64 // selfCheck's, left for haulHost.SelfCheck (tick.go) only: see checkIndex
 func selfCheck() bool {
 	return indexSelfCheck && (selfCheckEvery <= 1 || selfCheckN.Add(1)%selfCheckEvery == 0)
+}
+
+// checkIndex: is this lookup of g checked against the scan? Counted per game (one owner, no atomic).
+func checkIndex(g *Game) bool {
+	g.idx.checkN++
+	return indexSelfCheck && (selfCheckEvery <= 1 || g.idx.checkN%selfCheckEvery == 0)
 }
 
 // cellSlots is one id per cell, for a fixed number of layers.
@@ -158,7 +160,7 @@ func (g *Game) notePlant(id entity.EntityID, p plant.Plant) {
 
 func (g *Game) plantAt(x, y int) entity.EntityID {
 	id := g.plantAtIndexed(x, y)
-	if selfCheck() {
+	if checkIndex(g) {
 		if s := g.plantAtScan(x, y); s != id {
 			panic(fmt.Sprintf("plantAt(%d,%d) index %d, scan %d", x, y, id, s))
 		}
@@ -296,7 +298,7 @@ func (g *Game) noteFrame(id entity.EntityID) {
 // layerBlockerAt is a completed movement-blocking building covering (x, y).
 func (g *Game) layerBlockerAt(x, y int) entity.EntityID {
 	id := g.layerBlockerAtIndexed(x, y)
-	if selfCheck() {
+	if checkIndex(g) {
 		if s := g.layerBlockerAtScan(x, y); s != id {
 			panic(fmt.Sprintf("layerBlockerAt(%d,%d) index %d, scan %d", x, y, id, s))
 		}
@@ -337,7 +339,7 @@ func (g *Game) layerBlockerAtScan(x, y int) entity.EntityID {
 
 func (g *Game) layerBldgAt(x, y int, layer construction.Layer) entity.EntityID {
 	id := g.layerBldgAtIndexed(x, y, layer)
-	if selfCheck() {
+	if checkIndex(g) {
 		if s := g.layerBldgAtScan(x, y, layer); s != id {
 			panic(fmt.Sprintf("layerBldgAt(%d,%d,%d) index %d, scan %d", x, y, layer, id, s))
 		}
@@ -368,7 +370,7 @@ func (g *Game) layerBldgAtScan(x, y int, layer construction.Layer) entity.Entity
 
 func (g *Game) layerFrameAt(x, y int, layer construction.Layer) entity.EntityID {
 	id := g.layerFrameAtIndexed(x, y, layer)
-	if selfCheck() {
+	if checkIndex(g) {
 		if s := g.layerFrameAtScan(x, y, layer); s != id {
 			panic(fmt.Sprintf("layerFrameAt(%d,%d,%d) index %d, scan %d", x, y, layer, id, s))
 		}
@@ -401,7 +403,7 @@ func (g *Game) layerFrameAtScan(x, y int, layer construction.Layer) entity.Entit
 // (so interaction spots are not planned under future benches/walls).
 func (g *Game) blockingFrameAt(x, y int) entity.EntityID {
 	id := g.blockingFrameAtIndexed(x, y)
-	if selfCheck() {
+	if checkIndex(g) {
 		if s := g.blockingFrameAtScan(x, y); s != id {
 			panic(fmt.Sprintf("blockingFrameAt(%d,%d) index %d, scan %d", x, y, id, s))
 		}
@@ -585,7 +587,7 @@ func shareLayer[T ~uint8](c *layerCache, src []T) []uint8 {
 func (g *Game) terrainView() []uint8 {
 	c := &g.viewTerr
 	if c.ok && c.ver == g.structVer && len(c.cells) == len(g.terr.Cells) {
-		if selfCheck() {
+		if checkIndex(g) {
 			for i, t := range g.terr.Cells {
 				if c.cells[i] != uint8(t) {
 					panic("terrainView: terrain changed without a structVer bump")
@@ -636,4 +638,5 @@ type indexes struct {
 	jobs                  jobIndexes  // jobindex.go
 	ground                haul.Ground // loose stacks per cell (STO-1)
 	stores                zone.Stores // storage zones by priority (STO-1)
+	checkN                uint64      // lookups seen by checkIndex
 }

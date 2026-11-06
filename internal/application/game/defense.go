@@ -48,10 +48,10 @@ type cellCache struct {
 	ok  bool
 }
 
-func (c *cellCache) get(ver uint64, build func() tileSet) tileSet {
+func (c *cellCache) get(g *Game, ver uint64, build func() tileSet) tileSet {
 	if !c.ok || c.ver != ver {
 		c.set, c.ver, c.ok = build(), ver, true
-	} else if selfCheck() {
+	} else if checkIndex(g) {
 		if fresh := build(); !slices.Equal(fresh, c.set) {
 			panic("cellCache: stale building/terrain cell set (structVer not bumped?)")
 		}
@@ -66,7 +66,7 @@ func (g *Game) buildingCells(kinds ...construction.Kind) tileSet {
 	for _, k := range kinds {
 		mask[k>>6] |= 1 << (uint(k) & 63)
 	}
-	return g.cellSet(mask).get(g.structVer, func() tileSet { return g.scanBuildingCells(kinds) })
+	return g.cellSet(mask).get(g, g.structVer, func() tileSet { return g.scanBuildingCells(kinds) })
 }
 
 // cellSet is the cache for key (a kind mask; bit 255, no kind, marks the
@@ -87,7 +87,7 @@ func (g *Game) cellSet(key [4]uint64) *cellCache {
 // (MAP-17): shut to raiders and wild animals (a shared cached set; holding a
 // door open and claiming one bump structVer).
 func (g *Game) shutDoors() tileSet {
-	return g.cellSet([4]uint64{3: 1 << 63}).get(g.structVer, func() tileSet {
+	return g.cellSet([4]uint64{3: 1 << 63}).get(g, g.structVer, func() tileSet {
 		return g.combat.Doors.Shut(slices.Clone(g.buildingCells(construction.DoorKinds[:]...)), g.grid.Width())
 	})
 }

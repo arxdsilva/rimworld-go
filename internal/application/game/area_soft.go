@@ -116,7 +116,7 @@ func (q softQuery) Reach(sx, sy, tx, ty int) bool {
 		return b.Reach(sx, sy, tx, ty)
 	case *grid.Grid:
 		if g := q.s.g; b == g.grid && !g.noRegions() {
-			return checkReach(b, sx, sy, tx, ty, g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+			return checkReach(g, b, sx, sy, tx, ty, g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
 		}
 	}
 	return true

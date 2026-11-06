@@ -257,7 +257,7 @@ func (g *Game) markMine(x1, y1, x2, y2 int, on bool) {
 func (g *Game) mineList() [][2]int {
 	c := &g.mineCache
 	if c.ok && c.ver == g.minesVer {
-		if selfCheck() && !slices.Equal(c.list, g.scanMineList()) {
+		if checkIndex(g) && !slices.Equal(c.list, g.scanMineList()) {
 			panic("mineList: mines changed without a minesVer bump")
 		}
 		return c.list
@@ -296,7 +296,7 @@ func (g *Game) assignCut(id entity.EntityID) bool {
 func (g *Game) nearestPlant(id entity.EntityID, k job.Kind, want func(plant.Plant) bool) entity.EntityID {
 	pos, _ := g.positions.Get(id)
 	cs := g.plantCands(id, k, want, pos) // jobindex.go: the marked plants only
-	if selfCheck() {
+	if checkIndex(g) {
 		g.checkPlantCands(id, k, want, pos, cs)
 	}
 	for i, c := range cs {

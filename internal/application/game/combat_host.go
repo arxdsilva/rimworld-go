@@ -238,7 +238,7 @@ func (h combatFlight) Calm(id entity.EntityID) (uint64, bool) {
 func (h combatFlight) SetCalm(id entity.EntityID, until uint64) { h.g.calm[id] = until }
 func (h combatFlight) ForgetCalm(id entity.EntityID)            { delete(h.g.calm, id) }
 func (h combatFlight) CheckThreats(id entity.EntityID, x, y, animalR, raiderR int, got entity.EntityID, gotD int) {
-	if selfCheck() {
+	if checkIndex(h.g) {
 		h.g.checkThreatScan(id, Position{X: x, Y: y}, animalR, raiderR, got, gotD) // paths.go
 	}
 }

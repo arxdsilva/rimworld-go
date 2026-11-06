@@ -41,7 +41,7 @@ func animalTendHeal(q int32) int { return TendHeal * int(250+q) / 500 }
 func (g *Game) bedUnder(id entity.EntityID) entity.EntityID {
 	pos, _ := g.positions.Get(id)
 	bid := g.bedUnderIndexed(id, pos) // jobindex.go
-	if selfCheck() {
+	if checkIndex(g) {
 		if s := g.bedUnderScan(id, pos); s != bid {
 			panic(fmt.Sprintf("bedUnder(%d) index %d, scan %d", id, bid, s))
 		}
@@ -129,7 +129,7 @@ func (g *Game) besideSpot(id entity.EntityID, x, y int) (int, int, bool) {
 
 func (g *Game) bedCovering(x, y int) bool {
 	on := g.bedCoveringIndexed(x, y) // jobindex.go
-	if selfCheck() {
+	if checkIndex(g) {
 		if s := g.bedCoveringScan(x, y); s != on {
 			panic(fmt.Sprintf("bedCovering(%d,%d) index %v, scan %v", x, y, on, s))
 		}

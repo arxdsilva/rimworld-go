@@ -283,7 +283,7 @@ func (g *Game) zoneViews() []ZoneView {
 	}
 	m := &g.views.zones
 	if m.ok && m.src == g.zones && m.ver == g.zones.Ver() {
-		if selfCheck() && !reflect.DeepEqual(m.views, g.buildZoneViews()) {
+		if checkIndex(g) && !reflect.DeepEqual(m.views, g.buildZoneViews()) {
 			panic("zoneViews: zones changed without a Ver bump")
 		}
 	} else {

@@ -40,7 +40,7 @@ func (g *Game) plantViews() []PlantView {
 	}
 	m := &g.views.plants
 	if m.ok && m.ver == g.plantVer && m.store == g.plants && m.zones == g.zones && m.zoneVer == g.zones.Ver() && !g.cropWiltFlipped(m) {
-		if selfCheck() {
+		if checkIndex(g) {
 			g.checkPlantMemo(m)
 		}
 		return m.views
