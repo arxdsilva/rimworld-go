@@ -217,9 +217,9 @@ type WornView struct {
 	HP, MaxHP            int
 	Tainted              bool
 	Ratty, Tattered      bool
-	// GEAR-1 contract (zero until game/gearfacts fills them): the garment's
-	// mass in grams, the body parts it covers ("torso, arms"), and what it
-	// adds to move speed in percent (negative slows, GEAR-009).
+	// GEAR-1: the garment's mass in grams (item.MassGrams), the body parts
+	// it covers ("torso, neck, shoulders, arms"; armor.Region.Names), and
+	// what it adds to move speed in percent (negative slows, GEAR-009).
 	Grams   int
 	Cover   string
 	MovePct int
@@ -234,8 +234,10 @@ func (o Outfit) Views() []WornView {
 		}
 		hp, mx := p.HP(), p.MaxHP()
 		st := item.StageOf(hp, mx)
+		l, _ := armor.Apparel(p.Kind) // GEAR-1: what it covers (none: a belt)
 		out = append(out, WornView{Kind: p.Kind.String(), Stuff: StuffLabel(p.Kind, p.Stuff), Quality: QualityLabel(p.Quality),
-			HP: hp, MaxHP: mx, Tainted: p.Of != 0, Ratty: st == item.Ratty, Tattered: st == item.Tattered})
+			HP: hp, MaxHP: mx, Tainted: p.Of != 0, Ratty: st == item.Ratty, Tattered: st == item.Tattered,
+			Grams: p.Kind.MassGrams(), Cover: l.Covers.Names(), MovePct: armor.SpeedPct(armor.MoveOffset(p.Kind))})
 	}
 	return out
 }

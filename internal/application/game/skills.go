@@ -4,6 +4,7 @@ import (
 	"maps"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/diet"
+	"rimworld-go/internal/application/game/gearfacts"
 	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/domain/animal"
 	"slices"
@@ -137,6 +138,7 @@ type pawnFx struct {
 	traits    []trait.ID
 	neutral   bool    // base sheet, all factors 100%: the fast path
 	body      bodyKey // the capacities the body layer was built from (body.go)
+	gear      int32   // the worn armour's MoveSpeed offset it was built with (game/gearfacts, GEAR-009)
 }
 
 // learnLog is how much each skill learned today and in the last 7 days,
@@ -235,22 +237,22 @@ func (g *Game) bioFor(id entity.EntityID) (pawngen.Pawn, bool) {
 // age, conditions, traits, then the difficulty layer, then the wounded
 // body's capacities (body.go; a pawn without a bio gets that layer alone).
 func (g *Game) rebuildStats(id entity.EntityID) {
-	key := keyOf(g.bodies[id]) // body.go: capacities, recomputed only on change
+	key, gm := keyOf(g.bodies[id]), gearfacts.MovePermille(g.apparel[id]) // body.go: capacities, recomputed only on change; worn armour
 	p, ok := g.sk.bios[id]
 	if !ok {
-		if key == healthyKey {
+		if key == healthyKey && gm == 0 {
 			delete(g.sk.stats, id)
 			return
 		}
-		fx := &pawnFx{sheet: stat.Build(stat.Base(), bodyMods(key)), body: key}
+		fx := &pawnFx{sheet: stat.Build(stat.Base(), gearfacts.Mods(gm), bodyMods(key)), body: key, gear: gm}
 		for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 			fx.workPct[sk], fx.learnPct[sk] = 100, 100
 		}
 		g.sk.stats[id] = fx
 		return
 	}
-	layers := append(pawngen.StatLayers(p), g.difficultyMods(), bodyMods(key))
-	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(), traits: p.Traits, body: key}
+	layers := append(pawngen.StatLayers(p), g.difficultyMods(), gearfacts.Mods(gm), bodyMods(key))
+	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(), traits: p.Traits, body: key, gear: gm}
 	fx.neutral = fx.sheet == stat.Base()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 		fx.workPct[sk] = int16(pawngen.SkillWorkPct(p, sk))
@@ -573,8 +575,12 @@ func (g *Game) aimTicksFor(id entity.EntityID, ticks int) int {
 	return ticks
 }
 
-// paceStep scales a step time by MoveSpeed (time ÷ speed).
+// paceStep scales a step time by MoveSpeed (time ÷ speed), the sheet rebuilt first if id's armour changed (GEAR-009).
 func (g *Game) paceStep(id entity.EntityID, ticks int) int {
+	if fx, gm := g.sk.stats[id], gearfacts.MovePermille(g.apparel[id]); fx == nil && gm != 0 || fx != nil && fx.gear != gm {
+		g.sk.ensure()
+		g.rebuildStats(id)
+	}
 	if r := g.statOf(id, stat.MoveSpeed); r != 1000 && r > 0 {
 		return max(1, (ticks*1000+int(r)-1)/int(r))
 	}
