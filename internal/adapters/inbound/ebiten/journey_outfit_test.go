@@ -219,9 +219,6 @@ func TestJourneyOutfitEditorAllowAndMaterials(t *testing.T) {
 		t.Fatalf("clicking %s sent %+v, want a forbid of that node", row, c)
 	}
 	j.update(2)
-	if got := len(outPolicy(t, j, made.ID).Allowed); got >= len(outPolicy(t, j, 0).Allowed) && false {
-		t.Fatalf("policy %d still allows %d garments", made.ID, got)
-	}
 	mat := ""
 	for _, id := range wbIDs(j) {
 		if strings.HasPrefix(id, "apparelpolicy.stuff.") {
