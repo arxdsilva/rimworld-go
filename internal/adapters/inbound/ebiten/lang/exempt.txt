@@ -1,0 +1,16 @@
+# Text TestUITextIsTranslatable may draw without T/Tf (OPT-001).
+# One rule per line:  path:literal # reason
+#   path     a glob below internal/adapters/inbound/ebiten ("hud/*.go"),
+#            or "dir/**" for a whole tree
+#   literal  "*" (anything), /regexp/, a Go-quoted "string", or the text
+# Every rule needs a reason. Keep it short: ids, units and developer-only
+# text, never player-facing words.
+
+devtools/**:* # developer mode is a debugging tool and stays English
+ports/ports.go:/^[a-z_]+$/ # screen ids (Screen.String)
+nav.go:/^[a-z]+$/ # overlay ids (overlayID.String)
+art/memory.go:* # the fps probe's memory line (make fps), never drawn in play
+gfx/canvas.go:* # draw-trace events for tests and the probe
+app.go:"asset warning: " # developer warning about missing generated art
+uikit/modal.go:X # the close button's glyph
+uikit/form.go:"  v" # the dropdown arrow glyph

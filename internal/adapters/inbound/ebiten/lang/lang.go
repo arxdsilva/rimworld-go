@@ -4,8 +4,10 @@
 // byte for byte. No package state: the shell holds the current catalog in a
 // Live and serves it as ports.Texts; pure helpers take a Tr.
 //
-// GEAR/OPT contract skeleton: English only. The catalog loader, the
-// extractor and the untranslated-text guard are W1-LANG's.
+// Catalogs are assets/lang/<code>.json (catalog.go). The tests keep them
+// honest: TestCatalogIsCurrent regenerates en.json from the T/Tf calls,
+// TestUITextIsTranslatable counts text drawn without T/Tf, and
+// TestCatalogGlyphs checks the UI font can draw every catalog.
 package lang
 
 import "fmt"
