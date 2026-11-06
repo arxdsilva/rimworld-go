@@ -47,6 +47,7 @@ type fakeHost struct {
 	work      int
 	log       []string
 	tended    map[entity.EntityID]int32
+	air       fakeAir // Climate (AIL-1): fakehost_climate_test.go
 }
 
 func newFakeHost() *fakeHost {

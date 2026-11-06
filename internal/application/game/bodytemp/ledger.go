@@ -10,6 +10,15 @@ import (
 // 1.0).
 type Sev struct{ Hypo, Heat int32 }
 
+// Held: s, past floor, holds or builds in air t with band b instead of
+// healing (exposure.Held, AIL-1).
+func (s Sev) Held(floor int32, t int, b exposure.Bands) bool {
+	return exposure.Held(s.Hypo, s.Heat, floor, t, b)
+}
+
+// Note is why s is not healing in air t with band b (exposure.Note).
+func (s Sev) Note(t int, b exposure.Bands) string { return exposure.Note(s.Hypo, s.Heat, t, b) }
+
 // Ledger holds the severities of every pawn and animal suffering any
 // (saved as Exposure; a creature with none has no entry).
 type Ledger map[entity.EntityID]Sev

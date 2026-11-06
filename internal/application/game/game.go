@@ -1411,7 +1411,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
-		pv.Hypothermia, pv.Heatstroke, pv.Frostbite = exposureView(g, id) // heat.go (TEMP-3)
+		pv.Hypothermia, pv.Heatstroke, pv.Frostbite, pv.ExposureNote = exposureNoted(g, id, v.Status == health.Downed) // heat.go (TEMP-3, AIL-004)
 		pv.Temperament = g.temperamentOf(id).String()
 		pr := g.prioOf(id)
 		for _, v := range pr {

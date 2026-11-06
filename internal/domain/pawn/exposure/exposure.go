@@ -8,7 +8,11 @@
 // and body conditions.
 package exposure
 
-import "rimworld-go/internal/domain/pawn/mood"
+import (
+	"fmt"
+
+	"rimworld-go/internal/domain/pawn/mood"
+)
 
 // Bands is a comfortable range, tenths of a degree C.
 type Bands struct{ Min, Max int }
@@ -22,6 +26,9 @@ var Everyday = Bands{Min: 160, Max: 260}
 func (b Bands) Wearing(cold, heat int) Bands {
 	return Bands{Min: b.Min - cold, Max: b.Max + heat}
 }
+
+// Inset narrows the band by m tenths at both ends (a margin to spare).
+func (b Bands) Inset(m int) Bands { return Bands{Min: b.Min + m, Max: b.Max - m} }
 
 // DangerMargin is how far past the comfortable range (tenths) hypothermia
 // or heatstroke starts to build. wiki: Hypothermia (more than 10 °C).
@@ -144,6 +151,35 @@ func Step(hypo, heat int32, t, ticks int, b Bands) (int32, int32) {
 		heat = move(heat, HeatGain(t, b), t <= b.Max, dt)
 	}
 	return hypo, heat
+}
+
+// Held reports a hypothermia or heatstroke of at least floor that air t
+// does not heal with band b (it holds or still builds): hypothermia below
+// Min, heatstroke above Max (AIL-1). Such a pawn needs other air.
+func Held(hypo, heat, floor int32, t int, b Bands) bool {
+	return hypo >= floor && hypo > 0 && t < b.Min || heat >= floor && heat > 0 && t > b.Max
+}
+
+// Note says why a hypothermia or heatstroke past Trivial is not healing in
+// air t with band b, in whole degrees C ("" when it heals): "Not
+// recovering: air 33 °C, needs 29 °C or cooler" (AIL-004). Screens build
+// their own line in the player's unit from the numbers.
+func Note(hypo, heat int32, t int, b Bands) string {
+	switch {
+	case !Held(hypo, heat, Trivial, t, b):
+		return ""
+	case t > b.Max:
+		return fmt.Sprintf("Not recovering: air %d °C, needs %d °C or cooler", degrees(t), degrees(b.Max))
+	}
+	return fmt.Sprintf("Not recovering: air %d °C, needs %d °C or warmer", degrees(t), degrees(b.Min))
+}
+
+// degrees rounds tenths of a degree to the nearest whole degree.
+func degrees(tenths int) int {
+	if tenths < 0 {
+		return -degrees(-tenths)
+	}
+	return (tenths + 5) / 10
 }
 
 // move is one (partial) step of a severity: up by gain, else down by its

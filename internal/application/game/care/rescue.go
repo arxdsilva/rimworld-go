@@ -3,6 +3,7 @@ package care
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -103,14 +104,44 @@ func (d *Doctor) bestPatient(id entity.EntityID, want func(pid entity.EntityID) 
 }
 
 // Rescuable: pid is rescueEligible with a safe bed to be carried to
-// (SafeBedFor). Its care level does not matter: even "No care" is
-// rescued. A downed prisoner is the warden's (prisonbed.go).
+// (SafeBedFor), or, lying in air that won't heal its hypothermia or
+// heatstroke, a spot whose air does (toSpot, AIL-1). Its care level does
+// not matter: even "No care" is rescued. A downed prisoner is the
+// warden's (prisonbed.go).
 func (d *Doctor) Rescuable(pid entity.EntityID) bool {
 	if !d.rescueEligible(pid) {
 		return false
 	}
 	px, py, _ := d.h.Pos(pid)
-	return d.c.SafeBedFor(pid, px, py, RescueBed) != 0
+	return d.c.SafeBedFor(pid, px, py, RescueBed) != 0 || d.toSpot(pid)
+}
+
+// ExposureRetry is how long a patient whose exposure won't heal where it
+// lies waits before a doctor looks again for air that heals it, after a
+// search that found none or a carry to a spot (AIL-1). With the bed
+// margin (healMargin) it keeps doctors from shuttling a patient between
+// rooms whose air drifts across its comfortable limit.
+const ExposureRetry = clock.TicksPerHour
+
+// exposureStuck: pid lies (in a bed or not) in air that won't heal its
+// hypothermia or heatstroke, and no ExposureRetry wait holds it (AIL-1;
+// wiki: Ailments, treated by moving to more comfortable temperatures).
+func (d *Doctor) exposureStuck(pid entity.EntityID) bool {
+	x, y, _ := d.h.Pos(pid)
+	return d.h.Now() >= d.h.ExposureWait(pid) && !d.h.AirHeals(pid, x, y, 0)
+}
+
+// toSpot: exposureStuck pid has a spot out of bed whose air heals it. With
+// none it waits ExposureRetry before anyone looks again.
+func (d *Doctor) toSpot(pid entity.EntityID) bool {
+	if !d.exposureStuck(pid) {
+		return false
+	}
+	if _, _, ok := d.h.HealingSpot(pid); ok {
+		return true
+	}
+	d.h.SetExposureWait(pid, d.h.Now()+ExposureRetry)
+	return false
 }
 
 // assignRescue carries the most urgent downed colonist to a bed.
@@ -147,10 +178,11 @@ func (d *Doctor) PatientDied(id entity.EntityID) {
 }
 
 // rescueEligible: pid is downed where a rescue helps and lies out of bed,
-// a colonist or a guest the colony takes in (guest.go); Rescuable adds
-// "a free bed exists", which the order menu shows as a reason instead.
+// or in a bed whose air won't heal its exposure (exposureStuck, AIL-1), a
+// colonist or a guest the colony takes in (guest.go); Rescuable adds "a
+// free bed exists", which the order menu shows as a reason instead.
 func (d *Doctor) rescueEligible(pid entity.EntityID) bool {
-	if !d.InjuredDowned(pid) || d.h.IsPrisoner(pid) || d.h.BedUnder(pid) != 0 {
+	if !d.InjuredDowned(pid) || d.h.IsPrisoner(pid) || d.h.BedUnder(pid) != 0 && !d.exposureStuck(pid) {
 		return false
 	}
 	return d.h.IsColonist(pid) || d.c.Guest.Rescuable(pid)

@@ -24,11 +24,36 @@ Scope: the conditions that build up and fade on their own or with care (exposure
 
 | Id | Gap | Wiki | Today | State |
 |---|---|---|---|---|
-| AIL-001 | Colonists stay downed after a heatwave | Treated by moving to comfortable air | Seen in the player's save (day 76): two colonists at 80 % and 94 % heatstroke in their own beds in 33–34 °C air, comfort maximum 29.2 °C. Severity unchanged over 12 h, because the air is in the held band (`domain/pawn/exposure/exposure.go:139-158`). No one moves them: `rescueEligible` skips a pawn in bed (`game/care/rescue.go:152`), and rescue picks any bed whatever its air (`care/beds.go:81`) | open [AIL-1] |
-| AIL-002 | Stand-up check | | `expose` checks standing only when the stage changes (`game/heat.go:95-97`) | open [AIL-1]: every climate interval |
-| AIL-003 | Bed choice for an exposure victim | | Any bed (RSC-201) | open [AIL-1]: a bed whose air heals, else the nearest bearable spot (`warmSpot`, `heat.go:157`), with a retry cooldown |
-| AIL-004 | The player can't see why | | "Heatstroke 80 %" only | open [AIL-1]: "Not recovering: air 33 °C, needs 29 °C or cooler" on the inspector, and an alert |
-| AIL-005 | Audit of every condition | | Infection, flu, plague, malaria, sleeping sickness, gut worms, muscle parasites, food poisoning, toxic buildup, hypothermia, heatstroke, frostbite, malnutrition, blood loss | open [AIL-1]: a table per condition (wiki, ours, file:line, can it hold forever) filled from the audit |
+| AIL-001 | Colonists stay downed after a heatwave | Treated by moving to comfortable air | Was: two colonists at 80 % and 94 % heatstroke in their own beds in 33–34 °C air (comfort maximum 29.2 °C), held by the in-between band (`domain/pawn/exposure/exposure.go` `Step`), never moved (`rescueEligible` skipped a pawn in bed; rescue took any bed). Now a doctor carries a pawn lying in air that won't heal it (`care/rescue.go` `exposureStuck`, `exposure.Held` at the trivial stage). The player's save: both carried and standing within 4 h | done [AIL-1] |
+| AIL-002 | Stand-up check | | `expose` checks standing every climate interval while the pawn is downed (`game/heat.go`), not only on a stage change | done [AIL-1] |
+| AIL-003 | Bed choice for an exposure victim | | A rescue takes only a bed whose air heals with 1 °C to spare (`care/beds.go` `healMargin`, `healBest`); else the nearest spot whose air heals (`warmSpot` via `Climate.HealingSpot`, `care/carrybed.go` `setOffToSpot`); else, for a pawn on a floor that doesn't heal it either, any safe bed; else a wait of `ExposureRetry` (1 h). Every exposure move holds the patient 1 h (`noComfort`). No-flap: `TestExposureRescueDoesNotFlap`. Prison beds ignore the air (capture, warden) | done [AIL-1] |
+| AIL-004 | The player can't see why | | `PawnView.ExposureNote` (sim, whole °C) for a downed pawn not healing; the inspector writes "Not recovering: air 33.4 °C, needs 29.2 °C or cooler" from `Temp` and the comfort range (`inspector/temp_ui.go`); the "Not recovering" alert (`hud/alerts_exposure.go`). The inspector's status lines are Celsius only, as the other temperature lines there (no unit reaches `ExposureLines`) | done [AIL-1]; unit: open, with the inspector's other lines |
+| AIL-005 | Audit of every condition | | Table below | done [AIL-1] |
+| AIL-006 | A permanent capacity inside the stand-up band | | `standsUp` needs consciousness ≥ 35 % and moving ≥ 20 %, `downsNow` downs below 30 % and 15 % (`domain/pawn/health`). A pawn left between the two by something permanent (scars, a lost part, a chronic condition) can't stand and isn't downed again; with nothing left to care for it leaves the patients index (`game/patients.go` `needsCare`) and is never checked again. None of the 14 conditions leaves such a residue; not reproduced | open, MEDICAL scope |
+| AIL-007 | Exposure off the map | | `expose` skips pawns not on the map (`game/heat.go`), so a downed pawn carried off in a caravan keeps its severity frozen. Not traced whether a downed pawn can leave that way | open, check caravans |
+
+## AIL-005 audit (2026-11-06)
+
+Wiki: rimworldwiki.com pages Infection, Flu, Plague, Malaria, Sleeping sickness, Gut worms, Muscle parasites, Ailments (food poisoning, toxic buildup, hypothermia, heatstroke), Frostbite, Malnutrition, Blood loss. "Holds forever": a living pawn kept downed with no path to change.
+
+| Condition | Wiki | Ours | Where | Holds forever |
+|---|---|---|---|---|
+| Infection | +0.84/day; immunity +0.6441/day; immune −0.7/day; tends slow it; 100 % kills | The same race, cured at 0, death at 100 % | `domain/pawn/infection/infection.go` `StepRace`; `game/infection.go` `stepConds` | n: it ends in a cure or death; `stepCare` checks standing hourly |
+| Flu | +0.2488/day; immunity +0.2388/day | The race | `game/disease.go` `stepDisease`; `body/cond_disease.go` | n |
+| Plague | +0.666/day; immunity +0.5224/day; immune −0.333/day | The race | same | n |
+| Malaria | +0.3702/day; immunity +0.3145/day; immune −0.7297/day | The race | same | n |
+| Sleeping sickness | +0.12/day; immunity +0.11/day; immune −0.176/day | The race (slowest rate 50/day, above the hourly rounding floor) | same | n |
+| Gut worms | Never rises or fades; 300 % summed tend quality cures | Flat until the tends sum to 3000 | `game/disease.go` (`TendSum`), `body/cond_disease.go` `TendCureSev` | n: never downs on its own (pain +20 %) |
+| Muscle parasites | Same as gut worms | Same | same | n: moving stays ≥ 70 % |
+| Food poisoning | 24 h of stages, then gone | Timed stages, removed after 24 h | `body/cond_food.go` `StepFoodPoisoning`; `game/food_poison.go` | n |
+| Toxic buildup | +40 %/day exposed; −8 %/day after | Same; zero only at full resistance, which humans never have | `body/cond_toxic.go` `StepToxic`; `game/incidents.go` `stepToxic` | n |
+| Hypothermia | Builds 10 °C below the range; fades at or above the minimum; between, nothing is said | Same; between it holds | `domain/pawn/exposure/exposure.go` `Step`; `game/heat.go` `expose` | was y (AIL-001, AIL-002); now n: a doctor moves the pawn, it checks standing every interval |
+| Heatstroke | Builds 10 °C above the range; fades at or below the maximum | Same; between it holds | same | was y; now n |
+| Frostbite | A wound; heals naturally | A wound on an extremity, healed as one | `body/cond_frostbite.go` `StrikeFrostbite`; `body/tend.go` `HealHour` | n |
+| Malnutrition | ±1.51–2.27 %/h; fed it falls | Same; a doctor feeds a downed colonist, the warden a prisoner | `body/cond_malnutrition.go` `StepMalnutrition`; `game/care_host_prison.go` `stepMalnutrition`; `care/feed.go` | n: it ends in feeding or death |
+| Blood loss | Recovers 33.3 %/day once nothing bleeds | Same; untended bleeding kills | `body/bleed.go` `StepBlood`; `game/bleed.go` `stepBloodLoss` | n |
+
+Every non-exposure condition downs with `CauseInjury`, which `stepCare` (`game/infection.go`) checks for standing every hour while the pawn is a patient. The exposure causes were the only ones checked on a stage change alone. A tend of quality 0 adds nothing to a parasite's tend sum (`body/tend.go` clamps at 0); it needs a doctor with no manipulation or sight, and parasites never down.
 
 ## Proposed phases
 

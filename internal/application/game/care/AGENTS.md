@@ -7,7 +7,7 @@ Looking after pawns that cannot look after themselves: the carry relation, rescu
 - `Care` (care.go): the root, built by `New(Host, Roles)`; components as exported fields; the care level and self-tend commands, `DropPatient`, `FollowCarriers`, `View(id, j) CareView`, `SafeBedFor` (beds.go), `PawnOrders` (orders.go), `Force` and `judge` (forced.go: one verdict for the menu row and the order), `Do` (jobs.go: the SIM-063…065 jobs), `kindOf` (targets.go: colonist, prisoner, guest, stranger, hostile). Kept at ≤ 40 methods: a feature's entry points go on its component, not here.
 - `Carries` (carry.go): who carries whom, a two-way index, carriers in ascending order.
 - `Policy` (policy.go): care levels per pawn and per group, self-tend; saved as `PolicySave`.
-- `Doctor` (rescue.go, tend.go): rescue to a safe bed (every downed cause but collapse-asleep, colonists and guests), tend, emergency tend, medicine fetch, `tendedUntil`, `PatientDied`.
+- `Doctor` (rescue.go, tend.go): rescue to a safe bed (every downed cause but collapse-asleep, colonists and guests), tend, emergency tend, medicine fetch, `tendedUntil`, `PatientDied`. AIL-1: a rescue takes only a bed whose air heals the patient's hypothermia or heatstroke (`healMargin` inside the range); a patient lying (in bed or not) in air that won't heal it is carried to such a bed, else to the nearest spot whose air does (`setOffToSpot`), else waits `ExposureRetry`; every exposure move holds the patient for `ExposureRetry`.
 - `Rest` (rest.go): bed rest and the holds on beds for a stay; saved as `RestSave`.
 - `Feeding` (feed.go, SIM-064): the Doctor's feed giver for patients who cannot feed themselves, the warden's prisoner food run, "Feed <name>"; retry state saved as `FeedRetry`.
 - `PrisonBeds` (prisonbed.go, SIM-063): a warden carries a downed prisoner back to a prison bed; "Take <name> to bed".
@@ -25,7 +25,7 @@ Looking after pawns that cannot look after themselves: the carry relation, rescu
 - `internal/application/game` (the guard's `imports` rule), adapters, platform, Ebitengine, global RNG, wall clock.
 
 ## Public Contracts
-- `deps.go`: `Host` embeds eight value-only roles (Bodies, Roster, Beds, Reach, Jobs, Health, Treatment, Events), each ≤ 8 methods; `Roles` carries the rest as their own interfaces: `Prison` (capture/arrest), `Guests` (guest lifecycle), `Social` (visits), `Gear` (strip), `Meals` (feeding, declared in feed.go). The game implements them with adapter types (`care_host.go`, `care_host_prison.go`, and beside the game code they wrap: `prisoners.go`, `visitors.go`, `social.go`, because the game package's file budget is full); none adds a method to `game.Game`.
+- `deps.go`: `Host` embeds eight value-only roles (Bodies, Roster, Beds, Reach, Jobs, Health, Treatment, Events), each ≤ 8 methods (`Reach` embeds `Climate`, AIL-1, served by the game's `careReach` in `heat.go`); `Roles` carries the rest as their own interfaces: `Prison` (capture/arrest), `Guests` (guest lifecycle), `Social` (visits), `Gear` (strip), `Meals` (feeding, declared in feed.go). The game implements them with adapter types (`care_host.go`, `care_host_prison.go`, and beside the game code they wrap: `prisoners.go`, `visitors.go`, `social.go`, because the game package's file budget is full); none adds a method to `game.Game`.
 - Saved state keeps gob field names (`Carrying`, `TendedUntil`, `Care`, `BedRest`, `FeedRetry`); a nil field loads an older save.
 - Pawn-targeted orders are `command.Prioritize` with `Order.TargetsPawn()` and the target in `Command.Target`; reason strings in reasons.go and next to each verb.
 
@@ -34,7 +34,7 @@ Looking after pawns that cannot look after themselves: the carry relation, rescu
 - Every need- or threshold-driven behaviour has hysteresis or a cooldown and a no-flap test.
 
 ## Tests
-- Unit tests here run against `fakeHost` (host_test.go) plus per-role fakes (fakeprison, fakeguests, fakesocial, fakehost_* files); coverage ≈ 97 % at SIM-066. No-flap tests: `TestRestDoesNotFlap`, `TestFeedDoesNotFlap`, `TestGuestDoesNotFlap`, the visit pair test.
+- Unit tests here run against `fakeHost` (host_test.go) plus per-role fakes (fakeprison, fakeguests, fakesocial, fakehost_* files); coverage ≈ 97 % at SIM-066. No-flap tests: `TestRestDoesNotFlap`, `TestFeedDoesNotFlap`, `TestGuestDoesNotFlap`, the visit pair test, `TestExposureRescueDoesNotFlap` (AIL-1).
 - Whole-game tests (medical, bed rest, care policy, bleeding, rescue, kidnap, save round trips) stay in `internal/application/game`.
 
 ## Hot Paths

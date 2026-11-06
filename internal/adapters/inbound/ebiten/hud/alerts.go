@@ -232,6 +232,9 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 	}
 	group("hypothermia", true, hypo, func(n string) string { return n + " has hypothermia" }, "colonists have hypothermia")
 	group("heatstroke", true, heat, func(n string) string { return n + " has heatstroke" }, "colonists have heatstroke")
+	if al, ok := NotRecoveringAlert(pawns); ok { // alerts_exposure.go (AIL-004)
+		out = append(out, al)
+	}
 	if al, ok := NeedWarmClothesAlert(pawns, w); ok { // alerts_temp.go (TEMP-5)
 		out = append(out, al)
 	}
@@ -707,6 +710,7 @@ var alertExplanations = map[string]string{
 	"animalcold":    "Tame animals are too cold. Shelter them in a heated room or pen, or bring them indoors beside a fire.",
 	"hypothermia":   "Colonists are freezing. Bring them indoors beside a fire and give them warm clothes.",
 	"heatstroke":    "Colonists are overheating. Move them into shade or a cool room and keep them off heavy work.",
+	"notrecovering": "A downed colonist's heatstroke or hypothermia can't heal in the air where they lie: it fades only in air inside their comfortable range. A doctor carries them to a bed or a spot where it does. If there is none, cool or warm a room with a cooler, a heater or shade, and they will mend there.",
 	"nofuel":        "A campfire, torch lamp or wood-fired generator has burned out of wood. Haulers refill them from the stockpile, so keep logs in stock; a generator makes no power until then.",
 	"brownout":      "A grid is asked for more power than it makes and has switched devices off. Build another generator or a battery, or switch off what you can do without.",
 	"notconnected":  "Some electrical devices have no grid in reach. Run conduit to within three tiles of each one, or place a power switch or battery on the line.",

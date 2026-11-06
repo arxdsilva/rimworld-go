@@ -107,7 +107,27 @@ func ExposureLines(p game.PawnView) []string {
 	if p.Frostbite > 0 {
 		out = append(out, fmt.Sprintf("Frostbite on %d %s", p.Frostbite, plural(p.Frostbite, "part", "parts")))
 	}
+	if ln := ExposureNoteLine(p); ln != "" {
+		out = append(out, ln)
+	}
 	return out
+}
+
+// ExposureNoteLine says why a downed colonist's hypothermia or heatstroke
+// is not healing (AIL-004): "Not recovering: air 33.4 °C, needs 29.2 °C or
+// cooler", from the view's air and comfortable range; "" while it heals
+// (PawnView.ExposureNote empty). The sim's note is in whole °C; this line
+// is built from the numbers.
+func ExposureNoteLine(p game.PawnView) string {
+	switch {
+	case p.ExposureNote == "":
+		return ""
+	case p.Temp > p.ComfortMax:
+		return "Not recovering: air " + FmtTarget(p.Temp) + ", needs " + FmtTarget(p.ComfortMax) + " or cooler"
+	case p.Temp < p.ComfortMin:
+		return "Not recovering: air " + FmtTarget(p.Temp) + ", needs " + FmtTarget(p.ComfortMin) + " or warmer"
+	}
+	return p.ExposureNote
 }
 
 func plural(n int, one, many string) string {

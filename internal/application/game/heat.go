@@ -94,6 +94,8 @@ func (g *Game) expose() {
 		}
 		if changed {
 			g.bodyChanged(id, b, &v) // body.go: stats, patients
+		}
+		if changed || v.Status == health.Downed { // AIL-002: lying, it tries to stand every interval
 			exposureDowned(g, id, b, v, e.Heat > e.Hypo)
 		}
 	}
@@ -126,6 +128,22 @@ func exposureView(g *Game, id entity.EntityID) (int, int, int) {
 	return int(exposure.Permille(e.Hypo)), int(exposure.Permille(e.Heat)), body.FrostbiteParts(g.bodies[id])
 }
 
+// exposureNoted is exposureView plus a downed pawn's ExposureNote (AIL-004).
+func exposureNoted(g *Game, id entity.EntityID, downed bool) (hypo, heat, frost int, note string) {
+	if hypo, heat, frost = exposureView(g, id); downed {
+		note = g.exposure[id].Note(chillHost{g}.AirAt(id), g.bandsOf(id))
+	}
+	return hypo, heat, frost, note
+}
+
+// careReach's care.Climate (AIL-1); its ExposureWait is noComfort.
+func (h careReach) AirHeals(id entity.EntityID, x, y, margin int) bool {
+	return !h.g.exposure[id].Held(exposure.Trivial, int(h.g.temperatureAt(x, y)), h.g.bandsOf(id).Inset(margin))
+}
+func (h careReach) HealingSpot(id entity.EntityID) (int, int, bool)  { return h.g.warmSpot(id) }
+func (h careReach) ExposureWait(id entity.EntityID) uint64           { return h.g.noComfort[id] }
+func (h careReach) SetExposureWait(id entity.EntityID, until uint64) { h.g.noComfort[id] = until }
+
 // chillHost is bodytemp.AnimalHost: animal exposure's reach into the game.
 type chillHost struct{ g *Game }
 
@@ -144,11 +162,7 @@ func (g *Game) nameOf(id entity.EntityID) string {
 // needsComfort reports a colonist suffering exposure where it stands
 // (from the trivial stage: hysteresis with doWarm's stop at none left).
 func (g *Game) needsComfort(id entity.EntityID) bool {
-	e := g.exposure[id]
-	pos, _ := g.positions.Get(id)
-	t := int(g.temperatureAt(pos.X, pos.Y))
-	b := g.bandsOf(id)
-	return e.Hypo >= exposure.Mild && t < b.Min || e.Heat >= exposure.Mild && t > b.Max
+	return g.exposure[id].Held(exposure.Mild, chillHost{g}.AirAt(id), g.bandsOf(id))
 }
 
 // warmSpot finds the nearest reachable spot in a room with bearable air for
@@ -190,8 +204,6 @@ func (g *Game) doWarm(id entity.EntityID, j job.Record) {
 	}
 	g.jobs.Set(id, j)
 }
-
-// refuelEnabled reports whether a pawn's work settings allow refuelling.
 
 // SkipTo jumps the calendar forward to day (0-based) at hour without
 // simulating the time in between (dev scenarios and fixtures).

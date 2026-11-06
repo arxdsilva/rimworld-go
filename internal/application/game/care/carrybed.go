@@ -26,11 +26,15 @@ const (
 // Rescued; a prisoner's trip only lays it down.
 func (c *Care) carryToBed(id entity.EntityID, j job.Record, trip bedTrip) {
 	h := c.h
-	if j.Dest == 0 {
+	if j.Dest == 0 && c.Carry.Patient(id) == 0 {
 		var ok bool
 		if j, ok = c.setOff(id, j, trip); !ok || j.State == job.Goto {
 			return
 		}
+	}
+	if j.Dest == 0 {
+		laySpot(c, id, j)
+		return
 	}
 	if b, ok := h.Building(j.Dest); !ok || trip != tripRescue && !b.ForPrisoners {
 		c.DropPatient(id)
@@ -60,11 +64,11 @@ func (c *Care) tripBed(id, t entity.EntityID, x, y int, trip bedTrip) (bid entit
 		return bid, false
 	}
 	q := rescueQuery(c, t, x, y)
-	if bid = q.best(c); bid == 0 {
+	if bid = q.healBest(c); bid == 0 {
 		return 0, false
 	}
 	q.reacher = id
-	bid = q.best(c)
+	bid = q.healBest(c)
 	return bid, bid == 0
 }
 
@@ -75,6 +79,9 @@ func (c *Care) setOff(id entity.EntityID, j job.Record, trip bedTrip) (job.Recor
 	t := j.Target
 	x, y, _ := h.Pos(id)
 	bid, unreachable := c.tripBed(id, t, x, y, trip)
+	if bid == 0 && !unreachable && trip == tripRescue && c.Doctor.exposureStuck(t) {
+		return setOffToSpot(c, id, j)
+	}
 	if unreachable {
 		j.State, j.Fail = job.Fail, job.Unreachable
 		h.SetJob(id, j)
@@ -103,6 +110,7 @@ func (c *Care) setOff(id entity.EntityID, j job.Record, trip bedTrip) (job.Recor
 	if trip == tripCapture {
 		c.pr.DropGear(t) // a captive's weapon stays where it was taken
 	}
+	holdExposure(c, t, trip)
 	c.Carry.Pick(id, t)
 	j.Dest, j.TX, j.TY, j.Path, j.PathI = bid, sx, sy, path, 0
 	j.State = job.Goto
@@ -133,4 +141,52 @@ func (c *Care) layInBed(patient, bid entity.EntityID, hold bool) {
 	cx, cy := h.SleepCell(patient, b)
 	h.Place(patient, cx, cy)
 	h.SetSleptAt(patient, bid)
+}
+
+// setOffToSpot carries exposure victim j.Target, with no bed free whose
+// air heals it, to the nearest spot whose air does (AIL-1; wiki: Ailments,
+// treated by moving to more comfortable temperatures). The trip keeps
+// Dest 0: carrying with no bed is what marks it. With no spot, or no way
+// there, the patient waits ExposureRetry.
+func setOffToSpot(c *Care, id entity.EntityID, j job.Record) (job.Record, bool) {
+	h := c.h
+	sx, sy, ok := h.HealingSpot(j.Target)
+	var path []pathing.Point
+	if ok {
+		path, ok = h.PathTo(id, sx, sy)
+	}
+	if !ok {
+		h.SetExposureWait(j.Target, h.Now()+ExposureRetry)
+		j.State, j.Fail = job.Fail, job.Unreachable
+		h.SetJob(id, j)
+		return j, false
+	}
+	holdExposure(c, j.Target, tripRescue)
+	c.Carry.Pick(id, j.Target)
+	j.TX, j.TY, j.Path, j.PathI, j.State = sx, sy, path, 0, job.Goto
+	if len(path) == 0 {
+		j.State = job.Do
+	}
+	h.SetJob(id, j)
+	return j, true
+}
+
+// holdExposure: a rescue lifting patient t out of air that won't heal its
+// exposure holds it from another exposure move for ExposureRetry, so air
+// drifting across its comfortable limit can't send doctors back and forth
+// (AIL-1 hysteresis, with healMargin).
+func holdExposure(c *Care, t entity.EntityID, trip bedTrip) {
+	h := c.h
+	if x, y, _ := h.Pos(t); trip == tripRescue && !h.AirHeals(t, x, y, 0) {
+		h.SetExposureWait(t, h.Now()+ExposureRetry)
+	}
+}
+
+// laySpot puts the patient carrier id brought to a spot down there.
+func laySpot(c *Care, id entity.EntityID, j job.Record) {
+	h := c.h
+	c.DropPatient(id)
+	h.Rescued(id, j.Target)
+	j.State = job.Complete
+	h.SetJob(id, j)
 }

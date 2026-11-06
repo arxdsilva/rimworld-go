@@ -35,7 +35,9 @@ const (
 // a medical bed (a hospital bed first) when the patient needs tending or
 // bed rest, or is a guest (guests use medical beds, wiki: Guest); else
 // the patient's own bed; else any free bed; the nearest by Manhattan
-// distance within a rank, ties to the lowest id.
+// distance within a rank, ties to the lowest id. A rescue takes only a
+// bed whose air heals the patient's hypothermia or heatstroke (healBest,
+// AIL-1).
 func (c *Care) SafeBedFor(patient entity.EntityID, x, y int, need BedNeed) entity.EntityID {
 	if need == RestBed {
 		return restBedFor(c, patient, x, y)
@@ -44,7 +46,7 @@ func (c *Care) SafeBedFor(patient entity.EntityID, x, y int, need BedNeed) entit
 	if c.kindOf(patient) == targetColonist {
 		q.reacher = patient
 	}
-	return q.best(c)
+	return q.healBest(c)
 }
 
 // PrisonBedFor is the safe prison bed for target at (x, y) (0: none):
@@ -53,18 +55,25 @@ func (c *Care) SafeBedFor(patient entity.EntityID, x, y int, need BedNeed) entit
 // serves capture, arrest and the warden's carry with it.
 func PrisonBedFor(c *Care, target entity.EntityID, x, y int) entity.EntityID {
 	q := rescueQuery(c, target, x, y)
-	q.prison = true
+	q.prison, q.heal = true, false
 	return q.best(c)
 }
 
 // bedQuery is one safe-bed search (SIM-063): for patient at (x, y),
-// prison beds only or never, medical beds first (care), and when reacher
-// is set only beds reacher can get beside.
+// prison beds only or never, medical beds first (care), when reacher is
+// set only beds reacher can get beside, and with heal only beds whose air
+// heals the patient's exposure (AIL-1).
 type bedQuery struct {
-	patient, reacher entity.EntityID
-	x, y             int
-	prison, care     bool
+	patient, reacher   entity.EntityID
+	x, y               int
+	prison, care, heal bool
 }
+
+// healMargin is how far inside the patient's comfortable range (tenths of
+// a degree) a bed's air must be for a rescue to take it there: a patient
+// is moved once its air leaves the range, so a bed right on the line
+// would send it back on the next drift (AIL-1 hysteresis).
+const healMargin = 10
 
 // rescueQuery is the search for patient at (x, y) without a reach check:
 // prison beds for a prisoner, medical first for a guest or a patient that
@@ -72,7 +81,27 @@ type bedQuery struct {
 func rescueQuery(c *Care, patient entity.EntityID, x, y int) bedQuery {
 	k := c.kindOf(patient)
 	needs := k == targetGuest || k == targetStranger || c.h.NeedsTending(patient) || c.Rest.NeedsBedRest(patient)
-	return bedQuery{patient: patient, x: x, y: y, prison: k == targetPrisoner, care: needs}
+	return bedQuery{patient: patient, x: x, y: y, prison: k == targetPrisoner, care: needs, heal: k != targetPrisoner}
+}
+
+// healBest is best over the beds whose air heals the patient. With none,
+// a patient out of bed in air that won't heal it either, and with no spot
+// whose air does (Climate.HealingSpot), still goes to any safe bed: no
+// worse than where it lies (AIL-1).
+func (q bedQuery) healBest(c *Care) entity.EntityID {
+	if bid := q.best(c); bid != 0 || !q.heal {
+		return bid
+	}
+	h := c.h
+	px, py, _ := h.Pos(q.patient)
+	if h.BedUnder(q.patient) != 0 || h.AirHeals(q.patient, px, py, 0) {
+		return 0
+	}
+	if _, _, ok := h.HealingSpot(q.patient); ok {
+		return 0
+	}
+	q.heal = false
+	return q.best(c)
 }
 
 // rank is bed b's rank for q (higher first): a medical bed (5 a hospital
@@ -110,7 +139,7 @@ func (q bedQuery) best(c *Care) entity.EntityID {
 		if rank < bestRank || rank == bestRank && (d > bestD || d == bestD && bid > best) {
 			continue
 		}
-		if h.BedHazard(bid) {
+		if h.BedHazard(bid) || q.heal && !h.AirHeals(q.patient, b.X, b.Y, healMargin) {
 			continue
 		}
 		if q.reacher != 0 {

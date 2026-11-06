@@ -87,6 +87,23 @@ type Reach interface {
 	// BedHazard: bed is no safe place to lay a patient now (burning, or
 	// its room at a deadly temperature; SIM-063).
 	BedHazard(bed entity.EntityID) bool
+	Climate
+}
+
+// Climate is the air a patient's hypothermia or heatstroke heals in
+// (AIL-1, wiki: Ailments, "moving to more comfortable temperatures").
+type Climate interface {
+	// AirHeals: the air on tile (x, y) lets patient's hypothermia and
+	// heatstroke heal with margin tenths of a degree to spare (true when it
+	// has none worth a move).
+	AirHeals(patient entity.EntityID, x, y, margin int) bool
+	// HealingSpot is the nearest reachable tile, not under a bed, whose air
+	// heals patient (ok false: none).
+	HealingSpot(patient entity.EntityID) (x, y int, ok bool)
+	// ExposureWait is the tick before which no exposure move of patient is
+	// tried again; SetExposureWait sets it.
+	ExposureWait(patient entity.EntityID) uint64
+	SetExposureWait(patient entity.EntityID, until uint64)
 }
 
 // Jobs starts and stops pawns' jobs.

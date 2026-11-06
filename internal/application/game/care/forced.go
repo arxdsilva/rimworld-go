@@ -163,7 +163,7 @@ func (c *Care) holdWhy(doer, target entity.EntityID) string {
 // rescueBedWhy: no safe bed to carry target to.
 func (c *Care) rescueBedWhy(target entity.EntityID) string {
 	px, py, _ := c.h.Pos(target)
-	if c.SafeBedFor(target, px, py, RescueBed) == 0 {
+	if c.SafeBedFor(target, px, py, RescueBed) == 0 && !c.Doctor.toSpot(target) { // AIL-1: or a spot whose air heals
 		return ReasonNoBed
 	}
 	return ""
