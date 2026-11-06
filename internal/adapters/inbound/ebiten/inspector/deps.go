@@ -158,6 +158,7 @@ type Shell interface {
 	Host
 	Peers
 	Labels
+	ports.Texts
 }
 
 // Producer is what the inspector shows for one selection kind: its pane
