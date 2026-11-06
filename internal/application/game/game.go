@@ -290,6 +290,7 @@ type PawnView struct {
 	Malnutrition int
 	ToxicBuildup int           // FOOD-6: toxic buildup percent (body/cond_toxic.go)
 	Frostbite    int           // TEMP-3: parts with an open frostbite (body.Frostbite wounds)
+	ExposureNote string        // AIL-004 contract (heat.go, "" until AIL-1): why heatstroke or hypothermia is not healing
 	AX           axview.Pawn   // AX-0 contract (zero until its owners fill it)
 	Gear         gearview.Pawn // GEAR-1/GEAR-3 contract (zero until its owners fill it)
 }
