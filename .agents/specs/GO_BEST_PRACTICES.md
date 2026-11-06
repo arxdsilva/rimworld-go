@@ -106,7 +106,7 @@ Use interfaces at real behavioral boundaries.
 
 Prefer small consumer-defined interfaces.
 
-This is SOLID's Dependency Inversion Principle (depend on an abstraction owned by the consumer, not on a concrete implementation) combined with the Interface Segregation Principle (no consumer should depend on methods it does not call). At every adapter/application/domain boundary, the caller defines the minimal interface it needs and the concrete type is only ever constructed at the composition root. See `.agents/specs/HEXAGONAL_ARCHITECTURE.md` §6 for the enforced project-wide rule.
+The consumer owns the interface and the concrete type is constructed only at the composition root: the dependency-inversion and interface-segregation rule is in `.agents/specs/HEXAGONAL_ARCHITECTURE.md` §6 and `.agents/specs/SOLID_GO.md` §6–7.
 
 Good:
 
@@ -131,7 +131,7 @@ type WorldService interface {
 
 Do not create `Fooer` interfaces for every concrete type preemptively.
 
-Size limits for types, interfaces and packages, and the guard that enforces them: `SOLID_GO.md` §8.
+Size limits for types, interfaces and packages, and the guard that enforces them: `.agents/specs/SOLID_GO.md` §8.
 
 ---
 
@@ -254,13 +254,7 @@ Do not pass context through every pure simulation function.
 
 Go's goroutines are not free architecture.
 
-Rules:
-
-- no goroutine per pawn;
-- no goroutine per job;
-- one owner mutates authoritative simulation state;
-- workers compute from immutable snapshots;
-- results are committed deterministically.
+The concurrency rules (no goroutine per pawn or job, one owner of simulation state, workers on immutable snapshots, deterministic commits) are in `.agents/specs/MASTER_SPEC.md` §55 and §78.
 
 Use channels where ownership boundaries benefit from them.
 
@@ -284,7 +278,7 @@ Run race tests on concurrent adapters/workers.
 
 # 14. Deterministic Go
 
-Authoritative code must avoid:
+Authoritative code must avoid (rule: `.agents/specs/MASTER_SPEC.md` §6–7):
 
 ```go
 time.Now()
@@ -498,11 +492,7 @@ Balance values should come from validated content where practical.
 
 # 27. Time
 
-Simulation duration = ticks.
-
-Wall-clock duration = `time.Duration`.
-
-Never mix them.
+Simulation duration = ticks; wall-clock duration = `time.Duration`; never mix them (no wall clock in authoritative code: `.agents/specs/MASTER_SPEC.md` §6–7).
 
 Name parameters clearly:
 
@@ -515,7 +505,7 @@ realTimeout
 
 # 28. Randomness
 
-No global RNG.
+No global RNG (`.agents/specs/MASTER_SPEC.md` §6–7).
 
 Preferred API should make randomness explicit:
 
@@ -1367,9 +1357,7 @@ Before finishing:
 - `gofmt`;
 - tests;
 - benchmark if relevant;
-- race test if concurrent;
-- docs/handoff;
-- ensure no architecture leak.
+- race test if concurrent.
 
 ---
 

@@ -1,6 +1,5 @@
 # rimworld-go — Master Product, Architecture & Multi-Agent Engineering Specification
 
-**Status:** Greenfield master specification  
 **Primary implementation language:** Go  
 **Working repository name:** `rimworld-go`  
 **Purpose:** This file is the authoritative engineering/product contract for humans and multiple AI coding agents collaborating on a large-scale open-source colony simulation.
@@ -11,7 +10,7 @@ The project must be an original implementation. Do not copy commercial source co
 
 The primary differentiator is scale: the architecture should ultimately support colonies with **1,000+ active settlers**, very large maps, tens or hundreds of thousands of world objects, headless simulation, deterministic replay, extensive modding, and lower CPU/RAM use than conventional simulation-heavy games.
 
-For the ordered, checkbox-tracked feature and UI/UX backlog derived from this spec, see `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` and `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`. For per-screen layout, navigation, commands, and states, see `MAIN_UI_SCREENS_SPECIFICATION.md` (agent playbook: `skills/rimworld-go-ui-screens/SKILL.md`). For player-visible art, sprites, icons, UI chrome, and the asset pipeline, see `ART_DIRECTION_AND_ASSET_PIPELINE.md` (agent playbook: `skills/rimworld-go-art-assets/SKILL.md`).
+Index of all specs, backlogs, skills and templates: `.agents/README.md`.
 
 
 # 1. Product Pillars
@@ -102,97 +101,8 @@ The renderer consumes read-only snapshots. It never owns authoritative state.
 
 # 5. Repository Layout
 
-Recommended structure:
-
-```text
-cmd/
-  game/
-  simulate/
-  benchmark/
-  contentlint/
-  replay/
-internal/
-  app/
-  sim/
-    clock/
-    entity/
-    components/
-    scheduler/
-    command/
-    event/
-    snapshot/
-  world/
-    grid/
-    chunk/
-    region/
-    room/
-    generation/
-    terrain/
-    temperature/
-    weather/
-    light/
-    fire/
-  pawn/
-    needs/
-    skills/
-    traits/
-    mood/
-    memory/
-    social/
-    health/
-    inventory/
-  ai/
-    intent/
-    jobs/
-    work/
-    reservation/
-    pathing/
-    movement/
-    combat/
-  economy/
-    item/
-    storage/
-    recipe/
-    production/
-    trade/
-  building/
-    construction/
-    doors/
-    zones/
-    power/
-  combat/
-    weapon/
-    projectile/
-    damage/
-    armor/
-    cover/
-  faction/
-  incident/
-  research/
-  save/
-  replay/
-  content/
-  mod/
-  metrics/
-  debug/
-pkg/
-  mathx/
-  randx/
-content/
-assets/
-mods/
-scenarios/
-benchmarks/
-docs/
-  architecture/
-  systems/
-  adr/
-  ai-agents/
-    handoffs/
-tools/
-scripts/
-```
-
+Real layout: `cmd/` (game, simulate, benchmark, contentlint, replay, mapgen, atlasgen, audiogen, sfxgen, normalgen, rambudget), `internal/{domain,application,ports,adapters,platform,arch,testkit}`, plus `assets/`, `content/`, `scripts/`, `docs/`.
+Package placement and dependency direction: `.agents/specs/HEXAGONAL_ARCHITECTURE.md` §4. Each package's purpose, contracts and invariants: its own `AGENTS.md`.
 Avoid catch-all `utils` packages and circular dependencies.
 
 
@@ -1759,23 +1669,19 @@ benchmark subset
 save compatibility
 ```
 
+Gate commands (`-race`, arch, art-check) are listed in `.agents/specs/PARALLEL_WORK.md` §5.
+
 Automated architecture lint should reject simulation imports of presentation packages and direct wall-clock/global random calls in authoritative packages.
 
 
 # 62. Coding Rules
 
-- idiomatic Go;
-- explicit data ownership;
-- no global mutable simulation state;
-- no unnecessary interfaces;
-- interfaces generally live at consumer boundaries;
-- no generic abstraction without real consumers;
-- no package named `utils`;
-- avoid magic `init()` registration;
+- no global mutable simulation state, no `init()` registration: `.agents/specs/SOLID_GO.md`;
+- interfaces live at consumer boundaries, none without a real consumer: `.agents/specs/HEXAGONAL_ARCHITECTURE.md` §6;
+- idiomatic Go, explicit data ownership, no `utils` package, hot loops with zero avoidable allocations: `.agents/specs/GO_BEST_PRACTICES.md`; size limits: `SOLID_GO.md` §8;
 - typed enums for state machines;
 - comments explain invariants/reasons;
 - exported APIs have Go doc;
-- hot loops target zero avoidable allocations;
 - TODO format: `TODO(TASK-123): explanation`;
 - never leave repository intentionally uncompilable for another agent.
 
@@ -1800,219 +1706,27 @@ Authoritative cumulative simulation should use integer/fixed-point where reasona
 
 # 64. AI Agent Organization
 
-Recommended standing agents:
-
-**Architecture Agent**
-- system boundaries;
-- ADRs;
-- primitives;
-- scheduler;
-- cross-cutting design.
-
-**World Agent**
-- grid/chunks;
-- generation;
-- terrain;
-- regions/rooms;
-- weather/temperature/fire/plants.
-
-**Pawn Agent**
-- needs;
-- skills;
-- traits;
-- mood;
-- memory;
-- social;
-- health.
-
-**AI/Jobs Agent**
-- intents;
-- jobs;
-- work indexing;
-- schedules;
-- reservations.
-
-**Navigation Agent**
-- pathfinding;
-- movement;
-- congestion;
-- region routes.
-
-**Economy Agent**
-- items;
-- inventory;
-- storage;
-- hauling;
-- recipes/trade.
-
-**Construction Agent**
-- blueprints;
-- buildings;
-- doors;
-- zones;
-- power.
-
-**Combat Agent**
-- weapons;
-- targeting;
-- projectiles;
-- damage;
-- armor;
-- cover;
-- enemy tactical AI.
-
-**World Strategy Agent**
-- factions;
-- diplomacy;
-- incidents;
-- research;
-- world map/travel later.
-
-**Presentation Agent**
-- renderer;
-- UI;
-- camera;
-- input;
-- overlays.
-
-**Persistence/Mod Agent**
-- save/load;
-- replay;
-- content;
-- mods;
-- localization.
-
-**Performance/QA Agent**
-- profiling;
-- benchmarks;
-- determinism;
-- fuzz;
-- CI;
-- regression analysis.
-
-**Integration Agent**
-- merge parallel branches;
-- resolve contracts;
-- run full validation;
-- publish integration handoffs.
+Agent organization and roles: `.agents/specs/PARALLEL_WORK.md`.
 
 
 # 65. Multi-Agent Ownership Rules
 
-Each package should contain `AGENTS.md` describing:
-
-```text
-purpose
-allowed dependencies
-forbidden responsibilities
-public contracts
-invariants
-hot paths
-tests
-benchmarks
-```
-
-Agents may edit another agent's owned package only when a required contract is missing, and the change should be minimal.
-
-Shared primitive ownership should be frozen early:
-
-```text
-EntityID
-Tick
-Tile
-ChunkCoord
-DefID/DefIndex
-command envelope
-RNG API
-component-store semantics
-event/phase ordering
-```
-
-Search the repository before inventing a shared type.
+Ownership rules, package `AGENTS.md` and frozen shared primitives: `.agents/specs/PARALLEL_WORK.md`. Search the repository before inventing a shared type.
 
 
 # 66. AI Task Contract
 
-Every coding assignment contains:
-
-```text
-Task ID
-Objective
-Allowed packages
-Forbidden packages
-Required input interfaces
-Required output interfaces
-Acceptance tests
-Performance constraints
-Determinism constraints
-Save/mod compatibility considerations
-Documentation/handoff requirement
-```
-
-Example:
-
-```text
-TASK: PAWN-014 Hunger decay
-
-Allowed:
-internal/pawn/needs
-internal/sim/systems
-
-Requirements:
-- integer deterministic math
-- bucketed update every 60 ticks
-- no per-pawn allocation
-- critical hunger event
-
-Acceptance:
-- unit tests
-- determinism test
-- benchmark 100k pawns
-- handoff file
-```
+Removed: use `.agents/templates/TASK_PACKET.md`.
 
 
 # 67. AI Handoff Contract
 
-Every completed task creates:
-
-```text
-.agents/handoffs/<TASK-ID>.md
-```
-
-Template:
-
-```markdown
-# Task ID
-# Summary
-# Files Changed
-# Interfaces Added/Changed
-# Assumptions
-# Invariants
-# Tests Run
-# Benchmarks
-# Determinism Impact
-# Save/Mod Impact
-# Known Limitations
-# Follow-Up Tasks
-```
-
-Integration agent may reject a task lacking a useful handoff.
+Removed: use `.agents/templates/HANDOFF.md`.
 
 
 # 68. ADR Process
 
-Cross-cutting decisions require an Architecture Decision Record.
-
-Examples:
-- discrete tick model;
-- deterministic RNG;
-- sparse component stores;
-- Ebitengine renderer;
-- hierarchical pathfinding;
-- gob saves with versioned migrations;
-- Starlark vs WASM;
-- multiplayer model.
+Cross-cutting decisions that change a contract get an Architecture Decision Record in `docs/adr/` (currently empty): write one only for such a decision (tick model, RNG, saves, renderer, scripting, multiplayer model).
 
 ADR template:
 
@@ -2030,14 +1744,7 @@ Migration impact
 
 # 69. Branching and Integration
 
-Use short-lived task branches:
-
-```text
-feature/PATH-021-region-route
-feature/PAWN-014-hunger
-```
-
-For multiple agents, separate Git worktrees are strongly recommended.
+Single developer: all work happens directly on `main`. No feature branches, worktrees or pull requests unless the user asks for one. Parallel agents share the checkout with disjoint file ownership (`.agents/specs/PARALLEL_WORK.md`). Pushing and tagging need an explicit request.
 
 Commit convention:
 
@@ -2046,14 +1753,12 @@ PATH-021: add cached region routing
 PAWN-014: implement deterministic hunger decay
 ```
 
-Agents rebase/merge frequently. Avoid long divergent branches.
-
-Integration agent runs full tests, deterministic hashes, architecture lint, and relevant benchmark set after merging a wave.
+The lead runs full tests, deterministic hashes, architecture lint, and the relevant benchmark set after a wave.
 
 
-# 70. PR Definition of Done
+# 70. Definition of Done
 
-Every feature PR must include:
+Every feature must include:
 1. behavior implementation;
 2. tests;
 3. deterministic implications;
@@ -2171,154 +1876,26 @@ Excluded from MVP: complex factions, world travel, advanced mood/social, multipl
 
 # 74. First Engineering Backlog
 
-Suggested dependency-ordered tasks:
-
-```text
-ARCH-001 repository boundaries
-ARCH-002 dependency rules + AGENTS templates
-SIM-001 Tick
-SIM-002 simulation clock
-SIM-003 deterministic RNG
-SIM-004 command queue
-SIM-005 phase scheduler
-SIM-006 state hash
-SIM-007 scheduled events
-SIM-020 EntityID allocator
-SIM-021 lifecycle queues
-SIM-022 component store
-WORLD-001 Tile/Grid
-WORLD-002 ChunkCoord/chunks
-WORLD-003 tile flags
-WORLD-004 terrain registry
-WORLD-005 seeded map generation
-WORLD-006 spatial index
-UI-001 Ebitengine spike
-UI-002 terrain renderer
-UI-003 camera
-UI-004 selection
-PAWN-001 pawn definition/spawn
-PATH-001 movement costs
-PATH-002 A* heap/scratch
-PATH-003 deterministic A*
-PATH-004 path follower
-PATH-005 benchmark
-AI-001 JobID/lifecycle
-AI-002 reservation manager
-AI-003 MoveTo job
-AI-004 intent selector
-AI-005 work indexes
-ECON-001 item defs
-ECON-002 stack entities
-ECON-003 inventory
-ECON-004 storage index
-ECON-005 transfer
-ECON-006 hauling
-PAWN-010 needs store
-PAWN-011 hunger
-PAWN-012 rest
-BUILD-001 building defs
-BUILD-002 blueprints
-BUILD-003 resource delivery
-BUILD-004 construction
-BUILD-005 wall/door
-SAVE-001 versioned save schema
-SAVE-002 minimal save/load
-TEST-001 sim test DSL
-PERF-001 benchmark harness
-PERF-002 pprof/tick profiler
-```
+Removed: greenfield plan, superseded by the code and `.agents/backlog/`.
 
 
 # 75. Recommended Parallel Work Waves
 
-**Wave 1 — Freeze foundations**
-- Architecture: clock/RNG/entities/scheduler;
-- World: grid/chunks/terrain;
-- Presentation: Ebitengine proof-of-concept;
-- QA: CI/state hash/benchmark harness.
-
-**Wave 2**
-- Navigation: A* + movement;
-- Pawn: pawn/needs data;
-- Persistence: save schema;
-- Content: definition loader.
-
-**Wave 3**
-- AI: jobs/reservations/work indexes;
-- Economy: items/inventory/storage;
-- Building: blueprint/construction;
-- Presentation: inspector/commands.
-
-Do not start aggressive parallelization until shared primitives and ownership contracts compile and have tests.
+Removed: greenfield plan, superseded by the code and `.agents/backlog/`.
 
 
 # 76. Reference AI Coding Prompt
 
-```text
-You are implementing rimworld-go.
-
-Read:
-- .agents/specs/MASTER_SPEC.md
-- package AGENTS.md
-- relevant docs/systems/*
-- accepted ADRs
-- recent handoffs for dependencies
-
-Task ID: PATH-021
-Objective: implement local deterministic A*.
-
-Allowed packages:
-- internal/ai/pathing
-- pkg/geom
-
-Forbidden:
-- pawn internals
-- renderer
-- combat
-
-Constraints:
-- no global RNG
-- no wall clock
-- integer movement costs
-- reusable scratch buffers
-- deterministic tie breaking
-- explicit no-path result
-- no unrelated refactors
-
-Acceptance:
-- unit tests
-- random-map property/fuzz coverage
-- 512×512 benchmark
-- deterministic path result
-- handoff PATH-021.md
-
-Before coding:
-1. search for existing primitives;
-2. summarize relevant interfaces;
-3. propose only necessary contract changes.
-
-After coding:
-1. run tests;
-2. run benchmark;
-3. list changed public contracts;
-4. report limitations;
-5. write handoff.
-```
+Removed: see `.agents/templates/TASK_PACKET.md`.
 
 
 # 77. AI Guardrails
 
-All AI agent prompts should include:
+All AI agent prompts should include (the rest of the guardrails live in the root `AGENTS.md`):
 
-- Do not delete tests to make CI green.
 - Do not weaken invariants silently.
-- Do not replace deterministic logic with wall-clock randomness.
-- Do not add goroutine-per-entity designs.
-- Do not introduce global mutable simulation state.
 - Do not broadly refactor outside task scope.
-- Do not invent duplicate primitives before repository search.
 - Do not change public contracts without documentation.
-- Do not copy proprietary game content/code/assets.
 - Do not commit generated binaries.
 - For bugs: write failing regression first.
 - For performance work: benchmark before and after.
@@ -2485,18 +2062,7 @@ Accessibility belongs to presentation and must not contaminate authoritative sim
 
 # 86. Licensing and Clean-Room Policy
 
-Choose project and asset licenses deliberately. Plausible code choices: MPL-2.0, GPL-3.0, AGPL-3.0, Apache-2.0, or MIT depending on desired reciprocity. Assets can use separate licenses.
-
-Before commercial distribution, get legal advice.
-
-Contributors must not:
-- decompile/reference proprietary implementation;
-- copy code;
-- extract game data/assets;
-- copy dialogue/descriptions;
-- duplicate exact balancing databases.
-
-Public final branding should be original. `rimworld-go` is best treated as a working engineering codename; a public title should avoid implying affiliation with another trademark.
+See `.agents/specs/CLEAN_ROOM.md`.
 
 
 # 87. Product Differentiators Beyond Inspiration
@@ -2558,31 +2124,7 @@ Off-map simulation should remain aggregate wherever individual fidelity is not c
 
 # 90. Immediate Execution Order
 
-Do not begin by building mood, diplomacy, raids, advanced crafting, and mods simultaneously.
-
-First establish:
-
-```text
-repository + CI
-→ Tick
-→ deterministic RNG
-→ EntityID
-→ Tile/Grid/Chunk
-→ component store
-→ headless Simulation.Step()
-→ command ordering
-→ state hashing
-→ renderer spike
-→ pawn Position
-→ deterministic A*
-→ movement
-→ movement benchmark
-→ Job engine
-→ Reservation manager
-→ indexed work
-```
-
-When these contracts stabilize, parallel development becomes dramatically safer.
+Removed: greenfield plan, superseded by the code and `.agents/backlog/`.
 
 
 # 91. Final Engineering Directive

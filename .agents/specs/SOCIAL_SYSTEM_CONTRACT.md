@@ -1,15 +1,12 @@
 # Social System Contract (ENG-003)
 
-This is the shared contract for the full social and relationship feature set: opinions, romance, weddings, fights, grief,
-prisoners, world pawns, caravans, areas, animal bonds, and the host systems they need (body, surgery, drugs).
-- Plan: `~/.claude/plans/pasted-content-id-a186-rimworld-snuggly-tiger.md`.
-- Everything here is **additive and append-only**. Only the lead changes this file.
-
-> **Balance override (user decision, 2026-10-23):** this feature set uses RimWorld's published wiki numbers for social, mood,
-> fight, grief, prisoner and bond values. That is an explicit, feature-scoped exception to the AGENTS.md rule against copying
-> proprietary balancing data and to MASTER_SPEC L10/§86. Names, labels, descriptions, log lines and topics stay **original**.
-> Every tuning file that uses these values starts with the comment:
-> `// Values follow the published RimWorld wiki by explicit user decision (ENG-003 balance override).`
+> **What:** Shared contract for the full social and relationship feature set (opinions, romance, weddings, fights, grief, prisoners, world pawns, caravans, areas, animal bonds) and the host systems they need (body, surgery, drugs).
+> **Load only for ENG-003 social-system tasks.**
+> Update the matching checklist rows in the same change (root `AGENTS.md`).
+> Clean-room rules and the data exceptions: `.agents/specs/CLEAN_ROOM.md`.
+> Plan: rolled into `.agents/handoffs/ENG.md` (ENG-003).
+> Everything here is additive and append-only. Only the lead changes this file.
+> Balance override (user decision, 2026-10-23): social, mood, fight, grief, prisoner and bond values follow the published RimWorld wiki, a feature-scoped exception to the root copying rule; names, labels, descriptions, log lines and topics stay original. Tuning files using these values start with `// Values follow the published RimWorld wiki by explicit user decision (ENG-003 balance override).`
 
 ## C0 Global rules
 - **Integer fixed point.** Opinion is in centi-points (`int32`, ×100). Factors and probabilities are permille (`int32`). No floats

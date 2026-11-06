@@ -1,6 +1,6 @@
 # Parallel work rule: fan out by default
 
-Split work across **parallel subagents** whenever a task touches two or more of the independent areas below. Do a single-area change, or one under ~150 lines, directly. The skill `parallel-work` (`skills/parallel-work/SKILL.md`) has the checklist and the agent prompt template.
+Split work across **parallel subagents** whenever a task touches two or more of the independent areas below. Do a single-area change, or one under ~150 lines, directly. The skill `parallel-work` (`.agents/skills/parallel-work/SKILL.md`) has the checklist and the agent prompt template.
 
 | Area | Paths |
 | --- | --- |
@@ -56,7 +56,7 @@ Agents never run a full package that loads the art. Never run more agents than i
 | Write the **shared contract**: `.agents/specs/*.md` spec sections (e.g. ART §, UI screen §), application read models (`internal/application/game/*View`), consumer-owned interfaces in the consuming package (`HEXAGONAL_ARCHITECTURE.md` §6), ports in `internal/ports/**`, typed commands (`internal/domain/sim/command`), asset names, metadata and attachment schema, save format | Let agents invent interfaces each other depend on |
 | **Stub every new hook** so every agent compiles from the first minute | Let a consumer wait for a producer to compile |
 | **Add every dependency** (`go get`, `go mod tidy`) | Let two agents touch `go.mod` / `go.sum` |
-| Make all **shared-config** edits: `go.mod`, `go.sum`, `Makefile`, `.gitignore`, CI workflows, staticcheck config, `cmd/**` (flags, scenarios), `assets/palettes/*.yaml`, `assets/source/blender/artlib/{contracts.py,stage.py}`, `README.md`, `.cursor` checklists, specs and handoffs | Hand shared config to an agent |
+| Make all **shared-config** edits: `go.mod`, `go.sum`, `Makefile`, `.gitignore`, CI workflows, staticcheck config, `cmd/**` (flags, scenarios), `assets/palettes/*.yaml`, `assets/source/blender/artlib/{contracts.py,stage.py}`, `README.md`, `.agents/backlog` checklists, specs and handoffs | Hand shared config to an agent |
 | Build shared binaries (`bin/game`, `bin/benchmark`) and record baselines (benchmarks, captures) | Let agents rebuild `bin/*` concurrently |
 
 ## 2. Disjoint ownership
@@ -65,7 +65,7 @@ Agents never run a full package that loads the art. Never run more agents than i
 | --- | --- |
 | Give every agent an explicit list of **owned files**, **forbidden files**, the **contract sections** it follows, its **verification commands**, and a **word-capped report** format | Launch an agent with "fix whatever you find" |
 | Split along the hexagon: one agent per layer/package area. Inside a large package, split by file or function and name them | Give two agents the same file |
-| Use `isolation: "worktree"` when ownership can't be disjoint; the lead merges | Hope concurrent edits to one file work out |
+| When ownership can't be disjoint, split the file, give it to one agent, or sequence the work (no worktrees or branches: root `AGENTS.md`) | Hope concurrent edits to one file work out |
 
 ## 3. Inside an agent
 
@@ -73,6 +73,7 @@ Agents never run a full package that loads the art. Never run more agents than i
 | --- | --- |
 | TDD (red, then green). Never lower a touched package's coverage; aim for ≥70% (`go test -cover`). The `AGENTS.md` non-negotiables still apply: dependency direction, headless deterministic domain, no global RNG or wall clock in the sim, typed commands only | `go get` / `go mod tidy`, edit shared config, `git add/commit/push`, edit checklists or handoffs (the lead writes them from reports) |
 | Run **targeted** checks only, with `GOFLAGS=-p=2`: `go test -race -count=1 -cover ./<owned pkgs>/...`, `go vet ./<owned pkgs>/...`; for art, `make art FAMILIES=<family>` and `make art-check` | Run `make all`, `make test`, `go test ./...`, `make art` without `FAMILIES`, `make screenshots`/`make clips`, or `go build -o bin/...` (others are mid-change; build to the scratchpad if needed) |
+| Use absolute paths (the cwd may change between Bash calls) and, in zsh, `${=files}` or `xargs` to split a variable (`$files` is not split) | Rely on `cd` carrying over or on an unquoted `$files` |
 | Report failures in other agents' files | "Fix" another agent's files or tests, or weaken a test to pass |
 | Develop against the contract and stubs when a producer isn't done yet | Block idle waiting; finish with stand-ins and report |
 
@@ -86,7 +87,7 @@ contract (spec §, read models, stubs) → **producers in parallel** (domain/sim
 | --- | --- |
 | Relay cross-agent facts through the lead (`SendMessage`) | Let agents coordinate implicitly through files |
 | Make contract changes as the lead, additive only, and broadcast them to every affected agent | Let one agent change a shared contract |
-| After each phase, run the gates below, then apply the merge checklist in `skills/rimworld-go-review-integration/SKILL.md` | Declare done from agent reports alone |
+| After each phase, run the gates below, then apply the merge checklist in `.agents/skills/rimworld-go-review-integration/SKILL.md` | Declare done from agent reports alone |
 | Route fixes back to the owning agent | Patch an active agent's files behind its back |
 | Keep ≤ 30 agents running at once, and never more than `make agent-budget` allows | Spawn more than the work has disjoint areas for, or more than free RAM holds |
 | Re-run `make agent-budget` before each phase and when an agent reports slow tests | Start every heavy agent in the same minute |
@@ -112,6 +113,7 @@ Every spawned agent stays in Claude Code's agent list for the rest of the sessio
 | Send follow-ups, fixes and the same area's next wave to the agent that already owns it (`SendMessage` resumes it with its context) | Spawn a fresh agent for a fix, a relay or a re-run in an area an existing agent owns |
 | Keep one docs agent and one journey agent per programme, resumed each wave | Spawn a new docs or journey agent every wave |
 | Do one-fact lookups, small edits and single test runs yourself | Spawn an agent for work under about 30 lines or one search |
+| While agents share the checkout, commit with `git commit -m … -- <paths>` (lead and agents alike) | `git add … && git commit`: it also commits what other agents staged. On 2026-11-06 a lead commit swept in another agent's staged `git rm` and HEAD failed to compile until that agent's own commit landed |
 | Stop each agent with `TaskStop` once its work is integrated and committed and you won't resume it | Leave finished agents open "just in case" across commits |
 | Before each wave commit, stop every agent of that wave you won't resume; at the end of a programme, stop them all | Carry a programme's agents into unrelated work |
 | When the list has grown large (about 50 or more) and the work is committed, tell the user that a new session starts with a clean list | Claim `TaskStop` removes entries: it only marks them stopped |

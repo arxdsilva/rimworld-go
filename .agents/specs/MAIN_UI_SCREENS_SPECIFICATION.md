@@ -1,28 +1,10 @@
 # rimworld-go --- Main UI Screens Specification
 
-> **Purpose:** Canonical build specification for every major
-> player-facing screen in `rimworld-go`.
->
-> **Companion documents:**
-> `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`,
-> `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`,
-> `HEXAGONAL_ARCHITECTURE.md`, and
-> `ART_DIRECTION_AND_ASSET_PIPELINE.md`.
->
-> **Architecture:** UI is an inbound adapter. Screens consume read-only
-> presentation models and emit typed commands. No screen may directly
-> mutate authoritative simulation state.
->
-> **Design target:** Deliver the information density, discoverability,
-> and management capabilities expected from a deep vanilla colony
-> simulator while using original layouts, artwork, terminology where
-> appropriate, and visual identity.
->
-> **Agent loading:** This file is *not* default context. Route via
-> `.agents/skills/rimworld-go-router/SKILL.md` and follow
-> `.agents/skills/rimworld-go-ui-screens/SKILL.md`. Load §0, §58, §59, and
-> only the named screen section for the task. Tick Wave UI / architecture
-> / DoD checkboxes in this file using `[x]` / `[-]` / `[!]`.
+> **What:** Canonical build spec for every major player-facing screen in `rimworld-go`: layout, information, actions, commands and states.
+> **Load by section through skill `rimworld-go-ui-screens`, never whole.**
+> Update the matching checklist rows in the same change (root `AGENTS.md`).
+> Design target: the information density, discoverability and management depth of a deep vanilla colony simulator, with original layouts, artwork and visual identity.
+> Companion docs: `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.agents/specs/HEXAGONAL_ARCHITECTURE.md`, `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`.
 
 ------------------------------------------------------------------------
 

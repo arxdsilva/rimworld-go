@@ -1,9 +1,8 @@
 # rimworld-go — Hexagonal Architecture & Repository Operating Model
 
 > **Status:** Authoritative architecture guide  
-> **Audience:** Human contributors, coding agents, reviewers, integration agents  
-> **Companion documents:** `AI_TOKEN_OPTIMIZATION.md`, `GO_BEST_PRACTICES.md`, `MASTER_SPEC.md`, `ART_DIRECTION_AND_ASSET_PIPELINE.md`, `MAIN_UI_SCREENS_SPECIFICATION.md`, `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
-
+> **Audience:** Human contributors, coding agents, reviewers  
+> **Index of all documents:** `.agents/README.md`
 ---
 
 # 1. Purpose
@@ -115,170 +114,32 @@ domain → CLI
 
 # 4. Repository Structure
 
-Recommended layout:
+Real top-level layout (package detail lives in each package's `AGENTS.md`):
 
 ```text
 rimworld-go/
-├── cmd/
-│   ├── game/
-│   │   └── main.go
-│   ├── simulate/
-│   │   └── main.go
-│   ├── benchmark/
-│   │   └── main.go
-│   ├── replay/
-│   │   └── main.go
-│   └── contentlint/
-│       └── main.go
-│
+├── cmd/                  game, simulate, benchmark, replay, contentlint, mapgen, atlasgen, audiogen, sfxgen, normalgen, rambudget
 ├── internal/
-│   ├── domain/
-│   │   ├── sim/
-│   │   │   ├── clock/
-│   │   │   ├── command/
-│   │   │   ├── event/
-│   │   │   ├── entity/
-│   │   │   ├── component/
-│   │   │   ├── scheduler/
-│   │   │   ├── snapshot/
-│   │   │   └── statehash/
-│   │   │
-│   │   ├── world/
-│   │   │   ├── grid/
-│   │   │   ├── chunk/
-│   │   │   ├── terrain/
-│   │   │   ├── region/
-│   │   │   ├── room/
-│   │   │   ├── generation/
-│   │   │   ├── temperature/
-│   │   │   ├── weather/
-│   │   │   ├── fire/
-│   │   │   └── lighting/
-│   │   │
-│   │   ├── pawn/
-│   │   │   ├── needs/
-│   │   │   ├── health/
-│   │   │   ├── skill/
-│   │   │   ├── trait/
-│   │   │   ├── mood/
-│   │   │   ├── memory/
-│   │   │   ├── social/
-│   │   │   ├── inventory/
-│   │   │   └── schedule/
-│   │   │
-│   │   ├── ai/
-│   │   │   ├── intent/
-│   │   │   ├── job/
-│   │   │   ├── reservation/
-│   │   │   ├── work/
-│   │   │   ├── movement/
-│   │   │   └── pathing/
-│   │   │
-│   │   ├── economy/
-│   │   │   ├── item/
-│   │   │   ├── storage/
-│   │   │   ├── recipe/
-│   │   │   ├── production/
-│   │   │   └── trade/
-│   │   │
-│   │   ├── building/
-│   │   │   ├── construction/
-│   │   │   ├── door/
-│   │   │   ├── zone/
-│   │   │   └── power/
-│   │   │
-│   │   ├── combat/
-│   │   │   ├── weapon/
-│   │   │   ├── attack/
-│   │   │   ├── projectile/
-│   │   │   ├── armor/
-│   │   │   ├── cover/
-│   │   │   └── damage/
-│   │   │
-│   │   ├── faction/
-│   │   ├── incident/
-│   │   └── research/
-│   │
-│   ├── application/
-│   │   ├── game/
-│   │   │   ├── combat/      # strikes, line of sight and cover, defending, traps, breaching, turrets (DEF-0)
-│   │   │   ├── craft/       # bills, bench work, drying, tool cabinets; later quality and stuff (PRD-0)
-│   │   │   ├── rest/        # sleeping: where and when, bed claims, partner beds, waking thoughts (BED-0)
-│   │   │   ├── care/        # looking after pawns that can't look after themselves: carry, rescue, tend, bed rest, beds, pawn-targeted orders (SIM-061)
-│   │   │   ├── mind/        # mental breaks, including those that target others, and social fights (SIM-066)
-│   │   │   └── prison/      # prisoner state, a prisoner's life and warden work (SIM-066 budget move)
-│   │   ├── session/
-│   │   ├── commands/
-│   │   ├── scenario/
-│   │   ├── savegame/
-│   │   ├── replay/
-│   │   └── benchmark/
-│   │
+│   ├── domain/           ai, animal, building, combat, difficulty, economy, faction, gameplay, incident,
+│   │                     pawn, raid, research, scenario, sim, storyteller, world (headless, deterministic)
+│   │   └── sim/          clock, command, component, entity, event, scheduler, snapshot, statehash
+│   ├── application/      game, session, commands, scenario, savegame, replay, benchmark
+│   │   └── game/         the simulation owner (Game); features live in sub-packages (care, combat, craft,
+│   │                     mind, prison, rest, ...) behind consumer-owned hosts (SOLID_GO §10)
 │   ├── ports/
-│   │   ├── inbound/
-│   │   │   ├── game.go
-│   │   │   ├── commands.go
-│   │   │   └── queries.go
-│   │   └── outbound/
-│   │       ├── content.go
-│   │       ├── persistence.go
-│   │       ├── pathing.go
-│   │       ├── metrics.go
-│   │       ├── asset.go
-│   │       └── event_sink.go
-│   │
+│   │   ├── inbound/      game.go, commands.go, queries.go
+│   │   └── outbound/     content, persistence, pathing, metrics, asset, event_sink
 │   ├── adapters/
-│   │   ├── inbound/
-│   │   │   ├── ebiten/            # the client's composition root: App, Renderer, shell roles, nav, hotkeys, capture (ARCH-001…006)
-│   │   │   │   ├── ports/         # the roles a feature sees of the shell (Hinter, Sizer, World, View, …) and the Intents
-│   │   │   │   ├── ids/           # widget and click ids
-│   │   │   │   ├── gfx/           # canvas, text, rects, the one documented GPU state
-│   │   │   │   ├── camera/ art/ globe/ globemath/ inputframe/ hudlayout/ uikit/
-│   │   │   │   ├── render/        # View: one frame's context for the draw layers
-│   │   │   │   │   ├── motion/ light/ sprite/ env/ creature/ overlay/ cue/ minimap/ world/
-│   │   │   │   ├── selection/ mainmenu/ wizard/ options/ windows/ architect/ orders/
-│   │   │   │   ├── dialogs/ learn/ devtools/ perf/ inspector/ hud/   # one type per feature behind a Shell
-│   │   │   ├── cli/
-│   │   │   ├── debugui/
-│   │   │   └── future_net/
-│   │   └── outbound/
-│   │       ├── contentfs/
-│   │       ├── slogmetrics/
-│   │       └── modloader/
-│   │
-│   ├── platform/
-│   │   └── config/
-│   │
-│   └── testkit/
-│       ├── simtest/
-│       ├── fixtures/
-│       ├── fakecontent/
-│       └── replaytest/
-│
-├── pkg/
-│   ├── mathx/
-│   └── randx/
-│
-├── api/
-│   └── proto/
-│
-├── content/
-├── assets/
-├── mods/
-├── scenarios/
-├── benchmarks/
-├── docs/
-│   ├── architecture/
-│   ├── systems/
-│   ├── adr/
-│   └── ai-agents/
-├── tools/
-├── scripts/
-├── go.mod
-├── go.sum
-├── AGENTS.md
-├── CONTRIBUTING.md
-└── README.md
+│   │   ├── inbound/      ebiten (the client's composition root; features in sub-packages behind
+│   │   │                 `ports` roles, ARCH-001…006), cli, debugui, future_net
+│   │   └── outbound/     contentfs, modloader, filesave, settingsfile, scenariofile, cardpresetfile,
+│   │                     slogmetrics, ebitenaudio, updatecheck, usagehttp
+│   ├── platform/         assetroot, atomicfile, config, input, openfolder, sysinfo
+│   ├── testkit/          simtest, fixtures, fakecontent, replaytest, deepeq
+│   └── arch/             architecture and SOLID tests (solid_budget.txt)
+├── pkg/                  low-level primitives with no game concepts (mathx, randx, noise*, flatyaml, msgfmt, synths, ...)
+├── api/proto/  assets/  content/  mods/  scenarios/  benchmarks/  docs/  migrations/  scripts/  tools/  third_party/
+└── AGENTS.md  README.md  Makefile
 ```
 
 ---
@@ -518,6 +379,8 @@ Workers may compute:
 
 They must not directly mutate authoritative stores.
 
+Determinism and the no-goroutine-per-entity rule: `.agents/specs/MASTER_SPEC.md` §6–7, §55.
+
 ---
 
 # 13. Deterministic Worker Pattern
@@ -567,12 +430,9 @@ Canonical ownership:
 ```text
 Tick            internal/domain/sim/clock
 EntityID        internal/domain/sim/entity
-Tile            internal/domain/world/grid
-ChunkCoord      internal/domain/world/chunk
-JobID           internal/domain/ai/job
-DefID/DefIndex  internal/domain/content or shared content primitive
-FactionID       internal/domain/faction
 ```
+
+Other identifiers are typed per package (`skill.ID`, `trait.ID`, `recipe.ID`, `zone.ID`, …). Content definitions are consumed through the `internal/ports/outbound/content.go` port and loaded by `internal/adapters/outbound/contentfs`; there is no shared domain content package.
 
 Never recreate these types elsewhere.
 
@@ -693,7 +553,7 @@ Renderer never calls entity stores to mutate game state.
 
 Inside the client the same rule repeats one level down (SOLID_GO.md §7, ARCH-004/005): the root `Renderer` fills one `render.View` per frame (camera, art, this frame's world and pawns, clocks, options) and the draw layers under `render/` (`motion`, `light`, `sprite`, `env`, `creature`, `overlay`, `cue`, `minimap`, `world`) read that view and each other's exported types, never the `Renderer`; each layer's needs of the simulation are a small consumer-owned interface (`env.Chunks`, `world.Source`) taking values, never a pointer to a frame local through an interface call. The App's features (`hud`, `inspector`, `architect`, `windows`, `orders`, …) see the shell only through the `ports` roles plus a small `Host` their `deps.go` declares, send cross-feature requests as `ports.Intent`s, and never import the root or one another; the root's `<pkg>_compat.go` holds the host adapters. The simulation reaches the root as the union `Simulation` of eight consumer groups (`sim_ports.go`), stored only at the composition root.
 
-Renderer-specific data such as sprite handles, camera transforms, screen pixels, and animation interpolation stay outside domain packages. Visual production (scale, pivots, palettes, sprites, icons, UI chrome, atlases) follows `ART_DIRECTION_AND_ASSET_PIPELINE.md`; named screens, windows, overlays, and HUD layout follow `MAIN_UI_SCREENS_SPECIFICATION.md`. Those specs do not move presentation ownership into the domain.
+Renderer-specific data such as sprite handles, camera transforms, screen pixels, and animation interpolation stay outside domain packages. Visual production (scale, pivots, palettes, sprites, icons, UI chrome, atlases) follows `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`; named screens, windows, overlays, and HUD layout follow `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` (the screen flow is §0). Those specs do not move presentation ownership into the domain.
 
 ---
 
@@ -729,6 +589,8 @@ Wall-clock time belongs to:
 - profiling.
 
 Wall-clock must not influence authoritative game outcomes.
+
+Determinism of the clock and RNG: `.agents/specs/MASTER_SPEC.md` §6–7.
 
 ---
 
@@ -910,128 +772,31 @@ CI must run archlint.
 
 # 32. AGENTS.md Root Contract
 
-Root `AGENTS.md` should state:
-
-```text
-Read MASTER_SPEC.md.
-Read HEXAGONAL_ARCHITECTURE.md.
-Read GO_BEST_PRACTICES.md.
-Read AI_TOKEN_OPTIMIZATION.md.
-
-Do not violate dependency direction.
-Search before creating shared primitives.
-Do not mutate simulation from adapters.
-Do not introduce global mutable state.
-Do not add goroutine-per-entity designs.
-Run tests and relevant benchmarks.
-Write task handoff.
-```
+See the root `AGENTS.md` for the contract and `.agents/README.md` for the document index.
 
 ---
 
 # 33. Package AGENTS.md Template
 
-```markdown
-# Package Purpose
-
-# Owned Concepts
-
-# Allowed Dependencies
-
-# Forbidden Dependencies
-
-# Public Contracts
-
-# Invariants
-
-# Hot Paths
-
-# Determinism Rules
-
-# Save/Mod Impact
-
-# Tests
-
-# Benchmarks
-
-# Known Design Constraints
-```
+Use `.agents/templates/PACKAGE_AGENTS.md`.
 
 ---
 
 # 34. Architecture Decision Records to Create First
 
-Recommended initial ADRs:
-
-```text
-ADR-0001 Hexagonal architecture
-ADR-0002 Single-owner deterministic simulation
-ADR-0003 Discrete tick model
-ADR-0004 Deterministic RNG
-ADR-0005 Entity/component storage
-ADR-0006 Chunked world
-ADR-0007 Hierarchical pathfinding
-ADR-0008 Command-based mutations
-ADR-0009 Snapshot-based rendering
-ADR-0010 Versioned gob save format
-ADR-0011 Content definitions and runtime indexing
-ADR-0012 Async worker ordered-commit model
-```
+`docs/adr/` is empty. Write an ADR only for a decision that changes a contract (a port, the save format, the tick model, the command set); everything else is a handoff (`.agents/templates/HANDOFF.md`).
 
 ---
 
 # 35. First Implementation Skeleton
 
-Start with these packages:
-
-```text
-internal/domain/sim/clock
-internal/domain/sim/entity
-internal/domain/sim/command
-internal/domain/sim/statehash
-internal/domain/world/grid
-internal/domain/world/chunk
-internal/application/game
-internal/ports/inbound
-internal/ports/outbound
-internal/adapters/inbound/cli
-internal/testkit/simtest
-```
-
-Do not create empty package trees all at once.
-
-Create packages when the first real behavior requires them.
+Superseded by the code. Entry points: `cmd/game/main.go` (composition root, builds `game.NewColony` / `game.NewColonyBuilder` from `internal/application/game`), `cmd/simulate` (headless), `cmd/replay`, `cmd/benchmark`, `cmd/contentlint`. Create a package when its first real behavior needs it.
 
 ---
 
 # 36. Example Simulation Root
 
-```go
-type Simulation struct {
-    tick clock.Tick
-
-    entities *entity.World
-    commands command.Queue
-
-    // explicit subsystem state
-}
-
-func (s *Simulation) Step() {
-    s.applyCommands()
-    s.spawnPhase()
-    s.needsPhase()
-    s.intentPhase()
-    s.jobsPhase()
-    s.movementPhase()
-    s.combatPhase()
-    s.healthPhase()
-    s.environmentPhase()
-    s.cleanupPhase()
-    s.tick++
-}
-```
-
-Explicit phase calls are preferred over a generic plugin-like system registry at first.
+Superseded by the code. The simulation root is `Game` in `internal/application/game` (`Step`, `Tick`); explicit phase calls stay preferred over a plugin-like registry.
 
 ---
 

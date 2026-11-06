@@ -31,66 +31,13 @@ The goal is:
 
 # 2. Context Hierarchy
 
-Agents should load context in this order:
-
-```text
-1. Task statement
-2. Root AGENTS.md
-3. Package AGENTS.md
-4. Relevant interfaces/types
-5. Relevant tests
-6. Relevant system doc
-7. Relevant ADRs
-8. Recent dependency handoffs
-9. ART_DIRECTION sections named by rimworld-go-art-assets, only if visual/asset work
-10. MAIN_UI_SCREENS sections named by rimworld-go-ui-screens, only if a player-facing screen is in scope
-11. MASTER_SPEC only if needed
-```
-
-Do **not** feed the full master specification by default once package-level guidance exists.
+Load the least that is sufficient, in this order: task statement, root `AGENTS.md`, package `AGENTS.md`, relevant interfaces and tests, one system doc, then specs by section only (ART via `rimworld-go-art-assets`, MAIN_UI via `rimworld-go-ui-screens`). `MASTER_SPEC` only if needed; do not feed it whole once package guidance exists. The doc list and loading order live in `.agents/README.md`.
 
 ---
 
 # 3. Progressive Disclosure
 
-Use layered documents.
-
-## Level A — Always
-
-Small:
-
-```text
-AGENTS.md
-task
-package AGENTS.md
-```
-
-## Level B — Usually
-
-```text
-relevant interfaces
-tests
-one system document
-```
-
-When the task produces sprites, icons, UI chrome, or asset-pipeline tooling, also load the `rimworld-go-art-assets` skill and only the named sections of `ART_DIRECTION_AND_ASSET_PIPELINE.md`.
-
-When the task implements or changes a player-facing screen, window, overlay, or HUD layout, also load the `rimworld-go-ui-screens` skill and only the named sections of `MAIN_UI_SCREENS_SPECIFICATION.md`.
-
-## Level C — Only if architectural question arises
-
-```text
-specific ADR
-hexagonal architecture guide
-```
-
-## Level D — Rare
-
-```text
-MASTER_SPEC.md
-```
-
-This keeps context focused.
+Layer the documents: always the task, root and package `AGENTS.md`; usually the relevant interfaces, tests and one system doc; architecture questions add the specific ADR and HEX; `MASTER_SPEC` is rare. Visual and screen work load their skill and only the sections it names. The index is `.agents/README.md`.
 
 ---
 
@@ -126,146 +73,37 @@ Large context often reduces attention quality.
 
 # 5. Agent Task Packet
 
-Every task packet should include only:
-
-```text
-Task ID
-Objective
-Scope
-Allowed packages
-Forbidden packages
-Acceptance criteria
-Relevant interface excerpts
-Relevant tests
-Relevant ADR links/names
-Relevant handoff summaries
-```
-
-Avoid repeating global rules word-for-word if they are already in root `AGENTS.md`.
+Task packets follow `.agents/templates/TASK_PACKET.md`. Do not repeat rules already in root `AGENTS.md`.
 
 ---
 
 # 6. Root AGENTS.md Should Be Short
 
-Target:
-
-```text
-< 1,500 words
-```
-
-It should link to canonical docs rather than duplicate them.
-
-Example:
-
-```text
-Architecture: .agents/specs/HEXAGONAL_ARCHITECTURE.md
-Go rules: .agents/specs/GO_BEST_PRACTICES.md
-Token rules: .agents/specs/AI_TOKEN_OPTIMIZATION.md
-Art/assets: .agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md
-Screens: .agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md
-```
+Root `AGENTS.md` links to canonical docs instead of duplicating them. Its size is capped by the byte budget in `internal/arch/agents_budget.txt`, enforced by the guard test in `internal/arch`.
 
 ---
 
 # 7. Package AGENTS.md Should Be Tiny
 
-Target:
-
-```text
-300–800 words
-```
-
-It should answer:
-
-- what this package owns;
-- what it must not own;
-- allowed dependencies;
-- core invariants;
-- hot paths;
-- test command;
-- benchmark command.
-
-Do not paste the master spec.
+Package `AGENTS.md` is tiny (300-800 words) and never pastes the master spec. Shape: `.agents/templates/PACKAGE_AGENTS.md`.
 
 ---
 
 # 8. Handoff Compression
 
-Handoffs must be useful but concise.
-
-Target:
-
-```text
-200–700 words
-```
-
-A good handoff says:
-
-```text
-what changed
-interfaces changed
-assumptions
-tests
-benchmarks
-known limitations
-follow-ups
-```
-
-A bad handoff is a narrative transcript of how the agent thought.
-
-Never store chain-of-thought.
+Handoffs are 200-700 words and never store chain-of-thought. Shape: `.agents/templates/HANDOFF.md`. They are sections of the family ledgers in `.agents/handoffs/`, indexed by `INDEX.md`.
 
 ---
 
 # 9. Interface Summaries
 
-> **Not built:** `.cursor/interfaces/` does not exist. Read the package's interface with a ranged Read or use the LSP tool.
-
-When another agent depends on a package, prefer a generated/summarized interface file instead of the entire package.
-
-Example:
-
-```text
-.cursor/interfaces/pathing.md
-```
-
-Contains:
-
-```go
-type Request struct { ... }
-type Result struct { ... }
-type Service interface { ... }
-```
-
-plus invariants.
-
-This can save thousands of tokens.
+Not built: use the LSP tool or a ranged Read of the package's interface.
 
 ---
 
 # 10. Context Index
 
-> **Not built:** `.cursor/CONTEXT_INDEX.md` does not exist. Use `.agents/README.md` and skill `rimworld-go-router`.
-
-Create:
-
-```text
-.cursor/CONTEXT_INDEX.md
-```
-
-It maps tasks/subsystems to canonical files.
-
-Example:
-
-```text
-Pathfinding:
-- internal/domain/ai/pathing/AGENTS.md
-- docs/systems/pathfinding.md
-- docs/adr/0007-hierarchical-pathfinding.md
-- .cursor/interfaces/pathing.md
-```
-
-Agents should consult the index before broad repository search.
+Not built: use `.agents/README.md` and skill `rimworld-go-router`.
 
 ---
 
@@ -425,44 +263,13 @@ Do not create alternatives such as `ActorID`, `SimTick`, `GridPos`, etc. unless 
 
 # 19. Generated Repository Maps
 
-> **Not built:** `.cursor/REPO_MAP.md` does not exist. Package `AGENTS.md` files and `grep` cover this.
-
-Maintain a lightweight generated file:
-
-```text
-.cursor/REPO_MAP.md
-```
-
-Example:
-
-```text
-domain/sim/entity — IDs and lifecycle
-domain/ai/job — job state machines
-domain/ai/pathing — pure path solver
-adapters/outbound (a new package when pathing goes async) — async worker execution
-```
-
-This is cheaper than exploratory reads.
+Not built: use package `AGENTS.md` files and `grep`.
 
 ---
 
 # 20. Symbol Index
 
-> **Not built, and not planned:** the LSP tool (`gopls`) and `grep -n` give symbol lookup.
-
-Optional tooling can generate:
-
-```text
-package
-exported type
-exported function
-interface
-file
-```
-
-for fast agent lookup.
-
-A symbol index often saves more tokens than long prompt engineering.
+Not built, and not planned: use the LSP tool (`gopls`) or `grep -n`.
 
 ---
 
@@ -511,29 +318,7 @@ Otherwise context/merge cost exceeds benefit.
 
 # 23. Task Dependency Graph
 
-> **Not built:** `.cursor/TASK_GRAPH.md` does not exist. Use the checklists and each plan's Parallel workers section.
-
-Maintain:
-
-```text
-.cursor/TASK_GRAPH.md
-```
-
-Example:
-
-```text
-SIM-020 EntityID
-   ↓
-WORLD-006 SpatialIndex
-   ↓
-PATH-003 A*
-   ↓
-PATH-004 Movement
-   ↓
-AI-003 MoveToJob
-```
-
-Agents only receive upstream handoffs they actually depend on.
+Not built: use the checklists in `.agents/backlog/` and the plan's Parallel workers section.
 
 ---
 
@@ -635,10 +420,9 @@ Implement bucketed hunger decay.
 
 Read:
 - root AGENTS.md
-- internal/domain/pawn/needs/AGENTS.md
-- hunger.go
-- hunger_test.go
-- ADR-0004 summary
+- internal/domain/building/aqua/AGENTS.md (an example package guide)
+- hunger_rate.go
+- hunger_rate_test.go
 
 Constraints:
 - deterministic integer math
@@ -651,7 +435,7 @@ Acceptance:
 - handoff
 ```
 
-This should be the default style.
+This should be the default style. The full packet shape is `.agents/templates/TASK_PACKET.md`.
 
 ---
 
@@ -665,7 +449,7 @@ Read:
 - root AGENTS.md
 - reservation AGENTS.md
 - economy/item AGENTS.md
-- interface summaries for reservations and stacks
+- reservation and stack interfaces (LSP or ranged Read)
 - existing integration tests
 
 Allowed:
@@ -738,7 +522,7 @@ Advisory rules in this guide did not hold: most subagent work ran on the lead's 
 
 Small shell views stay allowed on purpose. Through Read they print the same text, so denying them only adds a call, and every call re-reads the whole context. `READ_GUARD=off` disables the read guard.
 
-Measure with `python3 scripts/token_report.py --since <date>`. Before changing a guard rule, run `--last 400 --replay` to see what it would deny, and run `python3 .agents/hooks/test_hooks.py`. The baseline and expected results are in `.agents/handoffs/TOKEN-001-usage-guards.md`.
+Measure with `python3 scripts/token_report.py --since <date>`. Before changing a guard rule, run `--last 400 --replay` to see what it would deny, and run `python3 .agents/hooks/test_hooks.py`. The baseline and expected results are in the TOKEN-001 entry in `.agents/handoffs/` (see `INDEX.md`).
 
 ---
 
@@ -789,21 +573,7 @@ Duplication causes both token waste and stale guidance.
 
 # 36. Documentation DRY Rule
 
-Canonical ownership:
-
-```text
-product scope → MASTER_SPEC
-architecture → HEXAGONAL_ARCHITECTURE
-Go rules → GO_BEST_PRACTICES
-token/context → AI_TOKEN_OPTIMIZATION
-visual production / asset pipeline → ART_DIRECTION_AND_ASSET_PIPELINE
-per-screen layout / navigation → MAIN_UI_SCREENS_SPECIFICATION
-ordered UI/UX backlog → RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST
-subsystem behavior → docs/systems/*
-design decisions → docs/adr/*
-package-specific constraints → package AGENTS.md
-task outcome → handoff
-```
+Canonical ownership of each kind of fact is listed in `.agents/README.md`; state a rule once in its home and point to it elsewhere.
 
 ---
 
@@ -833,53 +603,19 @@ At completion:
 - list signatures changed;
 - include benchmark numbers;
 - include follow-ups;
-- update compact interface summary if public contract changed.
+- note any public contract change in the handoff.
 
 ---
 
 # 39. Recommended Automation Tooling
 
-> **Not built, and not planned:** none of these `tools/` exist. The tooling in use is in §32a.
-
-Create helper tools:
-
-```text
-tools/contextpack
-tools/repomap
-tools/symbolindex
-tools/handofflint
-```
-
-Potential commands:
-
-```bash
-go run ./tools/contextpack --task PATH-021
-go run ./tools/repomap
-go run ./tools/handofflint .agents/handoffs/PATH-021.md
-```
-
-`contextpack` can output exactly the files/summaries an agent should receive.
+Not built, and not planned: no `tools/` helpers exist. The tooling in use is in §32a. A context-pack or handoff linter could come later.
 
 ---
 
 # 40. Context Pack Manifest
 
-> **Not built, and not planned:** this depends on `contextpack` (§39).
-
-Each subsystem can have:
-
-```yaml
-name: pathfinding
-always:
-  - internal/domain/ai/pathing/AGENTS.md
-  - docs/systems/pathfinding.md
-interfaces:
-  - .cursor/interfaces/pathing.md
-adrs:
-  - docs/adr/0007-hierarchical-pathfinding.md
-```
-
-This allows automated prompt assembly.
+Not built, and not planned: use `.agents/README.md` and grep.
 
 ---
 

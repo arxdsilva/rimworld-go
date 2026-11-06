@@ -161,7 +161,7 @@ In a draw or tick path the host interface's methods take values, not pointers to
 - Growth past a ceiling fails.
 - A stale ceiling fails with a message "lower it to N". Lower the line, in the same commit.
 - A paid debt whose line is still present fails. Delete the line.
-- Never raise a line. If a feature needs more room, split the type (§10).
+- Never raise a line, and new code never gets one. If a feature needs more room, split the type (§10).
 
 Run `make arch` before every commit that touches a type, an interface or an import.
 
@@ -195,6 +195,15 @@ A test hook becomes a field on its owner, nil in production. It is not a global 
 
 A cluster may become a sub-package of the god type's package when it owns state no other cluster writes and everything it needs from the root fits behind consumer-owned roles in its `deps.go`: each role at most 8 methods, composed by embedding, values only on tick and draw paths (§7). The root builds it, keeps one field, and implements the roles with small adapter types (at most 8 methods each) in `<sub>_host.go`, or beside the root code they wrap when the package's file budget is full; the sub-package never imports the root. New features of a package at its ceiling go into such a sub-package, never into the package itself. Keep the sub-package concise: one concept, several small types if the concept needs them, never one package per type and no `utils`. State that two clusters write stays on the root, behind a role. Keep the sub-package's own types under the limits too: a feature's entry points go on a component type of their own, not on the sub-package's root type. Examples: `internal/adapters/inbound/ebiten/<feature>` (ARCH-005), `internal/application/game/care` (SIM-061…065), `internal/application/game/mind` (SIM-066).
 
+**Game sub-package recipe** (user decision 2026-10-29: new packages instead of raising budgets). Package `internal/application/game` sits at its exact budget, so new gameplay goes into sub-packages behind consumer-owned roles:
+- `care` (carry, rescue, tend, beds, feeding, guests, visits, strip, pawn-targeted orders), `mind` (mental breaks, inspirations, social fights), `prison` (prisoner state, warden), `craft` (bills, quality, stuff, wear, benches, stockpile filters), `rest` (sleep, rooms' thoughts, comfort/beauty/outdoors needs), `combat` (shots, armor, blasts, IEDs, turrets, mortars, doors, draft toggles), `raid` (raids, pods, strategies, mechanoids, ship parts). Others (`ls internal/application/game`) own their own narrower concept.
+- Every phase leaves package `game` no larger than the previous commit: pay for adapters by moving matching code out in the same change, or run a dedicated budget-payer agent with a state-hash proof (`bin/benchmark -hash` on cached fixtures).
+- Put each feature's entry points on its own component type (e.g. `care.Feeding`), never on the sub-package root: stubs on `*care.Care` once blew the 40-method limit.
+- The game file budget is full, so an adapter may live beside the game code it wraps instead of in a new `<sub>_host.go`.
+- A new command kind needs a UI action and a journey asserting it (`TestEveryInputActionHasAJourney`; its TODO lists only shrink).
+- An intended behaviour change moves `TestGrownGolden` (`internal/application/scenario`): re-pin it with a written reason, stable over `-count=2`.
+- Per wave: a contract agent appends enums and fields first (inert, hash-identical), feature agents work per sub-package, then the lead re-pins the golden and lowers budgets. A pure extraction is proven hash-identical before behaviour lands.
+
 ---
 
 # 11. What NOT to Do
@@ -212,7 +221,8 @@ A cluster may become a sub-package of the god type's package when it owns state 
 
 # 12. Relation to Other Documents
 
-- `GO_BEST_PRACTICES.md` §3, §4–§7, §38, §73–§74, §88: naming, interfaces, constructors, function size, API ownership, lint rules.
-- `HEXAGONAL_ARCHITECTURE.md` §6, §14, §26, §31, §37: consumer-owned ports, package boundaries, injection, architecture lint, smells.
+- Design side: skill `rimworld-go-hexagonal` (`.agents/skills/rimworld-go-hexagonal/SKILL.md`). Read §8 and §10 before adding to `App`, `Renderer`, `Game` or any type or package with a line in `solid_budget.txt`; run `go test ./internal/arch/` before committing. Skip all this for work that touches no type, interface, package-level var or package layout.
+- `.agents/specs/GO_BEST_PRACTICES.md` §3, §4–§7, §38, §73–§74, §88: naming, interfaces, constructors, function size, API ownership, lint rules.
+- `.agents/specs/HEXAGONAL_ARCHITECTURE.md` §6, §14, §26, §31, §37: consumer-owned ports, package boundaries, injection, architecture lint, smells.
 
 This document owns only the Go reading of SOLID and the numeric limits in §8. No rule is restated here, only referenced; where this text and those documents disagree on a dependency rule, they win.

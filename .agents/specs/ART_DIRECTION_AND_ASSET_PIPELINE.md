@@ -1,26 +1,10 @@
 # rimworld-go --- Art Direction & Asset Pipeline
 
-> **Purpose:** Canonical visual-production specification for human and
-> AI agents creating `rimworld-go` art in parallel.
->
-> **Target:** A highly readable, top-down colony-simulator aesthetic
-> close to RimWorld's look (style only), with strong silhouettes,
-> bold outlines, a muted palette, composited characters, consistent
-> materials, and excellent readability at gameplay zoom.
->
-> **Clean-room rule:** Never trace, extract, recolor, vectorize, or
-> closely reconstruct proprietary RimWorld sprites, textures, icons, UI
-> art, source files, or other copyrighted assets. Do not use extracted
-> RimWorld assets as image-to-image inputs. Reproduce broad design
-> principles and gameplay readability---not proprietary artwork.
->
-> **Agent loading:** This file is *not* default context. Route via
-> `.agents/skills/rimworld-go-router/SKILL.md` and follow
-> `.agents/skills/rimworld-go-art-assets/SKILL.md`. Load §1, §2, §35, and
-> only the category/pipeline sections that skill names for the task.
-> Tick ART wave / prototype-gate / acceptance checkboxes in this file
-> using `[x]` / `[-]` / `[!]` when work lands. For UI chrome that belongs
-> to a named screen, also follow `MAIN_UI_SCREENS_SPECIFICATION.md`.
+> **What:** Canonical visual-production spec for `rimworld-go` art: style, scale, pivots, palettes, outlines, metadata and the asset pipeline.
+> **Load by section through skill `rimworld-go-art-assets`, never whole.**
+> Update the matching checklist rows in the same change (root `AGENTS.md`).
+> Clean-room rules and the data exceptions: `.agents/specs/CLEAN_ROOM.md`.
+> Target look: a highly readable, top-down colony-simulator aesthetic close to RimWorld's look (style only), with strong silhouettes, bold outlines, a muted palette, composited characters, consistent materials and excellent readability at gameplay zoom.
 
 ## 1. Agent Definition of Done
 
@@ -1477,10 +1461,8 @@ doing its job.
 ## 37. Social & host systems asset list (ENG-003)
 
 Normative key list for the social and host-system feature set
-(`.agents/specs/SOCIAL_SYSTEM_CONTRACT.md`). None of these exist yet: until each
-is generated the renderer draws its vector stand-in (`social_art.go`,
-`drawIconFallback`) and the Architect keeps the tool in
-`archToolsPendingArt`. When an asset lands, move its tool to `archTools`
+(`.agents/specs/SOCIAL_SYSTEM_CONTRACT.md`). Status: the assets exist (ART-019, see
+`.agents/handoffs/ART-019-social-host-assets.md`); the six order icons and the face-scar overlay are not wired yet, see the checklists. When an asset lands, move its tool to `archTools`
 (TestPendingArtToolsLackArt fails until you do), add its keys to the
 renderer's sprite lookups, and only then let `TestGeneratedArtCoversRenderer`
 cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
@@ -1519,10 +1501,7 @@ cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
 
 ## 38. Sentry turret, trade beacon and radio console (PLAY-024)
 
-Normative key list (contract in `.agents/handoffs/_plans/PLAY024_PLAN.md`). None exist yet:
-until each is generated the renderer draws the plain building fallback and
-the Architect keeps the tool out of `archTools` (so
-`TestGeneratedArtCoversRenderer` does not ask for it). Every sprite follows
+Normative key list (contract in `.agents/handoffs/_plans/PLAY024_PLAN.md`). Status: the sprites and icons are generated (`assets/metadata/defense`, `power`, `ui_icon`); see the checklists for what is wired. Every sprite follows
 §12-§17 (pivots, palette, outline rules) and §24 metadata; all designs
 original, never traced from RimWorld.
 
