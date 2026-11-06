@@ -30,7 +30,7 @@ Read only what the current task needs.
 - Player-observable behaviour ships with a read-only HUD/UI representation (via `Snapshot()`/read models) in the same change, or the handoff says why none exists (`.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` §0).
 - Screens, windows, overlays and HUD go through skill `rimworld-go-ui-screens`; sprites, icons, UI chrome, palettes and asset tooling through `rimworld-go-art-assets`; every new or changed creature through `rimworld-go-creatures` (all four generated sounds, local MOSS by default, ElevenLabs only with approved spending).
 - Multi-area tasks follow `.agents/specs/PARALLEL_WORK.md`: every plan has its Parallel workers section (§0); contract first, disjoint file ownership, lead-only shared config; at most 30 agents, bounded by `make agent-budget` (§5); reuse agents, stop each once its work is committed (§5a).
-- Every scoped task appends one section to its family ledger in `.agents/handoffs/` and one row to `INDEX.md` (`.agents/templates/HANDOFF.md`).
+- Every scoped task appends one section to its family ledger in `.agents/handoffs/` and its `INDEX.md` row (`python3 scripts/handoff_index.py`; format `.agents/templates/HANDOFF.md`).
 - Read long files with Read `offset`/`limit`; a hook denies shell views over 150 lines and whole-file Reads over 500 (`.agents/specs/AI_TOKEN_OPTIMIZATION.md` §32a). Name a `model` when spawning a `general-purpose` agent (`PARALLEL_WORK.md` §6).
 
 ## Repository overrides

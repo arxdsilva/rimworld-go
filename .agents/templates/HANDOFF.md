@@ -1,6 +1,6 @@
 # Handoff section
 
-Every scoped task appends one section to its family's ledger in `.agents/handoffs/` and one row to `.agents/handoffs/INDEX.md`. The ledger for each ID family is listed at the top of `INDEX.md`; start a new ledger only when no existing one fits, and never name one `AGENTS.md`.
+Every scoped task appends one section to its family's ledger in `.agents/handoffs/` and regenerates `.agents/handoffs/INDEX.md` with `python3 scripts/handoff_index.py`. The ledger for each ID family is listed at the top of `INDEX.md`; start a new ledger only when no existing one fits, and never name one `AGENTS.md`.
 
 ```markdown
 ## <ID>-<slug>
