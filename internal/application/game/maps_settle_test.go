@@ -413,7 +413,7 @@ func attackRun(t *testing.T, reload bool) uint64 {
 		if h.StateHash() != g.StateHash() {
 			t.Fatal("a save mid-attack changed the state hash")
 		}
-		h.worldS().planet, h.worldS().planetTried = testPlanet(), true
+		h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
 		g = h
 	}
 	g.Step(clock.TicksPerHour)

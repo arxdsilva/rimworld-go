@@ -496,7 +496,7 @@ func turretFightRun(t *testing.T, reload bool) uint64 {
 		if n != len(ts) {
 			t.Fatalf("%d settlement turrets after the load, want %d", n, len(ts))
 		}
-		h.worldS().planet, h.worldS().planetTried = testPlanet(), true
+		h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
 		g = h
 	}
 	g.Step(clock.TicksPerHour / 4)

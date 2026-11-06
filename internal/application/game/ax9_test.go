@@ -318,7 +318,7 @@ func TestMineralSiteFoundAndMined(t *testing.T) {
 	if len(sites) != 1 || sites[0].Mineral != "gold" {
 		t.Fatalf("sites %+v", sites)
 	}
-	if d := testPlanet().Hops(g.colonyTile(), int(sites[0].Tile), 30); d < travel.SiteMinDist || d > travel.SiteMaxDist {
+	if d := testPlanet().Fork().Hops(g.colonyTile(), int(sites[0].Tile), 30); d < travel.SiteMinDist || d > travel.SiteMaxDist {
 		t.Fatalf("site %d tiles out", d)
 	}
 	w := g.worldS()

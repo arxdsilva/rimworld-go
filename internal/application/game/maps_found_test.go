@@ -166,7 +166,7 @@ func TestAbandonFirstColony(t *testing.T) {
 	}
 	g.Step(600)
 	h, _ := saveLoadInfo(t, g)
-	h.worldS().planet, h.worldS().planetTried = testPlanet(), true
+	h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
 	if g.StateHash() != h.StateHash() {
 		t.Fatal("the round trip changed the state")
 	}
@@ -478,7 +478,7 @@ func TestEncounterSaveLoad(t *testing.T) {
 	round := func(g *Game) {
 		t.Helper()
 		h, _ := saveLoadInfo(t, g)
-		h.worldS().planet, h.worldS().planetTried = testPlanet(), true
+		h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
 		if g.StateHash() != h.StateHash() || len(g.maps) != len(h.maps) {
 			t.Fatal("the round trip changed the state")
 		}

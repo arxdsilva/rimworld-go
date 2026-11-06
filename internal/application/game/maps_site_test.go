@@ -337,7 +337,7 @@ func TestSiteMapSaveLoad(t *testing.T) {
 		t.Fatal("no site map")
 	}
 	h, _ := saveLoadInfo(t, g)
-	h.worldS().planet, h.worldS().planetTried = testPlanet(), true
+	h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
 	if len(h.maps) != 2 || len(h.worldSt.atlas.Maps) != 1 || len(h.worldSt.atlas.Maps[0].Cells) != 10 || onMap(h, ada) != h.maps[1] {
 		t.Fatalf("the loaded game lost the site map: %d maps", len(h.maps))
 	}

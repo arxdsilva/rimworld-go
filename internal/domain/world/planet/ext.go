@@ -21,6 +21,17 @@ type extData struct {
 	name      string      // v1: the planet's name
 }
 
+// Fork is a shallow copy of p: it shares every table (tiles, roads,
+// settlements, the query tables and the WG data, so a write to one shows
+// in both) but has its own zero Hops scratch, so Hops on the fork never
+// writes p's buffer. Forks of one planet can run Hops on different
+// goroutines at once.
+func (p *Planet) Fork() *Planet {
+	f := *p
+	f.ext.hops = HopScratch{}
+	return &f
+}
+
 // HopScratch is caller-owned breadth-first search scratch for HopsWith
 // and NearbyBasesWith. The zero value is ready; use one per goroutine.
 type HopScratch struct {

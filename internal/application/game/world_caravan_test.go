@@ -46,7 +46,7 @@ func worldGame(t *testing.T) *Game {
 	}))
 	stepUntilLanded(t, g)
 	w := g.worldS()
-	w.planet, w.planetTried = p, true
+	w.planet, w.planetTried = p.Fork(), true // its own hop scratch: tests run in parallel
 	return g
 }
 
@@ -236,7 +236,7 @@ func TestCaravanSaveLoadInTransit(t *testing.T) {
 		t.Fatal("setup: the caravan should be on the road")
 	}
 	h, _ := saveLoadInfo(t, g)
-	h.worldS().planet, h.worldS().planetTried = testPlanet(), true
+	h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
 	if g.StateHash() != h.StateHash() {
 		t.Fatal("state hash changed in the round trip")
 	}

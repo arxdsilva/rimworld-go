@@ -7,7 +7,7 @@ import "rimworld-go/internal/domain/world/planet"
 func OpenBenchMaps(g *Game, n int) int {
 	p := testPlanet()
 	w := g.worldS()
-	w.planet, w.planetTried = p, true
+	w.planet, w.planetTried = p.Fork(), true
 	opened := 0
 	for t := 0; t < p.TileCount() && opened < n; t++ {
 		if p.Water[t] != planet.Land || p.Settlement[t] >= 0 {
