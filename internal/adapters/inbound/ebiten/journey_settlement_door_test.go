@@ -32,6 +32,11 @@ func attackedBase(t *testing.T) *journey {
 	j.key("F8", 0)
 	j.update(worldFly)
 	j.g.ViewMap(away)
+	// The renderer turns the read-model cache on for the map it starts on;
+	// the game keeps that flag per map, so a map opened later builds every
+	// view afresh on each call (about 0.8 s an Update under -race here).
+	// Turn it on for the settlement too, as the renderer means to.
+	j.g.SetViewCache(true)
 	j.update(2)
 	return j
 }

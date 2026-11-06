@@ -338,10 +338,9 @@ func TestJourneyMechOpensDoor(t *testing.T) {
 	w3Auto(j, []string{"RaidMechs", "RaidMech", "MechRaid", "RaidArmedMechs", "RaidMechanoids", "RaidMechanoid"}, []string{"mech", "raid"}, 0, 700, "")
 	j.update(1)
 	through := false
-	j.key("Digit3", 0)
-	for i := 0; i < 8000 && !through; i++ {
-		careFeed(j)
-		j.update(1)
+	careFeed(j)
+	// 8000 Updates at Very fast, the room looked at after every tick
+	j.ffWatch(48000, ffStride, func() bool {
 		// the mechs break into the room: they bash the forbidden door, or,
 		// as mechs breach (CBT-4: they bash walls and shut doors), knock a
 		// wall of the room down, or walk in (stray shots chipping a wall
@@ -362,8 +361,8 @@ func TestJourneyMechOpensDoor(t *testing.T) {
 		for _, p := range weRaiders(j) {
 			through = through || (p.X >= 11 && p.X <= 13 && p.Y >= 11 && p.Y <= 13)
 		}
-	}
-	j.key("Space", 0)
+		return through
+	}, func() bool { careFeed(j); return false })
 	if !through {
 		var as []string
 		for _, a := range j.world().Animals {
@@ -508,12 +507,11 @@ func TestJourneyCombatRecords(t *testing.T) {
 	if k := j.pawn(id).Kills; k != 0 {
 		t.Fatalf("a fresh colonist has %d kills", k)
 	}
-	j.key("Digit3", 0)
-	for i := 0; i < 6000 && j.pawn(id).Kills == 0; i++ {
+	careFeed(j)
+	j.ff(36000, ffStride, func() bool { // 6000 Updates at Very fast
 		careFeed(j)
-		j.update(1)
-	}
-	j.key("Space", 0)
+		return j.pawn(id).Kills > 0
+	})
 	p := j.pawn(id)
 	if p.Kills == 0 {
 		t.Fatalf("no kill recorded; raiders %+v", weRaiders(j))

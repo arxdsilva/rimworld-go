@@ -528,26 +528,30 @@ func TestArchitectDescriptionDragStyleHints(t *testing.T) {
 }
 
 // Every tool, with every material and crop, fits its box at the sizes the
-// game runs at, and the regions do not overlap the command grid.
+// game runs at, and the regions do not overlap the command grid. A tool is
+// picked once and laid out at each size: the pick and its tool card do not
+// depend on the screen size, the box and its buttons are laid out per size.
 func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
-	for _, sz := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
-		a.sw, a.sh = sz[0], sz[1]
-		for _, tool := range allArchTools() {
-			a.arch.Cat = tool.Category
-			a.arch.ToolID = ""
-			a.arch.Stuff = ""
-			archPick(t, a, tool.ID)
-			if a.arch.ToolID != tool.ID {
-				continue // an allowed-area tool opens its area menu first
-			}
-			stuffs := []string{""}
-			if bv, ok := architect.Buildable(tool.Build); ok && len(bv.Stuffs) > 1 {
-				stuffs = bv.Stuffs
-			}
-			for _, s := range stuffs {
-				a.arch.Stuff = s
+	sizes := [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}}
+	for _, tool := range allArchTools() {
+		a.sw, a.sh = sizes[0][0], sizes[0][1]
+		a.arch.Cat = tool.Category
+		a.arch.ToolID = ""
+		a.arch.Stuff = ""
+		archPick(t, a, tool.ID)
+		if a.arch.ToolID != tool.ID {
+			continue // an allowed-area tool opens its area menu first
+		}
+		stuffs := []string{""}
+		if bv, ok := architect.Buildable(tool.Build); ok && len(bv.Stuffs) > 1 {
+			stuffs = bv.Stuffs
+		}
+		for _, s := range stuffs {
+			a.arch.Stuff = s
+			for _, sz := range sizes {
+				a.sw, a.sh = sz[0], sz[1]
 				l := a.hud()
 				if l.ArchDesc.Empty() || l.ArchDesc.H != a.arch.DescHeight() {
 					t.Errorf("%dx%d %s/%s: box %+v is clamped (wants %v)", sz[0], sz[1], tool.ID, s, l.ArchDesc, a.arch.DescHeight())
@@ -563,17 +567,11 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 						t.Errorf("%dx%d %s/%s: line %q at y=%v runs past the box (%v)", sz[0], sz[1], tool.ID, s, ln.Text, ln.Y, l.ArchDesc.H)
 					}
 				}
-				for _, b := range archButtonsWith(a, "arch.stuff.") {
-					if !within(b, l.ArchDesc) {
-						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
+				// the material, crop and (AX-3) carpet colour buttons
+				for _, b := range a.arch.Buttons() {
+					if !strings.HasPrefix(b.ID, "arch.stuff.") && !strings.HasPrefix(b.ID, "arch.crop.") && !strings.HasPrefix(b.ID, "arch.colour.") {
+						continue
 					}
-				}
-				for _, b := range archButtonsWith(a, "arch.crop.") {
-					if !within(b, l.ArchDesc) {
-						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
-					}
-				}
-				for _, b := range archButtonsWith(a, "arch.colour.") { // AX-3: the carpet floor's swatches
 					if !within(b, l.ArchDesc) {
 						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
 					}

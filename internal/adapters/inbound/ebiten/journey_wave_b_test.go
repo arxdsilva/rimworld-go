@@ -59,14 +59,14 @@ func TestJourneyBillsStoreModeAndRadius(t *testing.T) {
 	if !ok || c.X != 10 || c.Y != 5 || c.Index != 0 || c.Store == 0 || c.Radius <= 0 {
 		t.Fatalf("ConfigureBill %+v (sent %v), want bench (10,5) bill 0 with a non-default store mode (drop) and radius > 0", c, ok)
 	}
-	// Step one tick at a time: the colonist, also the only hauler, picks
+	// Look after every tick: the colonist, also the only hauler, picks
 	// the dropped club up again within a few ticks, so look for the tick
 	// it lies at the bench; in "best stockpile" mode it is carried the
 	// whole way and never lies outside the stockpile.
-	lay := false
-	for i := 0; i < 20000 && !lay; i++ {
-		careFeed(j)
-		j.tick(1)
+	lay, ticks := false, 0
+	careFeed(j)
+	j.ffWatch(20000, ffStride, func() bool {
+		ticks++
 		for _, it := range j.world().Items {
 			if it.Kind == "club" && !it.Carried && !(it.X >= 12 && it.X <= 13 && it.Y >= 6 && it.Y <= 7) {
 				if d := max(mathx.Abs(it.X-10), mathx.Abs(it.Y-5)); d > 4 {
@@ -75,14 +75,15 @@ func TestJourneyBillsStoreModeAndRadius(t *testing.T) {
 				lay = true
 			}
 		}
-		if i%50 == 49 { // finished: the club stands in the stockpile and never lay outside
+		if ticks%50 == 0 { // finished: the club stands in the stockpile and never lay outside
 			for _, it := range j.world().Items {
 				if it.Kind == "club" && !it.Carried {
 					t.Fatalf("the club went straight to the stockpile at (%d, %d): drop on floor was ignored", it.X, it.Y)
 				}
 			}
 		}
-	}
+		return lay
+	}, func() bool { careFeed(j); return false })
 	if !lay {
 		t.Fatal("no club was made")
 	}
@@ -105,7 +106,7 @@ func TestJourneyBillsIngredientToggle(t *testing.T) {
 		t.Fatalf("SetBillIngredient %+v (sent %v), want bill 0 at (10,5), ingredient wood, forbidden (Enabled false)", c, ok)
 	}
 	j.key("Escape", 0)
-	wbRun(j, "Digit3", 2500)
+	wbRun(j, 15000) // 2500 Updates at Very fast
 	for _, it := range j.world().Items {
 		if it.Kind == "club" {
 			t.Fatalf("a club was made at (%d, %d) although wood is forbidden for the bill", it.X, it.Y)
@@ -122,14 +123,14 @@ func TestJourneyBillsIngredientToggle(t *testing.T) {
 	}
 }
 
-// wbRun runs the colony at speed key for n Updates, keeping it fed.
-func wbRun(j *journey, key string, n int) {
+// wbRun runs the colony at Very fast for n ticks, keeping it fed.
+func wbRun(j *journey, n int) {
 	j.t.Helper()
-	j.key(key, 0)
-	defer j.key("Space", 0)
-	for i := 0; i < n; i++ {
-		careFeed(j)
-		j.update(1)
+	start := j.g.Tick()
+	careFeed(j)
+	j.ff(n, ffStride, func() bool { careFeed(j); return false })
+	if ran := int(j.g.Tick() - start); ran < n {
+		j.t.Fatalf("the colony ran %d ticks of %d", ran, n)
 	}
 }
 
@@ -251,19 +252,25 @@ func TestJourneyForbidBed(t *testing.T) {
 	}
 	j.g.ApplyPending()
 	pawn := ordColonists(j)[0]
-	for i := 0; i < 4000; i++ { // run on, topping the colonist's rest up to exhaustion each time it recovers
-		if i%100 == 0 {
-			j.g.SetNeeds(entity.EntityID(pawn), needs.Full, needs.CriticalRest-500)
-		}
-		if i == 0 {
-			j.key("Digit3", 0)
-		}
-		j.update(1)
+	// run on for 24,000 ticks (4000 Updates at Very fast), dropping the
+	// colonist's rest to exhaustion every 600 ticks so it always wants a bed
+	start := j.g.Tick()
+	tired := func() { j.g.SetNeeds(entity.EntityID(pawn), needs.Full, needs.CriticalRest-500) }
+	tired()
+	next := start + 600
+	j.ff(24000, ffStride, func() bool {
 		if j.pawn(pawn).InBed {
-			t.Fatalf("the colonist sleeps in the forbidden bed at update %d", i)
+			t.Fatalf("the colonist sleeps in the forbidden bed at tick %d", j.g.Tick()-start)
 		}
+		if j.g.Tick() >= next {
+			tired()
+			next += 600
+		}
+		return false
+	})
+	if ran := j.g.Tick() - start; ran < 24000 {
+		t.Fatalf("the colony ran %d ticks of 24000", ran)
 	}
-	j.key("Space", 0)
 }
 
 // TestJourneyCombatHitChanceTooltip (DEF-1): a drafted, armed colonist is

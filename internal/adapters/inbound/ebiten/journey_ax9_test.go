@@ -85,9 +85,11 @@ func ax9LoadOne(t *testing.T, j *journey, pod entity.EntityID, x, y int, pawn ui
 	if c, ok := j.lastCmd(command.LoadPods); !ok || !c.Enabled || c.Target != uint64(pod) || c.Name != strconv.FormatUint(pawn, 10) {
 		t.Fatalf("LoadPods %+v ok=%v", c, ok)
 	}
-	j.key("Digit3", 0)
-	j.until(func() bool { return ax9PodLoad(j, pod) >= 60 }, 6000)
-	j.key("Space", 0)
+	// the colonist steps into the pod: stop on that tick, before anyone
+	// else walks onto the pod's tile and takes the click below
+	if !j.ffWatch(6000*speedVeryFast.ticksPerFrame(), ffStride, func() bool { return ax9PodLoad(j, pod) >= 60 }, nil) {
+		t.Fatalf("the pod's load is %d kg after 6000 Very fast Updates' ticks, want the colonist's 60", ax9PodLoad(j, pod))
+	}
 }
 
 func TestJourneyAX9CasketScannerPods(t *testing.T) {
@@ -269,9 +271,7 @@ func TestJourneyAX9PodsLaunch(t *testing.T) {
 	if pods := j.world().AX.Pods; len(pods) != 1 || int(pods[0].To) != target {
 		t.Fatalf("pods in flight %+v", pods)
 	}
-	j.key("Digit3", 0)
-	j.until(func() bool { return len(j.world().AX.Pods) == 0 }, 8000)
-	j.key("Space", 0)
+	j.ffUntil(func() bool { return len(j.world().AX.Pods) == 0 }, 8000)
 	if mode == podVisit && len(j.g.WorldMap().Caravans) != 1 {
 		t.Fatalf("the visitors are no caravan: %+v", j.g.WorldMap().Caravans)
 	}

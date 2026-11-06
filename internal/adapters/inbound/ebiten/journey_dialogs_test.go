@@ -462,9 +462,7 @@ func TestJourneyDialogsTradeCaravanAccept(t *testing.T) {
 		}
 		return game.PawnView{}, false
 	}
-	j.key("Digit3", 0)
-	j.until(func() bool { _, ok := trader(); return ok }, 3000)
-	j.key("Space", 0)
+	j.ffUntil(func() bool { _, ok := trader(); return ok }, 3000)
 	tp, ok := trader()
 	if !ok {
 		t.Fatal("the trader left between the Updates")

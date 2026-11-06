@@ -81,6 +81,29 @@ func flowUntil(j *journey, what string, cond func() bool, max int) {
 	}
 }
 
+// flowFF is flowUntil for a colony that runs on its own: after each
+// Update that advanced it, the simulation steps on to ffStride ticks, as a
+// faster speed would (CI-004), over the ticks max Updates at the speed it
+// runs cover; an Update that ran no tick steps nothing.
+func flowFF(j *journey, what string, cond func() bool, max int) {
+	j.t.Helper()
+	start := j.g.Tick()
+	for i := 0; i < max && !cond(); i++ {
+		before := j.g.Tick()
+		j.update(1)
+		ran := int(j.g.Tick() - before)
+		if ran == 0 || cond() {
+			continue
+		}
+		if n := min(ffStride-ran, max*ran-int(j.g.Tick()-start)); n > 0 {
+			j.g.Step(n)
+		}
+	}
+	if !cond() {
+		j.t.Fatalf("%s: not reached after %d Updates (screen %s, modal %q, %s)", what, max, j.a.nav.screen(), j.a.uiModalTop(), j.a.sessionErr)
+	}
+}
+
 // wizardToColony walks New Colony with the mouse: the Hearthkeeper on
 // Seasoned, a tiny world, a random site at the smallest map size, Start;
 // the intro letter is closed with Escape.
@@ -124,7 +147,7 @@ func wizardToColony(t *testing.T, j *journey) {
 	flowUntil(j, "the colony", func() bool { return a.nav.screen() == ports.ScreenColony && a.renderer != nil }, 4000)
 	flowAttach(j)
 	// the pods land, then the scenario's intro letter opens by itself
-	flowUntil(j, "the intro letter", a.uiModalOpen, 2000)
+	flowFF(j, "the intro letter", a.uiModalOpen, 2000)
 	j.key("Escape", 0)
 	if a.uiSt().ModalOpen() {
 		t.Fatalf("Escape left the modal %q open", a.uiModalTop())

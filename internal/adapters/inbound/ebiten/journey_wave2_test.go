@@ -430,19 +430,15 @@ func TestJourneyAutoUndraft(t *testing.T) {
 	j := newJourney(t, jPawns([2]int{8, 4}))
 	id := weDraft(j, 0)
 	start := j.g.Tick()
-	j.key("Digit3", 0)
-	for i := 0; i < 40000 && j.g.Tick()-start < 5000; i++ {
-		careFeed(j)
-		j.update(1)
-	}
-	if !j.pawn(id).Drafted {
+	careFeed(j)
+	j.ff(5000, ffStride, func() bool { careFeed(j); return false })
+	if !j.pawn(id).Drafted || j.g.Tick()-start < 5000 {
 		t.Fatalf("undrafted after only %d ticks", j.g.Tick()-start)
 	}
-	for i := 0; i < 40000 && j.g.Tick()-start < 10500 && j.pawn(id).Drafted; i++ {
+	j.ff(10500-int(j.g.Tick()-start), ffStride, func() bool {
 		careFeed(j)
-		j.update(1)
-	}
-	j.key("Space", 0)
+		return !j.pawn(id).Drafted
+	})
 	if j.pawn(id).Drafted {
 		t.Fatalf("still drafted after %d ticks with no threat", j.g.Tick()-start)
 	}

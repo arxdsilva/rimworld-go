@@ -96,18 +96,17 @@ func TestJourneySittingRaisesComfort(t *testing.T) {
 	pawn := ordColonists(j)[0]
 	start := wcNum(j, j.pawn(pawn), "Comfort")
 	best, lowest := start, start
-	j.key("Digit3", 0)
-	for i := 0; i < 12000; i++ {
+	careFeed(j)
+	j.ff(72000, ffStride, func() bool { // 12000 Updates at Very fast
 		careFeed(j)
-		j.update(1)
 		c := wcNum(j, j.pawn(pawn), "Comfort")
 		lowest = min(lowest, c)
 		if c > best && c > lowest {
 			best = c
-			break
+			return true
 		}
-	}
-	j.key("Space", 0)
+		return false
+	})
 	if !(best > lowest) {
 		t.Fatalf("PawnView.Comfort never rose: started %v, lowest %v, best %v (no one sat down)", start, lowest, best)
 	}

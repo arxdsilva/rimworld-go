@@ -391,14 +391,13 @@ func weHoldRun(t *testing.T, hold bool) int {
 	}
 	x0, y0 := j.pawn(id).X, j.pawn(id).Y
 	far := 0
-	j.key("Digit3", 0)
-	for i := 0; i < 900; i++ {
-		careFeed(j)
-		j.update(1)
+	careFeed(j)
+	// 900 Updates at Very fast; the position is read after every tick
+	j.ffWatch(5400, ffStride, func() bool {
 		p := j.pawn(id)
 		far = max(far, max(mathx.Abs(p.X-x0), mathx.Abs(p.Y-y0)))
-	}
-	j.key("Space", 0)
+		return false
+	}, func() bool { careFeed(j); return false })
 	return far
 }
 

@@ -118,7 +118,7 @@ func TestJourneyRoomCardStats(t *testing.T) {
 		j.g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: pawn, X: x, Y: 4})
 		j.g.ApplyPending()
 		careFeed(j)
-		j.tick(400)
+		j.ff(400, ffStride, func() bool { return false })
 	}
 	after := view()
 	if !(wcNum(j, after, "Beauty") < wcNum(j, before, "Beauty")) {
@@ -127,11 +127,11 @@ func TestJourneyRoomCardStats(t *testing.T) {
 }
 
 // wcShotsPeak runs the fight and returns the most projectiles in flight at
-// one moment.
-func wcShotsPeak(j *journey, updates int) int {
+// one moment, stopping once it reaches enough.
+func wcShotsPeak(j *journey, updates, enough int) int {
 	peak := 0
 	j.key("Digit3", 0)
-	for i := 0; i < updates; i++ {
+	for i := 0; i < updates && peak < enough; i++ {
 		careFeed(j)
 		j.update(1)
 		peak = max(peak, len(j.world().Shots))
@@ -159,7 +159,7 @@ func TestJourneyBurstFire(t *testing.T) {
 	}
 	j.g.RaidArmed(ar, ar, ar)
 	j.update(1) // the raid alert pauses the game (pause on threat); unpause after it
-	if peak := wcShotsPeak(j, 4000); peak < 2 {
+	if peak := wcShotsPeak(j, 4000, 2); peak < 2 {
 		t.Fatalf("at most %d projectile(s) in flight at once, want a burst of several", peak)
 	}
 }

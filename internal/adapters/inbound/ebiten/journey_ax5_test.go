@@ -197,7 +197,6 @@ func TestJourneyAX5RocketBattery(t *testing.T) {
 	if !j.pawn(ordColonists(j)[0]).Drafted {
 		t.Fatal("R did not draft the colonist")
 	}
-	j.key("Digit3", 0)
 	rockets := func() int {
 		n := 0
 		for _, b := range j.world().Bursts {
@@ -207,11 +206,8 @@ func TestJourneyAX5RocketBattery(t *testing.T) {
 		}
 		return n
 	}
-	for i := 0; i < 600; i++ {
-		careFeed(j)
-		j.update(1)
-	}
-	j.key("Space", 0)
+	careFeed(j)
+	j.ff(3600, ffStride, func() bool { careFeed(j); return false }) // 600 Updates at Very fast
 	if rockets() != 0 {
 		t.Fatal("the rocket battery fired on its own")
 	}
@@ -227,12 +223,9 @@ func TestJourneyAX5RocketBattery(t *testing.T) {
 	if v := wdView(j, id); !wcField(j, v, "HasTarget").Bool() {
 		t.Fatalf("battery view %+v does not show the target", v)
 	}
-	j.key("Digit3", 0)
-	for i := 0; i < 3000 && rockets() < 12; i++ {
-		careFeed(j)
-		j.update(1)
-	}
-	j.key("Space", 0)
+	careFeed(j)
+	// 3000 Updates at Very fast, the bursts counted after every tick
+	j.ffWatch(18000, ffStride, func() bool { return rockets() >= 12 }, func() bool { careFeed(j); return false })
 	near, spread := 0, false
 	for _, b := range j.world().Bursts {
 		if wcStr(j, b, "Blast") == "bomb" && b.Radius == 29 && mathx.Abs(b.X-tx) <= 6 && mathx.Abs(b.Y-ty) <= 6 {

@@ -411,12 +411,11 @@ func TestJourneyHaulerFillsBarrelCookDoesNot(t *testing.T) {
 		}
 		return false
 	}
-	j.key("Digit3", 0)
-	for i := 0; i < 5500 && !hopperHas(); i++ {
+	careFeed(j)
+	j.ff(33000, ffStride, func() bool { // 5500 Updates at Very fast
 		careFeed(j)
-		j.update(1)
-	}
-	j.key("Space", 0)
+		return hopperHas()
+	})
 	if hopperHas() {
 		t.Fatalf("the cook filled the hopper: that is hauling work (WRK-008): items %+v", fdItems(j, "berries"))
 	}
@@ -425,12 +424,11 @@ func TestJourneyHaulerFillsBarrelCookDoesNot(t *testing.T) {
 	}
 	j.g.Enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: id, Work: command.WorkHaul, Count: 1})
 	j.g.ApplyPending()
-	j.key("Digit3", 0)
-	for i := 0; i < 6000 && !(barrelFilled() && hopperHas()); i++ {
+	careFeed(j)
+	j.ff(36000, ffStride, func() bool { // 6000 Updates at Very fast
 		careFeed(j)
-		j.update(1)
-	}
-	j.key("Space", 0)
+		return barrelFilled() && hopperHas()
+	})
 	if !barrelFilled() {
 		t.Fatalf("the hauler never filled the barrel; wort left %d", f2Qty(j, item.Wort))
 	}

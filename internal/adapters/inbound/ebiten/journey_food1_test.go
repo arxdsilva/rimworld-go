@@ -437,10 +437,9 @@ func TestJourneyHunterHaulsKill(t *testing.T) {
 	j.leaveArch()
 	stored, killed := false, false
 	in := func(x, y int) bool { return x >= sp.MinX && x <= sp.MaxX && y >= sp.MinY && y <= sp.MaxY }
-	j.key("Digit3", 0)
-	for i := 0; i < 12000 && !stored; i++ {
+	careFeed(j)
+	j.ff(72000, ffStride, func() bool { // 12000 Updates at Very fast
 		careFeed(j)
-		j.update(1)
 		if _, alive := fdAnimal(j, deer); !alive {
 			killed = true
 		}
@@ -450,8 +449,8 @@ func TestJourneyHunterHaulsKill(t *testing.T) {
 				stored = true
 			}
 		}
-	}
-	j.key("Space", 0)
+		return stored
+	})
 	if !killed {
 		t.Fatalf("the deer was never killed; hunter job %q", j.pawn(id).Job)
 	}
