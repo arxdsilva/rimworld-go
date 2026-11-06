@@ -116,7 +116,7 @@ func (g *Game) wandererJoins(now uint64) bool {
 	if !ok {
 		return false
 	}
-	g.letter(letterGood, "Wanderer joins", g.personName(id)+", a wanderer, has asked to join the colony.", id)
+	letterf(g, letterGood, "Wanderer joins", id, "%s, a wanderer, has asked to join the colony.", g.personName(id))
 	g.addHistory("joined", g.personName(id)+" wandered in and joined the colony.", id)
 	return true
 }
@@ -208,8 +208,8 @@ func (h careGuests) JoinOffer(id entity.EntityID) {
 func (h careGuests) offerJoin(id entity.EntityID) {
 	g := h.g
 	g.setVisitorStay(id, uint64(g.clock.Now())+joinOfferWait)
-	g.letter(letterInfo, "Stranger asks to join", g.personName(id)+", the stranger your colony took in and nursed back to health, asks to join you. "+
-		"Accept to welcome them; dismiss this letter and they will go their way.", id)
+	letterf(g, letterInfo, "Stranger asks to join", id, "%s, the stranger your colony took in and nursed back to health, asks to join you. "+
+		"Accept to welcome them; dismiss this letter and they will go their way.", g.personName(id))
 	g.letters.list[len(g.letters.list)-1].Join = id
 }
 
@@ -230,9 +230,7 @@ func (h careGuests) join(p entity.EntityID) {
 	g := h.g
 	g.enlist(p)
 	g.invalidateCreatures()
-	text := g.personName(p) + ", the stranger you nursed back to health, has joined the colony."
-	g.letter(letterGood, "Stranger joins", text, p)
-	g.addHistory("joined", text, p)
+	g.addHistory("joined", letterf(g, letterGood, "Stranger joins", p, "%s, the stranger you nursed back to health, has joined the colony.", g.personName(p)), p)
 }
 
 // visitHost is game/visit's roles (visit/deps.go) over small adapters.
@@ -337,8 +335,8 @@ func (h visitArrivals) RelativeFor(ref int, f *faction.Faction) entity.EntityID 
 func (h visitArrivals) RelativeLetter(kin entity.EntityID, among string) {
 	h.g.relativeLetter(letterInfo, "Relative arrives", kin, among)
 }
-func (h visitArrivals) Letter(kind, title, text string, focus entity.EntityID) {
-	h.g.letter(kind, title, text, focus)
+func (h visitArrivals) Letter(kind, title string, focus entity.EntityID, format string, args ...any) {
+	letterf(h.g, kind, title, focus, format, args...)
 }
 
 type visitFighters struct{ g *Game }
@@ -372,7 +370,9 @@ func (h visitCarrying) PutDown(id entity.EntityID) { h.g.care.Carry.Drop(id) }
 func (h visitCarrying) Beside(id entity.EntityID, x, y int) (int, int, bool) {
 	return h.g.besideSpot(id, x, y)
 }
-func (h visitCarrying) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
+func (h visitCarrying) Message(x, y int, format string, args ...any) {
+	h.g.message(x, y, format, args...)
+}
 
 // visitTurning is visit.Turning (visit/turn.go, MAP-18): a turned visitor
 // becomes a raider already fleeing, the way a prisoner breaking out does

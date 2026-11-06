@@ -28,7 +28,7 @@ func (l Lifecycle) Apply(c command.Command) {
 		l.Attack(c) // settle.go (MAP-05)
 	case command.SettleHere:
 		if why := f.Found(c.Target); why != "" { // found.go (MAP-06)
-			f.h.Note(why)
+			f.h.Note("%s", why)
 		}
 	case command.EncounterAnswer:
 		f.Answer(c.Target, c.Mode) // encounter.go (MAP-08)
@@ -170,7 +170,7 @@ func (l Lifecycle) enter(c *Caravan, id uint32) {
 	if c.Back {
 		f.Home(c)
 	} else if names := f.walkIn(c); len(names) > 0 {
-		f.h.Letter(false, "Caravan entered", fmt.Sprintf("%s entered %s.", travel.JoinNames(names), f.h.TileName(c.C.Tile)), entity.EntityID(c.C.Members[0]))
+		f.h.Letter(false, "Caravan entered", entity.EntityID(c.C.Members[0]), "%s entered %s.", travel.JoinNames(names), f.h.TileName(c.C.Tile))
 	}
 	f.drop(cid)
 }
@@ -204,7 +204,7 @@ func (l Lifecycle) hourly(id uint32, now uint64) {
 	}
 	if m.PackBy == 0 && streak(&m.Done, JobDone(m, c)) {
 		m.PackBy = now + packTicks
-		f.h.Letter(false, "Time to pack up", fmt.Sprintf("The work at %s is done. Whoever is still there leaves as a caravan in a day.", f.h.TileName(m.Tile)), 0)
+		f.h.Letter(false, "Time to pack up", 0, "The work at %s is done. Whoever is still there leaves as a caravan in a day.", f.h.TileName(m.Tile))
 	}
 	if m.PackBy != 0 && now >= m.PackBy {
 		l.reform(id, now)

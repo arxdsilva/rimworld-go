@@ -1,7 +1,6 @@
 package travel
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -184,8 +183,8 @@ func (o scanner) find(target item.Kind, b construction.Building) bool {
 	t := cands[hashN(&v, len(cands))]
 	s := Site{Tile: t, Mineral: m.Kind, Qty: m.Min + hashN(&v, m.Max-m.Min+1), Expires: o.h.Now() + SiteDays*clock.TicksPerDay}
 	o.s.sites = append(o.s.sites, s)
-	o.h.Letter("Mineral site found", fmt.Sprintf("The long-range scanner found a lump of %d %s on tile %d. "+
-		"Send a caravan or transport pods within %d days to mine it.", s.Qty, s.Mineral, t, SiteDays), b.X, b.Y)
+	o.h.Letter("Mineral site found", b.X, b.Y, "The long-range scanner found a lump of %d %s on tile %d. "+
+		"Send a caravan or transport pods within %d days to mine it.", s.Qty, s.Mineral, t, SiteDays)
 	o.h.Changed()
 	return true
 }

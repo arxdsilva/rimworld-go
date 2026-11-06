@@ -1,8 +1,6 @@
 package combat
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -89,7 +87,7 @@ func (t *Traps) Spring(victim entity.EntityID, x, y int) {
 	}
 	b, _ := h.Building(tid)
 	per := attack.MeleeDamage(TrapDamage*trapSharp(b.Stuff)/1000, h.Roll) / TrapSpikes
-	h.Message(x, y, fmt.Sprintf("A spike trap caught %s.", who))
+	h.Message(x, y, "A spike trap caught %s.", who)
 	h.Trace(projectile.Trace{FromX: x, FromY: y, ToX: x, ToY: y,
 		Tick: h.Now(), Hit: true, Melee: true, Damage: per * TrapSpikes})
 	h.RemoveBuilding(tid)

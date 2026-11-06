@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/application/game/farm"
@@ -17,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/pkg/mathx"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Nature events (SIM-025, plan 3.2-3.3). Every two to five days, at a
@@ -276,7 +276,7 @@ func (g *Game) FireIncident(key string) bool {
 // notice posts a message about creature focus (the UI's jump link
 // follows it).
 func (g *Game) notice(x, y int, focus entity.EntityID, format string, args ...any) {
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y, Focus: focus})
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Focus: focus})
 }
 
 // --- climate fit and species -----------------------------------------------

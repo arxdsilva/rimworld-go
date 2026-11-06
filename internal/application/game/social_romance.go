@@ -1,11 +1,10 @@
 package game
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Romance (ENG-003, M5): couples move through the domain's pair machine
@@ -161,9 +160,7 @@ func (g *Game) tryRomance(a, b entity.EntityID, now uint64) bool {
 		return false
 	}
 	g.setPair(a, b, p)
-	text := fmt.Sprintf("%s and %s are now lovers.", g.personName(a), g.personName(b))
-	g.romanceLetter(letterGood, "New lovers", text, a)
-	g.addHistory("romance", text, a, b)
+	g.addHistory("romance", pawnLetterf(g, letterGood, "New lovers", a, "%s and %s are now lovers.", g.personName(a), g.personName(b)), a, b)
 	for _, c := range cheatedA {
 		g.cheatedOn(c, a, b, now)
 	}
@@ -180,8 +177,8 @@ func (g *Game) cheatedOn(victim, cheater, other entity.EntityID, now uint64) {
 	}
 	g.addOpinionMemory(victim, cheater, social.MemCheatedOnMe, now)
 	g.memories[victim] = g.memories[victim].AddFor(mood.CheatedOn, uint64(cheater), now)
-	g.romanceLetter(letterCaution, "Affair", fmt.Sprintf("%s has been cheating on %s with %s.",
-		g.personName(cheater), g.personName(victim), g.personName(other)), victim)
+	pawnLetterf(g, letterCaution, "Affair", victim, "%s has been cheating on %s with %s.",
+		g.personName(cheater), g.personName(victim), g.personName(other))
 }
 
 // breakUp ends a's partnership with b: ex-lovers, or divorce for a married
@@ -207,13 +204,9 @@ func (g *Game) breakUp(a, b entity.EntityID, now uint64) bool {
 	g.addSocialLog(a, b, logBreakup, 0, now)
 	na, nb := g.personName(a), g.personName(b)
 	if divorce {
-		text := fmt.Sprintf("%s and %s have divorced.", na, nb)
-		g.romanceLetter(letterCaution, "Divorce", text, a)
-		g.addHistory("divorce", text, a, b)
+		g.addHistory("divorce", pawnLetterf(g, letterCaution, "Divorce", a, "%s and %s have divorced.", na, nb), a, b)
 	} else {
-		text := fmt.Sprintf("%s broke up with %s.", na, nb)
-		g.romanceLetter(letterCaution, "Breakup", text, a)
-		g.addHistory("breakup", text, a, b)
+		g.addHistory("breakup", pawnLetterf(g, letterCaution, "Breakup", a, "%s broke up with %s.", na, nb), a, b)
 	}
 	return true
 }
@@ -233,30 +226,23 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 		g.addOpinionMemory(a, b, social.MemRejectedMyProposal, now)
 		g.addOpinionMemory(b, a, social.MemIRejectedProposal, now)
 		g.memories[a] = g.memories[a].AddFor(mood.ProposalRejected, uint64(b), now)
-		g.romanceLetter(letterCaution, "Proposal rejected", fmt.Sprintf("%s proposed to %s and was turned down.",
-			g.personName(a), g.personName(b)), a)
+		pawnLetterf(g, letterCaution, "Proposal rejected", a, "%s proposed to %s and was turned down.", g.personName(a), g.personName(b))
 		return true
 	}
 	if !p.Transition(social.PairFiance, now) {
 		return false
 	}
 	g.setPair(a, b, p)
-	text := fmt.Sprintf("%s and %s are engaged to be married.", g.personName(a), g.personName(b))
-	g.romanceLetter(letterGood, "Engagement", text, a)
-	g.addHistory("engagement", text, a, b)
+	g.addHistory("engagement", pawnLetterf(g, letterGood, "Engagement", a, "%s and %s are engaged to be married.", g.personName(a), g.personName(b)), a, b)
 	return true
 }
 
-// romanceLetter posts a letter about pawn focus.
-func (g *Game) romanceLetter(kind, title, text string, focus entity.EntityID) {
-	g.pawnLetter(kind, title, text, focus)
-}
-
-// pawnLetter posts a letter titled title about creature focus (shown once,
-// the jump link follows it).
-func (g *Game) pawnLetter(kind, title, text string, focus entity.EntityID) {
+// pawnLetterf posts a letter titled title about creature focus (shown once,
+// the jump link follows it), its text a format and args (OPT-001); it
+// returns the text.
+func pawnLetterf(g *Game, kind, title string, focus entity.EntityID, format string, args ...any) string {
 	pos, _ := g.positions.Get(focus)
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Focus: focus, Letter: true, Title: title, Kind: kind})
+	return g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of(format, args...), X: pos.X, Y: pos.Y, Focus: focus, Letter: true, Title: title, Kind: kind})
 }
 
 // romanceNote is the Social tab's reason id and o can't become a couple

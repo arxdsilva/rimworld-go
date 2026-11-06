@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Weddings and parties live in game/gather; here are its entry points,
@@ -210,14 +211,14 @@ func (h gatherTidings) SetSurname(id entity.EntityID, last string) { // colonist
 		p.Bio.Last = last
 	}
 }
-func (h gatherTidings) Note(text string, x, y int, focus entity.EntityID) {
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Focus: focus})
+func (h gatherTidings) Note(x, y int, focus entity.EntityID, format string, args ...any) {
+	h.g.notice(x, y, focus, format, args...) // incidents.go
 }
-func (h gatherTidings) GoodLetter(title, text string, x, y int, focus entity.EntityID) {
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: letterGood})
+func (h gatherTidings) GoodLetter(title string, x, y int, focus entity.EntityID, format string, args ...any) {
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: letterGood})
 }
 func (h gatherTidings) RomanceLetter(title, text string, focus entity.EntityID) {
-	h.g.romanceLetter(letterGood, title, text, focus) // social_romance.go
+	pawnLetterf(h.g, letterGood, title, focus, msgfmt.Plain(text)) // social_romance.go
 }
 func (h gatherTidings) History(kind, text string, a, b entity.EntityID) {
 	h.g.addHistory(kind, text, a, b)

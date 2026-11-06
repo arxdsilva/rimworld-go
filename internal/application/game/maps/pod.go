@@ -1,7 +1,6 @@
 package maps
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/application/game/travel"
@@ -52,9 +51,9 @@ func (l Lifecycle) landOn(c *Caravan, r Request) {
 	}
 	names := f.setDown(c, lx, ly)
 	if len(names) > 0 {
-		f.h.Letter(false, "Transport pods landed", fmt.Sprintf("%s came down at %s.", travel.JoinNames(names), f.h.TileName(c.C.Tile)), entity.EntityID(c.C.Members[0]))
+		f.h.Letter(false, "Transport pods landed", entity.EntityID(c.C.Members[0]), "%s came down at %s.", travel.JoinNames(names), f.h.TileName(c.C.Tile))
 	} else {
-		f.h.Letter(false, "Transport pods landed", fmt.Sprintf("The pods came down at %s.", f.h.TileName(c.C.Tile)), 0)
+		f.h.Letter(false, "Transport pods landed", 0, "The pods came down at %s.", f.h.TileName(c.C.Tile))
 	}
 	f.drop(entity.EntityID(c.C.ID))
 }

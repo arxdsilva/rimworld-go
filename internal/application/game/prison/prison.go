@@ -75,5 +75,5 @@ func (p *Prison) Release(id, by entity.EntityID) {
 	}
 	h.SetHeld(id, r)
 	x, y, _ := h.Pos(id)
-	h.Message(x, y, h.PersonName(id)+" has been released.")
+	h.Message(x, y, "%s has been released.", h.PersonName(id))
 }

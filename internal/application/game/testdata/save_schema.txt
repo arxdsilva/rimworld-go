@@ -601,6 +601,9 @@ saveState.Letters[].Intro bool
 saveState.Letters[].Join rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Letters[].Kind string
 saveState.Letters[].Map rimworld-go/internal/application/game.MapID = uint32
+saveState.Letters[].Msg rimworld-go/pkg/msgfmt.Text
+saveState.Letters[].Msg.Format string
+saveState.Letters[].Msg.Packed string
 saveState.Letters[].Text string
 saveState.Letters[].Tick uint64
 saveState.Letters[].Title string

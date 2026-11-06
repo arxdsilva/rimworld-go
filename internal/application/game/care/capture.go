@@ -89,7 +89,7 @@ func (c *Care) startHold(by, target entity.EntityID, kind job.Kind, forced bool)
 	}
 	tx, ty, _ := h.Pos(target)
 	if _, ok := c.pr.PrisonBedFor(target, tx, ty); !ok {
-		h.Message(tx, ty, "No free prisoner bed for "+c.pr.PersonName(target)+".")
+		h.Message(tx, ty, "No free prisoner bed for %s.", c.pr.PersonName(target))
 		return ReasonNoPrisonBed
 	}
 	sx, sy, ok := h.BesideSpot(by, tx, ty)
@@ -172,7 +172,7 @@ func (c *Care) DoArrest(id entity.EntityID, j job.Record) {
 	}
 	x, y, _ := h.Pos(id)
 	if !c.pr.ArrestRoll(id, t) {
-		h.Message(x, y, c.pr.PersonName(t)+" resisted arrest by "+c.pr.PersonName(id)+".")
+		h.Message(x, y, "%s resisted arrest by %s.", c.pr.PersonName(t), c.pr.PersonName(id))
 		j.State, j.Fail = job.Fail, job.Interrupted
 		h.SetJob(id, j)
 		c.pr.StartFight(t, id) // the target fights back

@@ -130,10 +130,11 @@ type Ground interface {
 	Build(kind, stuff, facing string, x, y int)
 }
 
-// Events posts messages and threat letters.
+// Events posts messages and threat letters, each text a format and args
+// (the catalog's key, OPT-001).
 type Events interface {
-	Message(x, y int, text string)
-	Threat(title string, x, y int, text string)
+	Message(x, y int, format string, args ...any)
+	Threat(title string, x, y int, format string, args ...any)
 }
 
 // Dice rolls on the game's main stream.

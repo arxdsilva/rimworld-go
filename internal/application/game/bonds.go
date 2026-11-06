@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Animal bonds and masters (ENG-003, M10). A tame animal may bond with a
@@ -228,7 +229,7 @@ func (g *Game) bereave(id entity.EntityID, a *animal.State, dead entity.EntityID
 	if g.bondRoll(bondManhunterPermille) {
 		a.Manhunter, a.Mode = now+animal.ManhunterTicks, animal.Attack
 		g.logEvent(id, logEntry{Kind: logManhunter, Other: dead})
-		g.post(MessageView{Tick: now, Text: fmt.Sprintf("%s the %s has gone manhunter with grief for %s!", a.Name, a.Species.Label(), g.name(dead)),
+		g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s the %s has gone manhunter with grief for %s!", a.Name, a.Species.Label(), g.name(dead)),
 			X: p.X, Y: p.Y, Danger: true, Focus: id})
 		return
 	}

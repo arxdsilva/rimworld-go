@@ -1,7 +1,6 @@
 package industry
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -135,8 +134,7 @@ func (s *State) find(h Host) bool {
 		s.ore = slices.Insert(s.ore, k, OreCell{I: i, Ore: uint8(d.kind), Left: int32(per)})
 	}
 	s.ver++
-	h.Letter("Deep ore found", fmt.Sprintf("A ground scan found %s deep under the ground: about %d units over %d cells. A deep drill set within reach brings it up.",
-		d.kind, per*len(blob), len(blob)), cx, cy)
+	h.Letter("Deep ore found", cx, cy, "A ground scan found %s deep under the ground: about %d units over %d cells. A deep drill set within reach brings it up.", d.kind, per*len(blob), len(blob))
 	h.Changed()
 	return true
 }

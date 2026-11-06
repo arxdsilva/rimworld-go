@@ -1,8 +1,6 @@
 package game
 
 import (
-	"fmt"
-
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
@@ -196,8 +194,8 @@ func (g *Game) migrateBenches(grew func(construction.Kind) bool, refund func(con
 		stuff, n, comps := refund(b)
 		g.dropStack(stuff, n, b.X, b.Y)
 		g.dropStack(item.Components, comps, b.X, b.Y) // none: SpawnStack refuses 0
-		g.message(b.X, b.Y, "%s", fmt.Sprintf("The %s no longer fits at its larger size; it was taken down and its materials returned.",
-			map[bool]string{true: rlab.HiTechLabel, false: construction.DefOf(b.Kind).Name}[b.Kind == construction.ElectricResearchBench]))
+		g.message(b.X, b.Y, "The %s no longer fits at its larger size; it was taken down and its materials returned.",
+			map[bool]string{true: rlab.HiTechLabel, false: construction.DefOf(b.Kind).Name}[b.Kind == construction.ElectricResearchBench])
 	}
 	if changed {
 		g.markRoomsDirty()

@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/faction"
@@ -306,6 +305,6 @@ func (g *Game) relativeLetter(kind, title string, id entity.EntityID, among stri
 		return
 	}
 	bio, _ := g.personBio(id)
-	g.letter(kind, title, fmt.Sprintf("%s's %s %s is among the %s.", g.personName(c), social.Label(k, bio.Look.Sex == look.Male),
-		g.personName(id), among), id)
+	letterf(g, kind, title, id, "%s's %s %s is among the %s.", g.personName(c), social.Label(k, bio.Look.Sex == look.Male),
+		g.personName(id), among)
 }

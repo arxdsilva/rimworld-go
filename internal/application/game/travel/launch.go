@@ -97,7 +97,7 @@ func (o pods) cmdLaunch(c command.Command) {
 	b, _ := o.h.Building(gr.leader)
 	why, dist := o.LaunchReason(pod, dest, c.Mode)
 	if why != "" {
-		o.h.Message(b.X, b.Y, "Can't launch: "+why)
+		o.h.Message(b.X, b.Y, "Can't launch: %s", why)
 		return
 	}
 	for _, l := range gr.launchers {
@@ -117,8 +117,7 @@ func (o pods) cmdLaunch(c command.Command) {
 	f := Flight{ID: o.s.nextID, From: o.h.ColonyTile(), To: dest, Depart: now,
 		Arrive: now + uint64(max(1, dist)*caravan.PodTicksPerTile), Mode: c.Mode, X: c.X2, Y: c.Y2, Pods: len(pods), Load: load}
 	o.s.flights = append(o.s.flights, f)
-	o.h.Letter("Transport pods launched", fmt.Sprintf("%d transport pods left for %s; they land in about %d hours.",
-		len(pods), o.tileName(dest), max(1, int(f.Arrive-now)/clock.TicksPerHour)), b.X, b.Y)
+	o.h.Letter("Transport pods launched", b.X, b.Y, "%d transport pods left for %s; they land in about %d hours.", len(pods), o.tileName(dest), max(1, int(f.Arrive-now)/clock.TicksPerHour))
 	o.h.Changed()
 }
 
@@ -154,13 +153,13 @@ func (o pods) land(f Flight) {
 	drop := f.Mode == command.PodArriveDrop || f.Mode == command.PodArriveDropCentre || f.Mode == command.PodArriveSpot
 	if f.To == o.h.ColonyTile() && f.Mode != command.PodArriveDropCentre && f.Mode != command.PodArriveSpot {
 		o.dropHold(&load, hx, hy)
-		o.h.Letter("Transport pods landed", fmt.Sprintf("%d transport pods came down at the colony.", f.Pods), hx, hy)
+		o.h.Letter("Transport pods landed", hx, hy, "%d transport pods came down at the colony.", f.Pods)
 		return
 	}
 	name, settled, _, _ := o.settlement(f.To)
 	if f.Mode == command.PodArriveGift && settled {
 		gw := o.gift(f.To, load.value())
-		o.h.Letter("Gift delivered", fmt.Sprintf("%s received the pods' goods, worth %d silver (%+d goodwill).", name, load.value(), gw), hx, hy)
+		o.h.Letter("Gift delivered", hx, hy, "%s received the pods' goods, worth %d silver (%+d goodwill).", name, load.value(), gw)
 		return
 	}
 	if drop && o.h.MapOpen(f.To) { // MAP-10: onto an open map, at its edge, centre or the chosen spot
@@ -168,7 +167,7 @@ func (o pods) land(f Flight) {
 		return
 	}
 	if len(load.Pawns) == 0 {
-		o.h.Letter("Transport pods lost", "The pods came down with nobody aboard; their goods are lost.", hx, hy)
+		o.h.Letter("Transport pods lost", hx, hy, "The pods came down with nobody aboard; their goods are lost.")
 		return
 	}
 	var members, animals []uint64

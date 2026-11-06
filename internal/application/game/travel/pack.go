@@ -1,7 +1,6 @@
 package travel
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -95,7 +94,7 @@ func (o Ops) Pack(cid uint64, list string, members int) {
 	o.s.packs[cid] = pk
 	if left > 0 {
 		x, y := o.h.Home()
-		o.h.Message(x, y, fmt.Sprintf("Too heavy for the caravan: %d picks were left behind.", left))
+		o.h.Message(x, y, "Too heavy for the caravan: %d picks were left behind.", left)
 	}
 }
 

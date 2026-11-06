@@ -193,7 +193,7 @@ func (h combatEvents) Shot(target entity.EntityID, hit bool, dmg int, by string)
 func (h combatEvents) Trapped(victim entity.EntityID, dmg int) {
 	h.g.logEvent(victim, logEntry{Kind: logTrap, Amount: dmg})
 }
-func (h combatEvents) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
+func (h combatEvents) Message(x, y int, f string, a ...any) { h.g.message(x, y, f, a...) }
 func (h combatEvents) Burst(x, y int, tick uint64, b explosion.Def) { // a turret's: b zero
 	h.g.wl.Bursts = append(h.g.wl.Bursts, burstStamp{X: x, Y: y, Tick: tick, Turret: b.Zero(), Blast: b.Kind, Radius: b.Radius / 100})
 	h.g.raid.Mechs.EMP(x, y, b, tick) // raid/mech.go (DEF-4): an EMP stuns the mechanoids it reaches

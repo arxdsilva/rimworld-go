@@ -100,7 +100,7 @@ func (l Lifecycle) AttackReason(id entity.EntityID) string {
 // settlement on its tile, entering at its map's edge.
 func (l Lifecycle) Attack(c command.Command) {
 	if why := l.f.Assault(c.Target, false); why != "" {
-		l.f.h.Note(why)
+		l.f.h.Note("%s", why)
 	}
 }
 
@@ -144,8 +144,7 @@ func (l Lifecycle) storm(c *Caravan, id uint32, r Request) {
 	}
 	names := l.walkInAt(c, r.Centre)
 	if len(names) > 0 {
-		f.h.Letter(true, "Attack on a settlement", fmt.Sprintf("%s attacked %s. Defeat every defender to destroy it.",
-			travel.JoinNames(names), f.h.TileName(c.C.Tile)), entity.EntityID(c.C.Members[0]))
+		f.h.Letter(true, "Attack on a settlement", entity.EntityID(c.C.Members[0]), "%s attacked %s. Defeat every defender to destroy it.", travel.JoinNames(names), f.h.TileName(c.C.Tile))
 	}
 	f.drop(entity.EntityID(c.C.ID))
 }
@@ -220,7 +219,7 @@ func (l Lifecycle) besiege(m *Meta, now uint64) {
 	if gone != "" {
 		text += fmt.Sprintf(" It was the last settlement of %s, who are no more.", gone)
 	}
-	f.h.Letter(false, "Settlement destroyed", text, 0)
+	f.h.Letter(false, "Settlement destroyed", 0, "%s", text)
 }
 
 // destroy takes the settlement on tile t away from faction fi and the

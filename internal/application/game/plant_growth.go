@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/world/chunk"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/pkg/mathx"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Staggered plant growth and frost (NG-1 §6.6, E4). Every chunk's plants
@@ -232,7 +233,8 @@ func (g *Game) endFrostPass(fp *farm.Pass) {
 func (g *Game) frostNotice(k farm.Kill, from uint64) {
 	for i := len(g.messages) - 1; i >= 0 && g.messages[i].Tick >= from; i-- {
 		if n, ok := farm.KillCount(g.messages[i].Text, k.Species, k.Cause); ok {
-			g.messages[i].Text = farm.KillText(k.Species, n+k.N, k.Cause)
+			t := farm.KillText(k.Species, n+k.N, k.Cause) // the posted "%s" message, retold
+			g.messages[i].Text, g.messages[i].Msg = t, msgfmt.Of("%s", t)
 			return
 		}
 	}

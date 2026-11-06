@@ -1,6 +1,7 @@
 package herd
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -46,11 +47,13 @@ func (f *fakeHost) add(id entity.EntityID, a animal.State, x, y int) {
 	f.animals[id], f.pos[id] = a, [2]int{x, y}
 }
 
-func (f *fakeHost) Now() uint64                   { return f.now }
-func (f *fakeHost) Roll(n int) int                { return min(f.roll, n-1) }
-func (f *fakeHost) Message(x, y int, text string) { f.msgs = append(f.msgs, text) }
-func (f *fakeHost) Name(entity.EntityID) string   { return "Ada" }
-func (f *fakeHost) Animals(entity.EntityID) int   { return f.skill }
+func (f *fakeHost) Now() uint64    { return f.now }
+func (f *fakeHost) Roll(n int) int { return min(f.roll, n-1) }
+func (f *fakeHost) Message(x, y int, format string, args ...any) {
+	f.msgs = append(f.msgs, fmt.Sprintf(format, args...))
+}
+func (f *fakeHost) Name(entity.EntityID) string { return "Ada" }
+func (f *fakeHost) Animals(entity.EntityID) int { return f.skill }
 func (f *fakeHost) Animal(id entity.EntityID) (animal.State, bool) {
 	a, ok := f.animals[id]
 	return a, ok

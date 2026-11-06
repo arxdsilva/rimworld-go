@@ -1,7 +1,6 @@
 package combat
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -46,7 +45,7 @@ func (t *Turrets) Hurt(id entity.EntityID, b construction.Building, before int) 
 	}
 	t.sparks = append(t.sparks, Fuse{ID: id, Kind: b.Kind, X: b.X, Y: b.Y, At: t.h.Now() + TurretFuseTicks})
 	if b.HP() > 0 {
-		t.h.Message(b.X, b.Y, fmt.Sprintf("The %s is sparking: it will blow up!", construction.DefOf(b.Kind).Name))
+		t.h.Message(b.X, b.Y, "The %s is sparking: it will blow up!", construction.DefOf(b.Kind).Name)
 	}
 }
 
@@ -102,7 +101,7 @@ func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 	case construction.Autocannon, construction.UraniumSlugTurret:
 		r = heavyBlastRadius
 	}
-	h.Message(b.X, b.Y, fmt.Sprintf("The %s blew up!", construction.DefOf(b.Kind).Name))
+	h.Message(b.X, b.Y, "The %s blew up!", construction.DefOf(b.Kind).Name)
 	t.blasts.Explode(0, gunOf(b.Kind), b.X, b.Y, explosion.Def{Kind: explosion.Bomb, Radius: r, Damage: TurretBlastDamage,
 		Pen: turretBlastPen})
 }

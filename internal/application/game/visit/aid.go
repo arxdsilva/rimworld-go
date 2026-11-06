@@ -215,8 +215,7 @@ func (a Aid) arrive(c *Call, now uint64) bool {
 		return true
 	}
 	c.Here, c.LeaveAt, c.Calm = true, now+allyStay, now
-	h.Letter("good", "Military aid", fmt.Sprintf("%d fighters of %s have come to help defend the colony. They will fight any raiders and hostile animals, and go home once all is quiet, within a day.",
-		len(ids), f.Name), ids[0])
+	h.Letter("good", "Military aid", ids[0], "%d fighters of %s have come to help defend the colony. They will fight any raiders and hostile animals, and go home once all is quiet, within a day.", len(ids), f.Name)
 	return true
 }
 
@@ -294,7 +293,7 @@ func (a Aid) leave(c *Call) {
 	if f := a.byID(c.Faction); f != nil {
 		name = "The fighters of " + f.Name
 	}
-	h.Letter("info", "Allies leave", name+" are heading home.", first)
+	h.Letter("info", "Allies leave", first, "%s are heading home.", name)
 }
 
 // step runs standing ally r (not leaving) for one tick: keep fighting its
@@ -329,7 +328,7 @@ func (a Aid) gone(r Rec) {
 	if f := ofRef(h.Factions(), r.Faction); f != nil {
 		of = " of " + f.Name
 	}
-	h.Letter("caution", "Ally killed", fmt.Sprintf("%s%s fell defending the colony.", h.Name(r.ID), of), r.ID)
+	h.Letter("caution", "Ally killed", r.ID, "%s%s fell defending the colony.", h.Name(r.ID), of)
 }
 
 // RaidTarget is what a raider goes for from (x, y): the nearest standing

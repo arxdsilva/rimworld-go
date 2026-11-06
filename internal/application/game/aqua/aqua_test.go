@@ -1,6 +1,7 @@
 package aqua
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -47,8 +48,10 @@ func newFake() *fake {
 		owners: map[entity.EntityID]entity.EntityID{}, putOff: map[entity.EntityID]bool{}, work: 1}
 }
 
-func (f *fake) Now() uint64                { return f.now }
-func (f *fake) Message(_, _ int, s string) { f.msgs = append(f.msgs, s) }
+func (f *fake) Now() uint64 { return f.now }
+func (f *fake) Message(_, _ int, format string, args ...any) {
+	f.msgs = append(f.msgs, fmt.Sprintf(format, args...))
+}
 func (f *fake) Tank(id entity.EntityID) (int, int, bool) {
 	p, ok := f.tanks[id]
 	return p[0], p[1], ok

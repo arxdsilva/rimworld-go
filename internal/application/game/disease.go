@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Diseases (MED-04). From day 15 the nature storyteller (incidents.go)
@@ -160,19 +160,18 @@ func (g *Game) diseaseLetter(k body.CondKind, victims []entity.EntityID) {
 	default:
 		who = strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 	}
-	var text string
+	var m msgfmt.Text // awayNote (caravan_medical.go, WS-M): who is off on a caravan
 	if d.CureTendSum > 0 {
-		text = fmt.Sprintf("%s has %s. They build no immunity and never kill, but stay until tended away: tends adding up to %d%% quality, one every %d hours.",
-			who, d.Label, d.CureTendSum/10, d.TendEvery)
+		m = msgfmt.Of("%s has %s. They build no immunity and never kill, but stay until tended away: tends adding up to %d%% quality, one every %d hours.%s",
+			who, d.Label, d.CureTendSum/10, d.TendEvery, g.awayNote(victims))
 	} else {
 		verb := "has"
 		if len(names) > 1 {
 			verb = "have"
 		}
-		text = fmt.Sprintf("%s %s caught %s. It races their immunity and can kill: keep them in bed and tended every %d hours, with the best medicine and doctor you have.",
-			who, verb, d.Label, d.TendEvery)
+		m = msgfmt.Of("%s %s caught %s. It races their immunity and can kill: keep them in bed and tended every %d hours, with the best medicine and doctor you have.%s",
+			who, verb, d.Label, d.TendEvery, g.awayNote(victims))
 	}
-	text += g.awayNote(victims) // caravan_medical.go (WS-M): who is off on a caravan
 	title := strings.ToUpper(d.Label[:1]) + d.Label[1:]
 	pos, on := g.positions.Get(victims[0])
 	focus := victims[0]
@@ -180,7 +179,7 @@ func (g *Game) diseaseLetter(k body.CondKind, victims []entity.EntityID) {
 		pos.X, pos.Y = g.home()
 		focus = 0
 	}
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Focus: focus,
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: m, X: pos.X, Y: pos.Y, Focus: focus,
 		Letter: true, Title: title, Kind: letterCaution})
 }
 

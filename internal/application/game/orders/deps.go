@@ -29,8 +29,9 @@ type Buildings interface {
 	// Claimed: building id became the colony's (rooms, links, the Home
 	// area follow it).
 	Claimed(id entity.EntityID)
-	// Message posts a quiet message at (x, y).
-	Message(x, y int, text string)
+	// Message posts a quiet message at (x, y), a format and args (the
+	// catalog's key, OPT-001).
+	Message(x, y int, format string, args ...any)
 	// Defending counts a settlement's defenders on their feet on this map
 	// (Claim: its doors wait for the defeat, MAP-17).
 	Defending() int

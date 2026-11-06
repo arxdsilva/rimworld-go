@@ -97,9 +97,9 @@ func (ts *Tanks) Phase() {
 		e.Tank, out = e.Tank.Step(clock.TicksPerHour, ts.conditions(e.ID, x, y))
 		switch {
 		case out.Died:
-			ts.h.Message(x, y, diedText(s, out.Cause))
+			ts.h.Message(x, y, "%s", diedText(s, out.Cause))
 		case out.Warn:
-			ts.h.Message(x, y, dyingText(s, out.Cause))
+			ts.h.Message(x, y, "%s", dyingText(s, out.Cause))
 		}
 	}
 }

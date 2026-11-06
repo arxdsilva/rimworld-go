@@ -56,7 +56,7 @@ func (s *Stripping) Do(id entity.EntityID, j job.Record) {
 		x, y, _ := h.Pos(t)
 		v, _ := h.Vital(t)
 		if !s.g.StripGear(t) {
-			h.Message(x, y, c.personName(t)+" has nothing to strip.")
+			h.Message(x, y, "%s has nothing to strip.", c.personName(t))
 		} else if v.Status == health.Downed && c.gu != nil && c.gu.IsGuest(t) && c.gu.FactionOf(t) != 0 {
 			c.gu.Goodwill(c.gu.FactionOf(t), StripGoodwill, "stripped a downed guest")
 		}

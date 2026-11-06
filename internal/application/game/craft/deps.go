@@ -118,8 +118,9 @@ type Output interface {
 	DropMeal(cook entity.EntityID, bench construction.Kind, st item.Stack, x, y int)
 	// Cremate burns body on pyre with the recipe's wood.
 	Cremate(pyre, body entity.EntityID, d recipe.Def)
-	// Message posts a plain message at (x, y).
-	Message(x, y int, text string)
+	// Message posts a plain message at (x, y), a format and args (the
+	// catalog's key, OPT-001).
+	Message(x, y int, format string, args ...any)
 	// Store has carrier take the stack of kind k lying at (x, y) to the
 	// best stockpile (zone 0) or to stockpile zone: a haul job replacing
 	// its current one. False when there is no such stack or no room.

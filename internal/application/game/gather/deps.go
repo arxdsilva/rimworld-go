@@ -86,9 +86,10 @@ type Tidings interface {
 	Name(id entity.EntityID) string
 	Bio(id entity.EntityID) (pawngen.Pawn, bool)
 	SetSurname(id entity.EntityID, last string)
-	// Note posts a message, GoodLetter a good letter, at (x, y).
-	Note(text string, x, y int, focus entity.EntityID)
-	GoodLetter(title, text string, x, y int, focus entity.EntityID)
+	// Note posts a message, GoodLetter a good letter, at (x, y): the text
+	// a format and args (the catalog's key, OPT-001).
+	Note(x, y int, focus entity.EntityID, format string, args ...any)
+	GoodLetter(title string, x, y int, focus entity.EntityID, format string, args ...any)
 	RomanceLetter(title, text string, focus entity.EntityID)
 	History(kind, text string, a, b entity.EntityID)
 	// Roll draws from the social stream.

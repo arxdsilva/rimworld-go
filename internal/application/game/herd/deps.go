@@ -24,8 +24,9 @@ type World interface {
 	Now() uint64
 	// Roll is a uniform draw in [0, n) from the simulation's stream.
 	Roll(n int) int
-	// Message posts a quiet message at (x, y).
-	Message(x, y int, text string)
+	// Message posts a quiet message at (x, y), a format and args (the
+	// catalog's key, OPT-001).
+	Message(x, y int, format string, args ...any)
 	// Name is colonist id's name.
 	Name(id entity.EntityID) string
 	// Animals is colonist id's Animals skill level.

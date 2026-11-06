@@ -339,7 +339,7 @@ func (h ordersHost) Building(id entity.EntityID) (construction.Building, bool) {
 }
 func (h ordersHost) SetBuilding(id entity.EntityID, b construction.Building) { h.g.bldgs.Set(id, b) }
 func (h ordersHost) Seen(x, y int) bool                                      { return !h.g.fogged(x, y) }
-func (h ordersHost) Message(x, y int, text string)                           { h.g.message(x, y, "%s", text) }
+func (h ordersHost) Message(x, y int, format string, args ...any)            { h.g.message(x, y, format, args...) }
 func (h ordersHost) Claimed(id entity.EntityID) {
 	b, _ := h.g.bldgs.Get(id)
 	h.g.autoHome(b.Kind, b.Facing, b.X, b.Y) // home.go: claimed, it joins the Home area (wiki)

@@ -103,7 +103,7 @@ func (o caskets) doEnter(id entity.EntityID, j job.Record) {
 	}
 	o.s.setSleeper(j.Target, id)
 	b, _ := o.h.Building(j.Target)
-	o.h.Message(b.X, b.Y, o.h.Name(id)+" lay down in the stasis casket.")
+	o.h.Message(b.X, b.Y, "%s lay down in the stasis casket.", o.h.Name(id))
 	o.h.Changed()
 }
 
@@ -141,7 +141,7 @@ func (o caskets) doCarry(id entity.EntityID, j job.Record) {
 		return
 	default:
 		o.s.setSleeper(j.Dest, j.Carry)
-		o.h.Message(b.X, b.Y, o.h.Name(j.Carry)+" was laid in the stasis casket.")
+		o.h.Message(b.X, b.Y, "%s was laid in the stasis casket.", o.h.Name(j.Carry))
 	}
 	o.end(id, j, 0)
 	o.h.Changed()
@@ -157,7 +157,7 @@ func (o caskets) eject(id entity.EntityID, x, y int) {
 	delete(o.s.caskets, id)
 	if cx, cy, ok := o.h.WalkableNear(x, y, 4); ok && o.h.Unstash(p, cx, cy) {
 		o.h.Sicken(p) // an animal is left alone (the game sickens people only)
-		o.h.Message(cx, cy, o.h.Name(p)+" came out of the stasis casket.")
+		o.h.Message(cx, cy, "%s came out of the stasis casket.", o.h.Name(p))
 	}
 	o.h.Changed()
 }

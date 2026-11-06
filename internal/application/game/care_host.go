@@ -194,4 +194,4 @@ func (h careEvents) Rescued(rescuer, patient entity.EntityID) {
 func (h careEvents) TendedBy(patient, doctor entity.EntityID) {
 	h.g.logPair(patient, doctor, logTendedBy, logTended, 0, 0)
 }
-func (h careEvents) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
+func (h careEvents) Message(x, y int, format string, args ...any) { h.g.message(x, y, format, args...) }

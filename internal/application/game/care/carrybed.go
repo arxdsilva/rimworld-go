@@ -90,7 +90,7 @@ func (c *Care) setOff(id entity.EntityID, j job.Record, trip bedTrip) (job.Recor
 	if bid == 0 || !h.Claim(id, bid) {
 		if trip != tripRescue {
 			tx, ty, _ := h.Pos(t)
-			h.Message(tx, ty, "No free prisoner bed for "+c.pr.PersonName(t)+".")
+			h.Message(tx, ty, "No free prisoner bed for %s.", c.pr.PersonName(t))
 		}
 		j.State, j.Fail = job.Fail, job.Reserved
 		h.SetJob(id, j)

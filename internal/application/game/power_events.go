@@ -1,10 +1,9 @@
 package game
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // PLAY-021 EVENTS: the two power events of the Nature pool. Both fit only
@@ -54,7 +53,7 @@ func (g *Game) startSolarFlare(now uint64) bool {
 	g.setFlare(now + uint64(hours)*clock.TicksPerHour) // power.go: everything is down until then
 	x, y := g.home()
 	g.post(MessageView{Tick: now, X: x, Y: y, Letter: true, Title: "Solar flare", Kind: letterCaution,
-		Text: fmt.Sprintf("A solar flare is washing over the land. Every electrical device will stop for about %d hours, "+
+		Msg: msgfmt.Of("A solar flare is washing over the land. Every electrical device will stop for about %d hours, "+
 			"and the batteries will hold what they have. Torches and campfires keep burning.", hours)})
 	return true
 }

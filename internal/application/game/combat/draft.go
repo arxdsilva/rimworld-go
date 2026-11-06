@@ -2,7 +2,6 @@ package combat
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -218,7 +217,7 @@ func (d *Drafts) Throw(id entity.EntityID, x, y int) bool {
 	h.Interrupt(id, job.Cancelled)
 	if !weapon.ReachesAt(def, px, py, x, y) {
 		if !h.StartJob(id, job.Record{Kind: job.Move, TX: x, TY: y, Forced: true}) {
-			h.Message(px, py, fmt.Sprintf("%s can't get close enough to throw.", h.Name(id)))
+			h.Message(px, py, "%s can't get close enough to throw.", h.Name(id))
 			return false
 		}
 		d.queue = append(d.queue, Throw{ID: id, X: x, Y: y, Walk: true})

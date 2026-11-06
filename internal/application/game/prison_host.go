@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // prisonHost implements prison.Host (prison/deps.go) over the game: the
@@ -109,8 +110,7 @@ func (h prisonWarden) Recruit(p, w entity.EntityID) {
 	g.enlist(p)
 	g.addOpinionMemory(p, w, social.MemRecruitedMe, now)
 	pos, _ := g.positions.Get(p)
-	text := g.personName(p) + " has joined the colony, won over by " + g.personName(w) + "."
-	g.post(MessageView{Tick: now, Text: text, X: pos.X, Y: pos.Y, Focus: p, Letter: true, Title: "Recruited", Kind: letterGood})
+	text := g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s has joined the colony, won over by %s.", g.personName(p), g.personName(w)), X: pos.X, Y: pos.Y, Focus: p, Letter: true, Title: "Recruited", Kind: letterGood})
 	g.addHistory("recruit", text, p, w)
 }
 

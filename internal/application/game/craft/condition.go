@@ -143,7 +143,7 @@ func (c *Condition) wearOutfits(hour uint64) {
 				continue
 			}
 			x, y, _ := h.Pos(id)
-			h.Message(x, y, fmt.Sprintf("%s's %s wore out.", name, p.Kind))
+			h.Message(x, y, "%s's %s wore out.", name, p.Kind)
 			*p = Piece{}
 			o.SetForced(item.Slot(s), false)
 		}
@@ -179,7 +179,7 @@ func (c *Condition) flush(text func(loss) string) {
 		c.h.DeleteItem(id)
 	}
 	for _, l := range c.lost {
-		c.h.Message(l.x, l.y, text(l))
+		c.h.Message(l.x, l.y, "%s", text(l))
 	}
 	c.gone, c.lost = c.gone[:0], c.lost[:0]
 }

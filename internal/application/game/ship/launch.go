@@ -25,7 +25,7 @@ func (s *State) Launch(h Host, id entity.EntityID) []string {
 	}
 	if issues := s.Issues(sh, h.Now()); len(issues) > 0 {
 		b, _ := h.Building(id)
-		h.Message(b.X, b.Y, "The ship can't launch yet: "+strings.Join(issues, "; ")+".")
+		h.Message(b.X, b.Y, "The ship can't launch yet: %s.", strings.Join(issues, "; "))
 		return issues
 	}
 	cx, cy := centre(h, sh)
@@ -44,9 +44,7 @@ func (s *State) Launch(h Host, id entity.EntityID) []string {
 	s.nextRaid = 0
 	s.launched, s.launchAt = true, h.Now()
 	s.escaped = append(s.escaped, names...)
-	h.Letter(LaunchTitle,
-		"Fire blooms under the engines and the ship climbs out of the sky, its sleepers dreaming of a world far from here: "+
-			strings.Join(names, ", ")+". This colony's story is complete.", cx, cy, false)
+	h.Letter(LaunchTitle, cx, cy, false, "Fire blooms under the engines and the ship climbs out of the sky, its sleepers dreaming of a world far from here: %s. This colony's story is complete.", strings.Join(names, ", "))
 	h.Changed()
 	return nil
 }

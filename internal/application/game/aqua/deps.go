@@ -18,8 +18,9 @@ type Host interface {
 // World is the clock and the player's messages.
 type World interface {
 	Now() uint64
-	// Message posts a quiet message at (x, y).
-	Message(x, y int, text string)
+	// Message posts a quiet message at (x, y), a format and args (the
+	// catalog's key, OPT-001).
+	Message(x, y int, format string, args ...any)
 }
 
 // Site reads the tank buildings and the world around them.

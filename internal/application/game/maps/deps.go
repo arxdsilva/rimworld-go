@@ -122,10 +122,11 @@ type Freight interface {
 
 // Post is the letters and messages.
 type Post interface {
-	// Letter posts a letter at the colony (caution: a bad one).
-	Letter(caution bool, title, text string, focus entity.EntityID)
-	// Note posts a plain message at the colony.
-	Note(text string)
+	// Letter posts a letter at the colony (caution: a bad one), its text
+	// a format and args (the catalog keys it on format, OPT-001).
+	Letter(caution bool, title string, focus entity.EntityID, format string, args ...any)
+	// Note posts a plain message at the colony (a format, as Letter).
+	Note(format string, args ...any)
 }
 
 // Road is life on the road: hunger, talk and the medic.

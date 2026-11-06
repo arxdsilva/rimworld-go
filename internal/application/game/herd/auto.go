@@ -1,7 +1,6 @@
 package herd
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/animal"
@@ -137,7 +136,7 @@ func (au *Auto) cull(s animal.Species, c Caps) int {
 		}
 	}
 	if marked > 0 {
-		h.Message(x, y, fmt.Sprintf("Auto-slaughter (%s): %d marked for slaughter.", s.Label(), marked))
+		h.Message(x, y, "Auto-slaughter (%s): %d marked for slaughter.", s.Label(), marked)
 	}
 	return marked
 }

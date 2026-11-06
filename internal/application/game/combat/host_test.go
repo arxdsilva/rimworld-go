@@ -291,7 +291,9 @@ func (f *fakeHost) Shot(t entity.EntityID, hit bool, _ int, by string) {
 func (f *fakeHost) Trapped(v entity.EntityID, dmg int) {
 	f.logs = append(f.logs, fmt.Sprintf("trap %d %d", v, dmg))
 }
-func (f *fakeHost) Message(_, _ int, text string) { f.msgs = append(f.msgs, text) }
+func (f *fakeHost) Message(_, _ int, format string, args ...any) {
+	f.msgs = append(f.msgs, fmt.Sprintf(format, args...))
+}
 func (f *fakeHost) Burst(_, _ int, _ uint64, b explosion.Def) {
 	f.bursts++
 	f.blasts = append(f.blasts, b)

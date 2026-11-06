@@ -1,8 +1,6 @@
 package craft
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -120,7 +118,7 @@ func (a *Art) make(id entity.EntityID, j job.Record, b construction.Building, d 
 		who = "Someone"
 	}
 	l, _ := quality.FromStored(q)
-	h.Message(x, y, fmt.Sprintf("%s finished %q, a %s %s.", who, ArtTitle(p.Seed), l, construction.DefOf(d.Builds).Name))
+	h.Message(x, y, "%s finished %q, a %s %s.", who, ArtTitle(p.Seed), l, construction.DefOf(d.Builds).Name)
 	return true
 }
 

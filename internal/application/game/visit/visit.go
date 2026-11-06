@@ -1,7 +1,6 @@
 package visit
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/application/game/raid"
@@ -134,7 +133,7 @@ func (v Visits) Arrive(now uint64) bool {
 	if len(ids) == 0 {
 		return false
 	}
-	h.Letter("info", "Visitors", fmt.Sprintf("%d people of %s have come to visit. They will stay about half a day.", len(ids), f.Name), ids[0])
+	h.Letter("info", "Visitors", ids[0], "%d people of %s have come to visit. They will stay about half a day.", len(ids), f.Name)
 	if kin != 0 {
 		h.RelativeLetter(kin, "visitors from "+f.Name)
 	}

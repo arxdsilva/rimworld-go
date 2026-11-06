@@ -1,7 +1,6 @@
 package travel
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -46,7 +45,7 @@ func (o pods) cmdLoad(c command.Command) {
 	}
 	o.s.wants[gr.leader] = &m
 	if left > 0 {
-		o.h.Message(b.X, b.Y, fmt.Sprintf("Too heavy for the pods: %d picks were left behind.", left))
+		o.h.Message(b.X, b.Y, "Too heavy for the pods: %d picks were left behind.", left)
 	}
 	o.h.Changed()
 }

@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/mathx"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Animal gaits (PLAY-022, AnimalView.Gait): wandering, grazing and penned
@@ -774,7 +775,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		}
 		if c := entity.EntityID(a.Bond); c != 0 && g.isPawn(c) {
 			// a bonded companion is a letter about the colonist who lost it
-			g.pawnLetter(letterCaution, "Bonded animal died", fmt.Sprintf("%s %s has lost a bonded companion.", text, g.personName(c)), c)
+			pawnLetterf(g, letterCaution, "Bonded animal died", c, "%s %s has lost a bonded companion.", text, g.personName(c))
 		} else {
 			g.message(pos.X, pos.Y, "%s", text)
 		}
@@ -794,7 +795,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	k, ok := g.animals.Get(by)
 	if ok && !animal.IsMech(a.Species) && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) { // a wreck is no meal
 		if k.Tame && k.HuntSince != 0 { // a quiet line: the colony's hunter fed itself
-			g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf("%s hunted %s.", animalLabel(k), withArticle(a.Species.Label())),
+			g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of("%s hunted %s.", animalLabel(k), withArticle(a.Species.Label())),
 				X: pos.X, Y: pos.Y, Focus: by})
 		}
 		g.feedOnKill(by, &k, corpse, pos) // animal_needs.go

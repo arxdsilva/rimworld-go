@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/storyteller"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // The storyteller of a setup colony (NG-1 §5.2, §5.3). Owned by SETUP.
@@ -451,15 +452,15 @@ func (h shipHost) Raid(mech bool) {
 		g.scaledRaid(day)
 	}
 }
-func (h shipHost) Letter(title, text string, x, y int, danger bool) {
+func (h shipHost) Letter(title string, x, y int, danger bool, format string, args ...any) {
 	if danger {
-		h.g.threat(title, x, y, "%s", text)
+		h.g.threat(title, x, y, format, args...)
 		return
 	}
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
 }
-func (h shipHost) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
-func (h shipHost) Changed()                      { h.g.viewGen++ }
+func (h shipHost) Message(x, y int, format string, args ...any) { h.g.message(x, y, format, args...) }
+func (h shipHost) Changed()                                     { h.g.viewGen++ }
 
 // DevWakeShip moves the reactors' countdowns and the next raid on by ticks (dev mode, journeys).
 func DevWakeShip(g *Game, ticks uint64) {

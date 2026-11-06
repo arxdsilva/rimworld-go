@@ -146,7 +146,7 @@ func (o Ops) portion(b construction.Building) {
 	kind, n, out := o.s.take(k)
 	o.h.Drop(kind, n, spot[0], spot[1])
 	if _, more := o.s.nearestOre(b.X, b.Y, w); out && !more {
-		o.h.Letter("Deep ore exhausted", "The deep drill has brought up all the "+kind.String()+" in its reach. It brings up stone chunks from now on.", b.X, b.Y)
+		o.h.Letter("Deep ore exhausted", b.X, b.Y, "The deep drill has brought up all the %s in its reach. It brings up stone chunks from now on.", kind.String())
 	}
 	o.h.Changed()
 }

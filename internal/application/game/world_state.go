@@ -34,6 +34,7 @@ import (
 	"rimworld-go/internal/domain/world/planet"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/msgfmt"
 	"rimworld-go/pkg/randx"
 )
 
@@ -179,8 +180,14 @@ func (g *Game) phaseWorld() {
 
 // letter posts a world letter titled title (shown once, jump to the home).
 func (g *Game) letter(kind, title, text string, focus entity.EntityID) {
+	letterf(g, kind, title, focus, msgfmt.Plain(text))
+}
+
+// letterf is letter with its text as a format and args, the catalog's key
+// (OPT-001). It returns the text.
+func letterf(g *Game, kind, title string, focus entity.EntityID, format string, args ...any) string {
 	x, y := g.home()
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: kind})
+	return g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: kind})
 }
 
 // worldNote posts a plain message at the colony (a refused order).
@@ -246,7 +253,7 @@ func dieAway(g *Game, id entity.EntityID, cause health.Cause) {
 	if c != nil {
 		c.C.Members = slices.DeleteFunc(c.C.Members, func(m uint64) bool { return m == uint64(id) })
 	}
-	g.letter(letterCaution, "Death on the road", g.personName(id)+" died on the caravan's journey.", 0)
+	letterf(g, letterCaution, "Death on the road", 0, "%s died on the caravan's journey.", g.personName(id))
 }
 
 // worldEdge is a walkable map-edge tile from which the colony can be
@@ -531,14 +538,14 @@ func (h mapsGround) HomeSpot(i int) (int, int, bool) {
 	o := ringOffsets[i%len(ringOffsets)]
 	return h.g.combat.Tiles.WalkableNear(hx+o[0]/2, hy+o[1]/2, 3)
 }
-func (h mapsGround) Letter(caution bool, title, text string, focus entity.EntityID) {
+func (h mapsGround) Letter(caution bool, title string, focus entity.EntityID, format string, args ...any) {
 	kind := letterInfo
 	if caution {
 		kind = letterCaution
 	}
-	h.g.letter(kind, title, text, focus)
+	letterf(h.g, kind, title, focus, format, args...)
 }
-func (h mapsGround) Note(text string) { h.g.worldNote("%s", text) }
+func (h mapsGround) Note(format string, args ...any) { h.g.worldNote(format, args...) }
 
 type mapsGlobe struct{ g *Game }
 
@@ -970,9 +977,9 @@ func (h mapsWaylay) Hunt(seed uint64, n int) {
 	g.manhunterPack(n)
 	g.rng = rng
 }
-func (h mapsWaylay) DemandLetter(title, text string) uint64 {
+func (h mapsWaylay) DemandLetter(title, format string, args ...any) uint64 {
 	g := h.g
-	g.letter(letterThreat, title, text, 0)
+	letterf(g, letterThreat, title, 0, format, args...)
 	l := &g.letters.list[len(g.letters.list)-1]
 	l.Demand = true
 	return l.ID

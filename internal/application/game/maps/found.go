@@ -118,7 +118,7 @@ func (l Lifecycle) settle(r Request, now uint64) {
 		return
 	}
 	if why := f.FoundReason(r.Tile); why != "" {
-		f.h.Note(why)
+		f.h.Note("%s", why)
 		return
 	}
 	id, ok := f.mapAt(r.Tile)
@@ -135,7 +135,7 @@ func (l Lifecycle) settle(r Request, now uint64) {
 	f.h.StartHome()
 	cid := entity.EntityID(c.C.ID)
 	if names := f.walkIn(c); len(names) > 0 {
-		f.h.Letter(false, "Colony founded", fmt.Sprintf("%s founded a new colony.", travel.JoinNames(names)), entity.EntityID(c.C.Members[0]))
+		f.h.Letter(false, "Colony founded", entity.EntityID(c.C.Members[0]), "%s founded a new colony.", travel.JoinNames(names))
 	}
 	f.drop(cid)
 }
@@ -155,7 +155,7 @@ func (l Lifecycle) abandon(id uint32) {
 		if f.h.Switch(0) {
 			f.h.Wipe()
 		}
-		f.h.Letter(true, "Colony abandoned", "Nothing is left of the colony. Only those still on the road remain.", 0)
+		f.h.Letter(true, "Colony abandoned", 0, "Nothing is left of the colony. Only those still on the road remain.")
 		return
 	}
 	next := f.a.Maps[i]
@@ -170,5 +170,5 @@ func (l Lifecycle) abandon(id uint32) {
 	}
 	l.close(next.ID) // the old first map, under its new id
 	f.h.Switch(0)
-	f.h.Letter(true, "Colony abandoned", "The colony was abandoned; whatever was left there is lost.", 0)
+	f.h.Letter(true, "Colony abandoned", 0, "The colony was abandoned; whatever was left there is lost.")
 }

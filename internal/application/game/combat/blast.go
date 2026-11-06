@@ -2,7 +2,6 @@ package combat
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -332,7 +331,7 @@ func (b *Blasts) cookOffNow(f Fuse) {
 		return
 	}
 	b.debris.DropStack(f.ID)
-	b.h.Message(st.X, st.Y, fmt.Sprintf("The %s cooked off.", st.Kind))
+	b.h.Message(st.X, st.Y, "The %s cooked off.", st.Kind)
 	b.Explode(0, wk, st.X, st.Y, weapon.DefOf(wk).Blast)
 }
 

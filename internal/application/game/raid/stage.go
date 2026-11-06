@@ -80,7 +80,7 @@ func (rs *Raiders) storm(gi, x, y int, now uint64, text string) {
 			}
 		}
 	}
-	rs.h.Threat(title, x, y, text)
+	rs.h.Threat(title, x, y, "%s", text)
 	rs.log(text)
 }
 

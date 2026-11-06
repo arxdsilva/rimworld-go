@@ -650,12 +650,16 @@ func joyOffHash(seed uint64, ticks int) (uint64, *Game) {
 // Re-pinned (CI-002): seed 1 was taken on arm64, where the weather fused x*y+z
 // and rounded differently. That commit on amd64 gives the value below, and with
 // the fusion gone from the per-tick code both architectures do.
+//
+// Re-pinned (OPT-001 Wave 4): saved messages and letters carry Msg, their
+// catalog key and args. With Msg blanked in the hash the old pins
+// (0xee2b9d9d5399d8ac, 0xf54cac3f8e33e07f) hold, so nothing else moved.
 func TestHabitsOffKeepTheHash(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
 		seed uint64
 		want uint64
-	}{{1, 0xee2b9d9d5399d8ac}, {2, 0xf54cac3f8e33e07f}} {
+	}{{1, 0x945881ff21cf1bc4}, {2, 0x1cf56df832cd860}} {
 		h, g := joyOffHash(c.seed, 30000)
 		if h != c.want {
 			t.Errorf("seed %d: hash %#x, want %#x", c.seed, h, c.want)

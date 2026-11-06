@@ -39,9 +39,7 @@ func (s *State) Start(h Host, id entity.EntityID) string {
 	if s.nextRaid == 0 {
 		s.nextRaid = now + FirstRaid
 	}
-	h.Letter("Ship reactor waking",
-		"The reactor hums awake. In "+Duration(CountdownTicks)+" it will be ready to lift the ship, and until then its call carries far: "+
-			"raiders and machines will come for it again and again. Defend it, for if it falls the waking is lost.", b.X, b.Y, true)
+	h.Letter("Ship reactor waking", b.X, b.Y, true, "The reactor hums awake. In %s it will be ready to lift the ship, and until then its call carries far: raiders and machines will come for it again and again. Defend it, for if it falls the waking is lost.", Duration(CountdownTicks))
 	h.Changed()
 	return ""
 }
@@ -66,7 +64,7 @@ func (s *State) Tick(h Host) {
 		if r.left(now) == 0 {
 			if !r.Told {
 				r.Told = true
-				h.Letter("Ship reactor ready", "The reactor is fully awake. Once every part is in place and someone sleeps in a casket, the ship can launch.", b.X, b.Y, false)
+				h.Letter("Ship reactor ready", b.X, b.Y, false, "The reactor is fully awake. Once every part is in place and someone sleeps in a casket, the ship can launch.")
 				h.Changed()
 			}
 		} else {

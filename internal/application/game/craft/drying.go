@@ -1,8 +1,6 @@
 package craft
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -72,7 +70,7 @@ func (d *Drying) Advance(interval int) {
 		delete(d.racks, bid)
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		d.h.DropStackOf(item.Stack{Kind: rb.Kind, Qty: rb.Qty, Dried: true}, spot[0], spot[1])
-		d.h.Message(spot[0], spot[1], fmt.Sprintf("%d dried %s ready", rb.Qty, rb.Kind))
+		d.h.Message(spot[0], spot[1], "%d dried %s ready", rb.Qty, rb.Kind)
 	}
 }
 

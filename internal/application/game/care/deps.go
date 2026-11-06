@@ -179,8 +179,9 @@ type Events interface {
 	Rescued(rescuer, patient entity.EntityID)
 	// TendedBy: doctor finished tending patient.
 	TendedBy(patient, doctor entity.EntityID)
-	// Message shows the player text at tile (x, y).
-	Message(x, y int, text string)
+	// Message shows the player text at tile (x, y), a format and args
+	// (the catalog's key, OPT-001).
+	Message(x, y int, format string, args ...any)
 }
 
 // Prison is what capture and arrest need from the simulation (SIM-062).

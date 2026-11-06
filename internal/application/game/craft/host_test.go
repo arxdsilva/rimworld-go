@@ -206,8 +206,8 @@ func (f *fakeHost) Cremate(pyre, body entity.EntityID, d recipe.Def) {
 	f.DeleteItem(body)
 }
 func (f *fakeHost) ButcheredHuman(b entity.EntityID) { f.butchered = append(f.butchered, b) }
-func (f *fakeHost) Message(x, y int, text string) {
-	f.msgs = append(f.msgs, fmt.Sprintf("%d,%d %s", x, y, text))
+func (f *fakeHost) Message(x, y int, format string, args ...any) {
+	f.msgs = append(f.msgs, fmt.Sprintf("%d,%d %s", x, y, fmt.Sprintf(format, args...)))
 }
 
 func (f *fakeHost) PawnIDs() []entity.EntityID { return f.pawns }

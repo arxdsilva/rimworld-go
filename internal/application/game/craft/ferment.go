@@ -1,8 +1,6 @@
 package craft
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -88,11 +86,11 @@ func (d *Drying) ferment(bid entity.EntityID, b construction.Building, rb Batch,
 	switch {
 	case rb.Rot >= RuinTicks:
 		delete(d.racks, bid)
-		d.h.Message(spot[0], spot[1], fmt.Sprintf("%d wort spoiled in a fermenting barrel", rb.Qty))
+		d.h.Message(spot[0], spot[1], "%d wort spoiled in a fermenting barrel", rb.Qty)
 	case rb.Left <= 0:
 		delete(d.racks, bid)
 		d.h.DropStack(item.Beer, rb.Qty, spot[0], spot[1])
-		d.h.Message(spot[0], spot[1], fmt.Sprintf("%d beer ready", rb.Qty))
+		d.h.Message(spot[0], spot[1], "%d beer ready", rb.Qty)
 	default:
 		d.racks[bid] = rb
 	}

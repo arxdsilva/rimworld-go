@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // breakState is a colonist's mental break: its kind and end tick. It stays
@@ -276,8 +277,7 @@ func (h mindEvents) FightStarted(starter, other entity.EntityID) {
 	g.logEvent(starter, logEntry{Kind: logMental, Name: label, Other: other})
 	g.logEvent(other, logEntry{Kind: logMental, Name: label, Other: starter})
 	pos, _ := g.positions.Get(starter)
-	text := fmt.Sprintf("%s and %s are fighting!", g.name(starter), g.name(other))
-	g.post(MessageView{Tick: now, Text: text, X: pos.X, Y: pos.Y, Danger: true, Focus: starter, Letter: true, Title: "Social fight", Kind: letterCaution})
+	g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s and %s are fighting!", g.name(starter), g.name(other)), X: pos.X, Y: pos.Y, Danger: true, Focus: starter, Letter: true, Title: "Social fight", Kind: letterCaution})
 	g.addHistory("fight", fmt.Sprintf("%s got into a fight with %s.", g.name(starter), g.name(other)), starter, other)
 }
 func (h mindEvents) Outcome(f, other entity.EntityID) {
@@ -328,8 +328,8 @@ func (h mindMuses) SkillLevel(id entity.EntityID, sk skill.ID) uint8 {
 	return h.g.skillOf(id, sk).Level
 }
 func (h mindMuses) Inspired(id entity.EntityID, label string) {
-	h.g.letter(letterGood, "Inspiration", fmt.Sprintf("%s has %s: the next thing %s makes or builds turns out better.",
-		h.g.personName(id), label, h.g.personName(id)), id)
+	letterf(h.g, letterGood, "Inspiration", id, "%s has %s: the next thing %s makes or builds turns out better.",
+		h.g.personName(id), label, h.g.personName(id))
 }
 func (h mindMuses) InspirationEnded(id entity.EntityID, label string) {
 	p, _ := h.g.positions.Get(id)

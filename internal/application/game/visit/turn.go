@@ -59,7 +59,7 @@ func (v Visits) turnGroup(list []Rec, ref int, first entity.EntityID, name strin
 	if v.h.TraderTurned(ref) {
 		text += " Its trader will not deal with you now."
 	}
-	v.h.Letter("caution", TurnedTitle, text, first)
+	v.h.Letter("caution", TurnedTitle, first, "%s", text)
 }
 
 // walkOut runs an enemy for one tick: the raid AI walks it out and strikes

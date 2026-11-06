@@ -45,7 +45,7 @@ func (s *State) Do(h Host, pawn entity.EntityID, j job.Record) {
 		return
 	}
 	s.setSleeper(j.Target, pawn)
-	h.Message(b.X, b.Y, h.Name(pawn)+" lies down in a ship stasis casket and sleeps.")
+	h.Message(b.X, b.Y, "%s lies down in a ship stasis casket and sleeps.", h.Name(pawn))
 	h.Changed()
 }
 
@@ -94,7 +94,7 @@ func (s *State) LayIn(h Host, pawn, id entity.EntityID) bool {
 	}
 	s.setSleeper(id, pawn)
 	b, _ := h.Building(id)
-	h.Message(b.X, b.Y, h.Name(pawn)+" was laid in a ship stasis casket.")
+	h.Message(b.X, b.Y, "%s was laid in a ship stasis casket.", h.Name(pawn))
 	h.Changed()
 	return true
 }

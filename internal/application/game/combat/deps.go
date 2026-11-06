@@ -218,7 +218,9 @@ type Events interface {
 	Shot(target entity.EntityID, hit bool, dmg int, by string)
 	// Trapped: a spike trap dealt dmg to victim.
 	Trapped(victim entity.EntityID, dmg int)
-	Message(x, y int, text string)
+	// Message posts a message at (x, y), a format and args (the catalog's
+	// key, OPT-001).
+	Message(x, y int, format string, args ...any)
 	// Burst is a blast for the renderer: a destroyed turret's (b zero) or
 	// an explosion's (DEF-2); Ignite may set (x, y) alight.
 	Burst(x, y int, tick uint64, b explosion.Def)

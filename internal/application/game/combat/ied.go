@@ -1,8 +1,6 @@
 package combat
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -144,7 +142,7 @@ func (t *Traps) burst(f Fuse) {
 	}
 	h.RemoveBuilding(f.ID)
 	wk, d := iedBlast(f.Kind)
-	h.Message(f.X, f.Y, fmt.Sprintf("A %s went off.", construction.DefOf(f.Kind).Name))
+	h.Message(f.X, f.Y, "A %s went off.", construction.DefOf(f.Kind).Name)
 	t.blasts.Explode(0, wk, f.X, f.Y, d)
 	h.PlaceFrame(f.Kind, b.Stuff, construction.South, f.X, f.Y) // re-lay it
 }

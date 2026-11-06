@@ -1,8 +1,6 @@
 package craft
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/quality"
@@ -86,5 +84,5 @@ func (q *Quality) announce(id entity.EntityID, l quality.Level, what string, x, 
 	if who == "" {
 		who = "Someone"
 	}
-	q.h.Message(x, y, fmt.Sprintf("%s made a %s %s.", who, l, what))
+	q.h.Message(x, y, "%s made a %s %s.", who, l, what)
 }

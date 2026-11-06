@@ -1,6 +1,7 @@
 package prison
 
 import (
+	"fmt"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -133,6 +134,8 @@ func (f *fakeHost) Chat(_, _ entity.EntityID, _ uint64) { f.chats++ }
 func (f *fakeHost) Recruit(p, _ entity.EntityID)        { f.recruited = append(f.recruited, p) }
 func (f *fakeHost) Execute(p, _ entity.EntityID)        { f.executed = append(f.executed, p) }
 func (f *fakeHost) PersonName(entity.EntityID) string   { return "Rid" }
-func (f *fakeHost) Message(_, _ int, text string)       { f.messages = append(f.messages, text) }
+func (f *fakeHost) Message(_, _ int, format string, args ...any) {
+	f.messages = append(f.messages, fmt.Sprintf(format, args...))
+}
 
 var _ Host = (*fakeHost)(nil)

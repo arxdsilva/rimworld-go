@@ -119,9 +119,9 @@ func (h raidGround) Build(kind, stuff, facing string, x, y int) {
 
 type raidEvents struct{ g *Game }
 
-func (h raidEvents) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
-func (h raidEvents) Threat(title string, x, y int, text string) {
-	h.g.threat(title, x, y, "%s", text) // climate.go
+func (h raidEvents) Message(x, y int, format string, args ...any) { h.g.message(x, y, format, args...) }
+func (h raidEvents) Threat(title string, x, y int, format string, args ...any) {
+	h.g.threat(title, x, y, format, args...) // climate.go
 }
 
 type raidWild struct{ g *Game }
@@ -291,7 +291,7 @@ func (h raidKidnap) Off(id, t entity.EntityID) {
 		g.setWhere(t, whereKidnapped)
 		name := g.personName(t)
 		g.socialOnLostAs(t, "kidnapped", name+" was kidnapped by "+by+".") // social_grief.go
-		g.letter(letterThreat, "Kidnapped", name+" was kidnapped by "+by+".", t)
+		letterf(g, letterThreat, "Kidnapped", t, "%s was kidnapped by %s.", name, by)
 	}
 	g.removeRaider(id) // raids.go: off the map, an off-map person again
 	g.invalidateCreatures()

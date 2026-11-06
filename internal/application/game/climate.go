@@ -1,8 +1,6 @@
 package game
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/pkg/msgfmt"
@@ -71,19 +69,26 @@ func (g *Game) growingSeason(x, y int) bool {
 func (g *Game) TemperatureAt(x, y int) int { return int(g.temperatureAt(x, y)) }
 
 func (g *Game) message(x, y int, format string, args ...any) {
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y})
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y})
 }
 
 // threat posts a danger message: a threat has arrived.
 func (g *Game) threat(title string, x, y int, format string, args ...any) {
 	// a major threat is a red letter in the stack too (PLAY-018), and a
 	// danger message the UI may pause for
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y, Danger: true,
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Danger: true,
 		Letter: true, Title: title, Kind: letterThreat})
 }
 
-func (g *Game) post(m MessageView) {
-	m.Map = MapID(g.mapState.id)
+// post posts m and returns its text: a view given only Msg prints it as
+// its Text; one given only Text is keyed on that finished text
+// (msgfmt.Plain; OPT-001).
+func (g *Game) post(m MessageView) string {
+	if m.Map = MapID(g.mapState.id); m.Text == "" {
+		m.Text = m.Msg.String()
+	} else if m.Msg.Format == "" {
+		m.Msg = msgfmt.Make(msgfmt.Plain(m.Text), nil)
+	}
 	if m.Letter {
 		m.Kind = g.addLetter(m) // letters.go: a letter is also kept in the stack
 	}
@@ -91,6 +96,7 @@ func (g *Game) post(m MessageView) {
 	if n := len(g.messages); n > maxMessages {
 		g.messages = append(g.messages[:0:0], g.messages[n-maxMessages:]...)
 	}
+	return m.Text
 }
 
 // phaseClimate rots perishable stacks, moves room temperatures and

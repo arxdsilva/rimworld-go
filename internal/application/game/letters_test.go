@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // PLAY-018 §6: every letter posted becomes a saved letter in the right-side
@@ -47,7 +48,7 @@ func TestLetterPostBecomesLetter(t *testing.T) {
 	}
 	x, y := g.home()
 	want := LetterView{ID: 1, Tick: uint64(g.clock.Now()), Kind: "good", Title: "Wanderer joins",
-		Text: "Bo has asked to join the colony.", X: x, Y: y, Focus: 7}
+		Text: "Bo has asked to join the colony.", Msg: msgfmt.Of("Bo has asked to join the colony."), X: x, Y: y, Focus: 7}
 	if ls[0] != want {
 		t.Fatalf("letter %+v, want %+v", ls[0], want)
 	}
@@ -293,9 +294,9 @@ func TestOldSaveMigratesLetterMessages(t *testing.T) {
 	g.letters = letterState{} // as saved before PLAY-018: messages, no letters
 	h := saveAndLoad(t, g)
 	want := []LetterView{
-		{ID: 1, Tick: 20, Kind: "threat", Title: "Cold snap", Text: "Cold!", X: 5, Y: 6},
-		{ID: 2, Tick: 30, Kind: "good", Title: "Wanderer joins", Text: "Bo joined.", X: 7, Y: 8, Focus: 9},
-		{ID: 3, Tick: 40, Kind: "info", Title: "Caravan departed", Text: "Caravan left.", X: 1, Y: 2},
+		{ID: 1, Tick: 20, Kind: "threat", Title: "Cold snap", Text: "Cold!", Msg: msgfmt.Of("Cold!"), X: 5, Y: 6},
+		{ID: 2, Tick: 30, Kind: "good", Title: "Wanderer joins", Text: "Bo joined.", Msg: msgfmt.Of("Bo joined."), X: 7, Y: 8, Focus: 9},
+		{ID: 3, Tick: 40, Kind: "info", Title: "Caravan departed", Text: "Caravan left.", Msg: msgfmt.Of("Caravan left."), X: 1, Y: 2},
 	}
 	if got := h.World().Letters; !reflect.DeepEqual(got, want) {
 		t.Fatalf("migrated letters\n got %+v\nwant %+v", got, want)

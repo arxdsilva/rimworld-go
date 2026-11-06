@@ -64,8 +64,9 @@ type Colony interface {
 	Seed() uint64
 	// Drop sets n items of kind k down at (x, y), or beside it.
 	Drop(k item.Kind, n, x, y int)
-	// Letter posts a letter (and its message) at (x, y).
-	Letter(title, text string, x, y int)
+	// Letter posts a letter (and its message) at (x, y), its text a
+	// format and args (the catalog's key, OPT-001).
+	Letter(title string, x, y int, format string, args ...any)
 	// Changed is called after a change the views show (the view cache key).
 	Changed()
 }

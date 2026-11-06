@@ -97,8 +97,9 @@ type Arrivals interface {
 	RelativeRoll() bool
 	RelativeFor(ref int, f *faction.Faction) entity.EntityID
 	RelativeLetter(kin entity.EntityID, among string)
-	// Letter posts a letter of kind ("good", "info", "caution").
-	Letter(kind, title, text string, focus entity.EntityID)
+	// Letter posts a letter of kind ("good", "info", "caution"), its text
+	// a format and args (the catalog's key, OPT-001).
+	Letter(kind, title string, focus entity.EntityID, format string, args ...any)
 }
 
 // Fighters is the allies' fight.
@@ -125,8 +126,8 @@ type Carrying interface {
 	PutDown(id entity.EntityID)
 	// Beside is a free tile beside (x, y) that id can stand on.
 	Beside(id entity.EntityID, x, y int) (int, int, bool)
-	// Message posts a map message.
-	Message(x, y int, text string)
+	// Message posts a map message (a format and args, as Letter).
+	Message(x, y int, format string, args ...any)
 }
 
 // Diplomacy is the factions and their request cooldowns.

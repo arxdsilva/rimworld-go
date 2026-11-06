@@ -155,9 +155,9 @@ type Colony interface {
 	Now() uint64
 	Seed() uint64
 	// Letter posts a letter (and its message) at (x, y); Message a plain
-	// message.
-	Letter(title, text string, x, y int)
-	Message(x, y int, text string)
+	// message. The text is a format and args (the catalog's key, OPT-001).
+	Letter(title string, x, y int, format string, args ...any)
+	Message(x, y int, format string, args ...any)
 	// Changed is called after a change the views show.
 	Changed()
 	// Work is one working tick of id: work units done (Intellectual).

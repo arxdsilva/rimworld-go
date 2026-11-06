@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // PLAY-021 generator outputs (FUELGEN owns this file): what each producer
@@ -157,8 +158,8 @@ func (h industryHost) Work(id entity.EntityID, mining bool) int {
 	}
 	return h.g.workProgress(id, skIntellectual, true)
 }
-func (h industryHost) Letter(title, text string, x, y int) {
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
+func (h industryHost) Letter(title string, x, y int, format string, args ...any) {
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
 }
 func (h industryHost) Free(worker, bench entity.EntityID, k job.Kind, sx, sy int) bool {
 	if owner, taken := h.g.reserve.EntityOwner(bench); taken && owner != worker || h.g.postponedFor(worker, k, bench, 0, 0) {

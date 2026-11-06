@@ -120,7 +120,7 @@ type Fate interface {
 	// Execute: warden w kills prisoner p.
 	Execute(p, w entity.EntityID)
 	PersonName(id entity.EntityID) string
-	Message(x, y int, text string)
+	Message(x, y int, format string, args ...any) // a format and args (OPT-001)
 }
 
 // Escapes is a prison break (CBT-4, escape.go).

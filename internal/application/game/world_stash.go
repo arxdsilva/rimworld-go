@@ -155,9 +155,7 @@ func cmdNewWanderers(g *Game, name string) {
 	}
 	s.WandererGroups++
 	s.GoneAt = 0
-	text := strings.Join(names, ", ") + " came across what is left and mean to start again. They are yours to lead."
-	g.letter(letterGood, wanderersTitle, text, ids[0])
-	g.addHistory("joined", text, ids...)
+	g.addHistory("joined", letterf(g, letterGood, wanderersTitle, ids[0], "%s came across what is left and mean to start again. They are yours to lead.", strings.Join(names, ", ")), ids...)
 }
 
 // walkInWanderers stands seeds' people on land near a map edge, walking in.

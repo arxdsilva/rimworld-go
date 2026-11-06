@@ -269,7 +269,7 @@ func (rs *Raiders) grab(id entity.EntityID, r Raider, j job.Record, x, y int, no
 	h.SetRaider(id, r)
 	h.Interrupt(id, job.Cancelled)
 	text := fmt.Sprintf("%s grabbed %d %s on the way out.", h.Name(id), n, k)
-	h.Message(x, y, text)
+	h.Message(x, y, "%s", text)
 	rs.log(text)
 	return true
 }

@@ -1,8 +1,6 @@
 package raid
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
@@ -211,6 +209,6 @@ func (t *Threats) WolfPack(n int) {
 		}
 	}
 	if spawned > 0 {
-		t.h.Threat("Starving predators", ex, ey, fmt.Sprintf("A pack of %d starving %s is prowling near the colony.", spawned, t.w.Plural(s)))
+		t.h.Threat("Starving predators", ex, ey, "A pack of %d starving %s is prowling near the colony.", spawned, t.w.Plural(s))
 	}
 }

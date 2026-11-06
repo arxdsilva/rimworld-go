@@ -114,8 +114,7 @@ func (sp *ShipParts) Crash(points int, now uint64) bool {
 	}
 	sp.parts = append(sp.parts, p)
 	mx, my := p.middle()
-	sp.h.Threat("Crashed ship part", mx, my,
-		"A blighting hull has crashed nearby. Every plant around it withers, wider each day. War machines sleep beside it: they wake if anyone comes close or harms them.")
+	sp.h.Threat("Crashed ship part", mx, my, "A blighting hull has crashed nearby. Every plant around it withers, wider each day. War machines sleep beside it: they wake if anyone comes close or harms them.")
 	return true
 }
 

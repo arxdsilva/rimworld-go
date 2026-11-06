@@ -58,7 +58,7 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 			r.Downed = now
 			h.SetRaider(id, r)
 			x, y, _ := h.Pos(id)
-			h.Message(x, y, fmt.Sprintf("Raider %s is down.", h.Name(id)))
+			h.Message(x, y, "Raider %s is down.", h.Name(id))
 			rs.log(fmt.Sprintf("Raider %s was downed.", h.Name(id)))
 		}
 		// MED-01: no timer; it bleeds out unless captured and tended, and
@@ -356,7 +356,7 @@ func (rs *Raiders) digIn(gi int, now uint64) {
 		}
 	}
 	text := "The raiders have dug in for a siege and are setting up mortars. They will storm the colony within a few days."
-	h.Threat("Siege", grp.CampX, grp.CampY, text)
+	h.Threat("Siege", grp.CampX, grp.CampY, "%s", text)
 	rs.log(text)
 }
 

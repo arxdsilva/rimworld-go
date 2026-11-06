@@ -1,8 +1,6 @@
 package visit
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
@@ -76,7 +74,7 @@ func (v Visits) fetching(r *Rec, x, y int, j job.Record) bool {
 		return false
 	}
 	h.Pick(r.ID, t)
-	h.Message(x, y, fmt.Sprintf("%s is carrying %s home.", h.Name(r.ID), h.Name(t)))
+	h.Message(x, y, "%s is carrying %s home.", h.Name(r.ID), h.Name(t))
 	return false
 }
 

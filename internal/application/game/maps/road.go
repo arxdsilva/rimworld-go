@@ -1,7 +1,6 @@
 package maps
 
 import (
-	"fmt"
 	"math"
 	"slices"
 
@@ -64,7 +63,7 @@ func (f Fleet) Step(now uint64) {
 			continue
 		}
 		if len(c.C.Members) == 0 {
-			f.h.Letter(true, "Caravan lost", "Nobody in the caravan survived the journey.", 0)
+			f.h.Letter(true, "Caravan lost", 0, "Nobody in the caravan survived the journey.")
 			*f.list = slices.Delete(*f.list, i, i+1)
 			i--
 			continue
@@ -111,10 +110,10 @@ func (f Fleet) Arrived(c *Caravan, now uint64) {
 		c.C.State = caravan.Visiting
 		c.C.VisitUntil = now + visitTicks
 		c.C.FoodDays = FoodDays
-		f.h.Letter(false, "Caravan arrived", fmt.Sprintf("The caravan reached %s and stays a day as their guests.", f.h.TileName(c.C.Tile)), 0)
+		f.h.Letter(false, "Caravan arrived", 0, "The caravan reached %s and stays a day as their guests.", f.h.TileName(c.C.Tile))
 		return
 	}
-	f.h.Letter(false, "Caravan arrived", fmt.Sprintf("The caravan reached %s and waits there for your orders.", f.h.TileName(c.C.Tile)), 0)
+	f.h.Letter(false, "Caravan arrived", 0, "The caravan reached %s and waits there for your orders.", f.h.TileName(c.C.Tile))
 }
 
 // enterMap brings c onto map id: at once when it is the map being
@@ -199,7 +198,7 @@ func (f Fleet) startReturn(c *Caravan) {
 // towards its centre.
 func (f Fleet) Home(c *Caravan) {
 	if names := f.walkIn(c); len(names) > 0 {
-		f.h.Letter(false, "Caravan returned", travel.JoinNames(names)+" came back from the journey.", entity.EntityID(c.C.Members[0]))
+		f.h.Letter(false, "Caravan returned", entity.EntityID(c.C.Members[0]), "%s came back from the journey.", travel.JoinNames(names))
 	}
 }
 

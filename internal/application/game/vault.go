@@ -248,7 +248,7 @@ func (g *Game) vaultWarn(v *vaultSave) {
 			continue
 		}
 		v.State = vault.Warned
-		g.letter(letterCaution, vaultWarnTitle, g.personName(id)+" stops near the smooth walls in the rock. Something old is sealed inside, and it does not feel empty.", id)
+		letterf(g, letterCaution, vaultWarnTitle, id, "%s stops near the smooth walls in the rock. Something old is sealed inside, and it does not feel empty.", g.personName(id))
 		return
 	}
 }

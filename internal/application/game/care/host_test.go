@@ -1,6 +1,7 @@
 package care
 
 import (
+	"fmt"
 	"maps"
 	"slices"
 
@@ -242,7 +243,9 @@ func (h *fakeHost) ApplyTend(patient entity.EntityID, q int32) {
 }
 func (h *fakeHost) Rescued(rescuer, patient entity.EntityID) { h.log = append(h.log, "rescued") }
 func (h *fakeHost) TendedBy(patient, doctor entity.EntityID) { h.log = append(h.log, "tended") }
-func (h *fakeHost) Message(x, y int, text string)            { h.log = append(h.log, "message: "+text) }
+func (h *fakeHost) Message(x, y int, format string, args ...any) {
+	h.log = append(h.log, "message: "+fmt.Sprintf(format, args...))
+}
 
 // Breaking: SIM-062 (the capture/arrest handler skips a colonist in a break).
 func (h *fakeHost) Breaking(id entity.EntityID) bool { return h.breaking[id] }

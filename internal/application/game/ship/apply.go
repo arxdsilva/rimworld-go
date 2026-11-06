@@ -23,7 +23,7 @@ func (s *State) Apply(h Host, c command.Command) {
 	}
 	if why != "" {
 		b, _ := h.Building(id)
-		h.Message(b.X, b.Y, "Can't "+what+": "+why+".")
+		h.Message(b.X, b.Y, "Can't %s: %s.", what, why)
 	}
 }
 

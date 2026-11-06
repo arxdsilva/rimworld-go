@@ -1,8 +1,6 @@
 package herd
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
@@ -87,7 +85,7 @@ func (c *Collect) Do(id entity.EntityID, j job.Record) {
 		}
 		h.Drop(st)
 	} else {
-		h.Message(ax, ay, fmt.Sprintf("%s wasted the %s of the %s.", h.Name(id), p, a.Species.Label()))
+		h.Message(ax, ay, "%s wasted the %s of the %s.", h.Name(id), p, a.Species.Label())
 	}
 	a.Product = 0
 	h.SetAnimal(j.Target, a)

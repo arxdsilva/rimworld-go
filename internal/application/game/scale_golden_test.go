@@ -153,13 +153,16 @@ import (
 // 51 % light rule and partial harvests, butchering by body size, per-species
 // products, taming food and auto-slaughter. All six runs move. Same-seed
 // runs identical (-count=2).
+// Re-pinned (OPT-001 Wave 4): saved messages and letters carry Msg, their
+// catalog key and args. With Msg blanked in the hash all six old pins hold;
+// the two 48x40 runs that end with no message saved keep theirs.
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0x3e5acab81c2a989d,
 	"48x40/seed7":    0x529de30845e69cf5,
-	"48x40/seed42":   0x43a6ab739bca6fe7,
-	"120x120/seed1":  0xde126bd6fc5f1289,
-	"120x120/seed7":  0x6986ce1c7a096a10,
-	"120x120/seed42": 0x7c1bc7e1562c0f08,
+	"48x40/seed42":   0xd7d1da8681635747,
+	"120x120/seed1":  0x1fe419a463e06408,
+	"120x120/seed7":  0x8954fb673149b61d,
+	"120x120/seed42": 0x2ee99f80de174aa2,
 }
 
 const scaleGoldenTicks = 20000

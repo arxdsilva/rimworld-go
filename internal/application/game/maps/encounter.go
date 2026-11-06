@@ -2,7 +2,6 @@ package maps
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/application/game/travel"
@@ -59,7 +58,7 @@ type Waylayer interface {
 	Hunt(seed uint64, n int)
 	// DemandLetter posts a demand letter (Give or Refuse): its id;
 	// DropLetter takes a letter off the stack.
-	DemandLetter(title, text string) uint64
+	DemandLetter(title, format string, args ...any) uint64
 	DropLetter(id uint64)
 }
 
@@ -159,8 +158,7 @@ func (f Fleet) demand(c *Caravan, fac int, now uint64) bool {
 	})
 	qty := (st.Qty + 1) / 2
 	name := f.h.Factions()[fac-1].Name
-	id := f.h.DemandLetter("A demand on the road", fmt.Sprintf("Fighters of %s block the caravan's way near %s and want %d %s. Give it up and they let it pass; refuse and they attack.",
-		name, f.h.TileName(c.C.Tile), qty, st.Kind))
+	id := f.h.DemandLetter("A demand on the road", "Fighters of %s block the caravan's way near %s and want %d %s. Give it up and they let it pass; refuse and they attack.", name, f.h.TileName(c.C.Tile), qty, st.Kind)
 	c.Ask = Ask{Letter: id, Faction: fac, Kind: st.Kind, Qty: qty, Until: now + demandWait}
 	return true
 }
@@ -177,7 +175,7 @@ func (f Fleet) Answer(letter uint64, mode uint8) {
 		c.Ask = Ask{}
 		f.h.DropLetter(letter)
 		if mode == 0 && f.h.Cargo().Yield(c.C.ID, a.Kind, a.Qty) {
-			f.h.Note(fmt.Sprintf("The caravan gave up %d %s and was let through.", a.Qty, a.Kind))
+			f.h.Note("The caravan gave up %d %s and was let through.", a.Qty, a.Kind)
 			return
 		}
 		f.fight(c, Ambush, a.Faction)
@@ -214,7 +212,7 @@ func (l Lifecycle) waylay(c *Caravan, id uint32, r Request) {
 		f.h.Ambush(seed, r.Faction)
 	}
 	if len(names) > 0 {
-		f.h.Letter(true, title, fmt.Sprintf("%s %s near %s.", travel.JoinNames(names), what, f.h.TileName(m.Tile)), entity.EntityID(c.C.Members[0]))
+		f.h.Letter(true, title, entity.EntityID(c.C.Members[0]), "%s %s near %s.", travel.JoinNames(names), what, f.h.TileName(m.Tile))
 	}
 	f.drop(entity.EntityID(c.C.ID))
 }

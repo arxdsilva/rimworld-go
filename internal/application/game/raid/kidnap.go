@@ -1,8 +1,6 @@
 package raid
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -178,7 +176,7 @@ func (kn *Kidnaps) pickUp(id, t entity.EntityID, j job.Record, now uint64) {
 		j.State = job.Do
 	}
 	h.SetJob(id, j)
-	h.Message(x, y, fmt.Sprintf("%s is carrying %s away!", h.Name(id), h.Name(t)))
+	h.Message(x, y, "%s is carrying %s away!", h.Name(id), h.Name(t))
 }
 
 // End ends raider id's kidnap (put down whoever it carries) and starts

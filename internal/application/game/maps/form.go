@@ -1,7 +1,6 @@
 package maps
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/application/game/travel"
@@ -60,7 +59,7 @@ func (f Fleet) Form(members string, dest int) {
 		return
 	}
 	*f.list = append(*f.list, c)
-	f.h.Note(fmt.Sprintf("The caravan is forming: %d heading for the map edge.", len(c.C.Members)))
+	f.h.Note("The caravan is forming: %d heading for the map edge.", len(c.C.Members))
 }
 
 // ExitMap: pawn id reached the map edge on job.ExitMap. A forming
@@ -140,8 +139,7 @@ func (f Fleet) depart(c *Caravan, now uint64) {
 	c.C.FoodDays = FoodDays
 	c.C.State = caravan.Travelling
 	c.NextTalk = now + talkPeriod
-	f.h.Letter(false, "Caravan departed", fmt.Sprintf("%s set out for %s with %d days of food.",
-		travel.JoinNames(names), f.h.TileName(c.C.Dest), FoodDays/1000), 0)
+	f.h.Letter(false, "Caravan departed", 0, "%s set out for %s with %d days of food.", travel.JoinNames(names), f.h.TileName(c.C.Dest), FoodDays/1000)
 }
 
 // pace sets c's speed inputs (MAP-09, wiki: Caravan): the slowest member

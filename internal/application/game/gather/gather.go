@@ -333,7 +333,7 @@ func (g Gatherings) attendees(ga *social.Gathering) []entity.EntityID {
 
 // note posts a message about the gathering.
 func (g Gatherings) note(ga *social.Gathering, text string) {
-	g.h.Note(text, ga.SpotX, ga.SpotY, entity.EntityID(ga.Hosts[0]))
+	g.h.Note(ga.SpotX, ga.SpotY, entity.EntityID(ga.Hosts[0]), "%s", text)
 }
 
 // retryBlocked reports a gathering of kind for hosts a, b waits after an
@@ -382,7 +382,7 @@ func (g Gatherings) WeddingCheck(id entity.EntityID, now uint64) {
 		}
 		g.start(social.Gathering{Kind: social.Wedding, SpotX: x, SpotY: y,
 			Hosts: [2]social.ID{social.ID(id), social.ID(o)}, Phase: social.PhaseCalling, PhaseAt: now})
-		g.h.GoodLetter("Wedding", fmt.Sprintf("%s and %s are getting married! The colony gathers for the wedding.", g.h.Name(id), g.h.Name(o)), x, y, id)
+		g.h.GoodLetter("Wedding", x, y, id, "%s and %s are getting married! The colony gathers for the wedding.", g.h.Name(id), g.h.Name(o))
 		return
 	}
 }
@@ -514,7 +514,7 @@ func (g Gatherings) ThrowParty(now uint64) bool {
 	host := guests[g.h.Roll(len(guests))]
 	g.start(social.Gathering{Kind: social.Party, SpotX: x, SpotY: y,
 		Hosts: [2]social.ID{social.ID(host), 0}, Phase: social.PhaseCalling, PhaseAt: now})
-	g.h.GoodLetter("Party", fmt.Sprintf("%s is throwing a party! Everyone is welcome.", g.h.Name(host)), x, y, host)
+	g.h.GoodLetter("Party", x, y, host, "%s is throwing a party! Everyone is welcome.", g.h.Name(host))
 	return true
 }
 

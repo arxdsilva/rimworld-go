@@ -1,6 +1,7 @@
 package ship
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -62,9 +63,13 @@ func (f *fake) Escaped(entity.EntityID)                          {}
 func (f *fake) Now() uint64                                      { return f.now }
 func (f *fake) Seed() uint64                                     { return 7 }
 func (f *fake) Raid(mech bool)                                   { f.raids = append(f.raids, mech) }
-func (f *fake) Letter(title, _ string, _, _ int, _ bool)         { f.letters = append(f.letters, title) }
-func (f *fake) Message(_, _ int, text string)                    { f.msgs = append(f.msgs, text) }
-func (f *fake) Changed()                                         {}
+func (f *fake) Letter(title string, _, _ int, _ bool, _ string, _ ...any) {
+	f.letters = append(f.letters, title)
+}
+func (f *fake) Message(_, _ int, format string, args ...any) {
+	f.msgs = append(f.msgs, fmt.Sprintf(format, args...))
+}
+func (f *fake) Changed() {}
 
 // minimal lays the wiki's minimum ship (beam, casket, core, reactor,
 // sensor, three engines), all joined, and returns the casket and reactor.

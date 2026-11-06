@@ -1,8 +1,6 @@
 package game
 
 import (
-	"fmt"
-
 	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -13,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/mathx"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // Animal handling. Hunters also tame: an animal marked for taming holds
@@ -77,12 +76,12 @@ func (g *Game) herdOf() *herd.Herd {
 // herdHost implements herd.Host over the game.
 type herdHost struct{ g *Game }
 
-func (h herdHost) Now() uint64                    { return uint64(h.g.clock.Now()) }
-func (h herdHost) Roll(n int) int                 { return h.g.rng.IntN(n) }
-func (h herdHost) Message(x, y int, text string)  { h.g.message(x, y, "%s", text) }
-func (h herdHost) Name(id entity.EntityID) string { return h.g.name(id) }
-func (h herdHost) Animals(id entity.EntityID) int { return int(h.g.skillOf(id, skill.Animals).Level) }
-func (h herdHost) AnimalIDs() []entity.EntityID   { return h.g.animalIDs }
+func (h herdHost) Now() uint64                                  { return uint64(h.g.clock.Now()) }
+func (h herdHost) Roll(n int) int                               { return h.g.rng.IntN(n) }
+func (h herdHost) Message(x, y int, format string, args ...any) { h.g.message(x, y, format, args...) }
+func (h herdHost) Name(id entity.EntityID) string               { return h.g.name(id) }
+func (h herdHost) Animals(id entity.EntityID) int               { return int(h.g.skillOf(id, skill.Animals).Level) }
+func (h herdHost) AnimalIDs() []entity.EntityID                 { return h.g.animalIDs }
 func (h herdHost) Animal(id entity.EntityID) (animal.State, bool) {
 	return h.g.animals.Get(id)
 }
@@ -212,7 +211,7 @@ func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, 
 	}
 	g.logEvent(id, logEntry{Kind: logManhunter, Other: who})
 	p, _ := g.positions.Get(id)
-	g.post(MessageView{Tick: now, Text: fmt.Sprintf("A %s has gone manhunter!", a.Species.Label()),
+	g.post(MessageView{Tick: now, Msg: msgfmt.Of("A %s has gone manhunter!", a.Species.Label()),
 		X: p.X, Y: p.Y, Danger: true, Focus: id})
 	if animal.DefOf(a.Species).Legendary {
 		g.rallyLegendaries(id, who, now)

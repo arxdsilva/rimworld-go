@@ -62,8 +62,10 @@ func (f *fakeHost) Start(worker, bench entity.EntityID, k job.Kind, sx, sy, tick
 func (f *fakeHost) Work(id entity.EntityID, mining bool) int { return f.unit }
 func (f *fakeHost) Seed() uint64                             { return f.seed }
 func (f *fakeHost) Drop(k item.Kind, n, x, y int)            { f.drops[k] += n }
-func (f *fakeHost) Letter(title, text string, x, y int)      { f.letters = append(f.letters, title) }
-func (f *fakeHost) Changed()                                 {}
+func (f *fakeHost) Letter(title string, x, y int, _ string, _ ...any) {
+	f.letters = append(f.letters, title)
+}
+func (f *fakeHost) Changed() {}
 
 // A find lays a lump of the wiki's size for its ore, the same for the
 // same seed, and a deep drill brings it up portion by portion until the

@@ -95,10 +95,12 @@ func (m *mechWorld) TurretFor(x, y, cd, sight int) (entity.EntityID, int, int, b
 func (m *mechWorld) CanHit(x, y int, d weapon.Def, tx, ty int) bool {
 	return weapon.InRange(d, weapon.Distance(x, y, tx, ty)) && m.Line(x, y, tx, ty)
 }
-func (m *mechWorld) Roll(n int) int                            { m.rolls++; return m.rolls % n }
-func (m *mechWorld) Home() (int, int)                          { return m.home[0], m.home[1] }
-func (m *mechWorld) Threat(title string, _, _ int, _ string)   { m.threats = append(m.threats, title) }
-func (m *mechWorld) Message(int, int, string)                  {}
+func (m *mechWorld) Roll(n int) int   { m.rolls++; return m.rolls % n }
+func (m *mechWorld) Home() (int, int) { return m.home[0], m.home[1] }
+func (m *mechWorld) Threat(title string, _, _ int, _ string, _ ...any) {
+	m.threats = append(m.threats, title)
+}
+func (m *mechWorld) Message(int, int, string, ...any)          {}
 func (m *mechWorld) InBounds(x, y int) bool                    { return x >= 0 && y >= 0 && x < m.w && y < m.h }
 func (m *mechWorld) Rock(int, int) bool                        { return false }
 func (m *mechWorld) Size() (int, int)                          { return m.w, m.h }

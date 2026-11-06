@@ -168,7 +168,7 @@ func (h craftOutput) DropMeal(cook entity.EntityID, bench construction.Kind, st 
 	h.g.dropStackOf(st, x, y)
 }
 func (h craftOutput) Cremate(pyre, body entity.EntityID, d recipe.Def) { h.g.cremate(pyre, body, d) } // burial.go
-func (h craftOutput) Message(x, y int, text string)                    { h.g.message(x, y, "%s", text) }
+func (h craftOutput) Message(x, y int, f string, a ...any)             { h.g.message(x, y, f, a...) }
 
 // ButcheredHuman: the butcher's stacking -6 and every other colonist's -6
 // (FOOD-3, wiki: Butcher table); cold-hearted and bloodthirsty colonists

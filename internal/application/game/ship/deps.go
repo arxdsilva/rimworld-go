@@ -52,10 +52,11 @@ type Colony interface {
 	// Raid sends a countdown raid through the storyteller: mechanoids
 	// when mech, else people from a hostile faction.
 	Raid(mech bool)
-	// Letter posts a letter at (x, y): a red one when danger.
-	Letter(title, text string, x, y int, danger bool)
+	// Letter posts a letter at (x, y): a red one when danger. Its text,
+	// and Message's, is a format and args (the catalog's key, OPT-001).
+	Letter(title string, x, y int, danger bool, format string, args ...any)
 	// Message posts a quiet message at (x, y).
-	Message(x, y int, text string)
+	Message(x, y int, format string, args ...any)
 	// Changed is called after a change the views show.
 	Changed()
 }
