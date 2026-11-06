@@ -410,8 +410,8 @@ func (c Global) TimeText() string {
 
 // HourLine is the clock and the schedule's current activity.
 func (c Global) HourLine() string {
-	d := c.sh.Date()
-	return fmt.Sprintf("%02d:%02d  %s · %s", d.Hour, d.Minute, d.Period(), c.activity())
+	in := c.sh.Settings().Interface
+	return gfx.Ellipsize(hourLine(c.sh.Date(), c.sh.Env().Wall, in.ClockRealtime, in.Clock12h, c.activity()), gfx.Body, GlobalInnerW)
 }
 
 // DateLine is the calendar date and the season.

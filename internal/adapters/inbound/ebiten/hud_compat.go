@@ -52,7 +52,7 @@ func newHud(a *App) *hud.Chrome {
 func (h hudHost) Env() hud.Env {
 	a := h.a
 	e := hud.Env{
-		Icons: a.art, Units: units.FromUnit(a.settings.Gameplay.TempUnit), Updates: a.updates, Session: a.simsStarted, Hint: a.hint != "", Alt: a.in.Alt(),
+		Wall: a.now(), Icons: a.art, Units: units.FromUnit(a.settings.Gameplay.TempUnit), Updates: a.updates, Session: a.simsStarted, Hint: a.hint != "", Alt: a.in.Alt(),
 		PanelOpen: a.arch.Open || a.win.Open,
 	}
 	if r := a.renderer; r != nil {

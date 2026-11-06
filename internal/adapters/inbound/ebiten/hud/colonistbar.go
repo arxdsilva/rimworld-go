@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/config"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
@@ -548,7 +549,7 @@ func (c ColonistBar) drawCard(screen *ebiten.Image, card barCard, p game.PawnVie
 	slot := card.slot
 	gfx.FillRect(screen, slot.X, slot.Y, slot.W, slot.H, uikit.Panel, false)
 	// the mood backing: a fill from the floor of the card up, as tall as the mood
-	if mood := max(0, min(p.Mood, 100)); mood > 0 {
+	if mood := max(0, min(p.Mood, 100)); mood > 0 && c.sh.Settings().Interface.BarMood {
 		fh := slot.H * float32(mood) / 100
 		gfx.FillRect(screen, slot.X, slot.Bottom()-fh, slot.W, fh, creature.Fade(MoodToken(mood), 0.55), false)
 	}
@@ -560,6 +561,7 @@ func (c ColonistBar) drawCard(screen *ebiten.Image, card barCard, p game.PawnVie
 	}
 	c.sh.DrawPawnBust(screen, p, float64(card.art.X), float64(card.art.Y), float64(card.art.W), float64(card.art.H))
 	c.drawStatuses(screen, card, sts)
+	c.drawWeapon(screen, card, p)
 	if !card.name.Empty() {
 		gfx.FillRect(screen, slot.X, card.name.Y, slot.W, slot.Bottom()-card.name.Y, creature.Fade(uikit.Space, 0.5), false) // a quiet plate: the name reads over any mood
 		st := gfx.WithColor(gfx.Small, uikit.Text)
@@ -635,4 +637,46 @@ func (c ColonistBar) drawGroups(screen *ebiten.Image, l hudlayout.Layout, mx, my
 			gfx.StrokeRect(screen, g.Frame.X, g.Frame.Y, g.Frame.W, g.Frame.H, 1, uikit.PanelBorder, false)
 		}
 	}
+}
+
+// showWeapon reports the weapon icon is due under p's portrait (OPT-011):
+// never, only while drafted, or always; bare fists have no icon.
+func showWeapon(mode string, p game.PawnView) bool {
+	if _, ok := creature.HeldWeaponKey(p.Weapon); !ok {
+		return false
+	}
+	switch mode {
+	case config.BarWeaponsAlways:
+		return true
+	case config.BarWeaponsDrafted:
+		return p.Drafted
+	}
+	return false
+}
+
+// weaponRect is the weapon icon's box: the bottom-left corner of the portrait,
+// a status mark's size but never more than half the portrait, so it fits
+// inside the slot at every bar scale.
+func weaponRect(card barCard) gfx.Rect {
+	sz := min(card.icon, card.art.W/2, card.art.H/2)
+	return gfx.Rect{X: card.art.X, Y: card.art.Bottom() - sz, W: sz, H: sz}
+}
+
+// drawWeapon draws the wielded weapon's sprite under the portrait.
+func (c ColonistBar) drawWeapon(screen *ebiten.Image, card barCard, p game.PawnView) {
+	if !showWeapon(c.sh.Settings().Interface.BarWeapons, p) {
+		return
+	}
+	cat := c.sh.Env().Art
+	if cat == nil {
+		return
+	}
+	key, _ := creature.HeldWeaponKey(p.Weapon)
+	img := cat.Image(key, color.NRGBA{})
+	if img == nil {
+		return
+	}
+	r := weaponRect(card)
+	gfx.FillRect(screen, r.X, r.Y, r.W, r.H, creature.Fade(uikit.Space, 0.5), false)
+	gfx.Icon(screen, img, float64(r.X), float64(r.Y), float64(r.W))
 }

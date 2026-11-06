@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"strings"
+	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -42,6 +43,8 @@ type Env struct {
 	Art   *art.Catalog // the map's catalog (item sprites); nil off the colony
 	Icons *art.Catalog // the client's catalog (ui_icon/ sprites)
 	Units units.Temp   // how temperatures read (Options, WG-16)
+
+	Wall time.Time // the wall clock (OPT-008); zero when the host gives none
 
 	Updates uint64 // the Update counter (toasts, double clicks)
 	Session int    // colonies started this run (letter ids restart with each)
