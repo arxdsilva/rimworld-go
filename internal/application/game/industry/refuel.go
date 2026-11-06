@@ -39,6 +39,14 @@ type RefuelHost interface {
 	Spare(st item.Stack, x, y int) (int, int, bool)
 }
 
+// Controllable reports a burner the player may order refuelled and switch
+// (REF-1): any fuel user but a fish tank (its feed follows the tank panel's
+// stock) or a hostile settlement's building.
+func Controllable(b construction.Building) bool {
+	_, ok := FuelSpec(b.Kind)
+	return ok && b.Kind != construction.FishTank && !b.Hostile
+}
+
 // RefuelWork is the work a hauler spends feeding a burner once there.
 const RefuelWork = 30
 
