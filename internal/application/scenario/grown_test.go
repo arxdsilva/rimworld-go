@@ -234,7 +234,11 @@ func TestGrownGolden(t *testing.T) {
 	// loop, and harvests use its yield and speed numbers. The year proof compared with
 	// the commit before: same meals eaten, no deaths, no malnutrition, food within 6 %
 	// at each ten-day mark past the first. Same hash on arm64 and amd64.
-	const want uint64 = 0x7623a063b8e7b5be
+	//
+	// Re-pinned (OPT-001 wave 4): saved messages and letters now carry Msg,
+	// their catalog key and arguments. With Msg blanked in the hash the old
+	// pin holds, so Text and every other field are unchanged.
+	const want uint64 = 0x847a4f202c0f89ba
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)
