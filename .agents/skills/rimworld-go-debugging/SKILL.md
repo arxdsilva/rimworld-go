@@ -1,9 +1,13 @@
 ---
 name: rimworld-go-debugging
-description: Investigate rimworld-go simulation regressions using deterministic seeds, state hashes, replay fixtures, entity/tick-scoped diagnostics, and minimal reproductions.
+description: Use when investigating a rimworld-go simulation bug or regression: fixed seeds, state hashes, replay fixtures, scoped diagnostics, minimal reproductions.
 ---
 
 # Debugging & Regression Reproduction
+
+## Load
+
+- `MASTER_SPEC` §7 Determinism Contract, §47 Replay and State Hashing, §60 Debugging Tools, §83 Save and Replay Regression Corpus
 
 ## Goal
 

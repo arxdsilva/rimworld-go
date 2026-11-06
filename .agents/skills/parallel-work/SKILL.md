@@ -1,16 +1,18 @@
 ---
 name: parallel-work
-description: Split a multi-area rimworld-go task across parallel subagents per .agents/specs/PARALLEL_WORK.md — contract first, disjoint file ownership, lead-only shared config, phased integration. Use for any task touching two or more of domain, simulation, ports, renderer/UI, outbound adapters, cmd, art pipeline, content or docs, or whenever the user asks to work in parallel.
+description: Plan and run a rimworld-go task touching two or more areas as parallel subagents. Use when planning or doing multi-area work, or when asked to work in parallel.
 ---
 
 # Parallel work (lead checklist)
+
+The rules (areas, ownership, phases, gates, model tiers) are in `.agents/specs/PARALLEL_WORK.md`; this skill is the lead's checklist and templates. A single-area task, or one under ~150 lines, skips it and says so in one line in the plan.
 
 0. **Writing a plan? Put the workers in it.** Before presenting any plan for a multi-area task, include its Parallel workers section (PARALLEL_WORK §0; template below): contract, waves with an agent table and a scope block per agent, RAM, gates and commits, asset agents. A plan without it is incomplete.
 0b. **Check RAM.** Run `make agent-budget`; size the batch to what it prints (heavy and light agents), stagger the heavy ones, and give every agent `GOFLAGS=-p=2` for its tests. Re-check before each later phase (PARALLEL_WORK §1).
 1. **Map areas → agents.** List the areas the task touches (rule intro table); one agent per area/layer (hexagon). ≤ 30 running at once, and only as many as the work has disjoint areas for.
    1b. **Pick each agent's model** (rule §6): `haiku` for mechanical work, `sonnet` for implementation against a written contract, `opus` for determinism/pathing/jobs/saves/timing math. Escalate one tier after two failed gates.
 2. **Contract first (you, alone):**
-   - `.cursor` spec sections, read models (`internal/application/game/*View`), consumer-owned interfaces, ports, typed commands, asset names/metadata, save format — additive only.
+   - `.agents/specs` sections, read models (`internal/application/game/*View`), consumer-owned interfaces, ports, typed commands, asset names/metadata, save format — additive only.
    - Stubs for every new hook so all agents compile.
    - `go get` / `go mod tidy` for every dependency the agents need.
    - All shared-config edits (`go.mod`, `Makefile`, `cmd/**`, palettes, Blender `contracts.py`/`stage.py`, CI, `.gitignore`).
@@ -18,7 +20,7 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 3. **Launch producers in parallel** (domain/sim, pathing, Blender art, pure logic), then consumers (renderer, UI, outbound adapters; they may start against the contract + stubs). Background agents; one message with all launches.
 4. **Relay** every cross-agent fact via `SendMessage`; broadcast contract changes to every affected agent.
 5. **Integrate and verify** yourself after each phase with the rule §5 gates (build, fmt/vet/lint, race tests, determinism, art-check, benchmarks, visual review). Route failures to the owner.
-6. **Write handoffs and update checklists** from the agent reports (agents never edit them).
+6. **Write handoffs and update checklists** from the agent reports (agents never edit them). Handoff: one section in the family ledger (`.agents/templates/HANDOFF.md`).
 7. **Don't enter plan mode while agents run** (it pauses them); if you did, resume each with `SendMessage`.
 8. **Reuse, then clean up (PARALLEL_WORK §5a).** Send fixes and the same area's next wave to the agent that already owns it; keep one docs and one journey agent per programme. Do one-fact lookups and small edits yourself. Once a wave is committed, `TaskStop` every agent of that wave you won't resume; at the end of the programme stop them all. When the list passes about 50 and the work is committed, tell the user a new session starts clean.
 
@@ -51,7 +53,7 @@ Model: <haiku|sonnet|opus> — <one-line reason>   (set the Agent `model` parame
 
 You are agent <ID> on the rimworld-go repo (/Users/arxdsilva/go/src/github.com/insurgencygames/rimworld-go). Read first (authoritative):
 - <plan file §…>, AGENTS.md, <nearest package AGENTS.md>, .agents/specs/PARALLEL_WORK.md
-- <named .cursor spec sections>, skill(s) .agents/skills/<rimworld-go-*>/SKILL.md
+- <named .agents/specs sections>, skill(s) .agents/skills/<rimworld-go-*>/SKILL.md
 
 ## Contract (pasted in full)
 <C-sections this agent follows>
@@ -60,7 +62,7 @@ You are agent <ID> on the rimworld-go repo (/Users/arxdsilva/go/src/github.com/i
 <scope, numbered, with acceptance criteria and the failing tests to write first>
 
 ## Rules
-- Owns ONLY: <files/globs>. Must NOT touch: <files/globs> (owned by <agents>), go.mod/go.sum, Makefile, cmd/**, .cursor checklists/handoffs.
+- Owns ONLY: <files/globs>. Must NOT touch: <files/globs> (owned by <agents>), go.mod/go.sum, Makefile, cmd/**, .agents backlog checklists/handoffs.
 - No go get / go mod tidy (report missing deps). No git add/commit/push.
 - Strict TDD; never weaken a test; run only: <targeted go test / go vet / make art FAMILIES=… commands>.
 - Don't rebuild bin/*; build to the scratchpad if you need your own binary.

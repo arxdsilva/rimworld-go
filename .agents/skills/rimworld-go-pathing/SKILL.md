@@ -1,9 +1,14 @@
 ---
 name: rimworld-go-pathing
-description: Implement or review rimworld-go pathfinding, regions, movement, congestion, navigation invalidation, and asynchronous path workers.
+description: Use when implementing or reviewing rimworld-go pathfinding, regions, movement, congestion, navigation invalidation or asynchronous path workers.
 ---
 
 # Pathing & Movement
+
+## Load
+
+- `MASTER_SPEC` §15 Regions and Hierarchical Pathfinding, §16 Path Requests and Parallelism, §27 Movement and Congestion
+- `HEXAGONAL_ARCHITECTURE` §22 Pathfinding Boundary, §13 Deterministic Worker Pattern
 
 ## Architecture
 

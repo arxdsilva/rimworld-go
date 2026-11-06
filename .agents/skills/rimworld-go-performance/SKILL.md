@@ -1,9 +1,14 @@
 ---
 name: rimworld-go-performance
-description: Optimize rimworld-go simulation scale, CPU, memory, allocations, data layout, indexes, update frequency, and concurrency based on measurement.
+description: Use when optimizing rimworld-go simulation scale, CPU, memory, allocations, data layout, indexes, update frequency or concurrency, based on measurement.
 ---
 
 # Performance & Scale
+
+## Load
+
+- `MASTER_SPEC` §53 Performance Budgets, §54 Memory Policy, §55 Concurrency Model, §56 Profiling and Metrics, §79 Scalability Algorithms by System, §82 Benchmark Scenarios
+- `MASTER_SPEC` §78 Architectural Anti-Patterns (no global scans, no goroutine per pawn)
 
 ## Optimization order
 

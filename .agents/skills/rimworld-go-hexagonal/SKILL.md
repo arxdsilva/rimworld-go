@@ -1,20 +1,14 @@
 ---
 name: rimworld-go-hexagonal
-description: Design or review rimworld-go package boundaries, ports, adapters, dependency direction, and cross-layer interfaces using pragmatic hexagonal architecture.
+description: Use when designing or reviewing rimworld-go package boundaries, ports, adapters, dependency direction, cross-layer interfaces, or SOLID size limits.
 ---
 
 # Hexagonal Architecture Skill
 
-## Core rule
+## Load
 
-Dependencies point inward:
-
-```text
-inbound adapters -> application -> domain
-outbound adapters -> ports required by application/domain
-```
-
-The domain must remain headless.
+- `HEXAGONAL_ARCHITECTURE` §3 Dependency Rule, §6 Ports Are Consumer-Owned, §14 Package-Level Boundaries, §37 Architecture Smells, §39 Definition of Architecture Compliance
+- `SOLID_GO` §6 Interface Segregation, §7 Dependency Inversion, §8 Measurable Limits, §9 Mutable Package-Level State, §10 How to Split a God Type
 
 ## Boundary test
 
@@ -41,9 +35,9 @@ Create a port only at a real boundary.
 
 Ports are consumer-owned and narrow.
 
-**Enforced rule (SOLID: DIP + ISP):** any consumer of an adapter — and any adapter that consumes the application layer — must depend on a small interface describing only the behavior it calls, never the concrete type. Construct concrete types exclusively at the composition root (`cmd/*`) or at the point an adapter wires its own dependency; everywhere else, pass the interface. This makes every adapter (renderer, save format, path worker, future network layer, etc.) swappable without touching its consumers, and makes the consumer trivially fakeable in tests.
+Consumers depend on a small interface for the behaviour they call, never the concrete type (HEX §6, SOLID_GO §6–7); construct concrete types only at the composition root.
 
-S, O, L and the numeric limits (methods per type, fields, interface width, package size, no `init()` registration, no runtime-assigned package vars) live in `.agents/specs/SOLID_GO.md` and are enforced by `internal/arch/solid_test.go` (`make arch`); its budget file only shrinks.
+Size limits, the no-`init()` and no-package-state rules and the split recipe are `SOLID_GO` §8–10, enforced by `internal/arch/solid_test.go` (`make arch`).
 
 Prefer:
 
@@ -108,6 +102,17 @@ Translate:
 ```text
 domain snapshot <-> persistence DTO <-> protobuf
 ```
+
+## Adding to a type, interface or package
+
+When a change adds a method or field to an existing type, declares an interface, adds a package-level var or `init()`, or creates or splits a package:
+
+1. Read `SOLID_GO` §8 before adding to `App`, `Renderer`, `Game` or any type or package with a line in `internal/arch/solid_budget.txt`.
+2. Put new state and behaviour on its own type with a consumer-owned interface (≤8 methods) and a constructor called from the composition root.
+3. Register tables at the composition root, never from `init()`; a test hook is a field, not a global.
+4. Run `go test ./internal/arch/` before committing. A budget line is only lowered or deleted, in the same commit as the split that earns it; new code never gets a budget line.
+
+Skip this for a task that touches no type, interface, package-level var or package layout.
 
 ## Architecture review checklist
 

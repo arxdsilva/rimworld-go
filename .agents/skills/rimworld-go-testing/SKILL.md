@@ -1,9 +1,29 @@
 ---
 name: rimworld-go-testing
-description: Design and run rimworld-go unit, system, integration, deterministic, fuzz, benchmark, replay, race, and long-run simulation tests.
+description: Use when writing or running rimworld-go tests: unit, system, deterministic, fuzz, benchmark, replay, race and long-run simulation tests.
 ---
 
 # Testing & Benchmarking
+
+## Load
+
+- `MASTER_SPEC` §57 Testing Pyramid, §58 Golden and Long-Run Simulation Tests, §59 Simulation Test DSL, §61 CI
+- `PARALLEL_WORK` §5 (gate commands)
+
+## Always `-race`
+
+Every `go test` runs with `-race` (`make test`, CI, agents, one-off runs). The answer to a slow suite is cheaper tests, never dropping the flag. Keep the suite inside CI's 10-minute `-race` budget.
+
+CI-speed tips:
+
+- Tests that need real art use the lazy helpers `realArt`/`testArt`/`atlasArt` (`portrait_test.go`) in the ebiten package, never `loadArtCatalog`, unless they test the loader.
+- CI wall time is about suite CPU / 4 on slower cores; `-p 2` keeps big test binaries from starving each other. Under `-race`, pprof's `runtime._ExternalCode`/`__tsan_*` is the TSan runtime (CPU, not waiting).
+- Replay CI with `docker run --cpuset-cpus 0-3 --cpus 2.2` (`--cpus` alone does not lower nproc). The Docker VM has 8.2 GB, so `signal: killed` can be the container's limit.
+- Live heap x GC headroom x race shadow is about 5x RSS. Headless tests never run a game loop, so Ebitengine retains every draw; `ebiten/test_main_test.go` drains it. Check peak RSS as well as time.
+
+## No-flap tests
+
+Every need-, threat- or threshold-driven behaviour ships a no-flap test (root `AGENTS.md`; model: `internal/application/game/sleep_test.go`).
 
 ## Pyramid
 

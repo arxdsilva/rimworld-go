@@ -1,9 +1,14 @@
 ---
 name: rimworld-go-content-modding
-description: Implement or review rimworld-go data-driven content definitions, validation, namespaced IDs, mod dependencies, deterministic loading, and future safe scripting.
+description: Use when implementing or reviewing rimworld-go data-driven content definitions, validation, namespaced IDs, mod dependencies or deterministic loading.
 ---
 
 # Content & Modding
+
+## Load
+
+- `MASTER_SPEC` §48 Modding, §49 Mod Scripting, §50 Content Definitions and Validation, §52 Security
+- `HEXAGONAL_ARCHITECTURE` §20 Content Boundary
 
 ## Principle
 
