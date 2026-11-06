@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"slices"
-	"sync/atomic"
 	"unsafe"
 
 	"rimworld-go/internal/application/game/haul"
@@ -36,11 +35,6 @@ var indexSelfCheck bool
 
 // selfCheckEvery: check one indexed answer in this many (fewer under -race, for time).
 var selfCheckEvery uint64 = 1
-
-var selfCheckN atomic.Uint64 // selfCheck's, left for haulHost.SelfCheck (tick.go) only: see checkIndex
-func selfCheck() bool {
-	return indexSelfCheck && (selfCheckEvery <= 1 || selfCheckN.Add(1)%selfCheckEvery == 0)
-}
 
 // checkIndex: is this lookup of g checked against the scan? Counted per game (one owner, no atomic).
 func checkIndex(g *Game) bool {

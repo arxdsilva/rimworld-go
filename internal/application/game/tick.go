@@ -992,7 +992,7 @@ func (h haulHost) ItemIDs() []entity.EntityID                  { return h.g.item
 func (h haulHost) StackRef(id entity.EntityID) *item.Stack     { return h.g.stacks.Ref(id) }
 func (h haulHost) Store() any                                  { return h.g.stacks }
 func (h haulHost) MapSize() (int, int)                         { return h.g.grid.Width(), h.g.grid.Height() }
-func (h haulHost) SelfCheck() bool                             { return selfCheck() }
+func (h haulHost) SelfCheck() bool                             { return checkIndex(h.g) }
 func (h haulHost) DeleteItem(id entity.EntityID)               { h.g.deleteItem(id) }
 func (h haulHost) Release(owner, target entity.EntityID)       { h.g.reserve.ReleaseEntity(owner, target) }
 func (h haulHost) MealRule() item.MealRule                     { return item.RuleOf(senseOf(h.g).Rules) }
