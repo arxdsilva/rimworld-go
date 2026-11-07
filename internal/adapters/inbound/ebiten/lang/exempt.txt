@@ -17,6 +17,7 @@ uikit/form.go:"  v" # the dropdown arrow glyph
 
 # Wave 3 (OPT-001): glyphs, ids, units and the product name.
 architect/area_manager.go:"X" # the delete button's glyph
+options/screen_options.go:"X" # the window's close button glyph (UIS-075)
 architect/area_menu.go:"  v" # the dropdown arrow glyph
 dossier/build.go:" v" # the dropdown arrow glyph
 inspector/log_ui.go:"v" # the scroll-hint arrow at the log's foot
