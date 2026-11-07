@@ -126,8 +126,18 @@ func TestCampClearedThroughTheGame(t *testing.T) {
 		t.Fatalf("no goodwill event: %v", g.ng.factions[gi].Events)
 	}
 	opt := v.Rewards[choice]
-	if !slices.ContainsFunc(g.trade.pods, func(p tradePod) bool { return reflect.DeepEqual(p.Items, opt.Lines) }) {
+	i := slices.IndexFunc(g.trade.pods, func(p tradePod) bool { return reflect.DeepEqual(p.Items, opt.Lines) })
+	if i < 0 {
 		t.Fatalf("no reward pod with %v: %+v", opt.Lines, g.trade.pods)
+	}
+	// Paid by the site's census, it still falls at home: near the first
+	// map's home, not the site map's.
+	cur := g.mapState
+	g.mapState = g.maps[0]
+	hx, hy := g.home()
+	g.mapState = cur
+	if p := g.trade.pods[i]; (p.X-hx)*(p.X-hx)+(p.Y-hy)*(p.Y-hy) > 8*podRadius*podRadius {
+		t.Fatalf("the reward pod falls at (%d,%d), home is (%d,%d)", p.X, p.Y, hx, hy)
 	}
 }
 

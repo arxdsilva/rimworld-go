@@ -246,6 +246,7 @@ func (h careGuests) join(p entity.EntityID) {
 	g.enlist(p)
 	g.invalidateCreatures()
 	g.addHistory("joined", letterf(g, letters.Good, "Stranger joins", p, "%s, the stranger you nursed back to health, has joined the colony.", g.personName(p)), p)
+	questSignal(g, quest.Signal{Kind: quest.SigPawnJoined, Pawn: p}) // a quest's guest joined (QST-058)
 }
 
 // visitHost is game/visit's roles (visit/deps.go) over small adapters.

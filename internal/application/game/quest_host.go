@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/skill"
 	qd "rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/sim/command"
@@ -101,17 +102,19 @@ type questMemo struct {
 	views []QuestView
 }
 
-func (h questHost) Landed() uint64                        { return h.g.dayOff() }
-func (h questHost) Colonists() int                        { return len(h.g.colonistsHomeAndAway()) }
-func (h questHost) ThreatScalePct() int                   { return h.g.diff().ThreatScale }
-func (h questHost) RewardPct() int                        { return h.g.diff().QuestRewardPct }
-func (h questHost) QuestThreats() bool                    { return h.g.diff().QuestThreats }
-func (h questHost) Factions() []quest.FactionView         { return quest.FactionViews(h.g.ng.factions) }
-func (h questHost) Now() uint64                           { return uint64(h.g.clock.Now()) }
-func (h questHost) Intn(n int) int                        { return h.g.stream(streamQuest).IntN(n) }
-func (h questHost) Seed() uint64                          { return uint64(h.Intn(math.MaxInt))*0x9e3779b97f4a7c15 ^ 0x51ed }
-func (h questHost) Count() int                            { return len(h.g.ng.factions) }
-func (h questHost) Alive(id entity.EntityID) bool         { return h.g.alive(id) }
+func (h questHost) Landed() uint64                { return h.g.dayOff() }
+func (h questHost) Colonists() int                { return len(h.g.colonistsHomeAndAway()) }
+func (h questHost) ThreatScalePct() int           { return h.g.diff().ThreatScale }
+func (h questHost) RewardPct() int                { return h.g.diff().QuestRewardPct }
+func (h questHost) QuestThreats() bool            { return h.g.diff().QuestThreats }
+func (h questHost) Factions() []quest.FactionView { return quest.FactionViews(h.g.ng.factions) }
+func (h questHost) Now() uint64                   { return uint64(h.g.clock.Now()) }
+func (h questHost) Intn(n int) int                { return h.g.stream(streamQuest).IntN(n) }
+func (h questHost) Seed() uint64                  { return uint64(h.Intn(math.MaxInt))*0x9e3779b97f4a7c15 ^ 0x51ed }
+func (h questHost) Count() int                    { return len(h.g.ng.factions) }
+func (h questHost) Alive(id entity.EntityID) bool {
+	return h.onPawnMap(id, func() bool { return h.g.onMap(id) })
+}
 func (h questHost) Preview(seed uint64) quest.PawnPreview { return quest.PreviewOf(seed) }
 
 // GrantXP is a fixed award: no learn rate, passion or daily cap (QST-076).
@@ -151,11 +154,28 @@ func (h questHost) WalkIn(seed uint64) (entity.EntityID, bool) {
 }
 
 func (h questHost) Join(id entity.EntityID) bool {
-	ok := h.g.visitor(id) && h.g.alive(id)
-	if ok {
-		careGuests{h.g}.join(id) // visitors.go
+	return h.onPawnMap(id, func() bool {
+		ok := h.g.visitor(id) // not dead; a downed guest may join
+		if ok {
+			careGuests{h.g}.join(id)               // visitors.go
+			h.g.remember(id, mood.RescuedByColony) // QST-057, QST-068
+		}
+		return ok
+	})
+}
+
+// onPawnMap runs f with the map that holds id current: a quest's person may
+// stand on a site map while the colony map is the one ticking.
+func (h questHost) onPawnMap(id entity.EntityID, f func() bool) bool {
+	g, cur := h.g, h.g.mapState
+	defer func() { g.mapState = cur }()
+	for _, m := range g.maps {
+		if m.positions.Has(id) {
+			g.mapState = m
+			break
+		}
 	}
-	return ok
+	return f()
 }
 
 // BestSocial is caravan cid's living member with the best Social skill.
@@ -171,8 +191,15 @@ func (h questHost) BestSocial(cid uint64) (entity.EntityID, int, bool) {
 	return best, lvl, lvl >= 0
 }
 
+// Pod drops lines at home: the spot is picked on the first map, where pods
+// land, even when a site's census pays it (QST-086).
 func (h questHost) Pod(lines []trade.Line, _ uint64) bool {
-	h.g.sendTradePod(slices.Clone(lines), h.Now()) // trade_orbital.go
+	g, cur := h.g, h.g.mapState
+	defer func() { g.mapState = cur }()
+	if len(g.maps) > 0 {
+		g.mapState = g.maps[0]
+	}
+	g.sendTradePod(slices.Clone(lines), h.Now()) // trade_orbital.go
 	return len(lines) > 0
 }
 
@@ -412,4 +439,26 @@ func (h questSite) guest(seed uint64, f, x, y int) (entity.EntityID, bool) {
 	g.socState().sig[id] = personSig{}
 	visitsOf(g).Place(id, f, cx, cy, uint64(g.clock.Now()))
 	return id, true
+}
+
+// careCaptives is care's Captives role: the prisoner an active rescue holds
+// in its cell (QST-067). It reads quests only when an order or the menu asks.
+type careCaptives struct{ g *Game }
+
+// Held reports whether guest id is an active rescue's prisoner, not yet freed.
+func (h careCaptives) Held(id entity.EntityID) bool {
+	if q := questOf(h.g); q != nil && h.g.visitor(id) {
+		for _, v := range questViews(h.g) {
+			if n, ok := q.Get(v.ID); ok && v.Kind == qd.Rescue && v.State == qd.Active && len(n.Parts) > 1 && n.Parts[1].Pawn == uint64(id) && !n.Parts[1].Done {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// Freed is the free order done: the kind joins id and succeeds (QST-068).
+func (h careCaptives) Freed(by, id entity.EntityID) {
+	h.g.remember(id, mood.RescuedByColony)
+	questSignal(h.g, quest.Signal{Kind: quest.SigPawnFreed, Pawn: id})
 }

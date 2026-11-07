@@ -76,7 +76,7 @@ func campGivers(c quest.Ctx) []int {
 func campTargets(c quest.Ctx) []int {
 	var out []int
 	for _, f := range c.R.World.Factions() {
-		if f.Relation == faction.Hostile && !f.Defeated && len(f.Settlements) > 0 {
+		if f.Relation == faction.Hostile && f.Human && !f.Defeated && len(f.Settlements) > 0 {
 			out = append(out, f.Index)
 		}
 	}
@@ -160,9 +160,8 @@ func layCamp(c quest.Ctx, q *qd.Quest, site, guard *qd.Part, m uint32) {
 	guard.Count = site.Count
 }
 
-// campTech is faction ref's tech. The faction view carries none yet, so
-// every camp is armed and built as an industrial faction's.
-func campTech(quest.Ctx, int) faction.Tech { return faction.Industrial }
+// campTech is faction ref's tech: the camp is built and armed as its own.
+func campTech(c quest.Ctx, ref int) faction.Tech { return quest.TechOf(c.R.World.Factions(), ref) }
 
 // census takes the hour's count of standing hostiles: the camp is cleared
 // once fewer than half of those spawned stand (more than 50 % down, dead or

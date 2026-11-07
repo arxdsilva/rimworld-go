@@ -50,7 +50,7 @@ func (Stash) Def() qd.Def { return qd.DefOf(qd.Stash) }
 func stashGuards(c quest.Ctx) []int {
 	var out []int
 	for _, f := range c.R.World.Factions() {
-		if f.Relation == faction.Hostile && !f.Defeated && len(f.Settlements) > 0 {
+		if f.Relation == faction.Hostile && f.Human && !f.Defeated && len(f.Settlements) > 0 {
 			out = append(out, f.Index)
 		}
 	}
@@ -135,7 +135,7 @@ func layStash(c quest.Ctx, q *qd.Quest) quest.Verdict {
 		X1: min(cx+stashClear, w-1), Y1: min(cy+stashClear, h-1),
 		Centre: mapgen.Point{X: cx, Y: cy}, Posts: posts,
 	}
-	arms := kit.Pick(p.Points*stashGuardPct/100, stashGuardMax, faction.Industrial, c.Intn)
+	arms := kit.Pick(p.Points*stashGuardPct/100, stashGuardMax, quest.TechOf(c.R.World.Factions(), q.Target), c.Intn)
 	p.Count = b.Camp(comp, q.Target, arms, p.Seed)
 	// After the camp: laying it clears every item inside its bounds.
 	b.Goods(q.Rewards[0].Lines, cx, cy, true)

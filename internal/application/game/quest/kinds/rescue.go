@@ -49,7 +49,7 @@ func (Rescue) Def() qd.Def { return qd.DefOf(qd.Rescue) }
 func rescueEnemies(c quest.Ctx) []int {
 	var out []int
 	for _, f := range c.R.World.Factions() {
-		if f.Relation == faction.Hostile && !f.Defeated {
+		if f.Relation == faction.Hostile && f.Human && !f.Defeated {
 			out = append(out, f.Index)
 		}
 	}

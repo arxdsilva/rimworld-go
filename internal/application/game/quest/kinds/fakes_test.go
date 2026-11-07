@@ -279,9 +279,9 @@ func newEnv() *env {
 	return &env{
 		world: &fakeWorld{colonists: 3, points: 500, scale: 100, reward: 100, threats: true, near: 40,
 			factions: []quest.FactionView{
-				{Index: 0, Relation: faction.Neutral, CanBeFriendly: true, Settlements: []int{5}},
-				{Index: 1, Relation: faction.Hostile, Goodwill: -80, CanBeFriendly: true, Settlements: []int{7}},
-				{Index: 2, Relation: faction.Hostile, Goodwill: -100, Settlements: []int{9}},
+				{Index: 0, Relation: faction.Neutral, CanBeFriendly: true, Human: true, Settlements: []int{5}},
+				{Index: 1, Relation: faction.Hostile, Goodwill: -80, CanBeFriendly: true, Human: true, Settlements: []int{7}},
+				{Index: 2, Relation: faction.Hostile, Goodwill: -100, Tech: faction.Neolithic, Human: true, Settlements: []int{9}},
 			}},
 		clock: c, sites: &fakeSites{deposits: map[int]trade.Line{}}, pawns: &fakePawns{social: 8, xp: map[skill.ID]int{}},
 		items:   &fakeItems{into: map[uint64][]trade.Line{}, at: map[uint64]int{}},

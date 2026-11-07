@@ -145,6 +145,9 @@ const (
 	// TurnedAwayWanderer (QST-173, append only, saved): the colony turned a
 	// wanderer's offer to join away.
 	TurnedAwayWanderer
+	// RescuedByColony (QST-057, QST-068, append only, saved): the colony
+	// came for this pawn, down on a site or held in a cell, and took them in.
+	RescuedByColony
 	numKinds
 )
 
@@ -307,6 +310,7 @@ var defs = [numKinds]Def{
 	BlisteringHot:      {"blistering hot", -16, 0, groupTempHot, 0, 0},
 	Naked:              {"naked", -6, 0, groupNone, 0, 0},
 	TurnedAwayWanderer: {"turned a wanderer away", -3, day, groupNone, 0, 0},
+	RescuedByColony:    {"rescued", 18, 30 * day, groupNone, 0, 0},
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

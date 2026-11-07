@@ -20,9 +20,19 @@ func FactionViews(fs []faction.Faction) []FactionView {
 	for i, f := range fs {
 		out[i] = FactionView{Index: i, Relation: f.Relation, Goodwill: f.Goodwill,
 			CanBeFriendly: faction.DefOf(f.Type).CanBeFriendly, Defeated: f.Defeated, Besieged: f.Besieged,
+			Tech: faction.DefOf(f.Type).Tech, Human: f.Type.Human(),
 			Settlements: slices.Sorted(slices.Values(f.Settlements))}
 	}
 	return out
+}
+
+// TechOf is faction ref's (index + 1) tech in fs; industrial when ref
+// names none.
+func TechOf(fs []FactionView, ref int) faction.Tech {
+	if ref < 1 || ref > len(fs) {
+		return faction.Industrial
+	}
+	return fs[ref-1].Tech
 }
 
 // PickSettlement is one of faction f's (index) settlement tiles, picked

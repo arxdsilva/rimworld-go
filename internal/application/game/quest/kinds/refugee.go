@@ -57,7 +57,7 @@ func (Refugee) Build(c quest.Ctx, q *qd.Quest) bool {
 	}
 	var enemies []int
 	for _, f := range c.R.World.Factions() {
-		if f.Relation == faction.Hostile && !f.Defeated {
+		if f.Relation == faction.Hostile && f.Human && !f.Defeated {
 			enemies = append(enemies, f.Index)
 		}
 	}

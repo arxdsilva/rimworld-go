@@ -708,7 +708,7 @@ func clearSite(g *Game, x, y int) {
 	for id := g.itemAt(x, y); id != 0; id = g.itemAt(x, y) {
 		g.deleteItem(id)
 	}
-	if len(g.roofs) > 0 {
-		g.setRoof(y*g.grid.Width()+x, 0)
+	if i := y*g.grid.Width() + x; len(g.roofs) > 0 {
+		g.setRoof(i, g.roofs[i]&roof.Supported) // derived: the room rebuild keeps it (a load derives it again)
 	}
 }

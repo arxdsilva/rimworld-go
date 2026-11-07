@@ -86,6 +86,10 @@ type FactionView struct {
 	CanBeFriendly bool
 	Defeated      bool
 	Besieged      bool
+	// Tech is its technology level; Human, whether its people are people
+	// (not a swarm), so it can hold a camp, guard goods or keep a prisoner.
+	Tech  faction.Tech
+	Human bool
 	// Settlements are its settlement tiles, ascending.
 	Settlements []int
 }
