@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 )
@@ -100,7 +101,7 @@ const (
 	OptLabelX = contentX
 	OptCtrlX  = 457
 	optCtrlW  = 173
-	rowTopY   = 21
+	rowTopY   = 23 // below the window X (UIS-075: it ends at y 22)
 	okW       = 154
 	okH       = 39
 	okBottom  = 18
@@ -495,6 +496,32 @@ func tabRects(win gfx.Rect, n int) []gfx.Rect {
 	return out
 }
 
+// optionsCloseID is the window X's widget id (UIS-075).
+const optionsCloseID = "options.close"
+
+// closeRect is the window's X (UIS-075): in the top-right corner, inset.
+func closeRect(win gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: win.Right() - hudlayout.OptionsCloseInset - hudlayout.OptionsCloseSize, Y: win.Y + hudlayout.OptionsCloseInset,
+		W: hudlayout.OptionsCloseSize, H: hudlayout.OptionsCloseSize}
+}
+
+// closeButton is the X: it sends the same intent as Back (ApplyOption).
+func closeButton(win gfx.Rect) uikit.Button {
+	r := closeRect(win)
+	return uikit.Button{ID: optionsCloseID, Label: "X", X: r.X, Y: r.Y, W: r.W, H: r.H, Quiet: true}
+}
+
+// rowRect is the declared rectangle of the button id on the current tab.
+func (o *Screen) rowRect(id string) gfx.Rect {
+	sw, sh := o.sh.Size()
+	for _, b := range o.Buttons(sw, sh) {
+		if b.ID == id {
+			return gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
+		}
+	}
+	return gfx.Rect{}
+}
+
 func (o *Screen) Buttons(sw, sh int) []uikit.Button {
 	tab := o.CurrentTab()
 	var out []uikit.Button
@@ -531,7 +558,7 @@ func (o *Screen) Buttons(sw, sh int) []uikit.Button {
 		}
 	}
 	if wideTab(tab) {
-		return append(out, uikit.Button{ID: ids.OptionsBack, Label: o.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36})
+		return append(out, uikit.Button{ID: ids.OptionsBack, Label: o.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36}, closeButton(win))
 	}
 	if more {
 		ok := okRect(win)
@@ -541,12 +568,17 @@ func (o *Screen) Buttons(sw, sh int) []uikit.Button {
 				Disabled: o.rowOff >= len(rows)-rowsPerPage(win, tab), Quiet: true, Reason: o.sh.T("last rows")})
 	}
 	ok := okRect(win)
-	return append(out, uikit.Button{ID: ids.OptionsBack, Label: o.sh.T("OK"), X: ok.X, Y: ok.Y, W: ok.W, H: ok.H})
+	return append(out, uikit.Button{ID: ids.OptionsBack, Label: o.sh.T("OK"), X: ok.X, Y: ok.Y, W: ok.W, H: ok.H}, closeButton(win))
 }
 
 // ApplyOption handles an options.* click: a tab, or a row's control.
 func (o *Screen) ApplyOption(id string) {
 	key := strings.TrimPrefix(id, ids.PrefixOptions)
+	if id == optionsCloseID { // the X: the same intent as Back and Esc (UIS-075)
+		o.sh.Cue("ui.toggle")
+		o.sh.Do(ports.Back{})
+		return
+	}
 	if t, ok := strings.CutPrefix(key, "tab."); ok {
 		o.Tab, o.rowOff = t, 0
 		*o.sh.Rebind() = RebindState{}
@@ -627,7 +659,7 @@ func (o *Screen) DrawOptions(screen *ebiten.Image, sw, sh int) {
 	if tab == "controls" {
 		o.drawControls(screen, sw, sh)
 		o.drawButtons(screen, o.Buttons(sw, sh)[:len(o.TabList())], mx, my)
-		o.drawButtons(screen, []uikit.Button{{ID: ids.OptionsBack, Label: o.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36}}, mx, my)
+		o.drawButtons(screen, []uikit.Button{{ID: ids.OptionsBack, Label: o.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36}, closeButton(win)}, mx, my)
 		return
 	}
 	rows := OptionRows(tab, o.sh)

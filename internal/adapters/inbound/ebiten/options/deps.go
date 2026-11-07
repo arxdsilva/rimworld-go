@@ -107,9 +107,16 @@ type Story interface {
 	Rules() gameplay.Settings
 }
 
+// Nav is how the screen tells the shell something: a hint, or an intent (the
+// window X sends ports.Back, UIS-075).
+type Nav interface {
+	ports.Hinter
+	ports.Dispatcher
+}
+
 // Shell composes the roles the screen calls with its Host.
 type Shell interface {
-	ports.Hinter
+	Nav
 	ports.Sizer
 	ports.Settings
 	ports.Widgets

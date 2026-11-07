@@ -27,6 +27,7 @@ type fakeShell struct {
 	listErr  error
 	loadErr  error
 	loaded   []string
+	intents  []ports.Intent
 }
 
 func newFake() (*fakeShell, *Screen) {
@@ -34,6 +35,7 @@ func newFake() (*fakeShell, *Screen) {
 	return f, New(f)
 }
 
+func (f *fakeShell) Do(it ports.Intent)        { f.intents = append(f.intents, it) }
 func (f *fakeShell) Env() Env                  { return f.env }
 func (f *fakeShell) Settings() config.Settings { return f.settings }
 func (f *fakeShell) SetSettings(s config.Settings) {

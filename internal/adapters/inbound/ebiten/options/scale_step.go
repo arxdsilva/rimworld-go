@@ -1,12 +1,12 @@
 package options
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 	"time"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
@@ -22,8 +22,6 @@ const (
 	scaleKeepSecs = 10
 	scalePickID   = "options.uiscale.pick"
 	scaleKeepID   = "options.uiscale.keep"
-	// the picker's cells: two columns of five at the menu-row pitch
-	pickCellW, pickCellH, pickPitch, pickGap = 150, 26, 29, 8
 )
 
 // ScaleControl is the UI scale row's behaviour: the list, the refusal, the
@@ -104,7 +102,7 @@ func uiScaleRow(t lang.Tr) OptionRow {
 	return OptionRow{Key: "uiscale", Label: t.T("UI scale"), kind: rowChoice,
 		Tip:  t.T("Scales text and every panel. Auto fits the window."),
 		live: func(o *Screen) string { return o.Scale.uiScaleLabel() },
-		run:  func(o *Screen) { o.Scale.openScalePicker() }}
+		run:  func(o *Screen) { o.Scale.openScaleList(o.rowRect(ids.PrefixOptions + "uiscale")) }}
 }
 
 // Choose picks Auto (0) or a step in percent. Auto applies at once.
@@ -186,28 +184,26 @@ func (o *ScaleControl) openScaleKeep() {
 // scaleChoices are the list's entries: 0 is Auto, then every step.
 func scaleChoices() []int { return append([]int{0}, config.UIScalePresets...) }
 
-func (o *ScaleControl) openScalePicker() {
-	k := o.sh.Kit()
+// openScaleList opens the drop list under the row's value control: Auto and
+// every step, the selected one marked, a step the window refuses disabled
+// with its reason.
+func (o *ScaleControl) openScaleList(anchor gfx.Rect) {
 	choices := scaleChoices()
-	per := (len(choices) + 1) / 2
-	h := uikit.ModalTitleH + uikit.ModalFooterH + 2*uikit.ModalPad + float32(per*pickPitch)
-	k.Push(uikit.Modal{ID: scalePickID, Title: o.sh.T("UI scale"), W: 2*pickCellW + pickGap + 2*uikit.ModalPad, H: h,
-		Draw: func(body gfx.Rect) {
-			for i, c := range choices {
-				r := gfx.Rect{X: body.X + float32(i/per)*(pickCellW+pickGap), Y: body.Y + float32(i%per)*pickPitch, W: pickCellW, H: pickCellH}
-				label := o.sh.T("Auto")
-				if c != 0 {
-					label = stepText(c)
-				}
-				ac := o.sh.Settings().Accessibility
-				on := (c == 0 && ac.UIScaleAuto) || (c != 0 && !ac.UIScaleAuto && c == ac.UIScale)
-				refused := c != 0 && !o.stepAllowed(c)
-				uikit.StyledButton(k, fmt.Sprintf("%s.%d", scalePickID, c), r, label,
-					uikit.BtnOpts{Selected: on, Tip: o.scaleTip(c, refused)},
-					func() { k.CloseModal(scalePickID); o.Choose(c) })
-			}
-		},
-		Buttons: []uikit.ModalButton{{ID: "cancel", Label: o.sh.T("Cancel"), Closes: true}}})
+	ac := o.sh.Settings().Accessibility
+	opts := make([]uikit.DropOpt, len(choices))
+	cur := 0
+	for i, c := range choices {
+		label := o.sh.T("Auto")
+		if c != 0 {
+			label = stepText(c)
+		}
+		if (c == 0 && ac.UIScaleAuto) || (c != 0 && !ac.UIScaleAuto && c == ac.UIScale) {
+			cur = i
+		}
+		refused := c != 0 && !o.stepAllowed(c)
+		opts[i] = uikit.DropOpt{Label: label, Tip: o.scaleTip(c, refused), Disabled: refused}
+	}
+	uikit.DropList(o.sh.Kit(), scalePickID, anchor, opts, cur, func(i int) { o.Choose(choices[i]) })
 }
 
 func (o *ScaleControl) scaleTip(c int, refused bool) string {
