@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/outfit"
+	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/ship"
@@ -89,6 +90,8 @@ type worldState struct {
 	atlas       maps.Atlas    // game/maps: the open maps beyond the first (MAP-01)
 	sense       *sense.Sense  // senseOf (sense_host.go): the habit rules (CSE)
 	outfits     outfit.Book   // outfitBook (apparel.go): apparel policies (GEAR-3), saved as Outfits
+	quests      *quest.Quests // questOf (quest_host.go): the quests root (QST-1), saved as Quests
+	questMemo   questMemo     // questViews: the read model's quest list
 }
 
 // worldSave is worldState as saved.
@@ -103,6 +106,7 @@ type worldSave struct {
 	HuntOut []huntOutRec // area_dest.go
 	AX9     *travel.Save // game/travel (AX-9): absent in older saves
 	Atlas   *maps.Atlas  // game/maps (MAP-01): absent while one map was ever open
+	Quests  *quest.Save  // game/quest (QST-1): absent before the first quest or in a legacy colony
 }
 
 // worldSaveVersion is the format exportWorld writes (2: area refs).
@@ -275,10 +279,14 @@ func (g *Game) worldEdge() (int, int, bool) {
 // exportWorld is the World save field (nil: nothing yet).
 func (g *Game) exportWorld() *worldSave {
 	w := g.worldSt
-	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 && w.ax9.Empty() && w.atlas.Empty() {
+	var qs *quest.Save
+	if w != nil && w.quests != nil {
+		qs = w.quests.Export() // nil while it holds nothing
+	}
+	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 && w.ax9.Empty() && w.atlas.Empty() && qs == nil {
 		return nil
 	}
-	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors)}
+	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors), Quests: qs}
 	for _, c := range w.caravans {
 		s.Caravans = append(s.Caravans, c.Clone())
 	}
@@ -314,6 +322,9 @@ func (g *Game) importWorld(s *worldSave) {
 	w.huntOut, w.ax9 = importHuntOut(s.HuntOut), travel.Import(s.AX9) // area_dest.go, game/travel
 	if s.Atlas != nil {
 		w.atlas = *s.Atlas.Clone()
+	}
+	if s.Quests != nil && g.hasSetup() {
+		questOf(g).Import(s.Quests)
 	}
 }
 

@@ -276,6 +276,7 @@ func (g *Game) setupTick(now uint64) {
 	if !primary(g) {
 		return
 	}
+	questTick(g, now, false) // quest_host.go (QST-1): due timers and offers
 	switch now % clock.TicksPerDay {
 	case 0:
 		g.dayRollover(now)
@@ -308,7 +309,8 @@ func (g *Game) checkLosses(now uint64) {
 func (g *Game) dayRollover(now uint64) {
 	g.ng.adapt.Day(g.ng.setup.Difficulty, g.ng.lost)
 	g.ng.lost = false
-	g.factionsDay() // factions.go
+	g.factionsDay()         // factions.go
+	questTick(g, now, true) // quest_host.go (QST-1): the offer cadence
 }
 
 // scheduledIncidents fires the scenario's incidents due today.

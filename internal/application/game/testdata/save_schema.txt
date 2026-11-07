@@ -605,6 +605,7 @@ saveState.Letters[].Map uint32
 saveState.Letters[].Msg rimworld-go/pkg/msgfmt.Text
 saveState.Letters[].Msg.Format string
 saveState.Letters[].Msg.Packed string
+saveState.Letters[].Quest uint32
 saveState.Letters[].Text string
 saveState.Letters[].Tick uint64
 saveState.Letters[].Title string
@@ -2728,6 +2729,62 @@ saveState.World.HuntOut[] rimworld-go/internal/application/game.huntOutRec
 saveState.World.HuntOut[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.HuntOut[].Prey rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.HuntOut[].Since uint64
+saveState.World.Quests rimworld-go/internal/application/game/quest.Save
+saveState.World.Quests.Cadence rimworld-go/internal/application/game/quest.Cadence
+saveState.World.Quests.Cadence.At uint64
+saveState.World.Quests.Cadence.Started bool
+saveState.World.Quests.Cadence.Window int
+saveState.World.Quests.Next rimworld-go/internal/domain/quest.ID = uint32
+saveState.World.Quests.NoGoodwill []int
+saveState.World.Quests.NoGoodwill[] int
+saveState.World.Quests.Quests []rimworld-go/internal/domain/quest.Quest
+saveState.World.Quests.Quests[] rimworld-go/internal/domain/quest.Quest
+saveState.World.Quests.Quests[].AcceptBy uint64
+saveState.World.Quests.Quests[].AcceptedAt uint64
+saveState.World.Quests.Quests[].Chosen int8
+saveState.World.Quests.Quests[].Deadline uint64
+saveState.World.Quests.Quests[].Dismissed bool
+saveState.World.Quests.Quests[].EndedAt uint64
+saveState.World.Quests.Quests[].Giver int
+saveState.World.Quests.Quests[].ID rimworld-go/internal/domain/quest.ID = uint32
+saveState.World.Quests.Quests[].Kind rimworld-go/internal/domain/quest.KindID = uint8
+saveState.World.Quests.Quests[].OfferedAt uint64
+saveState.World.Quests.Quests[].Paid bool
+saveState.World.Quests.Quests[].Parts []rimworld-go/internal/domain/quest.Part
+saveState.World.Quests.Quests[].Parts[] rimworld-go/internal/domain/quest.Part
+saveState.World.Quests.Quests[].Parts[].At uint64
+saveState.World.Quests.Quests[].Parts[].Count int
+saveState.World.Quests.Quests[].Parts[].Done bool
+saveState.World.Quests.Quests[].Parts[].Kind rimworld-go/internal/domain/quest.PartKind = uint8
+saveState.World.Quests.Quests[].Parts[].Layout uint8
+saveState.World.Quests.Quests[].Parts[].Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.World.Quests.Quests[].Parts[].Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.World.Quests.Quests[].Parts[].Lines[].Building uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Qty int
+saveState.World.Quests.Quests[].Parts[].Map uint32
+saveState.World.Quests.Quests[].Parts[].Pawn uint64
+saveState.World.Quests.Quests[].Parts[].Points int
+saveState.World.Quests.Quests[].Parts[].Seed uint64
+saveState.World.Quests.Quests[].Parts[].Threat uint8
+saveState.World.Quests.Quests[].Parts[].Tile int
+saveState.World.Quests.Quests[].Points int
+saveState.World.Quests.Quests[].Reason rimworld-go/internal/domain/quest.Reason = uint8
+saveState.World.Quests.Quests[].Rewards []rimworld-go/internal/domain/quest.Reward
+saveState.World.Quests.Quests[].Rewards[] rimworld-go/internal/domain/quest.Reward
+saveState.World.Quests.Quests[].Rewards[].Goodwill int
+saveState.World.Quests.Quests[].Rewards[].Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.World.Quests.Quests[].Rewards[].Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.World.Quests.Quests[].Rewards[].Lines[].Building uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Qty int
+saveState.World.Quests.Quests[].Rewards[].Pawn uint64
+saveState.World.Quests.Quests[].Rewards[].SiteLoot bool
+saveState.World.Quests.Quests[].Rewards[].Value int
+saveState.World.Quests.Quests[].Seed uint64
+saveState.World.Quests.Quests[].Stars uint8
+saveState.World.Quests.Quests[].State rimworld-go/internal/domain/quest.State = uint8
+saveState.World.Quests.Quests[].Target int
 saveState.World.Stashed []rimworld-go/internal/application/game.stashRec
 saveState.World.Stashed[] rimworld-go/internal/application/game.stashRec
 saveState.World.Stashed[].Beast rimworld-go/internal/domain/animal.State

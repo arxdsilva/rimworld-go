@@ -59,6 +59,9 @@ type Letter struct {
 	// Demand: a caravan's encounter asks Give or Refuse by this letter
 	// (command.EncounterAnswer, MAP-08).
 	Demand bool
+	// Quest is the quest the letter is about (QST-131; 0: none): the
+	// letter opens the Quests window on it.
+	Quest uint32
 }
 
 // State is the stack, oldest first, and how many letters were ever issued:

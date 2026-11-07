@@ -363,6 +363,7 @@ type LetterView struct {
 	// Demand: a caravan's encounter asks Give or Refuse (EncounterAnswer,
 	// Target this letter, Mode 0 give, 1 refuse; MAP-08).
 	Demand bool
+	Quest  uint32 // the quest it is about (0: none): it opens the Quests window there (QST-131)
 }
 
 // StoredResourceView is one row of the resource list (PLAY-018).
@@ -625,6 +626,7 @@ type WorldView struct {
 	// Letters (PLAY-018) are the letter stack, newest last: kept and saved
 	// until the player dismisses one (command.DismissLetter), at most 40.
 	Letters []LetterView
+	Quests  []QuestView // QST-1: every quest, ids ascending (memoized; quest_host.go)
 	// Stored (PLAY-018) is what the colony holds in its stockpiles, one row
 	// per item kind, for the resource list (the Food/Wood/... totals above
 	// still count every loose stack).
@@ -1495,6 +1497,7 @@ func (g *Game) world() WorldView {
 		Season:      temperature.Season(g.clock.Now()),
 		Messages:    g.messageViews(),
 		Letters:     g.sharedLetters(), // letters.go (PLAY-018)
+		Quests:      questViews(g),
 		Zones:       g.zoneViews(),
 		Schedule:    g.scheduleView(),
 	}

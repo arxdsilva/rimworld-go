@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 )
 
 // Goods is what caravan cid carries, a copy (MAP-08: what a demand asks for).
@@ -42,5 +43,41 @@ func (o Ops) Yield(cid uint64, k item.Kind, qty int) bool {
 		}
 	}
 	o.h.Changed()
+	return true
+}
+
+// CarryLines adds lines to caravan cid's goods (a quest reward, QST-090).
+func (o Ops) CarryLines(cid uint64, lines []trade.Line) {
+	for _, l := range lines {
+		o.Carry(cid, item.Stack{Kind: l.Kind, Qty: l.Qty})
+	}
+}
+
+// HasLines: caravan cid carries every line (a request, QST-2g).
+func (o Ops) HasLines(cid uint64, lines []trade.Line) bool {
+	h := o.s.cargo[cid]
+	if h == nil {
+		return len(lines) == 0
+	}
+	have := map[item.Kind]int{}
+	for _, st := range h.Items {
+		have[st.Kind] += st.Qty
+	}
+	for _, l := range lines {
+		if have[l.Kind] -= l.Qty; have[l.Kind] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// TakeLines gives every line up, or nothing when one is short.
+func (o Ops) TakeLines(cid uint64, lines []trade.Line) bool {
+	if !o.HasLines(cid, lines) {
+		return false
+	}
+	for _, l := range lines {
+		o.Yield(cid, l.Kind, l.Qty)
+	}
 	return true
 }

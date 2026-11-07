@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/hit"
+	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/attack"
@@ -112,8 +113,9 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) { g.dieBy(id, cause, 
 func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.EntityID) {
 	g.stainDeath(id) // stains.go
 	g.interrupt(id, job.Cancelled)
-	g.reserve.ReleaseTarget(id)   // RES-1: claims on the dead pawn end
-	g.care.Doctor.PatientDied(id) // care/rescue.go (SIM-063): a carrier drops a patient that died
+	g.reserve.ReleaseTarget(id)                                     // RES-1: claims on the dead pawn end
+	g.care.Doctor.PatientDied(id)                                   // care/rescue.go (SIM-063): a carrier drops a patient that died
+	questSignal(g, quest.Signal{Kind: quest.SigPawnDied, Pawn: id}) // quest_host.go (QST-1)
 	g.releaseBed(id)
 	delete(g.draft, id)
 	g.logEvent(id, logEntry{Kind: logDied})

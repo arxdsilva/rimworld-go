@@ -148,7 +148,7 @@ func (g *Game) letterViews() []LetterView {
 	out := make([]LetterView, len(list))
 	for i, l := range list {
 		out[i] = LetterView{ID: l.ID, Tick: l.Tick, Kind: l.Kind, Title: l.Title, Text: l.Text, Msg: l.Msg,
-			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0, Demand: l.Demand}
+			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0, Demand: l.Demand, Quest: l.Quest}
 	}
 	return out
 }
