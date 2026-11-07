@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -358,8 +359,8 @@ func (g *Game) introLetter() {
 	}
 	x, y := g.landingSpot()
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: x, Y: y,
-		Letter: true, Title: g.ng.setup.Scenario.Name, Kind: letterInfo})
-	g.markIntroLetter() // letters.go: the stack flags it so the UI opens it by itself
+		Letter: true, Title: g.ng.setup.Scenario.Name, Kind: letters.Info})
+	g.letters.EditLast(func(l *letters.Letter) { l.Intro = true }) // the UI opens the intro letter by itself
 }
 
 // ArrivalView is one arrival pod for the renderer (NG-1 §2.11): it falls

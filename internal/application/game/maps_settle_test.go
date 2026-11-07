@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/building/construction"
@@ -249,8 +250,8 @@ func TestSettlementDestroyedThenFactionGone(t *testing.T) {
 		if got := g.ng.factions[enemy].Goodwill; got != was+20 {
 			t.Fatalf("enemy goodwill %d, want %d", got, was+20)
 		}
-		i := slices.IndexFunc(g.letters.list, func(l savedLetter) bool { return l.Title == "Settlement destroyed" })
-		if i < 0 || uint32(g.letters.list[i].Map) != m.id {
+		i := slices.IndexFunc(g.letters.List(), func(l letters.Letter) bool { return l.Title == "Settlement destroyed" })
+		if i < 0 || uint32(g.letters.List()[i].Map) != m.id {
 			t.Fatalf("no letter on the map: %d", i)
 		}
 		if v := g.Maps()[1]; v.Kind != "site" || v.Countdown <= 0 {

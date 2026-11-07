@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"slices"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/outfit"
 	"rimworld-go/internal/application/game/raid"
@@ -253,7 +254,7 @@ func dieAway(g *Game, id entity.EntityID, cause health.Cause) {
 	if c != nil {
 		c.C.Members = slices.DeleteFunc(c.C.Members, func(m uint64) bool { return m == uint64(id) })
 	}
-	letterf(g, letterCaution, "Death on the road", 0, "%s died on the caravan's journey.", g.personName(id))
+	letterf(g, letters.Caution, "Death on the road", 0, "%s died on the caravan's journey.", g.personName(id))
 }
 
 // worldEdge is a walkable map-edge tile from which the colony can be
@@ -539,9 +540,9 @@ func (h mapsGround) HomeSpot(i int) (int, int, bool) {
 	return h.g.combat.Tiles.WalkableNear(hx+o[0]/2, hy+o[1]/2, 3)
 }
 func (h mapsGround) Letter(caution bool, title string, focus entity.EntityID, format string, args ...any) {
-	kind := letterInfo
+	kind := letters.Info
 	if caution {
-		kind = letterCaution
+		kind = letters.Caution
 	}
 	letterf(h.g, kind, title, focus, format, args...)
 }
@@ -922,9 +923,7 @@ func (h mapsFound) Promote(next uint32, land [2]int, hasLand bool) {
 	for i := range g.messages {
 		g.messages[i].Map = swap(g.messages[i].Map)
 	}
-	for i := range g.letters.list {
-		g.letters.list[i].Map = swap(g.letters.list[i].Map)
-	}
+	g.letters.EditAll(func(l *letters.Letter) { l.Map = uint32(swap(MapID(l.Map))) })
 }
 
 // Wipe removes the current map's colonists, prisoners and items (MAP-07):
@@ -979,12 +978,12 @@ func (h mapsWaylay) Hunt(seed uint64, n int) {
 }
 func (h mapsWaylay) DemandLetter(title, format string, args ...any) uint64 {
 	g := h.g
-	letterf(g, letterThreat, title, 0, format, args...)
-	l := &g.letters.list[len(g.letters.list)-1]
-	l.Demand = true
-	return l.ID
+	letterf(g, letters.Threat, title, 0, format, args...)
+	var id uint64
+	g.letters.EditLast(func(l *letters.Letter) { l.Demand, id = true, l.ID })
+	return id
 }
 func (h mapsWaylay) DropLetter(id uint64) {
 	g := h.g
-	g.letters.list = slices.DeleteFunc(g.letters.list, func(l savedLetter) bool { return l.ID == id })
+	g.letters.Remove(id)
 }

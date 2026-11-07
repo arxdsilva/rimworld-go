@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/pkg/msgfmt"
 )
@@ -81,9 +82,9 @@ func TestPostsCarryTheirFormat(t *testing.T) {
 		c.checkPosts(t, g)
 	}
 	// the hand-posted kinds, a % in finished text among them
-	g.letter(letterInfo, "Plain", "Stocks at 100% of last year.", 0)
-	letterf(g, letterGood, "Keyed", 0, "%s found %d silver (%d%%).", "Ada", 40, 5)
-	pawnLetterf(g, letterCaution, "Keyed about", 0, "%s is %s.", "Bo", "sad")
+	g.letter(letters.Info, "Plain", "Stocks at 100% of last year.", 0)
+	letterf(g, letters.Good, "Keyed", 0, "%s found %d silver (%d%%).", "Ada", 40, 5)
+	pawnLetterf(g, letters.Caution, "Keyed about", 0, "%s is %s.", "Bo", "sad")
 	g.worldNote("A note at %d%%.", 7)
 	g.notice(1, 1, 0, "%d deer and %s.", 3, "a hare")
 	c.checkPosts(t, g)
@@ -97,8 +98,8 @@ func TestPostsCarryTheirFormat(t *testing.T) {
 func TestLettersKeepMsgThroughSave(t *testing.T) {
 	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 40, Height: 40})
-	letterf(g, letterGood, "Keyed", 0, "%s found %d silver.", "Ada", 40)
-	g.letter(letterInfo, "Plain", "Half of 50% is 25%.", 0)
+	letterf(g, letters.Good, "Keyed", 0, "%s found %d silver.", "Ada", 40)
+	g.letter(letters.Info, "Plain", "Half of 50% is 25%.", 0)
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "msg"); err != nil {
 		t.Fatal(err)

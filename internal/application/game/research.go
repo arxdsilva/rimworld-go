@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/letters"
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
@@ -110,7 +111,7 @@ func (h researchHost) Difficulty() int {
 }
 func (h researchHost) Now() uint64 { return uint64(h.g.clock.Now()) }
 func (h researchHost) Letter(title, text string, x, y int) {
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letters.Good})
 }
 func (h researchHost) Changed() { h.g.viewGen++ } // view cache (indexes.go)
 

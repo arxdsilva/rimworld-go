@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/industry"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/application/game/outfit"
@@ -182,7 +183,7 @@ type saveState struct {
 	// Letters is the letter stack, oldest first, and NextLetter how many
 	// ids were ever issued (PLAY-018, additive: an older save has neither
 	// and importLetters builds the stack from its letter messages).
-	Letters    []savedLetter
+	Letters    []letters.Letter
 	NextLetter uint64
 
 	PawnIDs   []entity.EntityID
@@ -497,10 +498,11 @@ func (g *Game) Save(w io.Writer, name string) error {
 	if err != nil {
 		return fmt.Errorf("save rng: %w", err)
 	}
+	letterList, letterNext := g.letters.Export()
 	s := saveState{
 		Tick: g.clock.Now(), NextEntity: g.entities.Peek(),
 		RNG: rng, Sched: g.sched, Messages: g.messages,
-		Letters: g.letters.list, NextLetter: g.letters.next,
+		Letters: letterList, NextLetter: letterNext,
 		Names: exportStore(g.names), Need: exportStore(g.need), Vital: exportStore(g.vital), Labor: exportStore(g.labor),
 		LastMeal: g.lastMeal, Bills: g.craft.Bills.Export(), Racks: g.craft.Drying.Export(), Art: map[entity.EntityID]craft.Artwork{}, Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,

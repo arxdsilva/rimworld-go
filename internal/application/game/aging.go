@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -176,11 +177,11 @@ func (g *Game) developAging(id entity.EntityID, k body.CondKind, p int, now uint
 	pos, _ := g.positions.Get(id)
 	switch k {
 	case body.CondHeartAttack:
-		g.post(MessageView{Tick: now, X: pos.X, Y: pos.Y, Focus: id, Letter: true, Title: "Heart attack", Kind: letterThreat,
+		g.post(MessageView{Tick: now, X: pos.X, Y: pos.Y, Focus: id, Letter: true, Title: "Heart attack", Kind: letters.Threat,
 			Msg: msgfmt.Of("%s is having a heart attack. Untreated it is usually fatal within hours: get a doctor to tend %s every hour, each tend may ease it. A pump or valve heart prevents heart attacks.",
 				g.personName(id), g.personName(id))})
 	case body.CondCarcinoma:
-		g.post(MessageView{Tick: now, X: pos.X, Y: pos.Y, Focus: id, Letter: true, Title: "Carcinoma", Kind: letterCaution,
+		g.post(MessageView{Tick: now, X: pos.X, Y: pos.Y, Focus: id, Letter: true, Title: "Carcinoma", Kind: letters.Caution,
 			Msg: msgfmt.Of("%s has a carcinoma in the %s. If it grows to full size it destroys the %s. A doctor with Medicine 10 can excise it with 4 industrial medicine or better; a failed excision kills one time in four.",
 				g.personName(id), part.Label(), part.Label())})
 	default:

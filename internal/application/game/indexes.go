@@ -517,10 +517,10 @@ func (g *Game) scheduleView() []schedule.Activity {
 	return g.views.sched.share(g.views.on, len(g.sched), func(i int) schedule.Activity { return g.sched[i] })
 }
 
-// letterMemo is the last letter stack view and the letters it was made
-// from.
+// letterMemo is the last letter stack view and the stack version it was
+// made from.
 type letterMemo struct {
-	src   []savedLetter
+	ver   uint64
 	views []LetterView
 	ok    bool
 }
@@ -532,10 +532,10 @@ func (g *Game) sharedLetters() []LetterView {
 		return g.letterViews()
 	}
 	m := &g.views.letters
-	if m.ok && slices.Equal(m.src, g.letters.list) {
+	if m.ok && m.ver == g.letters.Version() {
 		return m.views
 	}
-	m.src, m.views, m.ok = slices.Clone(g.letters.list), g.letterViews(), true
+	m.ver, m.views, m.ok = g.letters.Version(), g.letterViews(), true
 	return m.views
 }
 

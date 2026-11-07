@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -180,7 +181,7 @@ func (g *Game) diseaseLetter(k body.CondKind, victims []entity.EntityID) {
 		focus = 0
 	}
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: m, X: pos.X, Y: pos.Y, Focus: focus,
-		Letter: true, Title: title, Kind: letterCaution})
+		Letter: true, Title: title, Kind: letters.Caution})
 }
 
 // hasDisease reports a disease on b.

@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/farm"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -251,7 +252,7 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 	case incident.Eclipse, incident.ToxicFallout, incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter: // FOOD-6, TEMP-2 (incident/sky.go, climate.go)
 		title, text, ok := g.incidents.StartTimed(id, now, g.rng.IntN)
 		if hx, hy := g.home(); ok {
-			g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letterCaution, Text: text})
+			g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letters.Caution, Text: text})
 		}
 		return ok
 	}

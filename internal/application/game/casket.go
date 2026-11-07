@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
@@ -212,7 +213,7 @@ func (g *Game) casketSleeper(b construction.Building, v *vaultSave) {
 	n, _ := g.need.Get(id)
 	n.Rest = needs.Full * pawngen.ExhaustedRest / 100 // dazed from the long sleep
 	g.need.Set(id, n)
-	letterf(g, letterGood, casketJoinTitle, id, "%s climbs out of the sleeper casket, dazed, and asks to stay. %s has joined the colony.", g.personName(id), g.personName(id))
+	letterf(g, letters.Good, casketJoinTitle, id, "%s climbs out of the sleeper casket, dazed, and asks to stay. %s has joined the colony.", g.personName(id), g.personName(id))
 	g.addHistory("joined", g.personName(id)+" woke in a sleeper casket and joined the colony.", id)
 }
 

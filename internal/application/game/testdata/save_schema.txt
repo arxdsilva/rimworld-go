@@ -593,15 +593,15 @@ saveState.Landing[] int
 saveState.LastMeal map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/economy/item.Kind
 saveState.LastMeal{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.LastMeal{} rimworld-go/internal/domain/economy/item.Kind = uint8
-saveState.Letters []rimworld-go/internal/application/game.savedLetter
-saveState.Letters[] rimworld-go/internal/application/game.savedLetter
+saveState.Letters []rimworld-go/internal/application/game/letters.Letter
+saveState.Letters[] rimworld-go/internal/application/game/letters.Letter
 saveState.Letters[].Demand bool
 saveState.Letters[].Focus rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Letters[].ID uint64
 saveState.Letters[].Intro bool
 saveState.Letters[].Join rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Letters[].Kind string
-saveState.Letters[].Map rimworld-go/internal/application/game.MapID = uint32
+saveState.Letters[].Map uint32
 saveState.Letters[].Msg rimworld-go/pkg/msgfmt.Text
 saveState.Letters[].Msg.Format string
 saveState.Letters[].Msg.Packed string

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
@@ -41,7 +42,7 @@ func letterByTitle(t testing.TB, g *Game, title string) LetterView {
 func TestLetterPostBecomesLetter(t *testing.T) {
 	t.Parallel()
 	g := letterGame()
-	g.letter(letterGood, "Wanderer joins", "Bo has asked to join the colony.", 7)
+	g.letter(letters.Good, "Wanderer joins", "Bo has asked to join the colony.", 7)
 	ls := g.World().Letters
 	if len(ls) != 1 {
 		t.Fatalf("%d letters, want 1", len(ls))
@@ -118,24 +119,24 @@ func TestLetterKindDefaults(t *testing.T) {
 func TestLetterCapDropsOldest(t *testing.T) {
 	t.Parallel()
 	g := letterGame()
-	for i := 1; i <= maxLetters+5; i++ {
-		g.letter(letterInfo, fmt.Sprintf("Letter %d", i), "text", 0)
+	for i := 1; i <= letters.Max+5; i++ {
+		g.letter(letters.Info, fmt.Sprintf("Letter %d", i), "text", 0)
 	}
 	ids := letterIDs(g)
-	if len(ids) != maxLetters || maxLetters != 40 {
-		t.Fatalf("%d letters kept (cap %d), want 40", len(ids), maxLetters)
+	if len(ids) != letters.Max || letters.Max != 40 {
+		t.Fatalf("%d letters kept (cap %d), want 40", len(ids), letters.Max)
 	}
 	for i, id := range ids { // the newest 40, oldest first: ids 6..45
 		if id != uint64(i+6) {
 			t.Fatalf("letter %d has id %d, want %d (ids %v)", i, id, i+6, ids)
 		}
 	}
-	if l := g.World().Letters[maxLetters-1]; l.Title != "Letter 45" {
+	if l := g.World().Letters[letters.Max-1]; l.Title != "Letter 45" {
 		t.Fatalf("newest letter is %q", l.Title)
 	}
 	// the counter keeps counting past dropped letters: ids are never reused
-	g.letter(letterInfo, "One more", "text", 0)
-	if l := letterByTitle(t, g, "One more"); l.ID != uint64(maxLetters+6) {
+	g.letter(letters.Info, "One more", "text", 0)
+	if l := letterByTitle(t, g, "One more"); l.ID != uint64(letters.Max+6) {
 		t.Fatalf("id after the cap: %d", l.ID)
 	}
 }
@@ -145,7 +146,7 @@ func TestLetterIDsDeterministic(t *testing.T) {
 	run := func() []uint64 {
 		g := letterGame()
 		for i := range 7 {
-			g.letter(letterCaution, fmt.Sprintf("L%d", i), "text", 0)
+			g.letter(letters.Caution, fmt.Sprintf("L%d", i), "text", 0)
 		}
 		g.Step(3)
 		return letterIDs(g)
@@ -159,7 +160,7 @@ func TestLetterIDsDeterministic(t *testing.T) {
 func TestLetterWorldViewIsACopy(t *testing.T) {
 	t.Parallel()
 	g := letterGame()
-	g.letter(letterInfo, "Visitors", "text", 0)
+	g.letter(letters.Info, "Visitors", "text", 0)
 	g.World().Letters[0].Title = "changed"
 	if got := g.World().Letters[0].Title; got != "Visitors" {
 		t.Fatalf("a caller rewrote the stack: %q", got)
@@ -170,7 +171,7 @@ func TestDismissLetter(t *testing.T) {
 	t.Parallel()
 	g := letterGame()
 	for i := range 4 {
-		g.letter(letterInfo, fmt.Sprintf("L%d", i), "text", 0)
+		g.letter(letters.Info, fmt.Sprintf("L%d", i), "text", 0)
 	}
 	dismiss := func(id uint64) {
 		g.Enqueue(command.Command{Kind: command.DismissLetter, Target: id})
@@ -196,7 +197,7 @@ func TestDismissLetter(t *testing.T) {
 	if len(g.World().Messages) != 4 {
 		t.Fatalf("%d messages", len(g.World().Messages))
 	}
-	g.letter(letterInfo, "Next", "text", 0)
+	g.letter(letters.Info, "Next", "text", 0)
 	if l := letterByTitle(t, g, "Next"); l.ID != 5 {
 		t.Fatalf("id after dismissals: %d, want 5", l.ID)
 	}
@@ -218,9 +219,9 @@ func saveAndLoad(t testing.TB, g *Game) *Game {
 func TestLettersSaveRoundTrip(t *testing.T) {
 	t.Parallel()
 	g := letterGame()
-	g.letter(letterThreat, "Kidnapped", "Ada was kidnapped by raiders.", 3)
-	g.letter(letterGood, "Wanderer joins", "Bo is here.", 4)
-	g.letter(letterInfo, "Visitors", "Three people came.", 0)
+	g.letter(letters.Threat, "Kidnapped", "Ada was kidnapped by raiders.", 3)
+	g.letter(letters.Good, "Wanderer joins", "Bo is here.", 4)
+	g.letter(letters.Info, "Visitors", "Three people came.", 0)
 	g.Enqueue(command.Command{Kind: command.DismissLetter, Target: 2})
 	g.Step(1)
 	h := saveAndLoad(t, g)
@@ -231,7 +232,7 @@ func TestLettersSaveRoundTrip(t *testing.T) {
 		t.Fatal("the loaded game hashes differently")
 	}
 	// the counter survives: the next letter does not reuse 2 or 3
-	h.letter(letterInfo, "Next", "text", 0)
+	h.letter(letters.Info, "Next", "text", 0)
 	if l := letterByTitle(t, h, "Next"); l.ID != 4 {
 		t.Fatalf("id after a load: %d, want 4", l.ID)
 	}
@@ -247,12 +248,12 @@ func TestSaveWithoutLettersRoundTripsIdentically(t *testing.T) {
 		t.Fatal(err)
 	}
 	g.Step(300)
-	if len(g.World().Letters) != 0 || g.letters.next != 0 {
+	if len(g.World().Letters) != 0 || letterNext(g) != 0 {
 		t.Fatal("set-up: the colony posted a letter")
 	}
 	h := saveAndLoad(t, g)
-	if len(h.World().Letters) != 0 || h.letters.next != 0 {
-		t.Fatalf("the load made letters: %+v (next %d)", h.World().Letters, h.letters.next)
+	if len(h.World().Letters) != 0 || letterNext(h) != 0 {
+		t.Fatalf("the load made letters: %+v (next %d)", h.World().Letters, letterNext(h))
 	}
 	if h.StateHash() != g.StateHash() {
 		t.Fatal("the loaded colony hashes differently")
@@ -270,7 +271,7 @@ func TestSaveWithoutLettersRoundTripsIdentically(t *testing.T) {
 func TestDismissedLettersStayDismissedAfterLoad(t *testing.T) {
 	t.Parallel()
 	g := letterGame()
-	g.letter(letterInfo, "Visitors", "text", 0)
+	g.letter(letters.Info, "Visitors", "text", 0)
 	g.Enqueue(command.Command{Kind: command.DismissLetter, Target: 1})
 	g.Step(1)
 	if len(g.World().Letters) != 0 || len(g.World().Messages) != 1 {
@@ -291,7 +292,7 @@ func TestOldSaveMigratesLetterMessages(t *testing.T) {
 	g.post(MessageView{Tick: 20, Text: "Cold!", X: 5, Y: 6, Danger: true, Letter: true, Title: "Cold snap"})
 	g.post(MessageView{Tick: 30, Text: "Bo joined.", X: 7, Y: 8, Focus: 9, Letter: true, Title: "Wanderer joins", Kind: "good"})
 	g.post(MessageView{Tick: 40, Text: "Caravan left.", X: 1, Y: 2, Letter: true, Title: "Caravan departed"})
-	g.letters = letterState{} // as saved before PLAY-018: messages, no letters
+	g.letters = letters.State{} // as saved before PLAY-018: messages, no letters
 	h := saveAndLoad(t, g)
 	want := []LetterView{
 		{ID: 1, Tick: 20, Kind: "threat", Title: "Cold snap", Text: "Cold!", Msg: msgfmt.Of("Cold!"), X: 5, Y: 6},
@@ -308,7 +309,7 @@ func TestOldSaveMigratesLetterMessages(t *testing.T) {
 	if again := saveAndLoad(t, h).World().Letters; !reflect.DeepEqual(again, want) {
 		t.Fatalf("second load: %+v", again)
 	}
-	h.letter(letterInfo, "Next", "text", 0)
+	h.letter(letters.Info, "Next", "text", 0)
 	if l := letterByTitle(t, h, "Next"); l.ID != 4 {
 		t.Fatalf("id after migrating: %d, want 4", l.ID)
 	}
@@ -410,4 +411,10 @@ func TestLetterKindsAtPostSites(t *testing.T) {
 			t.Fatalf("rejected proposal: %+v", l)
 		}
 	})
+}
+
+// letterNext is the stack's next id (how many letters were ever issued).
+func letterNext(g *Game) uint64 {
+	_, n := g.letters.Export()
+	return n
 }

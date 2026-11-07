@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
@@ -266,7 +267,7 @@ func TestSynthStomachBlocksGutWorms(t *testing.T) {
 func TestDiseaseLetter(t *testing.T) {
 	t.Parallel()
 	g := diseaseGame(t, biome.TemperateForest, 100)
-	before := len(g.letters.list)
+	before := len(g.letters.List())
 	if !g.FireIncident("plague") {
 		t.Fatal("no plague")
 	}
@@ -276,11 +277,11 @@ func TestDiseaseLetter(t *testing.T) {
 			sick = append(sick, g.personName(id))
 		}
 	}
-	if len(sick) < 1 || len(sick) > 3 || len(g.letters.list) != before+1 {
-		t.Fatalf("%d sick, %d letters", len(sick), len(g.letters.list)-before)
+	if len(sick) < 1 || len(sick) > 3 || len(g.letters.List()) != before+1 {
+		t.Fatalf("%d sick, %d letters", len(sick), len(g.letters.List())-before)
 	}
-	l := g.letters.list[len(g.letters.list)-1]
-	if l.Kind != letterCaution || l.Title != "Plague" || !strings.Contains(l.Text, sick[0]) || !strings.Contains(l.Text, "15 hours") {
+	l := g.letters.List()[len(g.letters.List())-1]
+	if l.Kind != letters.Caution || l.Title != "Plague" || !strings.Contains(l.Text, sick[0]) || !strings.Contains(l.Text, "15 hours") {
 		t.Fatalf("letter %+v", l)
 	}
 	for _, id := range g.diseaseCandidates(body.CondPlague) {
@@ -297,7 +298,7 @@ func TestDiseaseLetter(t *testing.T) {
 			n++
 		}
 	}
-	if l := g2.letters.list[len(g2.letters.list)-1]; n != 1 || !strings.Contains(l.Text, "300%") {
+	if l := g2.letters.List()[len(g2.letters.List())-1]; n != 1 || !strings.Contains(l.Text, "300%") {
 		t.Fatalf("gut worms strike one (%d) and the letter tells the cure: %q", n, l.Text)
 	}
 }

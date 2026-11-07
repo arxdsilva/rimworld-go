@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
@@ -81,7 +82,7 @@ func (g *Game) traderCaravanFrom(ref int, now uint64, requested bool) bool {
 	if requested {
 		why = "has come as you asked"
 	}
-	letterf(g, letterInfo, "Trader caravan", ids[0], "%s, a %s of %s, %s to trade, with %d guards. They will camp near the colony for most of a day. Right-click the trader with a colonist selected to trade.",
+	letterf(g, letters.Info, "Trader caravan", ids[0], "%s, a %s of %s, %s to trade, with %d guards. They will camp near the colony for most of a day. Right-click the trader with a colonist selected to trade.",
 		g.name(ids[0]), lower(trade.DefOf(kind).Label), f.Name, why, len(ids)-1)
 	return true
 }
@@ -186,12 +187,12 @@ func (g *Game) traderLost(c *traderCaravan) {
 		return
 	}
 	if c.Turned {
-		letterf(g, letterInfo, "Trader lost", c.Trader, "%s, the trader of %s, won't reach home. Its goods lie where it fell.", g.name(c.Trader), f.Name)
+		letterf(g, letters.Info, "Trader lost", c.Trader, "%s, the trader of %s, won't reach home. Its goods lie where it fell.", g.name(c.Trader), f.Name)
 		return
 	}
 	now := uint64(g.clock.Now())
 	faction.Adjust(f, -traderLostGoodwill, fmt.Sprintf("Day %d: trader killed or taken (%d goodwill)", g.relDay(now)+1, -traderLostGoodwill))
-	letterf(g, letterCaution, "Trader lost", c.Trader, "%s, the trader of %s, is lost to them. Its goods lie where it fell. %s will not forget it (%d goodwill).",
+	letterf(g, letters.Caution, "Trader lost", c.Trader, "%s, the trader of %s, is lost to them. Its goods lie where it fell. %s will not forget it (%d goodwill).",
 		g.name(c.Trader), f.Name, f.Name, -traderLostGoodwill)
 }
 

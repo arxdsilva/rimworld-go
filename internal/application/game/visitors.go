@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
@@ -116,7 +117,7 @@ func (g *Game) wandererJoins(now uint64) bool {
 	if !ok {
 		return false
 	}
-	letterf(g, letterGood, "Wanderer joins", id, "%s, a wanderer, has asked to join the colony.", g.personName(id))
+	letterf(g, letters.Good, "Wanderer joins", id, "%s, a wanderer, has asked to join the colony.", g.personName(id))
 	g.addHistory("joined", g.personName(id)+" wandered in and joined the colony.", id)
 	return true
 }
@@ -208,9 +209,9 @@ func (h careGuests) JoinOffer(id entity.EntityID) {
 func (h careGuests) offerJoin(id entity.EntityID) {
 	g := h.g
 	g.setVisitorStay(id, uint64(g.clock.Now())+joinOfferWait)
-	letterf(g, letterInfo, "Stranger asks to join", id, "%s, the stranger your colony took in and nursed back to health, asks to join you. "+
+	letterf(g, letters.Info, "Stranger asks to join", id, "%s, the stranger your colony took in and nursed back to health, asks to join you. "+
 		"Accept to welcome them; dismiss this letter and they will go their way.", g.personName(id))
-	g.letters.list[len(g.letters.list)-1].Join = id
+	g.letters.EditLast(func(l *letters.Letter) { l.Join = id })
 }
 
 // leavingSafe: no hostile raider stands on the map and the outdoor air
@@ -230,7 +231,7 @@ func (h careGuests) join(p entity.EntityID) {
 	g := h.g
 	g.enlist(p)
 	g.invalidateCreatures()
-	g.addHistory("joined", letterf(g, letterGood, "Stranger joins", p, "%s, the stranger you nursed back to health, has joined the colony.", g.personName(p)), p)
+	g.addHistory("joined", letterf(g, letters.Good, "Stranger joins", p, "%s, the stranger you nursed back to health, has joined the colony.", g.personName(p)), p)
 }
 
 // visitHost is game/visit's roles (visit/deps.go) over small adapters.
@@ -333,7 +334,7 @@ func (h visitArrivals) RelativeFor(ref int, f *faction.Faction) entity.EntityID 
 	return h.g.relativeFor(ref, whereVisitor, techTag(f))
 }
 func (h visitArrivals) RelativeLetter(kin entity.EntityID, among string) {
-	h.g.relativeLetter(letterInfo, "Relative arrives", kin, among)
+	h.g.relativeLetter(letters.Info, "Relative arrives", kin, among)
 }
 func (h visitArrivals) Letter(kind, title string, focus entity.EntityID, format string, args ...any) {
 	letterf(h.g, kind, title, focus, format, args...)

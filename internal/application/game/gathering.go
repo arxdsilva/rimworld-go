@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/gather"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -215,10 +216,10 @@ func (h gatherTidings) Note(x, y int, focus entity.EntityID, format string, args
 	h.g.notice(x, y, focus, format, args...) // incidents.go
 }
 func (h gatherTidings) GoodLetter(title string, x, y int, focus entity.EntityID, format string, args ...any) {
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: letterGood})
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: letters.Good})
 }
 func (h gatherTidings) RomanceLetter(title, text string, focus entity.EntityID) {
-	pawnLetterf(h.g, letterGood, title, focus, msgfmt.Plain(text)) // social_romance.go
+	pawnLetterf(h.g, letters.Good, title, focus, msgfmt.Plain(text)) // social_romance.go
 }
 func (h gatherTidings) History(kind, text string, a, b entity.EntityID) {
 	h.g.addHistory(kind, text, a, b)

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
@@ -160,7 +161,7 @@ func (g *Game) tryRomance(a, b entity.EntityID, now uint64) bool {
 		return false
 	}
 	g.setPair(a, b, p)
-	g.addHistory("romance", pawnLetterf(g, letterGood, "New lovers", a, "%s and %s are now lovers.", g.personName(a), g.personName(b)), a, b)
+	g.addHistory("romance", pawnLetterf(g, letters.Good, "New lovers", a, "%s and %s are now lovers.", g.personName(a), g.personName(b)), a, b)
 	for _, c := range cheatedA {
 		g.cheatedOn(c, a, b, now)
 	}
@@ -177,7 +178,7 @@ func (g *Game) cheatedOn(victim, cheater, other entity.EntityID, now uint64) {
 	}
 	g.addOpinionMemory(victim, cheater, social.MemCheatedOnMe, now)
 	g.memories[victim] = g.memories[victim].AddFor(mood.CheatedOn, uint64(cheater), now)
-	pawnLetterf(g, letterCaution, "Affair", victim, "%s has been cheating on %s with %s.",
+	pawnLetterf(g, letters.Caution, "Affair", victim, "%s has been cheating on %s with %s.",
 		g.personName(cheater), g.personName(victim), g.personName(other))
 }
 
@@ -204,9 +205,9 @@ func (g *Game) breakUp(a, b entity.EntityID, now uint64) bool {
 	g.addSocialLog(a, b, logBreakup, 0, now)
 	na, nb := g.personName(a), g.personName(b)
 	if divorce {
-		g.addHistory("divorce", pawnLetterf(g, letterCaution, "Divorce", a, "%s and %s have divorced.", na, nb), a, b)
+		g.addHistory("divorce", pawnLetterf(g, letters.Caution, "Divorce", a, "%s and %s have divorced.", na, nb), a, b)
 	} else {
-		g.addHistory("breakup", pawnLetterf(g, letterCaution, "Breakup", a, "%s broke up with %s.", na, nb), a, b)
+		g.addHistory("breakup", pawnLetterf(g, letters.Caution, "Breakup", a, "%s broke up with %s.", na, nb), a, b)
 	}
 	return true
 }
@@ -226,14 +227,14 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 		g.addOpinionMemory(a, b, social.MemRejectedMyProposal, now)
 		g.addOpinionMemory(b, a, social.MemIRejectedProposal, now)
 		g.memories[a] = g.memories[a].AddFor(mood.ProposalRejected, uint64(b), now)
-		pawnLetterf(g, letterCaution, "Proposal rejected", a, "%s proposed to %s and was turned down.", g.personName(a), g.personName(b))
+		pawnLetterf(g, letters.Caution, "Proposal rejected", a, "%s proposed to %s and was turned down.", g.personName(a), g.personName(b))
 		return true
 	}
 	if !p.Transition(social.PairFiance, now) {
 		return false
 	}
 	g.setPair(a, b, p)
-	g.addHistory("engagement", pawnLetterf(g, letterGood, "Engagement", a, "%s and %s are engaged to be married.", g.personName(a), g.personName(b)), a, b)
+	g.addHistory("engagement", pawnLetterf(g, letters.Good, "Engagement", a, "%s and %s are engaged to be married.", g.personName(a), g.personName(b)), a, b)
 	return true
 }
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/sim/clock"
@@ -161,10 +162,10 @@ func TestWanderersArriveAsColonistsWalkingIn(t *testing.T) {
 			t.Fatalf("%d is no colonist", id)
 		}
 	}
-	if !slices.ContainsFunc(g.letters.list, func(l savedLetter) bool {
+	if !slices.ContainsFunc(g.letters.List(), func(l letters.Letter) bool {
 		return l.Title == wanderersTitle && ids[0] == l.Focus
 	}) {
-		t.Fatalf("no letter: %+v", g.letters.list)
+		t.Fatalf("no letter: %+v", g.letters.List())
 	}
 	g.Step(50)
 	if v := g.World().AX; v.EveryoneGone || v.WanderersLeft != 6 || v.WanderersOK {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -277,7 +278,7 @@ func (h mindEvents) FightStarted(starter, other entity.EntityID) {
 	g.logEvent(starter, logEntry{Kind: logMental, Name: label, Other: other})
 	g.logEvent(other, logEntry{Kind: logMental, Name: label, Other: starter})
 	pos, _ := g.positions.Get(starter)
-	g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s and %s are fighting!", g.name(starter), g.name(other)), X: pos.X, Y: pos.Y, Danger: true, Focus: starter, Letter: true, Title: "Social fight", Kind: letterCaution})
+	g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s and %s are fighting!", g.name(starter), g.name(other)), X: pos.X, Y: pos.Y, Danger: true, Focus: starter, Letter: true, Title: "Social fight", Kind: letters.Caution})
 	g.addHistory("fight", fmt.Sprintf("%s got into a fight with %s.", g.name(starter), g.name(other)), starter, other)
 }
 func (h mindEvents) Outcome(f, other entity.EntityID) {
@@ -305,9 +306,9 @@ func (h mindEvents) Started(id entity.EntityID, k mentalbreak.Kind, target entit
 		g.message(pos.X, pos.Y, "%s", text)
 		return
 	}
-	kind := letterThreat
+	kind := letters.Threat
 	if k == mentalbreak.Catatonic {
-		kind = letterCaution
+		kind = letters.Caution
 	}
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Danger: mind.Hostile(k), Focus: id,
 		Letter: true, Title: "Mental break: " + def.Label, Kind: kind})
@@ -328,7 +329,7 @@ func (h mindMuses) SkillLevel(id entity.EntityID, sk skill.ID) uint8 {
 	return h.g.skillOf(id, sk).Level
 }
 func (h mindMuses) Inspired(id entity.EntityID, label string) {
-	letterf(h.g, letterGood, "Inspiration", id, "%s has %s: the next thing %s makes or builds turns out better.",
+	letterf(h.g, letters.Good, "Inspiration", id, "%s has %s: the next thing %s makes or builds turns out better.",
 		h.g.personName(id), label, h.g.personName(id))
 }
 func (h mindMuses) InspirationEnded(id entity.EntityID, label string) {

@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -248,7 +249,7 @@ func (g *Game) vaultWarn(v *vaultSave) {
 			continue
 		}
 		v.State = vault.Warned
-		letterf(g, letterCaution, vaultWarnTitle, id, "%s stops near the smooth walls in the rock. Something old is sealed inside, and it does not feel empty.", g.personName(id))
+		letterf(g, letters.Caution, vaultWarnTitle, id, "%s stops near the smooth walls in the rock. Something old is sealed inside, and it does not feel empty.", g.personName(id))
 		return
 	}
 }
@@ -333,9 +334,9 @@ func (g *Game) breachVault(v *vaultSave) {
 	}
 	g.invalidateCreatures()
 	x, y := v.centre()
-	m := MessageView{Tick: uint64(g.clock.Now()), Text: vaultQuietText, X: x, Y: y, Letter: true, Title: vaultBreachTitle, Kind: letterInfo}
+	m := MessageView{Tick: uint64(g.clock.Now()), Text: vaultQuietText, X: x, Y: y, Letter: true, Title: vaultBreachTitle, Kind: letters.Info}
 	if woke > 0 {
-		m.Text, m.Danger, m.Kind = vaultBreachText, true, letterThreat
+		m.Text, m.Danger, m.Kind = vaultBreachText, true, letters.Threat
 	}
 	g.post(m)
 	g.addHistory("vault", "The colony broke into a sealed vault.")

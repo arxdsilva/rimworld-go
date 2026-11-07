@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -203,9 +204,9 @@ func TestStrangerDeclinedLeaves(t *testing.T) {
 		t.Fatalf("declined, the stranger goes its way: %+v", v)
 	}
 	// accepting an offer whose stranger is gone does nothing but say so
-	g.letters.list = append(g.letters.list, savedLetter{ID: 999, Join: s})
+	gone := g.letters.Add(letters.Letter{Join: s})
 	visitBodies{g}.Depart(s)
-	g.acceptLetter(999)
+	g.acceptLetter(gone)
 	if slices.Contains(g.pawnIDs, s) {
 		t.Fatal("a stranger who left cannot join")
 	}

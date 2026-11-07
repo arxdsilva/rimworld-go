@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/animalview"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
@@ -775,7 +776,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		}
 		if c := entity.EntityID(a.Bond); c != 0 && g.isPawn(c) {
 			// a bonded companion is a letter about the colonist who lost it
-			pawnLetterf(g, letterCaution, "Bonded animal died", c, "%s %s has lost a bonded companion.", text, g.personName(c))
+			pawnLetterf(g, letters.Caution, "Bonded animal died", c, "%s %s has lost a bonded companion.", text, g.personName(c))
 		} else {
 			g.message(pos.X, pos.Y, "%s", text)
 		}

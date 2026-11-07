@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -291,7 +292,7 @@ func (h raidKidnap) Off(id, t entity.EntityID) {
 		g.setWhere(t, whereKidnapped)
 		name := g.personName(t)
 		g.socialOnLostAs(t, "kidnapped", name+" was kidnapped by "+by+".") // social_grief.go
-		letterf(g, letterThreat, "Kidnapped", t, "%s was kidnapped by %s.", name, by)
+		letterf(g, letters.Threat, "Kidnapped", t, "%s was kidnapped by %s.", name, by)
 	}
 	g.removeRaider(id) // raids.go: off the map, an off-map person again
 	g.invalidateCreatures()

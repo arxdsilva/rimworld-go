@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/incident"
@@ -138,7 +139,7 @@ func TestSolarFlareFiringSetsWindowAndLetter(t *testing.T) {
 		t.Fatal("the world view does not show the flare")
 	}
 	ls := eventLetters(g, "Solar flare")
-	if len(ls) != 1 || ls[0].Kind != letterCaution || ls[0].Tick != now || !strings.Contains(ls[0].Text, "hours") {
+	if len(ls) != 1 || ls[0].Kind != letters.Caution || ls[0].Tick != now || !strings.Contains(ls[0].Text, "hours") {
 		t.Fatalf("flare letter: %+v", ls)
 	}
 	if g.incidentFits(incident.SolarFlare, now) {
@@ -296,7 +297,7 @@ func TestShortCircuitDrainsRemovesConduitAndStartsFire(t *testing.T) {
 		t.Fatalf("fire at %d,5 has size %d, want 3", at, got)
 	}
 	ls := eventLetters(g, "Short circuit")
-	if len(ls) != 1 || ls[0].Kind != letterThreat || ls[0].X != at || ls[0].Y != 5 || ls[0].Tick != now {
+	if len(ls) != 1 || ls[0].Kind != letters.Threat || ls[0].X != at || ls[0].Y != 5 || ls[0].Tick != now {
 		t.Fatalf("short circuit letter: %+v (conduit at %d,5)", ls, at)
 	}
 	if g.incidents.Last[incident.ShortCircuit] != g.rel(now) {

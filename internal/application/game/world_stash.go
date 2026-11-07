@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/game/axview"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/application/game/visit"
@@ -155,7 +156,7 @@ func cmdNewWanderers(g *Game, name string) {
 	}
 	s.WandererGroups++
 	s.GoneAt = 0
-	g.addHistory("joined", letterf(g, letterGood, wanderersTitle, ids[0], "%s came across what is left and mean to start again. They are yours to lead.", strings.Join(names, ", ")), ids...)
+	g.addHistory("joined", letterf(g, letters.Good, wanderersTitle, ids[0], "%s came across what is left and mean to start again. They are yours to lead.", strings.Join(names, ", ")), ids...)
 }
 
 // walkInWanderers stands seeds' people on land near a map edge, walking in.

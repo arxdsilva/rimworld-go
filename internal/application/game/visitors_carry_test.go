@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -303,7 +304,7 @@ func TestTurnedGuestsRaiseNoRaidAlert(t *testing.T) {
 		t.Fatalf("view %+v", v)
 	}
 	ls := turnedLetters(g)
-	if len(ls) != 1 || ls[0].Kind != letterCaution {
+	if len(ls) != 1 || ls[0].Kind != letters.Caution {
 		t.Fatalf("letter %+v", ls)
 	}
 	for _, m := range g.messageViews() {

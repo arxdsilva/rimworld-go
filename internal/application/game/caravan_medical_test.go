@@ -52,7 +52,7 @@ func TestCaravanMemberCatchesFlu(t *testing.T) {
 		t.Fatalf("the caravan member did not catch it (patient %v)", g.indexedPatient(away))
 	}
 	letter := ""
-	for _, l := range g.letters.list {
+	for _, l := range g.letters.List() {
 		if l.Title == "Flu" {
 			letter = l.Text
 		}
@@ -118,7 +118,7 @@ func TestCaravanMemberDiesAwayCleanly(t *testing.T) {
 				t.Fatalf("a corpse appeared on the map: %+v", st)
 			}
 			road := false
-			for _, l := range g.letters.list {
+			for _, l := range g.letters.List() {
 				road = road || l.Title == "Death on the road"
 			}
 			if !road {

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
@@ -36,7 +37,7 @@ func (g *Game) orbitalArrive(now uint64) bool {
 	name := shipNames[r.IntN(len(shipNames))]
 	stock := trade.Generate(trade.CurioMerchant, faction.Spacer, r)
 	g.trade.orbital = &orbitalShip{Name: name, Kind: trade.CurioMerchant, Stock: stock, Until: now + orbitalStay}
-	letterf(g, letterInfo, "Trade ship", 0, "The %s, a %s, is in radio range for about a day and a half. Call it from a powered radio console; only goods within reach of a trade beacon can be traded.",
+	letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about a day and a half. Call it from a powered radio console; only goods within reach of a trade beacon can be traded.",
 		name, lower(trade.DefOf(trade.CurioMerchant).Label))
 	return true
 }

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
@@ -110,7 +111,7 @@ func (h prisonWarden) Recruit(p, w entity.EntityID) {
 	g.enlist(p)
 	g.addOpinionMemory(p, w, social.MemRecruitedMe, now)
 	pos, _ := g.positions.Get(p)
-	text := g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s has joined the colony, won over by %s.", g.personName(p), g.personName(w)), X: pos.X, Y: pos.Y, Focus: p, Letter: true, Title: "Recruited", Kind: letterGood})
+	text := g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s has joined the colony, won over by %s.", g.personName(p), g.personName(w)), X: pos.X, Y: pos.Y, Focus: p, Letter: true, Title: "Recruited", Kind: letters.Good})
 	g.addHistory("recruit", text, p, w)
 }
 

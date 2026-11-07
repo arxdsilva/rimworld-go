@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
@@ -42,9 +43,9 @@ func calmDown(t *testing.T, g *Game, ref int) {
 }
 
 // turnedLetters are the letters about faction ref's visitors turning.
-func turnedLetters(g *Game) []savedLetter {
-	var out []savedLetter
-	for _, l := range g.letters.list {
+func turnedLetters(g *Game) []letters.Letter {
+	var out []letters.Letter
+	for _, l := range g.letters.List() {
 		if l.Title == visit.TurnedTitle {
 			out = append(out, l)
 		}
@@ -478,7 +479,7 @@ func TestHostileAlliesLeaveAsEnemies(t *testing.T) {
 	}
 	g.die(ids[0], health.CauseInjury)
 	g.Step(2)
-	if slices.ContainsFunc(g.letters.list, func(l savedLetter) bool { return l.Title == "Ally killed" }) {
+	if slices.ContainsFunc(g.letters.List(), func(l letters.Letter) bool { return l.Title == "Ally killed" }) {
 		t.Fatal("a letter mourns an enemy")
 	}
 }

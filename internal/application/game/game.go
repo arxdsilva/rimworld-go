@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/gearview"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/application/game/raid"
@@ -754,7 +755,7 @@ type Game struct {
 	thoughtBuf []mood.Thought
 
 	messages   []MessageView
-	letters    letterState // the letter stack (letters.go, PLAY-018)
+	letters    letters.State // the letter stack (game/letters, PLAY-018)
 	names      *component.Store[string]
 	need       *component.Store[needs.Pair]
 	vital      *component.Store[health.Record]

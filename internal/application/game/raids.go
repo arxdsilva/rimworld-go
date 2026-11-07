@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
@@ -157,7 +158,7 @@ func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
 	g.combat.Log.Add(fmt.Sprintf("A raid of %d came: %s.", spawned, grp.Plan)) // combat/log.go (DEF-4)
 	if f != nil {
 		if kin != 0 { // relative_world.go: before the raid alert, which stays the latest message
-			g.relativeLetter(letterCaution, "Relative among the raiders", kin, "raiders")
+			g.relativeLetter(letters.Caution, "Relative among the raiders", kin, "raiders")
 		}
 		g.raidMessage(ex, ey, spawned, grp.Plan, f) // story.go
 		return

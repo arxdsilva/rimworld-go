@@ -49,7 +49,7 @@ func TestEclipseTakesTheSun(t *testing.T) {
 	if growthAt(g, rice) != before {
 		t.Fatal("a crop grew in the eclipse")
 	}
-	l := g.letters.list
+	l := g.letters.List()
 	if len(l) == 0 || l[len(l)-1].Title != "Eclipse" {
 		t.Fatal("the eclipse sends a letter")
 	}

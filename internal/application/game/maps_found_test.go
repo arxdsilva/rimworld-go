@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -293,7 +294,7 @@ func ambushRun(t *testing.T) uint64 {
 	if v := g.Maps()[1]; v.Kind != "encounter" {
 		t.Fatalf("view %+v", v)
 	}
-	if !slices.ContainsFunc(g.letters.list, func(l savedLetter) bool { return l.Title == "Ambush!" && l.Map == MapID(m.id) }) {
+	if !slices.ContainsFunc(g.letters.List(), func(l letters.Letter) bool { return l.Title == "Ambush!" && MapID(l.Map) == MapID(m.id) }) {
 		t.Fatal("no letter jumping to the encounter")
 	}
 	m.climate = biome.DefOf(biome.TemperateForest).Climate
@@ -355,7 +356,7 @@ func TestManhunterEncounter(t *testing.T) {
 
 // demandGame is a caravan carrying 100 silver with a hostile faction about,
 // asked for half of it.
-func demandGame(t *testing.T) (*Game, *maps.Caravan, savedLetter) {
+func demandGame(t *testing.T) (*Game, *maps.Caravan, letters.Letter) {
 	t.Helper()
 	g := worldGame(t)
 	for i := range g.ng.factions {
@@ -366,7 +367,7 @@ func demandGame(t *testing.T) (*Game, *maps.Caravan, savedLetter) {
 	c := onRoad(t, g, g.pawnIDs[0])
 	travelOf(g).Carry(c.C.ID, item.Stack{Kind: item.Silver, Qty: 100})
 	fleetOf(g).Waylay(c, maps.Demand, uint64(g.clock.Now()))
-	l := g.letters.list[len(g.letters.list)-1]
+	l := g.letters.List()[len(g.letters.List())-1]
 	if !l.Demand || c.Ask.Qty != 50 || c.Ask.Kind != item.Silver || c.C.State != caravan.Travelling {
 		t.Fatalf("no demand: %+v, %+v", l, c.Ask)
 	}
@@ -388,7 +389,7 @@ func TestDemandGive(t *testing.T) {
 	if len(g.maps) != 1 || c.Ask.Letter != 0 || len(goods) != 1 || goods[0].Qty != 50 || c.C.State != caravan.Travelling {
 		t.Fatalf("give: %d maps, goods %+v, %+v", len(g.maps), goods, c.Ask)
 	}
-	if slices.ContainsFunc(g.letters.list, func(s savedLetter) bool { return s.ID == l.ID }) {
+	if slices.ContainsFunc(g.letters.List(), func(s letters.Letter) bool { return s.ID == l.ID }) {
 		t.Fatal("the letter stayed")
 	}
 }
@@ -455,11 +456,11 @@ func TestEncounterCooldownNoFlap(t *testing.T) {
 		if len(g.worldSt.atlas.Queue) > 0 {
 			break
 		}
-		if m := g.letters.list; len(m) > 0 && m[len(m)-1].Demand {
+		if m := g.letters.List(); len(m) > 0 && m[len(m)-1].Demand {
 			break
 		}
 	}
-	if g.streams.m[streamRoad] == nil || len(g.worldSt.atlas.Queue) == 0 && !g.letters.list[len(g.letters.list)-1].Demand {
+	if g.streams.m[streamRoad] == nil || len(g.worldSt.atlas.Queue) == 0 && !g.letters.List()[len(g.letters.List())-1].Demand {
 		t.Fatal("no encounter in 60 000 hours on the road")
 	}
 	if fleet.At(cid).NextEnc <= uint64(g.clock.Now()) {

@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/domain/ai/job"
@@ -457,7 +458,7 @@ func (h shipHost) Letter(title string, x, y int, danger bool, format string, arg
 		h.g.threat(title, x, y, format, args...)
 		return
 	}
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Letter: true, Title: title, Kind: letters.Good})
 }
 func (h shipHost) Message(x, y int, format string, args ...any) { h.g.message(x, y, format, args...) }
 func (h shipHost) Changed()                                     { h.g.viewGen++ }

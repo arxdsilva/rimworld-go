@@ -1,6 +1,8 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/pkg/msgfmt"
@@ -77,7 +79,7 @@ func (g *Game) threat(title string, x, y int, format string, args ...any) {
 	// a major threat is a red letter in the stack too (PLAY-018), and a
 	// danger message the UI may pause for
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Danger: true,
-		Letter: true, Title: title, Kind: letterThreat})
+		Letter: true, Title: title, Kind: letters.Threat})
 }
 
 // post posts m and returns its text: a view given only Msg prints it as
@@ -90,13 +92,82 @@ func (g *Game) post(m MessageView) string {
 		m.Msg = msgfmt.Make(msgfmt.Plain(m.Text), nil)
 	}
 	if m.Letter {
-		m.Kind = g.addLetter(m) // letters.go: a letter is also kept in the stack
+		m.Kind = g.addLetter(m) // a letter is also kept in the stack
 	}
 	g.messages = append(g.messages, m)
 	if n := len(g.messages); n > maxMessages {
 		g.messages = append(g.messages[:0:0], g.messages[n-maxMessages:]...)
 	}
 	return m.Text
+}
+
+// addLetter puts message m on the letter stack and returns the kind it got.
+// The letter keeps the message's Tick, Title and Text (the UI matches a
+// letter to its message by them); a message with no place (0, 0 or off the
+// map) gives the letter X and Y of -1, so the UI offers no jump.
+func (g *Game) addLetter(m MessageView) string {
+	kind := letters.KindOf(m.Kind, m.Danger)
+	x, y := m.X, m.Y
+	if x == 0 && y == 0 || !g.grid.InBounds(x, y) {
+		x, y = -1, -1
+	}
+	g.letters.Add(letters.Letter{Tick: m.Tick, Kind: kind, Title: m.Title, Text: m.Text, Msg: m.Msg,
+		X: x, Y: y, Map: uint32(m.Map), Focus: m.Focus})
+	return kind
+}
+
+// dismissLetter removes letter id (an unknown id is ignored). Dismissing a
+// join offer declines it: the stranger, still here, goes its way.
+func (g *Game) dismissLetter(id uint64) {
+	if l, ok := g.letters.Remove(id); ok && l.Join != 0 && g.visitor(l.Join) {
+		careGuests{g}.Leave(l.Join) // visitors.go
+	}
+}
+
+// acceptLetter accepts letter id's offer (command.AcceptLetter): a rescued
+// stranger still on the map joins. A letter with no offer is left as it is.
+func (g *Game) acceptLetter(id uint64) {
+	l, ok := g.letters.Get(id)
+	if !ok || l.Join == 0 {
+		return
+	}
+	g.letters.Remove(id)
+	if v, _ := g.vital.Get(l.Join); !g.visitor(l.Join) || v.Status == health.Dead {
+		g.worldNote("%s is no longer here to join.", g.personName(l.Join))
+		return
+	}
+	careGuests{g}.join(l.Join) // visitors.go
+}
+
+// letterViews is the stack for the read model, oldest first (a copy).
+func (g *Game) letterViews() []LetterView {
+	list := g.letters.List()
+	if len(list) == 0 {
+		return nil
+	}
+	out := make([]LetterView, len(list))
+	for i, l := range list {
+		out[i] = LetterView{ID: l.ID, Tick: l.Tick, Kind: l.Kind, Title: l.Title, Text: l.Text, Msg: l.Msg,
+			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0, Demand: l.Demand}
+	}
+	return out
+}
+
+// importLetters restores the stack from a save. A save from before the
+// stack existed has letter messages but never issued an id (next is 0):
+// those messages become the letters, oldest first (an old intro letter
+// reads as a plain info letter).
+func (g *Game) importLetters(list []letters.Letter, next uint64) {
+	g.letters = letters.State{}
+	g.letters.Import(list, next)
+	if next != 0 || len(list) != 0 {
+		return
+	}
+	for _, m := range g.messages {
+		if m.Letter {
+			g.addLetter(m)
+		}
+	}
 }
 
 // phaseClimate rots perishable stacks, moves room temperatures and
