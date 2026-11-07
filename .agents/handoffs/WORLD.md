@@ -74,3 +74,12 @@ Roads, rivers and labels on the globe; landing UI; units · 2026-11-02 · 1fda9e
 - Decisions: temperature unit (WG-16): `config.Gameplay.TempUnit` (`omitempty`, absent = Celsius); `SettingsVersion` still 6 (the plan's bump to 7 was not made); `ebiten/units` formatter; UI literals swept (wizard, inspector, overlay, hud, architect); domain C sentences converted at sinks by `units.Temp.Text` (`hud/chips.go chipsIn`, wizard tips, trait effects, condition picker).
 - Tests: `journey_globe_test.go` (click a tile, view buttons, search, filtered random site, Factions row, world sliders, options unit and colonies), `screen_landing_wg_test.go`, `BenchmarkGlobeFrame`.
 - Open: none. World view (F8) has the same search, legend, grid (MAP-3).
+
+## QST-gap-analysis
+Quests gap analysis · 2026-11-07 · this commit
+- Added `.agents/gaps/QUESTS_GAP_ANALYSIS.md`: 184 rows (QST-001..184) over the model, generator, the 8 Core kinds, rewards and goodwill, sites and world objects, UI, save and determinism, tests and budgets; phases QST-1..4 with their parallel workers. Sources: wiki pages for published numbers; flow and sizes from 41 shots of the reference game (Core only, launched through Steam with a scratch save folder; the user's Config shasums unchanged). Four read-only analysts wrote fragments; the lead merged them, applied the shot corrections and spot-checked 10 code citations (one line number fixed).
+- Decisions (lead, under "implement everything under quests"): all 8 Core kinds; three tabs; wanderer stays a choice letter, the pod crash stays an incident, the far ship ending is kept out; ore lump and stash succeed on arrival; 20 decisions in the file's table.
+- Key corrections to the plan: five kinds accept themselves; the reward is chosen at accept; failure on a hostile giver is per kind; 5,500 is not a cap; cadence is one offer per 10-day window; quests root in `worldState`; `raid.Defend` exists; there is no replay system; the game package needs the letters and scheduled-incident moves first.
+- Pointers: CLEAN_ROOM row QST-*, `.agents/README.md` gaps index, MAIN_UI §31, checklist Phase 29, UIS-041 → QST-138, UIS-066 → QST-139.
+- HUD/UI: none (documentation only); the Quests window and tab are QST-3.
+- Next: QST-1 step 0 (letters and the scheduled-incident queue move to sub-packages).

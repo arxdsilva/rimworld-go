@@ -2256,6 +2256,8 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 
 # PHASE 29 --- Quests and Temporary World Sites
 
+Gap analysis and phases QST-1..4: `.agents/gaps/QUESTS_GAP_ANALYSIS.md`. The items below are ticked as each phase lands.
+
 Base-game factions can generate quests, often asking the player to
 travel, rescue, fight, deliver, or interact with a temporary site in
 exchange for rewards. citeturn2search0

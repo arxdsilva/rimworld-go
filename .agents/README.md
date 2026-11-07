@@ -59,6 +59,7 @@ Each file holds the decisions, wiki constants and phase rows for one area. Load 
 | SIM-061..066 | `PAWN_INTERACTION_GAP_ANALYSIS.md` | Orders on a pawn, rescue, feeding patients, visiting, mental breaks involving others |
 | PWR-* | `POWER_GAP_ANALYSIS.md` | Grid joining, visible wire, Reconnect |
 | PRD-* | `PRODUCTION_GAP_ANALYSIS.md` | Benches, bills, recipes, quality, materials, deterioration, art, stockpile filters |
+| QST-* | `QUESTS_GAP_ANALYSIS.md` | Quests: model, generator, the 8 Core kinds, rewards and goodwill, sites, the Quests window and letters |
 | REF-* | `REFUEL_GAP_ANALYSIS.md` | Feeding fuel to campfires, lamps, generators, launchers, smithies |
 | RSC-* | `RESCUE_GAP_ANALYSIS.md` | Who is carried to which bed, carrier requirements, aftermath |
 | RSCH-* | `RESEARCH_GAP_ANALYSIS.md` | Research speed, tech levels, project table, benches, Research tab |

@@ -1399,6 +1399,8 @@ Long graphs require downsampling rather than rendering every sample.
 
 # 31. Quest Screen
 
+Rows, measured sizes and decisions: `.agents/gaps/QUESTS_GAP_ANALYSIS.md` (QST-120..139). Three tabs, Available, Active and Historical, replace the four states below (decision 2 there).
+
 ## Purpose
 
 Track available, active and completed structured opportunities.
