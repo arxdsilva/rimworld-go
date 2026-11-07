@@ -16,10 +16,6 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// uiStripe is the faint stripe of every other table row (non-premultiplied,
-// so the 16 % alpha scales the colour).
-var uiStripe = color.NRGBA{R: uikit.PanelBorder.R, G: uikit.PanelBorder.G, B: uikit.PanelBorder.B, A: 0x28}
-
 // The pawn inspector's Bio tab (NG-1 §2.12): the colonist's identity from
 // the read model Simulation.Bio, read-only: portrait, names, sex/age/build,
 // backstories and traits with hover cards, what they can't do, the eleven
@@ -275,9 +271,7 @@ func (a Tabs) bioSkills(r gfx.Rect, b game.BioView, week [skill.NumSkills]int, r
 			if row.Bottom() < view.Y || row.Y > view.Bottom() {
 				continue
 			}
-			if i%2 == 1 {
-				uikit.FillRect(body, row, uiStripe)
-			}
+			uikit.RowStripe(body, row, i)
 			st := gfx.Small
 			if s.Incapable {
 				st.Color = uikit.TextDisabled

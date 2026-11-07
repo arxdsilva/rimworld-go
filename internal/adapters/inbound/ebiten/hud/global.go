@@ -331,7 +331,7 @@ func (c Global) toggleButton(i int, r gfx.Rect) uikit.Button {
 // Buttons are the global controls' buttons: the legacy overlay toggles
 // and the four speed buttons.
 func (c Global) Buttons(sw int) []uikit.Button {
-	if !c.live() {
+	if !c.live() || c.sh.Layout().Global.Empty() {
 		return nil
 	}
 	rows := c.Rows()
@@ -371,7 +371,7 @@ func (c Global) SpeedClick(id string) {
 // Declare declares the global controls' widget-kit parts: the settings
 // toggles (clickable) and the hover cards of the text rows.
 func (c Global) Declare(sw, sh int) {
-	if !c.live() {
+	if !c.live() || c.sh.Layout().Global.Empty() {
 		return
 	}
 	rows := c.Rows()

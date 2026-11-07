@@ -45,6 +45,7 @@ func (a *App) hud() hudlayout.Layout {
 	}
 	st.ExpandedW, st.ExpandedH = a.insp.ExpandedWant()
 	st.WindowW, st.WindowH = a.win.Want()
+	st.FullWidthWindow = a.win.Open && a.win.Mode == "research" // UIS-065: Research spans the screen over the right column
 	st.PerfW, st.PerfH = a.meter.Box()
 	st.PaneW, st.PaneH = a.insp.Card().Size()
 	st.Card = a.insp.Card().FloatRect(sw, sh)

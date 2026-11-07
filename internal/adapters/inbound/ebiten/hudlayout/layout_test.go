@@ -120,6 +120,22 @@ func TestMetricsMatchReference(t *testing.T) {
 		got, want float32
 	}{
 		{"UIS-040 tab bar", TabsH, 34},
+		{"UIS-008 scale list row", ScaleListRowH, 29},
+		{"UIS-008 scale list width", ScaleListW, 70},
+		{"UIS-032 letter card width", LetterCardW, 330},
+		{"UIS-032 letter card height", LetterCardH, 105},
+		{"UIS-032 letter card gap", LetterCardGap, 10},
+		{"UIS-032 letter card wrap", LetterCardWrap, 300},
+		{"UIS-061 work box", WorkBox, 25},
+		{"UIS-062 schedule area column", SchedAreaW, 270},
+		{"UIS-062 schedule area gap", SchedAreaGap, 7},
+		{"UIS-064 wildlife width", WildW, 515},
+		{"UIS-064 wildlife header", WildHeadH, 32},
+		{"UIS-068 faction row", FactionRowH, 80},
+		{"UIS-068 faction header", FactionHeadH, 150},
+		{"UIS-068 faction footer", FactionFootH, 55},
+		{"UIS-068 faction gutter", FactionGutter, 16},
+		{"UIS-075 close X", OptionsCloseSize, 18},
 		{"UIS-044 pane width", PaneW, 432},
 		{"UIS-044 pane height", PaneH, 165},
 		{"UIS-045 pane tab row", PaneTabsH, 30},
@@ -344,5 +360,30 @@ func TestCardPaneLeavesCommandRoom(t *testing.T) {
 	}
 	if l := Compute(1280, 720, Inputs{PaneShown: true}); l.Pane.W != PaneW || l.Pane.H != PaneH {
 		t.Errorf("the plain pane: %+v", l.Pane)
+	}
+}
+
+// UIS-065: a window as wide as the screen spans it; the right column it
+// covers is not laid out (no alerts, letters, minimap or time controls).
+func TestFullWidthWindowCoversRightColumn(t *testing.T) {
+	t.Parallel()
+	in := Inputs{GlobalH: 120, MinimapOn: true, Alerts: 2, Letters: 3, LearnH: 90, WindowW: 1920, WindowH: 731}
+	l := Compute(1920, 1080, in)
+	if l.Window.W >= 1920 || l.Right.Empty() || l.Global.Empty() {
+		t.Fatalf("a normal wide window leaves the right column: window %+v right %+v", l.Window, l.Right)
+	}
+	in.FullWidthWindow = true
+	l = Compute(1920, 1080, in)
+	if l.Window.X != 0 || l.Window.W != 1920 {
+		t.Errorf("the window spans the screen: %+v", l.Window)
+	}
+	for name, r := range map[string]gfx.Rect{"right": l.Right, "global": l.Global, "minimap": l.Minimap, "letters": l.Letters, "alerts": l.Alerts, "learn": l.Learn} {
+		if !r.Empty() {
+			t.Errorf("%s is laid out under a full-width window: %+v", name, r)
+		}
+	}
+	in.WindowW, in.WindowH = 0, 0
+	if l = Compute(1920, 1080, in); l.Global.Empty() {
+		t.Error("with no window open the flag changes nothing")
 	}
 }

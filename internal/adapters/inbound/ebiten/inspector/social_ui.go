@@ -166,7 +166,7 @@ func relationLine(tr lang.Tr, r game.RelationRowView) string {
 // tag, the big opinion of them and the small (their opinion of us).
 func paintRelationRow(tr lang.Tr, dst *ebiten.Image, row gfx.Rect, r game.RelationRowView, stripe bool) {
 	if stripe {
-		uikit.FillRect(dst, row, uiStripe)
+		uikit.FillRect(dst, row, uikit.RowStripeColor)
 	}
 	const (
 		labelW = 92

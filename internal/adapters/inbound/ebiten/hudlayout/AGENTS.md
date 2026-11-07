@@ -5,7 +5,7 @@ The colony HUD's pure layout: region rectangles from the screen size and the reg
 
 ## Owns
 - `Layout` (region rectangles) computed by `Compute(sw, sh, st Inputs) Layout`.
-- `Inputs` (screen size and each region's wanted size).
+- `Inputs` (screen size and each region's wanted size). `FullWidthWindow` (UIS-065; the root sets it while Research is open): the window spans the screen and the right column is not laid out, so its regions are empty and their owners draw and declare nothing.
 - `BoundsOf` and `PerfRect` (the performance overlay's rectangle), `LearnHeaderH`.
 - Every HUD size token, in `metrics.go`: each reference size names its row in `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md` and `TestMetricsMatchReference` pins it; "ours" marks a size with no reference measure. Workers read the tokens and never add one (the lead does, UIS-1).
 

@@ -29,7 +29,10 @@ type Inputs struct {
 	Messages             int
 	ArchCats             int     // the Architect's category count (0: ArchCatRows rows)
 	WindowW, WindowH     float32 // an open main-tab window's wanted size (0: none)
-	PerfW, PerfH         float32 // the performance box's size (0: off)
+	// FullWidthWindow: the open window spans the screen's width (UIS-065,
+	// Research) and covers the right column, which is not laid out.
+	FullWidthWindow bool
+	PerfW, PerfH    float32 // the performance box's size (0: off)
 	// The colonist card (RHUD), zero keeps today's layout. PaneW and PaneH
 	// size the pane; Card is the floating card; letters avoid LetterAvoid and
 	// use LetterGap between them (0: HudGap).
@@ -88,7 +91,11 @@ func Compute(sw, sh int, st Inputs) Layout {
 	l.Tabs = gfx.Rect{X: 0, Y: H - TabsH, W: W, H: TabsH}
 	floorY := l.Tabs.Y // the top of the lowest-left stack, for the resource list
 
-	rx := layoutRight(&l, W, st)
+	full := st.FullWidthWindow && st.WindowW > 0 && st.WindowH > 0
+	rx := W
+	if !full {
+		rx = layoutRight(&l, W, st)
+	}
 
 	// the colonist bar, top-centre, at most W - BarReserveW wide
 	if st.Colonists > 0 {
@@ -112,6 +119,9 @@ func Compute(sw, sh int, st Inputs) Layout {
 	if st.WindowW > 0 && st.WindowH > 0 {
 		h := min(st.WindowH, l.Tabs.Y-barBottom-2*HudMargin)
 		w := min(st.WindowW, rx-HudMargin)
+		if full {
+			w = min(st.WindowW, W)
+		}
 		l.Window = gfx.Rect{X: 0, Y: l.Tabs.Y - h, W: w, H: h}
 		floorY = l.Window.Y
 	}

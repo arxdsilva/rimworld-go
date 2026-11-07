@@ -51,9 +51,18 @@ type Modal struct {
 	// screen). The frame is that rectangle cut to the screen.
 	Anchor func() gfx.Rect
 	// Frameless drops the title bar and the X (UIS-060: a main-tab window
-	// through RunWindow). Title is then not drawn; a window that shows one
-	// draws it in its body in gfx.Title.
+	// through RunWindow; UIS-073: an opened letter). Title is then not
+	// drawn; a window that shows one draws it in its body in gfx.Title.
+	// The scrim stays (UIS-079).
 	Frameless bool
+	// Popup is a frameless list on its anchor (a dropdown, UIS-008): no
+	// scrim, no inner margin; a click outside the frame closes it (and is
+	// swallowed), as Esc does.
+	Popup bool
+	// RowActions lays the buttons out as full-width text rows, MenuRowH
+	// apart, top to bottom in declaration order (UIS-073: a letter's
+	// choices), instead of a right-to-left footer.
+	RowActions bool
 }
 
 // ModalGeometry places a w x h modal centred on the screen, shrunk to fit.
@@ -67,15 +76,28 @@ func ModalGeometry(sw, sh int, m Modal) (frame, title, body, footer gfx.Rect) {
 // frameless one has no title bar and the window's inner margin.
 func modalParts(frame gfx.Rect, m Modal) (f, title, body, footer gfx.Rect) {
 	rest, pad := frame, float32(ModalPad)
-	if m.Frameless {
+	switch {
+	case m.Popup:
+		pad = 1 // inside the 1 px frame
+	case m.Frameless:
 		pad = hudlayout.WindowPad
-	} else {
+	default:
 		title, rest = frame.SplitV(ModalTitleH)
 	}
 	if len(m.Buttons) > 0 {
-		rest, footer = rest.SplitV(-ModalFooterH)
+		rest, footer = rest.SplitV(-ModalFooterHeight(m))
 	}
 	return frame, title, rest.Inset(pad), footer
+}
+
+// ModalFooterHeight is the height m's buttons take: the footer bar, or
+// with RowActions one MenuRowH row per button and the window's margin
+// under the last.
+func ModalFooterHeight(m Modal) float32 {
+	if !m.RowActions {
+		return ModalFooterH
+	}
+	return float32(len(m.Buttons))*hudlayout.MenuRowH + hudlayout.WindowPad
 }
 
 // layout is where m sits this frame: on its anchor when it has one (cut
@@ -155,10 +177,17 @@ func (k *Kit) RunModals(closeModal func(id string)) {
 		m := k.Modals[i]
 		k.Layer = i + 1
 		frame, titleR, body, footer := layout(sw, sh, m)
-		k.Queue(func(dst *ebiten.Image) { FillRect(dst, gfx.WinRect(sw, sh), ModalDim) })
+		if !m.Popup {
+			k.Queue(func(dst *ebiten.Image) { FillRect(dst, gfx.WinRect(sw, sh), ModalDim) })
+		}
 		k.modalChrome(m, frame, titleR)
 		n := len(k.Modals)
-		if k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: tk(k).T("Close")}) {
+		if i == n-1 && m.Popup && popupMissed(k, frame) {
+			k.CloseTop()
+			swallowClicks(k)
+			return
+		}
+		if !m.Frameless && !m.Popup && k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: tk(k).T("Close")}) {
 			k.CloseTop()
 			return
 		}
@@ -171,12 +200,27 @@ func (k *Kit) RunModals(closeModal func(id string)) {
 		}
 	}
 	if len(k.Modals) > 0 { // nothing outside the modal gets a click
-		for _, b := range []inputframe.MouseBtn{inputframe.Left, inputframe.Right, inputframe.Middle} {
-			if k.in().Clicked(b) {
-				k.in().Take(b)
-			}
+		swallowClicks(k)
+	}
+}
+
+// swallowClicks takes every mouse press of this frame.
+func swallowClicks(k *Kit) {
+	for _, b := range []inputframe.MouseBtn{inputframe.Left, inputframe.Right, inputframe.Middle} {
+		if k.in().Clicked(b) {
+			k.in().Take(b)
 		}
 	}
+}
+
+// popupMissed reports a left or right press this frame outside a popup's
+// frame.
+func popupMissed(k *Kit, frame gfx.Rect) bool {
+	if !k.in().Clicked(inputframe.Left) && !k.in().Clicked(inputframe.Right) {
+		return false
+	}
+	mx, my := k.host.Cursor()
+	return !frame.Hit(mx, my)
 }
 
 // RunWindow declares m as the host's main-tab window on the screen layer:
@@ -203,7 +247,7 @@ func (k *Kit) RunWindow(m Modal, closeX, dismiss func()) {
 func (k *Kit) modalChrome(m Modal, frame, titleR gfx.Rect) {
 	k.Queue(func(dst *ebiten.Image) {
 		DrawPanel(dst, frame.X, frame.Y, frame.W, frame.H)
-		if m.Frameless {
+		if m.Frameless || m.Popup {
 			return
 		}
 		gfx.Line(dst, frame.X, titleR.Bottom(), frame.Right(), titleR.Bottom(), 1, PanelBorder, false)
@@ -222,11 +266,15 @@ func modalCloseRect(titleR gfx.Rect) gfx.Rect {
 // closes calls closeFn after its OnClick.
 func (k *Kit) modalButtons(m Modal, footer gfx.Rect, closeFn func()) {
 	bx := footer.Right() - ModalPad
-	for _, b := range m.Buttons {
+	for i, b := range m.Buttons {
 		bw := max(100, gfx.TextW(b.Label, gfx.Label)+32)
 		br := gfx.Rect{X: bx - bw, Y: footer.Y + (footer.H-FooterBtnH)/2, W: bw, H: FooterBtnH}
 		bx -= bw + 8
 		o := BtnOpts{Style: b.Style}
+		if m.RowActions {
+			br = ModalRowRect(footer, i)
+			o.Plain = true
+		}
 		if b.Disabled != nil {
 			o.Reason = b.Disabled()
 			o.Disabled = o.Reason != ""
@@ -240,6 +288,13 @@ func (k *Kit) modalButtons(m Modal, footer gfx.Rect, closeFn func()) {
 			}
 		}
 	}
+}
+
+// ModalRowRect is the i-th RowActions row in a footer: full width inside
+// the window's margin, MenuRowH tall.
+func ModalRowRect(footer gfx.Rect, i int) gfx.Rect {
+	pad := float32(hudlayout.WindowPad)
+	return gfx.Rect{X: footer.X + pad, Y: footer.Y + float32(i)*hudlayout.MenuRowH, W: footer.W - 2*pad, H: hudlayout.MenuRowH}
 }
 
 // Confirm opens a Cancel / OK dialog; onOK runs when OK is pressed.

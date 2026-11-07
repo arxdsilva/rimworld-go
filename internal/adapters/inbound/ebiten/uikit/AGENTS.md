@@ -7,6 +7,8 @@ The immediate-mode widget kit (NG-1 §1.4): per-`Update` widget declarations wit
 - `Kit` (73 methods, 50 exported) with exported state; the moved `uiState` (budget `uikit.Kit 73` methods, `uikit.Kit 30` fields).
 - `Host` (`host.go`, exactly 8 methods): `Frame`, `Cursor`, `Size`, `Updates`, `KeyRepeat`, `Cue`, `Hint`, `ReducedMotion`. `Kit.Bind(h)` attaches it lazily; `Bound()` and `Host()` report it.
 - `Owner` (`form.go`): `Kit() *Kit`; `Form` (8 methods) and its free functions `Row`, `Gap`, `Content`, `SectionTitle`, `Slider`, `Check`, `Stepper`, `Choice`, `Picker`, `Segmented`, `OnScreenLayer`, `WrapCols`, `StyledButton`.
+- `DropList` (`dropdown.go`, UIS-008): a dropdown as a `Popup` modal under its anchor, rows `ScaleListRowH` apart, `DropOpt` entries, kept on screen; `RowStripe`/`RowStripeColor`, the every-other-row table stripe.
+- `Modal` modes: `Frameless` (no title bar or X; scrim kept), `Popup` (frameless, no scrim, closes on an outside click), `RowActions` (buttons as full-width `MenuRowH` text rows, top to bottom; `BtnOpts.Plain` draws a button as a list row).
 - `Button`, `Modal`, `SliderSpec` (the slider's `Tick` is set by the root's step sound), paint and spec types, colour tokens, `Shade`, `Fade`, `LerpRGBA`, the dialog frame.
 
 ## Depends on

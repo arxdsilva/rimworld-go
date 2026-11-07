@@ -1025,7 +1025,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 			screen.Fill(uikit.Space)
 		}
 		if !a.chrome.Hidden {
-			if !a.world.Open() {
+			if !a.world.Open() && !a.hud().Right.Empty() { // a full-width window covers the right column (UIS-065)
 				a.renderer.drawMinimap(screen, camerapkg.ColonyViewport(sw, sh), a.mapViewport()) // minimap.go: big maps only
 			}
 			a.drawColonyHUD(screen, sw, sh)

@@ -288,6 +288,7 @@ type BtnOpts struct {
 	Tip      string // hover card: "Title\nbody"
 	Selected bool
 	NoFocus  bool // out of the Tab order: a button of the map's HUD, where Tab opens the Architect
+	Plain    bool // drawn as a list row (DrawListRow): no fill or border until hovered
 }
 
 func (s BtnStyle) Colors(hover, down, selected bool) (fill, border, text color.RGBA) {
@@ -349,6 +350,10 @@ func (k *Kit) Button(id string, r gfx.Rect, label string, o BtnOpts) bool {
 	k.Queue(func(dst *ebiten.Image) {
 		hover := k.Hot == id && !o.Disabled
 		down := hover && k.in().Down(inputframe.Left) && k.Active == ""
+		if o.Plain {
+			DrawListRow(dst, r, label, hover, o.Selected, o.Disabled)
+			return
+		}
 		fill, border, text := o.Style.ColorsIn(k.Access.Palette(), hover, down, o.Selected)
 		if o.Disabled {
 			fill, border, text = BtnDisabled, BtnBorder, TextDisabled

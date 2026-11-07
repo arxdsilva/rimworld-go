@@ -482,7 +482,7 @@ func (a Tabs) healthParts(r gfx.Rect, parts []game.PartView) {
 // a missing or bleeding part, amber for wounds, dim for scars and artificial parts).
 func paintPartRow(dst *ebiten.Image, row gfx.Rect, p game.PartView, stripe bool) {
 	if stripe {
-		uikit.FillRect(dst, row, uiStripe)
+		uikit.FillRect(dst, row, uikit.RowStripeColor)
 	}
 	const labelW = 96
 	ty := gfx.CenterTop(float64(row.Y), float64(row.H), gfx.Body)
@@ -733,7 +733,7 @@ func (a Tabs) openHealthPicker(id entity.EntityID) {
 // exists (the label alone otherwise).
 func (a Tabs) paintOptionRow(dst *ebiten.Image, row gfx.Rect, o HealthOption, hover, selected bool) {
 	if selected || hover {
-		uikit.FillRect(dst, row, uiStripe)
+		uikit.FillRect(dst, row, uikit.RowStripeColor)
 	}
 	textX := row.X + 6
 	if o.Item != 0 && a.env().Art != nil {

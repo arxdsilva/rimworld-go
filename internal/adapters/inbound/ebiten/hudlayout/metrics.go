@@ -239,6 +239,14 @@ const (
 	// OptionRowH is an option row's pitch, OptionCtrlH its control.
 	OptionRowH  = 35
 	OptionCtrlH = 30
+	// OptionsCloseSize is the Options window's X, OptionsCloseInset from its
+	// top-right corner (UIS-075).
+	OptionsCloseSize  = 18
+	OptionsCloseInset = 4
+	// ScaleListRowH is a UI scale dropdown row, ScaleListW its least width
+	// (UIS-008).
+	ScaleListRowH = 29
+	ScaleListW    = 70
 	// FloatRowH is a float-menu row; FloatIcon its icon, FloatPadW the width
 	// the menu adds to its widest text.
 	FloatRowH = 29
@@ -256,3 +264,33 @@ const (
 
 // LearnHeaderH is the learning helper's collapsed height (its header alone; ours).
 const LearnHeaderH = 28
+
+// Letter hover card (UIS-032): a LetterCardW x LetterCardH box LetterCardGap
+// left of the letter's tile, text wrapped at LetterCardWrap.
+const (
+	LetterCardW    = 330
+	LetterCardH    = 105
+	LetterCardGap  = 10
+	LetterCardWrap = 300
+)
+
+// Main-tab window details (UIS-061, UIS-062, UIS-064, UIS-068).
+const (
+	// WorkBox is a work cell's square box, WorkPadL its left pad in the slot.
+	WorkBox  = 25
+	WorkPadL = 8
+	// SchedAreaW is the schedule's area column, SchedAreaGap left of it;
+	// SchedSegMin the narrowest area segment before it falls back to a list.
+	SchedAreaW   = 270
+	SchedAreaGap = 7
+	SchedSegMin  = 40
+	// WildW is the Wildlife window's width, WildHeadH its header band.
+	WildW     = 515
+	WildHeadH = 32
+	// The Factions window: FactionHeadH over FactionRowH rows, FactionFootH
+	// under them, FactionGutter right of the row stripe for the scroll bar.
+	FactionRowH   = 80
+	FactionHeadH  = 150
+	FactionFootH  = 55
+	FactionGutter = 16
+)

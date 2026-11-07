@@ -505,8 +505,13 @@ func TestWindowsStayInsideTheWindowRect(t *testing.T) {
 				if w.X != 0 || w.Bottom() != a.hud().Tabs.Y {
 					t.Errorf("%s: Window %+v, want bottom-left above the tabs (Tabs.Y %v)", c.name, w, a.hud().Tabs.Y)
 				}
-				if w.Right() > a.hud().Right.X-hudlayout.HudMargin+0.01 {
-					t.Errorf("%s: Window right %v reaches the right column at %v", c.name, w.Right(), a.hud().Right.X)
+				switch r := a.hud().Right; {
+				case r.Empty(): // UIS-065: a full-width window (Research) covers the right column
+					if c.name != "research" || w.Right() > float32(sc.w)+0.01 {
+						t.Errorf("%s: Window %+v hides the right column or leaves the screen", c.name, w)
+					}
+				case w.Right() > r.X-hudlayout.HudMargin+0.01:
+					t.Errorf("%s: Window right %v reaches the right column at %v", c.name, w.Right(), r.X)
 				}
 				got := winTrace(a, img)
 				added := winAdded(base, got)

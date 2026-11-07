@@ -68,7 +68,7 @@ func StatusChips(w game.WorldView) []StatusChip {
 // first on top, each as wide as its label and flush with Global's right
 // edge (global.go lays them out).
 func (c Global) ChipRects(chips []StatusChip, sw int) []gfx.Rect {
-	if !c.live() {
+	if !c.live() || c.sh.Layout().Global.Empty() {
 		return nil
 	}
 	p := c.Plan()
