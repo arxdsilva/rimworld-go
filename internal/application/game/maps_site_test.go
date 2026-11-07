@@ -144,6 +144,7 @@ func siteRun(t *testing.T) uint64 {
 	}
 	m, meta := g.maps[1], &w.atlas.Maps[0]
 	m.climate = biome.DefOf(biome.TemperateForest).Climate // the test planet is all sea ice: keep ada on her feet
+	calmSite(g, m)                                         // whatever threat the site rolled (QST-047): this run is about the mining
 	if meta.Lump != item.Steel || len(meta.Cells) != 10 {
 		t.Fatalf("lump %v in %d cells, want steel in 10", meta.Lump, len(meta.Cells))
 	}
@@ -219,8 +220,25 @@ func TestSiteMapMinePackUpHome(t *testing.T) {
 	}
 }
 
+// calmSite takes site map m's threat away: its raiders leave the map and
+// its manhunters calm down.
+func calmSite(g *Game, m *mapState) {
+	prev := g.mapState
+	g.mapState = m
+	for _, id := range slices.Clone(m.raiderIDs) {
+		g.removeRaider(id)
+	}
+	for _, id := range m.animalIDs {
+		if a := g.animals.Ref(id); a != nil {
+			a.Manhunter = 0
+		}
+	}
+	m.raidGroups = nil
+	g.mapState = prev
+}
+
 // TestMineralSiteRaidDayTen: hostiles come to a mineral site 10 days
-// after it opened, once.
+// after no hostile stands there (QST-048), once.
 func TestMineralSiteRaidDayTen(t *testing.T) {
 	t.Parallel()
 	g := worldGame(t)
@@ -230,11 +248,17 @@ func TestMineralSiteRaidDayTen(t *testing.T) {
 	arriveAt(t, g, tile, g.pawnIDs[0], g.pawnIDs[1])
 	g.Step(1)
 	meta := &w.atlas.Maps[0]
+	calmSite(g, g.maps[1])
 	g.Step(clock.TicksPerHour)
-	if meta.Raided || len(g.maps[1].raidGroups) != 0 {
-		t.Fatal("a raid before day 10")
+	if meta.Raided || len(g.maps[1].raidGroups) != 0 || meta.Clear == 0 {
+		t.Fatalf("a raid before day 10, or the site never counted as clear (clear %d)", meta.Clear)
 	}
-	meta.Opened -= 10 * clock.TicksPerDay
+	meta.Opened -= 20 * clock.TicksPerDay // the day counts from the clear hour, not the open
+	g.Step(clock.TicksPerHour)
+	if meta.Raided {
+		t.Fatal("the raid counted from the open, not from the site being clear")
+	}
+	meta.Clear -= 10 * clock.TicksPerDay
 	g.Step(clock.TicksPerHour)
 	if !meta.Raided || len(g.maps[1].raidGroups) == 0 || len(g.maps[0].raidGroups) != 0 {
 		t.Fatalf("no raid on the site at day 10 (%d groups there)", len(g.maps[1].raidGroups))

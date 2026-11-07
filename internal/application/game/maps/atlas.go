@@ -46,7 +46,7 @@ const (
 	// packTicks is the time to pack up once a temporary map's job is done
 	// (wiki: Caravan, 24 hours).
 	packTicks = clock.TicksPerDay
-	// raidDays is when hostiles come to a mineral site (wiki: Long-range
+	// raidDays is when hostiles come to a cleared mineral site (wiki: Long-range
 	// mineral scanner, 10 days).
 	raidDays = 10
 )
@@ -82,10 +82,12 @@ type Meta struct {
 	ResumeDest int
 	Defeated   bool
 	// Lump is a mineral site's mineral and Cells the lump's ore cells
-	// (index y*w+x); Raided: its hostiles were sent.
+	// (index y*w+x); Raided: its hostiles were sent; Clear is the first
+	// hour no hostile stood there (QST-048: the raid comes raidDays later).
 	Lump   item.Kind
 	Cells  []int
 	Raided bool
+	Clear  uint64
 	// Hostile: hostiles were seen here. Empty and Done count hourly
 	// census results in a row (nobody of ours left; the job done).
 	Hostile     bool

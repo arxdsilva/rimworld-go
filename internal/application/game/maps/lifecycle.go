@@ -113,6 +113,8 @@ func (l Lifecycle) apply(r Request, now uint64) {
 			}
 			if r.Quest != 0 && f.h.Switch(id) {
 				f.h.SiteOpened(r.Quest, id) // the quest lays its site (QST-104)
+			} else if r.Lump != 0 && r.Kind == Site {
+				l.oreThreat(c, id) // oresite.go (QST-047)
 			}
 		}
 		if r.Kind == Encounter {
@@ -197,9 +199,12 @@ func (l Lifecycle) hourly(id uint32, now uint64) {
 	if m.Kind == Settlement {
 		l.besiege(m, now) // settle.go (MAP-05): defeat after 3 hourly results with no defender
 	}
-	if m.Lump != 0 && !m.Raided && m.PackBy == 0 && now >= m.Opened+raidDays*clock.TicksPerDay {
+	if m.Lump != 0 && m.Clear == 0 && c.Hostiles == 0 {
+		m.Clear = now
+	}
+	if m.Lump != 0 && !m.Raided && m.PackBy == 0 && m.Clear != 0 && now >= m.Clear+raidDays*clock.TicksPerDay {
 		m.Raided = true
-		f.h.Raid() // wiki: Long-range mineral scanner: hostiles come after 10 days
+		f.h.Raid() // wiki: Long-range mineral scanner: another group 10 days after the site is clear
 	}
 	busy := m.Quest != 0 && f.h.SiteCensus(m.Quest, id, c) // the quest's own rules (QST-108)
 	if m = f.a.Meta(id); m == nil {

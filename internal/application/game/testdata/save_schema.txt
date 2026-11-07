@@ -2656,6 +2656,7 @@ saveState.World.Atlas.Maps []rimworld-go/internal/application/game/maps.Meta
 saveState.World.Atlas.Maps[] rimworld-go/internal/application/game/maps.Meta
 saveState.World.Atlas.Maps[].Cells []int
 saveState.World.Atlas.Maps[].Cells[] int
+saveState.World.Atlas.Maps[].Clear uint64
 saveState.World.Atlas.Maps[].Defeated bool
 saveState.World.Atlas.Maps[].Done uint8
 saveState.World.Atlas.Maps[].Empty uint8
