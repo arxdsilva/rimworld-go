@@ -142,6 +142,9 @@ const (
 	Baking
 	BlisteringHot
 	Naked
+	// TurnedAwayWanderer (QST-173, append only, saved): the colony turned a
+	// wanderer's offer to join away.
+	TurnedAwayWanderer
 	numKinds
 )
 
@@ -303,6 +306,7 @@ var defs = [numKinds]Def{
 	Baking:             {"baking in the heat", -12, 0, groupTempHot, 0, 0},
 	BlisteringHot:      {"blistering hot", -16, 0, groupTempHot, 0, 0},
 	Naked:              {"naked", -6, 0, groupNone, 0, 0},
+	TurnedAwayWanderer: {"turned a wanderer away", -3, day, groupNone, 0, 0},
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

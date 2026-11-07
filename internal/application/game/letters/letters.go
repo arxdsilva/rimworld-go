@@ -62,6 +62,10 @@ type Letter struct {
 	// Quest is the quest the letter is about (QST-131; 0: none): the
 	// letter opens the Quests window on it.
 	Quest uint32
+	// Wanderer: a wanderer's offer to join (QST-170; 0 none), the seed the
+	// person is made from on AcceptLetter (quest.PawnOf); dismissing turns
+	// them away. Until: the offer lapses and the letter goes (0: never).
+	Wanderer, Until uint64
 }
 
 // State is the stack, oldest first, and how many letters were ever issued:
@@ -112,6 +116,14 @@ func (s *State) Remove(id uint64) (Letter, bool) {
 	s.list = slices.Delete(s.list, i, i+1)
 	s.ver++
 	return l, true
+}
+
+// Lapse drops the letters whose offer ran out by now.
+func (s *State) Lapse(now uint64) {
+	n := len(s.list)
+	if s.list = slices.DeleteFunc(s.list, func(l Letter) bool { return l.Until != 0 && l.Until <= now }); len(s.list) != n {
+		s.ver++
+	}
 }
 
 // Get is letter id; ok false for an unknown id.

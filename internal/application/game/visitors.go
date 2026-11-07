@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
@@ -101,23 +102,36 @@ func (g *Game) wandererFits(now uint64) bool {
 	return g.hasSetup() && (everyoneGone(g) || len(g.pawnIDs) > 0 && len(g.pawnIDs) < wandererMaxColony)
 }
 
-// wandererJoins brings in a generated human who walks to the colony and
-// joins it.
+// wandererJoins posts a wanderer's offer to join (QST-170): accepted within
+// a day, they walk in (wandererWalksIn); dismissed, the colony turned them
+// away (a short mood thought); lapsed, they went on.
 func (g *Game) wandererJoins(now uint64) bool {
+	if _, _, ok := g.worldEdge(); !ok {
+		return false
+	}
+	seed := (g.worldSeed() ^ wandererSalt ^ now) | 1
+	if everyoneGone(g) { // nobody to answer: they restart the colony at once
+		return g.wandererWalksIn(seed)
+	}
+	letterf(g, letters.Info, "Wanderer asks to join", 0, "%s, a wanderer, asks to join the colony. "+
+		"Accept within a day to welcome them; dismiss this letter and they go their way.", quest.PreviewOf(seed).Name)
+	g.letters.EditLast(func(l *letters.Letter) { l.Wanderer, l.Until = seed, now+clock.TicksPerDay })
+	return true
+}
+
+// wandererWalksIn brings the wanderer made from seed in from an edge to
+// join the colony.
+func (g *Game) wandererWalksIn(seed uint64) bool {
 	ex, ey, ok := g.worldEdge()
+	x, y, in := g.insetLandNear(ex, ey, nil)
+	if !ok || !in {
+		return false
+	}
+	id, ok := walkInColonist(g, quest.PawnOf(seed), x, y)
 	if !ok {
 		return false
 	}
-	x, y, ok := g.insetLandNear(ex, ey, nil)
-	if !ok {
-		return false
-	}
-	p := pawngen.Generate(g.worldSeed()^wandererSalt, int(g.entities.Peek()), 0, pawngen.Rules{})
-	id, ok := walkInColonist(g, p, x, y)
-	if !ok {
-		return false
-	}
-	letterf(g, letters.Good, "Wanderer joins", id, "%s, a wanderer, has asked to join the colony.", g.personName(id))
+	letterf(g, letters.Good, "Wanderer joins", id, "%s, a wanderer, has joined the colony.", g.personName(id))
 	g.addHistory("joined", g.personName(id)+" wandered in and joined the colony.", id)
 	return true
 }

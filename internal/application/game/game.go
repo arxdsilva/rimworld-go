@@ -364,6 +364,7 @@ type LetterView struct {
 	// Target this letter, Mode 0 give, 1 refuse; MAP-08).
 	Demand bool
 	Quest  uint32 // the quest it is about (0: none): it opens the Quests window there (QST-131)
+	Until  uint64 // the offer lapses then (0: never; a wanderer's, QST-170)
 }
 
 // StoredResourceView is one row of the resource list (PLAY-018).

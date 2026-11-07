@@ -6,6 +6,10 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // visitorGame is a landed set-up colony whose first human faction is
@@ -138,8 +142,14 @@ func TestWandererJoins(t *testing.T) {
 	now := uint64(g.clock.Now())
 	before := slices.Clone(g.pawnIDs)
 	if !g.wandererFits(now) || !g.wandererJoins(now) {
-		t.Fatal("no wanderer joined")
+		t.Fatal("no wanderer offer")
 	}
+	offer := wandererOffer(t, g)
+	if len(g.pawnIDs) != len(before) || !offer.JoinOffer || offer.Until != now+clock.TicksPerDay {
+		t.Fatalf("an offer with a day to answer and nobody in yet: %+v", offer)
+	}
+	g.Enqueue(command.Command{Kind: command.AcceptLetter, Target: offer.ID})
+	g.Step(1)
 	if len(g.pawnIDs) != len(before)+1 {
 		t.Fatalf("%d colonists, want %d", len(g.pawnIDs), len(before)+1)
 	}
@@ -163,5 +173,52 @@ func TestWandererJoins(t *testing.T) {
 	g.Step(500)
 	if !g.alive(id) {
 		t.Fatal("the wanderer is not alive")
+	}
+}
+
+// wandererOffer is the wanderer's offer letter (fails when there is none).
+func wandererOffer(t *testing.T, g *Game) LetterView {
+	t.Helper()
+	for _, l := range g.letterViews() {
+		if l.Title == "Wanderer asks to join" {
+			return l
+		}
+	}
+	t.Fatalf("no wanderer offer among %+v", g.letterViews())
+	return LetterView{}
+}
+
+func TestWandererLapsedThenTurnedAway(t *testing.T) {
+	t.Parallel()
+	g := visitorGame(t)
+	before := slices.Clone(g.pawnIDs)
+	turnedAway := func() bool {
+		return slices.ContainsFunc(g.pawnIDs, func(c entity.EntityID) bool {
+			return slices.ContainsFunc(g.memories[c], func(m mood.Memory) bool { return m.Kind == mood.TurnedAwayWanderer })
+		})
+	}
+	// Left unanswered, the offer lapses after a day: nobody joins, nobody minds.
+	now := uint64(g.clock.Now())
+	g.wandererJoins(now)
+	g.Step(int(wandererOffer(t, g).Until - now + clock.TicksPerHour))
+	for _, l := range g.letterViews() {
+		if l.Title == "Wanderer asks to join" {
+			t.Fatalf("the offer outlived its day: %+v", l)
+		}
+	}
+	if len(g.pawnIDs) != len(before) || turnedAway() {
+		t.Fatal("a lapsed offer neither joins nor hurts")
+	}
+	// Dismissed, the wanderer is turned away: every colonist minds a little.
+	g.wandererJoins(uint64(g.clock.Now()))
+	g.Enqueue(command.Command{Kind: command.DismissLetter, Target: wandererOffer(t, g).ID})
+	g.Step(1)
+	if len(g.pawnIDs) != len(before) {
+		t.Fatal("a turned-away wanderer does not join")
+	}
+	for _, c := range g.pawnIDs {
+		if !slices.ContainsFunc(g.memories[c], func(m mood.Memory) bool { return m.Kind == mood.TurnedAwayWanderer }) {
+			t.Fatalf("colonist %d does not remember turning the wanderer away", c)
+		}
 	}
 }

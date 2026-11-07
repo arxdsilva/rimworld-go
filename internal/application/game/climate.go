@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/pkg/msgfmt"
@@ -121,6 +122,10 @@ func (g *Game) addLetter(m MessageView) string {
 func (g *Game) dismissLetter(id uint64) {
 	if l, ok := g.letters.Remove(id); ok && l.Join != 0 && g.visitor(l.Join) {
 		careGuests{g}.Leave(l.Join) // visitors.go
+	} else if ok && l.Wanderer != 0 {
+		for _, c := range g.pawnIDs {
+			g.remember(c, mood.TurnedAwayWanderer)
+		}
 	}
 }
 
@@ -128,10 +133,13 @@ func (g *Game) dismissLetter(id uint64) {
 // stranger still on the map joins. A letter with no offer is left as it is.
 func (g *Game) acceptLetter(id uint64) {
 	l, ok := g.letters.Get(id)
-	if !ok || l.Join == 0 {
+	if !ok || l.Join == 0 && l.Wanderer == 0 {
 		return
 	}
-	g.letters.Remove(id)
+	if g.letters.Remove(id); l.Wanderer != 0 {
+		g.wandererWalksIn(l.Wanderer) // visitors.go
+		return
+	}
 	if v, _ := g.vital.Get(l.Join); !g.visitor(l.Join) || v.Status == health.Dead {
 		g.worldNote("%s is no longer here to join.", g.personName(l.Join))
 		return
@@ -148,7 +156,7 @@ func (g *Game) letterViews() []LetterView {
 	out := make([]LetterView, len(list))
 	for i, l := range list {
 		out[i] = LetterView{ID: l.ID, Tick: l.Tick, Kind: l.Kind, Title: l.Title, Text: l.Text, Msg: l.Msg,
-			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0, Demand: l.Demand, Quest: l.Quest}
+			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0 || l.Wanderer != 0, Demand: l.Demand, Quest: l.Quest, Until: l.Until}
 	}
 	return out
 }

@@ -53,7 +53,7 @@ func (h questHost) roles() quest.Roles {
 func questTick(g *Game, now uint64, day bool) {
 	if q := questOf(g); q != nil && day {
 		q.Daily(now)
-	} else if q != nil {
+	} else if g.letters.Lapse(now); q != nil {
 		q.Hourly(now)
 	}
 }

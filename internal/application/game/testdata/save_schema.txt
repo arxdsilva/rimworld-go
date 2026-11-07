@@ -609,6 +609,8 @@ saveState.Letters[].Quest uint32
 saveState.Letters[].Text string
 saveState.Letters[].Tick uint64
 saveState.Letters[].Title string
+saveState.Letters[].Until uint64
+saveState.Letters[].Wanderer uint64
 saveState.Letters[].X int
 saveState.Letters[].Y int
 saveState.Logs map[rimworld-go/internal/domain/sim/entity.EntityID][]rimworld-go/internal/application/game.logEntry
