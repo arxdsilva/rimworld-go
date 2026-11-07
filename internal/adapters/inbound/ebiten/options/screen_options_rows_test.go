@@ -1,25 +1,35 @@
 package options
 
 import (
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 )
 
-// A step row writes its value next to its own + button, whichever column
-// the row is in: Max colonies once wrote its number in the first column.
-func TestStepValueFollowsItsRow(t *testing.T) {
+// A step row's two buttons frame its bar and value: the + button ends where
+// the control column ends, on the - button's line, with room between them.
+func TestStepButtonsFrameTheValue(t *testing.T) {
 	t.Parallel()
+	_, o := newFake()
 	for _, tab := range []string{"gameplay", "graphics", "audio"} {
-		rows := OptionRows(tab)
-		for i, r := range rows {
-			if r.kind != rowStep {
-				continue
-			}
-			_, cx, _ := OptPos(rows, i)
-			plusEnd := cx + OptBtnH + 8 + optBarW + 8 + OptBtnH
-			if x := stepValueX(cx); x < plusEnd || x > plusEnd+16 {
-				t.Errorf("%s/%s: value at %.0f, the + button ends at %.0f", tab, r.Key, x, plusEnd)
+		o.Tab = tab
+		for page := 0; page < 4; page++ {
+			o.rowOff = page * 6
+			bs := o.Buttons(1280, 720)
+			for _, dec := range bs {
+				base, ok := strings.CutSuffix(dec.ID, ".dec")
+				if !ok {
+					continue
+				}
+				for _, inc := range bs {
+					if inc.ID != base+".inc" {
+						continue
+					}
+					if inc.Y != dec.Y || inc.X+inc.W-dec.X != optCtrlW || inc.X-(dec.X+dec.W) < 40 {
+						t.Errorf("%s/%s: - at %.0f, + at %.0f..%.0f", tab, base, dec.X, inc.X, inc.X+inc.W)
+					}
+				}
 			}
 		}
 	}

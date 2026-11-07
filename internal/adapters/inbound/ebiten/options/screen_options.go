@@ -2,12 +2,12 @@ package options
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -39,7 +39,7 @@ type OptionRow struct {
 	// applyApp, when set, replaces apply for a change that needs the running
 	// app (the screen's device scale, the hardware).
 	applyApp func(sc *Screen, s *config.Settings, d int)
-	// Col is 0 for the first column and 1 for the second.
+	// Col groups rows: the window lists group 0, then group 1, in one column.
 	Col int
 	// run, when set, makes the row a one-shot action (open a folder, ask to
 	// restore the defaults, edit names): the click calls it and changes no
@@ -83,27 +83,33 @@ func (o *Screen) TabList() []string {
 	return out
 }
 
-// tabW is a tab button's width: optTabW, narrowed so that n tabs fit the
-// screen's width.
-func tabW(sw, n int) float32 {
-	if n <= 0 {
-		return optTabW
-	}
-	return float32(max(40, min(optTabW, (sw-2*56-8*(n-1))/n)))
-}
-
-// Layout (px).
+// Layout (px). The row tabs live in a centred window of one fixed size
+// (UIS-075); positions inside it are relative to its top left. The wide tabs
+// (Controls, Story, Habits) keep the large panel and the same tab list.
 const (
-	optTabY    = 108
-	optTabW    = 112
-	optRowY    = 164
-	optRowStep = 44
-	OptCtrlX   = 260
-	OptBtnH    = 32
-	optBarW    = 160
-	// the second column (Graphics): its labels and controls
-	optCol2LabelX = 600
-	optCol2CtrlX  = 720
+	winW, winH = 650, 600
+	tabListX   = 22
+	tabListY   = 21
+	tabBtnW    = 152
+	tabBtnH    = 40
+	tabPitch   = 50
+	// contentX is where the content starts, left of the control column;
+	// OptCtrlX is where a row's control starts; both are window-relative.
+	contentX = 194
+	// OptLabelX is where a row's label starts, window-relative.
+	OptLabelX = contentX
+	OptCtrlX  = 457
+	optCtrlW  = 173
+	rowTopY   = 21
+	okW       = 154
+	okH       = 39
+	okBottom  = 18
+	// OptBtnH is an option control's height (UIS-016).
+	OptBtnH = hudlayout.OptionCtrlH
+	// optExtraW is a second button on a row; it sits left of the control.
+	optExtraW = 118
+	optBarH   = 4
+	panelEdge = 40 // the wide panel's inset from the screen
 )
 
 func onOff(b bool) string {
@@ -291,43 +297,6 @@ func renderScaleLabel(v float64) string {
 	return "Full"
 }
 
-// uiScaleLabel names a UI scale choice; Auto is shown with its live value.
-func uiScaleLabel(s config.Settings) string {
-	if s.Accessibility.UIScaleAuto {
-		return "Auto"
-	}
-	return fmt.Sprintf("%d%%", s.Accessibility.UIScale)
-}
-
-// uiScaleRow cycles Auto, then every preset, then Auto again. The text
-// size follows it; there is no separate slider.
-func uiScaleRow(t lang.Tr) OptionRow {
-	return OptionRow{Key: "uiscale", Label: t.T("UI scale"), kind: rowChoice,
-		Tip:   t.T("Scales text and every panel. Auto fits the window."),
-		value: uiScaleLabel,
-		live: func(o *Screen) string {
-			if o.sh.Settings().Accessibility.UIScaleAuto {
-				return fmt.Sprintf("Auto (%d%%)", int(math.Round(o.sh.Env().UIScale*100)))
-			}
-			return uiScaleLabel(o.sh.Settings())
-		},
-		apply: func(s *config.Settings, _ int) {
-			ac := &s.Accessibility
-			ac.UIScaleLegacy = 0 // a chosen step replaces a scale saved before the steps (UIS-009)
-			if ac.UIScaleAuto {
-				ac.UIScaleAuto, ac.UIScale = false, config.UIScalePresets[0]
-				return
-			}
-			for i, p := range config.UIScalePresets {
-				if p == ac.UIScale && i+1 < len(config.UIScalePresets) {
-					ac.UIScale = config.UIScalePresets[i+1]
-					return
-				}
-			}
-			ac.UIScaleAuto = true
-		}}
-}
-
 // learningHelperRow shows or hides the learning helper (PLAY-018) and, beside
 // it, starts its lessons again.
 func learningHelperRow() OptionRow {
@@ -421,67 +390,177 @@ func (o *Screen) CurrentTab() string {
 	return "audio"
 }
 
-func rowY(i int) float32 { return float32(optRowY + i*optRowStep) }
+// wideTab reports whether a tab keeps the large panel: its content is wider
+// than the 650 px window.
+func wideTab(tab string) bool { return tab == "controls" || tab == "story" || tab == "habits" }
 
-// stepValueX is where a step row with its controls at cx writes its value.
-func stepValueX(cx float32) float32 { return cx + 2*OptBtnH + optBarW + 28 }
+// winRect is the window (or the wide panel) the tab draws in. The window is
+// 650 x 600 centred and shrinks only when the screen is smaller.
+func winRect(sw, sh int, tab string) gfx.Rect {
+	if wideTab(tab) {
+		return gfx.Rect{X: panelEdge, Y: 96, W: float32(sw - 2*panelEdge), H: float32(sh - 180)}
+	}
+	w, h := min(winW, sw-16), min(winH, sh-16)
+	return gfx.Rect{X: float32((sw - w) / 2), Y: float32((sh - h) / 2), W: float32(w), H: float32(h)}
+}
 
-// OptPos is row i's label x, control x and y: rows stack down their column.
-func OptPos(rows []OptionRow, i int) (labelX, ctrlX, y float32) {
-	n := 0
-	for _, r := range rows[:i] {
-		if r.Col == rows[i].Col {
-			n++
+// ContentLeft is the x where a tab's content starts in its window.
+func ContentLeft(sw, sh int, tab string) float32 {
+	return winRect(sw, sh, tab).X + contentX
+}
+
+// tabContent is where a wide tab (Story, Habits) lays its content: right of
+// the tab list, inside the panel.
+func tabContent(panel gfx.Rect) gfx.Rect {
+	top := panel.Y + tabListY
+	return gfx.Rect{X: panel.X + contentX, Y: top, W: panel.W - contentX - 16, H: panel.Bottom() - top - 16}
+}
+
+// okRect is the OK button of a window tab.
+func okRect(win gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: win.X + (win.W-okW)/2, Y: win.Bottom() - okBottom - okH, W: okW, H: okH}
+}
+
+// rowsBottom is the lowest y a row may reach: above the OK button, and above
+// the tab's note when it has one.
+func rowsBottom(win gfx.Rect, tab string) float32 {
+	b := okRect(win).Y - 10
+	if optionNotes[tab] != "" {
+		b -= noteH
+	}
+	return b
+}
+
+// noteH is the room the dim note under a tab's rows takes.
+const noteH = 36
+
+// rowOrder lists the rows' indexes in the order the window shows them:
+// group 0, then group 1, each in table order.
+func rowOrder(rows []OptionRow) []int {
+	out := make([]int, 0, len(rows))
+	for g := 0; g <= 1; g++ {
+		for i, r := range rows {
+			if min(r.Col, 1) == g {
+				out = append(out, i)
+			}
 		}
 	}
-	if rows[i].Col == 1 {
-		return optCol2LabelX, optCol2CtrlX, rowY(n)
+	return out
+}
+
+// OptPos is row i's label x, control x and y inside the window (no page
+// offset): rows stack down one column at the option row pitch.
+func OptPos(rows []OptionRow, i int) (labelX, ctrlX, y float32) {
+	for n, j := range rowOrder(rows) {
+		if j == i {
+			return contentX, OptCtrlX, float32(rowTopY + n*hudlayout.OptionRowH)
+		}
 	}
-	return 56, OptCtrlX, rowY(n)
+	return contentX, OptCtrlX, rowTopY
+}
+
+// rowsPerPage is how many rows the window shows at once.
+func rowsPerPage(win gfx.Rect, tab string) int {
+	return max(1, int((rowsBottom(win, tab)-(win.Y+rowTopY))/hudlayout.OptionRowH))
+}
+
+// rowSlot is a visible row: its index and its absolute y.
+type rowSlot struct {
+	i int
+	y float32
+}
+
+// visibleRows are the rows on the current page, with the page clamped.
+func visibleRows(win gfx.Rect, tab string, rows []OptionRow, off *int) (slots []rowSlot, more bool) {
+	order := rowOrder(rows)
+	per := rowsPerPage(win, tab)
+	*off = max(0, min(*off, len(order)-per))
+	for n := *off; n < len(order) && n < *off+per; n++ {
+		slots = append(slots, rowSlot{order[n], win.Y + rowTopY + float32((n-*off)*hudlayout.OptionRowH)})
+	}
+	return slots, len(order) > per
+}
+
+// tabRects are the tab list's buttons, stacked down the window's left edge.
+func tabRects(win gfx.Rect, n int) []gfx.Rect {
+	pitch := float32(tabPitch)
+	if n > 1 {
+		pitch = min(pitch, (win.H-2*tabListY-tabBtnH)/float32(n-1))
+	}
+	h := min(float32(tabBtnH), pitch-2)
+	out := make([]gfx.Rect, n)
+	for i := range out {
+		out[i] = gfx.Rect{X: win.X + tabListX, Y: win.Y + tabListY + float32(i)*pitch, W: tabBtnW, H: h}
+	}
+	return out
 }
 
 func (o *Screen) Buttons(sw, sh int) []uikit.Button {
 	tab := o.CurrentTab()
 	var out []uikit.Button
 	list := o.TabList()
-	tw := tabW(sw, len(list))
-	for i, t := range list {
-		out = append(out, uikit.Button{ID: "options.tab." + t, Label: o.sh.T(optionTabLabels[t]),
-			X: 56 + float32(i)*(tw+8), Y: optTabY, W: tw, H: OptBtnH, Selected: t == tab})
+	win := winRect(sw, sh, tab)
+	for i, r := range tabRects(win, len(list)) {
+		out = append(out, uikit.Button{ID: "options.tab." + list[i], Label: o.sh.T(optionTabLabels[list[i]]),
+			X: r.X, Y: r.Y, W: r.W, H: r.H, Selected: list[i] == tab})
 	}
 	if tab == "controls" {
 		out = append(out, o.controlsButtons(sw, sh)...)
 	}
 	rows := OptionRows(tab, o.sh)
-	for i, r := range rows {
-		_, cx, y := OptPos(rows, i)
+	slots, more := visibleRows(win, tab, rows, &o.rowOff)
+	cx := win.X + OptCtrlX
+	for _, sl := range slots {
+		r, y := rows[sl.i], sl.y
 		lock := o.optionLock(r.Key) // saves.go: developer mode is locked in commitment mode; card rows by their settings
 		if r.kind == rowStep {
 			out = append(out,
 				uikit.Button{ID: ids.PrefixOptions + r.Key + ".dec", Label: "-", X: cx, Y: y, W: OptBtnH, H: OptBtnH, Disabled: lock != "", Reason: o.sh.T(lock)},
-				uikit.Button{ID: ids.PrefixOptions + r.Key + ".inc", Label: "+", X: cx + OptBtnH + 8 + optBarW + 8, Y: y, W: OptBtnH, H: OptBtnH, Disabled: lock != "", Reason: o.sh.T(lock)})
+				uikit.Button{ID: ids.PrefixOptions + r.Key + ".inc", Label: "+", X: cx + optCtrlW - OptBtnH, Y: y, W: OptBtnH, H: OptBtnH, Disabled: lock != "", Reason: o.sh.T(lock)})
 			continue
 		}
-		out = append(out, uikit.Button{ID: ids.PrefixOptions + r.Key, Label: o.rowValue(r), X: cx, Y: y, W: 160, H: OptBtnH,
+		out = append(out, uikit.Button{ID: ids.PrefixOptions + r.Key, Label: o.rowValue(r), X: cx, Y: y, W: optCtrlW, H: OptBtnH,
 			Disabled: lock != "", Reason: o.sh.T(lock), Tip: o.sh.T(r.Tip)})
 		if x := r.extra; x != nil {
 			off := ""
 			if x.off != nil {
 				off = x.off(o)
 			}
-			out = append(out, uikit.Button{ID: ids.PrefixOptions + r.Key + "." + x.key, Label: o.sh.T(x.label), X: cx + 160 + 8, Y: y, W: 150, H: OptBtnH,
+			out = append(out, uikit.Button{ID: ids.PrefixOptions + r.Key + "." + x.key, Label: o.sh.T(x.label), X: cx - 8 - optExtraW, Y: y, W: optExtraW, H: OptBtnH,
 				Tip: o.sh.T(x.tip), Disabled: off != "", Reason: o.sh.T(off)})
 		}
 	}
-	return append(out, uikit.Button{ID: ids.OptionsBack, Label: o.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36})
+	if wideTab(tab) {
+		return append(out, uikit.Button{ID: ids.OptionsBack, Label: o.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36})
+	}
+	if more {
+		ok := okRect(win)
+		out = append(out,
+			uikit.Button{ID: "options.rows.up", Label: o.sh.T("Up"), X: win.Right() - okBottom - 136, Y: ok.Y, W: 64, H: okH, Disabled: o.rowOff == 0, Quiet: true, Reason: o.sh.T("first rows")},
+			uikit.Button{ID: "options.rows.down", Label: o.sh.T("Down"), X: win.Right() - okBottom - 64, Y: ok.Y, W: 64, H: okH,
+				Disabled: o.rowOff >= len(rows)-rowsPerPage(win, tab), Quiet: true, Reason: o.sh.T("last rows")})
+	}
+	ok := okRect(win)
+	return append(out, uikit.Button{ID: ids.OptionsBack, Label: o.sh.T("OK"), X: ok.X, Y: ok.Y, W: ok.W, H: ok.H})
 }
 
 // ApplyOption handles an options.* click: a tab, or a row's control.
 func (o *Screen) ApplyOption(id string) {
 	key := strings.TrimPrefix(id, ids.PrefixOptions)
 	if t, ok := strings.CutPrefix(key, "tab."); ok {
-		o.Tab = t
+		o.Tab, o.rowOff = t, 0
 		*o.sh.Rebind() = RebindState{}
+		o.sh.Cue("ui.toggle")
+		return
+	}
+	if key == "rows.up" || key == "rows.down" {
+		sw, sh := o.sh.Size()
+		per := rowsPerPage(winRect(sw, sh, o.CurrentTab()), o.CurrentTab())
+		if key == "rows.up" {
+			o.rowOff = max(0, o.rowOff-per)
+		} else {
+			o.rowOff += per // visibleRows clamps it
+		}
 		o.sh.Cue("ui.toggle")
 		return
 	}
@@ -537,44 +616,55 @@ func (o *Screen) ApplyOption(id string) {
 
 func (o *Screen) DrawOptions(screen *ebiten.Image, sw, sh int) {
 	o.sh.PaintMenu(screen, sw, sh, o.sh.T("Options"), nil, nil)
-	uikit.DrawPanel(screen, 40, 96, float32(sw-80), float32(sh-180))
 	tab := o.CurrentTab()
+	win := winRect(sw, sh, tab)
+	uikit.DrawPanel(screen, win.X, win.Y, win.W, win.H)
+	mx, my := o.sh.Cursor()
 	if tab == "story" || tab == "habits" { // the kit paints the tab's content over the panel
-		mx, my := o.sh.Cursor()
 		o.drawButtons(screen, o.Buttons(sw, sh), mx, my)
 		return
 	}
 	if tab == "controls" {
 		o.drawControls(screen, sw, sh)
-		mx, my := o.sh.Cursor()
 		o.drawButtons(screen, o.Buttons(sw, sh)[:len(o.TabList())], mx, my)
 		o.drawButtons(screen, []uikit.Button{{ID: ids.OptionsBack, Label: o.sh.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36}}, mx, my)
 		return
 	}
 	rows := OptionRows(tab, o.sh)
-	for i, r := range rows {
-		lx, cx, y := OptPos(rows, i)
+	slots, _ := visibleRows(win, tab, rows, &o.rowOff)
+	cx := win.X + OptCtrlX
+	for _, sl := range slots {
+		r, y := rows[sl.i], sl.y
 		ty := float64(y) + (OptBtnH-gfx.LineH(gfx.Body))/2
-		gfx.Text(screen, o.sh.T(r.Label), float64(lx), ty, gfx.Body)
+		gfx.Text(screen, uikit.FitText(o.sh.T(r.Label), gfx.Body, OptCtrlX-contentX-8-extraRoom(r)), float64(win.X+contentX), ty, gfx.Body)
 		if r.kind != rowStep {
 			continue
 		}
-		bx := cx + OptBtnH + 8
-		by := y + OptBtnH/2 - 6
-		gfx.FillRect(screen, bx, by, optBarW, 12, uikit.BtnDisabled, false)
-		gfx.FillRect(screen, bx, by, optBarW*float32(gfx.Clamp01(r.frac(o.sh.Settings()))), 12, uikit.Accent, false)
-		gfx.StrokeRect(screen, bx, by, optBarW, 12, 1, uikit.PanelBorder, false)
-		gfx.Text(screen, r.value(o.sh.Settings()), float64(stepValueX(cx)), ty, gfx.Body)
+		// the value sits on the bar, centred between the two buttons
+		bx, bw := cx+OptBtnH+4, float32(optCtrlW-2*OptBtnH-8)
+		by := y + OptBtnH - optBarH - 3
+		gfx.FillRect(screen, bx, by, bw, optBarH, uikit.BtnDisabled, false)
+		gfx.FillRect(screen, bx, by, bw*float32(gfx.Clamp01(r.frac(o.sh.Settings()))), optBarH, uikit.Accent, false)
+		gfx.StrokeRect(screen, bx, by, bw, optBarH, 1, uikit.PanelBorder, false)
+		v := r.value(o.sh.Settings())
+		vw, _ := gfx.Measure(v, gfx.Body)
+		gfx.Text(screen, v, float64(bx)+(float64(bw)-vw)/2, float64(y)+3, gfx.Body)
 	}
 	if note := optionNotes[tab]; note != "" {
-		// beside the Back button: the rows fill the panel
-		ny := float64(footerY(sh)) + 2
-		for i, ln := range gfx.WrapPx(note, gfx.Small, float64(sw)-200-56) {
-			gfx.Text(screen, ln, 200, ny+float64(i)*gfx.LineH(gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
+		ny := float64(okRect(win).Y-10) - noteH + 4
+		for i, ln := range gfx.WrapPx(note, gfx.Small, float64(win.W-contentX-okBottom)) {
+			gfx.Text(screen, ln, float64(win.X+contentX), ny+float64(i)*gfx.LineH(gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
 		}
 	}
-	mx, my := o.sh.Cursor()
 	o.drawButtons(screen, o.Buttons(sw, sh), mx, my)
+}
+
+// extraRoom is the label room a row's second button takes.
+func extraRoom(r OptionRow) float32 {
+	if r.extra != nil {
+		return optExtraW + 8
+	}
+	return 0
 }
 
 // footerYOff is how far above the screen's bottom the footer buttons sit

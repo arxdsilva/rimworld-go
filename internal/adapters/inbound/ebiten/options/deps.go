@@ -33,10 +33,13 @@ type Env struct {
 	// RenderLimit is the physical size the render cap holds the frame to
 	// (ui_scale.go), and whether it is holding it.
 	RenderLimit func() (w, h int, capped bool)
-	UIScale     float64        // the UI step in use, physical px per logical px (Auto shows it)
-	Bindings    input.Bindings // the live key bindings
-	Pressed     []string       // keys that went down this frame
-	Mods        input.Mod      // modifiers held with them
+	UIScale     float64 // the UI step in use, physical px per logical px (Auto shows it)
+	// Window is the window's physical size in pixels (nil: the logical size times UIScale),
+	// which decides whether a UI step is allowed (UIS-003).
+	Window   func() (w, h int)
+	Bindings input.Bindings // the live key bindings
+	Pressed  []string       // keys that went down this frame
+	Mods     input.Mod      // modifiers held with them
 	// OpenFolder shows a folder in the file browser (nil: platform/openfolder).
 	OpenFolder func(path string) error
 	// SavesDir and LogDir are the folders the General tab opens ("": the
@@ -147,7 +150,10 @@ type Screen struct {
 	AutosaveDay int              // in-game day of the last autosave
 	SlotPage    int              // the Load screen's page of saves
 	namesDraft  string           // the preferred names dialog's text
+	// Scale is the UI scale row's list, refusal and keep-or-revert question.
+	Scale  ScaleControl
+	rowOff int // the first row shown when a tab has more rows than fit
 }
 
 // New builds the feature over its shell.
-func New(sh Shell) *Screen { return &Screen{sh: sh} }
+func New(sh Shell) *Screen { return &Screen{sh: sh, Scale: ScaleControl{sh: sh}} }

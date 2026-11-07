@@ -140,8 +140,8 @@ func visCheckScale(ref, got []gfx.TraceEvent, s float64) []string {
 }
 
 // autoScaleRE is the Options "UI scale" stepper's Auto label, which names
-// the current scale by design ("Auto (150%)").
-var autoScaleRE = regexp.MustCompile(`^Auto \(\d+%\)$`)
+// the step in use by design ("Auto (1.5×)", UIS-001).
+var autoScaleRE = regexp.MustCompile(`^Auto \([\d.]+×\)$`)
 
 // visScaleText is a text as the scale check compares it: the one label
 // that legitimately shows the scale itself is reduced to a constant.
@@ -749,10 +749,10 @@ func TestVisualCheckersCatchTheBugs(t *testing.T) {
 	if bad := visCheckScale(ref, renamed, 2); len(bad) != 1 || !strings.Contains(bad[0], "kind/text") {
 		t.Errorf("a changed text = %q, want one problem", bad)
 	}
-	auto1 := []gfx.TraceEvent{{Kind: "text", Text: "Auto (100%)", X: 270, Y: 171, W: 73, H: 17.7, Pass: "hud"}}
-	auto2 := []gfx.TraceEvent{{Kind: "text", Text: "Auto (200%)", X: 540, Y: 342, W: 146, H: 35.4, Pass: "hud"}}
+	auto1 := []gfx.TraceEvent{{Kind: "text", Text: "Auto (1×)", X: 270, Y: 171, W: 73, H: 17.7, Pass: "hud"}}
+	auto2 := []gfx.TraceEvent{{Kind: "text", Text: "Auto (2×)", X: 540, Y: 342, W: 146, H: 35.4, Pass: "hud"}}
 	if bad := visCheckScale(auto1, auto2, 2); len(bad) != 0 {
-		t.Errorf("the Options \"Auto (n%%)\" label names the scale by design: %q", bad)
+		t.Errorf("the Options \"Auto (n×)\" label names the step by design: %q", bad)
 	}
 
 	// regions: a draw reaching past a region's edge is flagged, a clipped

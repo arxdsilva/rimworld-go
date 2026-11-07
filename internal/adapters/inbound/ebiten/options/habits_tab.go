@@ -110,9 +110,7 @@ func habitsContentH() float32 {
 // the defaults button above the scrolling rows.
 func (o *Screen) habitsTab(sw, sh int) {
 	k := o.sh.Kit()
-	panel := gfx.Rect{X: 40, Y: 96, W: float32(sw - 80), H: float32(sh - 180)}
-	top := float32(optTabY + OptBtnH + 16)
-	c := gfx.Rect{X: panel.X + 16, Y: top, W: panel.W - 32, H: panel.Bottom() - top - 16}
+	c := tabContent(winRect(sw, sh, o.CurrentTab()))
 	if !o.sh.Env().Running {
 		uikit.TextLines(k, c.X, c.Y, c.W, o.sh.T("Habits are rules of a colony and are saved with it, so they can only be changed while a colony is running. Open Options from the pause menu in a game to change them."), uikit.DimText())
 		return

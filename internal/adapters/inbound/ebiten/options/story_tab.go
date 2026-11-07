@@ -36,6 +36,7 @@ const (
 
 // UI declares the Story tab's widgets (the other tabs are legacy buttons).
 func (o *Screen) UI(sw, sh int) {
+	o.Scale.Tick()
 	switch {
 	case o.CurrentTab() == "habits":
 		uikit.OnScreenLayer(o.sh.Kit())
@@ -72,9 +73,7 @@ func storyCols(c gfx.Rect) (left, mid, right gfx.Rect) {
 
 func (o *Screen) storyTab(sw, sh int) {
 	v := o.sh.StoryView()
-	panel := gfx.Rect{X: 40, Y: 96, W: float32(sw - 80), H: float32(sh - 180)}
-	top := float32(optTabY + OptBtnH + 16)
-	c := gfx.Rect{X: panel.X + 16, Y: top, W: panel.W - 32, H: panel.Bottom() - top - 16}
+	c := tabContent(winRect(sw, sh, o.CurrentTab()))
 	if v.Preset == "" {
 		uikit.TextLines(o.sh.Kit(), c.X, c.Y, c.W, o.sh.T("This colony started without a storyteller (the classic start), so there is nothing to change here."), uikit.DimText())
 		return
@@ -86,7 +85,7 @@ func (o *Screen) storyTab(sw, sh int) {
 }
 
 func headingStyle() gfx.TextStyle {
-	hs := gfx.Large
+	hs := gfx.Label // UIS-012: Large has no reference size; the semibold 14
 	hs.Color = uikit.Heading
 	return hs
 }

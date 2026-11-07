@@ -19,12 +19,12 @@ import (
 
 // Layout (px).
 const (
-	ctlTop    = 164
+	ctlTop    = 140
 	ctlRowH   = 26
 	ctlBtnH   = 22
-	ctlCatX   = 56
-	ctlLabelX = 176
-	ctlSlotX  = 470
+	ctlCatX   = 40 + contentX // right of the tab list in the wide panel
+	ctlLabelX = ctlCatX + 120
+	ctlSlotX  = ctlLabelX + 294
 	ctlSlotW  = 150
 	ctlSlots  = 2
 )

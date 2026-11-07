@@ -2,11 +2,13 @@ package ebiten
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/perf"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/sysinfo"
 )
@@ -334,28 +336,42 @@ func TestOptionsGraphicsRowsHaveCostTips(t *testing.T) {
 	}
 }
 
-// TestOptionsGraphicsLabelsFitTheirColumn: with two columns every label
-// ends before its control (the Gameplay tab sets the one-column limit).
+// TestOptionsGraphicsLabelsFitTheirColumn: every label ends before its
+// control (and before the second button a row may carry), every row of a 540
+// px screen's window sits above its OK button, and every button stays inside
+// the window.
 func TestOptionsGraphicsLabelsFitTheirColumn(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	rows := options.OptionRows("graphics")
 	if !slices.ContainsFunc(rows, func(r options.OptionRow) bool { return r.Key == "renderscale" && r.Col == 1 }) {
-		t.Fatal("no World detail row in the detail column")
+		t.Fatal("no World detail row in the detail group")
 	}
 	for i, r := range rows {
 		lx, cx, y := options.OptPos(rows, i)
 		if w, _ := gfx.Measure(r.Label, gfx.Body); lx+float32(w) > cx-8 {
 			t.Fatalf("label %q (%v px at x=%v) runs into its control at x=%v", r.Label, w, lx, cx)
 		}
-		if y+options.OptBtnH > float32(540-footerYOff) {
-			t.Fatalf("row %q at y=%v reaches the footer of a 540 px window", r.Key, y)
+		if y+options.OptBtnH > 600 {
+			t.Fatalf("row %q at y=%v is below the 600 px window", r.Key, y)
 		}
 	}
 	a.opt.Tab = "graphics"
-	for _, b := range a.opt.Buttons(960, 540) {
-		if b.X+b.W > 960-40 { // inside the panel
-			t.Fatalf("%s ends at x=%v, outside the 960 px panel", b.ID, b.X+b.W)
+	for _, size := range [][2]int{{960, 540}, {1280, 720}} {
+		win := gfx.Rect{X: float32((size[0] - 650) / 2), Y: float32(max(8, (size[1]-600)/2)), W: 650, H: float32(min(600, size[1]-16))}
+		var ok uikit.Button
+		for _, b := range a.opt.Buttons(size[0], size[1]) {
+			if b.ID == "options.back" {
+				ok = b
+			}
+			if b.X < win.X || b.Y < win.Y || b.X+b.W > win.Right() || b.Y+b.H > win.Bottom() {
+				t.Fatalf("%dx%d: %s at %v,%v %vx%v is outside the window %+v", size[0], size[1], b.ID, b.X, b.Y, b.W, b.H, win)
+			}
+		}
+		for _, b := range a.opt.Buttons(size[0], size[1]) {
+			if b.ID != "options.back" && !strings.HasPrefix(b.ID, "options.tab.") && b.ID != "options.rows.up" && b.ID != "options.rows.down" && b.Y+b.H > ok.Y {
+				t.Fatalf("%dx%d: %s reaches the OK button", size[0], size[1], b.ID)
+			}
 		}
 	}
 }

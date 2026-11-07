@@ -239,24 +239,32 @@ func TestOptionsButtonsFitAtEveryUIScale(t *testing.T) {
 	}
 }
 
-// No tab has more rows than two columns hold at 960x540 (seven each), and
-// no id repeats within a tab.
-func TestOptionTabsHoldAtMostSevenRowsPerColumn(t *testing.T) {
+// No id repeats within a tab, every row has a label and a value, and a tab
+// with more rows than the 600 px window shows has the Up and Down buttons
+// that reach the rest (UIS-075).
+func TestOptionTabRowsAreUniqueNamedAndReachable(t *testing.T) {
 	t.Parallel()
+	_, s := newFake()
 	for _, tab := range []string{"audio", "graphics", "gameplay", "access", "general", "interface", "developer"} {
-		cols, seen := [2]int{}, map[string]bool{}
-		for _, r := range OptionRows(tab) {
-			cols[r.Col]++
+		seen := map[string]bool{}
+		rows := OptionRows(tab)
+		for _, r := range rows {
 			if seen[r.Key] {
 				t.Errorf("%s: %s twice", tab, r.Key)
 			}
 			seen[r.Key] = true
-			if r.Label == "" || r.value == nil {
+			if r.Label == "" || (r.value == nil && r.live == nil) {
 				t.Errorf("%s/%s has no label or value", tab, r.Key)
 			}
 		}
-		if cols[0] > 8 || cols[1] > 7 {
-			t.Errorf("%s: %v rows per column", tab, cols)
+		s.Tab = tab
+		per := rowsPerPage(winRect(1280, 720, tab), tab)
+		has := false
+		for _, b := range s.Buttons(1280, 720) {
+			has = has || b.ID == "options.rows.down"
+		}
+		if has != (len(rows) > per) {
+			t.Errorf("%s: %d rows, %d per page, page buttons %v", tab, len(rows), per, has)
 		}
 	}
 }
