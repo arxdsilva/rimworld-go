@@ -37,6 +37,8 @@ func (c *Care) Force(doer entity.EntityID, o command.Order, target entity.Entity
 		return c.Strip.Force(doer, target) // strip.go (SIM-065)
 	case command.OrderCarryToPrisonBed:
 		return c.PrisonBeds.Force(doer, target) // prisonbed.go (SIM-063)
+	case command.OrderFreePrisoner:
+		return c.Free.Force(doer, target) // free.go (QST-067)
 	}
 	return ReasonIncapable // judge refuses every other order
 }
@@ -101,6 +103,8 @@ func (c *Care) judge(doer entity.EntityID, o command.Order, target entity.Entity
 		return c.Strip.Judge(doer, target) // strip.go (SIM-065)
 	case command.OrderCarryToPrisonBed:
 		return c.PrisonBeds.Judge(doer, target) // prisonbed.go (SIM-063)
+	case command.OrderFreePrisoner:
+		return c.Free.Judge(doer, target) // free.go (QST-067)
 	}
 	return false, ReasonIncapable
 }

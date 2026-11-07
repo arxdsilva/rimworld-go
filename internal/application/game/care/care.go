@@ -23,7 +23,8 @@ type Care struct {
 	Guest      *Hospitality
 	Visits     *Visits
 	Strip      *Stripping
-	Giving     *Giving // gift.go (CSE-007)
+	Giving     *Giving  // gift.go (CSE-007)
+	Free       *Freeing // free.go (QST-067)
 	h          Host
 	pr         Prison
 	gu         Guests
@@ -42,6 +43,8 @@ type Roles struct {
 	Gear   Gear
 	Meals  Meals // feed.go (SIM-064)
 	Gifts  Gifts // gift.go (CSE-007)
+	// Captives frees a quest prisoner (free.go, QST-067); nil: no such order.
+	Captives Captives
 }
 
 // New builds the care cluster on host h with the extra roles r.
@@ -53,6 +56,7 @@ func New(h Host, r Roles) *Care {
 	c.PrisonBeds, c.Guest = newPrisonBeds(c), newHospitality(c)
 	c.Visits, c.Strip = newVisits(c, r.Social), newStripping(c, r.Gear)
 	c.Giving = &Giving{c: c, r: r.Gifts}
+	c.Free = newFreeing(c, r.Captives)
 	return c
 }
 
