@@ -120,12 +120,14 @@ func TestRightHoverCardsForLettersAndFoldedRows(t *testing.T) {
 	if !ok || card.Title != last.Title || card.Clr != hud.LetterColor(last.Kind) || !strings.Contains(card.Body, last.Text) {
 		t.Fatalf("letter card = %+v %v", card, ok)
 	}
-	// a long letter text is cut in the preview
+	// a long letter text is cut in the preview: UIS-032 replaced the
+	// 240-rune cap with the card's fixed height, the last line ellipsized
 	s := a.renderer.game.(*stubSim)
 	s.world.Letters[9].Text = strings.Repeat("word ", 100)
-	card, _, _ = a.rightHover(l)
-	if len([]rune(card.Body)) > 300 {
-		t.Errorf("preview is %d runes", len([]rune(card.Body)))
+	card, anchor, _ = a.rightHover(l)
+	box, _, lines := hud.LayoutLetterCard(hud.LetterTile(anchor), card.Title, card.Body, a.sw, a.sh)
+	if box.H != hudlayout.LetterCardH || len(lines) == 0 || len(lines) > 5 || !strings.HasSuffix(lines[len(lines)-1], "…") {
+		t.Errorf("preview card %+v lines %q", box, lines)
 	}
 
 	// folded alerts

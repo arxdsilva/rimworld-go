@@ -30,8 +30,9 @@ import (
 // letter was read, and the highlight of a new one, are presentation only.
 
 const (
-	letterW    = 620 // UIS-073: the reference letter window's width
-	letterMinH = 480
+	letterW        = 620 // UIS-073: the reference letter window's width
+	letterMinH     = 480 // UIS-073: its height, grown when the text needs more
+	letterTitleGap = 8   // the title to the text in a letter's body
 	// letterFresh is how old (game ticks) an intro letter may be and still
 	// open by itself: a loaded save's intro is not a letter to read again.
 	LetterFresh = 600
@@ -287,27 +288,38 @@ func (c Right) openLetterView(l game.LetterView) {
 	if l.ID != 0 {
 		c.session().read[l.ID] = true
 	}
-	lines := gfx.WrapPx(LetterTextIn(c.sh, l), gfx.Body, letterW-2*uikit.ModalPad)
-	h := max(letterMinH, float32(uikit.ModalTitleH+uikit.ModalFooterH+2*uikit.ModalPad)+float32(len(lines))*float32(gfx.LineH(gfx.Body))+8)
+	inner := float32(letterW - 2*hudlayout.WindowPad)
+	lines := gfx.WrapPx(LetterTextIn(c.sh, l), gfx.Body, float64(inner))
 	id := fmt.Sprintf("letter.%d.%s", l.Tick, key)
 	if l.ID != 0 {
 		id = fmt.Sprintf("letter.%d", l.ID)
 	}
-	buttons := c.letterFooter(l)
-	c.kit().Push(uikit.Modal{
-		ID: id, Title: title, W: letterW, H: h,
-		Draw: func(body gfx.Rect) {
-			y := body.Y
-			for _, line := range lines {
-				c.kit().Label(body.X, y, line, gfx.Body)
-				y += float32(gfx.LineH(gfx.Body))
+	m := uikit.Modal{ID: id, Title: title, W: letterW, Frameless: true, RowActions: true, Buttons: c.letterFooter(l)}
+	titleH, lineH := float32(gfx.LineH(gfx.Title)), float32(gfx.LineH(gfx.Body))
+	m.H = max(letterMinH, 2*hudlayout.WindowPad+titleH+letterTitleGap+float32(len(lines))*lineH+uikit.ModalFooterHeight(m))
+	head := uikit.FitText(title, gfx.Title, inner)
+	m.Draw = func(body gfx.Rect) {
+		// UIS-073: a frameless window has no title bar; the title heads
+		// the body. A screen too short for the text cuts it with an
+		// ellipsis above the rows.
+		c.kit().Label(body.X, body.Y, head, gfx.WithColor(gfx.Title, uikit.Heading))
+		y := body.Y + titleH + letterTitleGap
+		for i, line := range lines {
+			if y+lineH > body.Bottom() {
+				break
 			}
-		},
-		Buttons: buttons,
-	})
+			if i+1 < len(lines) && y+2*lineH > body.Bottom() {
+				line = gfx.Ellipsize(line+"…", gfx.Body, float64(body.W))
+			}
+			c.kit().Label(body.X, y, line, gfx.Body)
+			y += lineH
+		}
+	}
+	c.kit().Push(m)
 }
 
-// letterFooter is the letter window's buttons: Continue, or, for a
+// letterFooter is the letter window's choices, rows top to bottom in this
+// order (UIS-073, uikit.Modal.RowActions): Continue, or, for a
 // rescued stranger's offer to join (SIM-063), Accept (command.AcceptLetter)
 // and Decline (command.DismissLetter), or, for a demand on a caravan
 // (MAP-08), Give and Refuse (command.EncounterAnswer); then "Jump to" when

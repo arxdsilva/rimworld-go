@@ -28,7 +28,11 @@ func (c Right) Draw(screen *ebiten.Image, sw, sh int) {
 	c.Alerts().DrawIn(screen, l)
 	c.drawLetters(screen, l)
 	if card, anchor, ok := c.Hover(l); ok {
-		drawRightCard(screen, card, anchor, sw, sh)
+		if card.Letter {
+			drawLetterCard(screen, card, LetterTile(anchor), sw, sh)
+		} else {
+			drawRightCard(screen, card, anchor, sw, sh)
+		}
 	}
 }
 
@@ -127,6 +131,9 @@ const (
 type RightCard struct {
 	Title, Body string
 	Clr         color.RGBA
+	// Letter: the card of a letter row, a fixed box beside the row's tile
+	// (LayoutLetterCard, UIS-032); else it fits its text (LayoutRightCard).
+	Letter bool
 }
 
 // Hover is the card for the row under the cursor and the row it
@@ -171,16 +178,66 @@ func (c Right) Hover(l hudlayout.Layout) (RightCard, gfx.Rect, bool) {
 		}
 		if row.Older > 0 {
 			return RightCard{Title: c.sh.Tf("%d older letters", row.Older),
-				Body: c.sh.T("Right-click a letter to dismiss it and bring an older one back."), Clr: uikit.PanelBorder}, row.R, true
+				Body: c.sh.T("Right-click a letter to dismiss it and bring an older one back."), Clr: uikit.PanelBorder, Letter: true}, row.R, true
 		}
+		// UIS-032: the card's fixed height cuts a long text (LayoutLetterCard)
 		text := LetterTextIn(c.sh, row.Letter)
-		if r := []rune(text); len(r) > 240 {
-			text = string(r[:240]) + "..."
-		}
 		return RightCard{Title: LetterRowLabelIn(c.sh, row), Body: text + c.sh.T("\n\nClick to read it, right-click to dismiss it."),
-			Clr: LetterColor(row.Letter.Kind)}, row.R, true
+			Clr: LetterColor(row.Letter.Kind), Letter: true}, row.R, true
 	}
 	return RightCard{}, gfx.Rect{}, false
+}
+
+// letterCardPad is the letter card's top and bottom margin, letterCardSide
+// its left and right one, so the text wraps at LetterCardWrap.
+const (
+	letterCardPad  = 8
+	letterCardSide = (hudlayout.LetterCardW - hudlayout.LetterCardWrap) / 2
+)
+
+// LayoutLetterCard places a letter's hover card (UIS-032): a fixed
+// LetterCardW x LetterCardH box whose right edge is LetterCardGap left of
+// the letter's tile, level with it, moved to stay on the sw x sh screen
+// (narrowed only when the screen is narrower than the card). It returns
+// the box, the title cut to one line, and the body wrapped at
+// LetterCardWrap, as many lines as fit; when the text goes on, the last
+// line ends in an ellipsis.
+func LayoutLetterCard(tile gfx.Rect, title, body string, sw, sh int) (box gfx.Rect, head string, lines []string) {
+	w := min(float32(hudlayout.LetterCardW), float32(sw)-2*hudlayout.HudMargin)
+	h := float32(hudlayout.LetterCardH)
+	x := min(tile.X-hudlayout.LetterCardGap-w, float32(sw)-hudlayout.HudMargin-w)
+	y := min(tile.Y, float32(sh)-hudlayout.HudMargin-h)
+	box = gfx.Rect{X: max(x, hudlayout.HudMargin), Y: max(y, hudlayout.HudMargin), W: w, H: h}
+	wrap := float64(w - 2*letterCardSide)
+	head = gfx.Ellipsize(title, gfx.Label, wrap)
+	if strings.TrimSpace(body) == "" {
+		return box, head, nil
+	}
+	room := float64(h-2*letterCardPad) - gfx.LineH(gfx.Label) - rightCardGap
+	fit := max(0, int(room/gfx.LineH(gfx.Small)))
+	lines = gfx.WrapPx(body, gfx.Small, wrap)
+	if len(lines) > fit {
+		lines = lines[:fit]
+		if fit > 0 {
+			lines[fit-1] = gfx.Ellipsize(strings.TrimRight(lines[fit-1], " ")+"…", gfx.Small, wrap)
+		}
+	}
+	return box, head, lines
+}
+
+// drawLetterCard paints a letter's card beside its tile.
+func drawLetterCard(screen *ebiten.Image, c RightCard, tile gfx.Rect, sw, sh int) {
+	box, head, lines := LayoutLetterCard(tile, c.Title, c.Body, sw, sh)
+	uikit.FillRect(screen, box, uikit.Tooltip)
+	uikit.StrokeRect(screen, box, uikit.TooltipEdge)
+	uikit.FillRect(screen, gfx.Rect{X: box.X, Y: box.Y, W: rightCardBar, H: box.H}, c.Clr)
+	x, y := float64(box.X+letterCardSide), float64(box.Y+letterCardPad)
+	gfx.Text(screen, head, x, y, gfx.WithColor(gfx.Label, uikit.Heading))
+	y += gfx.LineH(gfx.Label) + rightCardGap
+	for _, ln := range lines {
+		gfx.Text(screen, ln, x, y, gfx.WithColor(gfx.Small, uikit.Text))
+		y += gfx.LineH(gfx.Small)
+	}
 }
 
 // LayoutRightCard wraps the card's text and places it to the left of the
