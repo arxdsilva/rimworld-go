@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/factionview"
 	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
@@ -119,22 +120,8 @@ var (
 	ErrNickTaken    = roster.ErrNickTaken
 )
 
-// FactionView is a faction row (setup and colony).
-type FactionView struct {
-	ID          int
-	Name, Type  string
-	Leader      string
-	LeaderTitle string
-	Goodwill    int
-	Relation    string // "hostile", "neutral", "friendly"
-	Settlements int
-	Tech        string
-	Emblem      string // ui_icon key
-	Accent      string // hex
-	History     []int16
-	Events      []string
-	Hidden      bool
-}
+// FactionView is a faction row (setup and colony; game/factionview).
+type FactionView = factionview.Row
 
 // StoryView is the colony's storyteller and difficulty.
 type StoryView struct {

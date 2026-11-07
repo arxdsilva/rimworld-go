@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/factionview"
 	"rimworld-go/internal/application/game/setupview"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -33,13 +34,7 @@ func NewPlanetBuilder(p planet.Params) *planet.Builder { return planet.NewBuilde
 
 // FactionViewsOf is the Factions table for generated factions (hidden
 // types such as the Swarm are marked Hidden).
-func FactionViewsOf(fs []faction.Faction) []FactionView {
-	out := make([]FactionView, 0, len(fs))
-	for _, f := range fs {
-		out = append(out, factionView(f))
-	}
-	return out
-}
+func FactionViewsOf(fs []faction.Faction) []FactionView { return factionview.All(fs) }
 
 // Map size options (NG-1 §2.6, §6.9).
 var mapSides = [...]int{200, 225, 250, 275, 300, 350, 400, 450, 500}

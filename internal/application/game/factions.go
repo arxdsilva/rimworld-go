@@ -2,11 +2,10 @@ package game
 
 import (
 	"fmt"
-	"slices"
 
+	"rimworld-go/internal/application/game/factionview"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
-	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/storyteller"
 	"rimworld-go/pkg/randx"
 )
@@ -21,35 +20,8 @@ const raidRepelled = -5
 // Factions is the colony's Factions window.
 func (g *Game) Factions() []FactionView { return FactionViewsOf(g.ng.factions) }
 
-// factionView is one faction row.
-func factionView(f faction.Faction) FactionView {
-	d := faction.DefOf(f.Type)
-	rel := "neutral"
-	switch f.Relation {
-	case faction.Hostile:
-		rel = "hostile"
-	case faction.Friendly:
-		rel = "friendly"
-	}
-	tech := research.LevelOf(d.Tech).String() // RSCH-0: the research scale names the level
-	if f.Type == faction.Swarm {
-		tech = "—"
-	}
-	events := f.Events
-	if len(events) > faction.EventCount {
-		events = events[len(events)-faction.EventCount:]
-	}
-	hist := f.History
-	if len(hist) > faction.HistoryDays {
-		hist = hist[len(hist)-faction.HistoryDays:]
-	}
-	return FactionView{
-		ID: f.ID, Name: f.Name, Type: d.Label, Leader: f.Leader.Name, LeaderTitle: f.Leader.Title,
-		Goodwill: f.Goodwill, Relation: rel, Settlements: len(f.Settlements), Tech: tech,
-		Emblem: "ui_icon/faction_" + d.Key, Accent: d.Accent,
-		History: slices.Clone(hist), Events: slices.Clone(events), Hidden: d.Hidden,
-	}
-}
+// factionView is one faction row (game/factionview).
+func factionView(f faction.Faction) FactionView { return factionview.Of(f) }
 
 // Story is the colony's storyteller, difficulty and save mode.
 func (g *Game) Story() StoryView {
