@@ -1,5 +1,7 @@
 package quest
 
+import "rimworld-go/internal/domain/sim/clock"
+
 // KindID names a quest kind. The ids are ours (clean room). Saved:
 // append-only.
 type KindID uint8
@@ -95,8 +97,57 @@ func DefOf(k KindID) Def {
 	return d[k]
 }
 
-// defs builds the table. D-dom fills it from the gap file's rows
-// (QST-040..079 and the shots: accept and completion windows).
+// defs builds the table from the gap file's rows (QST-040..079) and the
+// shots (accept and completion windows, measured at 500 points).
+//
+// Weights are ours (QST-037): the three plain faction jobs (stash, camp,
+// request) 100 each; the three joining kinds 60 each, before the
+// colony-size curve (JoinerWeight) scales them; the peace talks 40, since
+// they need a hostile faction willing to talk; the ore lump 0, because
+// only the long-range scanner offers it and the cadence never does
+// (decision 15).
 func defs() []Def {
-	return make([]Def, NumKinds)
+	const (
+		hour = uint64(clock.TicksPerHour)
+		day  = uint64(clock.TicksPerDay)
+	)
+	d := make([]Def, NumKinds)
+	d[Joiner] = Def{
+		Kind: Joiner, Weight: 60, Joins: true,
+		AcceptTicks: 7 * hour, RewardAt: OnAccept, Delivery: Home,
+		Violent: true, FailOnGiverHostile: true,
+	}
+	d[OreLump] = Def{
+		Kind: OreLump, Weight: 0, AutoAccept: true,
+		DurationTicks: 30 * day, Delivery: AtSite, Violent: true,
+	}
+	d[Stash] = Def{
+		Kind: Stash, Weight: 100, AutoAccept: true,
+		DurationTicks: 16 * day, Delivery: AtSite, Violent: true,
+	}
+	d[Refugee] = Def{
+		Kind: Refugee, Weight: 60, Joins: true, AutoAccept: true,
+		DurationTicks: 10 * day, Delivery: Home, Violent: true,
+	}
+	d[Camp] = Def{
+		Kind: Camp, Weight: 100,
+		AcceptTicks: 6 * day, DurationTicks: 17 * day, Delivery: Home,
+		Violent: true, Choice: true, GoodwillPlusItems: true,
+		FailOnGiverHostile: true, HasTarget: true,
+	}
+	d[Rescue] = Def{
+		Kind: Rescue, Weight: 60, Joins: true, AutoAccept: true,
+		DurationTicks: 23 * day, Delivery: Home, Violent: true, HasTarget: true,
+	}
+	d[Request] = Def{
+		Kind: Request, Weight: 100,
+		AcceptTicks: 46 * day / 10, DurationTicks: 16 * day, Delivery: IntoCaravan,
+		Choice: true, FailOnGiverHostile: true,
+	}
+	// The talks' 12-28 day lifetime is rolled by the kind, so the Def has
+	// no window; the gift goes into the caravan (QST-078).
+	d[Talks] = Def{
+		Kind: Talks, Weight: 40, AutoAccept: true, Delivery: IntoCaravan,
+	}
+	return d
 }
