@@ -241,3 +241,13 @@ Command labels stay inside their cells · 2026-11-07 · 9e3e97f9f
 - HUD/UI: the fix is the representation (captures `pawn`, `architect` at 1 and 1.5 viewed).
 - Checks: `make art-check` passes (its Python validator run from a scratch venv with Pillow: 6855 sprites, 0 errors).
 - Open: fixed-box text not yet in a guarded scene: `hud/rooms.go:148`, `hud/cellinfo.go:120`, `architect/tool.go:704`, `windows/research_tree.go:564`. The remaining audit sites are buttons now covered by guard 2.
+
+## UIS-4
+Options, letters and window sizes · 2026-11-07 · 0f0df2694, e0e591e1c, 5f19123cf, 98b5d75c5, 2b605f698
+- Contract (B0): `Modal.Frameless` honoured (no title bar or X, scrim kept), `Modal.Popup` (no scrim, closes on an outside click or Esc), `Modal.RowActions` (actions as full-width text rows at `MenuRowH`), free functions `uikit.DropList` and `uikit.RowStripe`, `hudlayout.Inputs.FullWidthWindow`, and the UIS-008/032/061-068/075 tokens pinned in `TestMetricsMatchReference`. No new `Kit` method (still 73).
+- Options (UIS-008, UIS-075): the UI scale row opens a `DropList` under its value (Auto plus the steps, refused steps greyed with their reason); an 18 px X in the top-right corner sends Back; `OptionCtrlH` 28. The X glyph is exempt from the translation guard like the other close glyphs.
+- Letters (UIS-073, UIS-032): an opened letter is frameless, 620 × max(480, content), title drawn in the body, actions as plain text rows; every `modal.letter.N.<action>` id kept; Esc closes. The hover card is a fixed 330 × 105 box 10 px left of the tile, text wrapped at 300 and fitted by height.
+- Windows (UIS-061, 062, 064, 065, 068): see the gap rows; Work cell text stays in its 25 px box (skill as tint), Schedule's area column is a 270 px segment strip, Wildlife 515 wide with a scroll track and one row-rect function for draw and hit, Research spans the screen and hides the right column, Factions rows 80 with leader and settlements wired from the read model.
+- HUD/UI: these rows are the representation; captures viewed for options, a letter and its card, and each window at scales 1 and 1.5 (schedule re-shot at 1.5 after the Manage... button was widened).
+- Checks: full `go test -race ./internal/adapters/inbound/ebiten/...` in 3 min 11 s wall; `make arch` passes (with `-skip TestAgentLinksResolve` until the quests gap file lands, then whole).
+- Open: UIS-041 and UIS-066 (the Quests tab and window) move to the quests gap analysis, rows QST-120..139.
