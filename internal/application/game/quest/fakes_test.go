@@ -7,11 +7,13 @@ import (
 
 	qd "rimworld-go/internal/domain/quest"
 
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/mapgen"
 )
 
 const (
@@ -182,6 +184,7 @@ type env struct {
 	letters *fakeLetters
 	gw      *fakeGoodwill
 	rolls   *fakeRolls
+	builder *fakeBuilder
 }
 
 func newEnv() *env {
@@ -191,13 +194,13 @@ func newEnv() *env {
 		clock: &fakeClock{}, sites: &fakeSites{}, pawns: &fakePawns{}, items: &fakeItems{},
 		threats: &fakeThreats{}, letters: &fakeLetters{},
 		gw:    &fakeGoodwill{rel: []faction.Relation{faction.Neutral, faction.Hostile}},
-		rolls: &fakeRolls{s: 7},
+		rolls: &fakeRolls{s: 7}, builder: &fakeBuilder{},
 	}
 }
 
 func (e *env) roles() Roles {
 	return Roles{World: e.world, Clock: e.clock, Sites: e.sites, Pawns: e.pawns, Items: e.items,
-		Threats: e.threats, Letters: e.letters, Goodwill: e.gw, Rolls: e.rolls}
+		Threats: e.threats, Letters: e.letters, Goodwill: e.gw, Rolls: e.rolls, Builder: e.builder}
 }
 
 // stubKind is a configurable Kind. Build gives the quest a site at tile
@@ -279,4 +282,24 @@ func stateOf(t *testing.T, q *Quests, id qd.ID) qd.Quest {
 		t.Fatalf("quest %d missing", id)
 	}
 	return n
+}
+
+// fakeBuilder records what a kind laid.
+type fakeBuilder struct {
+	camps, goods, downed, held int
+}
+
+func (b *fakeBuilder) Size() (int, int) { return 150, 150 }
+func (b *fakeBuilder) Camp(c mapgen.Compound, f int, arms []item.Kind, seed uint64) int {
+	b.camps++
+	return len(arms)
+}
+func (b *fakeBuilder) Goods(l []trade.Line, x, y int, forbid bool) { b.goods++ }
+func (b *fakeBuilder) Downed(seed uint64, f, x, y int) (entity.EntityID, bool) {
+	b.downed++
+	return entity.EntityID(seed), true
+}
+func (b *fakeBuilder) Held(seed uint64, f, x, y int) (entity.EntityID, bool) {
+	b.held++
+	return entity.EntityID(seed), true
 }

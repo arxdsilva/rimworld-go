@@ -96,6 +96,8 @@ type Meta struct {
 	// Land is where the map's generator set people down (HasLand: it did).
 	Land    [2]int
 	HasLand bool
+	// Quest is the quest whose site this map is (0: none; QST-101).
+	Quest uint32
 }
 
 // Op is a queued map request.
@@ -128,6 +130,8 @@ type Request struct {
 	// of walking in from the edge (MAP-10, pod.go).
 	Spot bool
 	X, Y int
+	// Quest: the map opens for this quest's site (QST-103; 0 none).
+	Quest uint32
 }
 
 // Atlas is the open maps beyond the first and the queued requests

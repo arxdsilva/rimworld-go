@@ -13,13 +13,18 @@ const (
 	SigNone SignalKind = iota
 	// SigCaravanArrived: Caravan reached world Tile (maps Fleet.Arrived).
 	SigCaravanArrived
-	// SigSiteOpened: a site map Map opened at world Tile.
+	// SigSiteOpened: quest Quest's site map Map opened at world Tile and is
+	// the current map: the kind lays its site with Roles.Builder now.
 	SigSiteOpened
 	// SigSiteLost: the world object at Tile was destroyed or abandoned.
 	SigSiteLost
-	// SigSiteCensus: map Map's census; Count is the hostiles standing.
+	// SigSiteCensus: quest Quest's map Map's hourly census; Count is the
+	// hostiles standing. The map's pack-up waits while the quest stays
+	// Active.
 	SigSiteCensus
-	// SigMapClosed: map Map closed.
+	// SigMapClosed: quest Quest's map Map closed. A kind still Active
+	// then ends the quest (its site is gone; a later caravan opens no new
+	// map).
 	SigMapClosed
 	// SigPawnJoined, SigPawnFreed, SigPawnDied, SigPawnLeft: Pawn joined
 	// the colony, was freed, died, or left the map for good.

@@ -46,6 +46,17 @@ type Quester interface {
 	// SettlementLost tells the quests faction fi's settlement on tile t is
 	// gone; defeated when it was the faction's last.
 	SettlementLost(fi, t int, defeated bool)
+	// SiteAt is the quest whose site on tile t waits for a caravan to open
+	// its map (QST-103; ok false: none).
+	SiteAt(t int) (quest uint32, ok bool)
+	// SiteOpened: quest's site map id just opened and is the current map;
+	// the quest lays its site on it (QST-104).
+	SiteOpened(quest, id uint32)
+	// SiteCensus is quest map id's hourly census; busy while the quest
+	// still needs the map, so its pack-up waits (QST-108, 109).
+	SiteCensus(quest, id uint32, c Census) (busy bool)
+	// SiteClosed: quest's map id closed (QST-109).
+	SiteClosed(quest, id uint32)
 }
 
 // Cartography is opening, emptying and changing maps.

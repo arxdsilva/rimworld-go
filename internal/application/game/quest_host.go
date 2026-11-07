@@ -15,11 +15,13 @@ import (
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/skill"
 	qd "rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/caravan"
+	"rimworld-go/internal/domain/world/mapgen"
 )
 
 // quest_host.go: the quests root's game glue (QST-1). game/quest owns the
@@ -46,7 +48,7 @@ func questOf(g *Game) *quest.Quests {
 }
 
 func (h questHost) roles() quest.Roles {
-	return quest.Roles{World: h, Clock: h, Sites: h, Pawns: h, Items: h, Threats: h, Letters: h, Goodwill: h, Rolls: h}
+	return quest.Roles{World: h, Clock: h, Sites: h, Pawns: h, Items: h, Threats: h, Letters: h, Goodwill: h, Rolls: h, Builder: questSite{h.g}}
 }
 
 // questTick runs the offer cadence (day) or the due timers (hour).
@@ -319,4 +321,95 @@ func (h questHost) Relation(f int) faction.Relation {
 		return faction.Neutral
 	}
 	return h.g.ng.factions[f].Relation
+}
+
+// SiteAt is the active site quest (stash, refugee, camp, rescue) on world
+// tile t: a caravan arriving there opens its site map (QST-100).
+func (h mapsQuests) SiteAt(t int) (uint32, bool) {
+	i := slices.IndexFunc(questViews(h.g), func(v QuestView) bool {
+		return v.State == qd.Active && v.Tile == t && (v.Kind == qd.Stash || v.Kind == qd.Refugee || v.Kind == qd.Camp || v.Kind == qd.Rescue)
+	})
+	if i < 0 {
+		return 0, false
+	}
+	return uint32(questViews(h.g)[i].ID), true
+}
+
+// SiteOpened: the site map id is current; the quest lays its site now.
+func (h mapsQuests) SiteOpened(q, id uint32) {
+	if m := h.g.worldS().atlas.Meta(id); m != nil {
+		questSignal(h.g, quest.Signal{Kind: quest.SigSiteOpened, Quest: qd.ID(q), Map: id, Tile: m.Tile})
+	}
+}
+
+// SiteCensus hands the hour's census to quest q: the map stays while it is
+// still Active.
+func (h mapsQuests) SiteCensus(q, id uint32, c maps.Census) bool {
+	questSignal(h.g, quest.Signal{Kind: quest.SigSiteCensus, Quest: qd.ID(q), Map: id, Count: c.Hostiles})
+	n, ok := h.g.worldSt.quests.Get(qd.ID(q))
+	return ok && n.State == qd.Active
+}
+
+func (h mapsQuests) SiteClosed(q, id uint32) {
+	questSignal(h.g, quest.Signal{Kind: quest.SigMapClosed, Quest: qd.ID(q), Map: id})
+}
+
+// questSite is the quests' Builder role: it lays a site on the current map
+// (valid only while SigSiteOpened is delivered).
+type questSite struct{ g *Game }
+
+func (h questSite) Size() (int, int) { return h.g.grid.Width(), h.g.grid.Height() }
+
+// Camp lays compound c with faction f's defenders (mapsSettle.Settle) and
+// counts those that stood up.
+func (h questSite) Camp(c mapgen.Compound, f int, arms []item.Kind, seed uint64) int {
+	if len(c.Posts) == 0 {
+		return 0
+	}
+	mapsSettle{h.g}.Settle(c, f, arms, seed)
+	return h.g.raidGroups[len(h.g.raidGroups)-1].Size
+}
+
+// Goods drops lines as found stacks on free land near (x, y).
+func (h questSite) Goods(l []trade.Line, x, y int, forbid bool) {
+	var used [][2]int
+	for _, ln := range l {
+		if cx, cy, ok := h.g.freeLandNear(x, y, 8, used); ok && ln.Qty > 0 {
+			used = append(used, [2]int{cx, cy})
+			h.g.spawnUnclaimed(ln.Kind, ln.Qty, cx, cy, forbid)
+		}
+	}
+}
+
+// Downed stands the person made from seed (faction ref f, 0 a stranger)
+// near (x, y) as a guest, down: the colony may rescue them.
+func (h questSite) Downed(seed uint64, f, x, y int) (entity.EntityID, bool) {
+	id, ok := h.guest(seed, f, x, y)
+	if ok {
+		h.g.hurt(id, health.DownedInjury+10, 0)
+	}
+	return id, ok
+}
+
+// Held stands the person made from seed near (x, y) as a guest who stays
+// until freed (QST-065).
+func (h questSite) Held(seed uint64, f, x, y int) (entity.EntityID, bool) {
+	id, ok := h.guest(seed, f, x, y)
+	if ok {
+		visitsOf(h.g).SetStay(id, math.MaxUint64)
+	}
+	return id, ok
+}
+
+func (h questSite) guest(seed uint64, f, x, y int) (entity.EntityID, bool) {
+	g := h.g
+	cx, cy, ok := g.freeLandNear(x, y, 4, nil)
+	if !ok {
+		return 0, false
+	}
+	id := g.entities.Next()
+	g.peopleReg().add(&person{ID: id, Bio: quest.PawnOf(seed), HasBio: true, Faction: f, Where: whereVisitor})
+	g.socState().sig[id] = personSig{}
+	visitsOf(g).Place(id, f, cx, cy, uint64(g.clock.Now()))
+	return id, true
 }

@@ -11,12 +11,14 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/quest"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/skill"
 	qd "rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/mapgen"
 )
 
 const (
@@ -196,6 +198,66 @@ func (g *fakeGoodwill) Adjust(f, d int)                 { g.adjusted = append(g.
 func (g *fakeGoodwill) Relation(f int) faction.Relation { return g.rel[f] }
 func (g *fakeGoodwill) Count() int                      { return len(g.rel) }
 
+// builtGoods is one Builder.Goods call.
+type builtGoods struct {
+	Lines  []trade.Line
+	X, Y   int
+	Forbid bool
+}
+
+// builtPawn is one Builder.Downed or Held call.
+type builtPawn struct {
+	Seed       uint64
+	Faction    int
+	X, Y       int
+	Held       bool
+	ID         entity.EntityID
+	Spawned    bool
+	AtTick     uint64
+	MapCurrent bool
+}
+
+// fakeBuilder records what a kind laid; refuse makes every spawn fail.
+// current is false outside SigSiteOpened (the test sets it), so a kind
+// calling the builder at the wrong time is caught.
+type fakeBuilder struct {
+	clock   *fakeClock
+	current bool
+	refuse  bool
+	camps   []mapgen.Compound
+	arms    [][]item.Kind
+	goods   []builtGoods
+	pawns   []builtPawn
+	next    entity.EntityID
+}
+
+func (b *fakeBuilder) Size() (int, int) { return 150, 150 }
+func (b *fakeBuilder) Camp(c mapgen.Compound, f int, arms []item.Kind, seed uint64) int {
+	if b.refuse {
+		return 0
+	}
+	b.camps, b.arms = append(b.camps, c), append(b.arms, slices.Clone(arms))
+	return len(arms)
+}
+func (b *fakeBuilder) Goods(l []trade.Line, x, y int, forbid bool) {
+	b.goods = append(b.goods, builtGoods{slices.Clone(l), x, y, forbid})
+}
+func (b *fakeBuilder) spawn(seed uint64, f, x, y int, held bool) (entity.EntityID, bool) {
+	b.next++
+	p := builtPawn{Seed: seed, Faction: f, X: x, Y: y, Held: held, ID: 1000 + b.next, Spawned: !b.refuse, AtTick: b.clock.now, MapCurrent: b.current}
+	b.pawns = append(b.pawns, p)
+	if b.refuse {
+		return 0, false
+	}
+	return p.ID, true
+}
+func (b *fakeBuilder) Downed(seed uint64, f, x, y int) (entity.EntityID, bool) {
+	return b.spawn(seed, f, x, y, false)
+}
+func (b *fakeBuilder) Held(seed uint64, f, x, y int) (entity.EntityID, bool) {
+	return b.spawn(seed, f, x, y, true)
+}
+
 // env is one set of fakes: faction 0 neutral and friendly-capable with
 // settlement tile 5, faction 1 hostile and friendly-capable (a talks
 // giver) with tile 7, faction 2 hostile and never friendly (pirates).
@@ -209,6 +271,7 @@ type env struct {
 	letters *fakeLetters
 	gw      *fakeGoodwill
 	rolls   *fakeRolls
+	builder *fakeBuilder
 }
 
 func newEnv() *env {
@@ -224,13 +287,13 @@ func newEnv() *env {
 		items:   &fakeItems{into: map[uint64][]trade.Line{}, at: map[uint64]int{}},
 		threats: &fakeThreats{clock: c}, letters: &fakeLetters{},
 		gw:    &fakeGoodwill{rel: []faction.Relation{faction.Neutral, faction.Hostile, faction.Hostile}},
-		rolls: &fakeRolls{s: 7},
+		rolls: &fakeRolls{s: 7}, builder: &fakeBuilder{clock: c},
 	}
 }
 
 func (e *env) roles() quest.Roles {
 	return quest.Roles{World: e.world, Clock: e.clock, Sites: e.sites, Pawns: e.pawns, Items: e.items,
-		Threats: e.threats, Letters: e.letters, Goodwill: e.gw, Rolls: e.rolls}
+		Threats: e.threats, Letters: e.letters, Goodwill: e.gw, Rolls: e.rolls, Builder: e.builder}
 }
 
 // newRoot is a quests root that knows only kind k, over e's fakes.
@@ -244,6 +307,14 @@ func get(t *testing.T, q *quest.Quests, id qd.ID) qd.Quest {
 		t.Fatalf("quest %d missing", id)
 	}
 	return n
+}
+
+// openSite delivers SigSiteOpened for quest id on tile t as the game does:
+// the site map (id map) is current while the signal is delivered.
+func openSite(e *env, q *quest.Quests, id qd.ID, t int, m uint32) {
+	e.builder.current = true
+	q.Signal(quest.Signal{Kind: quest.SigSiteOpened, Quest: id, Tile: t, Map: m})
+	e.builder.current = false
 }
 
 // run advances e's clock hour by hour to tick until, calling Hourly.

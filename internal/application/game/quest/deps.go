@@ -3,10 +3,12 @@ package quest
 import (
 	qd "rimworld-go/internal/domain/quest"
 
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/mapgen"
 )
 
 // Roles is everything the quests root and its kinds need from the
@@ -26,6 +28,31 @@ type Roles struct {
 	Letters  Letters
 	Goodwill Goodwill
 	Rolls    Rolls
+	Builder  Builder
+}
+
+// Builder lays a quest's site on its map (QST-104..111). Its calls act on
+// the current map, so a kind calls it only while SigSiteOpened is being
+// delivered (the site map is current then). Cells are the map's own.
+type Builder interface {
+	// Size is the current map's width and height in cells.
+	Size() (w, h int)
+	// Camp lays compound c as a settlement's (pieces, loot forbidden for
+	// the pack-up to carry) and spawns one defender of faction f per
+	// weapon in arms at its posts, in a defending group that flees at
+	// half losses; seed draws (no simulation stream moves). The number of
+	// defenders spawned.
+	Camp(c mapgen.Compound, f int, arms []item.Kind, seed uint64) int
+	// Goods lays lines as stacks around cell (x, y), forbidden when
+	// forbid (the pack-up carries forbidden goods too).
+	Goods(l []trade.Line, x, y int, forbid bool)
+	// Downed spawns the person made from seed (PawnOf) downed and wounded
+	// near (x, y), a guest of faction f (-1: none) who stays: its id.
+	Downed(seed uint64, f, x, y int) (entity.EntityID, bool)
+	// Held spawns the person made from seed near (x, y) as a prisoner of
+	// faction f: a guest who stays put until freed (OrderFreePrisoner,
+	// SigPawnFreed). Its id.
+	Held(seed uint64, f, x, y int) (entity.EntityID, bool)
 }
 
 // World is the colony and the planet as the generator sees them.

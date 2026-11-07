@@ -2670,6 +2670,7 @@ saveState.World.Atlas.Maps[].Land[] int
 saveState.World.Atlas.Maps[].Lump rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.Atlas.Maps[].Opened uint64
 saveState.World.Atlas.Maps[].PackBy uint64
+saveState.World.Atlas.Maps[].Quest uint32
 saveState.World.Atlas.Maps[].Raided bool
 saveState.World.Atlas.Maps[].ResumeDest int
 saveState.World.Atlas.Maps[].Routed uint8
@@ -2685,6 +2686,7 @@ saveState.World.Atlas.Queue[].Lump rimworld-go/internal/domain/economy/item.Kind
 saveState.World.Atlas.Queue[].Map uint32
 saveState.World.Atlas.Queue[].Op rimworld-go/internal/application/game/maps.Op = uint8
 saveState.World.Atlas.Queue[].Qty int
+saveState.World.Atlas.Queue[].Quest uint32
 saveState.World.Atlas.Queue[].Resume rimworld-go/internal/domain/world/caravan.State = uint8
 saveState.World.Atlas.Queue[].Spot bool
 saveState.World.Atlas.Queue[].Tile int

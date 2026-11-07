@@ -105,6 +105,11 @@ func (f Fleet) Arrived(c *Caravan, now uint64) {
 		f.enterMap(c, id)
 		return
 	}
+	if q, ok := f.h.SiteAt(c.C.Tile); ok { // a quest's site (QST-103): its map opens
+		c.C.State = caravan.Arrived
+		f.a.Queue = append(f.a.Queue, Request{Op: OpOpen, Kind: Site, Tile: c.C.Tile, Caravan: c.C.ID, Quest: q})
+		return
+	}
 	if lump, qty, ok := f.h.Cargo().Claim(c.C.Tile); ok { // game/travel (AX-9): a mineral site (MAP-04)
 		c.C.State = caravan.Arrived
 		f.a.Queue = append(f.a.Queue, Request{Op: OpOpen, Kind: Site, Tile: c.C.Tile, Caravan: c.C.ID, Lump: lump, Qty: qty})

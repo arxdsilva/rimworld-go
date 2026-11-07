@@ -111,6 +111,9 @@ func (l Lifecycle) apply(r Request, now uint64) {
 				}
 				return
 			}
+			if r.Quest != 0 && f.h.Switch(id) {
+				f.h.SiteOpened(r.Quest, id) // the quest lays its site (QST-104)
+			}
 		}
 		if r.Kind == Encounter {
 			l.waylay(c, id, r) // encounter.go (MAP-08)
@@ -152,7 +155,7 @@ func (l Lifecycle) open(r Request, now uint64) (uint32, bool) {
 		return 0, false
 	}
 	m := a.add(id, r.Kind, r.Tile, now)
-	m.Land, m.HasLand = o.Land, o.HasLand
+	m.Land, m.HasLand, m.Quest = o.Land, o.HasLand, r.Quest
 	if len(o.Cells) > 0 {
 		m.Lump, m.Cells = r.Lump, o.Cells
 	}
@@ -198,11 +201,15 @@ func (l Lifecycle) hourly(id uint32, now uint64) {
 		m.Raided = true
 		f.h.Raid() // wiki: Long-range mineral scanner: hostiles come after 10 days
 	}
+	busy := m.Quest != 0 && f.h.SiteCensus(m.Quest, id, c) // the quest's own rules (QST-108)
+	if m = f.a.Meta(id); m == nil {
+		return // the quest closed it
+	}
 	if ShouldClose(m, c) {
 		l.close(id)
 		return
 	}
-	if m.PackBy == 0 && streak(&m.Done, JobDone(m, c)) {
+	if m.PackBy == 0 && streak(&m.Done, !busy && JobDone(m, c)) {
 		m.PackBy = now + packTicks
 		f.h.Letter(false, "Time to pack up", 0, "The work at %s is done. Whoever is still there leaves as a caravan in a day.", f.h.TileName(m.Tile))
 	}
@@ -284,6 +291,9 @@ func (l Lifecycle) close(id uint32) {
 // forgetMeta drops map id's row and its queued requests.
 func (l Lifecycle) forgetMeta(id uint32) {
 	a := l.f.a
+	if m := a.Meta(id); m != nil && m.Quest != 0 {
+		l.f.h.SiteClosed(m.Quest, id) // QST-109
+	}
 	a.Maps = slices.DeleteFunc(a.Maps, func(m Meta) bool { return m.ID == id })
 	a.Queue = slices.DeleteFunc(a.Queue, func(r Request) bool { return r.Op != OpOpen && r.Map == id })
 }
