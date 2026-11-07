@@ -383,7 +383,7 @@ func (c Resources) drawRow(dst *ebiten.Image, line gfx.Rect, row ResRow, hover b
 			uikit.DrawCentered(dst, l, float64(ix+resIconSize/2), float64(iy+resIconSize/2), gfx.WithColor(gfx.Small, uikit.Text))
 		}
 	}
-	gfx.Text(dst, count, float64(ix+resIconSize+resPad), float64(line.Y)+(float64(line.H)-gfx.LineH(gfx.Body))/2, gfx.Body)
+	gfx.Text(dst, count, float64(ix+resIconSize+resPad), textY(line, count, gfx.Body), gfx.Body)
 }
 
 // drawHeader draws a category header: a chevron, the name and the
@@ -397,10 +397,10 @@ func (c Resources) drawHeader(dst *ebiten.Image, line gfx.Rect, row ResRow, hove
 	}
 	gfx.FillPoly(dst, chev, uikit.Accent, false)
 	st := gfx.WithColor(gfx.Label, uikit.Heading)
-	gfx.Text(dst, gfx.Ellipsize(row.Label, st, float64(line.W-2*resPad-48)), float64(line.X+resPad+14), float64(line.Y)+(float64(line.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, gfx.Ellipsize(row.Label, st, float64(line.W-2*resPad-48)), float64(line.X+resPad+14), textY(line, row.Label, st), st)
 	tot := gfx.WithColor(gfx.Small, uikit.TextDim)
 	tot.Align = gfx.AlignRight
-	gfx.Text(dst, strconv.Itoa(row.Qty), float64(line.Right()-resPad-2), float64(line.Y)+(float64(line.H)-gfx.LineH(tot))/2, tot)
+	gfx.Text(dst, strconv.Itoa(row.Qty), float64(line.Right()-resPad-2), textY(line, strconv.Itoa(row.Qty), tot), tot)
 }
 
 // firstLetter is the first rune of s, upper case ("" for none).

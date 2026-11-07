@@ -34,10 +34,13 @@ import (
 const (
 	BarMoreID = "bar.more" // the "+N" slot (a kit widget: ../hud.go routes no click for it)
 
-	barPad      = 2  // card inset, at bar scale 1
-	BarIconSize = 14 // a status mark, at bar scale 1
-	BarIconMin  = 10 // a status mark never gets smaller than this
-	barNameMin  = 1  // names are drawn at this bar scale and above; smaller slots use the tooltip
+	barPad        = 2  // card inset, at bar scale 1
+	BarIconSize   = 14 // a status mark, at bar scale 1
+	BarIconMin    = 10 // a status mark never gets smaller than this
+	barBracketOut = 2  // the selection's corner brackets lie this far outside the portrait box (UIS-027)
+	barBracketLen = 7  // each bracket arm's length, at any slot size
+	// barMsgVeil is the opacity of the veil over a slot a message covers (UIS-029).
+	barMsgVeil = 0.6
 
 	// barIdleHold is how long a colonist has to stand idle before the
 	// "idle" mark shows, so the gap between two jobs does not flash it.
@@ -303,21 +306,19 @@ func barMoreSlot(l hudlayout.Layout) (gfx.Rect, bool) {
 	return l.BarSlots[len(l.BarSlots)-1], true
 }
 
-// barCard is where the parts of a colonist's card go inside its slot.
+// barCard is where the parts of a colonist's card go: the portrait inside
+// its slot, the name plate under it (UIS-020), outside the portrait box.
 type barCard struct {
 	slot, art, name gfx.Rect
 	icon            float32
 }
 
-// barCardOf lays a card out inside slot at bar scale s: the head and
-// shoulders on top, the name strip under them at full size only.
+// barCardOf lays a card out at bar scale s: the head and shoulders fill the
+// slot, the name plate (BarNameH tall, as wide as the slot) hangs under it
+// at the same size at every scale (UIS-026).
 func barCardOf(slot gfx.Rect, s float32) barCard {
-	inner := slot.Inset(barPad * s)
-	c := barCard{slot: slot, art: inner, icon: max(BarIconMin, BarIconSize*s)}
-	if s >= barNameMin {
-		c.art, c.name = inner.SplitV(-min(gfx.LineStep(gfx.Small), inner.H))
-	}
-	return c
+	return barCard{slot: slot, art: slot.Inset(barPad * s), icon: max(BarIconMin, BarIconSize*s),
+		name: gfx.Rect{X: slot.X, Y: slot.Bottom(), W: slot.W, H: hudlayout.BarNameH}}
 }
 
 // Buttons are the bar's slots, one button per shown colonist.
@@ -550,9 +551,16 @@ func (c ColonistBar) DrawPortraits(screen *ebiten.Image, sh int) {
 	mx, my := c.sh.Cursor()
 	fires := c.sh.World().Fires
 	c.drawGroups(screen, l, mx, my)
+	msgs := Right(c).MessageRows(l)
 	for i, p := range pawns[:n] {
 		slot := l.BarSlots[i]
 		c.drawCard(screen, barCardOf(slot, l.BarScale), p, c.Picked(p.ID), slot.Hit(mx, my), c.statusesWith(p, fires))
+		for _, m := range msgs {
+			if !m.R.Intersect(slot).Empty() {
+				gfx.FillRect(screen, slot.X, slot.Y, slot.W, slot.H, creature.Fade(uikit.Space, barMsgVeil), false) // UIS-029: the slot fades under a message
+				break
+			}
+		}
 	}
 	c.drawDrag(screen, pawns[:n])
 	if slot, ok := barMoreSlot(l); ok {
@@ -578,17 +586,40 @@ func (c ColonistBar) drawCard(screen *ebiten.Image, card barCard, p game.PawnVie
 	c.sh.DrawPawnBust(screen, p, float64(card.art.X), float64(card.art.Y), float64(card.art.W), float64(card.art.H))
 	c.drawStatuses(screen, card, sts)
 	c.drawWeapon(screen, card, p)
-	if !card.name.Empty() {
-		gfx.FillRect(screen, slot.X, card.name.Y, slot.W, slot.Bottom()-card.name.Y, creature.Fade(uikit.Space, 0.5), false) // a quiet plate: the name reads over any mood
-		st := gfx.WithColor(gfx.Small, uikit.Text)
-		st.Align = gfx.AlignCenter
-		gfx.Text(screen, gfx.Ellipsize(PawnLabelIn(c.sh, p), gfx.Small, float64(card.name.W)), float64(card.name.X+card.name.W/2), float64(card.name.Y), st)
-	}
-	if selected { // unmistakable: a 2 px accent frame inside the card
-		gfx.StrokeRect(screen, slot.X+1, slot.Y+1, slot.W-2, slot.H-2, 2, uikit.Accent, false)
+	c.drawName(screen, card, p)
+	if selected { // UIS-027: four corner brackets just outside the portrait box
+		drawBrackets(screen, slot)
 		return
 	}
 	gfx.StrokeRect(screen, slot.X, slot.Y, slot.W, slot.H, 1, uikit.PanelBorder, false)
+}
+
+// drawName draws the name plate under the portrait: Small at every slot
+// size, ellipsized to the slot's width, underlined while drafted (UIS-027).
+func (c ColonistBar) drawName(screen *ebiten.Image, card barCard, p game.PawnView) {
+	n := card.name
+	st := gfx.WithColor(gfx.Small, uikit.Text)
+	st.Align = gfx.AlignCenter
+	label := gfx.Ellipsize(PawnLabelIn(c.sh, p), gfx.Small, float64(n.W))
+	_, th := gfx.Measure(label, gfx.Small)
+	ty := float64(n.Bottom()) - th // the line box ends at the plate's foot, inside the bar's box
+	gfx.Text(screen, label, float64(n.X+n.W/2), ty, st)
+	if p.Drafted {
+		w, _ := gfx.Measure(label, gfx.Small)
+		y := n.Bottom() - 1
+		gfx.Line(screen, n.X+n.W/2-float32(w)/2, y, n.X+n.W/2+float32(w)/2, y, 1, uikit.Text, false)
+	}
+}
+
+// drawBrackets marks the selected card with four white corner brackets
+// barBracketOut outside the portrait box.
+func drawBrackets(screen *ebiten.Image, slot gfx.Rect) {
+	const o, l, w = barBracketOut, barBracketLen, 2
+	x0, y0, x1, y1 := slot.X-o, slot.Y-o, slot.Right()+o, slot.Bottom()+o
+	for _, c := range [...]struct{ x, y, dx, dy float32 }{{x0, y0, 1, 1}, {x1, y0, -1, 1}, {x0, y1, 1, -1}, {x1, y1, -1, -1}} {
+		gfx.Line(screen, c.x, c.y+c.dy*w/2, c.x+c.dx*l, c.y+c.dy*w/2, w, uikit.Heading, false)
+		gfx.Line(screen, c.x+c.dx*w/2, c.y, c.x+c.dx*w/2, c.y+c.dy*l, w, uikit.Heading, false)
+	}
 }
 
 // drawStatuses stacks the card's marks down its right edge, as many as

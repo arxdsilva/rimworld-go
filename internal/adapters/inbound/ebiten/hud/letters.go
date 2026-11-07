@@ -30,7 +30,8 @@ import (
 // letter was read, and the highlight of a new one, are presentation only.
 
 const (
-	letterW = 560
+	letterW    = 620 // UIS-073: the reference letter window's width
+	letterMinH = 480
 	// letterFresh is how old (game ticks) an intro letter may be and still
 	// open by itself: a loaded save's intro is not a letter to read again.
 	LetterFresh = 600
@@ -38,8 +39,7 @@ const (
 	// (presentation frames).
 	LetterFlashFrames = 90
 
-	letterBarW  = 4  // the kind-coloured edge on a row's left
-	letterIconW = 20 // the kind icon
+	letterIconW = 20 // the kind icon on its tile
 	letterPadX  = 8
 )
 
@@ -127,7 +127,7 @@ func (c Right) LetterRows(l hudlayout.Layout) []LetterRow {
 	rows := make([]LetterRow, 0, n)
 	gap := l.LetterGap // RHUD-475; zero reads as the usual gap
 	if gap <= 0 {
-		gap = hudlayout.HudGap
+		gap = hudlayout.LetterGap
 	}
 	top := l.Letters.Bottom() - float32(n)*(hudlayout.LetterRowH+gap) + gap
 	at := func(i int) gfx.Rect {
@@ -288,7 +288,7 @@ func (c Right) openLetterView(l game.LetterView) {
 		c.session().read[l.ID] = true
 	}
 	lines := gfx.WrapPx(LetterTextIn(c.sh, l), gfx.Body, letterW-2*uikit.ModalPad)
-	h := float32(uikit.ModalTitleH+uikit.ModalFooterH+2*uikit.ModalPad) + float32(len(lines))*float32(gfx.LineH(gfx.Body)) + 8
+	h := max(letterMinH, float32(uikit.ModalTitleH+uikit.ModalFooterH+2*uikit.ModalPad)+float32(len(lines))*float32(gfx.LineH(gfx.Body))+8)
 	id := fmt.Sprintf("letter.%d.%s", l.Tick, key)
 	if l.ID != 0 {
 		id = fmt.Sprintf("letter.%d", l.ID)
@@ -337,7 +337,14 @@ func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 	return buttons
 }
 
-// drawLetters paints the stack.
+// LetterTile is the tile of a row: LetterW x LetterRowH, LetterRight from
+// the row's right edge (UIS-031). The row itself is the click target.
+func LetterTile(r gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: r.Right() - hudlayout.LetterRight - hudlayout.LetterW, Y: r.Y, W: hudlayout.LetterW, H: r.H}
+}
+
+// drawLetters paints the stack: an icon tile in the kind's colour with the
+// label right-aligned on a dark strip left of it (UIS-031).
 func (c Right) drawLetters(screen *ebiten.Image, l hudlayout.Layout) {
 	rows := c.LetterRows(l)
 	if len(rows) == 0 {
@@ -346,39 +353,51 @@ func (c Right) drawLetters(screen *ebiten.Image, l hudlayout.Layout) {
 	mx, my := c.sh.Cursor()
 	for _, row := range rows {
 		r := row.R
-		if row.Older > 0 {
-			uikit.FillRect(screen, r, uikit.Panel)
-			uikit.StrokeRect(screen, r, creature.Fade(uikit.PanelBorder, 0.7))
-			gfx.Text(screen, LetterRowLabelIn(c.sh, row), float64(r.X)+letterPadX+letterBarW, float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, uikit.TextDim))
-			continue
-		}
-		k := LetterKinds[LetterKind(row.Letter.Kind)]
+		tile := LetterTile(r)
 		hover := r.Hit(mx, my)
+		label, text := LetterRowLabelIn(c.sh, row), uikit.Text
+		clr := uikit.PanelBorder
+		var k struct {
+			Icon string
+			Clr  color.RGBA
+		}
+		if row.Older > 0 {
+			text = uikit.TextDim
+		} else {
+			kk := LetterKinds[LetterKind(row.Letter.Kind)]
+			k.Icon, k.Clr, clr = kk.Icon, kk.Clr, kk.Clr
+			if c.LetterRead(row.Letter.ID) {
+				text = uikit.TextDim
+			}
+		}
 		bg := uikit.Panel
 		if hover {
 			bg = uikit.BtnHover
 		}
-		uikit.FillRect(screen, r, bg)
-		if f := c.LetterFlash(row.Letter.ID); f > 0 {
-			uikit.FillRect(screen, r, creature.Fade(k.Clr, 0.45*f))
+		uikit.FillRect(screen, tile, bg)
+		if row.Older == 0 {
+			uikit.FillRect(screen, tile, creature.Fade(k.Clr, 0.25))
+			if f := c.LetterFlash(row.Letter.ID); f > 0 {
+				uikit.FillRect(screen, tile, creature.Fade(k.Clr, 0.45*f))
+			}
 		}
-		uikit.FillRect(screen, gfx.Rect{X: r.X, Y: r.Y, W: letterBarW, H: r.H}, k.Clr)
-		border := uikit.PanelBorder
-		if hover || c.LetterFlash(row.Letter.ID) > 0 {
-			border = k.Clr
+		border := creature.Fade(clr, 0.7)
+		if hover || (row.Older == 0 && c.LetterFlash(row.Letter.ID) > 0) {
+			border = clr
 		}
-		uikit.StrokeRect(screen, r, border)
-		ix, iy := r.X+letterBarW+letterPadX, r.Y+(r.H-letterIconW)/2
-		if img := c.icon(k.Icon); img != nil {
-			gfx.Icon(screen, img, float64(ix), float64(iy), letterIconW)
-		} else {
-			gfx.FillCircle(screen, ix+letterIconW/2, iy+letterIconW/2, 5, k.Clr, true) // no art: a dot in the kind's colour
+		uikit.StrokeRect(screen, tile, border)
+		switch img := c.icon(k.Icon); {
+		case row.Older > 0:
+			gfx.Text(screen, "+", float64(tile.X)+float64(tile.W)/2-3, float64(tile.Y)+(float64(tile.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, uikit.TextDim))
+		case img != nil:
+			gfx.Icon(screen, img, float64(tile.X+(tile.W-letterIconW)/2), float64(tile.Y+(tile.H-letterIconW)/2), letterIconW)
+		default:
+			gfx.FillCircle(screen, tile.X+tile.W/2, tile.Y+tile.H/2, 5, k.Clr, true) // no art: a dot in the kind's colour
 		}
-		tx := ix + letterIconW + letterPadX
-		text := uikit.Text
-		if c.LetterRead(row.Letter.ID) {
-			text = uikit.TextDim
-		}
-		gfx.Text(screen, uikit.FitText(LetterRowLabelIn(c.sh, row), gfx.Body, r.Right()-tx-letterPadX), float64(tx), float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, text))
+		label = uikit.FitText(label, gfx.Small, tile.X-r.X-hudlayout.LetterLabelRight-2*letterPadX)
+		w, _ := gfx.Measure(label, gfx.Small)
+		lx := float64(tile.X) - hudlayout.LetterLabelRight - w
+		uikit.FillRect(screen, gfx.Rect{X: float32(lx) - 4, Y: r.Y + 4, W: float32(w) + 8, H: r.H - 8}, creature.Fade(uikit.Panel, 0.7))
+		gfx.Text(screen, label, lx, textY(r, label, gfx.Small), gfx.WithColor(gfx.Small, text))
 	}
 }

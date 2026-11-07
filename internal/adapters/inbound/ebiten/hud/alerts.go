@@ -449,7 +449,7 @@ func (c Alerts) Rows(l hudlayout.Layout) []AlertRow {
 	shown, more := StackSplit(len(als), l.AlertRows, len(als))
 	rows := make([]AlertRow, 0, shown+1)
 	at := func(i int) gfx.Rect {
-		return gfx.Rect{X: l.Alerts.X, Y: l.Alerts.Y + float32(i)*(hudlayout.AlertRowH+hudlayout.HudGap), W: l.Alerts.W, H: hudlayout.AlertRowH}
+		return gfx.Rect{X: l.Alerts.X, Y: l.Alerts.Y + float32(i)*hudlayout.AlertRowH, W: l.Alerts.W, H: hudlayout.AlertRowH}
 	}
 	for i := 0; i < shown; i++ {
 		rows = append(rows, AlertRow{R: at(i), Al: als[i]})
@@ -474,6 +474,14 @@ func (c Alerts) ButtonsIn(l hudlayout.Layout) []uikit.Button {
 	return out
 }
 
+// textY is the y that centres s, drawn in st, in r: by the height the text
+// measures (the font's own, taller than its reference pitch), so it stays
+// inside r.
+func textY(r gfx.Rect, s string, st gfx.TextStyle) float64 {
+	_, h := gfx.Measure(s, st)
+	return float64(r.Y) + (float64(r.H)-h)/2
+}
+
 // AlertPulse is the danger backing's brightness (0.55..1) at presentation
 // frame present; reduced motion holds it steady.
 func AlertPulse(present uint64, reduced bool) float64 {
@@ -494,23 +502,25 @@ func (c Alerts) DrawIn(screen *ebiten.Image, l hudlayout.Layout) {
 	mx, my := c.sh.Cursor()
 	for _, row := range rows {
 		r := row.R
-		edge, bg, text := uikit.Warning, uikit.AlertWarnBg, uikit.Text
+		// UIS-030: plain right-aligned text, no panel; the severity is the
+		// text colour, a danger's pulse its brightness, a shadow plate keeps
+		// it legible over the map
+		text := uikit.Warning
 		switch {
 		case row.More > 0:
-			edge, bg, text = uikit.PanelBorder, uikit.Panel, uikit.TextDim
+			text = uikit.TextDim
 		case row.Al.Sev == SevDanger:
-			edge, bg = uikit.Danger, creature.Fade(uikit.AlertDangerBg, pulse)
+			text = creature.Fade(uikit.Danger, pulse)
 		}
-		uikit.FillRect(screen, r, bg)
-		if row.More == 0 {
-			uikit.FillRect(screen, gfx.Rect{X: r.X, Y: r.Y, W: 4, H: r.H}, edge)
+		if row.More == 0 && r.Hit(mx, my) {
+			text = uikit.Text
 		}
-		border := edge
-		if row.More > 0 || !r.Hit(mx, my) {
-			border = creature.Fade(edge, 0.5)
-		}
-		uikit.StrokeRect(screen, r, border)
-		gfx.Text(screen, uikit.FitText(AlertRowLabelIn(c.sh, row), gfx.Body, r.W-20), float64(r.X)+12, float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, text))
+		label := uikit.FitText(AlertRowLabelIn(c.sh, row), gfx.Small, r.W-2*hudlayout.AlertRight)
+		w, _ := gfx.Measure(label, gfx.Small)
+		x := float64(r.Right()) - hudlayout.AlertRight - w
+		y := textY(r, label, gfx.Small)
+		uikit.FillRect(screen, gfx.Rect{X: float32(x) - 4, Y: r.Y + 2, W: float32(w) + 8, H: r.H - 4}, creature.Fade(uikit.Panel, 0.55))
+		gfx.Text(screen, label, x, y, gfx.WithColor(gfx.Small, text))
 	}
 }
 

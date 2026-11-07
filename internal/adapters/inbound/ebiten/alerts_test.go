@@ -69,7 +69,7 @@ func TestAlertRowsFillTheLayoutsAlertsRect(t *testing.T) {
 		t.Fatalf("alertCount() = %d, want %d", a.chrome.Alerts().Count(), len(rows))
 	}
 	for i, r := range rows {
-		if r.R.X != l.Alerts.X || r.R.W != l.Alerts.W || r.R.H != hudlayout.AlertRowH || r.R.Y != l.Alerts.Y+float32(i)*(hudlayout.AlertRowH+hudlayout.HudGap) {
+		if r.R.X != l.Alerts.X || r.R.W != l.Alerts.W || r.R.H != hudlayout.AlertRowH || r.R.Y != l.Alerts.Y+float32(i)*hudlayout.AlertRowH {
 			t.Errorf("row %d at %+v, Alerts %+v", i, r.R, l.Alerts)
 		}
 		if r.Al.Key != a.currentAlerts()[i].Key {

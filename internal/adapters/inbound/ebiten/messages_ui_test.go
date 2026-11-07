@@ -30,7 +30,7 @@ func messageStub(n int) *stubSim {
 	return s
 }
 
-func TestMessagesFillTheLayoutsRectRightAligned(t *testing.T) {
+func TestMessagesFillTheLayoutsRectLeftAligned(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, messageStub(7))
 	l := a.hud()
@@ -45,8 +45,8 @@ func TestMessagesFillTheLayoutsRectRightAligned(t *testing.T) {
 		if r.R.H != hudlayout.MsgRowH || r.R.Y != l.Messages.Y+float32(i)*hudlayout.MsgStride {
 			t.Errorf("row %d at %+v, Messages %+v", i, r.R, l.Messages)
 		}
-		if r.R.Right() != l.Messages.Right() || r.R.X < l.Messages.X {
-			t.Errorf("row %d %+v is not right-aligned inside %+v", i, r.R, l.Messages)
+		if r.R.X != l.Messages.X || r.R.Right() > l.Messages.Right() { // UIS-029: left-aligned at the anchor
+			t.Errorf("row %d %+v is not left-aligned inside %+v", i, r.R, l.Messages)
 		}
 	}
 	if got := rows[hudlayout.MaxMsgs-1].Msg.Text; !strings.Contains(got, "number 7") {

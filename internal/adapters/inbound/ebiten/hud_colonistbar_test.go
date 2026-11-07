@@ -73,7 +73,7 @@ func htPhysRect(r gfx.Rect, s float64) gfx.Rect {
 }
 
 func htInside(e gfx.TraceEvent, r gfx.Rect) bool {
-	const eps = 0.51
+	const eps = 1.01 // two snapped edges: a half-pixel origin (BarTop 21 at 1.5x) moves each by up to half a pixel
 	return e.X >= r.X-eps && e.Y >= r.Y-eps && e.X+e.W <= r.Right()+eps && e.Y+e.H <= r.Bottom()+eps
 }
 
@@ -122,10 +122,11 @@ func TestBarRowsAtTheDefaultSize(t *testing.T) {
 	if l.BarScale != 1 || l.BarMore != 0 || len(l.BarSlots) != 6 {
 		t.Fatalf("6 colonists: scale %v, hidden %d, slots %d; want one row at scale 1", l.BarScale, l.BarMore, len(l.BarSlots))
 	}
-	if l.Bar.Y != hudlayout.HudMargin {
-		t.Errorf("bar top = %v, want the %d px margin", l.Bar.Y, hudlayout.HudMargin)
+	if l.Bar.Y != hudlayout.BarTop {
+		t.Errorf("bar top = %v, want BarTop %d (UIS-020)", l.Bar.Y, hudlayout.BarTop)
 	}
-	if mid := l.Bar.X + l.Bar.W/2; mid < 639 || mid > 641 {
+	// the bar is centred over its slots' pitch (the last slot has no gap after it)
+	if mid := l.Bar.X + l.Bar.W/2 + (hudlayout.BarPitch-hudlayout.BarSlot)/2; mid < 639 || mid > 641 {
 		t.Errorf("bar centre = %v, want 640 (top-centre)", mid)
 	}
 
@@ -140,8 +141,8 @@ func TestBarRowsAtTheDefaultSize(t *testing.T) {
 		counts = append(counts, c)
 	}
 	slices.Sort(counts)
-	if l.BarScale != 0.75 || l.BarMore != 0 || !slices.Equal(counts, []int{12, 18}) {
-		t.Fatalf("30 colonists: scale %v, hidden %d, rows %v; want 18 + 12 at 0.75", l.BarScale, l.BarMore, counts)
+	if want := float32(27) / hudlayout.BarSlot; l.BarScale != want || l.BarMore != 0 || !slices.Equal(counts, []int{12, 18}) {
+		t.Fatalf("30 colonists: scale %v, hidden %d, rows %v; want 18 + 12 at %v (the 27 step)", l.BarScale, l.BarMore, counts, want)
 	}
 }
 
@@ -190,18 +191,24 @@ func TestBarCardDrawsMoodNameAndPortraitBox(t *testing.T) {
 				a, _ := htApp(t, &stubSim{pawns: ps}, sw, sh)
 				withUIScale(t, s) // after the frames: Update re-derives the scale from the settings
 				l := a.hud()
-				wantNames := l.BarScale >= 1 // smaller slots leave the name to the tooltip
-				if n == 6 && s == 1 && !wantNames || n == 30 && s == 1 && wantNames {
-					t.Fatalf("setup: bar scale %v for %d colonists", l.BarScale, n)
-				}
+				const wantNames = true // UIS-026: the name is drawn at every slot size (ellipsized when narrow)
 				screen := ebiten.NewImage(int(float64(sw)*s), int(float64(sh)*s))
 				ev := htTrace(t, func() { a.chrome.Bar().Draw(screen, sw, sh) })
 
-				names := map[string]bool{}
+				var texts []gfx.TraceEvent
 				for _, e := range ev {
 					if e.Kind == "text" {
-						names[e.Text] = true
+						texts = append(texts, e)
 					}
+				}
+				// the name of slot i: the text under the slot's floor, over its width
+				nameOf := func(pr gfx.Rect) (gfx.TraceEvent, bool) {
+					for _, e := range texts {
+						if cx := e.X + e.W/2; cx >= pr.X && cx <= pr.Right() && e.Y >= pr.Bottom()-6*float32(s) {
+							return e, true
+						}
+					}
+					return gfx.TraceEvent{}, false
 				}
 				for i, slot := range l.BarSlots[:hud.BarShown(l)] {
 					p := ps[i]
@@ -209,16 +216,21 @@ func TestBarCardDrawsMoodNameAndPortraitBox(t *testing.T) {
 					// the mood backing: a fill on the slot's floor, as tall as the mood
 					gauge := false
 					for _, e := range ev {
-						if e.Kind == "fill" && e.X >= pr.X-0.5 && e.X+e.W <= pr.Right()+0.5 && e.W > pr.W-1 &&
-							gfx.Abs32(e.Y+e.H-pr.Bottom()) < 0.51 && gfx.Abs32(e.H-pr.H*float32(p.Mood)/100) < 0.51 {
+						if e.Kind == "fill" && e.X >= pr.X-1.01 && e.X+e.W <= pr.Right()+1.01 && e.W > pr.W-2 &&
+							gfx.Abs32(e.Y+e.H-pr.Bottom()) < 1.01 && gfx.Abs32(e.H-pr.H*float32(p.Mood)/100) < 1.01 {
 							gauge = true
 						}
 					}
 					if !gauge {
 						t.Errorf("slot %d (%s, mood %d): no mood backing fill of %.1f px on its floor", i, p.Name, p.Mood, pr.H*float32(p.Mood)/100)
 					}
-					if names[p.Name] != wantNames {
-						t.Errorf("slot %d name %q drawn = %v, want %v at bar scale %v", i, p.Name, names[p.Name], wantNames, l.BarScale)
+					e, ok := nameOf(pr)
+					if ok != wantNames {
+						t.Errorf("slot %d name %q drawn = %v, want %v at bar scale %v", i, p.Name, ok, wantNames, l.BarScale)
+					}
+					// UIS-026: the name keeps the Small size at every slot size
+					if want := float32(gfx.LineStep(gfx.Small)) * float32(s); ok && gfx.Abs32(e.H-want) > 1 {
+						t.Errorf("slot %d name is %.1f px tall at bar scale %v, want the Small line %.1f", i, e.H, l.BarScale, want)
 					}
 				}
 				// nothing the bar draws leaves its bounding box
@@ -242,7 +254,8 @@ func TestBarSelectedSlotHasAnOutline(t *testing.T) {
 	outlined := func(slot gfx.Rect) int {
 		n := 0
 		for _, e := range ev {
-			if e.Kind == "stroke" && e.X == slot.X+1 && e.Y == slot.Y+1 && e.W == slot.W-2 && e.H == slot.H-2 {
+			// UIS-027: four corner brackets (two lines each) just outside the portrait box
+			if e.Kind == "line" && htInside(e, gfx.Rect{X: slot.X - 3, Y: slot.Y - 3, W: slot.W + 6, H: slot.H + 6}) {
 				n++
 			}
 		}
@@ -253,8 +266,8 @@ func TestBarSelectedSlotHasAnOutline(t *testing.T) {
 		if i == 2 {
 			want = 1
 		}
-		if got := outlined(slot); got != want {
-			t.Errorf("slot %d: %d selection outlines, want %d", i, got, want)
+		if got := outlined(slot); got != want*8 {
+			t.Errorf("slot %d: %d bracket lines, want %d", i, got, want*8)
 		}
 	}
 	// a colonist in a group selection is outlined too
@@ -266,8 +279,8 @@ func TestBarSelectedSlotHasAnOutline(t *testing.T) {
 		if i == 1 || i == 4 {
 			want = 1
 		}
-		if got := outlined(slot); got != want {
-			t.Errorf("group: slot %d: %d outlines, want %d", i, got, want)
+		if got := outlined(slot); got != want*8 {
+			t.Errorf("group: slot %d: %d bracket lines, want %d", i, got, want*8)
 		}
 	}
 }
@@ -459,7 +472,7 @@ func TestBarPortraitsAndIconsStayInTheirSlots(t *testing.T) {
 		l := a.hud()
 		screen := ebiten.NewImage(int(float64(sw)*s), int(float64(sh)*s))
 		ev := htTrace(t, func() { a.chrome.Bar().Draw(screen, sw, sh) })
-		for i, slot := range l.BarSlots {
+		for i, slot := range l.BarSlots[:hud.BarShown(l)] { // the "+N" slot has no portrait
 			pr := htPhysRect(slot, s)
 			n, icons := 0, 0
 			for _, e := range ev {
@@ -470,7 +483,7 @@ func TestBarPortraitsAndIconsStayInTheirSlots(t *testing.T) {
 					t.Errorf("s=%v slot %d: image %v leaves its slot %+v", s, i, e, pr)
 				}
 				n++
-				if gfx.Abs32(e.W-float32(hud.BarIconSize)*l.BarScale*float32(s)) < 0.6 && gfx.Abs32(e.H-e.W) < 0.6 {
+				if gfx.Abs32(e.W-max(float32(hud.BarIconMin), float32(hud.BarIconSize)*l.BarScale)*float32(s)) < 0.6 && gfx.Abs32(e.H-e.W) < 0.6 {
 					icons++
 				}
 			}
@@ -481,5 +494,33 @@ func TestBarPortraitsAndIconsStayInTheirSlots(t *testing.T) {
 				t.Errorf("s=%v slot %d draws %d status icons, want %d", s, i, icons, want)
 			}
 		}
+	}
+}
+
+// UIS-020, UIS-026: the name plate hangs under the slot, Small at every
+// slot size, and is never hidden: at the 27 slot it is ellipsized.
+func TestBarNameStaysSmallAtTheSmallestSlot(t *testing.T) {
+	a, _ := htApp(t, &stubSim{pawns: htPawns(30)}, 1280, 720)
+	l := a.hud()
+	if want := float32(27) / hudlayout.BarSlot; l.BarScale != want {
+		t.Fatalf("setup: bar scale %v, want the 27 step %v", l.BarScale, want)
+	}
+	screen := ebiten.NewImage(1280, 720)
+	ev := htTrace(t, func() { a.chrome.Bar().Draw(screen, 1280, 720) })
+	var names int
+	for _, e := range ev {
+		if e.Kind != "text" {
+			continue
+		}
+		names++
+		if want := float32(gfx.LineStep(gfx.Small)); gfx.Abs32(e.H-want) > 0.5 {
+			t.Errorf("name %q is %.1f px tall, want the Small line %.1f", e.Text, e.H, want)
+		}
+		if e.W > l.BarSlots[0].W+0.5 {
+			t.Errorf("name %q is %.1f px wide, wider than the %v slot", e.Text, e.W, l.BarSlots[0].W)
+		}
+	}
+	if names != 30 {
+		t.Errorf("%d names drawn, want 30 (never hidden)", names)
 	}
 }

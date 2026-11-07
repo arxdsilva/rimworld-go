@@ -78,7 +78,7 @@ func TestPanelStartsWithTheFirstThreeLessons(t *testing.T) {
 		t.Fatalf("rows = %v, want the first three lessons", got)
 	}
 	l := a.hud().Learn
-	if want := (gfx.Rect{X: float32(a.sw) - hudlayout.HudMargin - hudlayout.RightW, Y: hudlayout.HudMargin, W: hudlayout.RightW, H: a.lrn.Height()}); l != want {
+	if want := (gfx.Rect{X: float32(a.sw) - hudlayout.RightW, Y: hudlayout.HudMargin, W: hudlayout.RightW, H: a.lrn.Height()}); l != want {
 		t.Fatalf("Learn rect = %+v, want %+v", l, want)
 	}
 	if h := a.lrn.Height(); h <= learn.HeaderH || h > 200 {

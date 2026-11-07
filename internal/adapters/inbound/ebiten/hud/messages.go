@@ -83,7 +83,7 @@ func spoilingAlert(w game.WorldView) (Alert, bool) {
 }
 
 // Messages (PLAY-018): recent event notices stacked in the layout's
-// Messages rect, right-aligned against the right column under the colonist
+// Messages rect, (UIS-029: now left-aligned at the layout's anchor, over the colonist
 // bar. Each shows for messageFrames presentation frames after it first
 // appears and fades out over the last MessageFadeFrames.
 const (
@@ -204,7 +204,7 @@ func (c Right) MessageRows(l hudlayout.Layout) []MessageRow {
 			break
 		}
 		w := min(gfx.TextW(MessageLineIn(c.sh, lm.m), MessageStyle(lm.m))+2*messagePadX+messageEdgeW, l.Messages.W)
-		rows = append(rows, MessageRow{R: gfx.Rect{X: l.Messages.Right() - w, Y: y, W: w, H: hudlayout.MsgRowH}, Msg: lm.m, Idx: i, Alpha: MessageAlpha(lm.age)})
+		rows = append(rows, MessageRow{R: gfx.Rect{X: l.Messages.X, Y: y, W: w, H: hudlayout.MsgRowH}, Msg: lm.m, Idx: i, Alpha: MessageAlpha(lm.age)})
 	}
 	return rows
 }
@@ -316,7 +316,7 @@ func (c Right) DrawMessagesIn(screen *ebiten.Image, l hudlayout.Layout) {
 		}
 		st.Color = fadeColor(base, k)
 		line := uikit.FitText(MessageLineIn(c.sh, row.Msg), st, r.W-2*messagePadX-messageEdgeW)
-		gfx.Text(screen, line, float64(r.X+messageEdgeW+messagePadX), float64(r.Y)+(float64(r.H)-gfx.LineH(st))/2, st)
+		gfx.Text(screen, line, float64(r.X+messageEdgeW+messagePadX), textY(r, line, st), st)
 	}
 }
 

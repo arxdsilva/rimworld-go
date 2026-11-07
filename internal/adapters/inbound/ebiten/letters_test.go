@@ -55,8 +55,8 @@ func TestLettersStackFromTheReadModel(t *testing.T) {
 		if r.R.H != hudlayout.LetterRowH || r.R.X != l.Letters.X || r.R.W != l.Letters.W {
 			t.Errorf("row %d rect %+v in Letters %+v", i, r.R, l.Letters)
 		}
-		if i > 0 && r.R.Y-rows[i-1].R.Bottom() != hudlayout.HudGap {
-			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.R.Y-rows[i-1].R.Bottom(), i-1, hudlayout.HudGap)
+		if i > 0 && r.R.Y-rows[i-1].R.Bottom() != hudlayout.LetterGap {
+			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.R.Y-rows[i-1].R.Bottom(), i-1, hudlayout.LetterGap)
 		}
 	}
 	if got := rows[2].R.Bottom(); got != l.Letters.Bottom() {
@@ -117,7 +117,7 @@ func TestLettersPlusNOlder(t *testing.T) {
 func TestLettersStackKeepsTheNewestWhenCramped(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, letterStub(nLetters(6)...))
-	l := hudlayout.Compute(1280, 720, hudlayout.Inputs{Letters: 6, GlobalH: 380, LearnH: 200})
+	l := hudlayout.Compute(1280, 720, hudlayout.Inputs{Letters: 6, GlobalH: 380, LearnH: 120})
 	if l.LetterRows == 0 || l.LetterRows >= 6 {
 		t.Fatalf("fixture: %d rows", l.LetterRows)
 	}
