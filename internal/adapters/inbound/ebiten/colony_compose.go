@@ -130,8 +130,9 @@ func (a *App) colonyButtons(sw, sh int) []uikit.Button {
 	if !a.world.Open() {
 		out = append(out, a.insp.Commands().GroupButtons()...)
 	}
-	out = append(out, a.chrome.Tabs().Buttons(sw, sh)...) // hud/tabs.go
-	out = append(out, a.chrome.Bar().Buttons(sw, sh)...)  // hud/colonistbar.go
+	out = append(out, a.chrome.Tabs().Buttons(sw, sh)...)     // hud/tabs.go
+	out = append(out, a.chrome.Right().MessageButtons(sw)...) // hud/messages.go: drawn over the bar (UIS-029)
+	out = append(out, a.chrome.Bar().Buttons(sw, sh)...)      // hud/colonistbar.go
 	if !a.world.Open() {
 		out = append(out, a.insp.Commands().CommandGridButtons()...) // hud_commands.go
 		out = append(out, a.insp.PaneButtons()...)                   // hud_inspect.go

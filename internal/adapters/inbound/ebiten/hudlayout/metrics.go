@@ -92,6 +92,12 @@ const (
 	CmdInset      = 6
 	CmdLabelBelow = 6
 	CmdIconMax    = 40
+	// CmdLabelBand is the room a cell's hanging label takes under it (ours:
+	// CmdLabelBelow plus the descent); CmdRowPitch is one grid row to the
+	// next, so a label never lies on the row under it (ours: no reference
+	// shot has two rows).
+	CmdLabelBand = 10
+	CmdRowPitch  = CmdCell + CmdLabelBand + (CmdStride - CmdCell)
 
 	// The Architect: category buttons ArchCatW x ArchCatH, two per row,
 	// flush, a search row of ArchSearchH under them, the description box

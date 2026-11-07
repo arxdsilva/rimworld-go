@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
@@ -57,7 +58,7 @@ func TestMessagesFillTheLayoutsRectLeftAligned(t *testing.T) {
 	}
 	// each row with a place is a click-to-focus button, ids msg.<i>
 	ids := map[string]uikit.Button{}
-	for _, b := range a.chrome.Right().Buttons(a.sw) {
+	for _, b := range a.chrome.Right().MessageButtons(a.sw) {
 		ids[b.ID] = b
 	}
 	for i, r := range rows {
@@ -167,5 +168,27 @@ func TestMessageEdgeFollowsItsKind(t *testing.T) {
 		if got != c.want {
 			t.Errorf("%+v: edge %v, want %v", c.m, got, c.want)
 		}
+	}
+}
+
+// TestMessageRowsTakeTheClickOverTheBar (UIS-029): a message row is drawn
+// over the colonist bar, so it is hit before any bar slot.
+func TestMessageRowsTakeTheClickOverTheBar(t *testing.T) {
+	t.Parallel()
+	a, _ := colonyApp(t, messageStub(3))
+	firstBar, lastMsg := -1, -1
+	for i, b := range a.colonyButtons(a.sw, a.sh) {
+		switch {
+		case strings.HasPrefix(b.ID, ids.PrefixMsg):
+			lastMsg = i
+		case firstBar < 0 && strings.HasPrefix(b.ID, ids.PrefixBarPawn):
+			firstBar = i
+		}
+	}
+	if lastMsg < 0 || firstBar < 0 {
+		t.Fatalf("want message and bar buttons, got last msg %d, first bar %d", lastMsg, firstBar)
+	}
+	if lastMsg > firstBar {
+		t.Errorf("message button %d comes after bar button %d: the bar takes the click", lastMsg, firstBar)
 	}
 }

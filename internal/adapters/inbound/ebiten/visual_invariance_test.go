@@ -44,14 +44,19 @@ import (
 // (ui_canvas_guard_test.go) covers them.
 
 // Matrix of the frame tests: device density x UI scale x apparent zoom.
-// 0.8 is the smallest second zoom every scale allows (the 32x32 map's
-// zoom-out limit is 0.75 at UI scale 2) whose tile (51.2 px) still shows
-// zone names (they need 40).
+// The cell is the window's height / 48 (UIS-080), so the 32x32 map is
+// smaller than the window and held at zoom 1 (camera.MinZoomFor); the
+// second zoom zooms in instead: 2 gives 30 logical px cells, enough for
+// zone names (visZoneLabelCell).
 var (
 	visDevs  = []float64{1, 2}
 	visUIs   = []float64{1, 1.5, 2}
-	visZooms = []float64{1, 0.8}
+	visZooms = []float64{1, 2}
 )
+
+// visZoneLabelCell is the logical cell size from which the scene's zone
+// names fit their zones (the stockpile is 3 x 2 cells).
+const visZoneLabelCell = 30
 
 const (
 	visPanX = 2 // the pan test moves the camera right 2 tiles ...
@@ -129,6 +134,9 @@ func visCheckScale(ref, got []gfx.TraceEvent, s float64) []string {
 			wTol += 0.05 * float64(r.W) * s
 			hTol += 0.05 * float64(r.H) * s
 		}
+		if autoScaleRE.MatchString(r.Text) { // its digits differ by design: only its width
+			wTol = math.Inf(1)
+		}
 		// centred/right text anchors at a point: its left edge moves with its width
 		xTol := tol + math.Abs(float64(g.W)-float64(r.W)*s)
 		if math.Abs(float64(g.X)-float64(r.X)*s) > xTol || math.Abs(float64(g.Y)-float64(r.Y)*s) > tol ||
@@ -188,7 +196,7 @@ func (s *visualScene) checkAnchors(ev []gfx.TraceEvent, sc, tile float64) []stri
 	}
 
 	// Zone names sit inside their zone.
-	if tile >= 40 {
+	if tile/sc >= visZoneLabelCell-1e-6 {
 		for _, z := range w.Zones {
 			lbl := overlaypkg.ZoneLabelText(z)
 			x0f, y0f := r.worldToScreenF(float64(z.MinX), float64(z.MinY))
@@ -228,7 +236,8 @@ func (s *visualScene) checkAnchors(ev []gfx.TraceEvent, sc, tile float64) []stri
 		}
 	}
 
-	// Stack counts sit on their stack's tile.
+	// Stack counts sit on a tag centred under their stack's tile, its top
+	// a logical px below the cell (UIS-090).
 	if tile >= worldpkg.StackCountMinTile {
 		for _, st := range visStacks {
 			if st.qty <= 1 {
@@ -241,8 +250,9 @@ func (s *visualScene) checkAnchors(ev []gfx.TraceEvent, sc, tile float64) []stri
 				bad = append(bad, fmt.Sprintf("stack count %d is not drawn (tile %.1f px)", st.qty, tile))
 			}
 			for _, e := range found {
-				if !visInside(e, sx, sy, sx+tile, sy+tile, 1) {
-					bad = append(bad, fmt.Sprintf("stack count %s is off its tile (%.0f,%.0f, %.1f px)", e, sx, sy, tile))
+				cx := float64(e.X + e.W/2)
+				if math.Abs(cx-(sx+tile/2)) > 1.5*sc || float64(e.Y) < sy+tile-1 || float64(e.Y) > sy+tile+3*sc {
+					bad = append(bad, fmt.Sprintf("stack count %s is not centred under its tile (%.0f,%.0f, %.1f px)", e, sx, sy, tile))
 				}
 			}
 		}
@@ -374,8 +384,19 @@ func visRegions(l hudlayout.Layout) []visRegion {
 			out = append(out, r)
 		}
 	}
-	for i, c := range l.GridCells {
+	for i, c := range visCmdRegions(l) {
 		out = append(out, visRegion{fmt.Sprintf("command %d", i), c})
+	}
+	return out
+}
+
+// visCmdRegions are the command cells with the band their hanging labels
+// take under them (UIS-051, hudlayout.CmdLabelBand).
+func visCmdRegions(l hudlayout.Layout) []gfx.Rect {
+	out := make([]gfx.Rect, len(l.GridCells))
+	for i, c := range l.GridCells {
+		c.H += hudlayout.CmdLabelBand
+		out[i] = c
 	}
 	return out
 }
@@ -500,7 +521,7 @@ type visPanel struct {
 // inside its own rect).
 func visSelRegions(s *visualScene) []gfx.Rect {
 	l := s.a.hud()
-	return append([]gfx.Rect{l.Pane, l.PaneTabs, l.Expanded, l.Resources}, l.GridCells...)
+	return append([]gfx.Rect{l.Pane, l.PaneTabs, l.Expanded, l.Resources}, visCmdRegions(l)...)
 }
 
 // visPawnRegions are a selected colonist's: the selection's, plus its own
@@ -582,7 +603,7 @@ func visPanels() []visPanel {
 		visPanel{"tab_architect", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.architect") },
 			func(s *visualScene) []gfx.Rect {
 				l := s.a.hud()
-				return append([]gfx.Rect{l.ArchCats, l.ArchDesc, l.Resources}, l.GridCells...)
+				return append([]gfx.Rect{l.ArchCats, l.ArchDesc, l.Resources}, visCmdRegions(l)...)
 			}},
 		// the pause overlay, a letter and the options screens: no single
 		// region, the screen bounds them

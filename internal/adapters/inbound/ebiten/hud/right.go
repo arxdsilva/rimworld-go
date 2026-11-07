@@ -32,15 +32,15 @@ func (c Right) Draw(screen *ebiten.Image, sw, sh int) {
 	}
 }
 
-// Buttons are the alerts', letters' and messages' buttons.
+// Buttons are the alerts' and letters' buttons. The messages' are
+// MessageButtons: they lie over the colonist bar, so the shell hits them
+// before it.
 func (c Right) Buttons(sw int) []uikit.Button {
 	if !c.live() || c.Hidden {
 		return nil
 	}
 	l := c.sh.Layout()
-	out := c.Alerts().ButtonsIn(l)
-	out = append(out, c.letterButtonsIn(l)...)
-	return append(out, c.messageButtonsIn(l)...)
+	return append(c.Alerts().ButtonsIn(l), c.letterButtonsIn(l)...)
 }
 
 // alertCount, letterCount and messageCount are the rows the layout

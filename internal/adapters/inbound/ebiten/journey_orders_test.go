@@ -149,7 +149,7 @@ func TestJourneyOrdersFormationDrag(t *testing.T) {
 	if n := len(j.cmdsOf(command.DraftPawn)); n != 3 {
 		t.Fatalf("R drafted %d colonists, want 3", n)
 	}
-	j.dragTiles(inputframe.Right, 8, 7, 14, 7, 0)
+	j.dragTiles(inputframe.Right, 8, 6, 14, 6, 0) // row 7 meets the two-row command grid
 	moves := j.cmdsOf(command.MovePawn)
 	if len(moves) != 3 {
 		t.Fatalf("the drag sent %d moves, want 3", len(moves))
@@ -157,7 +157,7 @@ func TestJourneyOrdersFormationDrag(t *testing.T) {
 	seen := map[[2]int]bool{}
 	pawns := map[uint64]bool{}
 	for _, m := range moves {
-		if m.Y != 7 || m.X < 8 || m.X > 14 {
+		if m.Y != 6 || m.X < 8 || m.X > 14 {
 			t.Fatalf("move %+v is off the drag line", m)
 		}
 		seen[[2]int{m.X, m.Y}] = true

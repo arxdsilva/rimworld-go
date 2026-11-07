@@ -83,30 +83,45 @@ func winApp(t *testing.T, s *stubSim) (*App, *fakeInput) {
 
 // ---- the tab strip ------------------------------------------------------
 
-func TestTabStripHasElevenEqualTabs(t *testing.T) {
+// TestTabStripKeepsOrderAndEdgesAtEverySize: the eleven tabs keep their
+// order, sit flush on the bar's row, abut, and end at the screen's edge
+// at any size; the three icon tabs are half a text tab (UIS-041 to UIS-043;
+// TestTabStripWidthsAt1280And1920 pins the widths).
+func TestTabStripKeepsOrderAndEdgesAtEverySize(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(3))
+	want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.world", "tab.history", "tab.factions", "tab.menu"}
+	icon := map[string]bool{"tab.history": true, "tab.factions": true, "tab.menu": true}
 	for _, size := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		a.sw, a.sh = size[0], size[1]
 		bs := a.chrome.Tabs().Buttons(a.sw, a.sh)
-		want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.world", "tab.history", "tab.factions", "tab.menu"}
 		if len(bs) != len(want) {
 			t.Fatalf("%v: %d tabs, want %d", size, len(bs), len(want))
 		}
-		w := float32(a.sw) / float32(len(want))
+		textW := bs[0].W
+		x := float32(0)
 		for i, b := range bs {
 			if b.ID != want[i] {
 				t.Errorf("%v: tab %d is %q, want %q", size, i, b.ID, want[i])
 			}
-			if math.Abs(float64(b.W-w)) > 0.01 || math.Abs(float64(b.X-float32(i)*w)) > 0.01 {
-				t.Errorf("%v: %s is x %v w %v, want x %v w %v", size, b.ID, b.X, b.W, float32(i)*w, w)
+			if math.Abs(float64(b.X-x)) > 0.01 {
+				t.Errorf("%v: %s starts at %v, want %v (flush after the last)", size, b.ID, b.X, x)
+			}
+			x = b.X + b.W
+			wantW := textW
+			if icon[b.ID] {
+				wantW = textW * hudlayout.IconTabShare
+			}
+			// the last tab takes the strip's rounding remainder
+			if i < len(bs)-1 && math.Abs(float64(b.W-wantW)) > 1 || i == len(bs)-1 && b.W < wantW-1 {
+				t.Errorf("%v: %s is %v wide, want %v", size, b.ID, b.W, wantW)
 			}
 			if b.Y != float32(a.sh-hudlayout.TabsH) || b.H != hudlayout.TabsH {
 				t.Errorf("%v: %s is y %v h %v, want y %d h %d", size, b.ID, b.Y, b.H, a.sh-hudlayout.TabsH, hudlayout.TabsH)
 			}
 		}
-		if last := bs[len(bs)-1]; math.Abs(float64(last.X+last.W-float32(a.sw))) > 0.01 {
-			t.Errorf("%v: the strip ends at %v, want the screen's edge", size, last.X+last.W)
+		if math.Abs(float64(x-float32(a.sw))) > 0.01 {
+			t.Errorf("%v: the strip ends at %v, want the screen's edge", size, x)
 		}
 	}
 }

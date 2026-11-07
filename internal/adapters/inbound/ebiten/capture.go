@@ -159,6 +159,8 @@ func (a *App) tickCapture() {
 			return
 		}
 		a.renderer.speed = speedPaused
+		// the cell the player sees: the window's height / 48 (UIS-080)
+		a.renderer.cam.SyncUnit(a.mapViewport().H(), nil)
 		if c.Zoom > 0 {
 			a.renderer.cam.Zoom = clampZoom(c.Zoom)
 		}

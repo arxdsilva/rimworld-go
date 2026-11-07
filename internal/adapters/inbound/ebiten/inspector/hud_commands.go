@@ -198,7 +198,7 @@ func (a Commands) MoreCommands() []Button {
 }
 
 // moreLabel is the "more" cell's caption.
-func moreLabel(n int) string { return "+" + strconv.Itoa(n) + " more" }
+func (a Commands) moreLabel(n int) string { return a.shell.Tf("+%d more", n) }
 
 // openMore lists the commands the "more" cell stands for above it; a pick
 // presses that command (a disabled one shows its reason).
@@ -248,7 +248,7 @@ func (a Commands) cellButtons() []uikit.Button {
 		out = append(out, b)
 	}
 	if r, rest, ok := a.MoreCell(); ok {
-		b := uikit.AsButton(r, MoreID, moreLabel(len(rest)))
+		b := uikit.AsButton(r, MoreID, a.moreLabel(len(rest)))
 		b.Quiet = true
 		out = append(out, b)
 	}
@@ -314,7 +314,7 @@ func (a Commands) CommandGridUI(sw, sh int) {
 		for i, c := range rest {
 			names[i] = c.cmd.Label
 		}
-		a.kit().Tip("cmd.tip."+MoreID, r, "More commands\n"+strings.Join(names, "\n"))
+		a.kit().Tip("cmd.tip."+MoreID, r, a.shell.T("More commands")+"\n"+strings.Join(names, "\n"))
 	}
 }
 
@@ -329,13 +329,13 @@ func (a Commands) DrawCommandGrid(screen *ebiten.Image) {
 		drawCmdCell(screen, c.cmd, c.r, c.r.Hit(mx, my), a.CommandKeyLabel(c.idx, c.cmd), a.icon(c.cmd.Icon))
 	}
 	if r, rest, ok := a.MoreCell(); ok {
-		drawMoreCell(screen, r, len(rest), r.Hit(mx, my))
+		drawMoreCell(screen, r, len(rest), r.Hit(mx, my), a.shell.T("More"))
 	}
 }
 
 // drawMoreCell draws the "more" cell: the count of the commands it stands
 // for, centred, and its caption under the cell like a command's label.
-func drawMoreCell(screen *ebiten.Image, r gfx.Rect, n int, hover bool) {
+func drawMoreCell(screen *ebiten.Image, r gfx.Rect, n int, hover bool, more string) {
 	fill, border := uikit.Btn, uikit.BtnBorder
 	if hover {
 		fill, border = uikit.BtnHover, uikit.Accent
@@ -344,7 +344,7 @@ func drawMoreCell(screen *ebiten.Image, r gfx.Rect, n int, hover bool) {
 	uikit.StrokeRect(screen, r, border)
 	cx, cy := r.Center()
 	uikit.DrawCentered(screen, "+"+strconv.Itoa(n), float64(cx), float64(cy), gfx.WithColor(gfx.Title, uikit.Accent))
-	drawCmdLabel(screen, r, []string{"More"}, gfx.Small)
+	drawCmdLabel(screen, r, []string{more}, gfx.Small)
 }
 
 // drawCmdLabel draws a command's label lines centred on r, the last line's

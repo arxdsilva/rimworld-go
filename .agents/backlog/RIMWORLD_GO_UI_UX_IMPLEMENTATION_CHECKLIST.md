@@ -108,13 +108,13 @@ use these primitives.
 
 ## 1.2 Visual design tokens
 
--   [-] **UI scale and density system** (PLAY-012 UI-024: the UI lays out in logical pixels and draws through a scaling canvas, text at the real font size; Auto plus 75–200 % presets; map coordinates unaffected; PLAY-017: portraits and world labels fixed at every scale, guarded by a per-function draw check and frame-invariance tests, `-capture-ui-scale` for scaled captures; spacing/row heights are still per-file constants, not a central token set; PLAY-018: one layout function places every colony HUD region on a shared grid, with no-overlap tests at three window sizes and three UI scales)
+-   [-] **UI scale and density system** (PLAY-012 UI-024: the UI lays out in logical pixels and draws through a scaling canvas, text at the real font size; UIS-1/2: the reference game's nine steps 1×–4× counted in physical px per logical px, a step refused below 1280×768 logical, Auto = the largest step leaving 1280×900, settings v11 migrates the old percentages; every colony HUD and window size is a token in `hudlayout/metrics.go` pinned to its UIS row by `TestMetricsMatchReference`; the map cell is the window's height / 48; still partial: the step list's cell width (UIS-008) and the Options close X (UIS-075); map coordinates unaffected; PLAY-017: portraits and world labels fixed at every scale, guarded by a per-function draw check and frame-invariance tests, `-capture-ui-scale` for scaled captures; PLAY-018: one layout function places every colony HUD region on a shared grid, with no-overlap tests at three window sizes and three UI scales)
     -   Support multiple UI scales.
     -   Define spacing, row heights, icon sizes, text sizes, border
         widths, modal sizes, and minimum click targets centrally.
     -   Scale must not change simulation or map coordinates.
     -   Reference sizes, scale steps and the central size table: UIS-* rows in `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md` (UIS-1).
--   [ ] **Typography hierarchy** (the reference cap heights and their mapping to our sizes: UIS font rows in `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md`)
+-   [-] **Typography hierarchy** (UIS-012 to UIS-014 done: Small 11/15, Body 14/16, Title 21/24 give the reference game's cap heights and pitches, the gameplay UI no longer uses Large; the setup screens keep Large and Huge; numeric column alignment is not checked yet: UIS font rows in `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md`)
     -   Game title.
     -   window title.
     -   section heading.

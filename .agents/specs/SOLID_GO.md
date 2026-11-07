@@ -19,7 +19,7 @@ The dependency rules in `HEXAGONAL_ARCHITECTURE.md` hold. The size and shape rul
 - `ebiten.Simulation`: 32 methods, and the only interface in non-test code with more than 8.
 - Two packages over 12,000 non-test lines: `ebiten` (64,178 lines, 212 files) and `game` (57,019 lines, 185 files). The third largest has 3,801.
 - 11 `init()` registrations in `ebiten` (`registerScreenUI`) and 5 in domain definition tables.
-- Mutable package globals in `ebiten`: `curUIScale`, `tracePass`, `traceVia`, `canvasTrace`, `drawTrace`, `appBackground`, `appWindow`, `animalMarkTrace`.
+- Mutable package globals in `ebiten`: `gfx.cur` (the scale), `tracePass`, `traceVia`, `canvasTrace`, `drawTrace`, `appBackground`, `appWindow`, `animalMarkTrace`.
 
 Reviewers do not hold these limits. The guard does. `make arch` fails the build when a limit is crossed, and the budget file only ever shrinks (§8). This document gives the Go reading of SOLID and the numeric limits. It restates no rule from the other specs.
 

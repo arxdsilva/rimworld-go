@@ -186,7 +186,7 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 	rel := a.bioRelations(p)
 	relH := bioRelationsH(len(rel))
 	// the Health line: its label's glyphs, then a Small line per further condition
-	_, labelH := gfx.Measure("Health:", gfx.Label)
+	_, labelH := gfx.Measure(a.shell.T("Health:"), gfx.Label)
 	condH := float32(math.Ceil(labelH)) + 2
 	if len(b.Conditions) > 1 {
 		condH += float32(len(b.Conditions)-1) * gfx.LineStep(gfx.Small)

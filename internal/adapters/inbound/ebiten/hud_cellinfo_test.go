@@ -115,8 +115,10 @@ func TestCellInfoIsNotChrome(t *testing.T) {
 		t.Fatal("no cell info rect while hovering a cell")
 	}
 	l := a.hud()
-	if r.X != hudlayout.HudMargin || r.Bottom() != l.Tabs.Y-hudlayout.HudMargin {
-		t.Errorf("cell info %+v, want its bottom-left corner at (8, %v)", r, l.Tabs.Y-hudlayout.HudMargin)
+	// UIS-059: text CellX from the left, the last baseline CellBottom above
+	// the tab bar, so only the last line's descent lies below that baseline
+	if base := l.Tabs.Y - hudlayout.CellBottom; r.X != hudlayout.CellX || r.Bottom() <= base || r.Bottom() > l.Tabs.Y {
+		t.Errorf("cell info %+v, want x %d and its last baseline at %v (bottom in (%v, %v])", r, hudlayout.CellX, base, base, l.Tabs.Y)
 	}
 	cx, cy := r.Center()
 	if a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {

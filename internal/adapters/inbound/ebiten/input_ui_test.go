@@ -110,8 +110,9 @@ func inputColony(t *testing.T, at ...[2]int) (*App, *stubSim, *fakeInput) {
 	f := fakeOn(a)
 	f.Frame(t, a) // place the camera
 	a.renderer.speed = speedPaused
-	// Tile (x, y) at screen (64x, 64y+32): rows 0..8 and, right of the
-	// inspector panels, columns 6..19 are open map.
+	// Tile (x, y) at screen (64x, 64y+32): rows 0..6 (row 7 meets a
+	// two-row command grid, CmdRowPitch) and, right of the inspector
+	// panels, columns 6..19 are open map.
 	inputCamera(a)
 	return a, s, f
 }
@@ -368,14 +369,14 @@ func TestGroupDraftAndFormation(t *testing.T) {
 		seen[c] = true
 	}
 	s.cmds = nil
-	f.Drag(t, a, inputframe.Right, 8, 7, 14, 7, input.ModShift)
+	f.Drag(t, a, inputframe.Right, 8, 6, 14, 6, input.ModShift)
 	moves = cmdsOf(s, command.MovePawn)
 	if len(moves) != 3 || !moves[0].Queue {
 		t.Fatalf("a right drag lines them up (Shift queues): %+v", moves)
 	}
 	xs := map[int]bool{}
 	for _, m := range moves {
-		if m.Y != 7 {
+		if m.Y != 6 {
 			t.Fatalf("off the line: %+v", m)
 		}
 		xs[m.X] = true

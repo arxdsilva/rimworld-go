@@ -389,6 +389,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | UI-027-play018-hud-relayout | HUD relayout and learning helper (PLAY-018) | 2026-10-25 | [UI.md](UI.md#ui-027-play018-hud-relayout) |
 | UI-028-play020-zones-beds-lamps | Zones, beds, lamps, bed rest (PLAY-020) | 2026-10-25 | [UI.md](UI.md#ui-028-play020-zones-beds-lamps) |
 | UIS-gap-analysis | UI size and scale gap analysis | 2026-11-06 | [UI.md](UI.md#uis-gap-analysis) |
+| UIS-implementation | Gameplay UI sizes and scaling to the reference | 2026-11-07 | [UI.md](UI.md#uis-implementation) |
 | UPDATE-001-update-notice | Running version and update notice | 2026-11-03 | [OPS.md](OPS.md#update-001-update-notice) |
 | USAGE-001-usage-data | Usage data client | 2026-11-03 | [OPS.md](OPS.md#usage-001-usage-data) |
 | VIEW-001-camera-restored-on-load | Camera restored when a game loads | 2026-10-30 | [ART.md](ART.md#view-001-camera-restored-on-load) |
