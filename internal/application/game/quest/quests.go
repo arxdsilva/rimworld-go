@@ -110,11 +110,16 @@ func (q *Quests) Signal(s Signal) {
 // Offer offers a quest of kind k now, outside the cadence (the long-range
 // scanner's ore lump, QST-116; dev tools): when the kind may be offered
 // and builds. It is the id issued.
-func (q *Quests) Offer(k qd.KindID) (qd.ID, bool) {
+func (q *Quests) Offer(k qd.KindID) (qd.ID, bool) { return q.OfferAt(k, -1) }
+
+// OfferAt is Offer for world tile t (Ctx.Tile): the long-range scanner's
+// ore site (QST-116).
+func (q *Quests) OfferAt(k qd.KindID, t int) (qd.ID, bool) {
 	if k >= qd.NumKinds || q.kinds[k] == nil {
 		return 0, false
 	}
 	c := q.ctx(q.r.Clock.Now())
+	c.Tile = t
 	if !q.kinds[k].CanOffer(c) {
 		return 0, false
 	}
@@ -122,7 +127,7 @@ func (q *Quests) Offer(k qd.KindID) (qd.ID, bool) {
 }
 
 // ctx is a kind's context at now.
-func (q *Quests) ctx(now uint64) Ctx { return Ctx{R: q.r, Now: now, q: q} }
+func (q *Quests) ctx(now uint64) Ctx { return Ctx{R: q.r, Now: now, Tile: -1, q: q} }
 
 // find is quest id's position in list (binary search: list is by id).
 func (q *Quests) find(id qd.ID) (int, bool) {

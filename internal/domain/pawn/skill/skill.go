@@ -147,8 +147,21 @@ func Learn(s *Skill, xp int) {
 		pct = passionPct[s.Passion]
 	}
 	total := int64(xp)*int64(pct) + int64(s.Carry)
-	gain := total / 100
 	s.Carry = int16(total % 100)
+	add(s, total/100)
+}
+
+// Grant adds xp as it stands: no passion multiplier and no carry (a fixed
+// award such as a quest's, QST-076). The level-up and the MaxLevel bank are
+// Learn's.
+func Grant(s *Skill, xp int) {
+	if xp > 0 {
+		add(s, int64(xp))
+	}
+}
+
+// add banks gain experience points, levelling up as needed.
+func add(s *Skill, gain int64) {
 	xpNow := int64(s.XP) + gain
 	for s.Level < MaxLevel && xpNow >= int64(Cost(s.Level)) {
 		xpNow -= int64(Cost(s.Level))

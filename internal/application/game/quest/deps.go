@@ -86,6 +86,9 @@ type Sites interface {
 	Remove(tile int, id qd.ID)
 	// Settlement is one of faction f's settlement tiles, picked from seed.
 	Settlement(f int, seed uint64) (tile int, ok bool)
+	// Deposit is the long-range scanner's mineral site on tile: its lump
+	// as one line (ok false: none there, QST-116).
+	Deposit(tile int) (lump trade.Line, ok bool)
 }
 
 // PawnPreview is what the window shows of a pawn reward or a joiner before
@@ -118,16 +121,23 @@ type Items interface {
 	// IntoCaravan adds lines to caravan's cargo (QST-090).
 	IntoCaravan(caravan uint64, lines []trade.Line) bool
 	// Has reports whether caravan carries lines; Take removes them.
+	// Only goods of normal quality or better and not tainted count
+	// (QST-071).
 	Has(caravan uint64, lines []trade.Line) bool
 	Take(caravan uint64, lines []trade.Line) bool
+	// CaravanAt is the world tile caravan stands on, arrived or visiting
+	// (ok false: no such caravan, or it is moving).
+	CaravanAt(caravan uint64) (tile int, ok bool)
 }
 
 // Threats starts the threats quests send.
 type Threats interface {
 	// Raid sends faction f (index) at the home colony with points.
 	Raid(f, points int, seed uint64) bool
+	// Manhunters sends a manhunter pack with points at the home colony.
 	Manhunters(points int, seed uint64) bool
-	// Condition starts game condition kind for ticks.
+	// Condition starts game condition kind (CondHeatWave, ...) at the home
+	// colony for ticks.
 	Condition(kind uint8, ticks uint64) bool
 	// Ambush attacks caravan with faction f (index) at once.
 	Ambush(caravan uint64, f, points int, seed uint64) bool
@@ -155,3 +165,11 @@ type Rolls interface {
 	// Seed is a fresh 64-bit seed for a quest or part.
 	Seed() uint64
 }
+
+// The game conditions a quest may force (Threats.Condition, QST-042).
+const (
+	CondNone uint8 = iota
+	CondHeatWave
+	CondColdSnap
+	CondVolcanicWinter
+)

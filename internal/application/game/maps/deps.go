@@ -33,6 +33,19 @@ type Surroundings interface {
 	Ground
 	Globe
 	Post
+	Quester
+}
+
+// Quester is the quests' side of the road (QST-074, QST-118).
+type Quester interface {
+	// CaravanArrived tells the quests caravan cid stopped on world tile t.
+	CaravanArrived(cid uint64, t int)
+	// HoldsVisit: an open quest keeps a caravan visiting tile t (a trade
+	// request waiting for its goods, decision 14).
+	HoldsVisit(t int) bool
+	// SettlementLost tells the quests faction fi's settlement on tile t is
+	// gone; defeated when it was the faction's last.
+	SettlementLost(fi, t int, defeated bool)
 }
 
 // Cartography is opening, emptying and changing maps.

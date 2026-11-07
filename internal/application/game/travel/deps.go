@@ -25,6 +25,14 @@ type Host interface {
 	Colony
 }
 
+// Quester is the quests' side of the scanner (QST-116).
+type Quester interface {
+	// ScannerFound offers the ore-lump quest for the mineral site just laid
+	// on tile t; true when a quest took it (its letter replaces the
+	// scanner's).
+	ScannerFound(t int) bool
+}
+
 // Sites is the buildings, in building order (the id slice is the host's
 // own, read only).
 type Sites interface {
@@ -138,6 +146,7 @@ type Globe interface {
 // Landings is pods coming down on the open maps and founding colonies
 // (game/maps, MAP-10).
 type Landings interface {
+	Quester
 	// MapOpen reports a map open on tile t (the first colony's included).
 	MapOpen(t int) bool
 	// LandOn sets pod passengers (stashed) and animals down on the open map

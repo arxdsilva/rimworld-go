@@ -102,6 +102,25 @@ func TestLearnLevelsUpAndCaps(t *testing.T) {
 	}
 }
 
+func TestGrantIgnoresPassion(t *testing.T) {
+	for _, p := range []Passion{NoPassion, Minor, Major} {
+		s := Skill{Passion: p, Carry: 50}
+		Grant(&s, 6000)
+		if s.Level != 0 || s.XP != 6000 || s.Carry != 50 {
+			t.Fatalf("passion %d: %+v, want 6000 XP flat and the carry kept", p, s)
+		}
+	}
+	s := Skill{Level: 3, XP: Cost(3) - 100}
+	Grant(&s, 6000)
+	if s.Level != 4 || s.XP != 5900 {
+		t.Fatalf("level-up: %+v", s)
+	}
+	Grant(&s, -5)
+	if s.XP != 5900 {
+		t.Fatal("a negative grant does nothing")
+	}
+}
+
 func TestDecay(t *testing.T) {
 	s := Skill{Level: 10, XP: 5}
 	DecayDay(&s)

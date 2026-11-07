@@ -436,7 +436,7 @@ func (h travelHost) Land(members, animals []uint64, t int) uint64 {
 func fleetOf(g *Game) maps.Fleet {
 	w := g.worldS()
 	if w.mapsH == nil {
-		w.mapsH = mapsHost{mapsCrew{g}, mapsWalk{g}, mapsGround{g}, mapsGlobe{g}, mapsRoad{g}, mapsOpen{g}, mapsPop{g}, mapsSettle{g}, mapsFound{g}, mapsWaylay{g}} // built once
+		w.mapsH = mapsHost{mapsCrew{g}, mapsWalk{g}, mapsGround{g}, mapsGlobe{g}, mapsRoad{g}, mapsOpen{g}, mapsPop{g}, mapsSettle{g}, mapsFound{g}, mapsWaylay{g}, mapsQuests{g}} // built once
 	}
 	return maps.Of(&w.caravans, &w.atlas, w.mapsH)
 }
@@ -453,6 +453,7 @@ type mapsHost struct {
 	mapsSettle
 	mapsFound
 	mapsWaylay
+	mapsQuests // quest_host.go
 }
 
 type mapsCrew struct{ g *Game }

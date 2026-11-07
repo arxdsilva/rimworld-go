@@ -35,6 +35,16 @@ func PickSettlement(fs []faction.Faction, f int, seed uint64) (int, bool) {
 	return ts[seed%uint64(len(ts))], true
 }
 
+// SettlementAt is the faction (index) whose settlement stands on tile t.
+func SettlementAt(fs []faction.Faction, t int) (int, bool) {
+	for i, f := range fs {
+		if slices.Contains(f.Settlements, t) {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 // PawnOf is the person of seed: the preview and the walk-in agree
 // (QST-087).
 func PawnOf(seed uint64) pawngen.Pawn { return pawngen.Generate(seed, 0, 0, pawngen.Rules{}) }

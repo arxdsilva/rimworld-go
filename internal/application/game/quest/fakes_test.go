@@ -91,6 +91,7 @@ type fakeSites struct {
 func (s *fakeSites) Place(x Site) bool                         { s.placed = append(s.placed, x); return true }
 func (s *fakeSites) Remove(tile int, id qd.ID)                 { s.removed = append(s.removed, tile) }
 func (s *fakeSites) Settlement(f int, seed uint64) (int, bool) { return 100 + f, true }
+func (s *fakeSites) Deposit(tile int) (trade.Line, bool)       { return trade.Line{}, false }
 
 type fakePawns struct {
 	walked []uint64
@@ -119,6 +120,7 @@ type fakeItems struct {
 	has     bool
 	took    int
 	podSeed []uint64
+	at      int // CaravanAt's tile (-1: moving; the zero value is tile 0)
 }
 
 func (it *fakeItems) Pod(l []trade.Line, seed uint64) bool {
@@ -132,6 +134,7 @@ func (it *fakeItems) IntoCaravan(c uint64, l []trade.Line) bool {
 }
 func (it *fakeItems) Has(c uint64, l []trade.Line) bool  { return it.has }
 func (it *fakeItems) Take(c uint64, l []trade.Line) bool { it.took++; return it.has }
+func (it *fakeItems) CaravanAt(c uint64) (int, bool)     { return it.at, it.at >= 0 }
 
 type fakeThreats struct{ raids, manhunters, conditions, ambushes int }
 

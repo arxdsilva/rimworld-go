@@ -121,6 +121,18 @@ func (f Fleet) Waylay(c *Caravan, k Trouble, now uint64) {
 	}
 }
 
+// AmbushCaravan has faction fac (1 + index) attack caravan id of f now where it
+// stands (a quest's talks gone wrong, QST-079); false when there is no
+// such caravan. A function, not a method: Fleet is at its method limit.
+func AmbushCaravan(f Fleet, id entity.EntityID, fac int, now uint64) bool {
+	c := f.At(id)
+	if c != nil {
+		c.NextEnc = now + encounterCooldown
+		f.fight(c, Ambush, fac)
+	}
+	return c != nil
+}
+
 // fight stops c and queues its encounter map.
 func (f Fleet) fight(c *Caravan, k Trouble, fac int) {
 	c.Ask = Ask{}

@@ -247,9 +247,11 @@ func (l Lifecycle) destroy(fi, t int) string {
 		}
 	}
 	if len(fa.Settlements) > 0 {
+		f.h.SettlementLost(fi, t, false)
 		return ""
 	}
 	fa.Defeated = true
+	f.h.SettlementLost(fi, t, true)
 	return fa.Name
 }
 

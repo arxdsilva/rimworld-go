@@ -183,25 +183,30 @@ func (o scanner) find(target item.Kind, b construction.Building) bool {
 	t := cands[hashN(&v, len(cands))]
 	s := Site{Tile: t, Mineral: m.Kind, Qty: m.Min + hashN(&v, m.Max-m.Min+1), Expires: o.h.Now() + SiteDays*clock.TicksPerDay}
 	o.s.sites = append(o.s.sites, s)
-	o.h.Letter("Mineral site found", b.X, b.Y, "The long-range scanner found a lump of %d %s on tile %d. "+
-		"Send a caravan or transport pods within %d days to mine it.", s.Qty, s.Mineral, t, SiteDays)
+	if !o.h.ScannerFound(t) {
+		o.h.Letter("Mineral site found", b.X, b.Y, "The long-range scanner found a lump of %d %s on tile %d. "+
+			"Send a caravan or transport pods within %d days to mine it.", s.Qty, s.Mineral, t, SiteDays)
+	}
 	o.h.Changed()
 	return true
 }
 
 // ring is every tile SiteMinDist to SiteMaxDist hops from home, in
 // breadth-first order (deterministic: the planet's neighbour order).
-func ring(p *planet.Planet, home int) []int {
+func ring(p *planet.Planet, home int) []int { return ringOf(p, home, SiteMinDist, SiteMaxDist) }
+
+// ringOf is every tile lo to hi hops from home, in breadth-first order.
+func ringOf(p *planet.Planet, home, lo, hi int) []int {
 	seen := map[int32]bool{int32(home): true}
 	front, out := []int32{int32(home)}, []int(nil)
-	for d := 1; d <= SiteMaxDist && len(front) > 0; d++ {
+	for d := 1; d <= hi && len(front) > 0; d++ {
 		var next []int32
 		for _, t := range front {
 			for _, nb := range p.Neighbours(int(t)) {
 				if !seen[nb] {
 					seen[nb] = true
 					next = append(next, nb)
-					if d >= SiteMinDist {
+					if d >= lo {
 						out = append(out, int(nb))
 					}
 				}
@@ -212,6 +217,26 @@ func ring(p *planet.Planet, home int) []int {
 	return out
 }
 
+// FreeTile is a land tile lo..hi hops from home with no settlement, no
+// mineral site and not taken, picked from seed (a quest site, QST-117).
+func (o Ops) FreeTile(seed uint64, lo, hi int, taken func(t int) bool) (int, bool) {
+	p, home := o.h.Planet(), o.h.ColonyTile()
+	if p == nil || home < 0 {
+		return 0, false
+	}
+	var cands []int
+	for _, t := range ringOf(p, home, lo, hi) {
+		_, settled, _, _ := o.settlement(t)
+		if _, site := scanner(o).siteAt(t); !settled && !site && p.Land(t) && !taken(t) {
+			cands = append(cands, t)
+		}
+	}
+	if len(cands) == 0 {
+		return 0, false
+	}
+	return cands[seed%uint64(len(cands))], true
+}
+
 // siteAt is the mineral site on tile t.
 func (o scanner) siteAt(t int) (Site, bool) {
 	for _, s := range o.s.sites {
@@ -220,6 +245,12 @@ func (o scanner) siteAt(t int) (Site, bool) {
 		}
 	}
 	return Site{}, false
+}
+
+// Deposit is the mineral site on tile t as its lump (quests, QST-116).
+func (o Ops) Deposit(t int) (item.Kind, int, bool) {
+	s, ok := scanner(o).siteAt(t)
+	return s.Mineral, s.Qty, ok
 }
 
 // siteTick drops expired sites.

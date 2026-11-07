@@ -62,7 +62,10 @@ func (v Verdict) Reason() qd.Reason { return qd.Reason(v >> 8) }
 type Ctx struct {
 	R   Roles
 	Now uint64
-	q   *Quests
+	// Tile is the world tile an offer was made for (OfferAt: the scanner's
+	// ore site); -1 for a cadence offer.
+	Tile int
+	q    *Quests
 }
 
 // Intn is a roll in [0, n) from the quest stream; 0 when n <= 0 (no draw).

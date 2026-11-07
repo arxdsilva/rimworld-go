@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/quality"
 	"rimworld-go/internal/domain/economy/trade"
 )
 
@@ -53,7 +54,15 @@ func (o Ops) CarryLines(cid uint64, lines []trade.Line) {
 	}
 }
 
-// HasLines: caravan cid carries every line (a request, QST-2g).
+// Deliverable: stack st counts toward a request (QST-071): normal quality
+// or better when it has one, and not tainted; wear does not matter.
+func Deliverable(st item.Stack) bool {
+	l, ok := st.QualityLevel()
+	return !st.Tainted() && (!ok || l >= quality.Normal)
+}
+
+// HasLines: caravan cid carries every line in deliverable goods (a
+// request, QST-2g).
 func (o Ops) HasLines(cid uint64, lines []trade.Line) bool {
 	h := o.s.cargo[cid]
 	if h == nil {
@@ -61,7 +70,9 @@ func (o Ops) HasLines(cid uint64, lines []trade.Line) bool {
 	}
 	have := map[item.Kind]int{}
 	for _, st := range h.Items {
-		have[st.Kind] += st.Qty
+		if Deliverable(st) {
+			have[st.Kind] += st.Qty
+		}
 	}
 	for _, l := range lines {
 		if have[l.Kind] -= l.Qty; have[l.Kind] < 0 {
@@ -71,13 +82,28 @@ func (o Ops) HasLines(cid uint64, lines []trade.Line) bool {
 	return true
 }
 
-// TakeLines gives every line up, or nothing when one is short.
+// TakeLines gives every line up from deliverable goods, or nothing when
+// one is short.
 func (o Ops) TakeLines(cid uint64, lines []trade.Line) bool {
 	if !o.HasLines(cid, lines) {
 		return false
 	}
+	h := o.s.cargo[cid]
 	for _, l := range lines {
-		o.Yield(cid, l.Kind, l.Qty)
+		qty := l.Qty
+		for i := 0; i < len(h.Items) && qty > 0; i++ {
+			if h.Items[i].Kind != l.Kind || !Deliverable(h.Items[i]) {
+				continue
+			}
+			n := min(qty, h.Items[i].Qty)
+			h.Items[i].Qty -= n
+			qty -= n
+			if h.Items[i].Qty == 0 {
+				h.Items = slices.Delete(h.Items, i, i+1)
+				i--
+			}
+		}
 	}
+	o.h.Changed()
 	return true
 }

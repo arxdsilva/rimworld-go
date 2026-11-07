@@ -54,7 +54,7 @@ func (f Fleet) Step(now uint64) {
 				f.roll(c, now) // encounter.go (MAP-08)
 			}
 		case caravan.Visiting:
-			if now >= c.C.VisitUntil {
+			if now >= c.C.VisitUntil && !f.h.HoldsVisit(c.C.Tile) {
 				f.startReturn(c)
 			}
 		}
@@ -95,6 +95,11 @@ func (f Fleet) Arrived(c *Caravan, now uint64) {
 		}
 		f.enterMap(c, id)
 		return
+	}
+	enc := c.NextEnc
+	f.h.CaravanArrived(c.C.ID, c.C.Tile) // quests (QST-074): a site, a delivery or talks here
+	if c = f.At(entity.EntityID(c.C.ID)); c == nil || c.NextEnc != enc {
+		return // the talks went wrong: an ambush (Fleet.Ambush) has it
 	}
 	if id, ok := f.mapAt(c.C.Tile); ok {
 		f.enterMap(c, id)
