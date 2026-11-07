@@ -463,7 +463,7 @@ func (w editorPage) partCard(f *uikit.Form, ng *Draft, ed *editorState, i int, b
 				bc = uikit.Danger
 			}
 			uikit.StrokeRect(dst, hdr, bc)
-			ty := float64(hdr.Y) + (float64(hdr.H)-gfx.LineH(gfx.Label))/2
+			ty := gfx.CenterTop(float64(hdr.Y), float64(hdr.H), gfx.Label)
 			cx, cy := hdr.X+14, hdr.Y+hdr.H/2
 			if expanded {
 				uikit.FillTri(dst, cx-4, cy-2, cx+4, cy-2, cx, cy+3)
@@ -538,7 +538,7 @@ func (w editorPage) pctSlider(id string, c gfx.Rect, v *int, lo, hi int, title s
 	w.sliderInt(id, sr, v, uikit.SliderSpec{Min: float64(lo), Max: float64(hi), Step: 5, Title: title,
 		Format: func(x float64) string { return fmt.Sprintf("%d%%", int(x)) }})
 	val := *v
-	w.kit().Label(sr.Right()+10, c.Y+(c.H-float32(gfx.LineH(gfx.Body)))/2, fmt.Sprintf("%d%%", val), gfx.Body)
+	w.kit().Label(sr.Right()+10, float32(gfx.CenterTop(float64(c.Y), float64(c.H), gfx.Body)), fmt.Sprintf("%d%%", val), gfx.Body)
 }
 
 // partControls declares the controls of an expanded part.
@@ -663,7 +663,7 @@ func (w editorPage) partControls(f *uikit.Form, ng *Draft, ed *editorState, i in
 			v := int(p.EveryDays)
 			w.ngNum(id("every"), gfx.Rect{X: c.X, Y: c.Y, W: 90, H: c.H}, &v, 0, scenario.MaxEveryDays)
 			p.EveryDays = uint16(min(v, 65535))
-			w.kit().Label(c.X+100, c.Y+(c.H-float32(gfx.LineH(gfx.Body)))/2, w.sh.T("days (0 = once)"), uikit.DimText())
+			w.kit().Label(c.X+100, float32(gfx.CenterTop(float64(c.Y), float64(c.H), gfx.Body)), w.sh.T("days (0 = once)"), uikit.DimText())
 		}
 	case scenario.PartDisabledIncident:
 		incidentRow()

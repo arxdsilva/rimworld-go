@@ -198,7 +198,7 @@ func (w Research) draw(screen *ebiten.Image, sw, sh int) {
 	hintX := float64(r.X) + pad + float64(gfx.TextW(w.sh.T("Research"), gfx.Label)) + 16
 	hint, c := w.headline(st)
 	if right := float64(r.X+r.W) - pad; right-hintX > 40 {
-		gfx.Text(screen, gfx.Ellipsize(hint, gfx.Small, right-hintX), hintX, float64(r.Y)+pad+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2,
+		gfx.Text(screen, gfx.Ellipsize(hint, gfx.Small, right-hintX), hintX, gfx.CenterTop(float64(r.Y)+pad, gfx.LineH(gfx.Label), gfx.Small),
 			gfx.WithColor(gfx.Small, c))
 	}
 	if st.qlow != "" && !g.search.Empty() {
@@ -207,7 +207,7 @@ func (w Research) draw(screen *ebiten.Image, sw, sh int) {
 			s = lang.Tf(w.sh, "%d found", st.matches)
 		}
 		if tw := gfx.TextW(s, gfx.Small); g.search.X-tw-8 > g.right.X {
-			gfx.Text(screen, s, float64(g.search.X-tw-8), float64(g.search.Y)+(rtSearchH-gfx.LineH(gfx.Small))/2,
+			gfx.Text(screen, s, float64(g.search.X-tw-8), gfx.CenterTop(float64(g.search.Y), rtSearchH, gfx.Small),
 				gfx.WithColor(gfx.Small, uikit.TextDim))
 		}
 	}

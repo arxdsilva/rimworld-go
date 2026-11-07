@@ -183,9 +183,9 @@ func (t *Presets) drawEntry(dst *ebiten.Image, i int, row gfx.Rect, hover, selec
 	}
 	dim := gfx.Small
 	dim.Color, dim.Align = uikit.TextDim, gfx.AlignRight
-	gfx.Text(dst, src, float64(row.Right())-6, float64(row.Y)+(float64(row.H)-gfx.LineH(dim))/2, dim)
+	gfx.Text(dst, src, float64(row.Right())-6, gfx.CenterTop(float64(row.Y), float64(row.H), dim), dim)
 	w := float32(gfx.TextW(src, gfx.Small)) + 18
-	gfx.Text(dst, uikit.FitText(e.label, st, row.W-w-8), float64(row.X)+8, float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, uikit.FitText(e.label, st, row.W-w-8), float64(row.X)+8, gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 }
 
 func (t *Presets) declareRight(r gfx.Rect, cur string) {

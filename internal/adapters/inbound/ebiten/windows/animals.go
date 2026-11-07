@@ -350,7 +350,7 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 	if w.Wild {
 		title = lang.Tf(w.sh, "Wildlife  (%d species)", len(w.wildlife()))
 	}
-	gfx.Text(screen, gfx.Ellipsize(title, gfx.Label, float64(r.W)-2*hudlayout.WindowPad-340), float64(r.X)+hudlayout.WindowPad, float64(r.Y)+hudlayout.WindowPad+(24-gfx.LineH(gfx.Label))/2, gfx.Label)
+	gfx.Text(screen, gfx.Ellipsize(title, gfx.Label, float64(r.W)-2*hudlayout.WindowPad-340), float64(r.X)+hudlayout.WindowPad, gfx.CenterTop(float64(r.Y)+hudlayout.WindowPad, 24, gfx.Label), gfx.Label)
 	mx, my := w.sh.Cursor()
 	if w.Wild {
 		w.drawWild(screen, r)

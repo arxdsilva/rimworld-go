@@ -287,10 +287,10 @@ func (w worldPage) worldRight(ng *Draft, col gfx.Rect) {
 		w.DrawEmblem(dst, "ui_icon/faction_swarm", globe.Accent(faction.Swarm), sw.X+8, sw.Y+(sw.H-24)/2, 24)
 		st := gfx.Label
 		st.Color = uikit.TextDim
-		gfx.Text(dst, w.sh.T("Hive swarms"), float64(sw.X+44), float64(sw.Y)+(float64(sw.H)-gfx.LineH(st))/2, st)
+		gfx.Text(dst, w.sh.T("Hive swarms"), float64(sw.X+44), gfx.CenterTop(float64(sw.Y), float64(sw.H), st), st)
 		dt := gfx.Small
 		dt.Color, dt.Align = uikit.TextDim, gfx.AlignRight
-		gfx.Text(dst, w.sh.T("Always present"), float64(sw.Right()-10), float64(sw.Y)+(float64(sw.H)-gfx.LineH(dt))/2, dt)
+		gfx.Text(dst, w.sh.T("Always present"), float64(sw.Right()-10), gfx.CenterTop(float64(sw.Y), float64(sw.H), dt), dt)
 	})
 	y += worldFacRowH + 12
 

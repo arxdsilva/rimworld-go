@@ -486,7 +486,7 @@ func (st *researchState) drawTree(dst *ebiten.Image, g researchGeom, mx, my int)
 		lo, hi := max(x0, v.X), min(x1, v.Right())
 		name := research.TechLevel(b.Level).String()
 		if tw := gfx.TextW(name, gfx.Small); hi-lo >= tw+8 {
-			gfx.Text(dst, name, float64(lo+(hi-lo-tw)/2), float64(g.band.Y)+(rtBandH-gfx.LineH(gfx.Small))/2,
+			gfx.Text(dst, name, float64(lo+(hi-lo-tw)/2), gfx.CenterTop(float64(g.band.Y), rtBandH, gfx.Small),
 				gfx.WithColor(gfx.Small, uikit.TextDim))
 		}
 	}

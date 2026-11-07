@@ -111,7 +111,7 @@ func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
 	hintX := float64(r.X) + pad + 4*118 + 8
 	gfx.Text(screen, gfx.Ellipsize(w.sh.T("pick an activity, then click or drag across the hours"), gfx.Small, float64(r.X+r.W)-pad-hintX),
-		hintX, float64(r.Y)+pad+(26-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
+		hintX, gfx.CenterTop(float64(r.Y)+pad, 26, gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
 	mx, my := w.sh.Cursor()
 	for _, b := range w.buttons() {
 		if !strings.HasPrefix(b.ID, ids.PrefixSchedBrush) {
@@ -140,7 +140,7 @@ func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 		if p, ok := byID[id]; ok {
 			name, grid = w.sh.PawnLabel(p), p.Schedule
 		}
-		gfx.Text(screen, gfx.Ellipsize(name, gfx.Body, schedGridX-hudlayout.WindowPad-8), float64(r.X)+pad, float64(y)+(schedRowBox-gfx.LineH(gfx.Body))/2, gfx.Body)
+		gfx.Text(screen, gfx.Ellipsize(name, gfx.Body, schedGridX-hudlayout.WindowPad-8), float64(r.X)+pad, gfx.CenterTop(float64(y), schedRowBox, gfx.Body), gfx.Body)
 		for h := 0; h < 24; h++ {
 			x := float32(gx + h*SchedCellW)
 			c := uikit.BtnDisabled

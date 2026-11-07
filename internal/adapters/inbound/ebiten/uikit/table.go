@@ -215,7 +215,7 @@ func drawCell(dst *ebiten.Image, cell gfx.Rect, s string, al gfx.Align, sts ...g
 	case gfx.AlignRight:
 		x = float64(cell.Right() - TableCellPad)
 	}
-	gfx.Text(dst, s, x, float64(cell.Y)+(float64(cell.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, s, x, gfx.CenterTop(float64(cell.Y), float64(cell.H), st), st)
 }
 
 func FillTri(dst *ebiten.Image, x0, y0, x1, y1, x2, y2 float32) {

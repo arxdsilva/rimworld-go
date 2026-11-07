@@ -202,7 +202,7 @@ func traceText(dst *ebiten.Image, s string, f *text.GoTextFace, op *text.DrawOpt
 	case AlignRight:
 		px -= w
 	}
-	emitTrace(dst, "text", s, float32(px), float32(py), float32(w), float32(h))
+	emitEvent(dst, TraceEvent{Kind: "text", Text: s, X: float32(px), Y: float32(py), W: float32(w), H: float32(h), Size: float32(f.Size)})
 }
 
 // Measure is the logical size of s drawn in st: measured on the scaled
@@ -227,6 +227,32 @@ func LineH(st TextStyle) float64 {
 	defer fontMu.Unlock()
 	f, k := face(st, sc)
 	return logicalLineH(f, k, sizeOf(st))
+}
+
+// How far Noto Sans's glyphs reach from the baseline, in em: ascenders
+// above, descenders below (the line box's ascent and descent add room for
+// accents).
+const (
+	glyphAbove = 0.76
+	glyphBelow = 0.24
+)
+
+// CenterTop is the top to draw one line of st at (as Text takes it) so its
+// capitals are centred in the band [y, y+h]. It moves the line as little as
+// needed to keep its ascenders and descenders inside the band; a band too
+// short for both keeps the ascenders inside.
+func CenterTop(y, h float64, st TextStyle) float64 {
+	sc := HUDScale()
+	fontMu.Lock()
+	defer fontMu.Unlock()
+	f, k := face(st, sc)
+	m := f.Metrics()
+	asc, capH := m.HAscent/k, m.CapHeight/k
+	size := sizeOf(st)
+	base := y + (h+capH)/2
+	base = min(base, y+h-glyphBelow*size)
+	base = max(base, y+glyphAbove*size)
+	return base - asc
 }
 
 // logicalLineH is a face's line height in logical pixels (glyph scale k,

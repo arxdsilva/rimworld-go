@@ -264,5 +264,5 @@ func DrawListRow(dst *ebiten.Image, row gfx.Rect, label string, hover, selected,
 	if disabled {
 		st.Color = TextDisabled
 	}
-	gfx.Text(dst, FitText(label, st, row.W-16), float64(row.X+8), float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, FitText(label, st, row.W-16), float64(row.X+8), gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 }

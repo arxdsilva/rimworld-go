@@ -635,7 +635,7 @@ func (o *Screen) DrawOptions(screen *ebiten.Image, sw, sh int) {
 	cx := win.X + OptCtrlX
 	for _, sl := range slots {
 		r, y := rows[sl.i], sl.y
-		ty := float64(y) + (OptBtnH-gfx.LineH(gfx.Body))/2
+		ty := gfx.CenterTop(float64(y), OptBtnH, gfx.Body)
 		gfx.Text(screen, uikit.FitText(o.sh.T(r.Label), gfx.Body, OptCtrlX-contentX-8-extraRoom(r)), float64(win.X+contentX), ty, gfx.Body)
 		if r.kind != rowStep {
 			continue

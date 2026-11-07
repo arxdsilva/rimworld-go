@@ -189,7 +189,7 @@ func (w Assign) body(body gfx.Rect) {
 		if rr.Y < area.View.Y || rr.Bottom() > area.View.Bottom() {
 			continue // outside the view: no widgets
 		}
-		w.kit().Label(rr.X, rr.Y+(rr.H-float32(gfx.LineH(gfx.Body)))/2, gfx.Ellipsize(r.name, gfx.Body, float64(cols.nameW)-12), gfx.Body)
+		w.kit().Label(rr.X, float32(gfx.CenterTop(float64(rr.Y), float64(rr.H), gfx.Body)), gfx.Ellipsize(r.name, gfx.Body, float64(cols.nameW)-12), gfx.Body)
 		w.careButton(r, rr, cols) // MED-03
 		w.foodButton(r.pawn, rr, rr.X+cols.foodX)
 		w.outfitCells(r.pawn, rr, cols) // GEAR-3

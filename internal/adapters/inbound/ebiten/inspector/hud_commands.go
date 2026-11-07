@@ -334,7 +334,8 @@ func (a Commands) DrawCommandGrid(screen *ebiten.Image) {
 }
 
 // drawMoreCell draws the "more" cell: the count of the commands it stands
-// for, centred, and its caption under the cell like a command's label.
+// for, centred above its caption, which is fitted inside the cell like a
+// command's label.
 func drawMoreCell(screen *ebiten.Image, r gfx.Rect, n int, hover bool, more string) {
 	fill, border := uikit.Btn, uikit.BtnBorder
 	if hover {
@@ -342,22 +343,37 @@ func drawMoreCell(screen *ebiten.Image, r gfx.Rect, n int, hover bool, more stri
 	}
 	uikit.FillRect(screen, r, fill)
 	uikit.StrokeRect(screen, r, border)
-	cx, cy := r.Center()
-	uikit.DrawCentered(screen, "+"+strconv.Itoa(n), float64(cx), float64(cy), gfx.WithColor(gfx.Title, uikit.Accent))
-	drawCmdLabel(screen, r, []string{more}, gfx.Small)
+	ts, lines := CmdLabelLines(more, gfx.Small, float64(r.W-2*CmdLabelPad), float64(r.H))
+	top := drawCmdLabel(screen, r, lines, ts)
+	cs := gfx.WithColor(gfx.Title, uikit.Accent)
+	_, h := gfx.Measure("+", cs)
+	cy := r.Y + hudlayout.CmdInset + (top-r.Y-hudlayout.CmdInset-float32(h))/2
+	cs.Align = gfx.AlignCenter
+	gfx.Text(screen, "+"+strconv.Itoa(n), float64(r.X+r.W/2), float64(max(r.Y, cy)), cs)
 }
 
-// drawCmdLabel draws a command's label lines centred on r, the last line's
-// baseline hudlayout.CmdLabelBelow under the cell: one line straddles the
-// frame, two rise into the cell (UIS-051). It returns the first line's top.
+// drawCmdLabel draws a command's label lines centred on r, inside it: the
+// block's bottom hudlayout.CmdLabelPadB above the cell's bottom, measured as
+// the text is drawn, so it holds at every scale and text size (user,
+// 2026-11-07: text never leaves its box). It returns the block's top.
 func drawCmdLabel(screen *ebiten.Image, r gfx.Rect, lines []string, ts gfx.TextStyle) float32 {
+	if len(lines) == 0 {
+		return r.Bottom()
+	}
+	top := r.Bottom() - hudlayout.CmdLabelPadB - cmdLabelH(lines, ts)
 	step := gfx.LineStep(ts)
-	top := TextTop(r.Bottom()+hudlayout.CmdLabelBelow, ts) - float32(len(lines)-1)*step
 	ts.Align = gfx.AlignCenter
 	for i, ln := range lines {
 		gfx.Text(screen, ln, float64(r.X+r.W/2), float64(top+float32(i)*step), ts)
 	}
 	return top
+}
+
+// cmdLabelH is the height label lines take drawn in ts: the pitch between
+// lines plus one line's ascent and descent.
+func cmdLabelH(lines []string, ts gfx.TextStyle) float32 {
+	_, h := gfx.Measure(strings.Join(lines, "\n"), ts)
+	return float32(h)
 }
 
 // drawCmdCell draws one command button inside r (UIS-050, UIS-051).
@@ -380,9 +396,12 @@ func drawCmdCell(screen *ebiten.Image, c Button, r gfx.Rect, hover bool, key str
 	}
 	uikit.StrokeRect(screen, r, border)
 
-	// the label: at most two lines, anchored under the cell
-	maxW := float64(r.W - 2*CmdLabelPad)
-	ts, lines := CmdLabelLines(c.Label, maxW, c.Disabled)
+	// the label: at most two lines, inside the cell at its bottom
+	ts := gfx.Small
+	if c.Disabled {
+		ts = gfx.WithColor(ts, uikit.TextDisabled)
+	}
+	ts, lines := CmdLabelLines(c.Label, ts, float64(r.W-2*CmdLabelPad), float64(r.H))
 	labelTop := drawCmdLabel(screen, r, lines, ts)
 
 	// the icon: centred in the cell above the label
@@ -743,15 +762,12 @@ func mergeOptions(cmds []Button, members []int, run func(member int, c Button)) 
 	}, true
 }
 
-// CmdLabelLines lays out a command button's label at gfx.Small in at most
-// two lines of maxW: words wrap, the second line takes the rest, and a line
-// still too wide (one long word) ends in an ellipsis. The type never
-// shrinks (UIS-051).
-func CmdLabelLines(label string, maxW float64, disabled bool) (gfx.TextStyle, []string) {
-	ts := gfx.Small
-	if disabled {
-		ts = gfx.WithColor(ts, uikit.TextDisabled)
-	}
+// CmdLabelLines lays out a command button's label in ts in at most two
+// lines of maxW: words wrap, the second line takes the rest, and a line
+// still too wide (one long word) ends in an ellipsis. Two lines that leave
+// a cell maxH tall less than hudlayout.CmdIconMin for the icon become one
+// ellipsized line. The type never shrinks (UIS-051).
+func CmdLabelLines(label string, ts gfx.TextStyle, maxW, maxH float64) (gfx.TextStyle, []string) {
 	var lines []string
 	line := ""
 	for _, word := range strings.Fields(label) {
@@ -772,11 +788,18 @@ func CmdLabelLines(label string, maxW float64, disabled bool) (gfx.TextStyle, []
 	if len(lines) > 2 {
 		lines = []string{lines[0], strings.Join(lines[1:], " ")}
 	}
+	if len(lines) == 2 && float64(cmdLabelH(lines, ts))+CmdLabelRoom > maxH {
+		lines = []string{lines[0] + " " + lines[1]}
+	}
 	for i, ln := range lines {
 		lines[i] = gfx.Ellipsize(ln, ts, maxW)
 	}
 	return ts, lines
 }
+
+// CmdLabelRoom is the height a cell keeps beside its label: the icon's
+// inset and smallest size, the gap under it and the label's bottom pad.
+const CmdLabelRoom = hudlayout.CmdInset + hudlayout.CmdIconMin + 2 + hudlayout.CmdLabelPadB
 
 // Anchor is where command id's menu opens: above its button, else above
 // the pointer.

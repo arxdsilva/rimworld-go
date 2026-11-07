@@ -12,6 +12,7 @@ import (
 	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -384,19 +385,8 @@ func visRegions(l hudlayout.Layout) []visRegion {
 			out = append(out, r)
 		}
 	}
-	for i, c := range visCmdRegions(l) {
-		out = append(out, visRegion{fmt.Sprintf("command %d", i), c})
-	}
-	return out
-}
-
-// visCmdRegions are the command cells with the band their hanging labels
-// take under them (UIS-051, hudlayout.CmdLabelBand).
-func visCmdRegions(l hudlayout.Layout) []gfx.Rect {
-	out := make([]gfx.Rect, len(l.GridCells))
 	for i, c := range l.GridCells {
-		c.H += hudlayout.CmdLabelBand
-		out[i] = c
+		out = append(out, visRegion{fmt.Sprintf("command %d", i), c})
 	}
 	return out
 }
@@ -521,7 +511,7 @@ type visPanel struct {
 // inside its own rect).
 func visSelRegions(s *visualScene) []gfx.Rect {
 	l := s.a.hud()
-	return append([]gfx.Rect{l.Pane, l.PaneTabs, l.Expanded, l.Resources}, visCmdRegions(l)...)
+	return append([]gfx.Rect{l.Pane, l.PaneTabs, l.Expanded, l.Resources}, l.GridCells...)
 }
 
 // visPawnRegions are a selected colonist's: the selection's, plus its own
@@ -603,7 +593,7 @@ func visPanels() []visPanel {
 		visPanel{"tab_architect", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.architect") },
 			func(s *visualScene) []gfx.Rect {
 				l := s.a.hud()
-				return append([]gfx.Rect{l.ArchCats, l.ArchDesc, l.Resources}, visCmdRegions(l)...)
+				return append([]gfx.Rect{l.ArchCats, l.ArchDesc, l.Resources}, l.GridCells...)
 			}},
 		// the pause overlay, a letter and the options screens: no single
 		// region, the screen bounds them
@@ -807,5 +797,133 @@ func TestVisualCheckersCatchTheBugs(t *testing.T) {
 	off := []gfx.TraceEvent{{Kind: "text", Text: "x", X: 1270, Y: 10, W: 30, H: 15, Pass: "hud"}, {Kind: "fill", X: 0, Y: 660, W: 1280, H: 61, Pass: "hud"}}
 	if bad := visCheckOnScreen(off, 1280, 720); len(bad) != 1 {
 		t.Errorf("a text past the right edge = %q, want one problem (a fill may bleed)", bad)
+	}
+}
+
+// visButtonTextExempt are button ids (prefixes) whose text may leave the
+// button, each with its reason. The list only shrinks: a new entry needs a
+// reason a reviewer accepts, and the fix that removes it deletes the line.
+var visButtonTextExempt = map[string]string{}
+
+// visButtonBoxes are the frame's buttons in physical pixels: the widget
+// kit's declarations (only the top modal's while one is open; not a scroll
+// view, not a bare hover tip) and, on the colony, every chrome button and
+// command cell.
+func visButtonBoxes(s *visualScene, sc float64) map[string]visBox {
+	a := s.a
+	out := map[string]visBox{}
+	modal := len(a.uiSt().Modals) > 0
+	for _, w := range a.uiSt().Cur {
+		if w.Wheel || w.R.Empty() || (modal && !strings.HasPrefix(w.ID, "modal.")) {
+			continue // a scroll view is a container, not a button
+		}
+		if w.Click == nil && !w.Focusable && w.Label == "" {
+			continue // a hover tip's region: nothing drawn marks its edge
+		}
+		out[w.ID] = visScaled(w.R, sc)
+	}
+	if modal || a.nav.screen() != ports.ScreenColony || a.nav.overlay() != overlayNone {
+		return out
+	}
+	for _, b := range a.colonyButtons(a.sw, a.sh) {
+		out[b.ID] = visScaled(gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, sc)
+	}
+	return out
+}
+
+// Noto Sans in em, from the baseline: the line box's ascent and descent,
+// and how far the glyphs reach (ascenders, descenders; accents above).
+const (
+	visNotoAscent  = 1.069
+	visNotoDescent = 0.293
+	visGlyphAbove  = 0.76
+	visGlyphBelow  = 0.24
+)
+
+// visGlyphs is a text run's box cut to its glyphs: the first line from its
+// ascenders, the last to its descenders, not the line box's padding.
+func visGlyphs(e gfx.TraceEvent) gfx.TraceEvent {
+	if e.Kind != "text" || e.Size <= 0 {
+		return e
+	}
+	top, bottom := (visNotoAscent-visGlyphAbove)*e.Size, (visNotoDescent-visGlyphBelow)*e.Size
+	e.Y += top
+	e.H -= top + bottom
+	return e
+}
+
+// visCheckButtonText: a text run whose centre lies in a button has its
+// glyphs inside the smallest button that holds its centre (tolerance 0.5
+// physical px).
+func visCheckButtonText(ev []gfx.TraceEvent, boxes map[string]visBox) []string {
+	var bad []string
+	for _, e := range ev {
+		if e.Kind != "text" {
+			continue
+		}
+		e, shown := visVisible(visGlyphs(e))
+		if !shown {
+			continue
+		}
+		cx, cy := float64(e.X+e.W/2), float64(e.Y+e.H/2)
+		id, best := "", math.Inf(1)
+		for k, b := range boxes {
+			if cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1 {
+				if area := (b.x1 - b.x0) * (b.y1 - b.y0); area < best {
+					id, best = k, area
+				}
+			}
+		}
+		if id == "" || visExempt(id) {
+			continue
+		}
+		if b := boxes[id]; !visInside(e, b.x0, b.y0, b.x1, b.y1, 0.5) {
+			bad = append(bad, fmt.Sprintf("%s leaves its button %s %v", e, id, b))
+		}
+	}
+	sort.Strings(bad)
+	return bad
+}
+
+func visExempt(id string) bool {
+	for p := range visButtonTextExempt {
+		if strings.HasPrefix(id, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestButtonTextStaysInsideItsButton opens every visual panel at scales 1
+// and 2 and with the larger small text (OPT-009), and checks that no
+// button's text leaves the button (user, 2026-11-07: text never leaves its
+// box).
+func TestButtonTextStaysInsideItsButton(t *testing.T) {
+	art := visArt(t)
+	type cfg struct {
+		dev, ui float64
+		larger  bool
+	}
+	cfgs := []cfg{{1, 1, false}, {2, 1, false}, {1, 1.5, false}, {1, 1, true}}
+	scenes := map[cfg]*visualScene{}
+	for _, c := range cfgs {
+		scenes[c] = newVisualScene(t, art, true)
+	}
+	t.Cleanup(func() { gfx.SetLargerSmall(false) })
+	for _, p := range visPanels() {
+		t.Run(p.name, func(t *testing.T) {
+			for _, c := range cfgs {
+				s := scenes[c]
+				s.a.settings.Interface.LargerSmall = c.larger
+				screen := s.configure(t, c.dev, c.ui, 1)
+				p.open(t, s)
+				s.update(t)
+				ev := visPass(s.frame(screen), "hud")
+				sc := c.dev * c.ui
+				visReport(t, fmt.Sprintf("scale %g larger %v", sc, c.larger), visCheckButtonText(ev, visButtonBoxes(s, sc)))
+				s.closeAll(t)
+				s.update(t)
+			}
+		})
 	}
 }

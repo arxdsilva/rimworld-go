@@ -386,12 +386,14 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 	gfx.Text(screen, title, float64(r.X)+pad, float64(r.Y)+pad, gfx.WithColor(gfx.Label, uikit.Heading))
 	hintX := float64(r.X) + pad + float64(gfx.TextW(title, gfx.Label)) + 16
 	gfx.Text(screen, gfx.Ellipsize(w.hint(), gfx.Small, float64(r.X+r.W)-pad-hintX),
-		hintX, float64(r.Y)+pad+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
+		hintX, gfx.CenterTop(float64(r.Y)+pad, gfx.LineH(gfx.Label), gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
 	hx := int(r.X) + hudlayout.WindowPad + WorkNameW
 	for i := range WorkColumns {
 		slot := workSlot(i)
-		y := float64(r.Y) + workHeadY + float64(slot%2)*gfx.LineH(gfx.Small) + 4 // staggered rows
-		gfx.Text(screen, w.colName(i), float64(hx+slot*workCellW)+float64(workCellW-4)/2, y, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter})
+		st := gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter}
+		band := float64(workHeadH) / 2 // staggered rows, each centred in half the header
+		y := gfx.CenterTop(float64(r.Y)+workHeadY+float64(slot%2)*band, band, st)
+		gfx.Text(screen, w.colName(i), float64(hx+slot*workCellW)+float64(workCellW-4)/2, y, st)
 	}
 	pawns := w.sh.Pawns()
 	for row, p := range pawns {
@@ -399,7 +401,7 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 			break
 		}
 		y := int(r.Y) + workTop + row*workRowH
-		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, WorkNameW-8), float64(r.X)+pad, float64(y)+(workCellH-gfx.LineH(gfx.Body))/2, gfx.Body)
+		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, WorkNameW-8), float64(r.X)+pad, gfx.CenterTop(float64(y), workCellH, gfx.Body), gfx.Body)
 	}
 	mx, my := w.sh.Cursor()
 	drawButtons(screen, w.cellButtons(), mx, my)
@@ -423,7 +425,7 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 					uikit.LerpRGBA(uikit.SliderFill, uikit.BtnSelected, float64(pr-1)/3), false)
 			}
 			w.drawSkill(screen, p, col, cell)
-			gfx.Text(screen, v, float64(cell.X+cell.W/2), float64(cell.Y)+(float64(cell.H)-gfx.LineH(gfx.Body))/2, gfx.TextStyle{Size: gfx.Body.Size, Align: gfx.AlignCenter})
+			gfx.Text(screen, v, float64(cell.X+cell.W/2), gfx.CenterTop(float64(cell.Y), float64(cell.H), gfx.Body), gfx.TextStyle{Size: gfx.Body.Size, Align: gfx.AlignCenter})
 		}
 	}
 }
@@ -437,7 +439,7 @@ func (w Work) drawSkill(screen *ebiten.Image, p game.PawnView, col int, cell gfx
 	sk := WorkColSkill[col].Skill
 	ls := gfx.Small
 	ls.Color = uikit.TextDim
-	gfx.Text(screen, strconv.Itoa(int(p.SkillLv[sk])), float64(cell.X+3), float64(cell.Y)+(float64(cell.H)-gfx.LineH(ls))/2, ls)
+	gfx.Text(screen, strconv.Itoa(int(p.SkillLv[sk])), float64(cell.X+3), gfx.CenterTop(float64(cell.Y), float64(cell.H), ls), ls)
 	if ps := int(p.Passion[sk]); ps > 0 {
 		w.sh.DrawPassion(screen, ps, float64(cell.Right()-13), float64(cell.Y)+(float64(cell.H)-10)/2, 10, ls, float64(cell.Y)+3)
 	}

@@ -641,7 +641,7 @@ func (w landingPage) mapSizeWarnings(list gfx.Rect, labels, notes []string) {
 			if room <= 0 {
 				continue
 			}
-			gfx.Text(dst, uikit.FitText(note, st, room), float64(row.Right()-4), float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+			gfx.Text(dst, uikit.FitText(note, st, room), float64(row.Right()-4), gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 		}
 	})
 }

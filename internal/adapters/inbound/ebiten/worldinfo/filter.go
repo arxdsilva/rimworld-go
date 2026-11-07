@@ -180,7 +180,7 @@ func (f *FilterPanel) stepper(k *uikit.Kit, id string, x, y float32, v *int, u u
 	k.Queue(func(dst *ebiten.Image) {
 		st := gfx.Label
 		st.Align = gfx.AlignCenter
-		gfx.Text(dst, text, float64(x+bw+27), float64(y)+(float64(h)-gfx.LineH(st))/2, st)
+		gfx.Text(dst, text, float64(x+bw+27), gfx.CenterTop(float64(y), float64(h), st), st)
 	})
 }
 

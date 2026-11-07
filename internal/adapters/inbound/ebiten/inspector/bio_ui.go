@@ -261,7 +261,7 @@ func (a Tabs) bioSkills(r gfx.Rect, b game.BioView, week [skill.NumSkills]int, r
 		hr := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: bioHdrH}
 		uikit.FillRect(dst, hr, uikit.Btn)
 		uikit.StrokeRect(dst, hr, uikit.BtnBorder)
-		hy := float64(r.Y) + (bioHdrH-gfx.LineH(hs))/2
+		hy := gfx.CenterTop(float64(r.Y), bioHdrH, hs)
 		gfx.Text(dst, a.shell.T("Skill"), float64(r.X+8), hy, hs)
 		gfx.Text(dst, a.shell.T("Passion"), float64(r.X+passX-14), hy, hs)
 		lh := hs
@@ -282,7 +282,7 @@ func (a Tabs) bioSkills(r gfx.Rect, b game.BioView, week [skill.NumSkills]int, r
 			if s.Incapable {
 				st.Color = uikit.TextDisabled
 			}
-			ty := float64(row.Y) + (float64(row.H)-gfx.LineH(st))/2
+			ty := gfx.CenterTop(float64(row.Y), float64(row.H), st)
 			if img := a.env().Art.Image("ui_icon/skill_"+s.Key, color.NRGBA{}); img != nil {
 				gfx.Icon(body, img, float64(row.X+6), float64(row.Y)+(float64(row.H)-12)/2, 12)
 			}

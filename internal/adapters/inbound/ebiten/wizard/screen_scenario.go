@@ -306,7 +306,7 @@ func (w scenarioPage) paintScenarioRow(dst *ebiten.Image, view gfx.Rect, row sce
 	case RowHeader:
 		st := gfx.Label
 		st.Color = uikit.Heading
-		gfx.Text(dst, row.Text, float64(r.X+10), float64(r.Y)+(float64(r.H)-gfx.LineH(st))/2+2, st)
+		gfx.Text(dst, row.Text, float64(r.X+10), gfx.CenterTop(float64(r.Y), float64(r.H), st)+2, st)
 		uikit.FillRect(dst, gfx.Rect{X: r.X + 8, Y: r.Bottom() - 3, W: r.W - 16, H: 1}, uikit.PanelBorder)
 	case RowNote:
 		st := uikit.DimText()

@@ -361,7 +361,7 @@ func (w *Flow) ngFooter(footer gfx.Rect, label, nextID string, o uikit.BtnOpts, 
 		onNext()
 	}
 	if o.Disabled && o.Reason != "" {
-		w.kit().Label(uikit.FooterBack(footer).Right()+16, footer.Y+(footer.H-float32(gfx.LineH(gfx.Body)))/2, o.Reason, uikit.DimText())
+		w.kit().Label(uikit.FooterBack(footer).Right()+16, float32(gfx.CenterTop(float64(footer.Y), float64(footer.H), gfx.Body)), o.Reason, uikit.DimText())
 	}
 }
 
@@ -382,7 +382,7 @@ func (w *Flow) drawNGFrame(screen *ebiten.Image, sw, sh int, title string) {
 	uikit.DrawPanel(screen, frame.X, frame.Y, frame.W, frame.H)
 	st := gfx.Title
 	st.Color = uikit.Heading
-	gfx.Text(screen, title, float64(titleR.X+uikit.DialogPad), float64(titleR.Y)+(float64(titleR.H)-gfx.LineH(st))/2, st)
+	gfx.Text(screen, title, float64(titleR.X+uikit.DialogPad), gfx.CenterTop(float64(titleR.Y), float64(titleR.H), st), st)
 	line := uikit.PanelBorder
 	uikit.FillRect(screen, gfx.Rect{X: frame.X, Y: titleR.Bottom() - 1, W: frame.W, H: 1}, line)
 	uikit.FillRect(screen, gfx.Rect{X: frame.X, Y: footer.Y, W: frame.W, H: 1}, line)

@@ -21,7 +21,7 @@ func DrawProgress(dst *ebiten.Image, r gfx.Rect, label string, frac float64, pha
 	if phase != "" {
 		ps := gfx.Small
 		ps.Color, ps.Align = TextDim, gfx.AlignRight
-		gfx.Text(dst, FitText(phase, gfx.Small, r.W*0.6), float64(r.Right()), float64(r.Y)+(float64(lh)-gfx.LineH(ps))/2, ps)
+		gfx.Text(dst, FitText(phase, gfx.Small, r.W*0.6), float64(r.Right()), gfx.CenterTop(float64(r.Y), float64(lh), ps), ps)
 	}
 	bar := gfx.Rect{X: r.X, Y: r.Y + lh + 4, W: r.W, H: min(progressBarH, max(8, r.H-lh-4))}
 	FillRect(dst, bar, SliderTrack)
@@ -33,5 +33,5 @@ func DrawProgress(dst *ebiten.Image, r gfx.Rect, label string, frac float64, pha
 		ps.Color = Field
 	}
 	cx, cy := bar.Center()
-	gfx.Text(dst, fmt.Sprintf("%d%%", int(math.Round(frac*100))), float64(cx), float64(cy)-gfx.LineH(ps)/2, ps)
+	gfx.Text(dst, fmt.Sprintf("%d%%", int(math.Round(frac*100))), float64(cx), gfx.CenterTop(float64(cy)-gfx.LineH(ps)/2, gfx.LineH(ps), ps), ps)
 }

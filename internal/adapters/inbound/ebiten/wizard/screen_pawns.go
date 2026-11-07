@@ -172,7 +172,7 @@ func (w pawnsPage) pawnsFooter(ng *Draft, footer gfx.Rect) {
 	if reason != "" {
 		st := gfx.Body
 		st.Color = uikit.Warning
-		w.kit().Label(uikit.FooterNext(footer).X-gfx.TextW(reason, st)-14, footer.Y+(footer.H-float32(gfx.LineH(st)))/2, reason, st)
+		w.kit().Label(uikit.FooterNext(footer).X-gfx.TextW(reason, st)-14, float32(gfx.CenterTop(float64(footer.Y), float64(footer.H), st)), reason, st)
 	}
 	if why := w.sh.Env().SessionErr; why != "" {
 		st := gfx.Body
@@ -566,7 +566,7 @@ func (w pawnsPage) traitChips(x, y, width float32, v game.CandidateView) float32
 			uikit.StrokeRect(dst, cr, uikit.BtnBorder)
 			st := gfx.Body
 			st.Align = gfx.AlignCenter
-			gfx.Text(dst, t.Label, float64(cr.X+cr.W/2), float64(cr.Y)+(float64(cr.H)-gfx.LineH(st))/2, st)
+			gfx.Text(dst, t.Label, float64(cr.X+cr.W/2), gfx.CenterTop(float64(cr.Y), float64(cr.H), st), st)
 		})
 		cx += cw + 6
 	}
@@ -621,9 +621,9 @@ func (w pawnsPage) skillsTable(r gfx.Rect, v game.CandidateView, rowH float32) {
 		hs.Color = uikit.Heading
 		uikit.FillRect(dst, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uikit.Btn)
 		uikit.StrokeRect(dst, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uikit.BtnBorder)
-		gfx.Text(dst, w.sh.T("Skill"), float64(r.X+8), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
-		gfx.Text(dst, w.sh.T("Passion"), float64(r.X+160), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
-		gfx.Text(dst, w.sh.T("Level"), float64(r.X+240), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
+		gfx.Text(dst, w.sh.T("Skill"), float64(r.X+8), gfx.CenterTop(float64(r.Y), pawnSkillHdrH, hs), hs)
+		gfx.Text(dst, w.sh.T("Passion"), float64(r.X+160), gfx.CenterTop(float64(r.Y), pawnSkillHdrH, hs), hs)
+		gfx.Text(dst, w.sh.T("Level"), float64(r.X+240), gfx.CenterTop(float64(r.Y), pawnSkillHdrH, hs), hs)
 		for i, s := range v.Skills {
 			row := gfx.Rect{X: r.X, Y: r.Y + pawnSkillHdrH + float32(i)*rowH, W: r.W, H: rowH}
 			if i%2 == 1 {
@@ -633,7 +633,7 @@ func (w pawnsPage) skillsTable(r gfx.Rect, v game.CandidateView, rowH float32) {
 			if s.Incapable {
 				st.Color = uikit.TextDisabled
 			}
-			ty := float64(row.Y) + (float64(row.H)-gfx.LineH(st))/2
+			ty := gfx.CenterTop(float64(row.Y), float64(row.H), st)
 			gfx.Text(dst, s.Label, float64(row.X+8), ty, st)
 			if !s.Incapable && s.Passion > 0 {
 				key := "ui_icon/passion_minor"
@@ -686,7 +686,7 @@ func (w pawnsPage) pawnsTeam(ng *Draft, r gfx.Rect) {
 		b := b
 		u.Queue(func(dst *ebiten.Image) {
 			st := gfx.Body
-			ty := float64(row.Y) + (rowH-gfx.LineH(st))/2
+			ty := gfx.CenterTop(float64(row.Y), rowH, st)
 			gfx.Text(dst, b.Label, float64(row.X+2), ty, st)
 			lv := "—"
 			if b.Who != "" {

@@ -131,7 +131,7 @@ func (c *Controller) DrawFloat(screen *ebiten.Image) {
 			gfx.Icon(screen, c.sh.Icon(ic), float64(b.X)+floatPadL, float64(b.Y)+(float64(b.H)-hudlayout.FloatIcon)/2, hudlayout.FloatIcon)
 			tx = float64(b.X) + floatTextIcon
 		}
-		gfx.Text(screen, gfx.Ellipsize(b.Label, ts, float64(b.X+b.W)-tx-6), tx, float64(b.Y)+(float64(b.H)-gfx.LineH(ts))/2, ts)
+		gfx.Text(screen, gfx.Ellipsize(b.Label, ts, float64(b.X+b.W)-tx-6), tx, gfx.CenterTop(float64(b.Y), float64(b.H), ts), ts)
 	}
 }
 

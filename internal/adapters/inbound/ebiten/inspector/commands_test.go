@@ -9,12 +9,27 @@ import (
 )
 
 // A command label is drawn at gfx.Small and never shrinks (UIS-051): words
-// wrap onto at most two lines, a word is never broken, and a line still too
-// wide for the cell ends in an ellipsis.
+// wrap onto at most two lines, a word is never broken, a line still too
+// wide for the cell ends in an ellipsis, and the lines leave the icon its
+// smallest size inside the cell, with the larger small text (OPT-009) too.
 func TestCommandLabelWrapsThenEllipsizes(t *testing.T) {
-	maxW := float64(hudlayout.CmdCell - 2*CmdLabelPad)
-	for _, label := range []string{"Deconstruct", "Mark for hauling", "Cancel blueprint", "Draft", "Supercalifragilisticexpialidocious", "Set the plant to grow in this zone"} {
-		st, lines := CmdLabelLines(label, maxW, false)
+	// serial: it sets the larger small text
+	old := gfx.LargerSmall()
+	t.Cleanup(func() { gfx.SetLargerSmall(old) })
+	for _, larger := range []bool{false, true} {
+		gfx.SetLargerSmall(larger)
+		checkCmdLabels(t, larger)
+	}
+}
+
+func checkCmdLabels(t *testing.T, larger bool) {
+	t.Helper()
+	maxW, maxH := float64(hudlayout.CmdCell-2*CmdLabelPad), float64(hudlayout.CmdCell)
+	for _, label := range []string{"Deconstruct", "Mark for hauling", "Cancel blueprint", "Draft", "Butcher table", "Supercalifragilisticexpialidocious", "Set the plant to grow in this zone"} {
+		st, lines := CmdLabelLines(label, gfx.Small, maxW, maxH)
+		if h := float64(cmdLabelH(lines, st)) + CmdLabelRoom; h > maxH+0.01 {
+			t.Errorf("larger %v, %q: lines %q need %.1f of a %.0f cell", larger, label, lines, h, maxH)
+		}
 		if st.Size != gfx.Small.Size {
 			t.Errorf("%q: drawn at %v, want gfx.Small %v", label, st.Size, gfx.Small.Size)
 		}
@@ -35,8 +50,12 @@ func TestCommandLabelWrapsThenEllipsizes(t *testing.T) {
 			t.Errorf("%q: lines %q lose text without an ellipsis", label, lines)
 		}
 	}
-	if _, lines := CmdLabelLines("Supercalifragilisticexpialidocious", maxW, false); len(lines) != 1 || !strings.HasSuffix(lines[0], "…") {
+	if _, lines := CmdLabelLines("Supercalifragilisticexpialidocious", gfx.Small, maxW, maxH); len(lines) != 1 || !strings.HasSuffix(lines[0], "…") {
 		t.Errorf("one long word ellipsizes on one line, got %q", lines)
+	}
+	// a cell too short for two lines and the smallest icon gets one line
+	if _, lines := CmdLabelLines("Butcher table", gfx.Small, maxW, CmdLabelRoom+float64(cmdLabelH([]string{"a"}, gfx.Small))); len(lines) != 1 {
+		t.Errorf("a short cell keeps one line, got %q", lines)
 	}
 }
 

@@ -118,8 +118,8 @@ func (w History) body(body gfx.Rect) {
 			if len(r.Pawns) > 0 {
 				st.Color = uikit.Heading
 			}
-			ty := float64(row.Y) + (historyRowH-gfx.LineH(st))/2
-			gfx.Text(sub, r.When, float64(row.X+6), float64(row.Y)+(historyRowH-gfx.LineH(dim))/2, dim)
+			ty := gfx.CenterTop(float64(row.Y), historyRowH, st)
+			gfx.Text(sub, r.When, float64(row.X+6), gfx.CenterTop(float64(row.Y), historyRowH, dim), dim)
 			gfx.Text(sub, uikit.FitText(r.Text, st, row.W-historyWhenW-10), float64(row.X+historyWhenW), ty, st)
 		}
 	})

@@ -90,31 +90,6 @@ func TestBarStepsMatchReference(t *testing.T) {
 	}
 }
 
-// TestCommandLabelsClearTheNextRow: a cell's hanging label (CmdLabelBand,
-// UIS-051) never lies on the row under it or on a panel beside the grid.
-func TestCommandLabelsClearTheNextRow(t *testing.T) {
-	t.Parallel()
-	for _, in := range []Inputs{
-		{Colonists: 3, PaneShown: true, Commands: 30, GlobalH: 60},
-		{Colonists: 3, PaneShown: true, Commands: 30, GlobalH: 60, ExpandedW: 460, ExpandedH: 450},
-	} {
-		l := Compute(1280, 720, in)
-		for i, a := range l.GridCells {
-			band := gfx.Rect{X: a.X, Y: a.Bottom(), W: a.W, H: CmdLabelBand}
-			for j, b := range l.GridCells {
-				if i != j && !band.Intersect(b).Empty() {
-					t.Errorf("%+v: cell %d's label band %+v lies on cell %d %+v", in, i, band, j, b)
-				}
-			}
-			for _, p := range []gfx.Rect{l.Expanded, l.ArchDesc, l.Card, l.Pane} {
-				if !p.Empty() && !band.Intersect(p).Empty() {
-					t.Errorf("%+v: cell %d's label band %+v lies on %+v", in, i, band, p)
-				}
-			}
-		}
-	}
-}
-
 // TestCommandsNeverDropped (UIS-052): more commands than cells keep every
 // one reachable: the last cell stands for the rest.
 func TestCommandsNeverDropped(t *testing.T) {
@@ -161,7 +136,6 @@ func TestMetricsMatchReference(t *testing.T) {
 		{"UIS-050 grid gap", CmdGridGap, 14},
 		{"UIS-050 grid bottom", CmdBottom, 16},
 		{"UIS-051 hotkey inset", CmdInset, 6},
-		{"UIS-051 label below", CmdLabelBelow, 6},
 		{"UIS-051 icon", CmdIconMax, 40},
 		{"UIS-053 category button width", ArchCatW, 100},
 		{"UIS-053 category button height", ArchCatH, 32},

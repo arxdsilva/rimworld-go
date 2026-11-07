@@ -89,6 +89,6 @@ func (c *Chrome) DrawToasts(screen *ebiten.Image, sw, sh int) {
 	ts := c.LiveToasts()
 	for j, r := range c.ToastRects(sw, sh) {
 		uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
-		gfx.Text(screen, ts[len(ts)-1-j].Text, float64(r.X+toastPadX), float64(r.Y)+(toastH-gfx.LineH(gfx.Body))/2, gfx.Body)
+		gfx.Text(screen, ts[len(ts)-1-j].Text, float64(r.X+toastPadX), gfx.CenterTop(float64(r.Y), toastH, gfx.Body), gfx.Body)
 	}
 }

@@ -142,7 +142,7 @@ func (a *Areas) body(body gfx.Rect, names map[int]*string) {
 		} else if k.Edit.ID != fid {
 			*v = ar.Name
 		}
-		k.Label(fr.Right()+8, rr.Y+(rr.H-float32(gfx.LineH(gfx.Small)))/2, a.sh.Tf("%d cells", ar.Cells), gfx.WithColor(gfx.Small, uikit.TextDim))
+		k.Label(fr.Right()+8, float32(gfx.CenterTop(float64(rr.Y), float64(rr.H), gfx.Small)), a.sh.Tf("%d cells", ar.Cells), gfx.WithColor(gfx.Small, uikit.TextDim))
 		if k.Button(fmt.Sprintf("areas.invert.%d", id), gfx.Rect{X: rr.Right() - 86, Y: rr.Y, W: 56, H: rr.H}, a.sh.T("Invert"), uikit.BtnOpts{
 			Tip: a.sh.T("Invert\nSwap the area's tiles: painted become empty and the rest becomes painted.")}) {
 			a.sh.Enqueue(command.Command{Kind: command.InvertArea, Index: id})

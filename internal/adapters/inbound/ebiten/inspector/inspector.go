@@ -131,7 +131,7 @@ func drawNeedBar(screen *ebiten.Image, x, y, w, h, pct int, label string) {
 	if pct > 100 {
 		pct = 100
 	}
-	gfx.Text(screen, fmt.Sprintf("%s  %d", label, pct), float64(x), float64(y)+float64(h)/2-gfx.LineH(gfx.Body)/2, gfx.Body)
+	gfx.Text(screen, fmt.Sprintf("%s  %d", label, pct), float64(x), gfx.CenterTop(float64(y), float64(h), gfx.Body), gfx.Body)
 	fill := uikit.SliderFill
 	switch label {
 	case "mood":

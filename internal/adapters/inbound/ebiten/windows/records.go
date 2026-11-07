@@ -62,7 +62,7 @@ func (w History) recordsList(body gfx.Rect) {
 			if i%2 == 1 {
 				uikit.FillRect(sub, gfx.Rect{X: area.View.X, Y: y, W: area.View.W, H: historyRowH}, rowStripe)
 			}
-			ty := float64(y) + float64(historyRowH-gfx.LineH(st))/2
+			ty := gfx.CenterTop(float64(y), float64(historyRowH), st)
 			gfx.Text(sub, uikit.FitText(a, st, area.View.W-300), float64(area.View.X+6), ty, st)
 			gfx.Text(sub, b, float64(area.View.X+area.View.W-260), ty, st)
 			gfx.Text(sub, c, float64(area.View.X+area.View.W-140), ty, st)

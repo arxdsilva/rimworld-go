@@ -29,12 +29,20 @@ type TraceEvent struct {
 	// Clip is the destination's bounds (physical pixels): a draw into a
 	// clipped sub-image (ClipTo) shows only inside it. Zero: not known.
 	Clip image.Rectangle
+	// Size is a text run's face size in physical pixels (0 for other
+	// kinds): with it a test can tell the glyphs from the line box.
+	Size float32
 }
 
 // emitTrace reports one event drawn into dst to cur.drawTrace (callers check
 // it is set).
 func emitTrace(dst *ebiten.Image, kind, txt string, x, y, w, h float32) {
-	e := TraceEvent{Kind: kind, Text: txt, X: x, Y: y, W: w, H: h, Pass: cur.tracePass, Via: cur.traceVia}
+	emitEvent(dst, TraceEvent{Kind: kind, Text: txt, X: x, Y: y, W: w, H: h})
+}
+
+// emitEvent reports e, drawn into dst, with the pass, route and clip.
+func emitEvent(dst *ebiten.Image, e TraceEvent) {
+	e.Pass, e.Via = cur.tracePass, cur.traceVia
 	if dst != nil {
 		e.Clip = dst.Bounds()
 	}

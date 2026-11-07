@@ -349,7 +349,7 @@ func (a Animal) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, 
 	}
 	y += float64(2*gfx.LineStep(gfx.Small)) + 8
 	for _, t := range animalTrainable(an) {
-		gfx.Text(screen, t.Label, x, y+(animalTrainRowH-gfx.LineH(gfx.Body))/2, gfx.Body)
+		gfx.Text(screen, t.Label, x, gfx.CenterTop(y, animalTrainRowH, gfx.Body), gfx.Body)
 		bx, by := float32(x)+animalTrainLblW, float32(y)+(animalTrainRowH-animalTrainBarH)/2
 		uikit.FillRect(screen, gfx.Rect{X: bx, Y: by, W: animalTrainBarW, H: animalTrainBarH}, uikit.ScrollTrack)
 		if t.Needed > 0 {
@@ -359,7 +359,7 @@ func (a Animal) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, 
 			}
 			uikit.FillRect(screen, gfx.Rect{X: bx, Y: by, W: animalTrainBarW * float32(min(t.Steps, t.Needed)) / float32(t.Needed), H: animalTrainBarH}, fill)
 		}
-		gfx.Text(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(a.shell, t)), float64(bx)+animalTrainBarW+10, y+(animalTrainRowH-gfx.LineH(gfx.Small))/2, dim)
+		gfx.Text(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(a.shell, t)), float64(bx)+animalTrainBarW+10, gfx.CenterTop(y, animalTrainRowH, gfx.Small), dim)
 		y += animalTrainRowH
 	}
 }

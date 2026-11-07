@@ -56,7 +56,8 @@ func DrawRoute(screen *ebiten.Image, tile float64, p game.PawnView, wx, wy float
 			label = strconv.Itoa(n)
 		}
 		k := 1 / gfx.UIScale() // sx, sy are physical (world); text is logical
-		gfx.Text(screen, label, float64(sx)*k, float64(sy)*k-gfx.LineH(gfx.Small)/2, gfx.TextStyle{Size: gfx.Small.Size, Bold: true, Align: gfx.AlignCenter})
+		rs := gfx.TextStyle{Size: gfx.Small.Size, Bold: true, Align: gfx.AlignCenter}
+		gfx.Text(screen, label, float64(sx)*k, gfx.CenterTop(float64(sy)*k-gfx.LineH(rs)/2, gfx.LineH(rs), rs), rs)
 	}
 }
 

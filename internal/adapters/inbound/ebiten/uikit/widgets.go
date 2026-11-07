@@ -308,13 +308,13 @@ func drawButtonLabel(dst *ebiten.Image, label string, b Button) {
 	st := gfx.Body
 	_, _, c := ButtonColors(b, false)
 	st.Color = c
-	gfx.Text(dst, label, x, float64(b.Y)+(float64(b.H)-gfx.LineH(gfx.Body))/2+1, st)
+	gfx.Text(dst, label, x, gfx.CenterTop(float64(b.Y), float64(b.H), gfx.Body), st)
 }
 
 // DrawCentered prints s in st centred on (cx, cy).
 func DrawCentered(dst *ebiten.Image, s string, cx, cy float64, st gfx.TextStyle) {
 	st.Align = gfx.AlignCenter
-	gfx.Text(dst, s, cx, cy-gfx.LineH(st)/2+1, st)
+	gfx.Text(dst, s, cx, gfx.CenterTop(cy-gfx.LineH(st)/2, gfx.LineH(st), st), st)
 }
 
 // DrawLabelClip is DrawLabel cut with an ellipsis to maxW pixels.

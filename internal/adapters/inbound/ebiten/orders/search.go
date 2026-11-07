@@ -251,7 +251,7 @@ func (c *Controller) DrawSearch(screen *ebiten.Image, sw int) {
 	for len(query) > 1 && gfx.TextW(c.sh.Tf("Search: %s", string(query)+cursor), gfx.Body) > r.W-28 {
 		query = query[1:] // keep the end of a long query, where the player is typing
 	}
-	gfx.Text(screen, c.sh.Tf("Search: %s", string(query)+cursor), float64(r.X)+14, float64(r.Y)+8+(24-gfx.LineH(gfx.Body))/2, gfx.Body)
+	gfx.Text(screen, c.sh.Tf("Search: %s", string(query)+cursor), float64(r.X)+14, gfx.CenterTop(float64(r.Y)+8, 24, gfx.Body), gfx.Body)
 	hits := c.SearchHits()
 	if len(hits) == 0 {
 		msg := c.sh.T("Type a name, species, item or building")
@@ -274,10 +274,10 @@ func (c *Controller) DrawSearch(screen *ebiten.Image, sw int) {
 		}
 		gfx.FillRect(screen, b.X, b.Y, b.W, b.H, fill, false)
 		kind := hits[i].Kind
-		ty := float64(b.Y) + (float64(b.H)-gfx.LineH(gfx.Body))/2
+		ty := gfx.CenterTop(float64(b.Y), float64(b.H), gfx.Body)
 		kw := float64(gfx.TextW(kind, gfx.Small))
 		gfx.Text(screen, gfx.Ellipsize(hits[i].Label, gfx.Body, float64(b.W)-kw-26), float64(b.X)+6, ty, gfx.Body)
-		gfx.Text(screen, kind, float64(b.X+b.W)-8, float64(b.Y)+(float64(b.H)-gfx.LineH(gfx.Small))/2, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignRight})
+		gfx.Text(screen, kind, float64(b.X+b.W)-8, gfx.CenterTop(float64(b.Y), float64(b.H), gfx.Small), gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignRight})
 	}
 }
 

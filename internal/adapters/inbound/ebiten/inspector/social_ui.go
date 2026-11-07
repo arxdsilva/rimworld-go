@@ -175,8 +175,8 @@ func paintRelationRow(tr lang.Tr, dst *ebiten.Image, row gfx.Rect, r game.Relati
 	)
 	small := gfx.Small
 	small.Color = uikit.TextDim
-	ty := float64(row.Y) + (float64(row.H)-gfx.LineH(gfx.Body))/2
-	sy := float64(row.Y) + (float64(row.H)-gfx.LineH(small))/2
+	ty := gfx.CenterTop(float64(row.Y), float64(row.H), gfx.Body)
+	sy := gfx.CenterTop(float64(row.Y), float64(row.H), small)
 	gfx.Text(dst, uikit.FitText(r.Label, small, labelW-6), float64(row.X+4), sy, small)
 	nameW := row.W - labelW - tagW - valW
 	nm := gfx.Body
@@ -190,7 +190,7 @@ func paintRelationRow(tr lang.Tr, dst *ebiten.Image, row gfx.Rect, r game.Relati
 	big := gfx.Label
 	big.Color = OpinionColor(r.OpinionTo)
 	big.Align = gfx.AlignRight
-	gfx.Text(dst, fmt.Sprintf("%+d", r.OpinionTo), float64(row.Right()-48), float64(row.Y)+(float64(row.H)-gfx.LineH(big))/2, big)
+	gfx.Text(dst, fmt.Sprintf("%+d", r.OpinionTo), float64(row.Right()-48), gfx.CenterTop(float64(row.Y), float64(row.H), big), big)
 	sm := small
 	sm.Color = OpinionColor(r.OpinionFrom)
 	sm.Align = gfx.AlignRight
@@ -224,7 +224,7 @@ func (a Tabs) socialLog(r gfx.Rect, log []game.SocialLogLineView) {
 					gfx.Icon(sub, img, x, float64(y)+1, 14)
 				}
 			}
-			gfx.Text(sub, uikit.FitText(l.Text, st, area.View.W-20), x+18, float64(y)+(socialLogRowH-gfx.LineH(st))/2, st)
+			gfx.Text(sub, uikit.FitText(l.Text, st, area.View.W-20), x+18, gfx.CenterTop(float64(y), socialLogRowH, st), st)
 		}
 	})
 }

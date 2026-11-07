@@ -206,7 +206,7 @@ func (a Tabs) healthCare(p game.PawnView, r gfx.Rect, h game.HealthView) {
 	}
 	care := gfx.Label
 	care.Color = uikit.TextDim
-	a.kit().Label(r.X, r.Y+(r.H-float32(gfx.LineH(care)))/2, a.shell.T("Care"), care)
+	a.kit().Label(r.X, float32(gfx.CenterTop(float64(r.Y), float64(r.H), care)), a.shell.T("Care"), care)
 	x := r.X + 40
 	w := r.Right() - x
 	if !p.Prisoner && !p.Visitor {
@@ -366,7 +366,7 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 	if h.State != "" && y+step <= r.Bottom() {
 		st := gfx.Body
 		st.Color = HealthStateColor(h)
-		a.kit().Label(r.X, y, uikit.FitText(h.State, st, r.W-4), st)
+		a.kit().Label(r.X, float32(gfx.CenterTop(float64(y), float64(step), st)), uikit.FitText(h.State, st, r.W-4), st)
 		u.Add(uikit.Widget{ID: HealthStateID, R: gfx.Rect{X: r.X, Y: y, W: r.W, H: step}, Label: h.State, Tip: healthStateTip(a.shell, h)})
 		y += step + 2
 	}
@@ -376,10 +376,11 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 			c = uikit.Danger
 		}
 		label := a.shell.Tf(a.shell.T("Blood loss: %d%%"), h.BloodLossPct)
-		a.kit().Label(r.X, y, uikit.FitText(a.shell.T("Blood loss"), gfx.Body, r.W-48), gfx.Body)
+		ty := float32(gfx.CenterTop(float64(y), float64(step), gfx.Body))
+		a.kit().Label(r.X, ty, uikit.FitText(a.shell.T("Blood loss"), gfx.Body, r.W-48), gfx.Body)
 		st := gfx.Body
 		st.Color, st.Align = c, gfx.AlignRight
-		a.kit().Label(r.Right()-4, y, fmt.Sprintf("%d%%", h.BloodLossPct), st)
+		a.kit().Label(r.Right()-4, ty, fmt.Sprintf("%d%%", h.BloodLossPct), st)
 		bar := gfx.Rect{X: r.X, Y: y + step, W: r.W - 4, H: healthBloodBarH}
 		fill := bar
 		fill.W = bar.W * float32(min(max(h.BloodLossPct, 0), 100)) / 100
@@ -396,10 +397,11 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 		if y+step > r.Bottom() {
 			return
 		}
-		a.kit().Label(r.X, y, uikit.FitText(label, gfx.Body, r.W-48), gfx.Body)
+		ty := float32(gfx.CenterTop(float64(y), float64(step), gfx.Body))
+		a.kit().Label(r.X, ty, uikit.FitText(label, gfx.Body, r.W-48), gfx.Body)
 		st := gfx.Body
 		st.Color, st.Align = c, gfx.AlignRight
-		a.kit().Label(r.Right()-4, y, fmt.Sprintf("%d%%", pct), st)
+		a.kit().Label(r.Right()-4, ty, fmt.Sprintf("%d%%", pct), st)
 		y += step
 	}
 	painC := uikit.Text
@@ -483,7 +485,7 @@ func paintPartRow(dst *ebiten.Image, row gfx.Rect, p game.PartView, stripe bool)
 		uikit.FillRect(dst, row, uiStripe)
 	}
 	const labelW = 96
-	ty := float64(row.Y) + (float64(row.H)-gfx.LineH(gfx.Body))/2
+	ty := gfx.CenterTop(float64(row.Y), float64(row.H), gfx.Body)
 	gfx.Text(dst, uikit.FitText(p.Label, gfx.Body, labelW-6), float64(row.X+4), ty, gfx.Body)
 	st := gfx.Small
 	switch {
@@ -494,7 +496,7 @@ func paintPartRow(dst *ebiten.Image, row gfx.Rect, p game.PartView, stripe bool)
 	default:
 		st.Color = uikit.TextDim
 	}
-	sy := float64(row.Y) + (float64(row.H)-gfx.LineH(st))/2
+	sy := gfx.CenterTop(float64(row.Y), float64(row.H), st)
 	gfx.Text(dst, uikit.FitText(p.Status, st, row.W-labelW-4), float64(row.X+labelW), sy, st)
 }
 
@@ -748,7 +750,7 @@ func (a Tabs) paintOptionRow(dst *ebiten.Image, row gfx.Rect, o HealthOption, ho
 		st.Color = uikit.Accent
 	}
 	if o.Reason == "" {
-		gfx.Text(dst, uikit.FitText(o.Label, st, row.Right()-textX-4), float64(textX), float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+		gfx.Text(dst, uikit.FitText(o.Label, st, row.Right()-textX-4), float64(textX), gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 		return
 	}
 	sm := gfx.Small

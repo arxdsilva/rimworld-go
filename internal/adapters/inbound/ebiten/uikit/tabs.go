@@ -99,8 +99,8 @@ func (k *Kit) Tabs(id string, r gfx.Rect, labels []string, sel *int, o TabsOpts)
 			StrokeRect(dst, tr, border)
 			st := gfx.Label
 			st.Color, st.Align = text, gfx.AlignCenter
-			cx, cy := tr.Center()
-			gfx.Text(dst, FitText(l, gfx.Label, tr.W-8), float64(cx), float64(cy)-gfx.LineH(st)/2, st)
+			cx, _ := tr.Center()
+			gfx.Text(dst, FitText(l, gfx.Label, tr.W-8), float64(cx), gfx.CenterTop(float64(tr.Y), float64(tr.H), st), st)
 		}
 	})
 	return changed

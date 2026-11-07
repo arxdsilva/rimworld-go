@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
@@ -446,5 +447,106 @@ func TestThirtyCommandsAreAllReachable(t *testing.T) {
 	}
 	if !overflowed {
 		t.Fatal("no case overflowed the grid: the more cell went untested")
+	}
+}
+
+// TestCommandTextStaysInItsCell: every label, hotkey and count a command
+// cell draws lies inside the cell (user, 2026-11-07: text never leaves its
+// box), for the pawn commands, every Architect category's designators, the
+// "more" cell and worst-case labels, at every UI scale, two window sizes
+// and with the larger small text (OPT-009). It reads the draw trace, which
+// sees text (the canvas trace does not).
+func TestCommandTextStaysInItsCell(t *testing.T) {
+	// serial: it sets the UI scale, the text size and the draw trace
+	worst := []inspector.Button{
+		{ID: "cmd.test.w0", Label: "Butcher table", Icon: "draft", Hotkey: input.Draft},
+		{ID: "cmd.test.w1", Label: "Supercalifragilisticexpialidocious", Icon: "draft"},
+		{ID: "cmd.test.w2", Label: "Rest when hurt badly", Icon: "draft", Options: func() []inspector.Option { return nil }},
+		{ID: "cmd.test.w3", Label: "Prioritize tending everyone nearby now", Disabled: true, Reason: "no"},
+		{ID: "cmd.test.w4", Label: "Draft", Icon: "draft"},
+	}
+	type scene struct {
+		name  string
+		build func(t *testing.T) *App
+	}
+	scenes := []scene{
+		{"worst", func(t *testing.T) *App { a, _, _ := cmdColony(t, 1, worst...); return a }},
+		{"more", func(t *testing.T) *App { a, _, _ := cmdColony(t, 1, append(nCmds(60), worst...)...); return a }},
+		{"pawn", func(t *testing.T) *App {
+			a, _, f := inputColony(t, [2]int{3, 3})
+			a.renderer.Select(1)
+			f.Frame(t, a)
+			return a
+		}},
+		{"drafted", func(t *testing.T) *App {
+			a, s, f := inputColony(t, [2]int{3, 3})
+			s.pawns[0].Drafted = true
+			a.renderer.Select(1)
+			f.Frame(t, a)
+			return a
+		}},
+	}
+	for _, c := range architect.Categories {
+		id := c.ID
+		scenes = append(scenes, scene{"arch." + id, func(t *testing.T) *App {
+			a, _ := archColony(t)
+			a.applyClick("arch.cat." + id)
+			fakeOn(a).Frame(t, a)
+			return a
+		}})
+	}
+	drawn := map[string]bool{}
+	for _, larger := range []bool{false, true} {
+		for _, sc := range []float64{1, 1.25, 1.5, 2, 4} {
+			for _, win := range [][2]int{{1280, 720}, {1920, 1080}} {
+				for _, sn := range scenes {
+					old := gfx.LargerSmall()
+					a := sn.build(t)
+					a.settings.Interface.LargerSmall = larger
+					layoutScreen(t, a, win[0], win[1], sc)
+					fakeOn(a).Frame(t, a)
+					if gfx.LargerSmall() != larger || gfx.UIScale() != sc {
+						t.Fatalf("the frame reset the larger small text (%v) or the scale (%v)", gfx.LargerSmall(), gfx.UIScale())
+					}
+					l := a.hud()
+					var ev []gfx.TraceEvent
+					gfx.SetDrawTrace(func(e gfx.TraceEvent) { ev = append(ev, e) })
+					a.insp.Commands().DrawCommandGrid(ebiten.NewImage(a.pw, a.ph))
+					gfx.SetDrawTrace(nil)
+					gfx.SetLargerSmall(old)
+					where := fmt.Sprintf("%s at scale %v, %dx%d, larger small %v", sn.name, sc, win[0], win[1], larger)
+					cells := append([]gfx.Rect(nil), l.GridCells...)
+					for _, e := range ev {
+						if e.Kind != "text" {
+							continue
+						}
+						drawn[sn.name] = true
+						er := gfx.Rect{X: e.X, Y: e.Y, W: e.W, H: e.H}
+						var home *gfx.Rect
+						for i := range cells {
+							p := gfx.Rect{X: cells[i].X * float32(sc), Y: cells[i].Y * float32(sc), W: cells[i].W * float32(sc), H: cells[i].H * float32(sc)}
+							if !p.Intersect(er).Empty() {
+								home = &p
+								break
+							}
+						}
+						if home == nil {
+							t.Errorf("%s: %q at %.1f,%.1f %.1fx%.1f meets no cell", where, e.Text, e.X, e.Y, e.W, e.H)
+							continue
+						}
+						const tol = 0.5
+						if e.X < home.X-tol || e.Y < home.Y-tol || e.X+e.W > home.Right()+tol || e.Y+e.H > home.Bottom()+tol {
+							t.Errorf("%s: %q (%.1f,%.1f %.1fx%.1f) leaves its cell %+v by %.1f px below, %.1f right",
+								where, e.Text, e.X, e.Y, e.W, e.H, *home, e.Y+e.H-home.Bottom(), e.X+e.W-home.Right())
+						}
+					}
+				}
+			}
+		}
+	}
+	for _, sn := range scenes {
+		if !drawn[sn.name] {
+			t.Errorf("%s drew no command text", sn.name)
+		}
 	}
 }

@@ -65,8 +65,8 @@ func (w History) combatList(body gfx.Rect) {
 			dim := gfx.Small
 			dim.Color = uikit.TextDim
 			st := gfx.Body
-			gfx.Text(sub, rows[i].When, float64(row.X+6), float64(y)+(historyRowH-gfx.LineH(dim))/2, dim)
-			gfx.Text(sub, uikit.FitText(rows[i].Text, st, row.W-historyWhenW-10), float64(row.X+historyWhenW), float64(y)+(historyRowH-gfx.LineH(st))/2, st)
+			gfx.Text(sub, rows[i].When, float64(row.X+6), gfx.CenterTop(float64(y), historyRowH, dim), dim)
+			gfx.Text(sub, uikit.FitText(rows[i].Text, st, row.W-historyWhenW-10), float64(row.X+historyWhenW), gfx.CenterTop(float64(y), historyRowH, st), st)
 		}
 	})
 }

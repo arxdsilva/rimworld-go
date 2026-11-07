@@ -45,7 +45,7 @@ func (w landingPage) factionColumns(rows []FacRow) []uikit.TableCol {
 		{ID: "relation", Title: w.sh.T("Relation"), W: 90, Draw: func(dst *ebiten.Image, i int, cell gfx.Rect) {
 			st := gfx.Body
 			st.Color = RelationColor(rows[i].Relation)
-			gfx.Text(dst, RelationLabelIn(w.sh, rows[i].Relation), float64(cell.X+uikit.TableCellPad), float64(cell.Y)+(float64(cell.H)-gfx.LineH(st))/2, st)
+			gfx.Text(dst, RelationLabelIn(w.sh, rows[i].Relation), float64(cell.X+uikit.TableCellPad), gfx.CenterTop(float64(cell.Y), float64(cell.H), st), st)
 		}, Less: func(x, y int) bool { return rows[x].Relation < rows[y].Relation }},
 		{ID: "settle", Title: w.sh.T("Settlements"), W: 100, Align: gfx.AlignRight, Cell: func(i int) string {
 			if rows[i].Swarm {
@@ -90,7 +90,7 @@ func drawGoodwill(dst *ebiten.Image, cell gfx.Rect, r FacRow) {
 	uikit.FillRect(dst, gfx.Rect{X: mid, Y: bar.Y - 1, W: 1, H: bar.H + 2}, uikit.TextDim)
 	st := gfx.Small
 	st.Align = gfx.AlignRight
-	gfx.Text(dst, GoodwillText(r.Goodwill), float64(cell.Right()-uikit.TableCellPad), float64(cell.Y)+(float64(cell.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, GoodwillText(r.Goodwill), float64(cell.Right()-uikit.TableCellPad), gfx.CenterTop(float64(cell.Y), float64(cell.H), st), st)
 }
 
 // factionsTable declares the table in r over rows; a click on a row

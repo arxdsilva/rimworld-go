@@ -119,7 +119,7 @@ func (f *Form) Stepper(o Owner, id, label string, v *int, lo, hi int, tip string
 	}
 	k := o.Kit()
 	ls := gfx.Body
-	k.Label(row.X, row.Y+(row.H-float32(gfx.LineH(ls)))/2, label, ls)
+	k.Label(row.X, float32(gfx.CenterTop(float64(row.Y), float64(row.H), ls)), label, ls)
 	Stepper(k, "diff.f."+id, gfx.Rect{X: row.Right() - 112, Y: row.Y + 2, W: 112, H: row.H - 4}, v, lo, hi)
 	if tip != "" {
 		k.Tip("diff.t."+id, gfx.Rect{X: row.X, Y: row.Y, W: row.W - 116, H: row.H}, tip)
@@ -148,7 +148,7 @@ func TextLines(k *Kit, x, y, w float32, s string, st gfx.TextStyle) float32 {
 // rectangle left for the control.
 func RowLabel(k *Kit, r gfx.Rect, label string, labelW float32) gfx.Rect {
 	st := DimText()
-	k.Label(r.X, r.Y+(r.H-float32(gfx.LineH(st)))/2, FitText(label, st, labelW-8), st)
+	k.Label(r.X, float32(gfx.CenterTop(float64(r.Y), float64(r.H), st)), FitText(label, st, labelW-8), st)
 	return gfx.Rect{X: r.X + labelW, Y: r.Y, W: max(0, r.W-labelW), H: r.H}
 }
 
@@ -182,7 +182,7 @@ func Stepper(k *Kit, id string, r gfx.Rect, v *int, lo, hi int) {
 	k.Queue(func(dst *ebiten.Image) {
 		st := gfx.Label
 		st.Align = gfx.AlignCenter
-		gfx.Text(dst, strconv.Itoa(val), float64(r.X+bw+28), float64(r.Y)+(float64(r.H)-gfx.LineH(st))/2, st)
+		gfx.Text(dst, strconv.Itoa(val), float64(r.X+bw+28), gfx.CenterTop(float64(r.Y), float64(r.H), st), st)
 	})
 }
 

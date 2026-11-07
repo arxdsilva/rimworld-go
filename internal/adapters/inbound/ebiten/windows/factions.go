@@ -166,12 +166,12 @@ func drawGoodwillChart(tr lang.Tr, dst *ebiten.Image, plot gfx.Rect, hist []int,
 		if g.v != 100 && g.v != -100 {
 			gfx.Line(dst, plot.X, y, plot.Right(), y, 1, g.c, false)
 		}
-		gfx.Text(dst, goodwillAxis(g.v), float64(plot.X-6), float64(y)-gfx.LineH(ls)/2, ls)
+		gfx.Text(dst, goodwillAxis(g.v), float64(plot.X-6), gfx.CenterTop(float64(y)-gfx.LineH(ls)/2, gfx.LineH(ls), ls), ls)
 	}
 	if len(hist) == 0 {
 		cs := uikit.DimText()
 		cs.Align = gfx.AlignCenter
-		gfx.Text(dst, tr.T("No history yet."), float64(plot.X+plot.W/2), float64(plot.Y+plot.H/2)-gfx.LineH(cs)/2, cs)
+		gfx.Text(dst, tr.T("No history yet."), float64(plot.X+plot.W/2), gfx.CenterTop(float64(plot.Y+plot.H/2)-gfx.LineH(cs)/2, gfx.LineH(cs), cs), cs)
 		return
 	}
 	pts := ChartPoints(hist, plot)

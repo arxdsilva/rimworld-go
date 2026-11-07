@@ -48,7 +48,7 @@ func (h *Helper) Draw(screen *ebiten.Image) {
 	if lay.Header.Hit(mx, my) {
 		gfx.FillRect(screen, p.X+1, p.Y+1, p.W-2, learnHeaderH-1, fade(uikit.TutorHeading, 0.14), false)
 	}
-	hy := float64(p.Y) + (learnHeaderH-gfx.LineH(gfx.Label))/2
+	hy := gfx.CenterTop(float64(p.Y), learnHeaderH, gfx.Label)
 	gfx.Text(screen, h.sh.T("Learning helper"), float64(p.X)+10, hy, gfx.WithColor(gfx.Label, uikit.TutorHeading))
 	right := h.sh.T("Done!")
 	if !flashing {
@@ -56,7 +56,7 @@ func (h *Helper) Draw(screen *ebiten.Image) {
 	}
 	st := gfx.WithColor(gfx.Small, uikit.TutorText)
 	st.Align = gfx.AlignRight
-	gfx.Text(screen, right, float64(p.Right())-28, float64(p.Y)+(learnHeaderH-gfx.LineH(gfx.Small))/2, st)
+	gfx.Text(screen, right, float64(p.Right())-28, gfx.CenterTop(float64(p.Y), learnHeaderH, gfx.Small), st)
 	drawChevron(screen, p.Right()-16, p.Y+learnHeaderH/2, collapsed)
 
 	if !collapsed {
@@ -66,7 +66,7 @@ func (h *Helper) Draw(screen *ebiten.Image) {
 		if flashing {
 			note, nst = h.sh.Tf("Done: %s", flashTitle), gfx.WithColor(gfx.Small, uikit.TutorHeading)
 		}
-		gfx.Text(screen, uikit.FitText(note, nst, p.W-20), float64(p.X)+10, float64(lay.Footer.Y)+(learnFooterH-gfx.LineH(gfx.Small))/2, nst)
+		gfx.Text(screen, uikit.FitText(note, nst, p.W-20), float64(p.X)+10, gfx.CenterTop(float64(lay.Footer.Y), learnFooterH, gfx.Small), nst)
 	}
 	if lay.Open != nil && !lay.Card.Empty() {
 		drawCard(screen, h.sh, lay, mx, my)

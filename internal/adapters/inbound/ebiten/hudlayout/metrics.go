@@ -87,17 +87,14 @@ const (
 	CmdBottom  = 16
 	// CmdReserveCols are the command columns a wide card pane leaves free (ours).
 	CmdReserveCols = 5
-	// CmdInset is the hotkey letter's inset; CmdLabelBelow the last label
-	// line's baseline below the cell; CmdIconMax the icon art's size (UIS-051).
-	CmdInset      = 6
-	CmdLabelBelow = 6
-	CmdIconMax    = 40
-	// CmdLabelBand is the room a cell's hanging label takes under it (ours:
-	// CmdLabelBelow plus the descent); CmdRowPitch is one grid row to the
-	// next, so a label never lies on the row under it (ours: no reference
-	// shot has two rows).
-	CmdLabelBand = 10
-	CmdRowPitch  = CmdCell + CmdLabelBand + (CmdStride - CmdCell)
+	// CmdInset is the hotkey letter's inset; CmdIconMax the icon art's size
+	// (UIS-051). The label is drawn inside the cell: its block's bottom
+	// CmdLabelPadB above the cell's bottom (ours: text never leaves its box);
+	// a two-line label shrinks the icon, never below CmdIconMin (ours).
+	CmdInset     = 6
+	CmdIconMax   = 40
+	CmdLabelPadB = 2
+	CmdIconMin   = 24
 
 	// The Architect: category buttons ArchCatW x ArchCatH, two per row,
 	// flush, a search row of ArchSearchH under them, the description box

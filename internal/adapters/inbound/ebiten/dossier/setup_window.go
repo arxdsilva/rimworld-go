@@ -209,5 +209,5 @@ func (s *Setup) changedTag(bar gfx.Rect) {
 	}
 	st := gfx.WithColor(gfx.Label, col)
 	st.Align = gfx.AlignRight
-	s.k.Label(bar.Right(), bar.Y+(bar.H-float32(gfx.LineH(st)))/2, text, st)
+	s.k.Label(bar.Right(), float32(gfx.CenterTop(float64(bar.Y), float64(bar.H), st)), text, st)
 }

@@ -69,7 +69,7 @@ func (k *Kit) Check(id string, r gfx.Rect, label string, val *bool, o CheckOpts)
 		}
 		st := gfx.Body
 		st.Color = tc
-		gfx.Text(dst, FitText(label, st, r.W-checkBox-CheckGap), float64(box.Right()+CheckGap), float64(r.Y)+(float64(r.H)-gfx.LineH(st))/2, st)
+		gfx.Text(dst, FitText(label, st, r.W-checkBox-CheckGap), float64(box.Right()+CheckGap), gfx.CenterTop(float64(r.Y), float64(r.H), st), st)
 	})
 	return changed
 }
@@ -163,7 +163,7 @@ func (k *Kit) Radio(id string, r gfx.Rect, labels []string, sel *int, o RadioOpt
 			if dis {
 				st.Color = TextDisabled
 			}
-			gfx.Text(dst, FitText(l, st, row.W-2*RadioRadius-CheckGap-2), float64(cx+RadioRadius+CheckGap), float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+			gfx.Text(dst, FitText(l, st, row.W-2*RadioRadius-CheckGap-2), float64(cx+RadioRadius+CheckGap), gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 		}
 	})
 	return changed

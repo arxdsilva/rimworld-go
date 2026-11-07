@@ -89,10 +89,10 @@ func (s *SearchBox) Draw(k *uikit.Kit, prefix string, right, y float32, f Finder
 		name, kind := h.Name, h.Kind.Label()
 		k.Queue(func(dst *ebiten.Image) {
 			st := gfx.Body
-			gfx.Text(dst, uikit.FitText(name, st, row.W-110), float64(row.X+8), float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+			gfx.Text(dst, uikit.FitText(name, st, row.W-110), float64(row.X+8), gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 			ks := uikit.DimText()
 			ks.Align = gfx.AlignRight
-			gfx.Text(dst, kind, float64(row.Right()-8), float64(row.Y)+(float64(row.H)-gfx.LineH(ks))/2, ks)
+			gfx.Text(dst, kind, float64(row.Right()-8), gfx.CenterTop(float64(row.Y), float64(row.H), ks), ks)
 		})
 	}
 	return r

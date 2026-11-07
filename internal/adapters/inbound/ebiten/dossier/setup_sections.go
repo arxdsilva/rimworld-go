@@ -286,7 +286,7 @@ func (t *Sections) drawRow(dst *ebiten.Image, i int, row gfx.Rect, hover, select
 	st := gfx.Body
 	st.Color = t.tint(rw.n)
 	x := float64(row.X) + 6 + float64(rw.depth*secIndent)
-	y := float64(row.Y) + (float64(row.H)-gfx.LineH(st))/2
+	y := gfx.CenterTop(float64(row.Y), float64(row.H), st)
 	if rw.kids > 0 {
 		mark := "-"
 		if t.collapsed[pathKey(rw.path)] {
@@ -302,7 +302,7 @@ func (t *Sections) drawRow(dst *ebiten.Image, i int, row gfx.Rect, hover, select
 	if at != "" {
 		aw = float64(gfx.TextW(at, dim)) + 8
 		dim.Align = gfx.AlignRight
-		gfx.Text(dst, at, float64(row.Right())-6, float64(row.Y)+(float64(row.H)-gfx.LineH(dim))/2, dim)
+		gfx.Text(dst, at, float64(row.Right())-6, gfx.CenterTop(float64(row.Y), float64(row.H), dim), dim)
 	}
 	label := t.nameOf(rw.n)
 	if len(rw.path) == 0 {

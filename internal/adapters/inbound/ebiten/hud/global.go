@@ -481,7 +481,7 @@ func (c Global) TemperatureLine() string {
 // rightText draws s right-aligned at x in the text row r, centred in it.
 func rightText(screen *ebiten.Image, s string, x float32, r gfx.Rect, st gfx.TextStyle) {
 	st.Align = gfx.AlignRight
-	gfx.Text(screen, s, float64(x), float64(r.Y)+max(0, (float64(r.H)-gfx.LineH(st))/2), st)
+	gfx.Text(screen, s, float64(x), gfx.CenterTop(float64(r.Y), float64(r.H), st), st)
 }
 
 // Draw draws the Global panel and its stack.
@@ -507,7 +507,7 @@ func (c Global) Draw(screen *ebiten.Image, sw, sh int) {
 	drawConditionLines(screen, plan.Chips, rows.Conds) // chips.go
 	rightText(screen, c.TemperatureLine(), right, rows.Temp, gfx.Body)
 	if !rows.Weather.Empty() {
-		wy := float64(rows.Weather.Y) + max(0, (float64(rows.Weather.H)-gfx.LineH(gfx.Body))/2)
+		wy := gfx.CenterTop(float64(rows.Weather.Y), float64(rows.Weather.H), gfx.Body)
 		c.sh.DrawWeather(screen, int(right), int(wy)+2, w) // the weather label lifts its text 2 px
 	}
 	rightText(screen, c.DateLine(), right, rows.Date, gfx.Body)

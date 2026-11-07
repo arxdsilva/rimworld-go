@@ -23,7 +23,7 @@ The colony HUD's pure layout: region rectangles from the screen size and the reg
 - Empty rectangles when a region is off (`TestPerfRectEmptyWhenOff`).
 - Colonist-bar rows wrap inside the bar at the reference steps (`TestLayoutColonistBarWraps`, `TestBarStepsMatchReference`).
 - Commands are never dropped: past the grid's room the last cell stands for the rest (`GridMore`, `TestCommandsNeverDropped`).
-- A command's hanging label (`CmdLabelBand`) never lies on the row under it or on a panel beside the grid: rows are `CmdRowPitch` apart (`TestCommandLabelsClearTheNextRow`).
+- A command's label, icon and hotkey stay inside its cell: the label block's bottom is `CmdLabelPadB` above the cell's bottom (`TestCommandTextStaysInItsCell`, root).
 - Messages lie over the colonist bar (UIS-029) and keep only the newest rows that fit above the lower-left stack.
 - `BoundsOf` matches the region rectangles that `Compute` returns (`TestBoundsOf`).
 

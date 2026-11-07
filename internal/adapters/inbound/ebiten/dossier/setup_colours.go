@@ -164,7 +164,7 @@ func drawColourRow(dst *ebiten.Image, row gfx.Rect, name string, cur color.RGBA,
 	if changed {
 		st = gfx.WithColor(gfx.Body, uikit.Heading)
 	}
-	gfx.Text(dst, uikit.FitText(name, st, row.W-sw.W-24), float64(sw.Right()+8), float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, uikit.FitText(name, st, row.W-sw.W-24), float64(sw.Right()+8), gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 }
 
 // colourEditor is the editor for the selected colour and the bar styles.
@@ -277,7 +277,7 @@ func drawSample(dst *ebiten.Image, row gfx.Rect, c color.RGBA, text string) {
 	uikit.FillRect(dst, gfx.Rect{X: back.X, Y: back.Y, W: back.W / 3, H: back.H}, shown(c))
 	uikit.StrokeRect(dst, back, uikit.PanelBorder)
 	st := gfx.WithColor(gfx.Body, shown(c))
-	gfx.Text(dst, text, float64(back.X+back.W/3+14), float64(back.Y)+(float64(back.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, text, float64(back.X+back.W/3+14), gfx.CenterTop(float64(back.Y), float64(back.H), st), st)
 }
 
 // barStyles previews the four bar colour styles with the bar colours now.
@@ -302,7 +302,7 @@ func (s *Setup) barStyles(f *uikit.Form, h config.HUD) {
 
 func drawStyleSample(dst *ebiten.Image, row gfx.Rect, style, label string, low, main, back color.RGBA) {
 	st := gfx.WithColor(gfx.Body, uikit.Text)
-	gfx.Text(dst, uikit.FitText(label, st, row.W-4*46-8), float64(row.X), float64(row.Y)+(float64(row.H)-gfx.LineH(st))/2, st)
+	gfx.Text(dst, uikit.FitText(label, st, row.W-4*46-8), float64(row.X), gfx.CenterTop(float64(row.Y), float64(row.H), st), st)
 	for i, frac := range []float64{0.15, 0.4, 0.7, 1} {
 		bar := gfx.Rect{X: row.Right() - float32(4-i)*46 + 4, Y: row.Y + 7, W: 40, H: 10}
 		uikit.FillRect(dst, bar, shown(back))

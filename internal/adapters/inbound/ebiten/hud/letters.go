@@ -388,7 +388,7 @@ func (c Right) drawLetters(screen *ebiten.Image, l hudlayout.Layout) {
 		uikit.StrokeRect(screen, tile, border)
 		switch img := c.icon(k.Icon); {
 		case row.Older > 0:
-			gfx.Text(screen, "+", float64(tile.X)+float64(tile.W)/2-3, float64(tile.Y)+(float64(tile.H)-gfx.LineH(gfx.Body))/2, gfx.WithColor(gfx.Body, uikit.TextDim))
+			gfx.Text(screen, "+", float64(tile.X)+float64(tile.W)/2-3, gfx.CenterTop(float64(tile.Y), float64(tile.H), gfx.Body), gfx.WithColor(gfx.Body, uikit.TextDim))
 		case img != nil:
 			gfx.Icon(screen, img, float64(tile.X+(tile.W-letterIconW)/2), float64(tile.Y+(tile.H-letterIconW)/2), letterIconW)
 		default:

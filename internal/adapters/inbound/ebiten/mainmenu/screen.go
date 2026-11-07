@@ -176,7 +176,7 @@ func drawButton(dst *ebiten.Image, b uikit.Button, primary, hover bool) {
 	st := gfx.Large
 	st.Color, st.Align = text, gfx.AlignCenter
 	cx, cy := r.Center()
-	gfx.Text(dst, b.Label, float64(cx), float64(cy)-gfx.LineH(st)/2, st)
+	gfx.Text(dst, b.Label, float64(cx), gfx.CenterTop(float64(cy)-gfx.LineH(st)/2, gfx.LineH(st), st), st)
 }
 
 // CreditsLines is the Credits screen body.

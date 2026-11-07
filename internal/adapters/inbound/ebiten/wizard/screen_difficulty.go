@@ -69,7 +69,7 @@ func (w storyPage) customDifficultyBody(body gfx.Rect) {
 	top, rest := body.SplitV(DiffTopRowH)
 
 	lab := uikit.DimText()
-	w.kit().Label(top.X, top.Y+(top.H-float32(gfx.LineH(lab)))/2, w.sh.T("Start from:"), lab)
+	w.kit().Label(top.X, float32(gfx.CenterTop(float64(top.Y), float64(top.H), lab)), w.sh.T("Start from:"), lab)
 	names := make([]string, 0, int(difficulty.Custom))
 	for _, n := range difficulty.Presets() {
 		names = append(names, n.Label)

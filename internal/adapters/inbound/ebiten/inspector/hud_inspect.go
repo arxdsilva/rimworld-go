@@ -472,7 +472,7 @@ func drawPaneBar(screen *ebiten.Image, r gfx.Rect, b Bar) {
 		uikit.FillRect(screen, gfx.Rect{X: r.X, Y: r.Y, W: w, H: r.H}, uikit.LerpRGBA(uikit.Field, b.Color, 0.7))
 	}
 	label := gfx.Ellipsize(fmt.Sprintf("%s %d%%", b.Label, pct), gfx.Small, float64(r.W-2*paneBarLabelX))
-	gfx.Text(screen, label, float64(r.X+paneBarLabelX), float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Small))/2, gfx.Small)
+	gfx.Text(screen, label, float64(r.X+paneBarLabelX), gfx.CenterTop(float64(r.Y), float64(r.H), gfx.Small), gfx.Small)
 }
 
 // drawPaneBody draws the scrolled lines and rows, clipped to the body.
@@ -500,7 +500,7 @@ func (a *Pane) drawPaneBody(screen *ebiten.Image, spec Spec, g Geom, mx, my int)
 		if r.Intersect(view).Hit(mx, my) {
 			uikit.FillRect(sub, r, uikit.BtnHover)
 		}
-		gfx.Text(sub, gfx.Ellipsize(row.Label, gfx.Body, float64(r.W-8)), float64(r.X+4), float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Body))/2, gfx.Body)
+		gfx.Text(sub, gfx.Ellipsize(row.Label, gfx.Body, float64(r.W-8)), float64(r.X+4), gfx.CenterTop(float64(r.Y), float64(r.H), gfx.Body), gfx.Body)
 	}
 }
 

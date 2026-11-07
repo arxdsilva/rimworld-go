@@ -357,8 +357,8 @@ func (k *Kit) Button(id string, r gfx.Rect, label string, o BtnOpts) bool {
 		gfx.StrokeRect(dst, r.X, r.Y, r.W, r.H, 1, border, false)
 		st := gfx.Label
 		st.Color, st.Align = text, gfx.AlignCenter
-		cx, cy := r.Center()
-		gfx.Text(dst, FitText(label, gfx.Label, r.W-12), float64(cx), float64(cy)-gfx.LineH(st)/2, st)
+		cx, _ := r.Center()
+		gfx.Text(dst, FitText(label, gfx.Label, r.W-12), float64(cx), gfx.CenterTop(float64(r.Y), float64(r.H), st), st)
 	})
 	return clicked
 }

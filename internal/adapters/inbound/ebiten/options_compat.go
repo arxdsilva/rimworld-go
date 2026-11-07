@@ -228,7 +228,7 @@ func (s optionsStory) OpenCustom(v game.StoryView, accept func(difficulty.Settin
 func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *float32) {
 	top, rest := body.SplitV(wizardpkg.DiffTopRowH)
 	lab := uikit.DimText()
-	a.uiSt().Label(top.X, top.Y+(top.H-float32(gfx.LineH(lab)))/2, a.shell.T("Start from:"), lab)
+	a.uiSt().Label(top.X, float32(gfx.CenterTop(float64(top.Y), float64(top.H), lab)), a.shell.T("Start from:"), lab)
 	names := make([]string, 0, int(difficulty.Custom))
 	for _, n := range difficulty.Presets() {
 		names = append(names, n.Label)

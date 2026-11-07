@@ -192,7 +192,7 @@ func (o *Screen) habitStepper(f *uikit.Form, rules gameplay.Settings, l habitLim
 	k := o.sh.Kit()
 	v := rules.LimitOf(l.L)
 	id := habitsID + ".l" + strconv.Itoa(int(l.L))
-	k.Label(row.X, row.Y+(row.H-float32(gfx.LineH(gfx.Body)))/2, o.sh.T(l.Label), gfx.Body)
+	k.Label(row.X, float32(gfx.CenterTop(float64(row.Y), float64(row.H), gfx.Body)), o.sh.T(l.Label), gfx.Body)
 	k.Tip(id+".tip", gfx.Rect{X: row.X, Y: row.Y, W: row.W - 2*habitBtnW - habitValW - 8, H: row.H}, o.sh.T(l.Label)+"\n"+o.sh.T(l.Tip))
 	x := row.Right() - 2*habitBtnW - habitValW
 	by := row.Y + 2
@@ -203,7 +203,7 @@ func (o *Screen) habitStepper(f *uikit.Form, rules gameplay.Settings, l habitLim
 		uikit.BtnOpts{Disabled: v >= gameplay.MaxLimit, Reason: o.sh.Tf("The maximum is %d.", gameplay.MaxLimit)}, func() { o.setLimit(l.L, v+1) })
 	text := HabitLimitText(v, l.Zero)
 	cx := float64(x + habitBtnW + habitValW/2)
-	cy := float64(by) + (float64(bh)-gfx.LineH(gfx.Label))/2
+	cy := gfx.CenterTop(float64(by), float64(bh), gfx.Label)
 	k.Queue(func(dst *ebiten.Image) {
 		st := gfx.Label
 		st.Align = gfx.AlignCenter

@@ -209,7 +209,7 @@ func (k *Kit) modalChrome(m Modal, frame, titleR gfx.Rect) {
 		gfx.Line(dst, frame.X, titleR.Bottom(), frame.Right(), titleR.Bottom(), 1, PanelBorder, false)
 		st := gfx.Title
 		st.Color = Heading
-		gfx.Text(dst, FitText(m.Title, st, titleR.W-ModalCloseW-3*ModalPad), float64(titleR.X+ModalPad), float64(titleR.Y)+(float64(titleR.H)-gfx.LineH(st))/2, st)
+		gfx.Text(dst, FitText(m.Title, st, titleR.W-ModalCloseW-3*ModalPad), float64(titleR.X+ModalPad), gfx.CenterTop(float64(titleR.Y), float64(titleR.H), st), st)
 	})
 }
 

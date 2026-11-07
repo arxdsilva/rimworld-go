@@ -287,17 +287,13 @@ func layoutGrid(l *Layout, n int, gridX0, rx, barBottom float32) {
 	}
 	x1 := rx - HudMargin
 	bottom := l.Tabs.Y - CmdBottom
-	maxRows := 0
-	if room := bottom - barBottom - HudMargin - CmdCell; room >= 0 {
-		maxRows = int(room/CmdRowPitch) + 1
-	}
+	maxRows := max(0, int((bottom-barBottom-HudMargin+(CmdStride-CmdCell))/CmdStride))
 	l.GridCols = max(0, int((x1-gridX0+(CmdStride-CmdCell))/CmdStride))
 	for r := 0; r < maxRows && len(l.GridCells) < n; r++ {
-		y := bottom - CmdCell - float32(r)*CmdRowPitch
+		y := bottom - CmdCell - float32(r)*CmdStride
 		x0 := gridX0
 		for _, p := range []gfx.Rect{l.Expanded, l.ArchDesc, l.Card} {
-			// a row beside p, its hanging labels included
-			if !p.Empty() && y < p.Bottom() && y+CmdCell+CmdLabelBand > p.Y {
+			if !p.Empty() && y < p.Bottom() && y+CmdCell > p.Y {
 				x0 = max(x0, p.Right()+CmdGridGap)
 			}
 		}

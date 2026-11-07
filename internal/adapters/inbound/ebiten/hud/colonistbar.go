@@ -673,7 +673,7 @@ func (c ColonistBar) drawGroups(screen *ebiten.Image, l hudlayout.Layout, mx, my
 			textW -= g.Chip.H
 		}
 		st := gfx.WithColor(gfx.Small, uikit.Text)
-		gfx.Text(screen, gfx.Ellipsize(mg.Label, gfx.Small, float64(textW)), float64(g.Chip.X+4), float64(g.Chip.Y)+(float64(g.Chip.H)-gfx.LineH(gfx.Small))/2, st)
+		gfx.Text(screen, gfx.Ellipsize(mg.Label, gfx.Small, float64(textW)), float64(g.Chip.X+4), gfx.CenterTop(float64(g.Chip.Y), float64(g.Chip.H), gfx.Small), st)
 		if mg.Threat {
 			r := g.Chip.H / 4
 			gfx.FillCircle(screen, g.Chip.Right()-r-4, g.Chip.Y+g.Chip.H/2, r, uikit.Danger, false)
