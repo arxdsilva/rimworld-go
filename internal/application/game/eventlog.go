@@ -17,13 +17,8 @@ import (
 // maxLogEntries bounds one creature's log; the oldest entry is dropped.
 const maxLogEntries = 30
 
-// LogLineView is one line of a creature's log, newest first in the views.
-type LogLineView struct {
-	Tick uint64
-	Day  int    // in-game day (1-based)
-	Hour int    // 0..23
-	Text string // e.g. "Bitten by Ridgewolf (-6)"
-}
+// LogLineView is one line of a creature's log (game/evlog).
+type LogLineView = evlog.Line
 
 // Event kinds (game/evlog). Values are saved; append only.
 const (

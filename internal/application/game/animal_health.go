@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/infection"
@@ -415,15 +416,9 @@ func (g *Game) sweepAnimalPatients() {
 
 // ---- the read model ----
 
-// AnimalPartView is one hurt or lost part of an animal (MED-13): its
-// label ("front left leg"), hit points left of MaxHP, lost, and bleeding
-// (an open wound, or a fresh stump).
-type AnimalPartView struct {
-	Label     string
-	HP, MaxHP int
-	Missing   bool
-	Bleeding  bool
-}
+// AnimalPartView is one hurt or lost part of an animal (MED-13,
+// game/animalview).
+type AnimalPartView = animalview.Part
 
 // animalParts lists body b's hurt and lost parts in part order; a lost
 // part's children go with it.

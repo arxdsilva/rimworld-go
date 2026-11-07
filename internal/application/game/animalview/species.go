@@ -1,8 +1,8 @@
-// Package animalview holds what an animal's read model takes from its
-// species alone. The species tables are constant, so it is derived once per
-// species instead of once per animal per view (Label allocates, and the
-// definition lookups copy whole rows): a big map's views hold thousands of
-// animals.
+// Package animalview is an animal's read model (View, which the game names
+// game.AnimalView; view.go) and what it takes from its species alone. The
+// species tables are constant, so that share is derived once per species
+// instead of once per animal per view (Label allocates, and the definition
+// lookups copy whole rows): a big map's views hold thousands of animals.
 package animalview
 
 import (

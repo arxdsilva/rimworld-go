@@ -10,6 +10,15 @@ import (
 	"rimworld-go/internal/domain/combat/weapon"
 )
 
+// Line is one line of a creature's log, newest first in the views
+// (game.LogLineView).
+type Line struct {
+	Tick uint64
+	Day  int    // in-game day (1-based)
+	Hour int    // 0..23
+	Text string // e.g. "Bitten by Ridgewolf (-6)"
+}
+
 // Event kinds (the game's logEntry.Kind). Values are saved; append only.
 const (
 	Hit uint8 = iota + 1

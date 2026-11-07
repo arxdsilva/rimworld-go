@@ -333,7 +333,7 @@ func RecruitChance(social int) int32
   - `doSurgery`, `doIngest`, `doLovin`, `doGather`, `doBrawl`, `doCapture`, `doWarden`, `doDeliverFood`, `doSocialRelax`, `doTrain`,
     `doArrest`, `doKidnap`, `doExitMap`, `doTendAnimal`, `doVisit`: job dispatch cases in `phaseJobs`, each an empty stub in its owner
     file.
-- **Read models**, all in `views_social.go`:
+- **Read models**, declared in `game/tabview` and named in `views_social.go` (game.SocialView = tabview.Social, and so on):
   - `SocialView{Relations []RelationRowView; Log []SocialLogLineView}`
   - `RelationRowView{Other uint64; Name, Label, Status string; OpinionTo, OpinionFrom int; TermsTo, TermsFrom []OpinionTermView; RomanceNote string}`
   - `OpinionTermView{Label string; Value int}`
