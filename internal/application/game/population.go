@@ -3,6 +3,7 @@ package game
 import (
 	"sort"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/clock"
@@ -236,7 +237,7 @@ func (g *Game) sendHerdOff(h uint32, ids []entity.EntityID) {
 	for _, id := range ids {
 		p, _ := g.positions.Get(id)
 		g.startLeaving(id, ex, ey)
-		g.logEvent(id, logEntry{Kind: logLeaving})
+		g.logEvent(id, logEntry{Kind: evlog.Leaving})
 		d.IDs = append(d.IDs, id)
 		d.Last = append(d.Last, p)
 	}

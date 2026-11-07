@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/furnish"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/application/game/industry"
@@ -394,9 +395,9 @@ func (g *Game) phaseNeeds() {
 func (g *Game) down(id entity.EntityID, cause health.Cause) {
 	g.interrupt(id, job.Cancelled)
 	if cause == health.CauseNoBed {
-		g.logEvent(id, logEntry{Kind: logCollapsed})
+		g.logEvent(id, logEntry{Kind: evlog.Collapsed})
 	} else {
-		g.logEvent(id, logEntry{Kind: logDowned})
+		g.logEvent(id, logEntry{Kind: evlog.Downed})
 	}
 	delete(g.calm, id) // lying down ends any flight
 	v, _ := g.vital.Get(id)

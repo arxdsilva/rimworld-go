@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/application/game/rest"
@@ -212,9 +213,9 @@ func (h restEvents) ForgetGroup(id entity.EntityID, k mood.Kind) {
 }
 func (h restEvents) Slept(id entity.EntityID, inBed bool) {
 	if inBed {
-		h.g.logEvent(id, logEntry{Kind: logSleptBed})
+		h.g.logEvent(id, logEntry{Kind: evlog.SleptBed})
 	} else {
-		h.g.logEvent(id, logEntry{Kind: logSleptGround})
+		h.g.logEvent(id, logEntry{Kind: evlog.SleptGround})
 	}
 }
 

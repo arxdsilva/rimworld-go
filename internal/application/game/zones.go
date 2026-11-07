@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/mapview"
 	"rimworld-go/internal/application/game/store"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
@@ -64,15 +65,8 @@ func stockpileProto(variant uint8) (zone.Kind, zone.Zone) {
 	return zone.KindStockpile, zone.NewStockpile()
 }
 
-// StoragePriorities lists the storage priority names, highest first (the
-// zone inspector's picker; the index is SetZonePriority's Index).
-func StoragePriorities() []string {
-	out := make([]string, len(zone.Priorities))
-	for i, p := range zone.Priorities {
-		out[i] = p.String()
-	}
-	return out
-}
+// StoragePriorities lists the storage priority names, highest first (game/mapview).
+func StoragePriorities() []string { return mapview.StoragePriorities() }
 
 // pen is a legacy animal pen rectangle (inclusive), read from older saves.
 type pen struct{ X1, Y1, X2, Y2 int }
@@ -445,7 +439,7 @@ func (g *Game) zoneCellsChanged(cells [][2]int, cause string) {
 			seen = seen || h.id == id
 		}
 		if !seen {
-			hits = append(hits, lost{id, c[0], c[1], why, zoneLabel(z)})
+			hits = append(hits, lost{id, c[0], c[1], why, mapview.ZoneLabel(z)})
 		}
 	}
 	if len(gone) == 0 {
@@ -459,23 +453,6 @@ func (g *Game) zoneCellsChanged(cells [][2]int, cause string) {
 		}
 		g.message(h.x, h.y, "%s shrank: %s", h.name, what)
 	}
-}
-
-// zoneLabel is a zone's name in messages: the player's name, else its
-// kind ("Growing zone", "Stockpile", "Dumping stockpile").
-func zoneLabel(z zone.Zone) string {
-	if z.Name != "" {
-		return z.Name
-	}
-	switch z.Kind {
-	case zone.KindGrow:
-		return "Growing zone"
-	case zone.KindDump:
-		return "Dumping stockpile"
-	case zone.KindPen:
-		return "Pen"
-	}
-	return "Stockpile"
 }
 
 // Storage filters and storage buildings (PRD-4, STO-2). The filter

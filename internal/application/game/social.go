@@ -2,6 +2,8 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/application/game/sociallog"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -280,8 +282,8 @@ func (g *Game) applyInteraction(a, b entity.EntityID, k social.Interaction, now 
 	}
 	lk := socialLogKind(k)
 	var topic uint8
-	if ts := topicsOf(lk); len(ts) > 0 {
-		topic = uint8(g.stream(streamSocial).IntN(len(ts)))
+	if n := sociallog.Topics(uint8(lk)); n > 0 {
+		topic = uint8(g.stream(streamSocial).IntN(n))
 	}
 	g.addSocialLog(a, b, lk, topic, now)
 	g.maybeSocialFight(a, b, k) // social_fight.go (M6)
@@ -304,7 +306,7 @@ func (h careSocial) Interact(a, b entity.EntityID) {
 	h.g.ensurePerson(a)
 	h.g.ensurePerson(b)
 	h.g.interact(a, b, uint64(h.g.clock.Now()))
-	h.g.logEvent(b, logEntry{Kind: logVisited, Other: a, Name: h.g.name(a)})
+	h.g.logEvent(b, logEntry{Kind: evlog.Visited, Other: a, Name: h.g.name(a)})
 }
 
 // asleep: id sleeps. A patient lying awake in bed does not.
@@ -347,7 +349,7 @@ func (h careGear) StripGear(target entity.EntityID) bool {
 			g.apparel[target] = w
 			g.dropStackOf(p.Stack(pos.X, pos.Y), pos.X, pos.Y) // PRD-2: as it was, worn or tainted
 			g.dressChanged(target, s)
-			g.dressNote(target, logTookOff, k)
+			g.dressNote(target, evlog.TookOff, k)
 		}
 	}
 	g.dropRaiderGear(target) // raids.go: a raider's or stranger's weapon is found, not the colony's

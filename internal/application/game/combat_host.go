@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -181,17 +182,17 @@ func (h combatEvents) LogStrike(attacker, target entity.EntityID, wk weapon.Kind
 	h.g.logStrike(attacker, target, wk, hit, dmg) // eventlog.go
 }
 func (h combatEvents) Fled(id, threat entity.EntityID) {
-	h.g.logEvent(id, logEntry{Kind: logFled, Other: threat, Name: h.g.creatureName(threat)})
+	h.g.logEvent(id, logEntry{Kind: evlog.Fled, Other: threat, Name: h.g.creatureName(threat)})
 }
 func (h combatEvents) Shot(target entity.EntityID, hit bool, dmg int, by string) {
 	if !hit {
-		h.g.logEvent(target, logEntry{Kind: logWasMissed, Name: by})
+		h.g.logEvent(target, logEntry{Kind: evlog.WasMissed, Name: by})
 		return
 	}
-	h.g.logEvent(target, logEntry{Kind: logAttacked, Amount: dmg, Name: by})
+	h.g.logEvent(target, logEntry{Kind: evlog.Attacked, Amount: dmg, Name: by})
 }
 func (h combatEvents) Trapped(victim entity.EntityID, dmg int) {
-	h.g.logEvent(victim, logEntry{Kind: logTrap, Amount: dmg})
+	h.g.logEvent(victim, logEntry{Kind: evlog.Trap, Amount: dmg})
 }
 func (h combatEvents) Message(x, y int, f string, a ...any) { h.g.message(x, y, f, a...) }
 func (h combatEvents) Burst(x, y int, tick uint64, b explosion.Def) { // a turret's: b zero

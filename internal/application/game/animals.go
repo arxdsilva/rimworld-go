@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/animalview"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
@@ -357,8 +358,8 @@ func (g *Game) chargeCheck(id entity.EntityID, a *animal.State, pos Position, no
 	}
 	a.Mode, a.Target, a.HuntSince, a.ChargeSince = animal.Attack, who, 0, now
 	a.Path, a.PathI, a.Feed, a.FeedLeft = nil, 0, animal.FeedTarget{}, 0
-	g.logEvent(who, logEntry{Kind: logChargedBy, Other: id, Name: g.killerName(id)})
-	g.logEvent(id, logEntry{Kind: logCharged, Other: who, Name: g.creatureName(who)})
+	g.logEvent(who, logEntry{Kind: evlog.ChargedBy, Other: id, Name: g.killerName(id)})
+	g.logEvent(id, logEntry{Kind: evlog.Charged, Other: who, Name: g.creatureName(who)})
 	g.warnChase(id, a, who, true) // chase.go: "A cougar charges Ada!" (raiders are skipped)
 }
 
@@ -647,7 +648,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		}
 	}
 	if by != 0 && by != id {
-		g.logEvent(by, logEntry{Kind: logKilled, Other: id, Name: animalLabel(a)})
+		g.logEvent(by, logEntry{Kind: evlog.Killed, Other: id, Name: animalLabel(a)})
 	}
 	// the colony's death (wildlife.go), else the corpse is unclaimed (PLAY-017)
 	colony := a.Tame || g.colonyKill(by, pos)

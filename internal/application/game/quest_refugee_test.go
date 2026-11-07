@@ -92,9 +92,11 @@ func TestRefugeeDyingOnTheSiteFailsIt(t *testing.T) {
 
 func TestRefugeeSurvivesSaveAndLoad(t *testing.T) {
 	t.Parallel()
-	// Without guards: a site map holding a camp's defenders does not round
-	// trip a save yet (reported to the lead).
-	g, id, _, _ := refugeeSiteWith(t, false)
+	// With guards; one tick first, so the site's rooms and roof support
+	// (derived, rebuilt after the camp was laid) settle as a load derives
+	// them.
+	g, id, _, _ := refugeeSite(t)
+	g.Step(1)
 	h := saveAndLoad(t, g)
 	if h.StateHash() != g.StateHash() {
 		t.Fatal("state hash differs after load")

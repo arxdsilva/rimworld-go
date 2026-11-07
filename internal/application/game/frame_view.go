@@ -3,33 +3,16 @@ package game
 import (
 	"fmt"
 	"slices"
-	"strings"
 
+	"rimworld-go/internal/application/game/framestatus"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Frame inspector read model and blueprint cancelling (UI-015).
-
-// Frame status lines (FrameView.Status), first match wins.
-const (
-	frameMoving     = "Moving %s here: needs no materials"
-	frameChanging   = "Changing to %s" // an in-place material swap (PLAY-011)
-	frameNoStock    = "No %s in stock"
-	frameOnTheWay   = "Materials on the way"
-	frameCompsWay   = "Components on the way"
-	frameNeedComps  = "Needs %d components"
-	frameNeedExtra  = "Needs %d %s" // AX-4: a secondary material (Def.Extra)
-	frameNoHauler   = "Waiting for a hauler"
-	frameBuiltBy    = "Being built by %s"
-	frameNoBuilder  = "Waiting for a builder"
-	frameCraftHint  = ": %s one at a %s"
-	frameHaulerLine = "%s (%d %s)"
-)
 
 // frameStock is the free stock of one material on the map: every ground
 // stack that is not forbidden (inStock), and the part of it someone has
@@ -177,9 +160,9 @@ func (g *Game) fillFrameViews(views []FrameView) {
 		}
 		fv.Builder = builders[fv.ID]
 		fv.Haulers = haulers[fv.ID]
-		fv.Status = frameStatus(fr, *fv)
+		fv.Status = framestatus.Of(fr, fv.Incoming, fv.InStock-fv.Reserved, fv.CompIncoming, fv.Builder)
 		if fr.Swaps != 0 && g.bldgs.Has(fr.Swaps) {
-			fv.Status = fmt.Sprintf(frameChanging, fr.Stuff.String())
+			fv.Status = fmt.Sprintf(framestatus.Changing, fr.Stuff.String())
 		}
 		if bid := g.replacedStanding(fr); bid != 0 {
 			b, _ := g.bldgs.Get(bid)
@@ -212,44 +195,7 @@ func (g *Game) haulerLine(pid entity.EntityID, qty int, key entity.EntityID) str
 	fid, _ := haul.SlotFrame(key)
 	fr, _ := g.frames.Get(fid)
 	sl, _ := haul.SlotOf(fid, fr, key) // the material, the components or a secondary material (AX-4)
-	return fmt.Sprintf(frameHaulerLine, g.name(pid), qty, sl.Kind.String())
-}
-
-// frameStatus is the frame inspector's one-line status (plan Part B).
-func frameStatus(fr construction.Frame, fv FrameView) string {
-	switch {
-	case fr.Reinstall != 0:
-		return fmt.Sprintf(frameMoving, construction.DefOf(fr.Kind).Name)
-	case !fr.Ready() && fr.Wood+fv.Incoming < fr.Need && fv.InStock-fv.Reserved <= 0:
-		return fmt.Sprintf(frameNoStock, fr.Stuff.String()) + craftHint(fr.Stuff)
-	case fr.Wood >= fr.Need && fr.Comp < fr.CompNeed && fv.CompIncoming > 0:
-		return frameCompsWay
-	case fr.Wood >= fr.Need && fr.Comp < fr.CompNeed:
-		return fmt.Sprintf(frameNeedComps, fr.CompNeed-fr.Comp)
-	case fr.Wood >= fr.Need && fr.Comp >= fr.CompNeed && !fr.ExtrasIn():
-		return fmt.Sprintf(frameNeedExtra, haul.SupplyNeed(fr, haul.SupplyKind(fr)), haul.SupplyKind(fr))
-	case !fr.Ready() && fv.Incoming > 0:
-		return frameOnTheWay
-	case !fr.Ready():
-		return frameNoHauler
-	case fv.Builder != "":
-		return fmt.Sprintf(frameBuiltBy, fv.Builder)
-	}
-	return frameNoBuilder
-}
-
-// craftHint tells where a crafted material is made (": sew one at a
-// tailoring bench"), from the first offered recipe whose output it is;
-// "" for gathered materials.
-func craftHint(k item.Kind) string {
-	for _, d := range recipe.All() {
-		if d.Output != k || d.Legacy || d.Name == "" || d.OutQty <= 0 {
-			continue
-		}
-		verb, _, _ := strings.Cut(strings.ToLower(d.Label), " ")
-		return fmt.Sprintf(frameCraftHint, verb, construction.DefOf(d.Bench).Name)
-	}
-	return ""
+	return fmt.Sprintf(framestatus.HaulerLine, g.name(pid), qty, sl.Kind.String())
 }
 
 // StockOf is the free stock of material kind on the map: ground stacks

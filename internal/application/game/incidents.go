@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
@@ -368,7 +369,7 @@ func (g *Game) herdCrossing() bool {
 	}
 	for _, id := range ids {
 		g.startLeaving(id, bx, by)
-		g.logEvent(id, logEntry{Kind: logLeaving})
+		g.logEvent(id, logEntry{Kind: evlog.Leaving})
 	}
 	g.notice(ax, ay, ids[0], "A herd of %d %s is crossing the land.", len(ids), animal.Plural(s))
 	return true
@@ -424,7 +425,7 @@ func (g *Game) strayJoins() bool {
 	}
 	a, _ := g.animals.Get(id)
 	a.Female = g.rng.IntN(2) == 0
-	g.joinColony(id, &a, logJoined)
+	g.joinColony(id, &a, evlog.Joined)
 	g.animals.Set(id, a)
 	g.notice(x, y, id, "A stray %s, %s, has joined the colony.", s.Label(), a.Name)
 	return true
@@ -458,7 +459,7 @@ func (g *Game) farmAnimals() bool {
 		default:
 			a.Female = g.rng.IntN(2) == 0
 		}
-		g.joinColony(id, &a, logJoined)
+		g.joinColony(id, &a, evlog.Joined)
 		g.animals.Set(id, a)
 		ids = append(ids, id)
 	}
@@ -500,7 +501,7 @@ func (g *Game) takenALiking(now uint64) bool {
 	}
 	id := cands[g.rng.IntN(len(cands))]
 	a, _ := g.animals.Get(id)
-	g.joinColony(id, &a, logLiking)
+	g.joinColony(id, &a, evlog.Liking)
 	g.animals.Set(id, a)
 	p, _ := g.positions.Get(id)
 	g.notice(p.X, p.Y, id, "A wild %s has taken a liking to the colony: meet %s.", a.Species.Label(), a.Name)
@@ -632,7 +633,7 @@ func (g *Game) sendGnawsOff() {
 	for _, id := range gw.IDs {
 		if a, ok := g.animals.Get(id); ok && !a.Tame {
 			g.startLeaving(id, ex, ey)
-			g.logEvent(id, logEntry{Kind: logLeaving})
+			g.logEvent(id, logEntry{Kind: evlog.Leaving})
 		}
 	}
 	g.message(ex, ey, "The timbergnaws are leaving, %d trees felled.", gw.Felled)

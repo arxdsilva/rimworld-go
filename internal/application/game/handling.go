@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -173,8 +174,8 @@ func (h herdHost) Tamed(id, aid entity.EntityID) {
 	a.Name = petNames[g.rng.IntN(len(petNames))]
 	a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
 	g.message(ap.X, ap.Y, "%s tamed a %s. Its name is %s.", g.name(id), a.Species.Label(), a.Name)
-	g.logEvent(aid, logEntry{Kind: logTamedBy, Other: id, Name: g.name(id)})
-	g.logEvent(id, logEntry{Kind: logTamed, Other: aid, Name: a.Name + " the " + a.Species.Label()})
+	g.logEvent(aid, logEntry{Kind: evlog.TamedBy, Other: id, Name: g.name(id)})
+	g.logEvent(id, logEntry{Kind: evlog.Tamed, Other: aid, Name: a.Name + " the " + a.Species.Label()})
 	g.animals.Set(aid, a)
 	g.onTamed(id, aid) // bonds.go: a chance of a bond with the tamer
 }
@@ -187,8 +188,8 @@ func (h herdHost) TameFailed(id, aid entity.EntityID) {
 	ap, _ := g.positions.Get(aid)
 	now := uint64(g.clock.Now())
 	a.TameRetry = now + animal.TameRetryTicks
-	g.logEvent(aid, logEntry{Kind: logResistedTaming, Other: id, Name: g.name(id)})
-	g.logEvent(id, logEntry{Kind: logFailedTame, Other: aid, Name: a.Species.Label()})
+	g.logEvent(aid, logEntry{Kind: evlog.ResistedTaming, Other: id, Name: g.name(id)})
+	g.logEvent(id, logEntry{Kind: evlog.FailedTame, Other: aid, Name: a.Species.Label()})
 	if g.rng.IntN(100) < g.revengePct(animal.DefOf(a.Species).TameRevenge) {
 		g.enrage(aid, &a, id, now)
 	} else {
@@ -209,7 +210,7 @@ func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, 
 	if a.Downed { // animal_health.go: enraged, but it cannot hunt until it stands
 		a.Mode, a.Target = animal.Wander, 0
 	}
-	g.logEvent(id, logEntry{Kind: logManhunter, Other: who})
+	g.logEvent(id, logEntry{Kind: evlog.Manhunter, Other: who})
 	p, _ := g.positions.Get(id)
 	g.post(MessageView{Tick: now, Msg: msgfmt.Of("A %s has gone manhunter!", a.Species.Label()),
 		X: p.X, Y: p.Y, Danger: true, Focus: id})

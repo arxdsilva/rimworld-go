@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
@@ -104,7 +105,7 @@ func TestMatingPregnancyBirth(t *testing.T) {
 	if gest := animal.GestTicks(animal.Goat); d.Pregnant <= now || d.Pregnant > now+gest {
 		t.Fatalf("due %d, now %d: want within a gestation (%d)", d.Pregnant, now, gest)
 	}
-	if !hasLogKind(g, billy, logMated) || !hasLogKind(g, daisy, logMated) {
+	if !hasLogKind(g, billy, evlog.Mated) || !hasLogKind(g, daisy, evlog.Mated) {
 		t.Fatal("both log the mating")
 	}
 	if b := animalOf(g, billy); b.Mate != 0 || d.Mate != 0 {
@@ -154,7 +155,7 @@ func TestMatingPregnancyBirth(t *testing.T) {
 	if !hasMessage(g, "Daisy gave birth to") || !hasMessage(g, "goat kid") {
 		t.Fatalf("birth message: %+v", g.messages)
 	}
-	if !hasLogKind(g, daisy, logGaveBirth) {
+	if !hasLogKind(g, daisy, evlog.GaveBirth) {
 		t.Fatal("the mother logs the birth")
 	}
 
@@ -369,7 +370,7 @@ func TestFertileEggHatches(t *testing.T) {
 	for _, id := range g.animalIDs {
 		if a := animalOf(g, id); a.Species == animal.Chicken {
 			chicks++
-			if !a.Tame || a.Name == "" || g.grown(a, uint64(g.clock.Now())) || !hasLogKind(g, id, logHatched) {
+			if !a.Tame || a.Name == "" || g.grown(a, uint64(g.clock.Now())) || !hasLogKind(g, id, evlog.Hatched) {
 				t.Fatalf("a tame young chick: %+v", a)
 			}
 		}

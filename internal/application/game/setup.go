@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/setupview"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
@@ -182,60 +183,18 @@ func newSetupGame(cfg Config, s *Setup) *Game {
 	if g.climate == (temperature.Climate{}) {
 		g.climate = biome.DefOf(s.Site.Biome).Climate
 	}
-	g.climate = withConditions(g.climate, g.ng.fx.Conditions)
+	g.climate = setupview.WithConditions(g.climate, g.ng.fx.Conditions)
 	g.ng.startDay = seasonStartDay(g.climate.PeakDay, s.Season)
 	g.clock = clock.NewAt(clock.Tick(g.ng.startDay*clock.TicksPerDay + clock.StartHour*clock.TicksPerHour))
 	g.lab.Prog = research.Progress{} // a new colony knows nothing yet
 	return g
 }
 
-// cloneFactionList deep-copies factions.
-func cloneFactionList(fs []faction.Faction) []faction.Faction {
-	out := make([]faction.Faction, len(fs))
-	for i, f := range fs {
-		f.Settlements = slices.Clone(f.Settlements)
-		f.SettlementNames = slices.Clone(f.SettlementNames)
-		f.History = slices.Clone(f.History)
-		f.Events = slices.Clone(f.Events)
-		out[i] = f
-	}
-	return out
-}
+// cloneFactionList deep-copies factions (game/setupview).
+func cloneFactionList(fs []faction.Faction) []faction.Faction { return setupview.CloneFactions(fs) }
 
-// seasonStartDay is the calendar day a season starts on for a climate
-// peaking on peak (15 north, 45 south): seasons are 15 days centred on
-// the temperature curve (temperature.Climate.SeasonAt), summer first.
-func seasonStartDay(peak int, s Season) int {
-	var idx int // 0 summer, 1 fall, 2 winter, 3 spring
-	switch s {
-	case SeasonSummer:
-		idx = 0
-	case SeasonFall:
-		idx = 1
-	case SeasonWinter:
-		idx = 2
-	default:
-		idx = 3
-	}
-	q := clock.DaysPerQuadrum
-	d := peak - q/2 + idx*q
-	return (d%clock.DaysPerYear + clock.DaysPerYear) % clock.DaysPerYear
-}
-
-// withConditions applies the permanent conditions to a climate (NG-1
-// §5.1): Endless chill -8 °C; Long summer +6 °C with a 30% smaller swing.
-func withConditions(c temperature.Climate, conds []scenario.Condition) temperature.Climate {
-	for _, k := range conds {
-		switch k {
-		case scenario.EndlessChill:
-			c.YearMean -= 80
-		case scenario.LongSummer:
-			c.YearMean += 60
-			c.Amplitude = c.Amplitude * 7 / 10
-		}
-	}
-	return c
-}
+// seasonStartDay is the calendar day season s starts on (game/setupview).
+func seasonStartDay(peak int, s Season) int { return setupview.SeasonStartDay(peak, uint8(s)) }
 
 // finishSetup is the last build step: arrival, Home, research, scenario
 // rules and the storyteller (§5.1 steps 3-10).

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/framestatus"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -38,7 +39,7 @@ func TestFrameViewMaterialsAndWork(t *testing.T) {
 	if !ok || fv.Wood != 0 || fv.Need != construction.WoodCost(construction.Wall) || fv.WorkTotal != want || fv.WorkLeft != want {
 		t.Fatalf("fresh frame view %+v", fv)
 	}
-	if fv.InStock != 20 || fv.Incoming != 0 || fv.Status != frameNoHauler {
+	if fv.InStock != 20 || fv.Incoming != 0 || fv.Status != framestatus.NoHauler {
 		t.Fatalf("stock %d, incoming %d, status %q", fv.InStock, fv.Incoming, fv.Status)
 	}
 	sawIncoming, sawHauler, sawBuilder, sawWork := false, false, false, false
@@ -51,7 +52,7 @@ func TestFrameViewMaterialsAndWork(t *testing.T) {
 		}
 		if fv.Incoming > 0 {
 			sawIncoming = true
-			if fv.Status != frameOnTheWay {
+			if fv.Status != framestatus.OnTheWay {
 				t.Fatalf("status while hauling %q", fv.Status)
 			}
 		}
@@ -111,20 +112,20 @@ func TestFrameStatusLines(t *testing.T) {
 	g.haul.deliveries = map[entity.EntityID][]haulShare{ada: {{Frame: fid, Qty: 3}}}
 	g.jobs.Set(ada, job.Record{Kind: job.Haul, State: job.Goto, Target: sid, Dest: fid, Route: []entity.EntityID{fid}})
 	fv, _ := frameView(g, fid)
-	if fv.Status != frameOnTheWay || fv.Incoming != 3 || len(fv.Haulers) != 1 || fv.Haulers[0] != "Ada (3 wood)" {
+	if fv.Status != framestatus.OnTheWay || fv.Incoming != 3 || len(fv.Haulers) != 1 || fv.Haulers[0] != "Ada (3 wood)" {
 		t.Fatalf("on the way: %+v", fv)
 	}
 	// 4 materials free, nobody carrying
 	g.releaseDelivery(ada)
 	g.jobs.Set(ada, job.Record{})
-	if s := status(fid); s != frameNoHauler {
+	if s := status(fid); s != framestatus.NoHauler {
 		t.Fatalf("waiting for a hauler %q", s)
 	}
 	// 5 and 6: materials in
 	fr, _ := g.frames.Get(fid)
 	fr.Wood = fr.Need
 	g.frames.Set(fid, fr)
-	if s := status(fid); s != frameNoBuilder {
+	if s := status(fid); s != framestatus.NoBuilder {
 		t.Fatalf("waiting for a builder %q", s)
 	}
 	g.jobs.Set(ada, job.Record{Kind: job.Construct, State: job.Do, Target: fid, TX: 10, TY: 2})
@@ -153,7 +154,7 @@ func TestFrameStatusNoCarpetInStock(t *testing.T) {
 	if g.StockOf("cloth carpet") != 2 {
 		t.Fatalf("StockOf = %d", g.StockOf("cloth carpet"))
 	}
-	if fv, _ = frameView(g, g.layerFrameAt(5, 4, construction.LayerObject)); fv.Status != frameNoHauler || fv.InStock != 2 {
+	if fv, _ = frameView(g, g.layerFrameAt(5, 4, construction.LayerObject)); fv.Status != framestatus.NoHauler || fv.InStock != 2 {
 		t.Fatalf("with a carpet in stock: %+v", fv)
 	}
 }

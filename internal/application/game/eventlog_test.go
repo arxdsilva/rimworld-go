@@ -2,9 +2,11 @@ package game
 
 import (
 	"bytes"
-	"rimworld-go/internal/domain/pawn/skill"
 	"strings"
 	"testing"
+
+	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/domain/pawn/skill"
 
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -161,7 +163,7 @@ func TestLogSurvivesSaveAndAnimalRemovalDeletes(t *testing.T) {
 	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	buck, _ := g.SpawnAnimal("dustbuck", 6, 5)
 	g.logEvent(ada, logEntry{Kind: logAte, Name: "meal"})
-	g.logEvent(buck, logEntry{Kind: logBitten, Name: "Ridgewolf", Amount: 4})
+	g.logEvent(buck, logEntry{Kind: evlog.Bitten, Name: "Ridgewolf", Amount: 4})
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "x"); err != nil {
 		t.Fatal(err)

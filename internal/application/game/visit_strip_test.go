@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
@@ -56,7 +57,7 @@ func TestFriendVisitsBedriddenColonistAndBothRelax(t *testing.T) {
 	}
 	found := false
 	for _, e := range g.logs[pat] {
-		found = found || e.Kind == logVisited
+		found = found || e.Kind == evlog.Visited
 	}
 	if !found {
 		t.Fatal("the patient's log says it was visited")
@@ -139,7 +140,7 @@ func TestStripDropsDownedColonistsGear(t *testing.T) {
 	}
 	took := false
 	for _, e := range g.logs[patient] {
-		took = took || e.Kind == logTookOff
+		took = took || e.Kind == evlog.TookOff
 	}
 	if !took {
 		t.Fatal("the patient's log records the garment taken off")

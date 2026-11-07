@@ -1,10 +1,10 @@
 package game
 
 import (
-	"rimworld-go/internal/application/game/postpone"
 	"slices"
 	"sort"
-	"strings"
+
+	"rimworld-go/internal/application/game/postpone"
 
 	"rimworld-go/internal/application/game/landing"
 	"rimworld-go/internal/application/game/mapview"
@@ -67,22 +67,10 @@ func oreMetal(o geology.Ore) item.Kind {
 func TerrainNames() []string { return terrain.Names() }
 
 // StoneNames maps WorldView.StoneType codes to names ("" is none).
-func StoneNames() []string {
-	out := []string{""}
-	for _, s := range geology.Stones() {
-		out = append(out, s.String())
-	}
-	return out
-}
+func StoneNames() []string { return mapview.StoneNames() }
 
 // OreNames maps WorldView.Ore codes to names ("" is none).
-func OreNames() []string {
-	out := []string{""}
-	for _, o := range minedOres() {
-		out = append(out, o.String())
-	}
-	return out
-}
+func OreNames() []string { return mapview.OreNames() }
 
 // generate replaces the map with a seeded generated one for the game's
 // biome (temperate forest: the original generator).
@@ -466,14 +454,6 @@ func (g *Game) dropStack(k item.Kind, qty, x, y int) {
 	}
 }
 
-var soilLabels = map[string]string{
-	"soil": "Soil", "rich_soil": "Rich soil", "gravel": "Gravel",
-	"stone": "Rough stone", "rock": "Rock wall",
-	"sand": "Sand", "marsh": "Marsh", "ice": "Ice",
-	"rock_smooth": "Smoothed rock wall", "stone_smooth": "Smooth stone floor",
-	"shallow_water": "Shallow water", "deep_water": "Deep water", "mud": "Mud", "track": "Dirt track",
-}
-
 // BiomeInfo is a new-game landing picker card (game/landing); Biomes
 // lists every card in picker order, BiomeInfoOf biome id's card.
 type BiomeInfo = landing.BiomeInfo
@@ -482,43 +462,7 @@ func Biomes() []BiomeInfo               { return landing.Biomes() }
 func BiomeInfoOf(id biome.ID) BiomeInfo { return landing.Of(id) }
 
 // Soils lists every ground type, indexed by the WorldView.Terrain code.
-func Soils() []SoilView {
-	names := terrain.Names()
-	out := make([]SoilView, len(names))
-	for i, n := range names {
-		t := terrain.Type(i)
-		out[i] = SoilView{Name: n, Label: soilLabels[n], Fertility: t.Fertility(),
-			Farmable: t.Fertility() > 0, Walkable: t.Walkable(), WalkCost: t.WalkCost(),
-			Smoothable: t == terrain.Rock || t == terrain.Stone}
-	}
-	return out
-}
+func Soils() []SoilView { return mapview.Soils() }
 
-// SoilLabel is the hover name of a tile's ground (SIM-029): ground, stone
-// and ore are names as in TerrainNames(), StoneNames() and OreNames(), ""
-// meaning none. Natural stone names its stone ("Granite rock wall",
-// "Smooth granite floor", "Compacted steel (in granite)"); without a
-// stone it is the plain Soils() label; an unknown ground is "".
-func SoilLabel(ground, stone, ore string) string {
-	s, ok := geology.ParseStone(stone)
-	if !ok {
-		return soilLabels[ground]
-	}
-	name := strings.ToLower(s.Label())
-	switch ground {
-	case "rock":
-		for _, o := range minedOres() {
-			if o.String() == ore {
-				return o.Label() + " (in " + name + ")"
-			}
-		}
-		return s.Label() + " rock wall"
-	case "rock_smooth":
-		return "Smoothed " + name + " wall"
-	case "stone":
-		return "Rough " + name + " ground"
-	case "stone_smooth":
-		return "Smooth " + name + " floor"
-	}
-	return soilLabels[ground]
-}
+// SoilLabel is the hover name of a tile's ground (SIM-029; mapview.SoilLabel).
+func SoilLabel(ground, stone, ore string) string { return mapview.SoilLabel(ground, stone, ore) }

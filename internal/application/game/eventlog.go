@@ -20,57 +20,16 @@ const maxLogEntries = 30
 // LogLineView is one line of a creature's log (game/evlog).
 type LogLineView = evlog.Line
 
-// Event kinds (game/evlog). Values are saved; append only.
+// The event kinds the care hosts name (game/evlog holds them all: saved,
+// append only); the rest of the game names evlog's directly.
 const (
-	logHit              = evlog.Hit
-	logAttacked         = evlog.Attacked
-	logMissed           = evlog.Missed
-	logWasMissed        = evlog.WasMissed
-	logBit              = evlog.Bit
-	logBitten           = evlog.Bitten
-	logTrap             = evlog.Trap
-	logDowned           = evlog.Downed
-	logDied             = evlog.Died
-	logKilled           = evlog.Killed
-	logFled             = evlog.Fled
-	logTendedBy         = evlog.TendedBy
-	logTended           = evlog.Tended
-	logAte              = evlog.Ate
-	logSleptBed         = evlog.SleptBed
-	logSleptGround      = evlog.SleptGround
-	logTamedBy          = evlog.TamedBy
-	logResistedTaming   = evlog.ResistedTaming
-	logTamed            = evlog.Tamed
-	logFailedTame       = evlog.FailedTame
-	logManhunter        = evlog.Manhunter
-	logMental           = evlog.Mental
-	logRecovered        = evlog.Recovered
-	logInfected         = evlog.Infected
-	logInfectionCleared = evlog.InfectionCleared
-	logHypothermia      = evlog.Hypothermia
-	logHeatstroke       = evlog.Heatstroke
-	logRescuedBy        = evlog.RescuedBy
-	logRescued          = evlog.Rescued
-	logCollapsed        = evlog.Collapsed
-	logStarving         = evlog.Starving
-	logLeaving          = evlog.Leaving
-	logJoined           = evlog.Joined
-	logLiking           = evlog.Liking
-	logMated            = evlog.Mated
-	logGaveBirth        = evlog.GaveBirth
-	logBorn             = evlog.Born
-	logOldAge           = evlog.OldAge
-	logHatched          = evlog.Hatched
-	logCharged          = evlog.Charged
-	logChargedBy        = evlog.ChargedBy
-	logIngested         = evlog.Ingested
-	logSurgery          = evlog.Surgery
-	logScarred          = evlog.Scarred
-	logPutOn            = evlog.PutOn
-	logTookOff          = evlog.TookOff
-	logVisited          = evlog.Visited
-	logFedBy            = evlog.FedBy
-	logFed              = evlog.Fed
+	logTendedBy  = evlog.TendedBy
+	logTended    = evlog.Tended
+	logAte       = evlog.Ate
+	logRescuedBy = evlog.RescuedBy
+	logRescued   = evlog.Rescued
+	logFedBy     = evlog.FedBy
+	logFed       = evlog.Fed
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -132,12 +91,12 @@ func (g *Game) logStrike(attacker, target entity.EntityID, wk weapon.Kind, hit b
 	_, bites := g.animals.Get(attacker)
 	switch {
 	case hit && bites:
-		g.logPair(attacker, target, logBit, 0, dmg, wk)
-		g.logEvent(target, logEntry{Kind: logBitten, Other: attacker, Amount: dmg, Weapon: uint8(wk), Name: g.creatureName(attacker)})
+		g.logPair(attacker, target, evlog.Bit, 0, dmg, wk)
+		g.logEvent(target, logEntry{Kind: evlog.Bitten, Other: attacker, Amount: dmg, Weapon: uint8(wk), Name: g.creatureName(attacker)})
 	case hit:
-		g.logPair(attacker, target, logHit, logAttacked, dmg, wk)
+		g.logPair(attacker, target, evlog.Hit, evlog.Attacked, dmg, wk)
 	default:
-		g.logPair(attacker, target, logMissed, logWasMissed, 0, wk)
+		g.logPair(attacker, target, evlog.Missed, evlog.WasMissed, 0, wk)
 	}
 }
 

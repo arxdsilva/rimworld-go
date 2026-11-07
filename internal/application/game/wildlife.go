@@ -1,11 +1,12 @@
 package game
 
 import (
-	"rimworld-go/internal/application/game/herd"
 	"slices"
 	"sort"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/forage"
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -345,7 +346,7 @@ func (g *Game) rallyLegendaries(id entity.EntityID, who entity.EntityID, now uin
 		o.Manhunter = now + animal.ManhunterTicks
 		o.Mode, o.Target, o.TameMark, o.FleeUntil, o.Path, o.PathI = animal.Attack, who, false, 0, nil, 0
 		g.animals.Set(aid, o)
-		g.logEvent(aid, logEntry{Kind: logManhunter, Other: who})
+		g.logEvent(aid, logEntry{Kind: evlog.Manhunter, Other: who})
 	})
 }
 

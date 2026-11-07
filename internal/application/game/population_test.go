@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -128,7 +129,7 @@ func TestOverCapHerdLeaves(t *testing.T) {
 			t.Fatalf("leaving %v, want the newest herd %v", leaving, newest)
 		}
 	}
-	if len(g.logs[newest[0]]) == 0 || g.logs[newest[0]][0].Kind != logLeaving {
+	if len(g.logs[newest[0]]) == 0 || g.logs[newest[0]][0].Kind != evlog.Leaving {
 		t.Fatal("the leaver's log says so")
 	}
 	for i := 0; i < 6*clock.TicksPerHour && len(g.wl.Departs) > 0; i++ {

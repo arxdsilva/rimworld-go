@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
@@ -66,7 +67,7 @@ func standInSight(t *testing.T, g *Game, m *mapState, tid, id entity.EntityID) P
 // shotBySentry reports a round of a turret having hit creature id.
 func shotBySentry(g *Game, id entity.EntityID) bool {
 	for _, e := range g.logs[id] {
-		if e.Kind == logAttacked && e.Name == combat.TurretLogName {
+		if e.Kind == evlog.Attacked && e.Name == combat.TurretLogName {
 			return true
 		}
 	}

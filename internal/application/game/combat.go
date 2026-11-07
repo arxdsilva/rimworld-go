@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/hit"
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/ai/job"
@@ -118,7 +119,7 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	questSignal(g, quest.Signal{Kind: quest.SigPawnDied, Pawn: id}) // quest_host.go (QST-1)
 	g.releaseBed(id)
 	delete(g.draft, id)
-	g.logEvent(id, logEntry{Kind: logDied})
+	g.logEvent(id, logEntry{Kind: evlog.Died})
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)

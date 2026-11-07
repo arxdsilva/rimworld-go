@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/dose"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -109,7 +110,7 @@ func (h doseMinds) Traits(id entity.EntityID) []trait.ID {
 }
 func (h doseMinds) Remember(id entity.EntityID, k mood.Kind) { h.g.remember(id, k) }
 func (h doseMinds) LogIngested(id entity.EntityID, name string) {
-	h.g.logEvent(id, logEntry{Kind: logIngested, Name: name})
+	h.g.logEvent(id, logEntry{Kind: evlog.Ingested, Name: name})
 }
 func (h doseMinds) DrugRolls() func(int) int { return h.g.stream(streamDrug).IntN }
 

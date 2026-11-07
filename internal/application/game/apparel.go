@@ -1,12 +1,13 @@
 package game
 
 import (
-	"rimworld-go/internal/application/game/postpone"
 	"slices"
 
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/gearview"
 	"rimworld-go/internal/application/game/outfit"
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/exposure"
@@ -168,9 +169,9 @@ func (h outfitWardrobe) SetWorn(id entity.EntityID, w craft.Outfit) { h.g.appare
 func (h outfitWardrobe) Drop(st item.Stack, x, y int)               { h.g.dropStackOf(st, x, y) }
 func (h outfitWardrobe) Drafted(id entity.EntityID) bool            { return h.g.drafted(id) }
 func (h outfitWardrobe) Note(id entity.EntityID, putOn bool, k item.Kind) {
-	kind := uint8(logTookOff)
+	kind := uint8(evlog.TookOff)
 	if putOn {
-		kind = logPutOn
+		kind = evlog.PutOn
 	}
 	h.g.dressNote(id, kind, k)
 }

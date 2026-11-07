@@ -1,9 +1,10 @@
 package game
 
 import (
-	"rimworld-go/internal/application/game/herd"
 	"strings"
 
+	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -109,7 +110,7 @@ func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
 	if a.Tame {
 		g.message(pos.X, pos.Y, "%s the %s died of old age.", a.Name, a.Species.Label())
 	}
-	g.logEvent(id, logEntry{Kind: logOldAge})
+	g.logEvent(id, logEntry{Kind: evlog.OldAge})
 	g.endMating(id, a)
 	g.removeAnimal(id)
 	toxicRot(g, g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, forbids(g).DropForbidden(pos.X, pos.Y), animal.CorpseYieldOf(*a, now, true)), body.ToxicBuildup(a.Body)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
@@ -195,8 +196,8 @@ func (g *Game) mateStep(id entity.EntityID, a *animal.State, pos Position, now u
 	a.Mate, a.MateLeft, a.MateUntil = 0, 0, 0
 	p.Mate, p.MateLeft, p.MateUntil = 0, 0, 0
 	g.animals.Set(fid, p)
-	g.logEvent(id, logEntry{Kind: logMated, Other: fid, Name: animalLabel(p)})
-	g.logEvent(fid, logEntry{Kind: logMated, Other: id, Name: animalLabel(*a)})
+	g.logEvent(id, logEntry{Kind: evlog.Mated, Other: fid, Name: animalLabel(p)})
+	g.logEvent(fid, logEntry{Kind: evlog.Mated, Other: id, Name: animalLabel(*a)})
 	return true
 }
 
@@ -264,13 +265,13 @@ func (g *Game) giveBirth(id entity.EntityID, a *animal.State, now uint64) {
 			c.Mother = uint64(id)
 			g.animals.Set(cid, c)
 		}
-		g.logEvent(cid, logEntry{Kind: logBorn, Other: id, Name: animalLabel(*a)})
+		g.logEvent(cid, logEntry{Kind: evlog.Born, Other: id, Name: animalLabel(*a)})
 		born++
 	}
 	if born == 0 {
 		return
 	}
-	g.logEvent(id, logEntry{Kind: logGaveBirth, Amount: born, Name: animal.YoungName(a.Species, born)})
+	g.logEvent(id, logEntry{Kind: evlog.GaveBirth, Amount: born, Name: animal.YoungName(a.Species, born)})
 	if a.Tame {
 		g.message(pos.X, pos.Y, "%s gave birth to %s.", a.Name, animal.YoungPhrase(a.Species, born))
 	}
@@ -460,7 +461,7 @@ func (g *Game) hatch(id entity.EntityID, st item.Stack) {
 		if !ok {
 			break
 		}
-		g.logEvent(cid, logEntry{Kind: logHatched})
+		g.logEvent(cid, logEntry{Kind: evlog.Hatched})
 		n++
 	}
 	if n == 0 || !st.Tame {

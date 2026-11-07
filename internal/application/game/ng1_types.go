@@ -19,10 +19,10 @@ import (
 type Season uint8
 
 const (
-	SeasonSpring Season = iota
-	SeasonSummer
-	SeasonFall
-	SeasonWinter
+	SeasonSpring Season = setupview.SeasonSpring
+	SeasonSummer Season = setupview.SeasonSummer
+	SeasonFall   Season = setupview.SeasonFall
+	SeasonWinter Season = setupview.SeasonWinter
 )
 
 // Setup is everything the new-game wizard chose (NG-1 §5.1). A nil Setup

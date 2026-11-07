@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -54,7 +55,7 @@ func operateAll(t *testing.T, g *Game, patient entity.EntityID, feed ...entity.E
 func surgeryLine(g *Game, patient entity.EntityID) string {
 	line := ""
 	for _, e := range g.logs[patient] {
-		if e.Kind == logSurgery {
+		if e.Kind == evlog.Surgery {
 			line = e.Name
 		}
 	}

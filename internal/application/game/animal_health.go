@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/animalview"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/infection"
@@ -257,7 +258,7 @@ func (g *Game) downAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
 	a.Target, a.HuntSince, a.FleeUntil, a.ChargeSince = 0, 0, 0, 0
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
-	g.logEvent(id, logEntry{Kind: logDowned})
+	g.logEvent(id, logEntry{Kind: evlog.Downed})
 	if a.Tame && a.Name != "" {
 		pos, _ := g.positions.Get(id)
 		g.message(pos.X, pos.Y, "%s the %s is down.", a.Name, a.Species.Label())
@@ -327,7 +328,7 @@ func (g *Game) rollAnimalInfections(id entity.EntityID, a *animal.State, b *body
 			continue
 		}
 		if b.AddCond(body.Condition{Kind: body.CondInfection, Part: w.Part, Sev: infection.Onset, Since: now}) {
-			g.logEvent(id, logEntry{Kind: logInfected})
+			g.logEvent(id, logEntry{Kind: evlog.Infected})
 			if a.Tame {
 				pos, _ := g.positions.Get(id)
 				g.message(pos.X, pos.Y, "%s's wound is infected.", a.Name)
@@ -357,7 +358,7 @@ func (g *Game) stepAnimalConds(id entity.EntityID, a *animal.State, b *body.Body
 			return true
 		case cured:
 			c.Sev, beaten = 0, true
-			g.logEvent(id, logEntry{Kind: logInfectionCleared})
+			g.logEvent(id, logEntry{Kind: evlog.InfectionCleared})
 		}
 	}
 	if beaten {

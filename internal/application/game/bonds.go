@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/faction"
@@ -228,7 +229,7 @@ func (g *Game) bereave(id entity.EntityID, a *animal.State, dead entity.EntityID
 	a.Path, a.PathI, a.Feed, a.FeedLeft, a.Target = nil, 0, animal.FeedTarget{}, 0, 0
 	if g.bondRoll(bondManhunterPermille) {
 		a.Manhunter, a.Mode = now+animal.ManhunterTicks, animal.Attack
-		g.logEvent(id, logEntry{Kind: logManhunter, Other: dead})
+		g.logEvent(id, logEntry{Kind: evlog.Manhunter, Other: dead})
 		g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s the %s has gone manhunter with grief for %s!", a.Name, a.Species.Label(), g.name(dead)),
 			X: p.X, Y: p.Y, Danger: true, Focus: id})
 		return

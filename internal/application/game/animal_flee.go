@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -76,7 +77,7 @@ func (g *Game) validFoe(self, t entity.EntityID) bool {
 // it moves on every hit (fleeFrom).
 func (g *Game) fleeHit(id entity.EntityID, a *animal.State, by entity.EntityID, now uint64) {
 	if a.Mode != animal.Flee {
-		g.logEvent(id, logEntry{Kind: logFled, Other: by, Name: g.creatureName(by)})
+		g.logEvent(id, logEntry{Kind: evlog.Fled, Other: by, Name: g.creatureName(by)})
 		a.Path, a.PathI = nil, 0 // a sleeper wakes, a grazer drops its meal
 	}
 	a.Target, a.HuntSince = 0, 0

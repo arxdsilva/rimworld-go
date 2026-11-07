@@ -1,8 +1,10 @@
 package game
 
 import (
-	"rimworld-go/internal/application/game/postpone"
 	"slices"
+
+	"rimworld-go/internal/application/game/mapview"
+	"rimworld-go/internal/application/game/postpone"
 
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
@@ -137,7 +139,7 @@ func (h craftStock) InSource(src uint64, x, y int) bool {
 }
 func (h craftStock) SourceName(src uint64) string {
 	if z, ok := h.g.zones.Zone(zone.ID(src)); ok {
-		return zoneLabel(z)
+		return mapview.ZoneLabel(z)
 	}
 	return ""
 }

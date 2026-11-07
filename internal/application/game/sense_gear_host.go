@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -146,7 +147,7 @@ func (h senseGear) TakeOff(id entity.EntityID, slot int) bool {
 		g.apparel[id] = w
 		g.dropStackOf(p.Stack(pos.X, pos.Y), pos.X, pos.Y)
 		g.dressChanged(id, s)
-		g.dressNote(id, logTookOff, p.Kind)
+		g.dressNote(id, evlog.TookOff, p.Kind)
 	}
 	return true
 }

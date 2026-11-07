@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
@@ -912,7 +913,7 @@ func (g *Game) operate(surgeon, patient entity.EntityID, slot int, j *job.Record
 	g.bodyChanged(patient, b, &v)
 	g.remember(patient, mood.Surgery) // rooms.go
 	line := g.name(surgeon) + " " + op.DoneText(outcome) + " on " + g.name(patient)
-	g.logEvent(patient, logEntry{Kind: logSurgery, Name: line})
+	g.logEvent(patient, logEntry{Kind: evlog.Surgery, Name: line})
 	if outcome != body.Success {
 		g.woundOpened(patient) // infection.go: a surgical wound wants tending
 		g.message(pp.X, pp.Y, "%s botched an operation on %s.", g.name(surgeon), g.name(patient))
@@ -949,7 +950,7 @@ func (g *Game) sedate(patient entity.EntityID, b *body.Body, now uint64) {
 // surgeon as for an execution (socialOnDeath).
 func (g *Game) euthanize(surgeon, patient entity.EntityID, b *body.Body, v *health.Record, pp Position) {
 	g.bodyChanged(patient, b, v)
-	g.logEvent(patient, logEntry{Kind: logSurgery, Name: g.name(surgeon) + " euthanized " + g.name(patient)})
+	g.logEvent(patient, logEntry{Kind: evlog.Surgery, Name: g.name(surgeon) + " euthanized " + g.name(patient)})
 	g.message(pp.X, pp.Y, "%s euthanized %s.", g.name(surgeon), g.name(patient))
 	g.dieBy(patient, health.CauseEuthanasia, surgeon) // combat.go
 	if g.prison.Is(patient) {

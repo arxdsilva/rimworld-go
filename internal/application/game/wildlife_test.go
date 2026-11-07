@@ -3,10 +3,11 @@ package game
 import (
 	"bytes"
 	"reflect"
-	"rimworld-go/internal/application/game/evlog"
-	"rimworld-go/internal/domain/pawn/skill"
 	"strings"
 	"testing"
+
+	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/domain/pawn/skill"
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -390,8 +391,8 @@ func TestAttackVerbs(t *testing.T) {
 		weapon.Headbutt: {"Headbutted deer (-3)", "Headbutted by deer (-3)"},
 		weapon.Peck:     {"Pecked deer (-3)", "Pecked by deer (-3)"},
 	} {
-		by := evlog.Text(logBit, uint8(wk), "deer", 3)
-		of := evlog.Text(logBitten, uint8(wk), "deer", 3)
+		by := evlog.Text(evlog.Bit, uint8(wk), "deer", 3)
+		of := evlog.Text(evlog.Bitten, uint8(wk), "deer", 3)
 		if by != want[0] || of != want[1] {
 			t.Errorf("%v: %q / %q", wk, by, of)
 		}

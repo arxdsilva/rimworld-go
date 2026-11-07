@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/setupview"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
@@ -931,7 +932,7 @@ func TestMapSizes(t *testing.T) {
 	var sides []int
 	for _, s := range sizes {
 		sides = append(sides, s.Side)
-		if s.Enabled != (s.Side <= MaxEnabledSide || s.Side == preReleaseSide && MaxEnabledSide < 200) {
+		if s.Enabled != (s.Side <= MaxEnabledSide || s.Side == setupview.PreReleaseSide && MaxEnabledSide < 200) {
 			t.Fatalf("%d enabled %v", s.Side, s.Enabled)
 		}
 		if s.Large != (s.Side >= 350) {

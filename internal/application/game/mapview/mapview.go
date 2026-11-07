@@ -2,8 +2,9 @@
 // zones, rooms, ground, stains and dirt, recent roof collapses and bursts,
 // per-chunk shares of the world view and the minimap, plant growth, fires,
 // lightning strikes, crop raids, power nets and aid groups. The game
-// fills them and names them game.ZoneView, game.RoomView and so on. Plain
-// data: no state, no host.
+// fills them and names them game.ZoneView, game.RoomView and so on. The
+// ground's names and labels (ground.go) and the zone labels (zone.go) are
+// pure helpers beside them. No state, no host.
 package mapview
 
 // Zone is one zone for the UI: its tiles and settings.

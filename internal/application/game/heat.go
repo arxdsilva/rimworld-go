@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/bodytemp"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/exposure"
@@ -105,9 +106,9 @@ func (g *Game) expose() {
 // capacity rule, bleed.go), or stands one lying from exposure once the
 // capacities recover past the band.
 func exposureDowned(g *Game, id entity.EntityID, b *body.Body, v health.Record, heat bool) {
-	cause, kind, how := health.CauseHypothermia, logHypothermia, "%s collapsed from hypothermia"
+	cause, kind, how := health.CauseHypothermia, evlog.Hypothermia, "%s collapsed from hypothermia"
 	if heat {
-		cause, kind, how = health.CauseHeatstroke, logHeatstroke, "%s collapsed from heatstroke"
+		cause, kind, how = health.CauseHeatstroke, evlog.Heatstroke, "%s collapsed from heatstroke"
 	}
 	switch {
 	case v.Status == health.Alive && g.downsNow(id, v, b):

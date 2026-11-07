@@ -36,31 +36,8 @@ func NewPlanetBuilder(p planet.Params) *planet.Builder { return planet.NewBuilde
 // types such as the Swarm are marked Hidden).
 func FactionViewsOf(fs []faction.Faction) []FactionView { return factionview.All(fs) }
 
-// Map size options (NG-1 §2.6, §6.9).
-var mapSides = [...]int{200, 225, 250, 275, 300, 350, 400, 450, 500}
-
-const (
-	preReleaseSide = 120
-	largeSide      = 350
-	reasonMapGate  = "Not available yet" // NG-1 §2.7: shown until the engine gate passes
-)
-
-// MapSizes lists the map size options, gated by MaxEnabledSide; while no
-// listed size is enabled a 120 "pre-release" size leads the list.
-func MapSizes() []MapSizeView {
-	var out []MapSizeView
-	if MaxEnabledSide < mapSides[0] {
-		out = append(out, MapSizeView{Side: preReleaseSide, Enabled: true, Reason: "pre-release"})
-	}
-	for _, s := range mapSides {
-		v := MapSizeView{Side: s, Enabled: s <= MaxEnabledSide, Large: s >= largeSide}
-		if !v.Enabled {
-			v.Reason = reasonMapGate
-		}
-		out = append(out, v)
-	}
-	return out
-}
+// MapSizes lists the map size options, gated by MaxEnabledSide (game/setupview).
+func MapSizes() []MapSizeView { return setupview.MapSizes(MaxEnabledSide) }
 
 // ---- scenario details: game/setupview builds the panel's lines ----
 

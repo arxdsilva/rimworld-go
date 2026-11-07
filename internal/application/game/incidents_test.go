@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/incident"
@@ -127,7 +128,7 @@ func TestStrayJoinsTame(t *testing.T) {
 		if p, _ := g.positions.Get(got[0]); !onEdge(g, p, 2) {
 			t.Fatalf("the stray walked in at %v", p)
 		}
-		if !evHasLog(g, got[0], logJoined) {
+		if !evHasLog(g, got[0], evlog.Joined) {
 			t.Fatal("its log says it joined")
 		}
 		m := lastMessage(g)
@@ -223,7 +224,7 @@ func TestSelfTameNearHome(t *testing.T) {
 		t.Fatal("no animal took a liking")
 	}
 	a, _ := g.animals.Get(near)
-	if !a.Tame || a.Name == "" || a.Herd != 0 || !evHasLog(g, near, logLiking) {
+	if !a.Tame || a.Name == "" || a.Herd != 0 || !evHasLog(g, near, evlog.Liking) {
 		t.Fatalf("the near deer %+v", a)
 	}
 	for _, id := range []entity.EntityID{wolf, far, stag} {

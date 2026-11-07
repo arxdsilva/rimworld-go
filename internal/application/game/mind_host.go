@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
@@ -275,8 +276,8 @@ func (h mindBrawls) StopBrawl(id entity.EntityID) {
 func (h mindEvents) FightStarted(starter, other entity.EntityID) {
 	g, now := h.g, uint64(h.g.clock.Now())
 	label := mentalbreak.DefOf(mentalbreak.SocialFight).Label
-	g.logEvent(starter, logEntry{Kind: logMental, Name: label, Other: other})
-	g.logEvent(other, logEntry{Kind: logMental, Name: label, Other: starter})
+	g.logEvent(starter, logEntry{Kind: evlog.Mental, Name: label, Other: other})
+	g.logEvent(other, logEntry{Kind: evlog.Mental, Name: label, Other: starter})
 	pos, _ := g.positions.Get(starter)
 	g.post(MessageView{Tick: now, Msg: msgfmt.Of("%s and %s are fighting!", g.name(starter), g.name(other)), X: pos.X, Y: pos.Y, Danger: true, Focus: starter, Letter: true, Title: "Social fight", Kind: letters.Caution})
 	g.addHistory("fight", fmt.Sprintf("%s got into a fight with %s.", g.name(starter), g.name(other)), starter, other)
@@ -296,7 +297,7 @@ type mindEvents struct{ g *Game }
 func (h mindEvents) Started(id entity.EntityID, k mentalbreak.Kind, target entity.EntityID) {
 	g := h.g
 	def := mentalbreak.DefOf(k)
-	g.logEvent(id, logEntry{Kind: logMental, Name: def.Label, Other: target})
+	g.logEvent(id, logEntry{Kind: evlog.Mental, Name: def.Label, Other: target})
 	pos, _ := g.positions.Get(id)
 	text := fmt.Sprintf("Mental break: "+def.Message, g.name(id))
 	if target != 0 {
@@ -315,7 +316,7 @@ func (h mindEvents) Started(id entity.EntityID, k mentalbreak.Kind, target entit
 }
 func (h mindEvents) Recovered(id entity.EntityID, _ mentalbreak.Kind) {
 	g := h.g
-	g.logEvent(id, logEntry{Kind: logRecovered})
+	g.logEvent(id, logEntry{Kind: evlog.Recovered})
 	g.remember(id, mood.Catharsis)
 	pos, _ := g.positions.Get(id)
 	g.message(pos.X, pos.Y, "%s has calmed down and feels a little better.", g.name(id))

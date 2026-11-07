@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -194,7 +195,7 @@ func (g *Game) stepCare(now uint64) {
 		before := len(b.Wounds)
 		scarred := b.HealHour(g.stream(streamBody).IntN, g.lyingHeal(id)) // body/tend.go
 		for _, p := range scarred {
-			g.logEvent(id, logEntry{Kind: logScarred, Name: "A wound on the " + p.Label() + " healed into a scar"})
+			g.logEvent(id, logEntry{Kind: evlog.Scarred, Name: "A wound on the " + p.Label() + " healed into a scar"})
 		}
 		if len(scarred) > 0 || len(b.Wounds) != before || b.Damage() != v.Injury {
 			g.bodyChanged(id, b, &v) // body.go: Injury follows the wounds
@@ -243,7 +244,7 @@ func (g *Game) rollInfections(id entity.EntityID, b *body.Body, now uint64) {
 		}
 		if b.AddCond(body.Condition{Kind: body.CondInfection, Part: w.Part, Sev: infection.Onset, Since: now}) {
 			pos, _ := g.positions.Get(id)
-			g.logEvent(id, logEntry{Kind: logInfected})
+			g.logEvent(id, logEntry{Kind: evlog.Infected})
 			g.message(pos.X, pos.Y, "%s's wound on the %s is infected.", g.name(id), w.Part.Label())
 		}
 	}
@@ -279,7 +280,7 @@ func (g *Game) stepConds(id entity.EntityID, b *body.Body, now uint64) bool {
 			return true
 		case cured:
 			c.Sev, beaten = 0, true
-			g.logEvent(id, logEntry{Kind: logInfectionCleared})
+			g.logEvent(id, logEntry{Kind: evlog.InfectionCleared})
 			g.message(pos.X, pos.Y, "%s fought off the %s.", g.name(id), d.Label)
 		}
 	}

@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/application/game/bodytemp"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
@@ -146,7 +147,7 @@ func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 	a.Food = 0
 	if a.Starving == 0 {
 		a.Starving = now
-		g.logEvent(id, logEntry{Kind: logStarving})
+		g.logEvent(id, logEntry{Kind: evlog.Starving})
 		return true
 	}
 	if (now-a.Starving)%animal.StarveEvery != 0 {
@@ -301,7 +302,7 @@ func (g *Game) breakOff(id entity.EntityID, a *animal.State, pos Position, now u
 		fx, fy := animal.FleeGoal(pos.X, pos.Y, fp.X, fp.Y, 8)
 		g.animalGoTo(id, a, fx, fy)
 	}
-	g.logEvent(id, logEntry{Kind: logFled, Other: foe, Name: g.creatureName(foe)})
+	g.logEvent(id, logEntry{Kind: evlog.Fled, Other: foe, Name: g.creatureName(foe)})
 }
 
 // endFight drops an animal's target and hunt.

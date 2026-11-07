@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/mapview"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -115,7 +116,5 @@ func (g *Game) findMonitor(bed entity.EntityID) entity.EntityID {
 	return best
 }
 
-// minedOres is every ore a rock cell can hold, in code order: the metal
-// veins of geology.Ores() and the buried machinery (WorldView.Ore codes,
-// OreNames, SetGround).
-func minedOres() []geology.Ore { return append(geology.Ores(), geology.Machinery) }
+// minedOres is every ore a rock cell can hold, in code order (game/mapview).
+func minedOres() []geology.Ore { return mapview.MinedOres() }
