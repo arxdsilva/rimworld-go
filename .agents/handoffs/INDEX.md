@@ -23,7 +23,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | [SIM.md](SIM.md) | SIM |
 | [SND.md](SND.md) | SND |
 | [STORAGE.md](STORAGE.md) | STK, NST, STO, ZONE, HAUL |
-| [UI.md](UI.md) | UI, CTL, TIME |
+| [UI.md](UI.md) | UI, CTL, TIME, UIS |
 | [WORLD.md](WORLD.md) | MAP, WG |
 
 | ID | Title | Date | Ledger |
@@ -388,6 +388,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | UI-026-play017-scale-fixes | Scale fixes, zone labels, hauling, chase UI (PLAY-017) | 2026-10-25 | [UI.md](UI.md#ui-026-play017-scale-fixes) |
 | UI-027-play018-hud-relayout | HUD relayout and learning helper (PLAY-018) | 2026-10-25 | [UI.md](UI.md#ui-027-play018-hud-relayout) |
 | UI-028-play020-zones-beds-lamps | Zones, beds, lamps, bed rest (PLAY-020) | 2026-10-25 | [UI.md](UI.md#ui-028-play020-zones-beds-lamps) |
+| UIS-gap-analysis | UI size and scale gap analysis | 2026-11-06 | [UI.md](UI.md#uis-gap-analysis) |
 | UPDATE-001-update-notice | Running version and update notice | 2026-11-03 | [OPS.md](OPS.md#update-001-update-notice) |
 | USAGE-001-usage-data | Usage data client | 2026-11-03 | [OPS.md](OPS.md#usage-001-usage-data) |
 | VIEW-001-camera-restored-on-load | Camera restored when a game loads | 2026-10-30 | [ART.md](ART.md#view-001-camera-restored-on-load) |

@@ -1,6 +1,6 @@
 # UI handoffs
 
-Families: UI, CTL, TIME. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
+Families: UI, CTL, TIME, UIS. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
 
 ## CTL-001-mouse-controls
 Mouse controls (CTL-001..020) · 2026-11-04 · c72269fee
@@ -211,3 +211,13 @@ Zones, beds, lamps, bed rest (PLAY-020) · 2026-10-25 · 327fe63f2
 - Changed: zone management: zone is the last selection candidate on its tile (label selects it); pane (size, crop, growing now/too cold/too hot, sown, ripe, growth); Plant, Allow sowing/cutting, Expand/Shrink (drag-rect for that zone until right-click/Esc), Delete, Hide, Rename. Sim `zone_cmds.go`, `zone.Map.AddCells/RemoveCells/Remove/Update`; settings never affect merging; zero values keep state hashes.
 - Decisions: goldens (48x40 seeds 1 and 42, 120x120 seed 7, grown) re-pinned because wounded colonists now rest until tended. `cmd/rambudget` gained a `capture` kind (2.2 GiB). Captures `zone`, `zone-shrink`. Fixed: floating cell info covered a selected zone's pane.
 - Open: double-click select all similar zones in view; crop selector columns (skill, growth time, yield); lamp pools step per tile; overlay ash PNGs differ from source (pre-existing drift); electricity PLAY-021 next (torch lamp before it).
+
+## UIS-gap-analysis
+UI size and scale gap analysis · 2026-11-06 · bd8480c26
+- Changed: `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md`, 92 rows comparing the reference game's logical sizes at 1x with ours: scale steps and the minimum logical size, type sizes, colonist bar, messages, alerts, letters, tab bar, inspect pane, commands, Architect, lower-right stack, main-tab windows, float menu, tooltips, Options, zoom range and map labels. `CLEAN_ROOM.md` row UIS-* (sizes, steps and zoom range may be measured; art, icons, colours, fonts, text and code stay ours; screenshots never enter the repo).
+- Method: the lead drove the reference game (1.6.4871, Core, dev mode) through Steam with `-savedatafolder` on a scratch folder; the user's config hashes were unchanged after. 71 shots at 1920×1080 (1x, 1.25x), 1280×720, 5120×2762 at 3x and two minimum-size windows; five read-only agents measured each value twice; the lead re-measured 10 values, all within ±2.
+- Decisions (user, 2026-11-06): same logical sizes (our 100 % is the reference 1x, same nine steps 1–4); Auto stays as our extra with a new rule (largest step keeping 1280×900 physical px per step); decompiled constants banned.
+- Findings: our Auto gives 1.5 at 1080p, so the whole HUD is 1.5× the reference; the reference default zoom is 48 cells of window height (22.5 px per cell at 1080, ours 64); commands past 4 rows are silently dropped today (UIS-052); no pawn name labels on the map (UIS-088).
+- Not measured: 1.75x rendering, message stacks, 20+ commands, work bars, tame animals, many-colonist rows between 17 and 39; UIS-3 captures them.
+- No HUD/UI representation: analysis only.
+- Open (the user's): default scale (UIS-006), step unit physical vs points (UIS-002), map rebase to 48 cells (UIS-080, UIS-086). Implementation: UIS-1 contract by the lead, then UIS-2a–f in parallel, then UIS-3; the Quests tab and window (UIS-041 part, UIS-066) wait for a quests feature.
