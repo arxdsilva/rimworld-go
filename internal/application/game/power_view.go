@@ -15,14 +15,6 @@ import (
 // structure moved, like the rooms), so a loaded game shows exactly what
 // the one it was saved from does.
 
-// PowerNetView is one power net for the overlay and the inspector: its id
-// (BuildingView.PowerNet), W generated and W drawn now, the batteries'
-// stored energy and capacity in Wh, and whether consumers are shed.
-type PowerNetView struct {
-	ID, Gen, Load, StoredWh, CapWh int
-	Brownout                       bool
-}
-
 // Why a device has no power, or makes none (BuildingView.NoPowerReason).
 const (
 	NoPowerNotConnected = "not connected"

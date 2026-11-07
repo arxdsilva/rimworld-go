@@ -14,15 +14,6 @@ const (
 	MinimapKind      uint8 = 0xc0 // mask of the plant/floor/structure bits
 )
 
-// MinimapView is the minimap layer: Cells is W×H, row-major, each a
-// terrain code with one of the Minimap* kinds; Ver changes whenever any
-// cell may have. Cells is shared and read-only.
-type MinimapView struct {
-	Ver   uint64
-	W, H  int
-	Cells []uint8
-}
-
 type minimapState struct {
 	gen   uint64
 	ok    bool

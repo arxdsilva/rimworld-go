@@ -66,13 +66,6 @@ type cropRaid struct {
 	Species animal.Species
 }
 
-// CropRaidView is a crop a wild animal ate in the last hour.
-type CropRaidView struct {
-	X, Y    int
-	Tick    uint64
-	Species string
-}
-
 // CropRaids lists the crops wild animals ate in the last hour, oldest
 // first (read-only; for the "Wild animals eating crops" alert).
 func (g *Game) CropRaids() []CropRaidView {

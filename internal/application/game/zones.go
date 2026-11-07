@@ -21,38 +21,6 @@ import (
 // skips zoned tiles, touching zones of the same kind (grow zones: the same
 // crop) merge, and cancelling tiles shrinks or splits a zone.
 
-// ZoneView is one zone for the UI: its tiles and settings.
-type ZoneView struct {
-	ID    uint16
-	Kind  string // "stockpile" | "grow" | "pen"
-	Crop  string // grow zones: the species name ("tree" for tree zones)
-	Food  bool   // stockpile filters
-	Wood  bool
-	Stone bool
-	Cells [][2]int // row-major
-	// The bounding box, for labels and panels.
-	MinX, MinY, MaxX, MaxY int
-	// PLAY-020 settings: sowing or cutting off, hidden overlay, the
-	// player's name ("" = the default).
-	NoSow, NoCut, Hidden bool
-	Name                 string
-	// PLAY-023 storage settings: Priority is the stockpile's priority
-	// name ("Critical" .. "Low"; "" for zones without one), Corpses and
-	// Chunks a dumping stockpile's filters.
-	Priority        string
-	Corpses, Chunks bool
-	// PRD-4 storage filters (stockpile_filter.go): Filter is the allowed
-	// filter-tree nodes, compact (zone.Filter.Names); Special the special
-	// filters on and the narrowed ranges (zone.Special.Names). Shelf is a
-	// shelf's storage zone's building id (0: no shelf).
-	Filter, Special []string
-	Shelf           uint64
-	Profile         string // NST: the storage furniture's build name; "" for the rest
-	// STO/CBT contract (0 until STO-2): storage Group id, Stored stacks of Capacity.
-	Group            uint64
-	Stored, Capacity int
-}
-
 // Zone kinds in ZoneView.Kind and CanZoneAt.
 const (
 	ZoneStockpile = "stockpile"

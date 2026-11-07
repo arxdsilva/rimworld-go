@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/factionview"
 	"rimworld-go/internal/application/game/roster"
+	"rimworld-go/internal/application/game/setupview"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -58,31 +59,14 @@ type Setup struct {
 // farthest zoom (ENG-001).
 const MaxEnabledSide = 500
 
-// MapSizeView is one map size option.
-type MapSizeView struct {
-	Side    int
-	Enabled bool
-	Reason  string
-	Large   bool // 350+ ("needs a capable computer")
-}
-
-// ScenarioView is a scenario in the Choose Scenario list.
-type ScenarioView struct {
-	Key, Name, Summary string
-	Builtin            bool
-	Hardness           int
-	Unreadable         string // decode error for a broken file
-	Problems           []scenario.Problem
-	Lines              []DetailLine
-	Def                scenario.Def
-}
-
-// DetailLine is one line of a details panel (Heading lines start groups).
-type DetailLine struct {
-	Heading bool
-	Text    string
-	Tip     string
-}
+// The setup read models (game/setupview); DetailLine is one line of a
+// details panel (Heading lines start groups).
+type (
+	MapSizeView  = setupview.MapSize
+	ScenarioView = setupview.ScenarioRow
+	DetailLine   = setupview.Line
+	StoryView    = setupview.Story
+)
 
 // The identity read models and the character-creation pool live in
 // game/roster; these are their names for the adapters.
@@ -122,12 +106,3 @@ var (
 
 // FactionView is a faction row (setup and colony; game/factionview).
 type FactionView = factionview.Row
-
-// StoryView is the colony's storyteller and difficulty.
-type StoryView struct {
-	Storyteller, Title string
-	Preset             string
-	Difficulty         difficulty.Settings
-	Adaptation         int
-	Commitment         bool
-}

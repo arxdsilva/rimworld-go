@@ -16,7 +16,7 @@ import (
 	"rimworld-go/internal/domain/scenario"
 )
 
-// Line is one details line: field for field game.DetailLine (a heading,
+// Line is one details line, game.DetailLine (a heading,
 // "key\tvalue" text, a hover tip).
 type Line struct {
 	Heading bool

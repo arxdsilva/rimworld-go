@@ -67,11 +67,4 @@ func MapSizes() []MapSizeView {
 func itemLabel(k item.Kind) string { return setupview.ItemLabel(k) }
 
 // scenarioLines is the key-value body of a scenario's details panel.
-func scenarioLines(d scenario.Def) []DetailLine {
-	ls := setupview.Scenario(d)
-	out := make([]DetailLine, len(ls))
-	for i, l := range ls {
-		out[i] = DetailLine(l)
-	}
-	return out
-}
+func scenarioLines(d scenario.Def) []DetailLine { return setupview.Scenario(d) }

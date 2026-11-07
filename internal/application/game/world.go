@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/game/landing"
+	"rimworld-go/internal/application/game/mapview"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/economy/item"
@@ -16,6 +17,25 @@ import (
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
+)
+
+// Read models of the map and its overlays (game/mapview).
+type (
+	ZoneView         = mapview.Zone
+	RoomView         = mapview.Room
+	SoilView         = mapview.Soil
+	PlantGrowthView  = mapview.PlantGrowth
+	StainView        = mapview.Stain
+	DirtView         = mapview.Dirt
+	RoofCollapseView = mapview.RoofCollapse
+	BurstView        = mapview.Burst
+	ChunkView        = mapview.Chunk
+	AllyGroupView    = mapview.AllyGroup
+	FireView         = mapview.Fire
+	StrikeView       = mapview.Strike
+	MinimapView      = mapview.Minimap
+	CropRaidView     = mapview.CropRaid
+	PowerNetView     = mapview.PowerNet
 )
 
 // MineYield is the chunks of its stone dropped by mining one rock tile
@@ -444,21 +464,6 @@ func (g *Game) dropStack(k item.Kind, qty, x, y int) {
 	if st, ok := g.stacks.Get(sid); ok {
 		g.mergeOrSet(sid, st)
 	}
-}
-
-// SoilView describes a ground type for the hover readout.
-type SoilView struct {
-	Name      string // terrain code name, e.g. "rich_soil"
-	Label     string // display name, e.g. "Rich soil"
-	Fertility int    // growth rate in percent; 0 = nothing grows
-	Farmable  bool   // growing zones may be placed here
-	Walkable  bool
-	// WalkCost is the time to cross it, percent of plain ground (marsh 200:
-	// "slow ground" in the hover; floors cancel it).
-	WalkCost int
-	// Smoothable: a builder may smooth it (rough rock without ore, rough
-	// stone ground without a building; SIM-029).
-	Smoothable bool
 }
 
 var soilLabels = map[string]string{

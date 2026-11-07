@@ -26,12 +26,6 @@ const (
 	strikeTries = 8
 )
 
-// StrikeView is one lightning strike: where and when (tick).
-type StrikeView struct {
-	X, Y int
-	Tick uint64
-}
-
 // strikeTick is the tick of slot's strike.
 func strikeTick(seed, slot uint64) uint64 {
 	return slot*strikeSlot + clock.TicksPerHour/2 + randx.SplitMix64(seed^slot)%clock.TicksPerHour

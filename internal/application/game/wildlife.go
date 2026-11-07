@@ -68,20 +68,6 @@ type burstStamp struct {
 	Radius  int // DEF-2: an explosion's kind and radius (tenths of a tile)
 }
 
-// BurstView is a recent explosive death, for the renderer's flash and
-// scorch (kept an hour, like roof collapses).
-type BurstView struct {
-	X, Y    int
-	Tick    uint64
-	Species string
-	// Turret: a destroyed sentry turret's blast (PLAY-024); Species is "".
-	// Blast names an explosion ("bomb", "flame", "EMP", "smoke"; DEF-2)
-	// of Radius tenths of a tile; "" otherwise.
-	Turret bool
-	Blast  string
-	Radius int
-}
-
 const (
 	// startPredatorMax caps a starting predator herd so a new colony
 	// meets a pair, not a whole pack.

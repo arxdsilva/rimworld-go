@@ -18,22 +18,6 @@ import (
 // ChunkSize is a chunk's side in tiles.
 const ChunkSize = chunk.Size
 
-// ChunkView is one chunk's share of the current World(): indexes into its
-// Plants, Items, Buildings and Frames, ascending (list order), of the
-// entries whose anchor tile (X, Y) lies in the chunk. The slices are
-// shared and read-only.
-//
-// Ver changes whenever anything a baked image of the chunk's ground can
-// show may have changed: terrain, stone and ore on the chunk and a one-
-// tile ring around it (edges and links reach across), three rows south
-// (tall rock reaches north), and every building whose footprint touches
-// that area. PlantVer changes when a plant in the chunk appears, goes,
-// changes species, growth stage or harvestability.
-type ChunkView struct {
-	Ver, PlantVer                    uint64
-	Plants, Items, Buildings, Frames []int32
-}
-
 // chunkReach is how far around a chunk its ground version looks: one
 // column each side, one row north and three south.
 const (

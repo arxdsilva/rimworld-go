@@ -28,15 +28,6 @@ const (
 // creatures stain tiles; stains fade over 7 days and wash off open ground
 // in rain and snow (stain package). Deterministic and saved.
 
-// StainView is one stained tile for presentation.
-type StainView struct {
-	X, Y     int
-	Kind     string  // "blood" or "ichor"
-	Amount   float64 // 0..1 strength
-	AgeTicks uint64  // since the last fresh blood (drying)
-	Variant  uint8
-}
-
 // stainState is the stains on the map and their fade/wash remainders.
 type stainState struct {
 	tiles map[[2]int]stain.Stain

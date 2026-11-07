@@ -29,12 +29,6 @@ import (
 //     with ReasonThickRoof, and no drop pod lands under one.
 // No RNG, no map iteration, no wall clock: ties go by row-major index.
 
-// RoofCollapseView is a recent roof collapse, for presentation (dust).
-type RoofCollapseView struct {
-	X, Y int
-	Tick uint64
-}
-
 // roofCollapse is a collapse stamp, kept for an hour.
 type roofCollapse struct {
 	x, y int

@@ -17,32 +17,6 @@ import (
 	"rimworld-go/internal/domain/world/terrain"
 )
 
-// RoomView is an enclosed room in the read model. BED-2 stats: Space, Beauty, Impressiveness
-// in tenths, CleanStat hundredths, Wealth silver; Score is whole points, Label the stage.
-type RoomView struct {
-	ID, Cells                            int
-	Role                                 string
-	Score                                int
-	Label                                string // awful .. wondrously impressive
-	Space, Beauty, Wealth, CleanStat     int
-	SpaceLabel, BeautyLabel, WealthLabel string
-	Impressiveness                       int
-	Lit                                  bool // a light shines in it: a powered lamp, a burning torch lamp or campfire
-	Temp                                 int  // air temperature, tenths of a degree C
-	// Roofed is the roofed share of the room's cells, 0..1 (SIM-018).
-	Roofed float64
-	// Filth is the average dirt plus stain per cell (0..filth.Full),
-	// Cleanliness the CleanStat label and FilthPenalty the impressiveness
-	// points the filth costs (already taken off Score) (SIM-021, BED-2).
-	Filth        int
-	Cleanliness  string
-	FilthPenalty int
-	// TEMP-1 (game/thermo), the room stats line: wall faces with outdoor air beyond, single and double (half the
-	// loss); its sources' net heat (tenths of heat/s); RoofKind "thin", "thick" (mountain), "mixed" or "".
-	ExposedWalls, DoubleWalls, HeatRate int
-	RoofKind                            string
-}
-
 // ThoughtView is one line of a pawn's mood.
 type ThoughtView struct {
 	Label string

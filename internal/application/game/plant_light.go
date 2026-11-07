@@ -86,18 +86,6 @@ func (g *Game) growNowOf() growNow {
 	return growNow{gp: g.growthPct(), sun: plant.GrowingHour(int(clock.HourOfDay(g.clock.Now()))), lamps: g.sunLamps(now)}
 }
 
-// PlantGrowthView is why a plant is or isn't growing now (PLAY-017), for
-// the plant inspector. State is "growing", "resting" (the rest hours),
-// "dark" (too little growing light: a sun lamp or the open sky), "cold",
-// "hot" or "ripe"; RipeIn the estimated ticks until ripe at the current
-// conditions (-1 unknown or not growing). It follows the hour, the
-// weather and the lamps rather than the plant, so it is asked for one
-// plant on demand instead of riding on every PlantView.
-type PlantGrowthView struct {
-	State  string
-	RipeIn int
-}
-
 // PlantGrowth is plant id's growth state now (ok false: no such plant).
 func (g *Game) PlantGrowth(id entity.EntityID) (PlantGrowthView, bool) {
 	p, ok := g.plants.Get(id)

@@ -4,12 +4,6 @@ import "rimworld-go/internal/domain/world/fire"
 
 // PLAY-015 fire contract (fire.go fills the behaviour).
 
-// FireView is one burning cell.
-type FireView struct {
-	X, Y int
-	Size int // 1..100
-}
-
 // fireState is the active fires (fire.go): fires sorted y then x, the
 // only saved part; rt holds derived lookups and recent lightning strikes
 // (fire.go, lightning.go), never saved.

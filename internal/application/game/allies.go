@@ -17,18 +17,6 @@ import (
 // aidCall is a military aid call (game/visit), saved in the trade block.
 type aidCall = visit.Call
 
-// AllyGroupView is one aid group on the map for the alerts: its faction,
-// how many of its fighters stand and are on the map, whether it is
-// leaving, the hours left at most, and where its standing fighters are.
-type AllyGroupView struct {
-	Faction   string
-	Standing  int
-	Total     int
-	Leaving   bool
-	HoursLeft int
-	Spots     [][2]int
-}
-
 // aidOf is game/visit's military aid over the game.
 func aidOf(g *Game) visit.Aid { return visitsOf(g).Aid(&g.trade.aid) }
 

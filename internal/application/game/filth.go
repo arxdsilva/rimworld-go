@@ -32,12 +32,6 @@ import (
 // Every dirt change goes through addDirt and every stain change through
 // stainMoved (stains.go); both end in filthMoved.
 
-// DirtView is the dirt on one tile.
-type DirtView struct {
-	X, Y   int
-	Amount float64 // 0..1 of filth.Full
-}
-
 // dirtCell is one dirty tile in a save.
 type dirtCell struct {
 	X, Y   int
