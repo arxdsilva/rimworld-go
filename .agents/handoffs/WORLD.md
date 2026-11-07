@@ -83,3 +83,14 @@ Quests gap analysis · 2026-11-07 · this commit
 - Pointers: CLEAN_ROOM row QST-*, `.agents/README.md` gaps index, MAIN_UI §31, checklist Phase 29, UIS-041 → QST-138, UIS-066 → QST-139.
 - HUD/UI: none (documentation only); the Quests window and tab are QST-3.
 - Next: QST-1 step 0 (letters and the scheduled-incident queue move to sub-packages).
+
+## QST-1-quests-contract
+Quests contract: domain, root, glue · 2026-11-07 · f1968a3b4 98999185e 3c8d1f954 c7cdaae1c aaea7cd83 961aeb73c 6cb638a7d
+- Changed: a setup colony now holds a quests root (`game/quest`, built on first use in `worldState`); one offer per 10-day window from day 6 on landing, fed by the kinds passed to `quest.New` (none yet, so no offers in play until QST-2).
+- Changed: commands Accept/Dismiss/Restore/Fulfil/Negotiate/SetRewardPref route to the root; a refused one is said in a world note. `WorldView.Quests` is the read model (memo on `Version()`); a quest letter carries `Quest` id. Difficulty gains "Quest rewards" (0–500 %) and "Quest threats" in the wizard and options (save v15).
+- Decisions: domain `internal/domain/quest` is pure (ticks and rolls passed in); every roll draws from `streamQuest`; the root fires timers from a due heap (O(due), `BenchmarkQuestHourly` 10 → 156 ns, 1,000 → 253 ns, 0 allocs). Faction refs in quests are 1 + index; roles take plain indexes.
+- Decisions: the quest save lives in `worldSave.Quests` and is nil while the root holds nothing (cadence included), so idle and legacy saves hash unchanged; the v12 fixture pin moved only for the v15 difficulty migration (proved by disabling the step).
+- Decisions: letters keep `Join`/`Demand`; the quest UI builds its rows from the quest view by the letter's quest id (QST-156 kept).
+- Limits: game package relieved by moving letters (f1968a3b4) and the postponed-work store (961aeb73c); line ceiling now 52,698, files 174; `Game` methods 1,783 and fields 64 unchanged. Root `Quests` at 37 of 40 methods.
+- HUD: none yet; the Quests tab, window, letter rows and alert are QST-3.
+- Open: QST-2a needs role glue — caravan arrival signal (QST-074), manhunters, condition, ambush, caravan-inclusive points (QST-025/044). QST-2b needs sites: `Place`/`Remove`/`NearTile`, `Meta.Quest`, the populate step, census and map-closed signals (QST-054, 064, 101–109, 117). QST-089 pod generalisation with 2e. QST-005 accept-time requirements per kind.

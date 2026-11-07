@@ -252,6 +252,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PRD-4-catalogue-stockpiles-shelves | Recipe catalogue, stockpile filters, shelves, barrel | 2026-10-29 | [BASE.md](BASE.md#prd-4-catalogue-stockpiles-shelves) |
 | PWR-power-wires | Visible power wires and Reconnect | 2026-11-03 | [BASE.md](BASE.md#pwr-power-wires) |
 | QA-001-player-journeys | Player-journey tests, CI on every push, real-path clicks | 2026-10-27 | [OPS.md](OPS.md#qa-001-player-journeys) |
+| QST-1-quests-contract | Quests contract: domain, root, glue | 2026-11-07 | [WORLD.md](WORLD.md#qst-1-quests-contract) |
 | QST-gap-analysis | Quests gap analysis | 2026-11-07 | [WORLD.md](WORLD.md#qst-gap-analysis) |
 | REF-1-prioritize-refuel-auto-toggle | Ordered refuels and the auto refuel switch | 2026-11-06 | [BASE.md](BASE.md#ref-1-prioritize-refuel-auto-toggle) |
 | REL-001-release-workflow | Release builds on tags | 2026-10-21 | [OPS.md](OPS.md#rel-001-release-workflow) |
