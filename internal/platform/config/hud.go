@@ -84,7 +84,7 @@ func defaultHUD() HUD {
 	return HUD{
 		Enabled: true,
 		Docked:  true, RefreshTenths: 5,
-		Pane: HUDPane{Restyle: true, Height: 168, MinTabs: 6, TabW: 96, FactionIcon: true},
+		Pane: HUDPane{Restyle: true, Height: 165, MinTabs: 6, TabW: 96, FactionIcon: true},
 		Card: HUDCard{Anchor: 6, W: 400, H: 460, LetterGap: 4},
 		Text: HUDText{BodySize: 12, BodyLinePct: 89, LargeDelta: 4, LargeLinePct: 100, SmallDelta: -2, SmallLinePct: 100,
 			LabelW: 100, ValueW: 36},

@@ -211,26 +211,27 @@ func TestDeveloperTabNeedsDeveloperMode(t *testing.T) {
 }
 
 // TestOptionsButtonsFitAtEveryUIScale: every tab's buttons, the tab row
-// included, stay on a 1920x1080 window laid out at 75 to 200 % and do not
-// overlap (960x540 logical at 200 %).
+// included, stay on the logical screens a UI step can leave (the smallest a
+// step above 1 allows is 1280x768, UIS-003; step 1 on the setup minimum is
+// 1280x720) and do not overlap.
 func TestOptionsButtonsFitAtEveryUIScale(t *testing.T) {
 	t.Parallel()
 	f, s := newFake()
 	f.env.Bindings = input.Defaults()
 	f.env.Running = true
 	f.settings.Gameplay.DevMode = true
-	for _, scale := range config.UIScalePresets {
-		sw, sh := 1920*100/scale, 1080*100/scale
+	for _, size := range [][2]int{{1280, 720}, {1280, 768}, {1536, 864}, {1920, 1080}} {
+		sw, sh := size[0], size[1]
 		for _, tab := range s.TabList() {
 			s.Tab = tab
 			bs := s.Buttons(sw, sh)
 			for i, b := range bs {
 				if b.X < 0 || b.Y < 0 || b.X+b.W > float32(sw) || b.Y+b.H > float32(sh) {
-					t.Fatalf("%d%% %s: %s is off screen (%v,%v %vx%v in %dx%d)", scale, tab, b.ID, b.X, b.Y, b.W, b.H, sw, sh)
+					t.Fatalf("%s: %s is off screen (%v,%v %vx%v in %dx%d)", tab, b.ID, b.X, b.Y, b.W, b.H, sw, sh)
 				}
 				for _, o := range bs[i+1:] {
 					if b.X < o.X+o.W && o.X < b.X+b.W && b.Y < o.Y+o.H && o.Y < b.Y+b.H {
-						t.Fatalf("%d%% %s: %s overlaps %s", scale, tab, b.ID, o.ID)
+						t.Fatalf("%dx%d %s: %s overlaps %s", sw, sh, tab, b.ID, o.ID)
 					}
 				}
 			}

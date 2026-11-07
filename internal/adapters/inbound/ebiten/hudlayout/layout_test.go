@@ -10,8 +10,8 @@ import (
 // layoutScreens are the logical screens the invariants run on.
 var layoutScreens = [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}}
 
-// Six colonists fit one full-size row; thirty wrap to more rows at a
-// smaller scale (18 + 12 at 0.75 on the default screen), and the bar never
+// Six colonists fit one full-size row; thirty go to the smallest step
+// (UIS-022): two rows of 18 + 12 at 1280, one row at 1920. The bar never
 // reaches the resource list or the right column.
 func TestLayoutColonistBarWraps(t *testing.T) {
 	t.Parallel()
@@ -19,30 +19,26 @@ func TestLayoutColonistBarWraps(t *testing.T) {
 	for _, sz := range layoutScreens {
 		st.Colonists = 6
 		l := Compute(sz[0], sz[1], st)
-		if l.BarScale != 1 || len(l.BarSlots) != 6 || l.BarMore != 0 || l.Bar.H != BarSlotH {
+		if l.BarScale != 1 || len(l.BarSlots) != 6 || l.BarMore != 0 || l.Bar.H != BarSlot+BarNameH || l.Bar.Y != BarTop {
 			t.Errorf("%v: 6 colonists = scale %v, %d slots (+%d), bar %+v; want one full-size row", sz, l.BarScale, len(l.BarSlots), l.BarMore, l.Bar)
 		}
 		st.Colonists = 30
 		l = Compute(sz[0], sz[1], st)
-		rows := map[float32]bool{}
+		rows := map[float32]int{}
 		for _, s := range l.BarSlots {
-			rows[s.Y] = true
+			rows[s.Y]++
 		}
-		if l.BarScale >= 1 || len(l.BarSlots) != 30 || l.BarMore != 0 {
+		if l.BarScale >= 1 || len(l.BarSlots)+max(l.BarMore-1, 0) != 30 {
 			t.Errorf("%v: 30 colonists = scale %v, %d slots (+%d); want them all, smaller", sz, l.BarScale, len(l.BarSlots), l.BarMore)
 		}
-		if sz[0] < 1920 && len(rows) < 2 { // the big screen holds them in one smaller row
-			t.Errorf("%v: 30 colonists sit in %d row(s), want them wrapped", sz, len(rows))
-		}
-		if sz == [2]int{1280, 720} {
-			first := 0
-			for _, s := range l.BarSlots {
-				if s.Y == l.BarSlots[0].Y {
-					first++
-				}
+		switch sz {
+		case [2]int{1280, 720}:
+			if l.BarSlots[0].W != 27 || rows[BarTop] != 18 || len(rows) != 2 || l.BarMore != 0 {
+				t.Errorf("1280x720: 30 colonists = slot %v, %v by row; want 18 + 12 at 27", l.BarSlots[0].W, rows)
 			}
-			if l.BarScale != 0.75 || first != 18 || len(rows) != 2 {
-				t.Errorf("1280x720: 30 colonists = scale %v, %d in the first row, %d rows; want 18 + 12 at 0.75", l.BarScale, first, len(rows))
+		case [2]int{1920, 1080}:
+			if l.BarSlots[0].W != 27 || len(rows) != 1 {
+				t.Errorf("1920x1080: 30 colonists = slot %v, %v by row; want one row at 27", l.BarSlots[0].W, rows)
 			}
 		}
 		for _, n := range []int{6, 30, 90} {
@@ -55,6 +51,151 @@ func TestLayoutColonistBarWraps(t *testing.T) {
 				t.Errorf("%v %d colonists: bar %+v reaches the resources (right %v) or the right column (%v)", sz, n, l.Bar, l.Resources.Right(), l.Right.X)
 			}
 		}
+	}
+}
+
+// TestBarStepsMatchReference (UIS-020 to UIS-025): at 1920 logical, 3, 8 and
+// 16 colonists are full size (48, pitch 72), 24 are 37 at pitch 56, 40 are
+// 27 at pitch 41 in two rows of 34 + 6 with a row pitch of 46, 60 still fit;
+// every row is n x pitch wide and centred on its own.
+func TestBarStepsMatchReference(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		n           int
+		slot, pitch float32
+		first, rows int
+	}{{3, 48, 72, 3, 1}, {8, 48, 72, 8, 1}, {16, 48, 72, 16, 1}, {24, 37, 56, 24, 1}, {40, 27, 41, 34, 2}, {60, 27, 41, 34, 2}} {
+		l := Compute(1920, 1080, Inputs{Colonists: c.n})
+		rows := map[float32][]gfx.Rect{}
+		for _, s := range l.BarSlots {
+			rows[s.Y] = append(rows[s.Y], s)
+		}
+		if len(l.BarSlots) != c.n || l.BarMore != 0 || l.BarSlots[0].W != c.slot || l.BarSlots[0].H != c.slot || len(rows[BarTop]) != c.first || len(rows) != c.rows {
+			t.Errorf("%d colonists: %d slots (+%d), slot %v, %d in row 1, %d rows; want slot %v, %d, %d", c.n, len(l.BarSlots), l.BarMore, l.BarSlots[0].W, len(rows[BarTop]), len(rows), c.slot, c.first, c.rows)
+			continue
+		}
+		for y, r := range rows {
+			if len(r) > 1 && r[1].X-r[0].X != c.pitch {
+				t.Errorf("%d colonists: pitch %v, want %v", c.n, r[1].X-r[0].X, c.pitch)
+			}
+			if mid := r[0].X + float32(len(r))*c.pitch/2; gfx.Abs32(mid-960) > 1 {
+				t.Errorf("%d colonists: row at %v centred on %v, want 960", c.n, y, mid)
+			}
+		}
+		if c.rows == 2 {
+			if _, ok := rows[BarTop+46]; !ok {
+				t.Errorf("%d colonists: second row not 46 below the first (%v)", c.n, rows)
+			}
+		}
+	}
+}
+
+// TestCommandsNeverDropped (UIS-052): more commands than cells keep every
+// one reachable: the last cell stands for the rest.
+func TestCommandsNeverDropped(t *testing.T) {
+	t.Parallel()
+	for _, n := range []int{8, 30, 400} {
+		l := Compute(1280, 720, Inputs{Colonists: 3, PaneShown: true, Commands: n, GlobalH: 60})
+		shown := len(l.GridCells)
+		if l.GridMore > 0 {
+			shown += l.GridMore - 1
+		}
+		if shown != n {
+			t.Errorf("%d commands: %d cells, more %d", n, len(l.GridCells), l.GridMore)
+		}
+		for _, g := range l.GridCells {
+			if g.Y < l.Bar.Bottom() || g.Right() > l.Right.X || g.Bottom() > l.Tabs.Y-CmdBottom {
+				t.Errorf("%d commands: cell %+v leaves its band", n, g)
+			}
+		}
+	}
+}
+
+// TestMetricsMatchReference pins each reference size to its gap row
+// (`.agents/gaps/UI_SCALE_GAP_ANALYSIS.md`): a change here changes the row.
+func TestMetricsMatchReference(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		row       string
+		got, want float32
+	}{
+		{"UIS-040 tab bar", TabsH, 34},
+		{"UIS-044 pane width", PaneW, 432},
+		{"UIS-044 pane height", PaneH, 165},
+		{"UIS-045 pane tab row", PaneTabsH, 30},
+		{"UIS-045 non-pawn tab", PaneTabW, 70},
+		{"UIS-046 pane inset", PaneInset, 12},
+		{"UIS-046 name baseline", PaneNameBaseline, 28},
+		{"UIS-047 status bar width", PaneBarW, 93},
+		{"UIS-047 status bar height", PaneBarH, 16},
+		{"UIS-047 status bar gap", PaneBarGap, 6},
+		{"UIS-047 status bar top", PaneBarTop, 36},
+		{"UIS-048 pane line", PaneLineH, 16},
+		{"UIS-050 command cell", CmdCell, 75},
+		{"UIS-050 command stride", CmdStride, 80},
+		{"UIS-050 grid gap", CmdGridGap, 14},
+		{"UIS-050 grid bottom", CmdBottom, 16},
+		{"UIS-051 hotkey inset", CmdInset, 6},
+		{"UIS-051 label below", CmdLabelBelow, 6},
+		{"UIS-051 icon", CmdIconMax, 40},
+		{"UIS-053 category button width", ArchCatW, 100},
+		{"UIS-053 category button height", ArchCatH, 32},
+		{"UIS-053 category panel", ArchCatsW, 200},
+		{"UIS-053 search row", ArchSearchH, 28},
+		{"UIS-054 description width", ArchDescW, 200},
+		{"UIS-054 description height", ArchDescH, 270},
+		{"UIS-055 designator gap", ArchGridGap, 10},
+		{"UIS-056 icon", GlobalIcon, 24},
+		{"UIS-056 icon pitch", GlobalIconPitch, 28},
+		{"UIS-056 per row", GlobalPerRow, 5},
+		{"UIS-056 right inset", GlobalRight, 3},
+		{"UIS-056 bottom", GlobalBottom, 6},
+		{"UIS-057 speed width", SpeedW, 32},
+		{"UIS-057 speed height", SpeedH, 24},
+		{"UIS-057 speed right", SpeedRight, 6},
+		{"UIS-058 text pitch", GlobalRowPitch, 26},
+		{"UIS-058 text right", GlobalTextRight, 8},
+		{"UIS-059 cell readout x", CellX, 15},
+		{"UIS-059 cell readout pitch", CellPitch, 19},
+		{"UIS-059 cell readout bottom", CellBottom, 17},
+		{"UIS-020 slot", BarSlot, 48},
+		{"UIS-021 pitch", BarPitch, 72},
+		{"UIS-024 bar top", BarTop, 21},
+		{"UIS-029 message x", MsgX, 140},
+		{"UIS-029 message y", MsgY, 17},
+		{"UIS-030 alert row", AlertRowH, 22},
+		{"UIS-030 alert right", AlertRight, 7},
+		{"UIS-031 letter width", LetterW, 38},
+		{"UIS-031 letter row", LetterRowH, 30},
+		{"UIS-031 letter gap", LetterGap, 12},
+		{"UIS-031 letter right", LetterRight, 12},
+		{"UIS-060 window pad", WindowPad, 18},
+		{"UIS-060 window edge", WindowEdge, 1},
+		{"UIS-017 menu row", MenuRowH, 29},
+		{"UIS-017 table row", TableRowH, 30},
+		{"UIS-016 option row", OptionRowH, 35},
+		{"UIS-016 option control", OptionCtrlH, 30},
+		{"UIS-070 float row", FloatRowH, 29},
+		{"UIS-070 float icon", FloatIcon, 19},
+		{"UIS-070 float pad", FloatPadW, 48},
+		{"UIS-069 menu width", PauseW, 450},
+		{"UIS-069 menu height", PauseH, 391},
+		{"UIS-069 menu button width", PauseBtnW, 168},
+		{"UIS-069 menu button height", PauseBtnH, 44},
+		{"UIS-069 menu button pitch", PauseBtnPitch, 52},
+		{"UIS-069 menu inset", PauseInset, 19},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s = %v, want %v", c.row, c.got, c.want)
+		}
+	}
+	for tab, want := range map[string][2]float32{"log": {630, 510}, "gear": {460, 450}, "social": {540, 510}, "bio": {514, 489}, "needs": {580, 520}, "health": {630, 430}} {
+		if w, h, ok := PaneTabSize(tab); !ok || w != want[0] || h != want[1] || w > ExpandMaxW {
+			t.Errorf("UIS-049 %s panel = %v x %v (%v), want %v", tab, w, h, ok, want)
+		}
+	}
+	if ArchCatsH(0) != 6*32+28 || ArchCatsH(13) != 7*32+28 {
+		t.Errorf("UIS-053 category panel heights %v, %v", ArchCatsH(0), ArchCatsH(13))
 	}
 }
 
@@ -164,11 +305,11 @@ func TestCardPaneLeavesCommandRoom(t *testing.T) {
 		wantW, wantH float32
 		cols         int
 	}{
-		{1288, 724, 576, 168, 576, 168, 6},
-		{1280, 720, 576, 168, 576, 168, 6},
-		{1024, 768, 624, 179, 436, 179, 4},
-		{1920, 1080, 864, 252, 864, 252, 11},
-		{853, 480, 432, 141, 400, 141, 0}, // UI scale 1.5: the plain pane's width is the least
+		{1288, 724, 576, 168, 576, 168, 5},
+		{1280, 720, 576, 168, 576, 168, 5},
+		{1024, 768, 624, 179, 432, 179, 4},
+		{1920, 1080, 864, 252, 864, 252, 10},
+		{853, 480, 432, 141, 432, 141, 0}, // a small window: the plain pane's width is the least
 	}
 	for _, c := range cases {
 		l := Compute(c.sw, c.sh, Inputs{Colonists: 3, PaneShown: true, Commands: 8, PaneW: c.paneW, PaneH: c.paneH, GlobalH: 60})

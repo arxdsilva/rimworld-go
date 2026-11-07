@@ -18,7 +18,13 @@ Scope: the logical sizes of the in-game HUD, windows, dialogs, fonts and map lab
 | Style vs size | Only sizes and cap heights must match. Our SemiBold label weight, colours and art stay ours. |
 | Not applicable | DLC tabs and gizmos, mod UIs, the world map screen. |
 
-### Open decisions (the user's)
+### Decided (user, 2026-11-07: the recommended option of each)
+
+- Default scale: Auto with the UIS-005 rule.
+- Step unit: physical window px per logical px.
+- Map rebase: the default zoom shows 48 cells of window height.
+
+The options as they were put:
 
 1. **Default scale** (UIS-006):
    - **Recommended:** Auto with the new rule. It gives 1x at 1080p, the same as the reference first launch, and 3x on the user's 5120×2762 display, which is the user's own pick there.

@@ -13,8 +13,9 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// rightAtScale puts a at UI scale s over a physical screen that is 1280x720
-// logical and returns the physical size.
+// rightAtScale puts a at UI scale s over a physical screen that is 1280x768
+// logical (the smallest a step above 1 allows, UIS-003) and returns the
+// physical size.
 func rightAtScale(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	t.Helper()
 	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
@@ -22,9 +23,9 @@ func rightAtScale(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	st := a.settings
 	st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, int(s*100)
 	a.setSettings(st)
-	pw, ph := a.LayoutF(1280*s, 720*s)
-	if a.sw != 1280 || a.sh != 720 {
-		t.Fatalf("scale %v: logical %dx%d, want 1280x720", s, a.sw, a.sh)
+	pw, ph := a.LayoutF(1280*s, 768*s)
+	if a.sw != 1280 || a.sh != 768 {
+		t.Fatalf("scale %v: logical %dx%d, want 1280x768", s, a.sw, a.sh)
 	}
 	f.Frame(t, a)
 	return int(pw), int(ph)

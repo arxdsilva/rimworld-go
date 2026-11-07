@@ -16,9 +16,9 @@ func TestLargerSmallText(t *testing.T) {
 	if body, _ := Measure("Hello world", Body); body != body0 {
 		t.Fatal("other sizes do not change")
 	}
-	// 13 px small text measures as 13 px body text.
+	// small text at the larger size measures as body text (14 px).
 	if wb, _ := Measure("Hello world", Body); w1 != wb {
-		t.Fatalf("small at 13 px is %v wide, body %v", w1, wb)
+		t.Fatalf("small at the larger size is %v wide, body %v", w1, wb)
 	}
 	SetLargerSmall(false)
 	if w, _ := Measure("Hello world", Small); w != w0 {

@@ -12,11 +12,12 @@ import (
 )
 
 // PLAY-012 B.4: every setup screen draws and hit-tests at UI scales other
-// than 1. The window is sized so the logical screen stays 1280x720 (the
-// setup minimum): the physical screen is 1280s x 720s.
+// than 1. The window is sized so the logical screen stays 1280x768 (the
+// smallest logical window a step above 1 allows is 1280x768, UIS-003): the
+// physical screen is 1280s x 768s.
 
 // atLogical1280 switches a to UI scale s over a physical screen that is
-// 1280x720 logical, and returns the physical size.
+// 1280x768 logical, and returns the physical size.
 func atLogical1280(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	t.Helper()
 	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
@@ -24,9 +25,9 @@ func atLogical1280(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	st := a.settings
 	st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, int(s*100)
 	a.setSettings(st)
-	pw, ph := a.LayoutF(1280*s, 720*s)
-	if a.sw != 1280 || a.sh != 720 {
-		t.Fatalf("scale %v: logical %dx%d, want 1280x720", s, a.sw, a.sh)
+	pw, ph := a.LayoutF(1280*s, 768*s)
+	if a.sw != 1280 || a.sh != 768 {
+		t.Fatalf("scale %v: logical %dx%d, want 1280x768", s, a.sw, a.sh)
 	}
 	f.Frame(t, a)
 	return int(pw), int(ph)

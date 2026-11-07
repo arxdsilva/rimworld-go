@@ -26,7 +26,7 @@ func scaledColony(t *testing.T) (*App, *recSim, *fakeInput) {
 	s := a.settings
 	s.Accessibility.UIScaleAuto, s.Accessibility.UIScale = false, 150
 	a.setSettings(s)
-	a.LayoutF(1920, 1080)
+	a.LayoutF(1920, 1152) // the smallest 16:9-ish window step 1.5 allows (1280x768 logical)
 	a.finishBoot()
 	a.startGame()
 	if a.renderer == nil || a.scale.S != 1.5 {

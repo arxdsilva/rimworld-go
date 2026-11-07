@@ -11,44 +11,61 @@ import (
 	"rimworld-go/internal/platform/config"
 )
 
-// UI scaling (PLAY-012 B.1, B.2). Two scales:
+// UI scaling (PLAY-012 B.1, B.2; UIS-001 to UIS-006). Two scales:
 //
 //   - dev: the screen's device pixel density (1, or 2 on Retina), so the
 //     game renders at the screen's true resolution (Graphics.HiDPI);
-//   - ui: how big the interface looks (Auto from the window, or a preset).
+//   - step: how big the interface looks, in physical window pixels per
+//     logical pixel (the reference game's steps, config.UIScalePresets), from
+//     Auto or the player's choice. A logical window is the physical window
+//     divided by the step, whatever the screen's density.
 //
-// The total UI scale is s = dev x ui. The screen Draw receives is physical
-// (outside size x dev). The UI lays itself out in logical pixels
-// (physical / s), exactly as at s = 1, and draws through the scaling
-// canvas (ui_canvas.go, font.go). The map renders at physical resolution
-// and scales its tiles by dev only. Captures force s = 1.
+// The frame Draw receives is the outside size x dev (dev may be lower than
+// the screen's own factor: HiDPI off or the render cap). The total UI scale
+// is s = step x dev / devRaw (frame pixels per logical pixel), and ui =
+// s / dev = step / devRaw. The UI lays itself out in logical pixels (frame /
+// s), exactly as at s = 1, and draws through the scaling canvas (gfx). The
+// map renders at the frame's resolution; its tiles never follow the step.
+// Captures force s = 1.
 //
 // A third factor, world (PERF-002, Graphics.RenderScale), draws the map
 // into an offscreen at world x the physical pixels (world_scale.go): the
 // camera then works in "map pixels" (physical x world, screenDev() =
 // dev x world) and the HUD and every label stay native.
 
-// Auto UI scale bounds and rounding.
-const (
-	autoUIMin  = 1.0
-	autoUIMax  = 2.0
-	autoUIStep = 0.05
-)
+// autoMinH is the logical height Auto keeps (UIS-005): it picks the largest
+// step that leaves at least uikit.MinStepW x autoMinH logical pixels.
+const autoMinH = 900
 
-// autoUIScale is the Auto scale for a w x h window in device-independent
-// points: the factor that keeps the 1280x720 baseline layout's share of
-// the screen, min(w/1280, h/720), clamped to 1..2 and floored to 0.05 (a
-// 1080p window gives 1.5). Flooring and the width term keep the logical
-// window at least the setup screens' minimum (1280x720) on any window
-// that is at least that big, including 16:10 ones.
-func autoUIScale(w, h float64) float64 {
-	if w <= 0 || h <= 0 {
-		return autoUIMin
+// uiStepAllowed reports whether a step leaves at least the minimum logical
+// window (UIS-003) on a physW x physH window: step 1 always does.
+func uiStepAllowed(physW, physH, step float64) bool {
+	return step <= 1 || (physW/step >= uikit.MinStepW-1e-6 && physH/step >= uikit.MinStepH-1e-6)
+}
+
+// effectiveStep is the largest allowed step not above the stored one
+// (UIS-004): the stored value stays, a smaller window uses a smaller step.
+func effectiveStep(physW, physH, stored float64) float64 {
+	best := 1.0
+	for _, p := range config.UIScalePresets {
+		if st := float64(p) / 100; st <= stored+1e-9 && uiStepAllowed(physW, physH, st) {
+			best = st
+		}
 	}
-	f := math.Min(w/uikit.MinSetupW, h/uikit.MinSetupH)
-	f = math.Floor(f/autoUIStep+1e-6) * autoUIStep
-	f = math.Round(f*100) / 100 // exact hundredths (1.5, not 1.5000000000000002)
-	return math.Max(autoUIMin, math.Min(autoUIMax, f))
+	return best
+}
+
+// autoUIStep is the Auto step for a physW x physH window in physical
+// pixels: the largest preset leaving at least MinStepW x autoMinH logical
+// pixels, else 1 (UIS-005). 1920x1080 gives 1, 2560x1440 1.5, 3840x2160 2.
+func autoUIStep(physW, physH float64) float64 {
+	best := 1.0
+	for _, p := range config.UIScalePresets {
+		if st := float64(p) / 100; physW/st >= uikit.MinStepW-1e-6 && physH/st >= autoMinH-1e-6 {
+			best = st
+		}
+	}
+	return best
 }
 
 // The render cap (PERF-003). One frame never holds more physical pixels
@@ -58,7 +75,7 @@ func autoUIScale(w, h float64) float64 {
 // native size (a 4K panel "looking like" 3360x1890 draws 6720x3780, 25 M
 // pixels a frame) therefore costs the GPU and the memory no more than the
 // biggest frame that has run here for months. The UI is laid out in points
-// (autoUIScale), so nothing changes size; only the map's sharpness.
+// (physical window / step), so nothing changes size; only the map's sharpness.
 const (
 	maxRenderPixels = 5120 * 2880
 	maxRenderSide   = 8192
@@ -79,14 +96,18 @@ func capDev(w, h, dev float64) float64 {
 }
 
 // computeUIScale is the scale for the settings, a w x h window in points
-// and the screen's device scale factor. Captures are always 1. The map's
+// and the screen's raw device scale factor. Captures are always 1. The map's
 // render scale never takes the map below one pixel per point (1/dev): at
 // dev 1 (HiDPI off, or a 1x screen) a smaller map would only blur.
-func computeUIScale(st config.Settings, w, h, dev float64, capture bool) gfx.Scale {
+func computeUIScale(st config.Settings, w, h, devRaw float64, capture bool) gfx.Scale {
 	if capture {
 		return gfx.UnitScale
 	}
-	if !st.Graphics.HiDPI || dev <= 0 || math.IsNaN(dev) {
+	if devRaw <= 0 || math.IsNaN(devRaw) {
+		devRaw = 1
+	}
+	dev := devRaw
+	if !st.Graphics.HiDPI {
 		dev = 1
 	}
 	dev = capDev(w, h, dev)
@@ -94,14 +115,29 @@ func computeUIScale(st config.Settings, w, h, dev float64, capture bool) gfx.Sca
 	if dev > 1 {
 		world = math.Max(renderScaleOf(st.Graphics), 1/dev)
 	}
-	ui := float64(st.Accessibility.UIScale) / 100
-	if st.Accessibility.UIScaleAuto {
-		ui = autoUIScale(w, h)
-	}
-	if ui <= 0 {
-		ui = 1
-	}
+	step := uiStep(st.Accessibility, w*devRaw, h*devRaw, devRaw)
+	ui := step / devRaw
 	return gfx.Scale{Dev: dev, UI: ui, S: dev * ui, World: world}
+}
+
+// stepInUse is the UI step in use for scale sc at the raw device density
+// devRaw: physical window pixels per logical pixel (the Options label shows
+// it).
+func stepInUse(sc gfx.Scale, devRaw float64) float64 {
+	if devRaw > 0 {
+		return sc.UI * devRaw
+	}
+	return sc.UI
+}
+
+// uiStep is the step in use on a physW x physH window: Auto's, or the
+// player's (a legacy share of the points resolved with devRaw) lowered to
+// what the window allows.
+func uiStep(a config.Accessibility, physW, physH, devRaw float64) float64 {
+	if a.UIScaleAuto {
+		return autoUIStep(physW, physH)
+	}
+	return effectiveStep(physW, physH, float64(a.Step(devRaw))/100)
 }
 
 // renderScaleOf is the settings' map render scale: one of
@@ -184,8 +220,8 @@ func logicalPx(p int, s float64) int {
 	return int(math.Ceil(float64(p)/s - 1e-9))
 }
 
-// syncUIScale mirrors the App's scale into curUIScale (main goroutine,
-// once per Update and Draw; written only on a change).
+// syncUIScale mirrors the App's scale into the gfx scale (gfx.SetScale;
+// main goroutine, once per Update and Draw; written only on a change).
 func (a *App) syncUIScale() {
 	if a.scale.S <= 0 {
 		a.scale = gfx.UnitScale

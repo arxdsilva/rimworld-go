@@ -121,6 +121,9 @@ func TestEdgeScrollAtEveryScreenEdge(t *testing.T) {
 // the top strip used to be.
 func TestZoomAnchorsOverTheFormerTopStrip(t *testing.T) {
 	a, f := globalColony(t, &stubSim{w: 80, h: 80}, 100, 1280, 720)
+	st := a.settings
+	st.Camera.ZoomToMouse = true // off by default since UIS-083
+	a.setSettings(st)
 	r := a.renderer
 	r.smooth.Instant = true
 	a.centerOnMap(40, 40)

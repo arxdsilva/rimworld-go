@@ -33,7 +33,7 @@ type Env struct {
 	// RenderLimit is the physical size the render cap holds the frame to
 	// (ui_scale.go), and whether it is holding it.
 	RenderLimit func() (w, h int, capped bool)
-	UIScale     float64        // the live UI scale factor (Auto shows it)
+	UIScale     float64        // the UI step in use, physical px per logical px (Auto shows it)
 	Bindings    input.Bindings // the live key bindings
 	Pressed     []string       // keys that went down this frame
 	Mods        input.Mod      // modifiers held with them

@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -97,7 +98,7 @@ func TestControlsAndDevModeDecodeOverDefaults(t *testing.T) {
 
 func TestUIScalePresetsSnap(t *testing.T) {
 	t.Parallel()
-	for in, want := range map[int]int{0: 100, 50: 75, 75: 75, 80: 75, 85: 90, 96: 100, 100: 100, 107: 100, 110: 115, 120: 115, 125: 130, 140: 130, 141: 150, 160: 150, 165: 175, 190: 200, 250: 200} {
+	for in, want := range map[int]int{0: 100, 50: 100, 100: 100, 112: 100, 113: 125, 137: 125, 138: 150, 190: 200, 225: 200, 226: 250, 275: 250, 330: 350, 500: 400} {
 		s := Defaults()
 		s.Accessibility.UIScale = in
 		if got := s.Normalize().Accessibility.UIScale; got != want {
@@ -133,7 +134,7 @@ func TestUIScaleAutoAndHiDPIDefaultOn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cur.Accessibility.UIScaleAuto || cur.Graphics.HiDPI || cur.Accessibility.UIScale != 150 {
+	if cur.Accessibility.UIScaleAuto || cur.Graphics.HiDPI || cur.Accessibility.UIScaleLegacy != 150 {
 		t.Fatalf("current file: %+v %+v", cur.Accessibility, cur.Graphics)
 	}
 	var buf bytes.Buffer
@@ -222,5 +223,41 @@ func TestDetailedUsageDataDefaultsOnAndMigrates(t *testing.T) {
 	}
 	if off.Telemetry.Advanced || off.Telemetry.InstallID != "abc" {
 		t.Fatalf("version 7 file lost the player's choice: %+v", off.Telemetry)
+	}
+}
+
+// TestUIStepMigration (UIS-009): a fixed scale saved before version 11 was a
+// share of the points; it becomes the step nearest it in physical pixels
+// (ties go lower), and a step saved since stays as it is.
+func TestUIStepMigration(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		stored int
+		dev1   int
+		dev2   int
+	}{
+		{75, 100, 150}, {90, 100, 175}, {100, 100, 200}, {115, 125, 250},
+		{130, 125, 250}, {150, 150, 300}, {175, 175, 350}, {200, 200, 400},
+	} {
+		s, err := Decode(strings.NewReader(fmt.Sprintf(`{"version": 10, "accessibility": {"ui_scale": %d, "ui_scale_auto": false}}`, c.stored)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := s.Accessibility.Step(1); got != c.dev1 {
+			t.Errorf("legacy %d at dev 1 = step %d, want %d", c.stored, got, c.dev1)
+		}
+		if got := s.Accessibility.Step(2); got != c.dev2 {
+			t.Errorf("legacy %d at dev 2 = step %d, want %d", c.stored, got, c.dev2)
+		}
+	}
+	s, err := Decode(strings.NewReader(`{"version": 11, "accessibility": {"ui_scale": 250, "ui_scale_auto": false}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Accessibility.UIScaleLegacy != 0 || s.Accessibility.Step(2) != 250 {
+		t.Fatalf("a version 11 step moved: %+v", s.Accessibility)
+	}
+	if d := Defaults(); d.HUD.Pane.Height != 165 || d.Camera.ZoomToMouse {
+		t.Fatalf("defaults: pane height %d, zoom to mouse %v; want 165 and off (UIS-044, UIS-083)", d.HUD.Pane.Height, d.Camera.ZoomToMouse)
 	}
 }

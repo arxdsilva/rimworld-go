@@ -94,3 +94,22 @@ func TestProgressAndSparkline(t *testing.T) {
 	DrawProgress(img, gfx.Rect{X: 0, Y: 50, W: 160, H: 40}, "World", 0.4, "Rivers")
 	DrawProgress(img, gfx.Rect{X: 0, Y: 50, W: 160, H: 40}, "World", 1.7, "")
 }
+
+// TestFramelessWindowParts (UIS-060): a main-tab window has no title bar
+// and an 18 px inner margin; a dialog keeps its 40 px title bar and 16 pad.
+func TestFramelessWindowParts(t *testing.T) {
+	t.Parallel()
+	frame := gfx.Rect{X: 0, Y: 200, W: 600, H: 400}
+	_, title, body, footer := modalParts(frame, Modal{Frameless: true})
+	if !title.Empty() || !footer.Empty() || body != frame.Inset(18) {
+		t.Errorf("frameless: title %+v, body %+v, footer %+v; want no title, body inset 18", title, body, footer)
+	}
+	_, title, body, _ = modalParts(frame, Modal{})
+	if title.H != ModalTitleH || body.Y != frame.Y+ModalTitleH+ModalPad || body.X != frame.X+ModalPad {
+		t.Errorf("dialog: title %+v, body %+v; want the 40 title bar and pad 16", title, body)
+	}
+	_, _, body, footer = modalParts(frame, Modal{Frameless: true, Buttons: []ModalButton{{ID: "ok"}}})
+	if footer.H != ModalFooterH || body.Bottom() != footer.Y-18 {
+		t.Errorf("frameless with buttons: body %+v, footer %+v", body, footer)
+	}
+}

@@ -590,7 +590,7 @@ func TestArchitectLayoutKeepsRegionsApart(t *testing.T) {
 			a.arch.Cat = c.ID
 			a.arch.ToolID = ""
 			cmds := a.archToolCommands()
-			l := hudlayout.Compute(sz[0], sz[1], hudlayout.Inputs{ArchOpen: true, Commands: len(cmds), ArchDescH: a.arch.DescHeight(), Colonists: 6})
+			l := hudlayout.Compute(sz[0], sz[1], hudlayout.Inputs{ArchOpen: true, Commands: len(cmds), ArchCats: len(architect.Categories), Colonists: 6})
 			regions := []gfx.Rect{l.Tabs, l.ArchCats, l.ArchDesc}
 			regions = append(regions, l.GridCells...)
 			for i := range regions {

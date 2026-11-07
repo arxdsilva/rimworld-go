@@ -30,7 +30,12 @@ import (
 // Normalize moves the values still at the old defaults.
 // Version 10 added the General, Interface, Camera and Developer groups
 // (prefs.go, OPT-*); AutoPause takes over from PauseOnThreat.
-const SettingsVersion = 10
+// Version 11 (UIS-001, UIS-009) made the UI scale a step of physical window
+// pixels per logical pixel (100..400, the reference game's steps); a fixed
+// scale saved before it was a share of the device-independent points and
+// moves to UIScaleLegacy, which Step resolves with the screen's device
+// factor. The docked pane's default height becomes 165 (UIS-044).
+const SettingsVersion = 11
 
 // MaxLearnedLessons caps the learning helper's done list.
 const MaxLearnedLessons = 64
@@ -168,9 +173,13 @@ func (g Gameplay) Colonies() int { return max(1, min(g.MaxColonies, MaxColoniesL
 type Accessibility struct {
 	ReducedMotion   bool `json:"reduced_motion"`
 	ReducedFlashing bool `json:"reduced_flashing"`
-	// UIScale is the UI scale in percent, one of UIScalePresets (0 = 100).
-	// It applies when UIScaleAuto is off.
+	// UIScale is the UI step in percent: physical window pixels per 100
+	// logical pixels, one of UIScalePresets (0 = 100). It applies when
+	// UIScaleAuto is off (Step).
 	UIScale int `json:"ui_scale,omitempty"`
+	// UIScaleLegacy is a fixed scale saved before version 11, in percent of
+	// the device-independent points; 0 once the player picks a step.
+	UIScaleLegacy int `json:"ui_scale_legacy,omitempty"`
 	// UIScaleAuto sizes the UI from the window (PLAY-012 B.1).
 	UIScaleAuto bool `json:"ui_scale_auto"`
 }
@@ -183,14 +192,28 @@ const (
 	PanSpeedStep = 25
 )
 
-// UI scale range (PLAY-012 B.1): a fixed scale is one of the presets.
+// UI scale range (UIS-001): a fixed scale is one of the presets, the
+// reference game's steps.
 const (
-	UIScaleMin = 75
-	UIScaleMax = 200
+	UIScaleMin = 100
+	UIScaleMax = 400
 )
 
-// UIScalePresets are the fixed UI scales in percent, ascending.
-var UIScalePresets = []int{75, 90, 100, 115, 130, 150, 175, 200}
+// UIScalePresets are the fixed UI steps in percent, ascending (UIS-001).
+var UIScalePresets = []int{100, 125, 150, 175, 200, 250, 300, 350, 400}
+
+// Step is the fixed UI step in percent on a screen whose device factor is
+// dev (physical pixels per point): the stored step, or a legacy share of
+// the points moved to the step nearest it in physical pixels (UIS-009).
+func (a Accessibility) Step(dev float64) int {
+	if a.UIScaleLegacy <= 0 {
+		return snapPreset(a.UIScale)
+	}
+	if dev <= 0 || dev != dev {
+		dev = 1
+	}
+	return snapPreset(int(float64(a.UIScaleLegacy)*dev + 0.5))
+}
 
 // snapPreset is the preset nearest v (the lower one on a tie).
 func snapPreset(v int) int {
@@ -253,6 +276,15 @@ func (s Settings) Normalize() Settings {
 		s.HUD = s.HUD.compactDocked()
 		if !contains(s.Graphics.Chosen, "vsync") {
 			s.Graphics.VSync = true
+		}
+	}
+	if s.Version < 11 { // before UIS: a fixed scale was a share of the points; Step resolves it with the device factor
+		if p := s.Accessibility.UIScale; p > 0 && !s.Accessibility.UIScaleAuto {
+			s.Accessibility.UIScaleLegacy = p
+		}
+		s.Accessibility.UIScale = 100
+		if s.HUD.Pane.Height == 168 {
+			s.HUD.Pane.Height = defaultHUD().Pane.Height
 		}
 	}
 	s = s.normalizePrefs(s.Version < 10)

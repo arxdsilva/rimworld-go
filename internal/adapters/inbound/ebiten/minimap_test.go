@@ -26,9 +26,9 @@ func TestMinimapClickMovesCamera(t *testing.T) {
 	}
 	bx, by, mx, my, mw, mh := r.minimapBox(v)
 	// the box is the layout's Minimap: 180 square, 8 px from the right edge,
-	// 8 px above Global (which sits 8 px above the tab strip)
+	// 8 px above Global (which sits GlobalBottom above the tab strip)
 	if want := hudlayout.Compute(sw, sh, hudlayout.Inputs{MinimapOn: true}).Minimap; bx != float64(want.X) || by != float64(want.Y) ||
-		bx+minimappkg.Side != v.X1-hudlayout.HudMargin || by+minimappkg.Side != v.Y1-hudlayout.TabsH-hudlayout.HudMargin-hudlayout.HudMargin {
+		bx+minimappkg.Side != v.X1-hudlayout.HudMargin || by+minimappkg.Side != v.Y1-hudlayout.TabsH-hudlayout.GlobalBottom-hudlayout.HudMargin {
 		t.Fatalf("box (%v,%v) is not the layout's Minimap %+v in %+v", bx, by, want, v)
 	}
 	// a click a quarter of the way in centres the camera on tile (50, 150)

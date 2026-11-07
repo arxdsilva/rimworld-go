@@ -160,7 +160,7 @@ func TestZoneDrawsOverFloor(t *testing.T) {
 
 // --- zone labels (PLAY-017 sections 2-3) ---------------------------------
 //
-// The layout tests run at several UI scales and change curUIScale, so none
+// The layout tests run at several UI scales and change the gfx scale (gfx.SetScale), so none
 // of them runs in parallel.
 
 func TestZoneLabelSizeGrowsWithZone(t *testing.T) {

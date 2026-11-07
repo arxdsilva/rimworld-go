@@ -7,72 +7,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 )
 
-const (
-	HudMargin = 8
-	HudGap    = 4
-
-	TabsH = 28 // the bottom tab strip
-
-	PaneW     = 400 // the inspect pane, lower-left
-	PaneH     = 188
-	PaneTabsH = 24  // its tabs, just above it
-	CardMinH  = 100 // the floating card never shrinks below this
-	// CardPaneMinH is the docked card's shortest pane (config.HUDPaneMinH).
-	CardPaneMinH = 120
-
-	ExpandMinW = 400 // an inspector tab's panel, opened above the pane tabs
-	ExpandMaxW = 560
-
-	CmdCell    = 64 // a command button
-	CmdStride  = 68 // cell + gap
-	CmdMaxRows = 4
-	// CmdReserveCols are the command columns a wide card pane leaves free.
-	CmdReserveCols = 5
-
-	RightW      = 232 // the right column: learning helper, alerts, letters, global controls
-	MinimapSize = 180
-	LetterRowH  = 28
-	MaxLetters  = 8 // then a "+N older" row
-	AlertRowH   = 24
-	// MinAlertRows are kept for alerts before the letters take the rest
-	// of the right column: problems to act on beat news.
-	MinAlertRows = 3
-	// MinLetterRows are kept for the newest letters before the learning
-	// helper unfolds.
-	MinLetterRows = 2
-
-	BarSlotW = 52 // a colonist bar slot at scale 1
-	BarSlotH = 64
-	BarGap   = 4
-
-	// MaxBarGroups caps the colonist bar's map groups (MAP-1): the most
-	// open maps. Inputs keeps them in an array so it stays comparable.
-	MaxBarGroups = 8
-	barGroupPad  = 3  // a group frame's inset around its slots, at scale 1
-	barChipH     = 14 // a group's label chip above its slots
-	barGroupGap  = 8  // between two group frames
-
-	ResourcesW   = 168
-	ResourceRowH = 20
-	ResourcesMin = 40 // less room than this hides the list
-
-	MsgRowH   = 22
-	MsgStride = MsgRowH + 2
-	MsgMaxW   = 480
-	MsgMinW   = 160 // narrower than this, the messages hide (a wide window)
-	MaxMsgs   = 5
-
-	ArchCatsW = 212 // the Architect's two category columns
-	ArchCatsH = 216 // seven rows of two category buttons (12 vanilla categories and storage, STK-AG, NST): 2*8 pad + 7*26 + 6*3
-	ArchDescW = 320
-)
-
-// barScales are the colonist bar's scale steps and the rows each allows.
-var barScales = []struct {
-	scale float32
-	rows  int
-}{{1, 1}, {0.75, 2}, {0.5, 3}}
-
 // Inputs is what the layout needs to know about this frame. The owners
 // of each region fill their fields (hud.go a.hud()); none of them may call
 // a.hud() while doing so.
@@ -93,7 +27,7 @@ type Inputs struct {
 	Alerts, Letters      int
 	ResourcesH           float32 // the resource list's content height
 	Messages             int
-	ArchDescH            float32 // the Architect description box (0: none)
+	ArchCats             int     // the Architect's category count (0: ArchCatRows rows)
 	WindowW, WindowH     float32 // an open main-tab window's wanted size (0: none)
 	PerfW, PerfH         float32 // the performance box's size (0: off)
 	// The colonist card (RHUD), zero keeps today's layout. PaneW and PaneH
@@ -120,18 +54,21 @@ type Layout struct {
 	Grid                     gfx.Rect   // bounding box of the occupied command cells
 	GridCells                []gfx.Rect // one per command, bottom row first, left to right
 	GridCols                 int        // cells in the bottom row's width
-	ArchCats, ArchDesc       gfx.Rect
-	Window                   gfx.Rect
+	// GridMore is the commands with no cell (UIS-052): when it is above 0,
+	// the last cell is a "more" cell standing for GridMore of them.
+	GridMore           int
+	ArchCats, ArchDesc gfx.Rect
+	Window             gfx.Rect
 
 	Right                                   gfx.Rect // the right column's band (x and width)
 	Global, Minimap, Letters, Learn, Alerts gfx.Rect
 	LetterRows, AlertRows                   int     // rows that fit (the last may be "+N")
 	LetterGap                               float32 // the padding between letter rows (0: none shown)
 
-	Bar      gfx.Rect   // bounding box of the colonist bar
-	BarSlots []gfx.Rect // one per shown colonist (the last may be "+N")
-	BarScale float32
-	BarMore  int // colonists not shown (the last slot reads "+N")
+	Bar      gfx.Rect   // bounding box of the colonist bar, the name plates under the slots included
+	BarSlots []gfx.Rect // one portrait box per shown colonist (the last may be "+N"); its name plate is BarNameH under it
+	BarScale float32    // the slot's size over BarSlot
+	BarMore  int        // colonists not shown (the last slot reads "+N")
 	// BarGroups are the map frames of a bar with several maps (empty with
 	// one); the groups' slots are consecutive runs of BarSlots.
 	BarGroups []BarGroup
@@ -151,94 +88,18 @@ func Compute(sw, sh int, st Inputs) Layout {
 	l.Tabs = gfx.Rect{X: 0, Y: H - TabsH, W: W, H: TabsH}
 	floorY := l.Tabs.Y // the top of the lowest-left stack, for the resource list
 
-	// the right column
-	l.Right = gfx.Rect{X: W - HudMargin - RightW, Y: 0, W: RightW, H: H}
-	rx := l.Right.X
-	if st.GlobalH > 0 {
-		l.Global = gfx.Rect{X: rx, Y: l.Tabs.Y - HudMargin - st.GlobalH, W: RightW, H: st.GlobalH}
-	} else {
-		l.Global = gfx.Rect{X: rx, Y: l.Tabs.Y - HudMargin, W: RightW, H: 0}
-	}
-	stackBottom := l.Global.Y
-	if st.MinimapOn {
-		l.Minimap = gfx.Rect{X: W - HudMargin - MinimapSize, Y: l.Global.Y - HudMargin - MinimapSize, W: MinimapSize, H: MinimapSize}
-		stackBottom = l.Minimap.Y
-	}
-	top := float32(HudMargin)
-	alertReserve := float32(0) // kept for alerts, with their margin above the letters
-	if st.Alerts > 0 {
-		alertReserve = float32(min(st.Alerts, MinAlertRows))*(AlertRowH+HudGap) + HudMargin
-	}
-	letterReserve := float32(0) // the newest letters, before the learning helper unfolds
-	if st.Letters > 0 {
-		letterReserve = float32(min(st.Letters, MinLetterRows))*(LetterRowH+HudGap) + HudMargin
-	}
-	if st.LearnH > 0 {
-		h := st.LearnH
-		// the least urgent panel: open only if the alerts and the newest
-		// letters keep their rows below it (and it never reaches the
-		// minimap or the time controls)
-		if room := stackBottom - 2*HudMargin - alertReserve - letterReserve; h > room {
-			h = min(LearnHeaderH, stackBottom-2*HudMargin) // the header alone
-		}
-		if h > 0 {
-			l.Learn = gfx.Rect{X: rx, Y: HudMargin, W: RightW, H: h}
-			top = l.Learn.Bottom() + HudMargin
-		}
-	}
-	if st.Letters > 0 {
-		g := float32(HudGap) // RHUD-475: the padding between letters
-		if st.LetterGap > 0 {
-			g = st.LetterGap
-		}
-		rows := min(st.Letters, MaxLetters)
-		if st.Letters > MaxLetters {
-			rows++ // "+N older"
-		}
-		lo, hi := top, stackBottom-HudMargin // the band the letters may use
-		if a := st.LetterAvoid; !a.Empty() && a.Right() > rx && a.X < rx+RightW && a.Bottom() > lo && a.Y < hi {
-			// RHUD-471, 472: a floating card over the column. The letters take
-			// the larger free band, below the card (kept at the bottom) or above.
-			fit := func(lo, hi float32) int { return max(0, int((hi-lo+g)/(LetterRowH+g))) }
-			if below := fit(a.Bottom()+HudMargin, hi); below >= fit(lo, a.Y-HudMargin) {
-				lo = a.Bottom() + HudMargin
-			} else {
-				hi = a.Y - HudMargin
-			}
-		}
-		floor := lo
-		if lo == top {
-			floor += alertReserve // the alerts keep their rows above
-		}
-		room := int((hi - floor + g) / (LetterRowH + g))
-		rows = max(0, min(rows, room))
-		if rows > 0 {
-			h := float32(rows)*(LetterRowH+g) - g
-			l.Letters = gfx.Rect{X: rx, Y: hi - h, W: RightW, H: h}
-			l.LetterRows = rows
-			l.LetterGap = g
-			stackBottom = l.Letters.Y
-		}
-	}
-	if st.Alerts > 0 {
-		room := int((stackBottom - HudMargin - top + HudGap) / (AlertRowH + HudGap))
-		rows := max(0, min(st.Alerts, room))
-		if rows > 0 {
-			l.Alerts = gfx.Rect{X: rx, Y: top, W: RightW, H: float32(rows)*(AlertRowH+HudGap) - HudGap}
-			l.AlertRows = rows
-		}
-	}
+	rx := layoutRight(&l, W, st)
 
-	// the colonist bar, top-centre, never reaching the resources or the
-	// right column
+	// the colonist bar, top-centre, at most W - BarReserveW wide
 	if st.Colonists > 0 {
-		capW := W - 2*(HudMargin+RightW+HudMargin)
+		capW := max(W-BarReserveW, BarPitch)
 		if st.BarGroups[0] > 0 {
 			l.BarScale, l.BarSlots, l.BarMore, l.BarGroups = layoutBarGroups(W, capW, st.BarGroups)
 			l.Bar = BoundsOf(frames(l.BarGroups))
 		} else {
 			l.BarScale, l.BarSlots, l.BarMore = layoutBar(W, capW, st.Colonists)
 			l.Bar = BoundsOf(l.BarSlots)
+			l.Bar.H += BarNameH
 		}
 	}
 	barBottom := float32(HudMargin)
@@ -258,14 +119,14 @@ func Compute(sw, sh int, st Inputs) Layout {
 	gridX0 := float32(0)
 	switch {
 	case st.ArchOpen && l.Window.Empty():
-		l.ArchCats = gfx.Rect{X: 0, Y: l.Tabs.Y - ArchCatsH, W: ArchCatsW, H: ArchCatsH}
+		catsH := ArchCatsH(st.ArchCats)
+		l.ArchCats = gfx.Rect{X: 0, Y: l.Tabs.Y - catsH, W: ArchCatsW, H: catsH}
 		floorY = l.ArchCats.Y
-		if st.ArchDescH > 0 {
-			h := min(st.ArchDescH, l.ArchCats.Y-HudGap-barBottom-HudMargin)
-			l.ArchDesc = gfx.Rect{X: 0, Y: l.ArchCats.Y - HudGap - h, W: ArchDescW, H: h}
+		if h := min(ArchDescH, l.ArchCats.Y-barBottom-HudMargin); h > 0 { // UIS-054: always shown, flush on the categories
+			l.ArchDesc = gfx.Rect{X: 0, Y: l.ArchCats.Y - h, W: ArchDescW, H: h}
 			floorY = l.ArchDesc.Y
 		}
-		gridX0 = l.ArchCats.Right() + HudMargin
+		gridX0 = l.ArchCats.Right() + ArchGridGap
 	case st.PaneShown && l.Window.Empty():
 		pw, ph := paneSize(st, rx, l.Tabs.Y-barBottom)
 		l.Pane = gfx.Rect{X: 0, Y: l.Tabs.Y - ph, W: pw, H: ph}
@@ -281,56 +142,39 @@ func Compute(sw, sh int, st Inputs) Layout {
 		if !l.Card.Empty() && l.Card.X < HudMargin+ResourcesW+HudMargin {
 			floorY = min(floorY, l.Card.Y)
 		}
-		gridX0 = l.Pane.Right() + HudMargin
+		gridX0 = l.Pane.Right() + CmdGridGap
 	}
-
-	// command buttons: right of the pane (or the Architect's categories),
-	// bottom row first, wrapping upward, stopping short of the right column.
-	// A row beside an open tab's panel or the Architect's description box
-	// (both wider than what is under them) starts right of it, so no cell
-	// covers them.
-	if st.Commands > 0 && gridX0 > 0 {
-		x1 := rx - HudMargin
-		bottom := l.Tabs.Y - HudMargin
-		maxRows := min(CmdMaxRows, int((bottom-barBottom-HudMargin+HudGap)/CmdStride))
-		l.GridCols = max(0, int((x1-gridX0+HudGap)/CmdStride))
-		for r := 0; r < maxRows && len(l.GridCells) < st.Commands; r++ {
-			y := bottom - CmdCell - float32(r)*CmdStride
-			x0 := gridX0
-			for _, p := range []gfx.Rect{l.Expanded, l.ArchDesc, l.Card} {
-				if !p.Empty() && y < p.Bottom() && y+CmdCell > p.Y {
-					x0 = max(x0, p.Right()+HudMargin)
-				}
-			}
-			for x := x0; x+CmdCell <= x1 && len(l.GridCells) < st.Commands; x += CmdStride {
-				l.GridCells = append(l.GridCells, gfx.Rect{X: x, Y: y, W: CmdCell, H: CmdCell})
-			}
-		}
-		l.Grid = BoundsOf(l.GridCells)
-	}
-
-	// messages: right-aligned against the right column, under the bar, and
-	// clear of whatever the lower-left holds in their rows (an open tab's
-	// panel, the Architect's description, a window): they narrow to the room
-	// left, and hide while a wide window leaves less than MsgMinW
-	if n := min(st.Messages, MaxMsgs); n > 0 {
-		band := gfx.Rect{X: 0, Y: barBottom + HudMargin, W: W, H: float32(n)*MsgStride - (MsgStride - MsgRowH)}
-		left := float32(HudMargin + ResourcesW + HudMargin)
-		for _, r := range append([]gfx.Rect{l.Window, l.ArchCats, l.ArchDesc, l.Pane, l.PaneTabs, l.Expanded, l.Card}, l.GridCells...) {
-			if !r.Empty() && r.Y < band.Bottom() && r.Bottom() > band.Y {
-				left = max(left, r.Right()+HudMargin)
-			}
-		}
-		if w := min(float32(MsgMaxW), rx-HudMargin-left); w >= MsgMinW {
-			l.Messages = gfx.Rect{X: rx - HudMargin - w, Y: band.Y, W: w, H: band.H}
-		}
-	}
+	layoutGrid(&l, st.Commands, gridX0, rx, barBottom)
 
 	// the resource list, top-left, above whatever the lower-left holds
 	if st.ResourcesH > 0 {
 		h := min(st.ResourcesH, floorY-2*HudMargin-HudMargin)
 		if h >= ResourcesMin {
 			l.Resources = gfx.Rect{X: HudMargin, Y: HudMargin, W: ResourcesW, H: h}
+		}
+	}
+
+	// messages: top-left at MsgX, MsgY, over the bar (whose slots under them
+	// fade, UIS-029), right of the resource list, short of the right column;
+	// the newest that fit above the lower-left stack (a tall tab panel, the
+	// command grid, a window) under them
+	if n := min(st.Messages, MaxMsgs); n > 0 {
+		x := float32(MsgX)
+		if !l.Resources.Empty() {
+			x = max(x, l.Resources.Right()+HudMargin)
+		}
+		if w := min(float32(MsgMaxW), rx-HudMargin-x); w >= MsgMinW {
+			r := gfx.Rect{X: x, Y: MsgY, W: w, H: float32(n) * MsgStride}
+			floor := r.Bottom()
+			for _, o := range [...]gfx.Rect{l.Expanded, l.ArchCats, l.ArchDesc, l.Window, l.PaneTabs, l.Pane, l.Card, l.Grid} {
+				if !o.Empty() && o.X < r.Right() && o.Right() > r.X {
+					floor = min(floor, o.Y)
+				}
+			}
+			if k := min(n, int((floor-MsgY)/MsgStride)); k > 0 {
+				r.H = float32(k) * MsgStride
+				l.Messages = r
+			}
 		}
 	}
 
@@ -348,6 +192,119 @@ func Compute(sw, sh int, st Inputs) Layout {
 		l.HintBottom = l.PaneTabs.Y - HudMargin
 	}
 	return l
+}
+
+// layoutRight places the right column: the lower-right controls on the tab
+// bar, the minimap over them, the letters over those and the alerts right
+// above the letters, all growing upward (UIS-030, UIS-031); the learning
+// helper on top. It returns the column's left edge.
+func layoutRight(l *Layout, W float32, st Inputs) float32 {
+	l.Right = gfx.Rect{X: W - RightW, Y: 0, W: RightW, H: l.Tabs.Y}
+	rx := l.Right.X
+	gh := max(st.GlobalH, 0)
+	l.Global = gfx.Rect{X: W - GlobalRight - RightW, Y: l.Tabs.Y - GlobalBottom - gh, W: RightW, H: gh}
+	stackBottom := l.Global.Y
+	if st.MinimapOn {
+		l.Minimap = gfx.Rect{X: W - HudMargin - MinimapSize, Y: l.Global.Y - HudMargin - MinimapSize, W: MinimapSize, H: MinimapSize}
+		stackBottom = l.Minimap.Y
+	}
+	g := float32(LetterGap)
+	if st.LetterGap > 0 { // RHUD-475: the card's letter spacing
+		g = st.LetterGap
+	}
+	top := float32(HudMargin)
+	alertReserve := float32(0) // kept for alerts above the letters
+	if st.Alerts > 0 {
+		alertReserve = float32(min(st.Alerts, MinAlertRows))*AlertRowH + AlertLetterGap
+	}
+	letterReserve := float32(0) // the newest letters, before the learning helper unfolds
+	if st.Letters > 0 {
+		letterReserve = float32(min(st.Letters, MinLetterRows))*(LetterRowH+g) - g + RightStackGap
+	}
+	if st.LearnH > 0 {
+		h := st.LearnH
+		// the least urgent panel: open only if the alerts and the newest
+		// letters keep their rows below it (and it never reaches the
+		// minimap or the time controls)
+		if room := stackBottom - 2*HudMargin - alertReserve - letterReserve; h > room {
+			h = min(LearnHeaderH, stackBottom-2*HudMargin) // the header alone
+		}
+		if h > 0 {
+			l.Learn = gfx.Rect{X: rx, Y: HudMargin, W: RightW, H: h}
+			top = l.Learn.Bottom() + HudMargin
+		}
+	}
+	alertBottom := stackBottom - RightStackGap
+	if st.Letters > 0 {
+		rows := min(st.Letters, MaxLetters)
+		if st.Letters > MaxLetters {
+			rows++ // "+N older"
+		}
+		lo, hi := top, stackBottom-RightStackGap // the band the letters may use
+		if a := st.LetterAvoid; !a.Empty() && a.Right() > rx && a.X < rx+RightW && a.Bottom() > lo && a.Y < hi {
+			// RHUD-471, 472: a floating card over the column. The letters take
+			// the larger free band, below the card (kept at the bottom) or above.
+			fit := func(lo, hi float32) int { return max(0, int((hi-lo+g)/(LetterRowH+g))) }
+			if below := fit(a.Bottom()+HudMargin, hi); below >= fit(lo, a.Y-HudMargin) {
+				lo = a.Bottom() + HudMargin
+			} else {
+				hi = a.Y - HudMargin
+			}
+		}
+		floor := lo
+		if lo == top {
+			floor += alertReserve // the alerts keep their rows above
+		}
+		rows = max(0, min(rows, int((hi-floor+g)/(LetterRowH+g))))
+		if rows > 0 {
+			h := float32(rows)*(LetterRowH+g) - g
+			l.Letters = gfx.Rect{X: rx, Y: hi - h, W: RightW, H: h}
+			l.LetterRows = rows
+			l.LetterGap = g
+			alertBottom = l.Letters.Y - AlertLetterGap
+		}
+	}
+	if st.Alerts > 0 {
+		rows := max(0, min(st.Alerts, int((alertBottom-top)/AlertRowH)))
+		if rows > 0 {
+			h := float32(rows) * AlertRowH
+			l.Alerts = gfx.Rect{X: rx, Y: alertBottom - h, W: RightW, H: h}
+			l.AlertRows = rows
+		}
+	}
+	return rx
+}
+
+// layoutGrid places the command buttons right of the pane (or the
+// Architect's categories, gridX0), bottom row first, wrapping upward as far
+// as the colonist bar allows, short of the right column (rx). A row beside
+// an open tab's panel, the Architect's description box or the floating card
+// starts right of it. Commands with no cell are never dropped: the last cell
+// stands for them (GridMore, UIS-052).
+func layoutGrid(l *Layout, n int, gridX0, rx, barBottom float32) {
+	if n <= 0 || gridX0 <= 0 {
+		return
+	}
+	x1 := rx - HudMargin
+	bottom := l.Tabs.Y - CmdBottom
+	maxRows := max(0, int((bottom-barBottom-HudMargin+(CmdStride-CmdCell))/CmdStride))
+	l.GridCols = max(0, int((x1-gridX0+(CmdStride-CmdCell))/CmdStride))
+	for r := 0; r < maxRows && len(l.GridCells) < n; r++ {
+		y := bottom - CmdCell - float32(r)*CmdStride
+		x0 := gridX0
+		for _, p := range []gfx.Rect{l.Expanded, l.ArchDesc, l.Card} {
+			if !p.Empty() && y < p.Bottom() && y+CmdCell > p.Y {
+				x0 = max(x0, p.Right()+CmdGridGap)
+			}
+		}
+		for x := x0; x+CmdCell <= x1 && len(l.GridCells) < n; x += CmdStride {
+			l.GridCells = append(l.GridCells, gfx.Rect{X: x, Y: y, W: CmdCell, H: CmdCell})
+		}
+	}
+	if c := len(l.GridCells); c > 0 && c < n {
+		l.GridMore = n - c + 1
+	}
+	l.Grid = BoundsOf(l.GridCells)
 }
 
 // paneSize is the pane's size: today's constants unless the card asks for
@@ -450,14 +407,14 @@ func CardOffsetBounds(sw, sh, anchor, w, h int) (minX, maxX, minY, maxY int) {
 	return minX, maxX, minY, maxY
 }
 
-// layoutBar lays out n colonist slots centred in a capW-wide band: the
-// biggest scale step whose allowed rows hold them all, else the smallest
-// step with its last slot reading "+N".
+// layoutBar lays out n colonist slots in rows at most capW wide: the
+// biggest step whose rows hold them all, else the smallest step with its
+// last slot reading "+N". Each row is n x pitch wide (the trailing gap
+// counts) and centred on its own (UIS-025).
 func layoutBar(W, capW float32, n int) (float32, []gfx.Rect, int) {
-	for i, s := range barScales {
-		pitch := (BarSlotW + BarGap) * s.scale
-		perRow := max(1, int((capW+BarGap*s.scale)/pitch))
-		last := i == len(barScales)-1
+	for i, s := range barSteps {
+		perRow := max(1, int(capW/s.pitch))
+		last := i == len(barSteps)-1
 		if n > perRow*s.rows && !last {
 			continue
 		}
@@ -465,15 +422,14 @@ func layoutBar(W, capW float32, n int) (float32, []gfx.Rect, int) {
 		if n > perRow*s.rows {
 			shown, more = perRow*s.rows, n-perRow*s.rows+1 // the last slot reads "+N"
 		}
-		cols := min(shown, perRow)
-		rowW := float32(cols)*pitch - BarGap*s.scale
-		x0 := float32(math.Floor(float64((W - rowW) / 2)))
 		slots := make([]gfx.Rect, shown)
 		for j := range shown {
 			r, c := j/perRow, j%perRow
-			slots[j] = gfx.Rect{X: x0 + float32(c)*pitch, Y: HudMargin + float32(r)*(BarSlotH+BarGap)*s.scale, W: BarSlotW * s.scale, H: BarSlotH * s.scale}
+			inRow := min(perRow, shown-r*perRow)
+			x0 := float32(math.Floor(float64((W - float32(inRow)*s.pitch) / 2)))
+			slots[j] = gfx.Rect{X: x0 + float32(c)*s.pitch, Y: BarTop + float32(r)*s.rowPitch, W: s.slot, H: s.slot}
 		}
-		return s.scale, slots, more
+		return s.slot / BarSlot, slots, more
 	}
 	return 1, nil, 0
 }
@@ -487,8 +443,8 @@ func frames(gs []BarGroup) []gfx.Rect {
 }
 
 // layoutBarGroups lays the bar out as one framed block per map (MAP-1),
-// left to right, centred: the biggest scale step whose allowed rows hold
-// every group, else the smallest step with the last slot reading "+N".
+// left to right, centred: the biggest step whose allowed rows hold every
+// group, else the smallest step with the last slot reading "+N".
 func layoutBarGroups(W, capW float32, sizes [MaxBarGroups]int) (float32, []gfx.Rect, int, []BarGroup) {
 	var ns []int
 	total := 0
@@ -499,16 +455,16 @@ func layoutBarGroups(W, capW float32, sizes [MaxBarGroups]int) (float32, []gfx.R
 		ns = append(ns, n)
 		total += n
 	}
-	for i, s := range barScales {
-		if slots, groups, ok := fitGroups(W, capW, s.scale, s.rows, ns); ok {
-			return s.scale, slots, 0, groups
-		} else if i == len(barScales)-1 {
+	for i := range barSteps {
+		if slots, groups, ok := fitGroups(W, capW, i, ns); ok {
+			return barSteps[i].slot / BarSlot, slots, 0, groups
+		} else if i == len(barSteps)-1 {
 			for keep := total - 1; keep >= 1; keep-- {
-				if slots, groups, ok = fitGroups(W, capW, s.scale, s.rows, truncate(ns, keep)); ok {
-					return s.scale, slots, total - keep + 1, groups
+				if slots, groups, ok = fitGroups(W, capW, i, truncate(ns, keep)); ok {
+					return barSteps[i].slot / BarSlot, slots, total - keep + 1, groups
 				}
 			}
-			return s.scale, slots, total, groups
+			return barSteps[i].slot / BarSlot, slots, total, groups
 		}
 	}
 	return 1, nil, 0, nil
@@ -527,17 +483,16 @@ func truncate(ns []int, keep int) []int {
 	return out
 }
 
-// fitGroups places the groups at one scale step with rows rows each; ok
-// when they fit capW.
-func fitGroups(W, capW, scale float32, rows int, ns []int) ([]gfx.Rect, []BarGroup, bool) {
-	pitch := (BarSlotW + BarGap) * scale
-	pad, gap := barGroupPad*scale, barGroupGap*scale
-	chip := barChipH * scale
+// fitGroups places the groups at bar step i; ok when they fit capW.
+func fitGroups(W, capW float32, i int, ns []int) ([]gfx.Rect, []BarGroup, bool) {
+	s := barSteps[i]
+	k := s.slot / BarSlot
+	pad, gap, chip := barGroupPad*k, barGroupGap*k, barChipH*k
 	widths := make([]float32, len(ns))
 	var sum float32
 	for i, n := range ns {
-		cols := (n + rows - 1) / rows
-		widths[i] = float32(cols)*pitch - BarGap*scale + 2*pad
+		cols := (n + s.rows - 1) / s.rows
+		widths[i] = float32(cols)*s.pitch - (s.pitch - s.slot) + 2*pad
 		sum += widths[i]
 	}
 	sum += float32(len(ns)-1) * gap
@@ -545,13 +500,14 @@ func fitGroups(W, capW, scale float32, rows int, ns []int) ([]gfx.Rect, []BarGro
 	var slots []gfx.Rect
 	groups := make([]BarGroup, len(ns))
 	for i, n := range ns {
-		cols := (n + rows - 1) / rows
+		cols := (n + s.rows - 1) / s.rows
+		rows := min(s.rows, (n+cols-1)/cols)
 		g := BarGroup{First: len(slots), N: n}
-		g.Frame = gfx.Rect{X: x, Y: HudMargin, W: widths[i], H: chip + pad + float32(min(rows, (n+cols-1)/cols))*(BarSlotH+BarGap)*scale - BarGap*scale + pad}
+		g.Frame = gfx.Rect{X: x, Y: BarTop, W: widths[i], H: chip + pad + float32(rows-1)*s.rowPitch + s.slot + BarNameH + pad}
 		g.Chip = gfx.Rect{X: g.Frame.X, Y: g.Frame.Y, W: g.Frame.W, H: chip}
 		for j := range n {
 			r, c := j/cols, j%cols
-			slots = append(slots, gfx.Rect{X: x + pad + float32(c)*pitch, Y: HudMargin + chip + pad + float32(r)*(BarSlotH+BarGap)*scale, W: BarSlotW * scale, H: BarSlotH * scale})
+			slots = append(slots, gfx.Rect{X: x + pad + float32(c)*s.pitch, Y: BarTop + chip + pad + float32(r)*s.rowPitch, W: s.slot, H: s.slot})
 		}
 		groups[i] = g
 		x += widths[i] + gap
@@ -585,9 +541,6 @@ func (l Layout) Chrome() []gfx.Rect {
 	}
 	return append(out, l.GridCells...)
 }
-
-// LearnHeaderH is the learning helper's collapsed height (its header alone).
-const LearnHeaderH = 28
 
 // PerfRect is where the performance box sits: right of the resource list,
 // clear of the colonist bar and the messages, never reaching the right

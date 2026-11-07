@@ -19,10 +19,10 @@ import (
 	"rimworld-go/internal/platform/config"
 )
 
-// PLAY-012 B.5: the UI scale core. These tests change the package's
-// curUIScale and must not run in parallel.
+// PLAY-012 B.5: the UI scale core. These tests change the gfx scale
+// (gfx.SetScale) and must not run in parallel.
 
-// withUIScale sets curUIScale to s for the rest of the test (dev 1) and
+// withUIScale sets the gfx scale to s for the rest of the test (dev 1) and
 // restores it after. Not for parallel tests.
 func withUIScale(t testing.TB, s float64) {
 	t.Helper()
@@ -31,63 +31,112 @@ func withUIScale(t testing.TB, s float64) {
 	t.Cleanup(func() { gfx.SetScale(old) })
 }
 
-func TestAutoUIScale(t *testing.T) {
+// TestAutoUIStep (UIS-005): Auto is the largest reference step that leaves
+// 1280 x 900 logical pixels of the physical window, else 1.
+func TestAutoUIStep(t *testing.T) {
 	for _, c := range []struct {
-		w, h float64
+		w, h float64 // physical
 		want float64
 	}{
-		{1280, 720, 1.0},
-		{1920, 1080, 1.5},
-		{2560, 1440, 2.0},
-		{1066, 600, 1.0},  // below the baseline: never shrinks
-		{3840, 2160, 2.0}, // capped
-		{0, 0, 1.0},       // unknown window
-		{1680, 1050, 1.3}, // 16:10: the width limits it, so 1280 logical px still fit
-		{1600, 900, 1.25},
-		{1340, 760, 1.0}, // floored to 0.05: never below the 1280x720 minimum
+		{1280, 720, 1},
+		{1920, 1080, 1}, // the reference game's first launch
+		{2560, 1440, 1.5},
+		{3840, 2160, 2},
+		{5120, 2762, 3}, // the user's display, the user's own pick there
+		{5120, 2880, 3},
+		{1066, 600, 1}, // below the minimum: never shrinks
+		{0, 0, 1},
 	} {
-		if got := autoUIScale(c.w, c.h); math.Abs(got-c.want) > 1e-9 {
-			t.Errorf("autoUIScale(%v, %v) = %v, want %v", c.w, c.h, got, c.want)
-		}
-		if ui := autoUIScale(c.w, c.h); c.w >= uikit.MinSetupW && c.h >= uikit.MinSetupH && (c.w/ui < uikit.MinSetupW-0.01 || c.h/ui < uikit.MinSetupH-0.01) {
-			t.Errorf("auto %v on %vx%v leaves less than the minimum logical window", ui, c.w, c.h)
+		if got := autoUIStep(c.w, c.h); got != c.want {
+			t.Errorf("autoUIStep(%v, %v) = %v, want %v", c.w, c.h, got, c.want)
 		}
 	}
 }
 
+// TestUIStepAllowed (UIS-003, UIS-004): a step above 1 must leave at least
+// 1280 x 768 logical pixels; the reference game refused 720, 690, 617 and
+// 576 logical heights and accepted 768, 789, 864 and 960. A stored step a
+// window refuses falls to the largest one it allows.
+func TestUIStepAllowed(t *testing.T) {
+	for _, c := range []struct {
+		w, h, step float64
+		ok         bool
+	}{
+		{1920, 1080, 1.25, true},  // 864
+		{1920, 1080, 1.5, false},  // 720
+		{1920, 1080, 1.75, false}, // 617
+		{1920, 1080, 2, false},    // 540
+		{1600, 1200, 1.25, true},  // 1280 x 960
+		{1600, 1200, 1.5, false},  // 1067 wide
+		{2400, 960, 1.25, true},   // 768
+		{2400, 960, 1.5, false},   // 640
+		{5120, 2762, 3.5, true},   // 789
+		{5120, 2762, 4, false},    // 690
+		{1280, 720, 1, true},      // step 1 always
+		{1024, 600, 1, true},
+	} {
+		if got := uiStepAllowed(c.w, c.h, c.step); got != c.ok {
+			t.Errorf("uiStepAllowed(%v, %v, %v) = %v, want %v", c.w, c.h, c.step, got, c.ok)
+		}
+	}
+	for _, c := range []struct{ w, h, stored, want float64 }{
+		{1920, 1080, 2, 1.25},
+		{1920, 1080, 1.25, 1.25},
+		{3840, 2160, 4, 2.5},
+		{1280, 720, 3, 1},
+	} {
+		if got := effectiveStep(c.w, c.h, c.stored); got != c.want {
+			t.Errorf("effectiveStep(%v, %v, %v) = %v, want %v", c.w, c.h, c.stored, got, c.want)
+		}
+	}
+}
+
+// TestComputeUIScale (UIS-002): a step is physical window pixels per logical
+// pixel, so the logical window is the same on any screen density; HiDPI and
+// the render cap change only the frame's pixels.
 func TestComputeUIScale(t *testing.T) {
 	s := config.Defaults()
 	s.Accessibility.UIScaleAuto = false
 	s.Accessibility.UIScale = 150
-	if got := computeUIScale(s, 1280, 720, 1, false); got != (gfx.Scale{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
-		t.Fatalf("preset 150 = %+v", got)
+	if got := computeUIScale(s, 1920, 1200, 1, false); got != (gfx.Scale{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
+		t.Fatalf("step 1.5 = %+v", got)
 	}
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (gfx.Scale{Dev: 2, UI: 1.5, S: 3, World: 1}) {
-		t.Fatalf("preset 150 on a Retina screen = %+v", got)
+	if got := computeUIScale(s, 1920, 1200, 2, false); got != (gfx.Scale{Dev: 2, UI: 0.75, S: 1.5, World: 1}) {
+		t.Fatalf("step 1.5 on a Retina screen = %+v (logical 2560x1600)", got)
 	}
 	s.Graphics.HiDPI = false
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (gfx.Scale{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
+	if got := computeUIScale(s, 1920, 1200, 2, false); got != (gfx.Scale{Dev: 1, UI: 0.75, S: 0.75, World: 1}) {
 		t.Fatalf("HiDPI off = %+v", got)
 	}
+	if got := computeUIScale(s, 1280, 720, 1, false); got.S != 1 {
+		t.Fatalf("step 1.5 on a 1280x720 window = %+v, want the refused step lowered to 1", got)
+	}
 	s = config.Defaults() // Auto
-	if got := computeUIScale(s, 1920, 1080, 1, false); got != (gfx.Scale{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
+	if got := computeUIScale(s, 1920, 1080, 1, false); got != (gfx.Scale{Dev: 1, UI: 1, S: 1, World: 1}) {
 		t.Fatalf("auto at 1080p = %+v", got)
 	}
 	if got := computeUIScale(s, 1920, 1080, 2, true); got != gfx.UnitScale {
 		t.Fatalf("capture = %+v, want unit", got)
 	}
 	// PERF-003: above the render cap dev shrinks, the UI keeps its size
-	// (ui is from the points) and the map's render scale stays 1.
+	// (the step is from the physical window) and the map's render scale stays 1.
 	got := computeUIScale(s, 3360, 1890, 2, false)
 	if want := math.Sqrt(maxRenderPixels / (3360.0 * 1890)); math.Abs(got.Dev-want) > 1e-9 || got.UI != 2 || got.World != 1 || math.Abs(got.S-2*want) > 1e-9 {
 		t.Fatalf("3360x1890 at 2x = %+v, want dev %.4f ui 2 world 1", got, want)
 	}
-	if got := computeUIScale(s, 7680, 4320, 1, false); math.Abs(got.Dev-2.0/3) > 1e-9 || got.UI != 2 || got.World != 1 {
-		t.Fatalf("8K at 1x = %+v, want dev 2/3 (below 1)", got)
+	if got := computeUIScale(s, 7680, 4320, 1, false); math.Abs(got.Dev-2.0/3) > 1e-9 || got.UI != 4 || got.World != 1 {
+		t.Fatalf("8K at 1x = %+v, want dev 2/3 (below 1) and step 4", got)
 	}
 	s.Graphics.HiDPI = false
 	if got := computeUIScale(s, 3360, 1890, 2, false); got.Dev != 1 {
 		t.Fatalf("HiDPI off on a capped screen = %+v, want dev 1", got)
+	}
+	// A fixed scale saved before the steps (a share of the points) keeps its
+	// size: 100 % on a Retina screen is step 2 (UIS-009).
+	s = config.Defaults()
+	s.Accessibility.UIScaleAuto, s.Accessibility.UIScaleLegacy = false, 100
+	if got := computeUIScale(s, 1920, 1200, 2, false); got.UI != 1 || got.S != 2 {
+		t.Fatalf("legacy 100 %% on Retina = %+v, want ui 1 (step 2)", got)
 	}
 }
 
@@ -161,7 +210,8 @@ func TestLayoutFHiDPI(t *testing.T) {
 	if pw != 2560 || ph != 1440 {
 		t.Fatalf("LayoutF = %vx%v, want 2560x1440 physical", pw, ph)
 	}
-	if a.pw != 2560 || a.ph != 1440 || a.sw != 1280 || a.sh != 720 || a.scale.S != 2 || a.scale.Dev != 2 {
+	// Auto on 2560x1440 physical is step 1.5: 1707x960 logical
+	if a.pw != 2560 || a.ph != 1440 || a.sw != 1707 || a.sh != 960 || a.scale.S != 1.5 || a.scale.Dev != 2 {
 		t.Fatalf("physical %dx%d logical %dx%d scale %+v", a.pw, a.ph, a.sw, a.sh, a.scale)
 	}
 	if lw, lh := a.Layout(1280, 720); lw != 2560 || lh != 1440 {
@@ -187,21 +237,21 @@ func TestLayoutFHiDPI(t *testing.T) {
 	}
 
 	off := scaledTestApp(t, 2, func(s *config.Settings) { s.Graphics.HiDPI = false })
-	if pw, ph := off.LayoutF(1280, 720); pw != 1280 || ph != 720 || off.scale.S != 1 {
+	if pw, ph := off.LayoutF(1280, 720); pw != 1280 || ph != 720 || off.scale.S != 0.75 || off.sw != 1707 {
 		t.Fatalf("HiDPI off: LayoutF %vx%v scale %+v", pw, ph, off.scale)
 	}
 
 	big := scaledTestApp(t, 1, nil)
 	big.LayoutF(1920, 1080)
-	if big.sw != 1280 || big.sh != 720 || big.pw != 1920 {
+	if big.sw != 1920 || big.sh != 1080 || big.pw != 1920 {
 		t.Fatalf("auto 1080p: logical %dx%d physical %d", big.sw, big.sh, big.pw)
 	}
 	// A settings change applies live, with no new LayoutF.
 	s := big.settings
-	s.Accessibility.UIScaleAuto, s.Accessibility.UIScale = false, 100
+	s.Accessibility.UIScaleAuto, s.Accessibility.UIScale = false, 125
 	big.setSettings(s)
-	if big.scale.S != 1 || big.sw != 1920 || big.sh != 1080 {
-		t.Fatalf("after preset 100: scale %+v logical %dx%d", big.scale, big.sw, big.sh)
+	if big.scale.S != 1.25 || big.sw != 1536 || big.sh != 864 {
+		t.Fatalf("after step 1.25: scale %+v logical %dx%d", big.scale, big.sw, big.sh)
 	}
 }
 
@@ -296,7 +346,7 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 	a := scaledTestApp(t, 1, func(s *config.Settings) {
 		s.Accessibility.UIScaleAuto, s.Accessibility.UIScale = false, 150
 	})
-	a.LayoutF(1920, 1080)
+	a.LayoutF(1920, 1152) // 1152 / 1.5 = 768: the smallest window step 1.5 allows
 	a.finishBoot()
 	f := fakeOn(a)
 	var b uikit.Button
@@ -322,8 +372,8 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 	}
 	screen := ebiten.NewImage(a.pw, a.ph)
 	a.Draw(screen) // draws at the physical size with the logical layout
-	if a.sw != 1280 || a.sh != 720 {
-		t.Fatalf("Draw kept logical %dx%d, want 1280x720", a.sw, a.sh)
+	if a.sw != 1280 || a.sh != 768 {
+		t.Fatalf("Draw kept logical %dx%d, want 1280x768", a.sw, a.sh)
 	}
 }
 

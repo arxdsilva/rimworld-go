@@ -115,7 +115,7 @@ func TestTabStripIsTheLayoutsTabsRect(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(3))
 	tabs := a.hud().Tabs
-	if tabs != (gfx.Rect{X: 0, Y: float32(a.sh - 28), W: float32(a.sw), H: 28}) {
+	if tabs != (gfx.Rect{X: 0, Y: float32(a.sh) - hudlayout.TabsH, W: float32(a.sw), H: hudlayout.TabsH}) {
 		t.Fatalf("Tabs = %+v", tabs)
 	}
 	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {

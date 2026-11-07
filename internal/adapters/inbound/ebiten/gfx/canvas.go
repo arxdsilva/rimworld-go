@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -46,49 +47,98 @@ func emitBox(dst *ebiten.Image, kind string, x0, y0, x1, y1, pad float32) {
 	emitTrace(dst, kind, "", min(x0, x1)-pad, min(y0, y1)-pad, Abs32(x1-x0)+2*pad, Abs32(y1-y0)+2*pad)
 }
 
-// FillRect is vector.FillRect in logical pixels.
+// snapSpan is a logical span [x, x+w) in device pixels at scale s. At a
+// whole s it is exact. At a fractional s (1.25, 1.75) the start rounds to
+// the nearest device pixel and the length is max(1, ceil(w x s)), so equal
+// spans get equal whole widths and an unblended edge (UIS-011).
+func snapSpan(x, w, s float32) (float32, float32) {
+	if s == float32(int(s)) || w <= 0 {
+		return x * s, w * s
+	}
+	return float32(math.Round(float64(x * s))), max(1, float32(math.Ceil(float64(w*s-0.01))))
+}
+
+// snapWidth is a stroke width in device pixels at scale s: whole and at
+// least 1 at a fractional s (UIS-011).
+func snapWidth(width, s float32) float32 {
+	if s == float32(int(s)) {
+		return width * s
+	}
+	return max(1, float32(math.Round(float64(width*s))))
+}
+
+// FillRect is vector.FillRect in logical pixels. Without anti-aliasing its
+// edges land on whole device pixels (snapSpan).
 func FillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool) {
 	if deferring(dst) { // world_scale.go: drawn at native size after the map
 		deferFillRect(x, y, w, h, clr, aa)
 		return
 	}
 	s := float32(UIScale())
+	px, pw, py, ph := x*s, w*s, y*s, h*s
+	if !aa {
+		px, pw = snapSpan(x, w, s)
+		py, ph = snapSpan(y, h, s)
+	}
 	if cur.canvasTrace != nil {
-		cur.canvasTrace("fill", x*s, y*s, w*s, h*s)
+		cur.canvasTrace("fill", px, py, pw, ph)
 	}
 	if cur.drawTrace != nil {
-		emitTrace(dst, "fill", "", x*s, y*s, w*s, h*s)
+		emitTrace(dst, "fill", "", px, py, pw, ph)
 	}
-	vector.FillRect(dst, x*s, y*s, w*s, h*s, clr, aa)
+	vector.FillRect(dst, px, py, pw, ph, clr, aa)
 }
 
-// StrokeRect is vector.StrokeRect in logical pixels.
+// StrokeRect is vector.StrokeRect in logical pixels. Without anti-aliasing
+// its box and stroke land on whole device pixels (snapSpan, snapWidth).
 func StrokeRect(dst *ebiten.Image, x, y, w, h, width float32, clr color.Color, aa bool) {
 	if deferring(dst) {
 		deferStrokeRect(x, y, w, h, width, clr, aa)
 		return
 	}
 	s := float32(UIScale())
+	px, pw, py, ph, pwid := x*s, w*s, y*s, h*s, width*s
+	if !aa {
+		px, pw = snapSpan(x, w, s)
+		py, ph = snapSpan(y, h, s)
+		pwid = snapWidth(width, s)
+	}
 	if cur.canvasTrace != nil {
-		cur.canvasTrace("stroke", x*s, y*s, w*s, h*s)
+		cur.canvasTrace("stroke", px, py, pw, ph)
 	}
 	if cur.drawTrace != nil {
-		emitTrace(dst, "stroke", "", x*s, y*s, w*s, h*s)
+		emitTrace(dst, "stroke", "", px, py, pw, ph)
 	}
-	vector.StrokeRect(dst, x*s, y*s, w*s, h*s, width*s, clr, aa)
+	vector.StrokeRect(dst, px, py, pw, ph, pwid, clr, aa)
 }
 
-// Line is vector.StrokeLine in logical pixels.
+// Line is vector.StrokeLine in logical pixels. A horizontal or vertical
+// line without anti-aliasing has a whole width and lands on whole device
+// pixels (UIS-011).
 func Line(dst *ebiten.Image, x0, y0, x1, y1, width float32, clr color.Color, aa bool) {
 	if deferring(dst) {
 		deferLine(x0, y0, x1, y1, width, clr, aa)
 		return
 	}
 	s := float32(UIScale())
-	if cur.drawTrace != nil {
-		emitBox(dst, "line", x0*s, y0*s, x1*s, y1*s, 0)
+	px0, py0, px1, py1, pw := x0*s, y0*s, x1*s, y1*s, width*s
+	if !aa && s != float32(int(s)) && (x0 == x1 || y0 == y1) {
+		pw = snapWidth(width, s)
+		// the edge across the line on a whole pixel: centre = edge + pw/2
+		across := func(v float32) float32 { return float32(math.Round(float64(v*s-pw/2))) + pw/2 }
+		round := func(v float32) float32 { return float32(math.Round(float64(v * s))) }
+		if y0 == y1 {
+			py0 = across(y0)
+			py1, px0, px1 = py0, round(x0), round(x1)
+		} else {
+			px0 = across(x0)
+			px1, py0, py1 = px0, round(y0), round(y1)
+		}
 	}
-	vector.StrokeLine(dst, x0*s, y0*s, x1*s, y1*s, width*s, clr, aa)
+	if cur.drawTrace != nil {
+		emitBox(dst, "line", px0, py0, px1, py1, 0)
+	}
+	vector.StrokeLine(dst, px0, py0, px1, py1, pw, clr, aa)
 }
 
 // FillCircle is vector.FillCircle in logical pixels.

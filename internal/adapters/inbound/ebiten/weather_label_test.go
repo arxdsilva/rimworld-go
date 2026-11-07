@@ -12,7 +12,7 @@ import (
 // PLAY-017: the HUD weather readout lays out in logical pixels. Its wind
 // arrow was stroked with raw vector calls at those logical coordinates, so
 // at UI scale > 1 it landed at 1/scale of the way across the screen,
-// nowhere near its text. It changes curUIScale and drawTrace, so it does
+// nowhere near its text. It changes the gfx scale (gfx.SetScale) and drawTrace, so it does
 // not run in parallel.
 func TestWeatherLabelArrowSitsBetweenItsTextAtScale(t *testing.T) {
 	for _, sc := range wlScales {

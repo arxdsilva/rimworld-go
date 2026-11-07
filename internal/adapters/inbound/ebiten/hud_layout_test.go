@@ -102,7 +102,8 @@ func layoutRegions(l hudlayout.Layout) map[string]gfx.Rect {
 }
 
 // overlaps are the pairs of regions of l that share area (touching edges
-// is fine), and the regions that leave the w x h screen.
+// is fine), and the regions that leave the w x h screen. The messages lie
+// over the colonist bar on purpose (UIS-029: the slots under them fade).
 func layoutOverlaps(l hudlayout.Layout, w, h int) []string {
 	rs := layoutRegions(l)
 	names := make([]string, 0, len(rs))
@@ -118,6 +119,9 @@ func layoutOverlaps(l hudlayout.Layout, w, h int) []string {
 			bad = append(bad, fmt.Sprintf("%s %+v leaves the %dx%d screen", n, r, w, h))
 		}
 		for _, m := range names[i+1:] {
+			if n == "Messages" && strings.HasPrefix(m, "Slot") {
+				continue
+			}
 			if o := r.Intersect(rs[m]); o.W > 0.01 && o.H > 0.01 {
 				bad = append(bad, fmt.Sprintf("%s %+v overlaps %s %+v", n, r, m, rs[m]))
 			}
@@ -160,8 +164,8 @@ func layoutStates() []hudlayout.Inputs {
 					pane.PaneShown = true
 					tall := pane
 					tall.ExpandedW, tall.ExpandedH = hudlayout.ExpandMaxW+100, 2000
-					arch := base // the biggest category, the tallest description
-					arch.ArchOpen, arch.Commands, arch.ArchDescH = true, maxArchTools(), 2000
+					arch := base // the biggest category, every category button
+					arch.ArchOpen, arch.Commands, arch.ArchCats = true, maxArchTools(), len(architectpkg.Categories)
 					win := base
 					win.WindowW, win.WindowH = 4000, 4000
 					out = append(out, nothing, pane, tall, arch, win)
@@ -291,8 +295,10 @@ func TestLiveLayoutRegionsNeverOverlap(t *testing.T) { // not parallel: it sets 
 }
 
 // Thirteen and twenty-seven commands fill the bottom row from the pane
-// rightward, then wrap upward; the grid stops short of the lower-right
-// controls (its right edge at most Global.X - 8).
+// rightward (UIS-050: CmdGridGap right of the pane, CmdBottom above the tab
+// bar), then wrap upward; the grid stops short of the lower-right controls
+// (its right edge at most Global.X - 8), and commands past its room are
+// reached through the last cell (UIS-052), never dropped.
 func TestLayoutCommandGridWrapsUpward(t *testing.T) {
 	t.Parallel()
 	for _, sz := range layoutScreens {
@@ -303,11 +309,11 @@ func TestLayoutCommandGridWrapsUpward(t *testing.T) {
 				t.Fatalf("%v %d: no cells", sz, n)
 			}
 			first := l.GridCells[0]
-			if first.X != l.Pane.Right()+hudlayout.HudMargin || first.Bottom() != l.Tabs.Y-hudlayout.HudMargin {
+			if first.X != l.Pane.Right()+hudlayout.CmdGridGap || first.Bottom() != l.Tabs.Y-hudlayout.CmdBottom {
 				t.Errorf("%v %d: the first cell %+v is not bottom-left of the grid, right of the pane %+v", sz, n, first, l.Pane)
 			}
-			if want := min(n, l.GridCols*hudlayout.CmdMaxRows); len(l.GridCells) != want {
-				t.Errorf("%v %d: %d cells, want %d (%d columns x %d rows)", sz, n, len(l.GridCells), want, l.GridCols, hudlayout.CmdMaxRows)
+			if shown := len(l.GridCells) + max(l.GridMore-1, 0); shown != n || (l.GridMore > 0) != (len(l.GridCells) < n) {
+				t.Errorf("%v %d: %d cells and %d more (%d columns); want every command reachable", sz, n, len(l.GridCells), l.GridMore, l.GridCols)
 			}
 			if l.GridCols*2 < n && len(l.GridCells) > l.GridCols && l.GridCells[l.GridCols].Y >= first.Y {
 				t.Errorf("%v %d: the row after the first does not sit above it", sz, n)

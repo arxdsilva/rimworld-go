@@ -4,6 +4,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 )
 
@@ -15,7 +16,8 @@ import (
 // A modal's Anchor places the frame on a rectangle instead of centring it
 // (PLAY-018). The host's one modeless main-tab window uses the same frame
 // through RunWindow: no scrim, declared on the screen layer, not on the
-// stack.
+// stack. A Frameless window (UIS-060) has no title bar and no X: a 1 px
+// frame, hudlayout.WindowPad inside it; the tab bar or Esc closes it.
 
 const (
 	ModalTitleH  = 40
@@ -48,6 +50,10 @@ type Modal struct {
 	// Anchor returns the rectangle the frame sits on (nil: centred on the
 	// screen). The frame is that rectangle cut to the screen.
 	Anchor func() gfx.Rect
+	// Frameless drops the title bar and the X (UIS-060: a main-tab window
+	// through RunWindow). Title is then not drawn; a window that shows one
+	// draws it in its body in gfx.Title.
+	Frameless bool
 }
 
 // ModalGeometry places a w x h modal centred on the screen, shrunk to fit.
@@ -57,13 +63,19 @@ func ModalGeometry(sw, sh int, m Modal) (frame, title, body, footer gfx.Rect) {
 	return modalParts(gfx.WinRect(sw, sh).Centered(w, h), m)
 }
 
-// modalParts cuts a modal's frame into its title bar, body and footer.
+// modalParts cuts a modal's frame into its title bar, body and footer. A
+// frameless one has no title bar and the window's inner margin.
 func modalParts(frame gfx.Rect, m Modal) (f, title, body, footer gfx.Rect) {
-	title, rest := frame.SplitV(ModalTitleH)
+	rest, pad := frame, float32(ModalPad)
+	if m.Frameless {
+		pad = hudlayout.WindowPad
+	} else {
+		title, rest = frame.SplitV(ModalTitleH)
+	}
 	if len(m.Buttons) > 0 {
 		rest, footer = rest.SplitV(-ModalFooterH)
 	}
-	return frame, title, rest.Inset(ModalPad), footer
+	return frame, title, rest.Inset(pad), footer
 }
 
 // layout is where m sits this frame: on its anchor when it has one (cut
@@ -169,13 +181,14 @@ func (k *Kit) RunModals(closeModal func(id string)) {
 
 // RunWindow declares m as the host's main-tab window on the screen layer:
 // its frame sits on its anchor, there is no scrim, and the HUD around it
-// stays live. The X calls closeX; a footer button that closes calls
-// dismiss. The host calls it once per Update while the window is open.
+// stays live. The X calls closeX (a frameless window has none); a footer
+// button that closes calls dismiss. The host calls it once per Update
+// while the window is open.
 func (k *Kit) RunWindow(m Modal, closeX, dismiss func()) {
 	sw, sh := k.host.Size()
 	frame, titleR, body, footer := layout(sw, sh, m)
 	k.modalChrome(m, frame, titleR)
-	if k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: tk(k).T("Close")}) {
+	if !m.Frameless && k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: tk(k).T("Close")}) {
 		closeX()
 		return
 	}
@@ -185,12 +198,16 @@ func (k *Kit) RunWindow(m Modal, closeX, dismiss func()) {
 	k.modalButtons(m, footer, dismiss)
 }
 
-// modalChrome queues a modal's panel and title.
+// modalChrome queues a modal's panel and title (a frameless one: the panel
+// alone).
 func (k *Kit) modalChrome(m Modal, frame, titleR gfx.Rect) {
 	k.Queue(func(dst *ebiten.Image) {
 		DrawPanel(dst, frame.X, frame.Y, frame.W, frame.H)
+		if m.Frameless {
+			return
+		}
 		gfx.Line(dst, frame.X, titleR.Bottom(), frame.Right(), titleR.Bottom(), 1, PanelBorder, false)
-		st := gfx.Large
+		st := gfx.Title
 		st.Color = Heading
 		gfx.Text(dst, FitText(m.Title, st, titleR.W-ModalCloseW-3*ModalPad), float64(titleR.X+ModalPad), float64(titleR.Y)+(float64(titleR.H)-gfx.LineH(st))/2, st)
 	})

@@ -18,7 +18,7 @@ import (
 // pixels and scales them again, so at UI scale > 1 they drifted off the
 // pawn. These tests draw them at several UI and device scales and check
 // the icon lands on the pawn, at the same physical place for every scale.
-// They change package globals (curUIScale, drawTrace) and must not run in
+// They change package globals (the gfx scale, gfx.SetScale; drawTrace) and must not run in
 // parallel.
 
 // wlScale is one UI/device scale combination.

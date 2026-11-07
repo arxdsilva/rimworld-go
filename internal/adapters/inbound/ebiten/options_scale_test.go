@@ -50,13 +50,13 @@ func TestOptionsUIScaleCyclesAutoAndPresets(t *testing.T) {
 
 func TestOptionsUIScaleAutoLabelShowsPercent(t *testing.T) {
 	a := scaledTestApp(t, 1, nil)
-	a.LayoutF(1920, 1080) // Auto: 1.5
+	a.LayoutF(1920, 1200) // Auto: 1.25 (1536x960 logical, UIS-005)
 	a.opt.Tab = "access"
-	if got := optionBtn(t, a, "options.uiscale").Label; got != "Auto (150%)" {
+	if got := optionBtn(t, a, "options.uiscale").Label; got != "Auto (125%)" {
 		t.Fatalf("label = %q", got)
 	}
 	a.opt.ApplyOption("options.uiscale")
-	if got := optionBtn(t, a, "options.uiscale").Label; got != "75%" {
+	if got := optionBtn(t, a, "options.uiscale").Label; got != "100%" {
 		t.Fatalf("label = %q", got)
 	}
 }
@@ -77,12 +77,12 @@ func TestOptionsHiDPIToggle(t *testing.T) {
 
 func TestOptionsScaleChangeKeepsStepperHit(t *testing.T) {
 	a := scaledTestApp(t, 1, nil)
-	a.LayoutF(1920, 1080)
+	a.LayoutF(1920, 1200) // Auto: 1.25
 	a.finishBoot()
 	a.opt.Tab = "access"
 	before := optionBtn(t, a, "options.uiscale")
-	a.opt.ApplyOption("options.uiscale") // Auto -> 75%
-	a.LayoutF(1920, 1080)
+	a.opt.ApplyOption("options.uiscale") // Auto -> 100%
+	a.LayoutF(1920, 1200)
 	if a.opt.CurrentTab() != "access" {
 		t.Fatal("tab lost")
 	}
@@ -90,7 +90,7 @@ func TestOptionsScaleChangeKeepsStepperHit(t *testing.T) {
 	if b.X != before.X || b.Y != before.Y {
 		t.Fatalf("stepper moved logically: %+v -> %+v", before, b)
 	}
-	if a.scale.UI != 0.75 {
+	if a.scale.UI != 1 {
 		t.Fatalf("ui scale = %v", a.scale.UI)
 	}
 	cx, cy := int(b.X+b.W/2), int(b.Y+b.H/2)

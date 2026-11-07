@@ -413,8 +413,9 @@ func (a *App) updateOnce(t *testing.T) {
 	}
 }
 
-// Global is exactly its measured stack: it ends 8 px above the tab strip,
-// every row sits inside it, and no two rows overlap.
+// Global is exactly its measured stack: it ends GlobalBottom above the tab
+// strip and GlobalRight from the edge (UIS-056), every row sits inside it,
+// and no two rows overlap.
 func TestGlobalStackIsMeasured(t *testing.T) {
 	for _, sc := range globalScales {
 		t.Run(fmt.Sprintf("ui%d", sc.ui), func(t *testing.T) {
@@ -427,7 +428,7 @@ func TestGlobalStackIsMeasured(t *testing.T) {
 			if l.Global.H != a.globalHeight() || l.Global.H <= 0 {
 				t.Fatalf("Global %+v vs globalHeight %v", l.Global, a.globalHeight())
 			}
-			if l.Global.Bottom() != l.Tabs.Y-hudlayout.HudMargin || l.Global.X != float32(a.sw)-240 || l.Global.W != 232 {
+			if l.Global.Bottom() != l.Tabs.Y-hudlayout.GlobalBottom || l.Global.X != float32(a.sw)-hudlayout.GlobalRight-hudlayout.RightW || l.Global.W != hudlayout.RightW {
 				t.Fatalf("Global %+v not at the lower-right above Tabs %+v", l.Global, l.Tabs)
 			}
 			rows := a.chrome.Global().Rows()

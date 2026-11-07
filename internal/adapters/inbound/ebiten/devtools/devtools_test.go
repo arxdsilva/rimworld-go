@@ -63,7 +63,7 @@ func devLayouts() map[string]hudlayout.Layout {
 	busy := hudlayout.Inputs{Colonists: 30, PaneShown: true, Commands: 13, GlobalH: 190, MinimapOn: true, LearnH: 200,
 		Alerts: 8, Letters: 8, ResourcesH: 600, Messages: 5, ExpandedW: 500, ExpandedH: 300}
 	arch := busy
-	arch.PaneShown, arch.ArchOpen, arch.ArchDescH, arch.ExpandedW, arch.ExpandedH = false, true, 120, 0, 0
+	arch.PaneShown, arch.ArchOpen, arch.ArchCats, arch.ExpandedW, arch.ExpandedH = false, true, 14, 0, 0
 	win := busy
 	win.PaneShown, win.WindowW, win.WindowH, win.ExpandedW, win.ExpandedH = false, 900, 500, 0, 0
 	idle := hudlayout.Inputs{GlobalH: 150, ResourcesH: 100}

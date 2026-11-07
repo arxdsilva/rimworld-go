@@ -22,7 +22,8 @@ import (
 // PERF-002 hot spot 6: the world render scale (world_scale.go).
 
 // renderScaleColony is hidpiColony with the map's render scale k: a live
-// colony on a dev x screen, a 1280x720-point window at UI scale 100 %.
+// colony on a dev x screen, a 1280x768-point window at a fixed scale of
+// 100 % of the points (a legacy scale: step dev, UIS-009).
 func renderScaleColony(t *testing.T, dev, k float64) (*App, *fakeInput) {
 	t.Helper()
 	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
@@ -30,10 +31,10 @@ func renderScaleColony(t *testing.T, dev, k float64) (*App, *fakeInput) {
 	a := testApp(s)
 	a.devFn = func() float64 { return dev }
 	st := a.settings
-	st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, 100
+	st.Accessibility.UIScaleAuto, st.Accessibility.UIScaleLegacy = false, 100
 	st.Graphics.HiDPI, st.Graphics.RenderScale = true, k
 	a.setSettings(st)
-	a.LayoutF(1280, 720)
+	a.LayoutF(1280, 768)
 	a.finishBoot()
 	a.startGame()
 	if a.nav.screen() != ports.ScreenColony {
@@ -82,16 +83,16 @@ func TestComputeRenderScale(t *testing.T) {
 }
 
 // TestRenderScaleOffscreenSize: at dev 2 and Half the screen stays
-// physical, the map draws into a 1280x720 offscreen at one map pixel per
+// physical, the map draws into a 1280x768 offscreen at one map pixel per
 // point, and at Full no offscreen exists.
 func TestRenderScaleOffscreenSize(t *testing.T) {
 	a, _ := renderScaleColony(t, 2, 0.5)
-	if a.pw != 2560 || a.ph != 1440 || a.sw != 1280 {
-		t.Fatalf("LayoutF: physical %dx%d logical %d, want 2560x1440 and 1280", a.pw, a.ph, a.sw)
+	if a.pw != 2560 || a.ph != 1536 || a.sw != 1280 {
+		t.Fatalf("LayoutF: physical %dx%d logical %d, want 2560x1536 and 1280", a.pw, a.ph, a.sw)
 	}
 	drawOnce(t, a)
-	if a.wr.img == nil || a.wr.img.Bounds().Dx() != 1280 || a.wr.img.Bounds().Dy() != 720 {
-		t.Fatalf("offscreen %v, want 1280x720", a.wr.img)
+	if a.wr.img == nil || a.wr.img.Bounds().Dx() != 1280 || a.wr.img.Bounds().Dy() != 768 {
+		t.Fatalf("offscreen %v, want 1280x768", a.wr.img)
 	}
 	if a.renderer.cam.Dev != 1 {
 		t.Fatalf("camera density %v, want dev x world = 1", a.renderer.cam.Dev)
@@ -153,8 +154,8 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 		t.Fatalf("a physical click on the pawn at Half did not select it (select %v %v)", half.renderer.HasSelect(), half.renderer.Selected())
 	}
 	// the map's viewport is the screen in map pixels
-	if v := half.mapViewport(); v.X1 != 1280 || v.Y1 != 720 {
-		t.Fatalf("map viewport %+v, want 1280x720 map pixels", v)
+	if v := half.mapViewport(); v.X1 != 1280 || v.Y1 != 768 {
+		t.Fatalf("map viewport %+v, want 1280x768 map pixels", v)
 	}
 }
 

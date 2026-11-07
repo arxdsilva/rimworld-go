@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -32,6 +33,7 @@ func (a *App) hud() hudlayout.Layout {
 		BarGroups:  a.chrome.Bar().GroupSizes(),
 		PaneShown:  a.insp.PaneShown(),
 		ArchOpen:   a.arch.Open,
+		ArchCats:   len(architect.Categories),
 		Commands:   a.insp.Commands().CommandCount(),
 		GlobalH:    a.globalHeight(),
 		MinimapOn:  a.minimapOn(),
@@ -40,7 +42,6 @@ func (a *App) hud() hudlayout.Layout {
 		Letters:    a.chrome.Right().LetterCount(),
 		ResourcesH: a.chrome.Res().Height(),
 		Messages:   a.chrome.Right().MessageCount(),
-		ArchDescH:  a.arch.DescHeight(),
 	}
 	st.ExpandedW, st.ExpandedH = a.insp.ExpandedWant()
 	st.WindowW, st.WindowH = a.win.Want()

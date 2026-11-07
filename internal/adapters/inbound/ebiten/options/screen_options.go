@@ -313,6 +313,7 @@ func uiScaleRow(t lang.Tr) OptionRow {
 		},
 		apply: func(s *config.Settings, _ int) {
 			ac := &s.Accessibility
+			ac.UIScaleLegacy = 0 // a chosen step replaces a scale saved before the steps (UIS-009)
 			if ac.UIScaleAuto {
 				ac.UIScaleAuto, ac.UIScale = false, config.UIScalePresets[0]
 				return

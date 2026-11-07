@@ -13,7 +13,7 @@ import (
 
 // PLAY-017 §9: double-clicking a colonist in the bar centres the camera on
 // it. These run at UI scale 1.5 (the bar is laid out in logical pixels, the
-// cursor and the camera are physical) and change curUIScale, so they must
+// cursor and the camera are physical) and change the gfx scale (gfx.SetScale), so they must
 // not run in parallel.
 
 const barPawnID = entity.EntityID(7) // hidpiColony's colonist, at tile (21, 19)
@@ -33,11 +33,12 @@ func clickBarSlot(t *testing.T, a *App, f *fakeInput, id entity.EntityID) {
 	t.Fatalf("no bar slot for pawn %d", id)
 }
 
-// barColony is hidpiColony at 150%, with the camera put well away from the
+// barColony is hidpiColony at 150% in a window that allows it (1920 x
+// 1152: 1280 x 768 logical), with the camera put well away from the
 // colonist so a jump is obvious.
 func barColony(t *testing.T) (*App, *fakeInput) {
 	t.Helper()
-	a, f := hidpiColony(t, 1, 150)
+	a, f := hidpiColonyAt(t, 1, 150, 1920, 1152)
 	if a.scale.S != 1.5 {
 		t.Fatalf("scale = %v, want 1.5", a.scale.S)
 	}

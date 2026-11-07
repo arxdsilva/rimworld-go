@@ -19,7 +19,7 @@ func TestPaneHeightRow(t *testing.T) {
 		t.Fatal("no Pane height row")
 	}
 	s := config.Defaults()
-	if got := row.value(s); got != "27%" {
+	if got := row.value(s); got != "26%" { // UIS-044: the pane is 165 tall
 		t.Errorf("the default pane reads %q", got)
 	}
 	for range 10 {

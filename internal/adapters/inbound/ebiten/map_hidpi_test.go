@@ -18,9 +18,9 @@ import (
 // PLAY-012 B.1/B.4 (HIDPI-MAP): the map renders at physical resolution.
 // Its tile size is TileSize x zoom x dev, the UI scale never zooms it, and
 // the camera, clicks and the minimap work in physical pixels. These tests
-// change curUIScale and must not run in parallel.
+// change the gfx scale (gfx.SetScale) and must not run in parallel.
 
-// withMapScale sets curUIScale to a device density and a UI scale for the
+// withMapScale sets the gfx scale (gfx.SetScale) to a device density and a UI scale for the
 // rest of the test.
 func withMapScale(t testing.TB, dev, ui float64) {
 	t.Helper()
@@ -64,8 +64,16 @@ func TestDevChangeKeepsTheView(t *testing.T) {
 }
 
 // hidpiColony is a live colony App on a dev x devFn screen with a
-// 1280x720-point window and the UI scale ui (percent, 0: Auto).
+// 1280x720-point window and a fixed UI scale of ui percent of the points
+// (a legacy scale, UIS-009; 0: Auto).
 func hidpiColony(t *testing.T, dev float64, ui int) (*App, *fakeInput) {
+	t.Helper()
+	return hidpiColonyAt(t, dev, ui, 1280, 720)
+}
+
+// hidpiColonyAt is hidpiColony in a w x h (points) window: a step above 1
+// needs the window to leave 1280 x 768 logical (UIS-003).
+func hidpiColonyAt(t *testing.T, dev float64, ui int, w, h float64) (*App, *fakeInput) {
 	t.Helper()
 	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	s := &stubSim{w: 40, h: 40, pawns: []game.PawnView{{ID: 7, Name: "Ada", X: 21, Y: 19, Status: "alive"}}}
@@ -73,10 +81,10 @@ func hidpiColony(t *testing.T, dev float64, ui int) (*App, *fakeInput) {
 	a.devFn = func() float64 { return dev }
 	st := a.settings
 	if ui > 0 {
-		st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, ui
+		st.Accessibility.UIScaleAuto, st.Accessibility.UIScaleLegacy = false, ui
 	}
 	a.setSettings(st)
-	a.LayoutF(1280, 720)
+	a.LayoutF(w, h)
 	a.finishBoot()
 	a.startGame()
 	if a.nav.screen() != ports.ScreenColony {
@@ -122,6 +130,7 @@ func TestHiDPIClickSelectsSameTile(t *testing.T) {
 
 func TestUIScaleLeavesMapTileSize(t *testing.T) {
 	a, _ := hidpiColony(t, 1, 150)
+	a.LayoutF(1920, 1152) // step 1.5 needs 1152 physical rows (UIS-003)
 	if a.scale.S != 1.5 || a.scale.Dev != 1 {
 		t.Fatalf("scale %+v, want ui 1.5 at dev 1", a.scale)
 	}
@@ -179,6 +188,9 @@ func TestCameraClampCoversPhysicalViewport(t *testing.T) {
 
 func TestZoomToCursorAnchorHiDPI(t *testing.T) {
 	a, f := hidpiColony(t, 2, 0)
+	st := a.settings
+	st.Camera.ZoomToMouse = true // off by default since UIS-083
+	a.setSettings(st)
 	r := a.renderer
 	r.smooth.Instant = true
 	x, y := 1700, 900 // physical, inside the map viewport

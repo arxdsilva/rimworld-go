@@ -8,7 +8,7 @@ import (
 )
 
 // PLAY-012 B.4: every world-mapping path uses physical pixels. These tests
-// change curUIScale and must not run in parallel.
+// change the gfx scale (gfx.SetScale) and must not run in parallel.
 
 // TestJumpToCentresOnPhysicalViewport: centring on a colonist puts it at
 // the middle of the physical map viewport at dev 2 and at UI scale 1.5.

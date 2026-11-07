@@ -24,6 +24,10 @@ const (
 	// Minimum window of the setup screens.
 	MinSetupW = 1280
 	MinSetupH = 720
+	// MinStepW and MinStepH are the smallest logical window a UI step
+	// above 1 may leave (UIS-003): a step that would go below is refused.
+	MinStepW = 1280
+	MinStepH = 768
 )
 
 // DialogFrame is the centred frame of the setup screens: width
@@ -56,7 +60,7 @@ func TooSmall(sw, sh int) bool { return sw < MinSetupW || sh < MinSetupH }
 func DrawTooSmall(dst *ebiten.Image, sw, sh int, tr ...lang.Tr) {
 	t := trOf(tr)
 	gfx.FillRect(dst, 0, 0, float32(sw), float32(sh), Dim, false)
-	st := gfx.Large
+	st := gfx.Title
 	st.Align = gfx.AlignCenter
 	cx, cy := float32(sw)/2, float32(sh)/2
 	gfx.Text(dst, t.T("Window too small"), float64(cx), float64(cy)-gfx.LineH(st), st)

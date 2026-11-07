@@ -39,23 +39,51 @@ type TextStyle struct {
 }
 
 // SmallSize and LargerSmallSize are the Small style's pixel sizes, normal and
-// with the larger-small-text option on (OPT-009).
+// with the larger-small-text option on (OPT-009): the Body size.
 const (
 	SmallSize       = 11
-	LargerSmallSize = 13
+	LargerSmallSize = BodySize
 )
 
-// The type scale (NG-1 §1.1) in logical pixels. Faces are rasterised at
-// Size x the UI scale (PLAY-012), so text is always sharp; positions and
-// metrics stay logical.
+// The reference game's three text sizes (UIS-012, UIS-013), as Noto Sans
+// pixel sizes with the same cap height (tiny cap 8, small cap 10, medium cap
+// 15) and their line pitches.
+const (
+	BodySize   = 14
+	TitleSize  = 21
+	SmallPitch = 15
+	BodyPitch  = 16
+	TitlePitch = 24
+)
+
+// The type scale (NG-1 §1.1, UIS-012) in logical pixels. Faces are
+// rasterised at Size x the UI scale (PLAY-012), so text is always sharp;
+// positions and metrics stay logical. Small, Body and Title are the
+// reference sizes; Label is Body in our SemiBold. Large has no reference
+// size and goes as its last callers move to Title or Body; Huge is for the
+// main menu and splash only.
 var (
 	Small = TextStyle{Size: SmallSize}
-	Body  = TextStyle{Size: 13}
-	Label = TextStyle{Size: 13, Bold: true}
+	Body  = TextStyle{Size: BodySize}
+	Label = TextStyle{Size: BodySize, Bold: true}
 	Large = TextStyle{Size: 16, Bold: true}
-	Title = TextStyle{Size: 22, Bold: true}
+	Title = TextStyle{Size: TitleSize, Bold: true}
 	Huge  = TextStyle{Size: 32, Bold: true}
 )
+
+// pitchOf is the line pitch of a face size in logical pixels: the
+// reference pitch for its three sizes, else 0 (ascent + descent + 2).
+func pitchOf(size float64) float64 {
+	switch size {
+	case SmallSize:
+		return SmallPitch
+	case BodySize:
+		return BodyPitch
+	case TitleSize:
+		return TitlePitch
+	}
+	return 0
+}
 
 // faceKey is a face's pixel size and weight.
 type faceKey struct {
@@ -97,11 +125,7 @@ func FaceSize(size, s float64) (px, k float64) {
 // face returns the cached face for a style at UI scale s and its glyph
 // scale k (call with fontMu held).
 func face(st TextStyle, s float64) (*text.GoTextFace, float64) {
-	size := st.Size
-	if size == SmallSize && cur.largerSmall {
-		size = LargerSmallSize
-	}
-	px, sc := FaceSize(size, s)
+	px, sc := FaceSize(sizeOf(st), s)
 	k := faceKey{px, st.Bold}
 	if f, ok := fontFaces[k]; ok {
 		return f, sc
@@ -126,6 +150,15 @@ func face(st TextStyle, s float64) (*text.GoTextFace, float64) {
 	return f, sc
 }
 
+// sizeOf is the pixel size st is drawn at: Small grows to LargerSmallSize
+// with the larger-small-text option on.
+func sizeOf(st TextStyle) float64 {
+	if st.Size == SmallSize && cur.largerSmall {
+		return LargerSmallSize
+	}
+	return st.Size
+}
+
 // Text draws s with its top-left at logical (x, y) (or its top-centre/
 // top-right for centred/right-aligned styles). Newlines start new lines.
 // It draws at physical (x, y) x the UI scale with a face of that size, a
@@ -141,7 +174,7 @@ func Text(dst *ebiten.Image, s string, x, y float64, st TextStyle) {
 	f, k := face(st, sc)
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(x*sc, y*sc)
-	op.LineSpacing = logicalLineH(f, k) * sc
+	op.LineSpacing = logicalLineH(f, k, sizeOf(st)) * sc
 	switch st.Align {
 	case AlignCenter:
 		op.PrimaryAlign = text.AlignCenter
@@ -179,24 +212,29 @@ func Measure(s string, st TextStyle) (w, h float64) {
 	fontMu.Lock()
 	defer fontMu.Unlock()
 	f, k := face(st, sc)
-	w, h = text.Measure(s, f, logicalLineH(f, k)*k)
+	w, h = text.Measure(s, f, logicalLineH(f, k, sizeOf(st))*k)
 	if k != 1 {
 		w, h = w/k, h/k
 	}
 	return w, h
 }
 
-// LineH is the logical line height of st: ascent + descent + 2 px leading.
+// LineH is the logical line height of st: the reference pitch for Small,
+// Body and Title (pitchOf), else ascent + descent + 2 px leading.
 func LineH(st TextStyle) float64 {
 	sc := HUDScale()
 	fontMu.Lock()
 	defer fontMu.Unlock()
-	return logicalLineH(face(st, sc))
+	f, k := face(st, sc)
+	return logicalLineH(f, k, sizeOf(st))
 }
 
-// logicalLineH is a face's line height in logical pixels (glyph scale k):
-// ascent + descent + 2 px leading.
-func logicalLineH(f *text.GoTextFace, k float64) float64 {
+// logicalLineH is a face's line height in logical pixels (glyph scale k,
+// style size size): its reference pitch, else ascent + descent + 2 px leading.
+func logicalLineH(f *text.GoTextFace, k, size float64) float64 {
+	if p := pitchOf(size); p > 0 {
+		return p
+	}
 	m := f.Metrics()
 	if k == 1 {
 		return m.HAscent + m.HDescent + 2

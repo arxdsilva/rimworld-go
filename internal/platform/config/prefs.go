@@ -43,7 +43,7 @@ const TempKelvin = "K"
 type Interface struct {
 	ClockRealtime bool `json:"clock_realtime"` // OPT-008: a wall clock beside the date
 	Clock12h      bool `json:"clock_12h"`      // OPT-008: 12-hour clocks
-	LargerSmall   bool `json:"larger_small"`   // OPT-009: small text at 13 px instead of 11
+	LargerSmall   bool `json:"larger_small"`   // OPT-009: small text at the Body size (14) instead of 11
 	// AnimalNames is which animals carry a name label, one of
 	// AnimalNameModes (OPT-010).
 	AnimalNames string `json:"animal_names"`
@@ -165,7 +165,7 @@ func defaultInterface() Interface {
 }
 
 func defaultCamera() Camera {
-	return Camera{ZoomToMouse: true, SmoothJumps: true, DragPct: 100, PlantSway: true, ShakePct: 100}
+	return Camera{ZoomToMouse: false, SmoothJumps: true, DragPct: 100, PlantSway: true, ShakePct: 100}
 }
 
 // normalizePrefs clamps the version 10 groups; a file older than version 10
