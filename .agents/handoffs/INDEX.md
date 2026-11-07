@@ -254,6 +254,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | QA-001-player-journeys | Player-journey tests, CI on every push, real-path clicks | 2026-10-27 | [OPS.md](OPS.md#qa-001-player-journeys) |
 | QST-1-quests-contract | Quests contract: domain, root, glue | 2026-11-07 | [WORLD.md](WORLD.md#qst-1-quests-contract) |
 | QST-2a-quest-kinds-without-sites | Joiner, ore lump, trade request, peace talks; the wanderer letter | 2026-11-07 | [WORLD.md](WORLD.md#qst-2a-quest-kinds-without-sites) |
+| QST-2b-quest-sites | Site maps for quests; stash, refugee, camp and rescue kinds; ore-site threats | 2026-11-07 | [WORLD.md](WORLD.md#qst-2b-quest-sites) |
 | QST-gap-analysis | Quests gap analysis | 2026-11-07 | [WORLD.md](WORLD.md#qst-gap-analysis) |
 | REF-1-prioritize-refuel-auto-toggle | Ordered refuels and the auto refuel switch | 2026-11-06 | [BASE.md](BASE.md#ref-1-prioritize-refuel-auto-toggle) |
 | REL-001-release-workflow | Release builds on tags | 2026-10-21 | [OPS.md](OPS.md#rel-001-release-workflow) |
