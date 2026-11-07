@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -456,7 +457,15 @@ func TestJourneyDropWeapon(t *testing.T) {
 	if j.pawn(id).Weapon == "fists" {
 		t.Fatal("the colonist is not armed")
 	}
-	w2Click(j, "Drop weapon button", []string{"drop"})
+	// with the Gear panel (UIS-049) open beside the pane the command grid
+	// has one row above it, so "Drop weapon" may fold under the more cell
+	// (UIS-052): reach it there when it is not a cell of its own
+	if w2Find(j, []string{inspectorpkg.DropWeaponID}) != "" {
+		w2Click(j, "Drop weapon button", []string{inspectorpkg.DropWeaponID})
+	} else {
+		w2Click(j, "More commands cell", []string{inspectorpkg.MoreID})
+		j.pick("Drop weapon")
+	}
 	if c, ok := j.lastCmd(command.DropWeapon); !ok || c.Pawn != id {
 		t.Fatalf("DropWeapon %+v (sent %v), want colonist %d", c, ok, id)
 	}

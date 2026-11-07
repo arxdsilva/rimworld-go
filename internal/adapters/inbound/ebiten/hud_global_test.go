@@ -94,9 +94,9 @@ func (f *fakeInput) onRect(a *App, r gfx.Rect) {
 
 var globalToggleIDs = []string{"hud.roof", "hud.home", "hud.homeauto", "hud.plan", "hud.rooms", "hud.learn", "hud.bar", "hud.rescat"}
 
-// All eight overlay toggles are 24 px squares inside Global, in one
-// right-aligned row of eight, at every UI scale, and none shares a rect
-// (hud.plan and hud.rooms used to).
+// All eight overlay toggles are GlobalIcon squares inside Global, in
+// right-aligned rows of GlobalPerRow (the full rows at the bottom), at
+// every UI scale, and none shares a rect (hud.plan and hud.rooms used to).
 func TestGlobalTogglesInsideGlobal(t *testing.T) {
 	for _, sc := range globalScales {
 		t.Run(fmt.Sprintf("ui%d", sc.ui), func(t *testing.T) {
@@ -111,8 +111,8 @@ func TestGlobalTogglesInsideGlobal(t *testing.T) {
 				if !ok {
 					t.Fatalf("toggle %s missing", id)
 				}
-				if r.W != 24 || r.H != 24 {
-					t.Errorf("%s is %vx%v, want 24x24", id, r.W, r.H)
+				if r.W != hudlayout.GlobalIcon || r.H != hudlayout.GlobalIcon {
+					t.Errorf("%s is %vx%v, want %vx%v", id, r.W, r.H, hudlayout.GlobalIcon, hudlayout.GlobalIcon)
 				}
 				if r.X < g.X || r.Right() > g.Right() || r.Y < g.Y || r.Bottom() > g.Bottom() {
 					t.Errorf("%s %+v is outside Global %+v", id, r, g)
@@ -124,14 +124,36 @@ func TestGlobalTogglesInsideGlobal(t *testing.T) {
 				}
 				rs = append(rs, r)
 			}
-			for i := 1; i < len(rs); i++ {
-				if rs[i].Y != rs[0].Y || rs[i].X <= rs[i-1].X {
-					t.Errorf("toggles are not one left-to-right row: %+v", rs)
-					break
+			// rows of GlobalPerRow at a GlobalIconPitch pitch, right-aligned on
+			// Global's right edge: the full rows at the bottom, the remainder
+			// on top (UIS-056)
+			var all []string // every toggle this frame, in order (the card's is last when on)
+			for _, tg := range hud.GlobalToggles {
+				all = append(all, tg.ID)
+			}
+			if _, ok := a.chrome.Global().ToggleRect(hud.DossierButtonID); ok {
+				all = append(all, hud.DossierButtonID)
+			}
+			rs = rs[:0]
+			for _, id := range all {
+				r, _ := a.chrome.Global().ToggleRect(id)
+				rs = append(rs, r)
+			}
+			n := len(rs)
+			for i, r := range rs {
+				fromEnd := n - 1 - i
+				row := fromEnd / hudlayout.GlobalPerRow // 0: the bottom row
+				col := hudlayout.GlobalPerRow - 1 - fromEnd%hudlayout.GlobalPerRow
+				rowLen := min(hudlayout.GlobalPerRow, n-row*hudlayout.GlobalPerRow)
+				col -= hudlayout.GlobalPerRow - rowLen
+				wantX := g.Right() - float32(rowLen-col)*hudlayout.GlobalIconPitch + (hudlayout.GlobalIconPitch - hudlayout.GlobalIcon)
+				wantY := g.Bottom() - hudlayout.GlobalIcon - float32(row)*hudlayout.GlobalIconPitch
+				if r.X != wantX || r.Y != wantY {
+					t.Errorf("%s at %v,%v, want %v,%v (row %d from the bottom, column %d)", all[i], r.X, r.Y, wantX, wantY, row, col)
 				}
 			}
-			if last := rs[len(rs)-1]; g.Right()-last.Right() > 8 {
-				t.Errorf("the row is not right-aligned: last toggle ends %v short of Global's right edge", g.Right()-last.Right())
+			if last := rs[n-1]; last.Right() != g.Right() {
+				t.Errorf("the rows are not right-aligned: last toggle ends %v short of Global's right edge", g.Right()-last.Right())
 			}
 			// the five legacy toggles are buttons, the three new ones widgets;
 			// both are hit-testable by id
@@ -275,8 +297,10 @@ func TestGlobalSpeedButtons(t *testing.T) {
 		key   string
 	}{{speedPaused, "[Space]"}, {speedNormal, "[1]"}, {speedFast, "[2]"}, {speedVeryFast, "[3]"}} {
 		b := find(i)
-		if b.W != 52 || b.H != 24 || b.X < g.X || b.X+b.W > g.Right() || b.Y < g.Y || b.Y+b.H > g.Bottom() {
-			t.Errorf("speed.%d = %+v, want 52x24 inside Global %+v", i, b, g)
+		// SpeedW x SpeedH, flush, the last SpeedRight from the window's edge (UIS-057)
+		wantX := g.Right() + hudlayout.GlobalRight - hudlayout.SpeedRight - float32(4-i)*hudlayout.SpeedW
+		if b.W != hudlayout.SpeedW || b.H != hudlayout.SpeedH || b.X != wantX || b.Y < g.Y || b.Y+b.H > g.Bottom() {
+			t.Errorf("speed.%d = %+v, want %vx%v at x %v inside Global %+v", i, b, hudlayout.SpeedW, hudlayout.SpeedH, wantX, g)
 		}
 		if !strings.Contains(b.Tip, want.key) {
 			t.Errorf("speed.%d tip = %q, want it to show %s", i, b.Tip, want.key)

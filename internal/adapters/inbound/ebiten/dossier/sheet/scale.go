@@ -14,10 +14,11 @@ const (
 	// DockRefH is the logical screen height the docked sizes are set for.
 	DockRefH = 720
 	// DockTabsH is the pane's tab strip above it (hudlayout.PaneTabsH).
-	DockTabsH = 24
+	DockTabsH = 30
 	// DockMargin is what the pane takes around the card's body: the name row
-	// on top and an edge below (inspector.PaneLayout with a card).
-	DockMargin = 34
+	// on top (its baseline hudlayout.PaneNameBaseline below the pane's top,
+	// then 2 px) and an edge of 2 below (inspector.PaneLayout with a card).
+	DockMargin = 32
 	// DockSharePct is the most of the screen's height the pane and its tabs
 	// take, unless the smallest readable card needs more.
 	DockSharePct = 30
@@ -35,10 +36,10 @@ const (
 // DockedFor is the docked card's settings on a logical screen sh tall. With
 // k = sh/720 the text grows with k above 720, and the pane too, never past 30 %
 // of the screen with its tabs. Below 720 the pane keeps its height while that
-// fits in 30 % and takes 30 % otherwise; the text is the largest, up to its size
-// times k, that leaves the layout room, and never smaller than 9 (the pane grows
-// past 30 % for that only on a screen under 550). The column and tab widths
-// follow the text. It copies values only.
+// fits in 30 % and takes 30 % otherwise. At any height the text is the
+// largest, up to its size times k, that leaves the layout room, and never
+// smaller than 9 (the pane grows past 30 % for that only on a screen under
+// 564). The column and tab widths follow the text. It copies values only.
 func DockedFor(h config.HUD, sh int) config.HUD {
 	t := h.Text
 	if sh <= 0 || t.BodySize <= 0 {
@@ -52,9 +53,9 @@ func DockedFor(h config.HUD, sh int) config.HUD {
 	} else {
 		share := sh*DockSharePct/100 - DockTabsH
 		h.Pane.Height = max(min(share, h.Pane.Height), dockNeed(nil, floor, t))
-		for f > floor && dockNeed(h.Layouts.Docked, f, t) > h.Pane.Height {
-			f--
-		}
+	}
+	for f > floor && dockNeed(h.Layouts.Docked, f, t) > h.Pane.Height {
+		f--
 	}
 	size := t.BodySize
 	t.BodySize = f

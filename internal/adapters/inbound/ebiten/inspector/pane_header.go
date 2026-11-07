@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -78,12 +79,13 @@ func (c CardPane) declareHeader(p gfx.Rect, spec Spec, g Geom) {
 	x := p.X + PaneInset
 	if spec.Emblem != "" {
 		if spec.EmblemTip != "" {
-			u.Tip(HeadEmblemID, gfx.Rect{X: x, Y: p.Y + paneTop, W: headBtn, H: headBtn}, spec.EmblemTip)
+			u.Tip(HeadEmblemID, gfx.Rect{X: x, Y: headY(p), W: headBtn, H: headBtn}, spec.EmblemTip)
 		}
 		x += headEmblem
 	}
-	tw := min(g.TitleW, gfx.TextW(spec.Title, gfx.Large))
-	title := gfx.Rect{X: x, Y: p.Y + paneTop, W: tw, H: gfx.LineStep(gfx.Large)}
+	tw := min(g.TitleW, gfx.TextW(spec.Title, gfx.Title))
+	top := TextTop(p.Y+hudlayout.PaneNameBaseline, gfx.Title)
+	title := gfx.Rect{X: x, Y: top, W: tw, H: p.Y + hudlayout.PaneNameBaseline + paneNameGap - top}
 	if spec.TitleTip != "" || spec.TitleTab != "" {
 		if u.Add(uikit.Widget{ID: HeadTitleID, R: title, Tip: spec.TitleTip}) && spec.TitleTab != "" && u.Press(title) {
 			c.SelectPaneTab(ids.PrefixInspector + spec.TitleTab)
@@ -91,10 +93,10 @@ func (c CardPane) declareHeader(p gfx.Rect, spec Spec, g Geom) {
 	}
 	bx := g.Close.X - headGap - headBtn
 	if spec.Close == "" {
-		bx = p.Right() - paneTop - headBtn
+		bx = p.Right() - PaneInset - headBtn // UIS-046: right-aligned, 12 from the edge
 	}
 	for _, b := range c.headButtons(spec) {
-		c.declareHeadButton(b, gfx.Rect{X: bx, Y: p.Y + paneTop, W: headBtn, H: headBtn})
+		c.declareHeadButton(b, gfx.Rect{X: bx, Y: headY(p), W: headBtn, H: headBtn})
 		bx -= headBtn + headGap
 	}
 }
@@ -288,8 +290,9 @@ func (c CardPane) openRename(id entity.EntityID, name string) {
 			c.shell.Enqueue(command.Command{Kind: command.SetName, Pawn: uint64(id), Name: clean})
 		}
 	}
-	u.Push(uikit.Modal{ID: headRenameMod, Title: c.shell.Tf("Rename %s", name), W: 380, H: 180,
-		Draw: func(r gfx.Rect) { c.renameBody(r, &text) },
+	title := c.shell.Tf("Rename %s", name)
+	u.Push(uikit.Modal{ID: headRenameMod, Title: title, W: renameW, H: renameH, Frameless: true, // UIS-072
+		Draw: func(r gfx.Rect) { c.renameBody(r, title, &text) },
 		Buttons: []uikit.ModalButton{
 			{ID: "ok", Label: c.shell.T("Rename"), Style: uikit.BtnPrimary, Closes: true, OnClick: send, Disabled: func() string { return renameRefusal(c.shell, text) }},
 			{ID: "cancel", Label: c.shell.T("Cancel"), Closes: true},
@@ -297,17 +300,27 @@ func (c CardPane) openRename(id entity.EntityID, name string) {
 	u.Focus, u.TabTo = HeadRenameFld, HeadRenameFld
 }
 
-// renameBody declares the dialog's field and its hint.
-func (c CardPane) renameBody(r gfx.Rect, text *string) {
+// The rename dialog (UIS-072): frameless, its title a heading inside it, the
+// field one control high; the height holds the title, the field and a note.
+const (
+	renameW    = 490
+	renameRowG = 8 // between the title, the field and the note
+	renameH    = 2*hudlayout.WindowPad + gfx.TitlePitch + renameRowG + hudlayout.OptionCtrlH + renameRowG + gfx.BodyPitch + uikit.ModalFooterH
+)
+
+// renameBody declares the dialog's heading, field and hint.
+func (c CardPane) renameBody(r gfx.Rect, title string, text *string) {
 	u := c.kit()
-	u.TextField(HeadRenameFld, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: 28}, text, uikit.TextFieldSpec{Placeholder: c.shell.T("Generated name")})
+	u.Label(r.X, r.Y, gfx.Ellipsize(title, gfx.Title, float64(r.W)), gfx.WithColor(gfx.Title, uikit.Heading))
+	y := r.Y + gfx.TitlePitch + renameRowG
+	u.TextField(HeadRenameFld, gfx.Rect{X: r.X, Y: y, W: r.W, H: hudlayout.OptionCtrlH}, text, uikit.TextFieldSpec{Placeholder: c.shell.T("Generated name")})
 	note := c.shell.T("Leave it empty for the name it started with.")
 	st := uikit.DimText()
 	if why := renameRefusal(c.shell, *text); why != "" {
 		note = why
 		st = gfx.WithColor(st, uikit.Warning)
 	}
-	u.Label(r.X, r.Y+36, note, st)
+	u.Label(r.X, y+hudlayout.OptionCtrlH+renameRowG, gfx.Ellipsize(note, st, float64(r.W)), st)
 }
 
 // renameRefusal is why a name will not do ("": it will).

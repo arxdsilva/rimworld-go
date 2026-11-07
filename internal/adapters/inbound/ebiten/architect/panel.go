@@ -14,31 +14,31 @@ import (
 )
 
 // The Architect on the colony HUD (PLAY-018: ARCHITECT owns it). At the
-// lower-left, two category columns (ArchCats) carry a description box
-// above them (ArchDesc); the open category's tools are command buttons in
-// the grid to their right (Cards). Placement input and the ghost stay in
-// tool.go.
+// lower-left, two flush category columns over a search row (ArchCats,
+// UIS-053) carry a fixed description box flush above them (ArchDesc,
+// UIS-054); the open category's tools, or the search's matches, are command
+// buttons in the grid to their right (Cards). Placement input and the ghost
+// stay in tool.go; the search row and the box's scroll are Panel's
+// (desc_box.go).
 //
-// The description box is content-sized: Plan measures it once per change
-// of its inputs (the layout asks for its height every frame, and wrapping
-// text is the costly part), and DescHeight reports that height to the
-// layout. Nothing here may ask for the layout; the box does not follow the
-// hovered tool (its height would then depend on the grid, which depends on
-// the layout): the grid's tooltip shows the hovered tool.
+// The box is ArchDescW x min(ArchDescH, room): Plan lays its content out
+// once per change of its inputs (wrapping text is the costly part); content
+// taller than the box scrolls inside it. The pickers (materials, colours,
+// crops) come right under the name so they sit in view first. Nothing here
+// may ask for the layout while planning; the box does not follow the
+// hovered tool: the grid's tooltip shows the hovered tool.
 
 const (
-	archPad    = 8 // inside the category panel and the description box
-	archCatW   = 96
-	archCatH   = 26
-	archCatGap = 3
+	archPad = hudlayout.ArchDescInset // the description box's text inset
 
 	archBtnH     = 22 // a material or crop button
 	archBtnGap   = 4
 	archBlockGap = 4 // between blocks of the description box
 	archCropCols = 4 // crop buttons per row, fewer when a name does not fit
 
-	// InnerW is the description box's text width.
-	InnerW = hudlayout.ArchDescW - 2*archPad
+	// InnerW is the description box's text width: the inset on the left,
+	// the scrollbar's width on the right.
+	InnerW = hudlayout.ArchDescW - archPad - uikit.ScrollBarW
 )
 
 // Cards are the open category's tools as command buttons, in catalog
@@ -52,6 +52,9 @@ func (t *Tool) Cards() []Card {
 		return nil
 	}
 	tools := ToolsIn(t.Cat)
+	if q := t.Panel.Query(); q != "" { // the search row: matches from every category
+		tools = t.Panel.matches(q)
+	}
 	if len(tools) == 0 {
 		return nil
 	}
@@ -100,8 +103,9 @@ func (t *Tool) ToolCell(id string) (gfx.Rect, bool) {
 	return gfx.Rect{}, false
 }
 
-// DescHeight is the description box's height (0 while the Architect is
-// closed).
+// DescHeight is the description box's content height (0 while the
+// Architect is closed); the box itself is the layout's ArchDesc and scrolls
+// when this is taller.
 func (t *Tool) DescHeight() float32 {
 	if !t.Open {
 		return 0
@@ -229,8 +233,29 @@ func (t *Tool) buildPlan(k planKey) DescPlan {
 
 	d = t.tx.localize(t.sh, d)
 	add(d.Label, head)
-	add(d.Desc, dim)
 	bv, built := Buildable(d.Build)
+	// the pickers first, so they show without scrolling
+	if built && len(bv.Stuffs) > 1 {
+		y += archBlockGap
+		perRow, rows, bw := archStuffGrid(bv)
+		p.stuffTop, p.stuffPerRow, p.stuffW = y, perRow, bw
+		y += float32(rows)*(archBtnH+archBtnGap) - archBtnGap
+	}
+	if ColourTool(d) { // AX-3: the colour picker, then the picked colour's name
+		y += archBlockGap
+		p.colourTop = y
+		y += float32(colourRows())*(archSwatch+archSwatchGap) - archSwatchGap + archBlockGap
+		add(ColourLabel(k.colour), gfx.Body)
+	}
+	if d.Crop != "" {
+		y += archBlockGap
+		cols, bw := archCropGrid()
+		p.cropTop, p.cropCols, p.cropW = y, cols, bw
+		rows := (len(ZoneSpecies()) + cols - 1) / cols
+		y += float32(rows)*(archBtnH+archBtnGap) - archBtnGap
+	}
+	y += archBlockGap
+	add(d.Desc, dim)
 	stuff := ""
 	if built && !bv.Carpet {
 		stuff = k.stuff
@@ -253,24 +278,8 @@ func (t *Tool) buildPlan(k planKey) DescPlan {
 		y += archBlockGap
 		add(StockLine(w, w.Wood, stuff), gfx.Body)
 	}
-	if built && len(bv.Stuffs) > 1 {
-		y += archBlockGap
-		perRow, rows, bw := archStuffGrid(bv)
-		p.stuffTop, p.stuffPerRow, p.stuffW = y, perRow, bw
-		y += float32(rows)*(archBtnH+archBtnGap) - archBtnGap
-	}
-	if ColourTool(d) { // AX-3: the colour picker, then the picked colour's name
-		y += archBlockGap
-		p.colourTop = y
-		y += float32(colourRows())*(archSwatch+archSwatchGap) - archSwatchGap + archBlockGap
-		add(ColourLabel(k.colour), gfx.Body)
-	}
 	if d.Crop != "" {
 		y += archBlockGap
-		cols, bw := archCropGrid()
-		p.cropTop, p.cropCols, p.cropW = y, cols, bw
-		rows := (len(ZoneSpecies()) + cols - 1) / cols
-		y += float32(rows)*(archBtnH+archBtnGap) - archBtnGap + archBlockGap
 		for _, ln := range CropLines(t.selectedCrop(), t.sh.Env().Units) {
 			add(ln, dim)
 		}
@@ -323,10 +332,11 @@ func archCropGrid() (cols int, bw float32) {
 	return cols, (InnerW - archBtnGap*float32(cols-1)) / float32(cols)
 }
 
-// descButtons are the armed tool's material buttons and, for a growing
-// zone, the crop picker, inside the description box r. Buttons the box
-// was too small to hold are left out.
-func (t *Tool) descButtons(r gfx.Rect) []uikit.Button {
+// descButtons are the armed tool's material buttons, colour swatches and,
+// for a growing zone, the crop picker, inside the description box r
+// scrolled by off. Only the buttons wholly in view are there; the rest are
+// a scroll away.
+func (t *Tool) descButtons(r gfx.Rect, off float32) []uikit.Button {
 	d, ok := ToolByID(t.ToolID)
 	if !ok {
 		return nil
@@ -334,7 +344,8 @@ func (t *Tool) descButtons(r gfx.Rect) []uikit.Button {
 	plan := t.Plan()
 	var out []uikit.Button
 	add := func(b uikit.Button) {
-		if b.Y+b.H <= r.Bottom() {
+		b.Y -= off
+		if b.Y >= r.Y && b.Y+b.H <= r.Bottom() {
 			out = append(out, b)
 		}
 	}

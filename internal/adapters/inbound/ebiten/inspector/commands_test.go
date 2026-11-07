@@ -8,32 +8,35 @@ import (
 	"testing"
 )
 
-// A one-word label too wide for a command button ("Deconstruct") steps its
-// type down instead of breaking the word in two; it still fits the cell.
-func TestCommandLabelShrinksBeforeBreakingAWord(t *testing.T) {
+// A command label is drawn at gfx.Small and never shrinks (UIS-051): words
+// wrap onto at most two lines, a word is never broken, and a line still too
+// wide for the cell ends in an ellipsis.
+func TestCommandLabelWrapsThenEllipsizes(t *testing.T) {
 	maxW := float64(hudlayout.CmdCell - 2*CmdLabelPad)
-	for _, label := range []string{"Deconstruct", "Mark for hauling", "Cancel blueprint", "Draft"} {
+	for _, label := range []string{"Deconstruct", "Mark for hauling", "Cancel blueprint", "Draft", "Supercalifragilisticexpialidocious", "Set the plant to grow in this zone"} {
 		st, lines := CmdLabelLines(label, maxW, false)
+		if st.Size != gfx.Small.Size {
+			t.Errorf("%q: drawn at %v, want gfx.Small %v", label, st.Size, gfx.Small.Size)
+		}
+		if len(lines) == 0 || len(lines) > 2 {
+			t.Errorf("%q: %d lines, want 1 or 2", label, len(lines))
+		}
 		for _, ln := range lines {
 			if w, _ := gfx.Measure(ln, st); w > maxW+0.01 {
 				t.Errorf("%q: line %q is %.1f wide, cell text room %.1f", label, ln, w, maxW)
 			}
-		}
-		for _, word := range strings.Fields(label) {
-			found := false
-			for _, ln := range lines {
-				found = found || strings.Contains(ln, word)
-			}
-			if !found {
-				t.Errorf("%q: word %q was broken across lines %q", label, word, lines)
+			for _, word := range strings.Fields(strings.TrimSuffix(ln, "…")) {
+				if !strings.Contains(label, word) {
+					t.Errorf("%q: line %q has a word not in the label", label, ln)
+				}
 			}
 		}
-		if len(lines) > 2 {
-			t.Errorf("%q: %d lines, want at most 2", label, len(lines))
+		if joined := strings.Join(lines, " "); !strings.HasSuffix(joined, "…") && joined != label {
+			t.Errorf("%q: lines %q lose text without an ellipsis", label, lines)
 		}
 	}
-	if st, _ := CmdLabelLines("Draft", maxW, false); st.Size != gfx.Small.Size {
-		t.Errorf("a short label shrank to %v", st.Size)
+	if _, lines := CmdLabelLines("Supercalifragilisticexpialidocious", maxW, false); len(lines) != 1 || !strings.HasSuffix(lines[0], "…") {
+		t.Errorf("one long word ellipsizes on one line, got %q", lines)
 	}
 }
 

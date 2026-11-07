@@ -8,8 +8,8 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
-	"rimworld-go/internal/adapters/inbound/ebiten/inspector/gear"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -26,17 +26,18 @@ import (
 // bar is the command buttons right of it. The old Character tab is the
 // pane itself.
 
-// The expanded panels' wanted sizes. The layout clamps the width to
-// 400..560 and the height to the room under the colonist bar, and a body
-// gets the panel inset by paneInset, so every body also copes with less.
-const (
-	needsWantW, needsWantH       = 400, 260
-	logWantW, logWantH           = 400, 280
-	bioWantW, bioWantH           = 480, 404
-	healthWantW, healthWantH     = 480, 360
-	socialWantW, socialWantH     = 480, 340
-	prisonerWantW, prisonerWantH = 480, 300
-)
+// The expanded panels' wanted sizes: each pawn tab's reference size
+// (hudlayout.PaneTabSize, UIS-049); the Prisoner tab has none and keeps ours.
+// The layout clamps the width to ExpandMinW..ExpandMaxW and the height to the
+// room under the colonist bar, and a body gets the panel inset by paneInset,
+// so every body scrolls or copes with less.
+const prisonerWantW, prisonerWantH = 480, 300
+
+// pawnTab is pawn tab name's tab with its reference panel size.
+func pawnTab(name, label string) Tab {
+	w, h, _ := hudlayout.PaneTabSize(name)
+	return Tab{ID: ids.PrefixInspector + name, Label: label, WantW: w, WantH: h}
+}
 
 // pawnCommands are colonist id's command buttons, in declaration order
 // (hotkeys follow it): Draft, Clear orders, Equip nearby, Rest when hurt (a
@@ -356,28 +357,27 @@ func wearingSummary(p game.PawnView) string {
 // Prisoner declare widget-kit bodies.
 func (a Pawn) pawnTabs(p game.PawnView) []Tab {
 	id := p.ID
-	bio := Tab{ID: "inspector.bio", Label: a.shell.T("Bio"), WantW: bioWantW, WantH: bioWantH,
-		Declare: func(r gfx.Rect) { a.Tabs().bioTab(id, r) }}
+	bio := pawnTab("bio", a.shell.T("Bio"))
+	bio.Declare = func(r gfx.Rect) { a.Tabs().bioTab(id, r) }
 	if !HasBio(p) {
 		bio.Disabled, bio.Reason = true, "No biography for this colonist"
 	}
-	gearTabs := []Tab{{ID: "inspector.gear", Label: a.shell.T("Gear"), WantW: gear.WantW, WantH: gear.WantH,
-		Declare: func(r gfx.Rect) { a.Tabs().gearTabBody(id, r) }}} // inspector/gear (GEAR-2)
+	gearTab := pawnTab("gear", a.shell.T("Gear"))
+	gearTab.Declare = func(r gfx.Rect) { a.Tabs().gearTabBody(id, r) } // inspector/gear (GEAR-2)
+	gearTabs := []Tab{gearTab}
 	if a.Tabs().isPrisoner(id) { // GEAR-008: a prisoner keeps Gear beside Prisoner
 		gearTabs = append(gearTabs, Tab{ID: PrisonerTabID, Label: a.shell.T("Prisoner"), WantW: prisonerWantW, WantH: prisonerWantH,
 			Declare: func(r gfx.Rect) { a.Tabs().prisonerTabBody(id, r) }})
 	}
-	return append([]Tab{
-		{ID: "inspector.needs", Label: a.shell.T("Needs"), WantW: needsWantW, WantH: needsWantH,
-			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawNeedsTab(screen, id, r) }},
-		bio,
-		{ID: "inspector.health", Label: a.shell.T("Health"), WantW: healthWantW, WantH: healthWantH,
-			Declare: func(r gfx.Rect) { a.Tabs().kitTabBody(id, "health", r) }},
-		{ID: "inspector.social", Label: a.shell.T("Social"), WantW: socialWantW, WantH: socialWantH,
-			Declare: func(r gfx.Rect) { a.Tabs().kitTabBody(id, "social", r) }},
-	}, append(gearTabs,
-		Tab{ID: "inspector.log", Label: a.shell.T("Log"), WantW: logWantW, WantH: logWantH,
-			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawPawnLog(screen, id, r) }})...)
+	needs := pawnTab("needs", a.shell.T("Needs"))
+	needs.Draw = func(screen *ebiten.Image, r gfx.Rect) { a.drawNeedsTab(screen, id, r) }
+	health := pawnTab("health", a.shell.T("Health"))
+	health.Declare = func(r gfx.Rect) { a.Tabs().kitTabBody(id, "health", r) }
+	social := pawnTab("social", a.shell.T("Social"))
+	social.Declare = func(r gfx.Rect) { a.Tabs().kitTabBody(id, "social", r) }
+	log := pawnTab("log", a.shell.T("Log"))
+	log.Draw = func(screen *ebiten.Image, r gfx.Rect) { a.drawPawnLog(screen, id, r) }
+	return append([]Tab{needs, bio, health, social}, append(gearTabs, log)...)
 }
 
 // PawnFoodLines are the colonist's food policy and last meal (empty until

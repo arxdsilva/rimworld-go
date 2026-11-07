@@ -19,9 +19,10 @@ import (
 // Index.
 
 const (
-	archSwatch       = 20 // a colour swatch button, square
-	archSwatchInset  = 3  // the colour inside the swatch's border
-	archColourPerRow = 13 // swatches per row (13 x 20 + 12 x 3 fits InnerW)
+	archSwatch      = 20 // a colour swatch button, square
+	archSwatchInset = 3  // the colour inside the swatch's border
+	// archColourPerRow is the swatches per row that fit InnerW.
+	archColourPerRow = (InnerW + archSwatchGap) / (archSwatch + archSwatchGap)
 	archSwatchGap    = 3
 )
 

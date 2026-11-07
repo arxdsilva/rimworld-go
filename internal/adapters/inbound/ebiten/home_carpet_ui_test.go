@@ -162,8 +162,10 @@ func TestHomeButtonToggle(t *testing.T) {
 	if b.Selected {
 		t.Fatal("active while overlay off")
 	}
-	if rb, _ := hasButton(a.colonyButtons(sw, sh), hud.RoofButtonID); b.X < rb.X+rb.W {
-		t.Fatalf("Home button %+v overlaps Roof %+v (Home follows Roof, left to right)", b, rb)
+	// Home follows Roof in reading order: right of it on its row, or on a
+	// lower row of the toggle grid (UIS-056)
+	if rb, _ := hasButton(a.colonyButtons(sw, sh), hud.RoofButtonID); !(b.Y >= rb.Y+rb.H || (b.Y == rb.Y && b.X >= rb.X+rb.W)) {
+		t.Fatalf("Home button %+v does not follow Roof %+v (left to right, top to bottom)", b, rb)
 	}
 	if g := a.hud().Global; b.X < g.X || b.X+b.W > g.Right() || b.Y < g.Y || b.Y+b.H > g.Bottom() {
 		t.Fatalf("button %+v should sit inside Global %+v", b, g)
@@ -237,10 +239,7 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 		"silver": "Silver", "gold": "Gold", "plasteel": "Plasteel", "uranium": "Uranium", "jade": "Jade"}
 	r := a.arch.Rect()
 	n := 0
-	for _, b := range a.arch.Buttons() {
-		if !strings.HasPrefix(b.ID, "arch.stuff.") {
-			continue
-		}
+	for _, b := range archButtonsScrolled(a, "arch.stuff.") { // the description box scrolls (UIS-054)
 		n++
 		s := strings.TrimPrefix(b.ID, "arch.stuff.")
 		if want[s] == "" || b.Label != want[s] {

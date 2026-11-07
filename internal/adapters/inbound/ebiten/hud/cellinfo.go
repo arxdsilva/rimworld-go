@@ -8,7 +8,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
-	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 
 	"rimworld-go/internal/application/game"
@@ -16,16 +15,12 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// Cell info (PLAY-018: GLOBAL owns it): what is under the cursor, as plain
-// text on a subtle translucent backing at the lower-left, built bottom-up
-// from (8, Tabs.Y - 8). It is not chrome (a click on it reaches the map)
-// and shows only while nothing is selected and no Architect or window is
-// open; it hides when the cursor is over the HUD.
-
-const (
-	cellInfoPad     = 6
-	cellInfoBacking = 0x70 // the backing's alpha over the map
-)
+// Cell info (PLAY-018: GLOBAL owns it; UIS-059): what is under the
+// cursor, as plain text with no backing plate at the lower-left, CellX from
+// the window's left edge, lines CellPitch apart, the last line's baseline
+// CellBottom above the tab strip. It is not chrome (a click on it reaches
+// the map) and shows only while nothing is selected and no Architect or
+// window is open; it hides when the cursor is over the HUD.
 
 // hovered is the map cell under the cursor: not over the HUD, on the
 // map.
@@ -88,8 +83,8 @@ func (c CellInfo) Lines() []string {
 	return lines
 }
 
-// Rect is where cell info draws: its lines' box with the bottom-left
-// corner at (8, Tabs.Y - 8). Empty while it is not showing.
+// Rect is where cell info draws: its lines' box (CellInfoBox). Empty while
+// it is not showing.
 func (c CellInfo) Rect() gfx.Rect {
 	lines := c.Lines()
 	if len(lines) == 0 {
@@ -98,31 +93,31 @@ func (c CellInfo) Rect() gfx.Rect {
 	return CellInfoBox(lines, c.sh.Layout().Tabs.Y)
 }
 
-// CellInfoBox is the box of lines whose bottom edge sits hudMargin above
-// tabsY.
-func CellInfoBox(lines []string, tabsY float32) gfx.Rect {
-	w := gfx.MaxTextW(lines, gfx.Label) + 2*cellInfoPad
-	h := float32(len(lines))*gfx.LineStep(gfx.Body) + 2*cellInfoPad
-	return gfx.Rect{X: hudlayout.HudMargin, Y: tabsY - hudlayout.HudMargin - h, W: w, H: h}
+// cellLineTop is the top of line i of n, the last one's baseline
+// CellBottom above tabsY.
+func cellLineTop(i, n int, tabsY float32) float32 {
+	base := tabsY - hudlayout.CellBottom - float32(n-1-i)*hudlayout.CellPitch
+	return base - float32(gfx.Body.Size*notoAscent)
 }
 
-// Draw draws the hovered cell's lines.
+// CellInfoBox is the lines' ink box: from the first line's top to the last
+// line's descent, CellX from the left edge, as wide as the widest line.
+func CellInfoBox(lines []string, tabsY float32) gfx.Rect {
+	n := len(lines)
+	top := cellLineTop(0, n, tabsY)
+	bottom := cellLineTop(n-1, n, tabsY) + float32(gfx.LineH(gfx.Body))
+	return gfx.Rect{X: hudlayout.CellX, Y: top, W: gfx.MaxTextW(lines, gfx.Body), H: bottom - top}
+}
+
+// Draw draws the hovered cell's lines, all in the body style.
 func (c CellInfo) Draw(screen *ebiten.Image, sh int) {
 	lines := c.Lines()
 	if len(lines) == 0 {
 		return
 	}
-	r := CellInfoBox(lines, c.sh.Layout().Tabs.Y)
-	back := uikit.Dim
-	back.A = cellInfoBacking
-	gfx.FillRect(screen, r.X, r.Y, r.W, r.H, back, false)
-	step := float64(gfx.LineStep(gfx.Body))
+	tabsY := c.sh.Layout().Tabs.Y
 	for i, l := range lines {
-		st := gfx.Body
-		if i == 0 {
-			st = gfx.WithColor(gfx.Label, uikit.Heading)
-		}
-		gfx.Text(screen, l, float64(r.X+cellInfoPad), float64(r.Y+cellInfoPad)+float64(i)*step, st)
+		gfx.Text(screen, l, hudlayout.CellX, float64(cellLineTop(i, len(lines), tabsY)), gfx.Body)
 	}
 }
 

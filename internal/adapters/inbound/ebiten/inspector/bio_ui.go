@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"image/color"
+	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
@@ -143,7 +144,7 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 	})
 	tx := pr.Right() + 12
 	tw := in.Right() - tx
-	nm := gfx.Large
+	nm := gfx.Title // UIS-012: a heading
 	nm.Color = uikit.Heading
 	y := in.Y
 	for i, l := range gfx.WrapPx(name, nm, float64(tw)) {
@@ -184,9 +185,11 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 	// Relations and conditions at the bottom, skills above them.
 	rel := a.bioRelations(p)
 	relH := bioRelationsH(len(rel))
-	condH := float32(18)
+	// the Health line: its label's glyphs, then a Small line per further condition
+	_, labelH := gfx.Measure("Health:", gfx.Label)
+	condH := float32(math.Ceil(labelH)) + 2
 	if len(b.Conditions) > 1 {
-		condH += float32(len(b.Conditions)-1) * 14
+		condH += float32(len(b.Conditions)-1) * gfx.LineStep(gfx.Small)
 	}
 	top := y
 	if in.Bottom()-condH-relH-top < bioHdrH+bioScrollRows*bioRowMin {
@@ -223,7 +226,7 @@ func bioRelationsH(n int) float32 {
 	if n == 0 {
 		return 0
 	}
-	return 16 + float32(n-1)*14
+	return 21 + float32(n-1)*14 // the 14 px label's glyphs, then a 14 px pitch of Small lines
 }
 
 // bioSkills draws the skill table of the Bio tab in r: a header, then the

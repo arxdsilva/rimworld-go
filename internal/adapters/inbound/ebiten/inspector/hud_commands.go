@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
@@ -78,13 +79,20 @@ func (c Button) mergeKey() string {
 	return c.ID
 }
 
-// Command cell metrics (logical px).
+// Command cell metrics (logical px): the cell, its hotkey inset and label
+// anchor are hudlayout's (UIS-050, UIS-051).
 const (
-	cmdIconMax  = 32
+	cmdIconMax  = hudlayout.CmdIconMax
 	cmdArrowW   = 16 // the options arrow's hit area (top right)
 	CmdMaxKeys  = 12
 	CmdLabelPad = 3
+	// notoCap is Noto Sans's cap height in em: the hotkey letter's cap top
+	// sits hudlayout.CmdInset below the cell's top.
+	notoCap = 0.714
 )
+
+// MoreID is the click id of the grid's "more" cell (UIS-052).
+const MoreID = ids.PrefixCmd + "more"
 
 // selectionCommands are the current selection's (or the Architect's)
 // commands, in declaration order.
@@ -138,20 +146,80 @@ type cmdSlot struct {
 	idx int // declaration index (the hotkey slot)
 }
 
-// commandCells pairs the selection's commands with the layout's cells (a
-// command beyond the last cell is not shown).
+// ID is the slot's command id.
+func (s cmdSlot) ID() string { return s.cmd.ID }
+
+// commandCells pairs the selection's commands with the layout's cells.
+// When the commands overflow the grid, the last cell is the "more" cell
+// (MoreCell), which stands for the rest: no command is dropped (UIS-052).
 func (a Commands) CommandCells() []cmdSlot {
 	cmds := a.SelectionCommands()
 	if len(cmds) == 0 {
 		return nil
 	}
-	cells := a.shell.Layout().GridCells
+	l := a.shell.Layout()
+	cells := l.GridCells
 	n := min(len(cmds), len(cells))
+	if l.GridMore > 0 && n > 0 {
+		n--
+	}
 	out := make([]cmdSlot, n)
 	for i := range n {
 		out[i] = cmdSlot{cmds[i], cells[i], i}
 	}
 	return out
+}
+
+// MoreCell is the grid's "more" cell and the commands it stands for, each
+// with its declaration index (ok is false when every command has a cell).
+func (a Commands) MoreCell() (r gfx.Rect, rest []cmdSlot, ok bool) {
+	l := a.shell.Layout()
+	if l.GridMore <= 0 || len(l.GridCells) == 0 {
+		return gfx.Rect{}, nil, false
+	}
+	cmds := a.SelectionCommands()
+	first := len(l.GridCells) - 1
+	r = l.GridCells[first]
+	for i := first; i < len(cmds); i++ {
+		rest = append(rest, cmdSlot{cmds[i], r, i})
+	}
+	return r, rest, len(rest) > 0
+}
+
+// MoreCommands are the commands the "more" cell stands for, in declaration
+// order (none when every command has its own cell).
+func (a Commands) MoreCommands() []Button {
+	_, rest, _ := a.MoreCell()
+	out := make([]Button, len(rest))
+	for i, c := range rest {
+		out[i] = c.cmd
+	}
+	return out
+}
+
+// moreLabel is the "more" cell's caption.
+func moreLabel(n int) string { return "+" + strconv.Itoa(n) + " more" }
+
+// openMore lists the commands the "more" cell stands for above it; a pick
+// presses that command (a disabled one shows its reason).
+func (a Commands) openMore() {
+	r, rest, ok := a.MoreCell()
+	if !ok {
+		return
+	}
+	opts := make([]Option, len(rest))
+	for i, c := range rest {
+		label := c.cmd.Label
+		if k := a.CommandKeyLabel(c.idx, c.cmd); k != "" {
+			label += "  [" + k + "]"
+		}
+		if c.cmd.Toggle && c.cmd.On {
+			label += currentMark
+		}
+		cmd := c.cmd
+		opts[i] = Option{Label: label, Disabled: cmd.Disabled, Reason: cmd.Reason, Run: func() { a.pressCommand(cmd) }}
+	}
+	a.openMenu(r.X, r.Y, opts)
 }
 
 // cmdOptionsID is the id of command i's corner arrow.
@@ -177,6 +245,11 @@ func (a Commands) cellButtons() []uikit.Button {
 	for _, c := range cells {
 		b := uikit.AsButton(c.r, c.cmd.ID, c.cmd.Label)
 		b.Disabled, b.Reason, b.Selected, b.Quiet = c.cmd.Disabled, c.cmd.Reason, c.cmd.On, true
+		out = append(out, b)
+	}
+	if r, rest, ok := a.MoreCell(); ok {
+		b := uikit.AsButton(r, MoreID, moreLabel(len(rest)))
+		b.Quiet = true
 		out = append(out, b)
 	}
 	return out
@@ -236,6 +309,13 @@ func (a Commands) CommandGridUI(sw, sh int) {
 	for _, c := range a.CommandCells() {
 		a.kit().Tip("cmd.tip."+c.cmd.ID, c.r, cmdTip(c.cmd, a.CommandKeyLabel(c.idx, c.cmd)))
 	}
+	if r, rest, ok := a.MoreCell(); ok {
+		names := make([]string, len(rest))
+		for i, c := range rest {
+			names[i] = c.cmd.Label
+		}
+		a.kit().Tip("cmd.tip."+MoreID, r, "More commands\n"+strings.Join(names, "\n"))
+	}
 }
 
 // drawCommandGrid draws the command buttons.
@@ -248,9 +328,39 @@ func (a Commands) DrawCommandGrid(screen *ebiten.Image) {
 	for _, c := range cells {
 		drawCmdCell(screen, c.cmd, c.r, c.r.Hit(mx, my), a.CommandKeyLabel(c.idx, c.cmd), a.icon(c.cmd.Icon))
 	}
+	if r, rest, ok := a.MoreCell(); ok {
+		drawMoreCell(screen, r, len(rest), r.Hit(mx, my))
+	}
 }
 
-// drawCmdCell draws one 64 x 64 command button inside r.
+// drawMoreCell draws the "more" cell: the count of the commands it stands
+// for, centred, and its caption under the cell like a command's label.
+func drawMoreCell(screen *ebiten.Image, r gfx.Rect, n int, hover bool) {
+	fill, border := uikit.Btn, uikit.BtnBorder
+	if hover {
+		fill, border = uikit.BtnHover, uikit.Accent
+	}
+	uikit.FillRect(screen, r, fill)
+	uikit.StrokeRect(screen, r, border)
+	cx, cy := r.Center()
+	uikit.DrawCentered(screen, "+"+strconv.Itoa(n), float64(cx), float64(cy), gfx.WithColor(gfx.Title, uikit.Accent))
+	drawCmdLabel(screen, r, []string{"More"}, gfx.Small)
+}
+
+// drawCmdLabel draws a command's label lines centred on r, the last line's
+// baseline hudlayout.CmdLabelBelow under the cell: one line straddles the
+// frame, two rise into the cell (UIS-051). It returns the first line's top.
+func drawCmdLabel(screen *ebiten.Image, r gfx.Rect, lines []string, ts gfx.TextStyle) float32 {
+	step := gfx.LineStep(ts)
+	top := TextTop(r.Bottom()+hudlayout.CmdLabelBelow, ts) - float32(len(lines)-1)*step
+	ts.Align = gfx.AlignCenter
+	for i, ln := range lines {
+		gfx.Text(screen, ln, float64(r.X+r.W/2), float64(top+float32(i)*step), ts)
+	}
+	return top
+}
+
+// drawCmdCell draws one command button inside r (UIS-050, UIS-051).
 func drawCmdCell(screen *ebiten.Image, c Button, r gfx.Rect, hover bool, key string, icon *ebiten.Image) {
 	fill, border := uikit.Btn, uikit.BtnBorder
 	switch {
@@ -270,22 +380,16 @@ func drawCmdCell(screen *ebiten.Image, c Button, r gfx.Rect, hover bool, key str
 	}
 	uikit.StrokeRect(screen, r, border)
 
-	// the label: at most two lines under the icon
+	// the label: at most two lines, anchored under the cell
 	maxW := float64(r.W - 2*CmdLabelPad)
-	if c.Options != nil {
-		maxW -= 6 // clear of the corner arrow
-	}
 	ts, lines := CmdLabelLines(c.Label, maxW, c.Disabled)
-	step := gfx.LineStep(ts)
-	labelTop := r.Bottom() - 2 - float32(len(lines))*step
-	for i, ln := range lines {
-		uikit.DrawCentered(screen, gfx.Ellipsize(ln, ts, maxW), float64(r.X+r.W/2), float64(labelTop+float32(i)*step)+gfx.LineH(ts)/2-1, ts)
-	}
+	labelTop := drawCmdLabel(screen, r, lines, ts)
 
-	// the icon: centred between the top edge and the label
-	area := labelTop - 1 - (r.Y + 3)
+	// the icon: centred in the cell above the label
+	top := r.Y + hudlayout.CmdInset
+	area := min(r.Bottom(), labelTop) - 2 - top
 	size := min(cmdIconMax, area)
-	ix, iy := r.X+(r.W-size)/2, r.Y+3+(area-size)/2
+	ix, iy := r.X+(r.W-size)/2, top+(area-size)/2
 	switch {
 	case icon != nil && c.Disabled:
 		drawIconCS(screen, icon, float64(ix), float64(iy), float64(size), sprite.ColorScale{0.45, 0.45, 0.45, 1})
@@ -295,10 +399,10 @@ func drawCmdCell(screen *ebiten.Image, c Button, r gfx.Rect, hover bool, key str
 		drawCmdFallback(screen, c.Label, gfx.Rect{X: ix, Y: iy, W: size, H: size}, c.Disabled)
 	}
 
-	if key != "" { // hotkey hint, top left
-		w := gfx.TextW(key, gfx.Small) + 4
-		uikit.FillRect(screen, gfx.Rect{X: r.X + 2, Y: r.Y + 2, W: w, H: step - 2}, uikit.Space)
-		gfx.Text(screen, key, float64(r.X+4), float64(r.Y+1), gfx.WithColor(gfx.Small, uikit.Accent))
+	if key != "" { // hotkey hint, top left, no plate: its cap top CmdInset in
+		ks := gfx.WithColor(gfx.Small, uikit.Accent)
+		capTop := r.Y + hudlayout.CmdInset
+		gfx.Text(screen, key, float64(r.X+hudlayout.CmdInset), float64(TextTop(capTop+float32(ks.Size*notoCap), ks)), ks)
 	}
 	if c.Options != nil { // options arrow, top right
 		ar := cmdArrowRect(r)
@@ -319,7 +423,7 @@ func drawCmdFallback(screen *ebiten.Image, label string, r gfx.Rect, disabled bo
 	if label == "" {
 		return
 	}
-	ts := gfx.Large
+	ts := gfx.Title
 	if disabled {
 		ts = gfx.WithColor(ts, uikit.TextDisabled)
 	}
@@ -331,6 +435,10 @@ func drawCmdFallback(screen *ebiten.Image, label string, r gfx.Rect, disabled bo
 // command's options menu, any other id runs its command.
 func (a Commands) ApplyCommandClick(id string) {
 	if a.sim() == nil {
+		return
+	}
+	if id == MoreID {
+		a.openMore()
 		return
 	}
 	if n, ok := strings.CutPrefix(id, "cmd.options."); ok {
@@ -447,6 +555,10 @@ func (a Commands) RightClickCommand(mx, my int) bool {
 			a.openCommandOptions(c)
 			return true
 		}
+	}
+	if r, _, ok := a.MoreCell(); ok && r.Hit(mx, my) {
+		a.openMore()
+		return true
 	}
 	return false
 }
@@ -631,37 +743,39 @@ func mergeOptions(cmds []Button, members []int, run func(member int, c Button)) 
 	}, true
 }
 
-// cmdLabelMinSize is the smallest a command label shrinks to before a
-// word has to break.
-const cmdLabelMinSize = 9
-
-// cmdLabelLines lays out a command button's label in at most two lines of
-// maxW: a single word too wide for the cell ("Deconstruct") steps the type
-// down in half points rather than breaking in two.
+// CmdLabelLines lays out a command button's label at gfx.Small in at most
+// two lines of maxW: words wrap, the second line takes the rest, and a line
+// still too wide (one long word) ends in an ellipsis. The type never
+// shrinks (UIS-051).
 func CmdLabelLines(label string, maxW float64, disabled bool) (gfx.TextStyle, []string) {
 	ts := gfx.Small
-	for ts.Size > cmdLabelMinSize && widestWord(label, ts) > maxW {
-		ts.Size -= 0.5
-	}
 	if disabled {
 		ts = gfx.WithColor(ts, uikit.TextDisabled)
 	}
-	lines := gfx.WrapPx(label, ts, maxW)
+	var lines []string
+	line := ""
+	for _, word := range strings.Fields(label) {
+		try := word
+		if line != "" {
+			try = line + " " + word
+		}
+		if w, _ := gfx.Measure(try, ts); w <= maxW || line == "" {
+			line = try
+			continue
+		}
+		lines = append(lines, line)
+		line = word
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
 	if len(lines) > 2 {
 		lines = []string{lines[0], strings.Join(lines[1:], " ")}
 	}
-	return ts, lines
-}
-
-// widestWord is the width of label's widest word in st.
-func widestWord(label string, st gfx.TextStyle) float64 {
-	w := 0.0
-	for _, word := range strings.Fields(label) {
-		if ww, _ := gfx.Measure(word, st); ww > w {
-			w = ww
-		}
+	for i, ln := range lines {
+		lines[i] = gfx.Ellipsize(ln, ts, maxW)
 	}
-	return w
+	return ts, lines
 }
 
 // Anchor is where command id's menu opens: above its button, else above

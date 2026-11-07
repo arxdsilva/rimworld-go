@@ -383,3 +383,68 @@ func TestCommandGridDrawsInsideItsCells(t *testing.T) {
 		}
 	}
 }
+
+// Thirty commands (and sixty) are all reachable at every UI scale
+// (UIS-052): each has its own cell or sits behind the "more" cell, in
+// declaration order, and a pick in the more cell's menu presses it.
+func TestThirtyCommandsAreAllReachable(t *testing.T) {
+	// serial: it sets the UI scale
+	overflowed := false
+	for _, n := range []int{30, 60} {
+		for _, sc := range []float64{1, 1.5, 2} {
+			withUIScale(t, sc)
+			sz := fmt.Sprintf("scale %v", sc)
+			ran := map[string]int{}
+			cmds := nCmds(n)
+			for i := range cmds {
+				id := cmds[i].ID
+				cmds[i].Run = func() { ran[id]++ }
+			}
+			a, _, _ := cmdColony(t, 1, cmds...)
+			c := a.insp.Commands()
+			var got []string
+			for _, s := range c.CommandCells() {
+				got = append(got, s.ID())
+			}
+			more := c.MoreCommands()
+			for _, m := range more {
+				got = append(got, m.ID)
+			}
+			if len(got) != n {
+				t.Fatalf("%d commands at %s: %d reachable (%d cells, %d more)", n, sz, len(got), len(c.CommandCells()), len(more))
+			}
+			for i, id := range got {
+				if id != cmds[i].ID {
+					t.Fatalf("%d commands at %s: slot %d is %s, want %s", n, sz, i, id, cmds[i].ID)
+				}
+			}
+			l := a.hud()
+			if (l.GridMore > 0) != (len(more) > 0) || (len(more) > 0 && l.GridMore != len(more)) {
+				t.Fatalf("%d commands at %s: layout more %d, grid more %d", n, sz, l.GridMore, len(more))
+			}
+			if len(more) == 0 {
+				continue
+			}
+			overflowed = true
+			found := false
+			for _, b := range c.CommandGridButtons() {
+				found = found || b.ID == inspector.MoreID
+			}
+			if !found {
+				t.Fatalf("%d commands at %s: no more cell among the grid buttons", n, sz)
+			}
+			click(t, a, inspector.MoreID)
+			if !a.ord.Float.Open || len(a.ord.Float.Opts) != len(more) {
+				t.Fatalf("%d commands at %s: the more cell's menu has %d entries, want %d", n, sz, len(a.ord.Float.Opts), len(more))
+			}
+			last := len(more) - 1
+			a.ord.ChooseFloat(fmt.Sprintf("float.%d", last))
+			if ran[more[last].ID] != 1 {
+				t.Fatalf("%d commands at %s: picking %s in the more menu did not run it", n, sz, more[last].ID)
+			}
+		}
+	}
+	if !overflowed {
+		t.Fatal("no case overflowed the grid: the more cell went untested")
+	}
+}

@@ -104,19 +104,21 @@ func TestJourneyAX2FurnitureCards(t *testing.T) {
 	ax2Place(j, "furniture", "animal_sleeping_box", "animal sleeping box", 12, 3)
 	ax2Place(j, "storage", "small_shelf", "small shelf", 14, 3)
 	ax2Place(j, "furniture", "flood_light", "flood light", 10, 3)
-	if !j.g.BuildNow("wall", "wood", "south", 11, 5) {
+	// rows 4-5: clear of the command grid's 75 px cells (UIS-050), whose
+	// third row reaches row 6 at 1280x720
+	if !j.g.BuildNow("wall", "wood", "south", 11, 4) {
 		t.Fatal("no wall")
 	}
-	c := ax2Place(j, "furniture", "wall_torch", "wall torch", 11, 6)
+	c := ax2Place(j, "furniture", "wall_torch", "wall torch", 11, 5)
 	if c.Facing != uint8(construction.South) {
 		t.Fatalf("wall torch facing %d, want south (away from the wall north of it)", c.Facing)
 	}
-	if _, ok := ax2Frame(j, "wall torch", 11, 6); !ok {
+	if _, ok := ax2Frame(j, "wall torch", 11, 5); !ok {
 		t.Fatal("no wall torch blueprint")
 	}
 	j.reset()
-	j.clickTile(14, 6, inputframe.Left, 0) // no wall behind: refused
-	if _, ok := ax2Frame(j, "wall torch", 14, 6); ok {
+	j.clickTile(14, 5, inputframe.Left, 0) // no wall behind: refused
+	if _, ok := ax2Frame(j, "wall torch", 14, 5); ok {
 		t.Fatal("a wall torch hung on nothing")
 	}
 }

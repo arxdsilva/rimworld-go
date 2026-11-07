@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
@@ -149,11 +150,16 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 			t.Errorf("tab %d overlaps tab %d", i, i-1)
 		}
 	}
-	if !(tabs[1].W > tabs[0].W) {
-		t.Errorf("widths follow the label: %.0f vs %.0f", tabs[0].W, tabs[1].W)
+	// a pawn's tabs share the strip in equal widths, whatever their labels
+	// (UIS-045): the first starts at the strip's left, the last ends at its right
+	wantW := (l.PaneTabs.W+hudlayout.PaneTabGap)/float32(len(tabs)) - hudlayout.PaneTabGap
+	for i, b := range tabs {
+		if math.Abs(float64(b.W-wantW)) > 0.01 {
+			t.Errorf("tab %d is %v wide, want the equal share %v", i, b.W, wantW)
+		}
 	}
-	if w, _ := gfx.Measure("A rather long tab label", gfx.Body); float64(tabs[1].W) < w {
-		t.Errorf("tab width %.0f is narrower than its label (%.0f)", tabs[1].W, w)
+	if tabs[0].X != l.PaneTabs.X || math.Abs(float64(tabs[2].X+tabs[2].W-l.PaneTabs.Right())) > 0.01 {
+		t.Errorf("the tabs %+v do not fill the strip %+v", tabs, l.PaneTabs)
 	}
 	if !tabs[2].Disabled || tabs[2].Reason != "nobody to dress" {
 		t.Errorf("a disabled tab reports its reason: %+v", tabs[2])
@@ -387,10 +393,18 @@ func TestDrawPaneStaysInItsRegions(t *testing.T) {
 			t.Fatalf("scale %v: the pane drew nothing", scale)
 		}
 		s := float32(scale)
+		// at a fractional scale a solid span's start rounds to a device pixel
+		// and its length is ceil(w x s) (gfx.snapSpan, UIS-011): a span on a
+		// half-pixel edge (the 165-high pane at 1.5) may end up to 1.5
+		// device px past it
+		tol := float32(0.5)
+		if scale != math.Trunc(scale) {
+			tol = 1.5
+		}
 		for _, r := range rects {
 			ok := false
 			for _, g := range regions {
-				if r.X >= g.X*s-0.5 && r.Y >= g.Y*s-0.5 && r.Right() <= g.Right()*s+0.5 && r.Bottom() <= g.Bottom()*s+0.5 {
+				if r.X >= g.X*s-tol && r.Y >= g.Y*s-tol && r.Right() <= g.Right()*s+tol && r.Bottom() <= g.Bottom()*s+tol {
 					ok = true
 				}
 			}

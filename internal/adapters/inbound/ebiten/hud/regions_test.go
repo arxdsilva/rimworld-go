@@ -95,16 +95,16 @@ func TestLayoutGlobalWrapsToggleRows(t *testing.T) {
 				t.Errorf("n=%d: toggle %d %+v should be below toggle %d %+v (rows run top to bottom)", n, i, r, i-GlobalPerRow, rows.Toggles[i-GlobalPerRow])
 			}
 		}
-		if last := rows.Toggles[n-1]; g.Right()-GlobalPad != last.Right() {
-			t.Errorf("n=%d: the last toggle ends at %v, want the inner right edge %v", n, last.Right(), g.Right()-GlobalPad)
+		if last := rows.Toggles[n-1]; g.Right() != last.Right() { // UIS-056: GlobalRight from the window's edge, the Global rect's own
+			t.Errorf("n=%d: the last toggle ends at %v, want the panel's right edge %v", n, last.Right(), g.Right())
 		}
 		if h < prev {
 			t.Errorf("n=%d: height %v shrank from %v", n, h, prev)
 		}
 		prev = h
 	}
-	if h8, h9 := GlobalStackHeight(GlobalPlan{}, 8), GlobalStackHeight(GlobalPlan{}, 9); h9-h8 != GlobalIconPx+GlobalIconGap {
-		t.Errorf("a second toggle row adds %v, want %v", h9-h8, GlobalIconPx+GlobalIconGap)
+	if h1, h2 := GlobalStackHeight(GlobalPlan{}, GlobalPerRow), GlobalStackHeight(GlobalPlan{}, GlobalPerRow+1); h2-h1 != hudlayout.GlobalIconPitch {
+		t.Errorf("a second toggle row adds %v, want the pitch %v", h2-h1, hudlayout.GlobalIconPitch)
 	}
 }
 

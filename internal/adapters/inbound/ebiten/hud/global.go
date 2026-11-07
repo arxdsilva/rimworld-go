@@ -17,12 +17,15 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// The lower-right global controls (PLAY-018: GLOBAL owns them). One panel,
-// the layout's Global rect, holds a measured stack. Bottom-up from the
-// tab strip:
+// The lower-right global controls (PLAY-018: GLOBAL owns them; UIS-056 to
+// UIS-058). One panel, the layout's Global rect (GlobalRight from the
+// window's right edge, GlobalBottom above the tab strip), holds a measured
+// stack. Bottom-up from the tab strip:
 //
-//	overlay toggles   24 px icons in rows of 8, right-aligned
-//	speed buttons     pause, normal, fast, superfast (52x24)
+//	overlay toggles   24 px icons at a 28 px pitch, 5 to a row, right-aligned;
+//	                  the top row holds the remainder
+//	speed buttons     pause, normal, fast, superfast (32x24, flush), SpeedAbove
+//	                  over the icons, SpeedRight from the window's edge
 //	speed reason      only while the game paused itself (threat, background)
 //	hour line         clock and the schedule's current activity
 //	date line         the calendar date and the season
@@ -35,13 +38,13 @@ import (
 // root's memo), so nothing here may ask for the layout while measuring.
 
 const (
-	GlobalPad     = 4  // inside the panel
-	GlobalIconPx  = 24 // an overlay toggle
-	GlobalIconGap = 4  // between toggles and between speed buttons
-	GlobalPerRow  = 8  // toggles per row
-	speedBtnW     = 52
-	speedBtnH     = 24
-	globalGap     = 4 // between the button rows and the text above
+	// GlobalPad is the text rows' inset in the panel: their right ink edge
+	// sits GlobalTextRight from the window's edge.
+	GlobalPad     = hudlayout.GlobalTextRight - hudlayout.GlobalRight
+	GlobalIconPx  = hudlayout.GlobalIcon                             // an overlay toggle
+	GlobalIconGap = hudlayout.GlobalIconPitch - hudlayout.GlobalIcon // between toggles
+	GlobalPerRow  = hudlayout.GlobalPerRow                           // toggles per row
+	globalGap     = 4                                                // between the speed row and the text above
 	GlobalInnerW  = hudlayout.RightW - 2*GlobalPad
 
 	learnButtonID  = "hud.learn"
@@ -197,9 +200,9 @@ type GlobalPlan struct {
 	Legend  []string     // the roof and power legends, wrapped (nil: none)
 }
 
-// TextRowH is a text row of the stack: the body line, whose height already
-// holds its leading.
-func TextRowH() float32 { return gfx.LineStep(gfx.Body) }
+// TextRowH is a text row of the stack: hudlayout.GlobalRowPitch (UIS-058),
+// the body line centred in it.
+func TextRowH() float32 { return hudlayout.GlobalRowPitch }
 
 // Plan reads the stack's content from the world and the renderer.
 func (c Global) Plan() GlobalPlan {
@@ -235,27 +238,27 @@ type GlobalRowRects struct {
 func LayoutGlobal(g gfx.Rect, p GlobalPlan, nToggles int) GlobalRowRects {
 	var o GlobalRowRects
 	text := TextRowH()
-	right := g.Right() - GlobalPad
-	y := g.Bottom() - GlobalPad
+	y := g.Bottom()
+	// the toggles: full rows at the bottom, the remainder on top (UIS-056)
 	rows := (nToggles + GlobalPerRow - 1) / GlobalPerRow
 	o.Toggles = make([]gfx.Rect, nToggles)
-	for row := rows - 1; row >= 0; row-- {
-		y -= GlobalIconPx
-		first, last := row*GlobalPerRow, min(nToggles, (row+1)*GlobalPerRow)
-		x := right - float32(last-first)*GlobalIconPx - float32(last-first-1)*GlobalIconGap
-		for i := first; i < last; i++ {
-			o.Toggles[i] = gfx.Rect{X: x, Y: y, W: GlobalIconPx, H: GlobalIconPx}
-			x += GlobalIconPx + GlobalIconGap
-		}
-		if row > 0 {
-			y -= GlobalIconGap
+	for r := range rows { // r = 0: the bottom row
+		hi := nToggles - r*GlobalPerRow
+		lo := max(0, hi-GlobalPerRow)
+		top := y - GlobalIconPx - float32(r)*hudlayout.GlobalIconPitch
+		x := g.Right() - float32(hi-lo)*hudlayout.GlobalIconPitch + GlobalIconGap
+		for i := lo; i < hi; i++ {
+			o.Toggles[i] = gfx.Rect{X: x + float32(i-lo)*hudlayout.GlobalIconPitch, Y: top, W: GlobalIconPx, H: GlobalIconPx}
 		}
 	}
-	y -= globalGap + speedBtnH
-	x := right - 4*speedBtnW - 3*GlobalIconGap
+	if rows > 0 {
+		y -= GlobalIconPx + float32(rows-1)*hudlayout.GlobalIconPitch
+	}
+	// the speed buttons, flush, SpeedRight from the window's edge (UIS-057)
+	y -= hudlayout.SpeedAbove + hudlayout.SpeedH
+	x := g.Right() + hudlayout.GlobalRight - hudlayout.SpeedRight - float32(len(o.Speed))*hudlayout.SpeedW
 	for i := range o.Speed {
-		o.Speed[i] = gfx.Rect{X: x, Y: y, W: speedBtnW, H: speedBtnH}
-		x += speedBtnW + GlobalIconGap
+		o.Speed[i] = gfx.Rect{X: x + float32(i)*hudlayout.SpeedW, Y: y, W: hudlayout.SpeedW, H: hudlayout.SpeedH}
 	}
 	y -= globalGap
 	next := func() gfx.Rect {
@@ -475,10 +478,10 @@ func (c Global) TemperatureLine() string {
 
 // ---------------------------------------------------------------- Drawing
 
-// rightText draws s right-aligned at x in the text row r.
+// rightText draws s right-aligned at x in the text row r, centred in it.
 func rightText(screen *ebiten.Image, s string, x float32, r gfx.Rect, st gfx.TextStyle) {
 	st.Align = gfx.AlignRight
-	gfx.Text(screen, s, float64(x), float64(r.Y), st)
+	gfx.Text(screen, s, float64(x), float64(r.Y)+max(0, (float64(r.H)-gfx.LineH(st))/2), st)
 }
 
 // Draw draws the Global panel and its stack.
@@ -493,7 +496,7 @@ func (c Global) Draw(screen *ebiten.Image, sw, sh int) {
 	plan := c.Plan()
 	rows := LayoutGlobal(g, plan, len(c.toggles()))
 	uikit.DrawPanel(screen, g.X, g.Y, g.W, g.H)
-	right := g.Right() - GlobalPad
+	right := g.Right() - GlobalPad // GlobalTextRight from the window's edge
 	w := c.sh.World()
 	mx, my := c.sh.Cursor()
 
@@ -504,7 +507,8 @@ func (c Global) Draw(screen *ebiten.Image, sw, sh int) {
 	drawConditionLines(screen, plan.Chips, rows.Conds) // chips.go
 	rightText(screen, c.TemperatureLine(), right, rows.Temp, gfx.Body)
 	if !rows.Weather.Empty() {
-		c.sh.DrawWeather(screen, int(right), int(rows.Weather.Y)+2, w) // the weather label lifts its text 2 px
+		wy := float64(rows.Weather.Y) + max(0, (float64(rows.Weather.H)-gfx.LineH(gfx.Body))/2)
+		c.sh.DrawWeather(screen, int(right), int(wy)+2, w) // the weather label lifts its text 2 px
 	}
 	rightText(screen, c.DateLine(), right, rows.Date, gfx.Body)
 	rightText(screen, c.HourLine(), right, rows.Hour, gfx.Body)

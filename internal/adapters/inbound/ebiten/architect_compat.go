@@ -180,7 +180,13 @@ func (a *App) zonePane(id uint16) inspector.Spec {
 
 // ---- areas
 
-func (a *App) areaSelectorsUI(sw, sh int) { a.arch.Areas.Selectors(architectPanes{a}) }
+// areaSelectorsUI declares the Architect's widget-kit parts each Update: the
+// allowed-area selectors, the category panel's search row and the
+// description box's scroll (UIS-053, UIS-054).
+func (a *App) areaSelectorsUI(sw, sh int) {
+	a.arch.Areas.Selectors(architectPanes{a})
+	a.arch.Panel.UI()
+}
 
 // areaChip is the colonist pane's allowed-area chip.
 func (a *App) areaChip(p game.PawnView) (inspector.Chip, bool) {

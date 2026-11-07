@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -82,23 +83,26 @@ type Spec struct {
 	Emblem, EmblemTip  string          // the faction icon and its tooltip
 }
 
-// Pane metrics (logical px).
+// Pane metrics (logical px): the reference sizes are hudlayout's (UIS-044 to
+// UIS-048), the rest ours.
 const (
-	PaneInset   = 12 // text inset in the pane and in a tab's panel
-	paneTop     = 8
+	PaneInset   = hudlayout.PaneInset // text inset in the pane and in a tab's panel
 	paneCloseW  = 20
 	paneChipH   = 20
 	paneChipGap = 4
-	// paneCardBottom is the edge under the card's body; with paneTop and the
-	// name's line it is the 34 px dossier/sheet.DockMargin counts.
+	// paneNameGap is the name's baseline to the card's body, paneCardBottom
+	// the edge under it: with hudlayout.PaneNameBaseline they are the 32 px
+	// dossier/sheet.DockMargin counts.
+	paneNameGap    = 2
 	paneCardBottom = 2
 	paneBarCols    = 4
-	paneBarGap     = 8
-	paneBarFill    = 6 // the fill's height under its label
-	paneTabGap     = 2
-	paneTabPad     = 20 // text padding inside a tab
-	paneTabMinW    = 48
-	PaneRowH       = 20
+	paneBarLabelX  = 3 // the bar's label inset (UIS-047)
+	paneTabGap     = hudlayout.PaneTabGap
+	paneTabPad     = 20 // text padding inside a chip
+	PaneRowH       = hudlayout.PaneLineH
+	// notoAscent is the UI font's ascent per pixel of size (Noto Sans: 1069
+	// units of 1000), to put a baseline where a reference size says.
+	notoAscent = 1.069
 
 	PaneBodyID  = "pane.body"
 	paneFrameID = "pane.frame"
@@ -135,12 +139,21 @@ func (a *Pane) SelectionPane() Spec {
 // paneFor dispatches to the selection kind's producer.
 func (a *Pane) paneFor(k selection.Kind, id entity.EntityID) Spec {
 	if p := a.TestPane; p != nil {
-		return p(k, id)
+		return withKind(p(k, id), k)
 	}
 	if p := a.Producers[k].Pane; p != nil {
-		return a.Card().dress(k, id, p(id))
+		return a.Card().dress(k, id, withKind(p(id), k))
 	}
 	return Spec{}
+}
+
+// withKind is spec of a selection of kind k (a producer may leave it out;
+// a pawn's tabs fill the strip, UIS-045).
+func withKind(spec Spec, k selection.Kind) Spec {
+	if spec.Kind == selection.None {
+		spec.Kind = k
+	}
+	return spec
 }
 
 // shownPane is the selection's pane when the layout shows one: something
@@ -221,17 +234,28 @@ type Geom struct {
 	ContentH float32
 }
 
-// paneLayout places spec inside the pane rectangle p. Parts that do not
-// fit are dropped rather than drawn over the pane's edge.
+// TextTop is the top y to draw st at so its baseline lands on baseline (a
+// reference size gives baselines, gfx.Text takes the line's top).
+func TextTop(baseline float32, st gfx.TextStyle) float32 {
+	return baseline - float32(st.Size*notoAscent)
+}
+
+// headY is the header buttons' top: 20 px centred on the name's caps.
+func headY(p gfx.Rect) float32 { return p.Y + hudlayout.PaneNameBaseline - headBtn + 2 }
+
+// paneLayout places spec inside the pane rectangle p: the name with its
+// baseline PaneNameBaseline below the top (UIS-046), the status bars from
+// PaneBarTop (UIS-047), then the chips and the body's lines at PaneLineH
+// (UIS-048). Parts that do not fit are dropped rather than drawn over the
+// pane's edge.
 func PaneLayout(p gfx.Rect, spec Spec) Geom {
 	var g Geom
 	inner := p.InsetXY(PaneInset, 0)
 	limit := p.Bottom() - paneChipGap
-	y := p.Y + paneTop
 	g.TitleW = inner.W
 	if spec.Close != "" {
-		g.Close = gfx.Rect{X: p.Right() - paneTop - paneCloseW, Y: p.Y + paneTop, W: paneCloseW, H: paneCloseW}
-		g.TitleW -= paneCloseW + paneTop
+		g.Close = gfx.Rect{X: p.Right() - PaneInset - paneCloseW, Y: headY(p), W: paneCloseW, H: paneCloseW}
+		g.TitleW -= paneCloseW + headGap
 	}
 	if spec.Restyled {
 		g.TitleW -= headReserve
@@ -239,10 +263,7 @@ func PaneLayout(p gfx.Rect, spec Spec) Geom {
 			g.TitleW -= headEmblem
 		}
 	}
-	y += gfx.LineStep(gfx.Large)
-	if spec.Subtitle != "" {
-		y += gfx.LineStep(gfx.Body)
-	}
+	y := p.Y + hudlayout.PaneNameBaseline + paneNameGap // under the name
 	if spec.Card {
 		// the compact card (RHUD-003) starts right under the name and keeps
 		// a thin edge below
@@ -250,20 +271,23 @@ func PaneLayout(p gfx.Rect, spec Spec) Geom {
 		g.Card = gfx.Rect{X: inner.X, Y: y, W: inner.W, H: max(0, limit-y)}
 		return g
 	}
-	y += 6
+	if spec.Subtitle != "" {
+		y += gfx.LineStep(gfx.Body) + paneChipGap
+	}
+	y = max(y, p.Y+hudlayout.PaneBarTop)
 	if n := len(spec.Bars); n > 0 {
 		cols := min(n, paneBarCols)
-		w := (inner.W - float32(cols-1)*paneBarGap) / float32(cols)
-		h := gfx.LineStep(gfx.Small) + 2 + paneBarFill
+		w := min(hudlayout.PaneBarW, (inner.W-float32(cols-1)*hudlayout.PaneBarGap)/float32(cols))
+		h := float32(hudlayout.PaneBarH)
 		for i := range n {
 			r, c := i/cols, i%cols
-			cell := gfx.Rect{X: inner.X + float32(c)*(w+paneBarGap), Y: y + float32(r)*(h+paneChipGap), W: w, H: h}
+			cell := gfx.Rect{X: inner.X + float32(c)*(w+hudlayout.PaneBarGap), Y: y + float32(r)*(h+hudlayout.PaneBarGap), W: w, H: h}
 			if cell.Bottom() > limit {
 				break
 			}
 			g.Bars = append(g.Bars, cell)
 		}
-		y += float32((n+cols-1)/cols) * (h + paneChipGap)
+		y += float32((n+cols-1)/cols) * (h + hudlayout.PaneBarGap)
 	}
 	if len(spec.Chips) > 0 {
 		x := inner.X
@@ -296,42 +320,30 @@ func PaneLayout(p gfx.Rect, spec Spec) Geom {
 	return g
 }
 
-// paneTabRects lays the tabs out along the strip: widths measured from the
-// labels, squeezed together when they do not fit.
-func paneTabRects(strip gfx.Rect, tabs []Tab) []gfx.Rect {
-	if len(tabs) == 0 {
-		return nil
+// paneTabRects lays spec's tabs along the strip (UIS-045): the card's own
+// width when it sets one, a pawn's tabs in equal widths across the pane,
+// any other kind's PaneTabW wide against the strip's right edge.
+func paneTabRects(strip gfx.Rect, spec Spec) []gfx.Rect {
+	n := len(spec.Tabs)
+	switch {
+	case spec.TabW > 0:
+		return fixedTabRects(strip, n, spec.TabW)
+	case spec.Kind == selection.Pawn && n > 0:
+		return fixedTabRects(strip, n, (strip.W+paneTabGap)/float32(n))
 	}
-	ws := make([]float32, len(tabs))
-	var sum float32
-	for i, t := range tabs {
-		ws[i] = max(paneTabMinW, gfx.TextW(t.Label, gfx.Body)+paneTabPad)
-		sum += ws[i]
-	}
-	room := strip.W - float32(len(tabs)-1)*paneTabGap
-	if sum > room && sum > 0 {
-		for i := range ws {
-			ws[i] *= room / sum
-		}
-	}
-	out := make([]gfx.Rect, len(tabs))
-	x := strip.X
-	for i := range tabs {
-		out[i] = gfx.Rect{X: x, Y: strip.Y, W: ws[i], H: strip.H}
-		x += ws[i] + paneTabGap
-	}
-	return out
+	return fixedTabRects(strip, n, hudlayout.PaneTabW+paneTabGap)
 }
 
-// fixedTabRects lays n tabs of one width out against the strip's right edge,
-// first tab leftmost, so the order stays the same (RHUD-005, 007).
+// fixedTabRects lays n tabs at a pitch of w (a tab and its gap) out against
+// the strip's right edge, first tab leftmost, so the order stays the same
+// (RHUD-005, 007); they shrink to share a strip too narrow for them.
 func fixedTabRects(strip gfx.Rect, n int, w float32) []gfx.Rect {
 	if n == 0 {
 		return nil
 	}
 	w = min(w, (strip.W+paneTabGap)/float32(n))
 	out := make([]gfx.Rect, n)
-	x := strip.Right() - float32(n)*w + paneTabGap
+	x := max(strip.X, strip.Right()-float32(n)*w+paneTabGap) // a full strip starts at its left edge, not a rounding error left of it
 	for i := range out {
 		out[i] = gfx.Rect{X: x, Y: strip.Y, W: w - paneTabGap, H: strip.H}
 		x += w
@@ -381,10 +393,7 @@ func (a *Pane) PaneButtons() []uikit.Button {
 
 // paneTabButtons are the tab strip's buttons.
 func (a *Pane) paneTabButtons(strip gfx.Rect, spec Spec) []uikit.Button {
-	rs := paneTabRects(strip, spec.Tabs)
-	if spec.TabW > 0 {
-		rs = fixedTabRects(strip, len(spec.Tabs), spec.TabW)
-	}
+	rs := paneTabRects(strip, spec)
 	out := make([]uikit.Button, len(rs))
 	for i, r := range rs {
 		t := spec.Tabs[i]
@@ -421,21 +430,20 @@ func (a *Pane) DrawPane(screen *ebiten.Image) {
 	uikit.DrawPanel(screen, p.X, p.Y, p.W, p.H)
 	g := PaneLayout(p, spec)
 	x := float64(p.X + PaneInset)
-	y := float64(p.Y + paneTop)
 	titleC := uikit.Heading
 	if spec.TitleColor.A != 0 {
 		titleC = spec.TitleColor
 	}
 	if spec.Emblem != "" {
 		if img := a.Card().headIcon(spec.Emblem); img != nil {
-			gfx.Icon(screen, img, x, y, headBtn)
+			gfx.Icon(screen, img, x, float64(headY(p)), headBtn)
 		}
 		x += headEmblem
 	}
-	gfx.Text(screen, gfx.Ellipsize(spec.Title, gfx.Large, float64(g.TitleW)), x, y, gfx.WithColor(gfx.Large, titleC))
-	y += float64(gfx.LineStep(gfx.Large))
+	base := p.Y + hudlayout.PaneNameBaseline
+	gfx.Text(screen, gfx.Ellipsize(spec.Title, gfx.Title, float64(g.TitleW)), x, float64(TextTop(base, gfx.Title)), gfx.WithColor(gfx.Title, titleC))
 	if spec.Subtitle != "" {
-		gfx.Text(screen, gfx.Ellipsize(spec.Subtitle, gfx.Body, float64(g.TitleW)), x, y, gfx.WithColor(gfx.Body, uikit.TextDim))
+		gfx.Text(screen, gfx.Ellipsize(spec.Subtitle, gfx.Body, float64(g.TitleW)), x, float64(base+paneNameGap), gfx.WithColor(gfx.Body, uikit.TextDim))
 	}
 	if spec.Close != "" {
 		uikit.DrawButton(screen, uikit.AsButton(g.Close, spec.Close, "X"), g.Close.Hit(mx, my), a.shell)
@@ -455,16 +463,16 @@ func (a *Pane) DrawPane(screen *ebiten.Image) {
 	a.drawPaneBody(screen, spec, g, mx, my)
 }
 
-// drawPaneBar draws one compact bar: its label and value over a fill.
+// drawPaneBar draws one compact bar (UIS-047): the fill, and its label and
+// value inside it.
 func drawPaneBar(screen *ebiten.Image, r gfx.Rect, b Bar) {
 	pct := max(0, min(100, b.Pct))
-	label := gfx.Ellipsize(fmt.Sprintf("%s %d%%", b.Label, pct), gfx.Small, float64(r.W))
-	gfx.Text(screen, label, float64(r.X), float64(r.Y), gfx.WithColor(gfx.Small, uikit.TextDim))
-	track := gfx.Rect{X: r.X, Y: r.Bottom() - paneBarFill, W: r.W, H: paneBarFill}
-	uikit.FillRect(screen, track, uikit.Field)
-	if w := track.W * float32(pct) / 100; w > 0 {
-		uikit.FillRect(screen, gfx.Rect{X: track.X, Y: track.Y, W: w, H: track.H}, b.Color)
+	uikit.FillRect(screen, r, uikit.Field)
+	if w := r.W * float32(pct) / 100; w > 0 {
+		uikit.FillRect(screen, gfx.Rect{X: r.X, Y: r.Y, W: w, H: r.H}, uikit.LerpRGBA(uikit.Field, b.Color, 0.7))
 	}
+	label := gfx.Ellipsize(fmt.Sprintf("%s %d%%", b.Label, pct), gfx.Small, float64(r.W-2*paneBarLabelX))
+	gfx.Text(screen, label, float64(r.X+paneBarLabelX), float64(r.Y)+(float64(r.H)-gfx.LineH(gfx.Small))/2, gfx.Small)
 }
 
 // drawPaneBody draws the scrolled lines and rows, clipped to the body.

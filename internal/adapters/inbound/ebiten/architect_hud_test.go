@@ -81,6 +81,37 @@ func archDescText(a *App) []string {
 	return out
 }
 
+// descHas reports the box's text holds want wherever the 200-wide box
+// (hudlayout.ArchDescW, UIS-054) wrapped it.
+func descHas(a *App, want string) bool {
+	flat := strings.Join(strings.Fields(strings.Join(archDescText(a), " ")), " ")
+	return strings.Contains(flat, strings.Join(strings.Fields(want), " "))
+}
+
+// archButtonsScrolled are the Architect's buttons with prefix that come into
+// view as the description box scrolls through its content (UIS-054), each
+// once, at the first offset it shows wholly; the box is left at the top.
+func archButtonsScrolled(a *App, prefix string) []uikit.Button {
+	defer a.arch.Panel.ScrollTo(0)
+	seen := map[string]bool{}
+	var out []uikit.Button
+	box := a.hud().ArchDesc
+	maxOff := a.arch.Plan().H - box.H
+	step := max(8, box.H-32) // a picker button (at most 22 tall) is wholly in view at some step
+	for off := float32(0); ; off += step {
+		a.arch.Panel.ScrollTo(off)
+		for _, b := range archButtonsWith(a, prefix) {
+			if !seen[b.ID] {
+				seen[b.ID] = true
+				out = append(out, b)
+			}
+		}
+		if off >= maxOff {
+			return out
+		}
+	}
+}
+
 func within(b uikit.Button, r gfx.Rect) bool {
 	return b.X >= r.X && b.Y >= r.Y && b.X+b.W <= r.Right() && b.Y+b.H <= r.Bottom()
 }
@@ -108,8 +139,14 @@ func TestArchitectCategoriesInTwoColumns(t *testing.T) {
 		if !within(b, l.ArchCats) {
 			t.Errorf("%s %+v is outside ArchCats %+v", b.ID, b, l.ArchCats)
 		}
-		if b.W < 92 || b.W > 104 || b.H != 26 { // 26: seven rows fit a small screen, NST
-			t.Errorf("%s is %vx%v, want about 100x26", b.ID, b.W, b.H)
+		if b.W != hudlayout.ArchCatW || b.H != hudlayout.ArchCatH { // UIS-053: 100 x 32, flush
+			t.Errorf("%s is %vx%v, want %vx%v", b.ID, b.W, b.H, hudlayout.ArchCatW, hudlayout.ArchCatH)
+		}
+		if col, row := i%hudlayout.ArchCatCols, i/hudlayout.ArchCatCols; b.X != l.ArchCats.X+float32(col*hudlayout.ArchCatW) || b.Y != l.ArchCats.Y+float32(row*hudlayout.ArchCatH) {
+			t.Errorf("%s at %v,%v: not flush row-major in %+v", b.ID, b.X, b.Y, l.ArchCats)
+		}
+		if b.Y+b.H > architect.SearchRect(l).Y {
+			t.Errorf("%s reaches into the search row %+v", b.ID, architect.SearchRect(l))
 		}
 		if b.Selected != (architect.Categories[i].ID == a.arch.Cat) {
 			t.Errorf("%s selected = %v with archCat %q", b.ID, b.Selected, a.arch.Cat)
@@ -343,12 +380,13 @@ func TestArchitectDescriptionBoxSitsAboveCategories(t *testing.T) {
 		if h <= 0 {
 			t.Fatalf("tool %q: archDescHeight = %v, want > 0", tool, h)
 		}
+		// UIS-054: a fixed box whatever its content (which scrolls inside it)
 		l := a.hud()
-		if l.ArchDesc.Empty() || l.ArchDesc.H != h || l.ArchDesc.W != hudlayout.ArchDescW {
-			t.Fatalf("tool %q: ArchDesc %+v, want %vx%v", tool, l.ArchDesc, hudlayout.ArchDescW, h)
+		if l.ArchDesc.Empty() || l.ArchDesc.H != hudlayout.ArchDescH || l.ArchDesc.W != hudlayout.ArchDescW {
+			t.Fatalf("tool %q: ArchDesc %+v, want %vx%v", tool, l.ArchDesc, hudlayout.ArchDescW, hudlayout.ArchDescH)
 		}
-		if l.ArchDesc.Bottom() != l.ArchCats.Y-hudlayout.HudGap {
-			t.Errorf("tool %q: ArchDesc bottom %v, want ArchCats.Y-gap = %v", tool, l.ArchDesc.Bottom(), l.ArchCats.Y-hudlayout.HudGap)
+		if l.ArchDesc.Bottom() != l.ArchCats.Y {
+			t.Errorf("tool %q: ArchDesc bottom %v, want flush on ArchCats.Y = %v", tool, l.ArchDesc.Bottom(), l.ArchCats.Y)
 		}
 	}
 }
@@ -409,7 +447,7 @@ func TestArchitectDescriptionShowsNameCostDescriptionStock(t *testing.T) {
 		"rotate (south)",
 		"Right-click: stop placing",
 	} {
-		if !strings.Contains(text, want) {
+		if !descHas(a, want) {
 			t.Errorf("hospital bed box lacks %q\n%s", want, text)
 		}
 	}
@@ -436,22 +474,33 @@ func TestArchitectDescriptionMaterialRow(t *testing.T) {
 	a, _ := archColony(t)
 	archPick(t, a, "wall")
 	l := a.hud()
-	stuffs := archButtonsWith(a, "arch.stuff.")
+	// in view, the buttons sit in the box and apart
+	inView := archButtonsWith(a, "arch.stuff.")
+	if len(inView) == 0 {
+		t.Fatal("no material button in view with the box at its top")
+	}
+	for i, b := range inView {
+		if !within(b, l.ArchDesc) {
+			t.Errorf("%s %+v outside ArchDesc %+v", b.ID, b, l.ArchDesc)
+		}
+		for _, o := range inView[:i] {
+			if overlap(b, o) {
+				t.Errorf("%s overlaps %s", b.ID, o.ID)
+			}
+		}
+	}
+	// every material is a scroll away at most (the fixed 200 x 270 box, UIS-054)
+	stuffs := archButtonsScrolled(a, "arch.stuff.")
 	bv, _ := architect.Buildable("wall")
 	if len(stuffs) != len(bv.Stuffs) || len(stuffs) < 2 {
 		t.Fatalf("%d material buttons, want %d", len(stuffs), len(bv.Stuffs))
 	}
 	for i, b := range stuffs {
-		if !within(b, l.ArchDesc) {
-			t.Errorf("%s %+v outside ArchDesc %+v", b.ID, b, l.ArchDesc)
+		if b.ID != "arch.stuff."+bv.Stuffs[i] {
+			t.Errorf("material %d is %s, want arch.stuff.%s", i, b.ID, bv.Stuffs[i])
 		}
 		if b.Selected != (bv.Stuffs[i] == a.toolStuff(architect.ToolDef{Build: "wall"})) {
 			t.Errorf("%s selected = %v", b.ID, b.Selected)
-		}
-		for _, o := range stuffs[:i] {
-			if overlap(b, o) {
-				t.Errorf("%s overlaps %s", b.ID, o.ID)
-			}
 		}
 	}
 	// A tool with one material shows no row.
@@ -507,7 +556,7 @@ func TestArchitectDescriptionCropPicker(t *testing.T) {
 	if !strings.Contains(text, "Tree: ") || !strings.Contains(text, "wood per tree") {
 		t.Errorf("box lacks the tree stats:\n%s", text)
 	}
-	if !strings.Contains(text, architect.StyleNames[architect.StyleRect]) || !strings.Contains(text, "shape, Ctrl square") {
+	if !descHas(a, architect.StyleNames[architect.StyleRect]) || !descHas(a, "shape, Ctrl square") {
 		t.Errorf("box lacks the area tool's draw style:\n%s", text)
 	}
 }
@@ -527,14 +576,17 @@ func TestArchitectDescriptionDragStyleHints(t *testing.T) {
 	}
 }
 
-// Every tool, with every material and crop, fits its box at the sizes the
-// game runs at, and the regions do not overlap the command grid. A tool is
-// picked once and laid out at each size: the pick and its tool card do not
-// depend on the screen size, the box and its buttons are laid out per size.
+// Every tool, with every material and crop, has its box at the sizes the
+// game runs at: the fixed ArchDescW x min(ArchDescH, room) box flush on the
+// categories (UIS-054), every line no wider than the box, and every line and
+// picker button wholly in view at some scroll offset. A tool is picked once
+// and laid out at each size: the pick and its tool card do not depend on the
+// screen size, the box and its buttons are laid out per size.
 func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
 	sizes := [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}}
+	pickers := []string{"arch.stuff.", "arch.crop.", "arch.colour."}
 	for _, tool := range allArchTools() {
 		a.sw, a.sh = sizes[0][0], sizes[0][1]
 		a.arch.Cat = tool.Category
@@ -545,35 +597,50 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 			continue // an allowed-area tool opens its area menu first
 		}
 		stuffs := []string{""}
+		want := map[string]int{}
 		if bv, ok := architect.Buildable(tool.Build); ok && len(bv.Stuffs) > 1 {
 			stuffs = bv.Stuffs
+			want["arch.stuff."] = len(bv.Stuffs)
 		}
-		for _, s := range stuffs {
+		if tool.Crop != "" {
+			want["arch.crop."] = len(game.ZoneSpecies())
+		}
+		if architect.ColourTool(tool) {
+			want["arch.colour."] = len(construction.CarpetColours)
+		}
+		for si, s := range stuffs {
 			a.arch.Stuff = s
 			for _, sz := range sizes {
 				a.sw, a.sh = sz[0], sz[1]
 				l := a.hud()
-				if l.ArchDesc.Empty() || l.ArchDesc.H != a.arch.DescHeight() {
-					t.Errorf("%dx%d %s/%s: box %+v is clamped (wants %v)", sz[0], sz[1], tool.ID, s, l.ArchDesc, a.arch.DescHeight())
+				box := l.ArchDesc
+				if box.Empty() || box.W != hudlayout.ArchDescW || box.H > hudlayout.ArchDescH || box.Bottom() != l.ArchCats.Y {
+					t.Errorf("%dx%d %s/%s: box %+v, want %v wide, at most %v tall, flush on %+v", sz[0], sz[1], tool.ID, s, box, hudlayout.ArchDescW, hudlayout.ArchDescH, l.ArchCats)
 				}
-				if l.ArchDesc.Y < 0 {
-					t.Errorf("%dx%d %s/%s: box above the screen: %+v", sz[0], sz[1], tool.ID, s, l.ArchDesc)
+				if box.Y < 0 {
+					t.Errorf("%dx%d %s/%s: box above the screen: %+v", sz[0], sz[1], tool.ID, s, box)
 				}
-				for _, ln := range a.arch.Plan().Lines {
+				plan := a.arch.Plan()
+				for _, ln := range plan.Lines {
 					if w, _ := gfx.Measure(ln.Text, ln.Style); w > architect.InnerW+0.5 {
 						t.Errorf("%dx%d %s/%s: line %q is %.1f wide, the box holds %v", sz[0], sz[1], tool.ID, s, ln.Text, w, float32(architect.InnerW))
 					}
-					if ln.Y+gfx.LineStep(ln.Style) > l.ArchDesc.H {
-						t.Errorf("%dx%d %s/%s: line %q at y=%v runs past the box (%v)", sz[0], sz[1], tool.ID, s, ln.Text, ln.Y, l.ArchDesc.H)
+					if step := gfx.LineStep(ln.Style); ln.Y+step > plan.H || step > box.H {
+						t.Errorf("%dx%d %s/%s: line %q at y=%v is never wholly in view (content %v, box %v)", sz[0], sz[1], tool.ID, s, ln.Text, ln.Y, plan.H, box.H)
 					}
 				}
-				// the material, crop and (AX-3) carpet colour buttons
-				for _, b := range a.arch.Buttons() {
-					if !strings.HasPrefix(b.ID, "arch.stuff.") && !strings.HasPrefix(b.ID, "arch.crop.") && !strings.HasPrefix(b.ID, "arch.colour.") {
-						continue
+				if si > 0 {
+					continue // the pickers do not change with the material
+				}
+				for _, prefix := range pickers {
+					bs := archButtonsScrolled(a, prefix)
+					if len(bs) != want[prefix] {
+						t.Errorf("%dx%d %s: %d %s buttons reachable, want %d", sz[0], sz[1], tool.ID, len(bs), prefix, want[prefix])
 					}
-					if !within(b, l.ArchDesc) {
-						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
+					for _, b := range bs {
+						if !within(b, box) {
+							t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, box)
+						}
 					}
 				}
 			}
@@ -607,8 +674,8 @@ func TestArchitectLayoutKeepsRegionsApart(t *testing.T) {
 			if len(l.GridCells) != len(cmds) {
 				t.Errorf("%dx%d %s: %d grid cells for %d tools", sz[0], sz[1], c.ID, len(l.GridCells), len(cmds))
 			}
-			if len(l.GridCells) > 0 && l.GridCells[0].X != l.ArchCats.Right()+hudlayout.HudMargin {
-				t.Errorf("%dx%d %s: grid starts at %v, want right of ArchCats (%v)", sz[0], sz[1], c.ID, l.GridCells[0].X, l.ArchCats.Right()+hudlayout.HudMargin)
+			if len(l.GridCells) > 0 && l.GridCells[0].X != l.ArchCats.Right()+hudlayout.ArchGridGap { // UIS-055
+				t.Errorf("%dx%d %s: grid starts at %v, want right of ArchCats (%v)", sz[0], sz[1], c.ID, l.GridCells[0].X, l.ArchCats.Right()+hudlayout.ArchGridGap)
 			}
 		}
 	}
@@ -724,5 +791,48 @@ func TestArchitectDraws(t *testing.T) {
 			}
 			drawFrame(t, a, f)
 		}
+	}
+}
+
+// The category panel's search row (UIS-053) is a text field at its bottom;
+// its text shows the designators whose name holds it, from every category,
+// and clearing it shows the open category again.
+func TestArchitectSearchRowFiltersTheDesignators(t *testing.T) {
+	t.Parallel()
+	a, _ := archColony(t)
+	f := fakeOn(a)
+	f.Frame(t, a)
+	l := a.hud()
+	sr := architect.SearchRect(l)
+	if sr.Empty() || sr.Bottom() != l.ArchCats.Bottom() || sr.H != hudlayout.ArchSearchH || sr.W != hudlayout.ArchCatsW {
+		t.Fatalf("search row %+v in %+v", sr, l.ArchCats)
+	}
+	field, ok := a.uiSt().Find(architect.SearchID)
+	if !ok || !sr.Contains(field.R.X, field.R.Y) || field.Focusable {
+		t.Fatalf("search field %+v (found %v): want a field in the row, out of the Tab order", field, ok)
+	}
+	before := a.arch.Cards()
+	a.arch.Panel.SetQuery("Wall")
+	cards := a.arch.Cards()
+	if len(cards) == 0 {
+		t.Fatal("no designator matches \"Wall\"")
+	}
+	cats := map[string]bool{}
+	for _, c := range cards {
+		if !strings.Contains(strings.ToLower(c.Label), "wall") {
+			t.Errorf("card %q does not hold the search text", c.Label)
+		}
+		d, _ := toolByID(strings.TrimPrefix(c.ID, "arch.tool."))
+		cats[d.Category] = true
+	}
+	if len(cats) < 2 {
+		t.Errorf("matches come from %d categories, want every category searched: %v", len(cats), cats)
+	}
+	if got := len(a.archToolCommands()); got != len(cards) {
+		t.Errorf("the grid shows %d commands for %d matches", got, len(cards))
+	}
+	a.arch.Panel.SetQuery("  ")
+	if after := a.arch.Cards(); len(after) != len(before) {
+		t.Errorf("a blank search shows %d cards, want the open category's %d", len(after), len(before))
 	}
 }

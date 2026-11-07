@@ -54,6 +54,7 @@ type Tool struct {
 	Areas *Areas
 	Mover *Mover
 	Marks *Marks
+	Panel *Panel // the search row and the description box's scroll (desc_box.go)
 }
 
 // New builds the feature over its shell.
@@ -63,6 +64,7 @@ func New(sh Shell) *Tool {
 	t.Areas = &Areas{Tool: t}
 	t.Mover = &Mover{Tool: t}
 	t.Marks = &Marks{Tool: t}
+	t.Panel = &Panel{Tool: t}
 	return t
 }
 
@@ -137,9 +139,10 @@ func (t *Tool) Rect() uikit.Button {
 	return uikit.Button{X: r.X, Y: r.Y, W: r.W, H: r.H}
 }
 
-// Buttons are the category buttons and, for the armed tool, its material
-// and crop buttons. The tools themselves are command buttons in the grid
-// (Cards).
+// Buttons are the category buttons (ArchCatW x ArchCatH, two per row,
+// flush, row-major over the search row: UIS-053) and, for the armed tool,
+// its material, colour and crop buttons in view in the description box.
+// The tools themselves are command buttons in the grid (Cards).
 func (t *Tool) Buttons() []uikit.Button {
 	if !t.Open {
 		return nil
@@ -150,16 +153,16 @@ func (t *Tool) Buttons() []uikit.Button {
 	}
 	out := make([]uikit.Button, 0, len(Categories)+16)
 	for i, c := range t.tx.of(t.sh).cats {
-		col, row := i%2, i/2
+		col, row := i%hudlayout.ArchCatCols, i/hudlayout.ArchCatCols
 		out = append(out, uikit.Button{
 			ID: ids.PrefixArchCat + c.ID, Label: c.Label,
-			X: l.ArchCats.X + archPad + float32(col)*(archCatW+archCatGap),
-			Y: l.ArchCats.Y + archPad + float32(row)*(archCatH+archCatGap),
-			W: archCatW, H: archCatH, Selected: t.Cat == c.ID,
+			X: l.ArchCats.X + float32(col*hudlayout.ArchCatW),
+			Y: l.ArchCats.Y + float32(row*hudlayout.ArchCatH),
+			W: hudlayout.ArchCatW, H: hudlayout.ArchCatH, Selected: t.Cat == c.ID,
 		})
 	}
 	if !l.ArchDesc.Empty() {
-		out = append(out, t.descButtons(l.ArchDesc)...)
+		out = append(out, t.descButtons(l.ArchDesc, t.Panel.Offset())...)
 	}
 	return out
 }
@@ -408,11 +411,12 @@ func (t *Tool) Draw(screen *ebiten.Image) {
 	uikit.DrawPanel(screen, l.ArchCats.X, l.ArchCats.Y, l.ArchCats.W, l.ArchCats.H)
 	if d := l.ArchDesc; !d.Empty() {
 		uikit.DrawPanel(screen, d.X, d.Y, d.W, d.H)
+		off := t.Panel.Offset()
 		for _, ln := range t.Plan().Lines {
-			if ln.Y+gfx.LineStep(ln.Style) > d.H {
-				continue // a clamped box on a small screen shows what fits
+			if y := ln.Y - off; y < 0 || y+gfx.LineStep(ln.Style) > d.H {
+				continue // scrolled out of view: the box shows the lines wholly in it
 			}
-			gfx.Text(screen, ln.Text, float64(d.X+archPad), float64(d.Y+ln.Y), ln.Style)
+			gfx.Text(screen, ln.Text, float64(d.X+archPad), float64(d.Y+ln.Y-off), ln.Style)
 		}
 	}
 	mx, my := t.sh.Cursor()

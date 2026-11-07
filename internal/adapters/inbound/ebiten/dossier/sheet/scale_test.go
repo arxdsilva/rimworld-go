@@ -7,20 +7,20 @@ import (
 )
 
 // The docked card at each screen height: the table the plan pins, then every
-// height from 550 to 1440, where the pane and its tabs never pass 30 % of the
+// height from 564 to 1440, where the pane and its tabs never pass 30 % of the
 // screen and the built-in tree fits every target.
 func TestDockedForTable(t *testing.T) {
 	t.Parallel()
 	d := config.Defaults().HUD
 	for _, c := range []struct{ sh, font, pane int }{
-		{550, 9, 141}, {720, 12, 168}, {1080, 18, 252}, {1440, 24, 336},
+		{564, 9, 139}, {720, 12, 165}, {1080, 18, 247}, {1440, 24, 330},
 	} {
 		got := DockedFor(d, c.sh)
 		if got.Text.BodySize != c.font || got.Pane.Height != c.pane {
 			t.Errorf("%d tall: text %d pane %d, want %d and %d", c.sh, got.Text.BodySize, got.Pane.Height, c.font, c.pane)
 		}
 	}
-	for sh := 550; sh <= 1440; sh++ {
+	for sh := 564; sh <= 1440; sh++ {
 		got := DockedFor(d, sh)
 		if (got.Pane.Height+DockTabsH)*100 > sh*DockSharePct {
 			t.Fatalf("%d tall: pane %d and tabs take more than %d %%", sh, got.Pane.Height, DockSharePct)
@@ -32,15 +32,15 @@ func TestDockedForTable(t *testing.T) {
 	}
 }
 
-// Under 550 (a high manual UI scale in a small window) the smallest readable
+// Under 564 (a high manual UI scale in a small window) the smallest readable
 // card wins over the 30 %; nothing is cut.
 func TestDockedForTinyScreens(t *testing.T) {
 	t.Parallel()
 	d := config.Defaults().HUD
-	for _, sh := range []int{360, 480, 549} {
+	for _, sh := range []int{360, 480, 563} {
 		got := DockedFor(d, sh)
-		if got.Text.BodySize != DockMinFont || got.Pane.Height != 141 {
-			t.Errorf("%d tall: text %d pane %d, want %d and 141", sh, got.Text.BodySize, got.Pane.Height, DockMinFont)
+		if got.Text.BodySize != DockMinFont || got.Pane.Height != 139 {
+			t.Errorf("%d tall: text %d pane %d, want %d and 139", sh, got.Text.BodySize, got.Pane.Height, DockMinFont)
 		}
 		fitsEveryTarget(t, sh, DefaultDocked(), got)
 	}
@@ -58,7 +58,7 @@ func TestDockedForCopiesValuesOnly(t *testing.T) {
 	if got.Pane.MinTabs != d.Pane.MinTabs || got.Card != d.Card || got.Text.BodyLinePct != d.Text.BodyLinePct || len(got.Colors) != 1 {
 		t.Errorf("more than the sizes changed: %+v", got)
 	}
-	if d.Pane.Height != 168 || d.Text.BodySize != 12 {
+	if d.Pane.Height != 165 || d.Text.BodySize != 12 {
 		t.Error("the input changed")
 	}
 	if same := DockedFor(d, 720); same.Pane != d.Pane || same.Text != d.Text {
@@ -138,9 +138,9 @@ func fitsEveryTarget(t *testing.T, sh int, tree config.HUDNode, h config.HUD) {
 	}
 }
 
-// Each built-in, loaded, fits every target on every screen from 550 to 1440
+// Each built-in, loaded, fits every target on every screen from 564 to 1440
 // tall, the pane within 30 % wherever its smallest readable text allows. Under
-// that (Roomy's taller lines need 604, Snug with traits' ninth row 594) the
+// that (Roomy's taller lines need 617, Snug with traits' ninth row 607) the
 // smallest text wins over the 30 % for the built-in rows, and a ninth row past
 // them is hidden, with the card's warning.
 func TestEachBuiltInFitsEveryScreen(t *testing.T) {
@@ -149,7 +149,7 @@ func TestEachBuiltInFitsEveryScreen(t *testing.T) {
 		h := config.Defaults().HUD
 		Apply(p, &h)
 		tree := *p.Docked
-		for sh := 550; sh <= 1440; sh++ {
+		for sh := 564; sh <= 1440; sh++ {
 			got := DockedFor(h, sh)
 			share := sh*DockSharePct/100 - DockTabsH
 			if dockNeed(&tree, DockMinFont, h.Text) <= share {
@@ -159,7 +159,7 @@ func TestEachBuiltInFitsEveryScreen(t *testing.T) {
 				t.Fatalf("%s at %d tall: pane %d, more than 30 %%", p.Name, sh, got.Pane.Height)
 			}
 		}
-		for _, sh := range []int{604, 720, 1080} {
+		for _, sh := range []int{617, 720, 1080} {
 			fitsEveryTarget(t, sh, tree, DockedFor(h, sh))
 		}
 	}

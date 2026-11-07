@@ -683,19 +683,21 @@ func TestJourneyDossierOffIsIdentical(t *testing.T) {
 }
 
 // The pane's numbers at the smallest supported window (RHUD-003): pinned so a
-// change has to be looked at. 626 tall: 30 % less the tabs is 163, the text 10
-// (12 x 626/720), the tabs 80 wide (96 x 10/12).
+// change has to be looked at. 626 tall: 30 % less the PaneTabsH (30) tabs is
+// 157; 473 wide leaves CmdReserveCols x CmdStride (5 x 80) and HudMargin
+// before the right column; the text 10 (12 x 626/720), the tabs 80 wide
+// (96 x 10/12).
 func TestJourneyDossierGolden1113(t *testing.T) {
 	j, _ := dossierPawn(t, true)
 	j.a.sw, j.a.sh = 1113, 626
 	j.update(3)
 	j.img = nil
 	l := j.a.hud()
-	want := gfx.Rect{X: 0, Y: 435, W: 480, H: 163}
+	want := gfx.Rect{X: 0, Y: 435, W: 473, H: 157}
 	if l.Pane != want {
 		t.Errorf("pane %+v, want %+v", l.Pane, want)
 	}
-	if wantTabs := (gfx.Rect{X: 0, Y: want.Y - hudlayout.PaneTabsH, W: 480, H: hudlayout.PaneTabsH}); l.PaneTabs != wantTabs {
+	if wantTabs := (gfx.Rect{X: 0, Y: want.Y - hudlayout.PaneTabsH, W: 473, H: hudlayout.PaneTabsH}); l.PaneTabs != wantTabs {
 		t.Errorf("tabs %+v, want %+v", l.PaneTabs, wantTabs)
 	}
 	if !l.Card.Empty() {

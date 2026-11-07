@@ -269,7 +269,8 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 			}
 			first, _ := a.chrome.Global().ToggleRect(hud.RoofButtonID)
 			lastRect, _ := a.chrome.Global().ToggleRect(hud.DossierButtonID) // the card's toggle closes the row
-			if pr.Y <= first.Y || pr.Y != lastRect.Y || lastRect.Right() != g.Right()-hud.GlobalPad {
+			// UIS-056: the icons end at the Global rect's right edge
+			if pr.Y <= first.Y || pr.Y != lastRect.Y || lastRect.Right() != g.Right() {
 				t.Errorf("power toggle %+v: want it on a second, right-aligned row (last %+v) below %+v in %+v", pr, lastRect, first, g)
 			}
 			if pr.X < g.X || pr.Bottom() > g.Bottom() || pr.Y < g.Y {
