@@ -432,6 +432,20 @@ const (
 	// SetAutoRefuel (REF-1): haulers keep burner Target fuelled (Enabled)
 	// or leave it to ordered refuels only.
 	SetAutoRefuel
+	// Quests (QST-1, game/quest); Index is the quest id throughout.
+	// AcceptQuest accepts offer Index for reward option Count (-1: it has
+	// none). DismissQuest hides quest Index under Historical; RestoreQuest
+	// shows it again (neither changes its state or timers).
+	AcceptQuest
+	DismissQuest
+	RestoreQuest
+	// FulfilRequest hands trade request Index's goods over from caravan
+	// Target; Negotiate holds peace talks Index with caravan Target.
+	FulfilRequest
+	Negotiate
+	// SetRewardPref sets whether faction Index accepts goodwill as a quest
+	// reward (Enabled; QST-083).
+	SetRewardPref
 )
 
 // EditApparelPolicy modes (Command.Mode), GEAR-3 contract.
@@ -558,11 +572,16 @@ const (
 	// OrderRefuel (REF-1): fill the burner at X, Y to full now, whatever
 	// its auto refuel setting and however full it is.
 	OrderRefuel
+	// OrderFreePrisoner (QST-2f): free the quest prisoner Target from its
+	// cell; it acts on a pawn.
+	OrderFreePrisoner
 )
 
 // TargetsPawn reports an order that acts on the pawn in Command.Target
-// rather than on the tile (SIM-062).
-func (o Order) TargetsPawn() bool { return o >= OrderRescue && o <= OrderCarryToPrisonBed }
+// rather than on the tile (SIM-062, QST-2f).
+func (o Order) TargetsPawn() bool {
+	return o >= OrderRescue && o <= OrderCarryToPrisonBed || o == OrderFreePrisoner
+}
 
 // Command is applied on a simulation tick, never by the UI directly.
 type Command struct {
