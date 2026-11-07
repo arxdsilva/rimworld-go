@@ -249,6 +249,7 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 	a.diffStepper(left, "pd", a.shell.T("Peaceful start (days)"), &s.PeacefulDays, 0, 30, a.shell.T("Peaceful start\nDays at the start with no big threat."))
 	a.diffCheck(left, "ph", a.shell.T("Predators hunt colonists"), &s.PredatorsHuntColonists, "", a.shell.T("Predators\nWild predators may attack colonists, not only prey."))
 	a.diffSlider(left, "ar", a.shell.T("Hostile wildlife revenge"), &s.AnimalRevenge, "ar", wizardpkg.PctText, "", a.shell.T("Revenge\nHow fiercely wild animals fight back when hurt."))
+	a.diffCheck(left, "qt", a.shell.T("Quest threats"), &s.QuestThreats, "", a.shell.T("Quest threats\nQuests may bring raids and other dangers. Off offers only quests without fighting."))
 	left.Gap(8)
 
 	left.SectionTitle(a, a.shell.T("Escalation"))
@@ -274,6 +275,7 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 	a.diffSlider(right, "my", a.shell.T("Mining yield"), &s.MineYield, "my", wizardpkg.PctText, "", "")
 	a.diffSlider(right, "by", a.shell.T("Butchering yield"), &s.ButcherYield, "by", wizardpkg.PctText, "", "")
 	a.diffSlider(right, "rs", a.shell.T("Research speed"), &s.ResearchSpeed, "rs", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "qr", a.shell.T("Quest rewards"), &s.QuestRewardPct, "qr", wizardpkg.PctText, "", a.shell.T("Quest rewards\nHow much quests pay, as a share of the normal amount."))
 	right.Gap(8)
 
 	right.SectionTitle(a, a.shell.T("Health and mind"))

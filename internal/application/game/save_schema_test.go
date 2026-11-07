@@ -233,7 +233,7 @@ New:
 // this pin to get a test to pass. Only a migration step that really changes a
 // v12 save's state may move the hash: re-pin it then, saying in the commit
 // why that migration changes it.
-const saveV12Hash = uint64(0x9f9a65eaaf7f6e3a)
+const saveV12Hash = uint64(0x2a89537689b1cc80)
 
 // v12Colony is the colony in the fixture: rich in state, so that as many
 // saved fields as practical are non-zero.

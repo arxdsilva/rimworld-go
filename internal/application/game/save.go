@@ -101,11 +101,13 @@ import (
 // v12 (MAP-0) adds the extra open maps (ExtraMaps): an older binary refuses
 // a save it would read as the first map alone. v14 (GEAR-3) adds the
 // apparel policies (Outfits): an older save gets the defaults, everyone on
-// Anything.
+// Anything. v15 (QST-1) adds the quest difficulty settings (an older save
+// gets rewards at 100 % and quest threats as its big threats) and the
+// quests.
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 14
+const SaveVersion = 15
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -921,6 +923,12 @@ func (g *Game) migrateSave(v int) {
 	case v < 12: // MAP-0: an older save has one map, nothing to change
 		fallthrough
 	case v < 14: // GEAR-3: no apparel policies yet: Import(nil) gave the defaults, everyone on Anything
+		fallthrough
+	case v < 15: // QST-1: quest rewards at 100 %, quest threats as big threats (off only on the peaceful preset)
+		if g.hasSetup() {
+			d := &g.ng.setup.Difficulty
+			d.QuestRewardPct, d.QuestThreats = 100, d.BigThreats
+		}
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

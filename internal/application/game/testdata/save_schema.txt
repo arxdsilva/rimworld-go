@@ -825,6 +825,8 @@ saveState.NG1.Setup.Difficulty.MoodOffset int
 saveState.NG1.Setup.Difficulty.PainTolerance int
 saveState.NG1.Setup.Difficulty.PeacefulDays int
 saveState.NG1.Setup.Difficulty.PredatorsHuntColonists bool
+saveState.NG1.Setup.Difficulty.QuestRewardPct int
+saveState.NG1.Setup.Difficulty.QuestThreats bool
 saveState.NG1.Setup.Difficulty.ResearchSpeed int
 saveState.NG1.Setup.Difficulty.ThreatScale int
 saveState.NG1.Setup.Difficulty.TimeEscalation bool

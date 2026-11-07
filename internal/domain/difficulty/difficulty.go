@@ -80,6 +80,11 @@ type Settings struct {
 	PredatorsHuntColonists bool
 	ExtremeWeather         bool
 	PainTolerance          int // percent offset
+	// QuestRewardPct scales quest rewards (QST-034, percent, 0..500).
+	QuestRewardPct int
+	// QuestThreats: violent quests are offered (QST-033; off only on the
+	// most peaceful preset).
+	QuestThreats bool
 }
 
 // Adapter is the adaptation state (saved).
@@ -108,27 +113,33 @@ var presets = [Custom]Named{
 	Wanderer: {Desc: "Build in peace — no raids or packs.", Settings: Settings{
 		ThreatScale: 5, BigThreats: false, PeacefulDays: 0, Adaptation: false, AdaptStrength: 100, EscPerYear: 25,
 		CropYield: 130, MineYield: 130, ButcherYield: 120, ResearchSpeed: 120, MoodOffset: 12,
-		Infection: 40, DiseaseFreq: 0, AnimalRevenge: 50, PredatorsHuntColonists: false, ExtremeWeather: false, PainTolerance: 10}},
+		Infection: 40, DiseaseFreq: 0, AnimalRevenge: 50, PredatorsHuntColonists: false, ExtremeWeather: false, PainTolerance: 10,
+		QuestRewardPct: 100, QuestThreats: false}},
 	Gentle: {Desc: "Rare, small threats; room to learn.", Settings: Settings{
 		ThreatScale: 35, BigThreats: true, PeacefulDays: 12, Adaptation: true, AdaptStrength: 60, EscPerYear: 25,
 		CropYield: 115, MineYield: 115, ButcherYield: 110, ResearchSpeed: 120, MoodOffset: 8,
-		Infection: 60, DiseaseFreq: 50, AnimalRevenge: 70, PredatorsHuntColonists: false, ExtremeWeather: true, PainTolerance: 5}},
+		Infection: 60, DiseaseFreq: 50, AnimalRevenge: 70, PredatorsHuntColonists: false, ExtremeWeather: true, PainTolerance: 5,
+		QuestRewardPct: 100, QuestThreats: true}},
 	Settled: {Desc: "Fair challenge with time to recover.", Settings: Settings{
 		ThreatScale: 65, BigThreats: true, PeacefulDays: 8, Adaptation: true, AdaptStrength: 80, EscPerYear: 25,
 		CropYield: 105, MineYield: 105, ButcherYield: 100, ResearchSpeed: 100, MoodOffset: 4,
-		Infection: 80, DiseaseFreq: 75, AnimalRevenge: 85, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: 0}},
+		Infection: 80, DiseaseFreq: 75, AnimalRevenge: 85, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: 0,
+		QuestRewardPct: 100, QuestThreats: true}},
 	Seasoned: {Desc: "The intended challenge.", Settings: Settings{
 		ThreatScale: 100, BigThreats: true, PeacefulDays: 6, Adaptation: true, AdaptStrength: 100, EscPerYear: 25,
 		CropYield: 100, MineYield: 100, ButcherYield: 100, ResearchSpeed: 100, MoodOffset: 0,
-		Infection: 100, DiseaseFreq: 100, AnimalRevenge: 100, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: 0}},
+		Infection: 100, DiseaseFreq: 100, AnimalRevenge: 100, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: 0,
+		QuestRewardPct: 100, QuestThreats: true}},
 	Grim: {Desc: "Harsh threats, thin margins.", Settings: Settings{
 		ThreatScale: 145, BigThreats: true, PeacefulDays: 4, Adaptation: true, AdaptStrength: 100, EscPerYear: 25,
 		CropYield: 90, MineYield: 90, ButcherYield: 90, ResearchSpeed: 95, MoodOffset: -4,
-		Infection: 115, DiseaseFreq: 120, AnimalRevenge: 115, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: 0}},
+		Infection: 115, DiseaseFreq: 120, AnimalRevenge: 115, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: 0,
+		QuestRewardPct: 100, QuestThreats: true}},
 	Merciless: {Desc: "Built to break you. Mostly.", Settings: Settings{
 		ThreatScale: 200, BigThreats: true, PeacefulDays: 3, Adaptation: true, AdaptStrength: 100, EscPerYear: 25,
 		CropYield: 80, MineYield: 80, ButcherYield: 80, ResearchSpeed: 90, MoodOffset: -8,
-		Infection: 130, DiseaseFreq: 150, AnimalRevenge: 130, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: -5}},
+		Infection: 130, DiseaseFreq: 150, AnimalRevenge: 130, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: -5,
+		QuestRewardPct: 100, QuestThreats: true}},
 }
 
 func init() {
@@ -215,6 +226,8 @@ var fields = []field{
 	{key: "ph", bool: true, bptr: func(s *Settings) *bool { return &s.PredatorsHuntColonists }},
 	{key: "ew", bool: true, bptr: func(s *Settings) *bool { return &s.ExtremeWeather }},
 	{key: "pt", min: -20, max: 20, ptr: func(s *Settings) *int { return &s.PainTolerance }},
+	{key: "qr", min: 0, max: 500, ptr: func(s *Settings) *int { return &s.QuestRewardPct }},
+	{key: "qt", bool: true, bptr: func(s *Settings) *bool { return &s.QuestThreats }},
 }
 
 var fieldByKey = func() map[string]field {
