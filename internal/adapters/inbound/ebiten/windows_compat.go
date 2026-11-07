@@ -78,18 +78,6 @@ func (h windowsHost) Float(x, y float32, opts []game.OrderOption) {
 	h.a.ord.OpenPick(x, y, false, opts, func(i int) { h.a.shell.Enqueue(opts[i].Cmd) })
 }
 
-func (h windowsHost) FactionsTable(body gfx.Rect, maxH float32, sel *int) gfx.Rect {
-	rows := h.colonyRows()
-	plain := make([]wizardpkg.FacRow, len(rows))
-	for i, r := range rows {
-		plain[i] = r.FacRow
-	}
-	listH := min(float32(uikit.TableHeaderH+len(rows)*wizardpkg.FacRowH+4), maxH)
-	tb, rest := body.SplitV(listH)
-	h.a.wiz.FactionsTable(tb, plain, sel, nil)
-	return rest
-}
-
 // ---- worldview.Host: the full-screen world view (MAP-2)
 
 // worldHost is the root's side of worldview.Host.
@@ -156,7 +144,7 @@ func (h windowsHost) Factions() []windows.Faction {
 		out[i] = windows.Faction{
 			Name: r.Name, TypeLabel: r.TypeLabel, Tech: r.Tech, Goodwill: r.Goodwill, Relation: r.Relation,
 			Standing: wizardpkg.RelationLabelIn(tr, r.Relation), Color: wizardpkg.RelationColor(r.Relation), Tip: wizardpkg.GoodwillTipIn(tr, r.FacRow),
-			History: r.History, Events: r.Events,
+			History: r.History, Events: r.Events, Leader: r.Leader, Settlements: r.Settlements,
 		}
 	}
 	return out

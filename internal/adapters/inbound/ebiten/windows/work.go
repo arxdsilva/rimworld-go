@@ -2,6 +2,7 @@ package windows
 
 import (
 	"fmt"
+	"image/color"
 	"strconv"
 	"strings"
 
@@ -73,13 +74,14 @@ func NextPriority(v int) int {
 
 // The Work window's measures at UI step 1 (UIS-061): row pitch 30, cell
 // stride 39, name column 240, first row 97 below the top, 60 under the last
-// row. The cell box is 25 high; ours is workCellW-4 wide (35, not the
-// reference 25) to hold the skill level, the priority and the passion glyph.
+// row. The cell box is hudlayout.WorkBox (25) square, left-aligned in its
+// 39 px slot; the slot's 14 px gutter right of it holds the passion glyph.
 const (
 	workRowH   = 30
 	WorkNameW  = 240
 	workCellW  = 39
-	workCellH  = 25
+	workCellH  = hudlayout.WorkBox
+	workGlyph  = 10 // the passion glyph's size
 	workTop    = 97
 	workBottom = 60
 	workHeadY  = 60 // the header buttons' top; two staggered label rows
@@ -152,12 +154,45 @@ func workSlot(col int) int {
 	return col
 }
 
-// WorkCellRect is the rectangle of colonist row's cell in column col (a
-// work.Type's index), placed at the column's workSlot.
+// WorkCellRect is the slot (the hit rectangle) of colonist row's cell in
+// column col (a work.Type's index), placed at the column's workSlot: the
+// box on its left and the passion gutter on its right.
 func WorkCellRect(r uikit.Button, row, col int) gfx.Rect {
-	hx := r.X + hudlayout.WindowPad + WorkNameW
+	hx := r.X + hudlayout.WorkPadL + WorkNameW
 	y := r.Y + workTop + float32(row*workRowH)
-	return gfx.Rect{X: hx + float32(workSlot(col)*workCellW), Y: y, W: workCellW - 4, H: workCellH}
+	return gfx.Rect{X: hx + float32(workSlot(col)*workCellW), Y: y, W: workCellW, H: workCellH}
+}
+
+// workHeadRect is the header button of column col: one slot wide, centred on
+// the box so the column name (drawn centred on the box) stays inside it.
+func workHeadRect(r uikit.Button, col int) gfx.Rect {
+	c := WorkCellRect(r, 0, col)
+	return gfx.Rect{X: c.X - (workCellW-hudlayout.WorkBox)/2, Y: r.Y + workHeadY, W: workCellW, H: workHeadH}
+}
+
+// workBoxRect is the box inside a slot.
+func workBoxRect(slot gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: slot.X, Y: slot.Y, W: hudlayout.WorkBox, H: workCellH}
+}
+
+// workGlyphRect is the passion glyph's square: centred in the gutter right
+// of the box, vertically centred, inside the slot.
+func workGlyphRect(slot gfx.Rect) gfx.Rect {
+	gx := slot.X + hudlayout.WorkBox + (workCellW-hudlayout.WorkBox-workGlyph)/2
+	return gfx.Rect{X: gx, Y: slot.Y + (slot.H-workGlyph)/2, W: workGlyph, H: workGlyph}
+}
+
+// workTint is the box fill of a skill level 0 to 20: dark at 0, the accent
+// at 20, brighter with every level.
+func workTint(level int) color.RGBA {
+	t := float64(max(0, min(20, level))) / 20
+	return uikit.LerpRGBA(uikit.Btn, uikit.Accent, 0.1+0.6*t)
+}
+
+// workNumColor is the priority number's colour: the more urgent, the
+// brighter (1 first, 4 last).
+func workNumColor(pr int) color.RGBA {
+	return uikit.LerpRGBA(uikit.Heading, uikit.TextDim, float64(max(1, min(4, pr))-1)/3)
 }
 
 // workRowShown reports the row fits the panel.
@@ -308,7 +343,7 @@ func (w Work) want() (float32, float32) {
 	}
 	pad := float32(hudlayout.WindowPad)
 	hint := pad + gfx.TextW(w.hint(), gfx.Small) + pad
-	return max(pad+WorkNameW+float32(len(WorkColumns)*workCellW)+pad, hint), float32(max(160, workTop+n*workRowH+workBottom))
+	return max(hudlayout.WorkPadL+WorkNameW+float32(len(WorkColumns)*workCellW)+hudlayout.WorkPadL, hint), float32(max(160, workTop+n*workRowH+workBottom))
 }
 
 func WorkCellValue(p game.PawnView, col int) string {
@@ -331,8 +366,8 @@ func (w Work) buttons() []uikit.Button {
 		if _, ok := WorkTypeForCol(col); !ok {
 			continue
 		}
-		cr := WorkCellRect(r, 0, col)
-		out = append(out, uikit.Button{ID: ids.PrefixWorkHead + strconv.Itoa(col), X: cr.X, Y: r.Y + workHeadY, W: cr.W, H: workHeadH, Quiet: true})
+		hr := workHeadRect(r, col)
+		out = append(out, uikit.Button{ID: ids.PrefixWorkHead + strconv.Itoa(col), X: hr.X, Y: hr.Y, W: hr.W, H: hr.H, Quiet: true})
 	}
 	return out
 }
@@ -340,11 +375,9 @@ func (w Work) buttons() []uikit.Button {
 // cellButtons are the priority cells alone (an incapable one disabled).
 func (w Work) cellButtons() []uikit.Button {
 	r := w.Rect()
-	hx := int(r.X) + hudlayout.WindowPad + WorkNameW
 	pawns := w.sh.Pawns()
 	out := make([]uikit.Button, 0)
 	for row, p := range pawns {
-		y := int(r.Y) + workTop + row*workRowH
 		if !workRowShown(r, row) {
 			break
 		}
@@ -352,13 +385,14 @@ func (w Work) cellButtons() []uikit.Button {
 			if _, ok := WorkTypeForCol(col); !ok {
 				continue
 			}
+			cr := WorkCellRect(r, row, col)
 			b := uikit.Button{
 				ID:    ids.PrefixWorkCell + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
 				Label: "",
-				X:     float32(hx + workSlot(col)*workCellW),
-				Y:     float32(y),
-				W:     float32(workCellW - 4),
-				H:     float32(workCellH),
+				X:     cr.X,
+				Y:     cr.Y,
+				W:     cr.W,
+				H:     cr.H,
 			}
 			if why, inc := w.incapable(p, col); inc {
 				// An incapable cell is hatched and can't be clicked: the
@@ -387,13 +421,12 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 	hintX := float64(r.X) + pad + float64(gfx.TextW(title, gfx.Label)) + 16
 	gfx.Text(screen, gfx.Ellipsize(w.hint(), gfx.Small, float64(r.X+r.W)-pad-hintX),
 		hintX, gfx.CenterTop(float64(r.Y)+pad, gfx.LineH(gfx.Label), gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
-	hx := int(r.X) + hudlayout.WindowPad + WorkNameW
 	for i := range WorkColumns {
 		slot := workSlot(i)
 		st := gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter}
 		band := float64(workHeadH) / 2 // staggered rows, each centred in half the header
 		y := gfx.CenterTop(float64(r.Y)+workHeadY+float64(slot%2)*band, band, st)
-		gfx.Text(screen, w.colName(i), float64(hx+slot*workCellW)+float64(workCellW-4)/2, y, st)
+		gfx.Text(screen, w.colName(i), float64(workBoxRect(WorkCellRect(r, 0, i)).X)+float64(hudlayout.WorkBox)/2, y, st)
 	}
 	pawns := w.sh.Pawns()
 	for row, p := range pawns {
@@ -404,44 +437,48 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, WorkNameW-8), float64(r.X)+pad, gfx.CenterTop(float64(y), workCellH, gfx.Body), gfx.Body)
 	}
 	mx, my := w.sh.Cursor()
-	drawButtons(screen, w.cellButtons(), mx, my)
 	for row, p := range pawns {
 		if !workRowShown(w.Rect(), row) {
 			break
 		}
 		for col := range WorkColumns {
-			v := WorkCellValue(p, col)
-			if v == "" {
-				continue
+			if _, live := WorkLive[col]; live {
+				w.drawCell(screen, p, WorkCellRect(w.Rect(), row, col), col, mx, my)
 			}
-			cell := WorkCellRect(w.Rect(), row, col)
-			if p.Incapable.Enabled(work.Type(col)) {
-				drawHatch(screen, cell)
-				continue
-			}
-			if pr := WorkPriority(p, col); pr > 0 {
-				// brighter for more urgent work
-				gfx.FillRect(screen, cell.X, cell.Y, cell.W, cell.H,
-					uikit.LerpRGBA(uikit.SliderFill, uikit.BtnSelected, float64(pr-1)/3), false)
-			}
-			w.drawSkill(screen, p, col, cell)
-			gfx.Text(screen, v, float64(cell.X+cell.W/2), gfx.CenterTop(float64(cell.Y), float64(cell.H), gfx.Body), gfx.TextStyle{Size: gfx.Body.Size, Align: gfx.AlignCenter})
 		}
 	}
 }
 
-// drawSkill adds the related skill's level (left) and the passion glyph
-// (right) to a live Work cell. Work with no skill shows neither.
-func (w Work) drawSkill(screen *ebiten.Image, p game.PawnView, col int, cell gfx.Rect) {
-	if col >= len(WorkColSkill) || !WorkColSkill[col].OK {
+// drawCell draws one cell: the box tinted by the colonist's skill level, the
+// priority number centred in it (its colour is the urgency), the passion
+// glyph in the gutter; incapable work is hatched.
+func (w Work) drawCell(screen *ebiten.Image, p game.PawnView, slot gfx.Rect, col, mx, my int) {
+	box := workBoxRect(slot)
+	if p.Incapable.Enabled(work.Type(col)) {
+		drawHatch(screen, box)
 		return
 	}
-	sk := WorkColSkill[col].Skill
-	ls := gfx.Small
-	ls.Color = uikit.TextDim
-	gfx.Text(screen, strconv.Itoa(int(p.SkillLv[sk])), float64(cell.X+3), gfx.CenterTop(float64(cell.Y), float64(cell.H), ls), ls)
-	if ps := int(p.Passion[sk]); ps > 0 {
-		w.sh.DrawPassion(screen, ps, float64(cell.Right()-13), float64(cell.Y)+(float64(cell.H)-10)/2, 10, ls, float64(cell.Y)+3)
+	level, passion := 0, 0
+	if col < len(WorkColSkill) && WorkColSkill[col].OK {
+		sk := WorkColSkill[col].Skill
+		level, passion = int(p.SkillLv[sk]), int(p.Passion[sk])
+	}
+	fill, border := workTint(level), uikit.BtnBorder
+	if slot.Hit(mx, my) {
+		border = uikit.Accent
+	}
+	uikit.FillRect(screen, box, fill)
+	uikit.StrokeRect(screen, box, border)
+	st := gfx.TextStyle{Size: gfx.Body.Size, Align: gfx.AlignCenter, Color: uikit.TextDim}
+	if pr := WorkPriority(p, col); pr > 0 {
+		st.Color = workNumColor(pr)
+	}
+	gfx.Text(screen, WorkCellValue(p, col), float64(box.X+box.W/2), gfx.CenterTop(float64(box.Y), float64(box.H), st), st)
+	if passion > 0 {
+		ls := gfx.Small
+		ls.Color = uikit.TextDim
+		g := workGlyphRect(slot)
+		w.sh.DrawPassion(screen, passion, float64(g.X), float64(g.Y), workGlyph, ls, gfx.CenterTop(float64(g.Y), workGlyph, ls))
 	}
 }
 

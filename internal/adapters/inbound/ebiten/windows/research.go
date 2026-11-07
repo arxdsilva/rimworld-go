@@ -36,7 +36,9 @@ import (
 
 // The window's wanted height is researchHeightShare of the room above the
 // tab bar, at least researchMinH (UIS-065: 731 of 1046 measured, one data
-// point); its width is the room left of the right column.
+// point); its width is the screen's: the root sets FullWidthWindow while
+// Research is open, so the layout gives it the whole width and hides the
+// right column.
 const (
 	researchHeightShare = 0.68
 	researchMinH        = 480
@@ -53,7 +55,7 @@ func (w Research) LockedBy(key string) string {
 // want is the Research window's wanted size.
 func (w Research) want() (float32, float32) {
 	sw, sh := w.sh.Size()
-	return float32(sw - hudlayout.RightW - hudlayout.HudMargin), max(researchMinH, researchHeightShare*float32(sh-hudlayout.TabsH))
+	return float32(sw), max(researchMinH, researchHeightShare*float32(sh-hudlayout.TabsH))
 }
 
 // storyReader is the optional reader of the colony's story settings (a

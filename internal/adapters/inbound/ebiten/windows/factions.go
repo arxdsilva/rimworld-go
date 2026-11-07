@@ -3,6 +3,8 @@ package windows
 import (
 	"fmt"
 	"image/color"
+	"strings"
+	"unicode"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -22,11 +24,9 @@ import (
 const (
 	ColFacModalID = "colony.factions"
 	colFacW       = 1010 // UIS-068
-	colFacListMax = 290  // the table's height cap; more rows scroll
 	colFacChartH  = 128
 	colFacAxisW   = 40
-	colFacRowH    = 34  // the table's row, wizard.FacRowH (its owner: the wizard)
-	colFacDetailH = 190 // the picked faction's chart and events under the table
+	ColFacListID  = "colfac.list"
 )
 
 // Toggle opens the window, or closes it when it is the open one.
@@ -45,21 +45,32 @@ func (w Factions) Launch() {
 	})
 }
 
-// height is the window's outer height: the inner margins, the table (capped,
-// then it scrolls) and the detail under it.
+// height is the window's outer height (UIS-068): the header, one 80 px row
+// per faction and the foot. The layout caps it to the room above the tab
+// bar; the rows then scroll.
 func (w Factions) height() float32 {
 	n := 0
 	if w.live() {
 		n = len(w.sh.Factions())
 	}
-	return float32(2*hudlayout.WindowPad) + min(float32(uikit.TableHeaderH+n*colFacRowH+4), colFacListMax) + 10 + colFacDetailH
+	return float32(hudlayout.FactionHeadH + n*hudlayout.FactionRowH + hudlayout.FactionFootH)
 }
 
 // size is the window's outer size.
 func (w Factions) size() (float32, float32) { return colFacW, w.height() }
 
-// body declares the table over the live rows and the
-// selected faction's detail under it.
+// factionRegions splits the body: the header (the picked faction's chart),
+// the scrolling rows and the foot. FactionHeadH and FactionFootH are outer
+// heights, so the body's WindowPad is taken off each.
+func factionRegions(body gfx.Rect) (head, rows, foot gfx.Rect) {
+	head = gfx.Rect{X: body.X, Y: body.Y, W: body.W, H: hudlayout.FactionHeadH - hudlayout.WindowPad}
+	foot = gfx.Rect{X: body.X, Y: body.Bottom() - (hudlayout.FactionFootH - hudlayout.WindowPad), W: body.W, H: hudlayout.FactionFootH - hudlayout.WindowPad}
+	rows = gfx.Rect{X: body.X, Y: head.Bottom(), W: body.W - (hudlayout.FactionGutter - uikit.ScrollBarW), H: max(0, foot.Y-head.Bottom())}
+	return head, rows, foot
+}
+
+// body declares the picked faction's header, the scrolling rows over the
+// live factions and the foot hint.
 func (w Factions) body(body gfx.Rect, sel *int) {
 	if !w.live() {
 		return
@@ -69,51 +80,143 @@ func (w Factions) body(body gfx.Rect, sel *int) {
 		return
 	}
 	*sel = max(0, min(*sel, len(rows)-1))
-	rest := w.sh.FactionsTable(body, colFacListMax, sel)
-	w.detail(gfx.Rect{X: rest.X, Y: rest.Y + 10, W: rest.W, H: rest.H - 10}, rows[*sel])
+	head, list, foot := factionRegions(body)
+	w.header(head, rows[*sel])
+	w.kit().List(ColFacListID, list, len(rows), sel, uikit.ListSpec{
+		RowH: hudlayout.FactionRowH,
+		Draw: func(dst *ebiten.Image, i int, row gfx.Rect, hover, selected bool) {
+			w.drawRow(dst, rows[i], row, i, hover, selected)
+		},
+		Tip: func(i int) string { return rows[i].Tip },
+	})
+	hs := uikit.DimText()
+	w.kit().Label(foot.X, float32(gfx.CenterTop(float64(foot.Y), float64(foot.H), hs)), uikit.FitText(w.sh.T("Click a faction to see how its goodwill moved."), hs, foot.W), hs)
 }
 
-// detail is the picked faction's goodwill history and events.
-func (w Factions) detail(r gfx.Rect, row Faction) {
+// header is the picked faction's name, standing, goodwill chart and the
+// events that moved it (the old 190 px detail pane, folded into 150).
+func (w Factions) header(r gfx.Rect, row Faction) {
 	u := w.kit()
-	left, right := r.SplitH(300)
-	chartR, evR := right.SplitH(right.W * 0.56)
+	left, rest := r.SplitH(300)
+	chartR, evR := rest.SplitH(rest.W * 0.56)
 	left.W -= 12
 
 	hs := gfx.Title
 	hs.Color = uikit.Heading
 	y := left.Y
-	w.kit().Label(left.X, y, uikit.FitText(row.Name, hs, left.W), hs)
+	u.Label(left.X, y, uikit.FitText(row.Name, hs, left.W), hs)
 	y += float32(gfx.LineH(hs)) + 2
-	w.kit().Label(left.X, y, uikit.FitText(row.TypeLabel+", "+row.Tech, uikit.DimText(), left.W), uikit.DimText())
+	u.Label(left.X, y, uikit.FitText(row.TypeLabel+", "+row.Tech, uikit.DimText(), left.W), uikit.DimText())
 	y += 20
 	rs := gfx.Label
 	rs.Color = row.Color
-	w.kit().Label(left.X, y, lang.Tf(w.sh, "%s  (goodwill %s)", row.Standing, goodwillText(row.Goodwill)), rs)
+	u.Label(left.X, y, uikit.FitText(lang.Tf(w.sh, "%s  (goodwill %s)", row.Standing, goodwillText(row.Goodwill)), rs, left.W), rs)
 	y += 22
 	ds := gfx.Small
 	ds.Color = uikit.TextDim
-	uikit.TextLines(w.kit(), left.X, y, left.W, row.Tip, ds)
+	for i, l := range gfx.WrapPx(row.Tip, ds, float64(left.W)) {
+		if y+float32(gfx.LineH(ds))*float32(i+1) > r.Bottom() {
+			break
+		}
+		u.Label(left.X, y+float32(gfx.LineH(ds))*float32(i), l, ds)
+	}
 
-	// The sparkline.
 	capR := gfx.Rect{X: chartR.X + 12, Y: chartR.Y, W: chartR.W - 12, H: 18}
-	w.kit().Label(capR.X, capR.Y, w.sh.T("Goodwill, last 60 days"), gfx.Label)
-	plot := gfx.Rect{X: capR.X + colFacAxisW, Y: capR.Y + 24, W: capR.W - colFacAxisW - 4, H: colFacChartH}
+	u.Label(capR.X, capR.Y, w.sh.T("Goodwill, last 60 days"), gfx.Label)
+	ls := gfx.Small
+	plot := gfx.Rect{X: capR.X + colFacAxisW, Y: capR.Y + 22, W: capR.W - colFacAxisW - 4, H: r.Bottom() - capR.Y - 22 - float32(gfx.LineH(ls)) - 6}
 	hist, relc := row.History, goodwillLineColor(row)
 	u.Queue(func(dst *ebiten.Image) { drawGoodwillChart(w.sh, dst, plot, hist, relc) })
-	w.kit().Tip("colfac.chart", plot, w.sh.T("Goodwill history\nOne point a day, from -100 (hostile) to +100 (friendly). Raids defeated and gifts move it; it drifts back toward the faction's usual mood."))
+	u.Tip("colfac.chart", plot, w.sh.T("Goodwill history\nOne point a day, from -100 (hostile) to +100 (friendly). Raids defeated and gifts move it; it drifts back toward the faction's usual mood."))
 
-	// The events.
 	ex := evR.X + 12
-	w.kit().Label(ex, evR.Y, w.sh.T("Recent events"), gfx.Label)
-	ey := evR.Y + 24
+	u.Label(ex, evR.Y, w.sh.T("Recent events"), gfx.Label)
+	ey := evR.Y + 22
 	if len(row.Events) == 0 {
-		w.kit().Label(ex, ey, w.sh.T("Nothing has moved their goodwill yet."), uikit.DimText())
+		u.Label(ex, ey, uikit.FitText(w.sh.T("Nothing has moved their goodwill yet."), uikit.DimText(), evR.W-12), uikit.DimText())
 		return
 	}
+	es := gfx.Small
 	for i := len(row.Events) - 1; i >= 0; i-- { // newest first
-		ey += uikit.TextLines(w.kit(), ex, ey, evR.W-24, "- "+row.Events[i], gfx.Body) + 3
+		for _, l := range gfx.WrapPx("- "+row.Events[i], es, float64(evR.W-24)) {
+			if ey+float32(gfx.LineH(es)) > r.Bottom() {
+				return
+			}
+			u.Label(ex, ey, l, es)
+			ey += float32(gfx.LineH(es))
+		}
 	}
+}
+
+// Faction row columns, right to left (offsets from the row's right edge).
+const (
+	facColSettleW = 110
+	facColGoodW   = 110
+	facColRelW    = 150
+	facIconSize   = 48
+)
+
+// drawRow draws one 80 px faction row: striped, an emblem disc, name, type,
+// leader, then relation, goodwill and settlements.
+func (w Factions) drawRow(dst *ebiten.Image, f Faction, row gfx.Rect, i int, hover, selected bool) {
+	switch {
+	case selected:
+		uikit.FillRect(dst, row, uikit.BtnSelected)
+	case hover:
+		uikit.FillRect(dst, row, uikit.Btn)
+	default:
+		uikit.RowStripe(dst, row, i)
+	}
+	pad := float32(10)
+	cy := row.Y + row.H/2
+	gfx.FillCircle(dst, row.X+pad+facIconSize/2, cy, facIconSize/2, f.Color, true)
+	is := gfx.Title
+	is.Color, is.Align = uikit.Field, gfx.AlignCenter
+	initial := facInitial(f.Name)
+	gfx.Text(dst, initial, float64(row.X+pad+facIconSize/2), gfx.CenterTop(float64(cy)-facIconSize/2, facIconSize, is), is)
+
+	right := row.Right() - pad
+	settle := gfx.Rect{X: right - facColSettleW, Y: row.Y, W: facColSettleW, H: row.H}
+	good := gfx.Rect{X: settle.X - facColGoodW, Y: row.Y, W: facColGoodW, H: row.H}
+	rel := gfx.Rect{X: good.X - facColRelW, Y: row.Y, W: facColRelW, H: row.H}
+	tx := row.X + pad + facIconSize + 14
+	tw := rel.X - tx - 8
+
+	ns := gfx.Title
+	ns.Color = uikit.Heading
+	ds := uikit.DimText()
+	lines := []struct {
+		s  string
+		st gfx.TextStyle
+	}{
+		{f.Name, ns},
+		{f.TypeLabel + ", " + f.Tech, ds},
+	}
+	if f.Leader != "" {
+		lines = append(lines, struct {
+			s  string
+			st gfx.TextStyle
+		}{f.Leader, ds})
+	}
+	total := 0.0
+	for _, l := range lines {
+		total += gfx.LineH(l.st)
+	}
+	ty := float64(cy) - total/2
+	for _, l := range lines {
+		h := gfx.LineH(l.st)
+		gfx.Text(dst, uikit.FitText(l.s, l.st, tw), float64(tx), gfx.CenterTop(ty, h, l.st), l.st)
+		ty += h
+	}
+
+	cell := func(c gfx.Rect, s string, st gfx.TextStyle) {
+		gfx.Text(dst, uikit.FitText(s, st, c.W-8), float64(c.X), gfx.CenterTop(float64(c.Y), float64(c.H), st), st)
+	}
+	rs := gfx.Label
+	rs.Color = f.Color
+	cell(rel, f.Standing, rs)
+	cell(good, goodwillText(f.Goodwill), gfx.Label)
+	cell(settle, fmt.Sprint(f.Settlements), gfx.Label)
 }
 
 // goodwillLineColor is the colour of a faction's history line.
@@ -200,3 +303,16 @@ var (
 	chartGrid = color.NRGBA{R: uikit.PanelBorder.R, G: uikit.PanelBorder.G, B: uikit.PanelBorder.B, A: 0x80}
 	chartZero = color.NRGBA{R: uikit.TextDim.R, G: uikit.TextDim.G, B: uikit.TextDim.B, A: 0xB0}
 )
+
+// facInitial is the letter on a faction's disc: the name's first letter,
+// upper case, after a leading article ("the Lone Drift" shows "L").
+func facInitial(name string) string {
+	name = strings.TrimSpace(name)
+	if rest, ok := strings.CutPrefix(strings.ToLower(name), "the "); ok && rest != "" {
+		name = name[len(name)-len(rest):]
+	}
+	for _, r := range name {
+		return string(unicode.ToUpper(r))
+	}
+	return "?"
+}

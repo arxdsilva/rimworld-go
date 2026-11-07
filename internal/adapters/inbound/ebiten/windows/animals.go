@@ -50,17 +50,22 @@ const (
 	dietW      = 120
 )
 
-// Column x offsets of the Wild list.
+const animalsRowTop = 60 // Colony list: pad 18, the 24-high button row, the column heads
+
+// The Wild list (UIS-064) is WildW wide with a WildHeadH header; its rows are
+// species, drawn by wildRowRect. x offsets from the window's left:
 const (
-	wildLabel     = 52
-	wildCount     = 190
-	wildDiet      = 240
-	wildPred      = 340
-	wildTame      = 392
-	wildMeat      = 490
-	wildMarks     = 576
-	wildBtn       = 700 // Hunt all, Tame one, Cancel
-	animalsRowTop = 60  // pad 18, the 24-high button row, the column heads
+	wildIconX    = 16
+	wildLabelX   = 50
+	wildCountX   = 164
+	wildTameX    = 204
+	wildWarnX    = 284
+	wildBtnGap   = 4
+	wildHuntW    = 66
+	wildTameW    = 70
+	wildCancelW  = 54
+	wildPad      = 6 // between the buttons and the scroll bar
+	wildScrollID = "animals.wild.scroll"
 )
 
 // animalCol is a column of the Colony or Wild list that is left out when
@@ -74,12 +79,10 @@ type animalCol struct{ x, w int }
 var (
 	colonyDrops = []animalCol{{colDoing, colBtn - colDoing}, {colTrain, colDoing - colTrain}, {colPreg, colHealth - colPreg},
 		{colProduct, colPreg - colProduct}, {colAge, colFood - colAge}, {colSex, colAge - colSex}, {colDiet, dietW + 6}}
-	wildDrops = []animalCol{{wildMarks, wildBtn - wildMarks}, {wildMeat, wildMarks - wildMeat}, {wildDiet, wildPred - wildDiet}}
 )
 
 const (
 	colonyFullW = colDiet + dietW + 12
-	wildFullW   = wildBtn + 272 + 12
 )
 
 // animalCols are the columns of a list left out to fit a window.
@@ -88,10 +91,10 @@ type animalCols []animalCol
 // animalColsFor is the columns the Colony (or Wild) list leaves out in a
 // window w px wide.
 func animalColsFor(w float32, wild bool) animalCols {
-	drops, full := colonyDrops, colonyFullW
 	if wild {
-		drops, full = wildDrops, wildFullW
+		return nil // UIS-064: the Wild list is WildW wide and keeps one column set
 	}
+	drops, full := colonyDrops, colonyFullW
 	var out animalCols
 	for _, d := range drops {
 		if float32(full) <= w {
@@ -128,13 +131,15 @@ func (c animalCols) at(x int) int {
 // want is the Animals (or Wildlife) window's wanted size: the full
 // layout, and a row per tame animal or wild species.
 func (w Animals) want() (float32, float32) {
-	width, rows := colonyFullW, 0
-	if w.Wild {
-		width, rows = wildFullW, len(w.wildlife())
-	} else if w.live() {
+	if w.Wild { // UIS-064: 515 wide, down to the tab bar (the layout caps the height)
+		_, sh := w.sh.Size()
+		return hudlayout.WildW, float32(sh)
+	}
+	rows := 0
+	if w.live() {
 		rows = len(w.tame())
 	}
-	return float32(width), float32(max(160, animalsRowTop+rows*animalRowH+hudlayout.WindowPad))
+	return float32(colonyFullW), float32(max(160, animalsRowTop+rows*animalRowH+hudlayout.WindowPad))
 }
 
 // wildlife is the game's wild species list, read again only when the
@@ -163,30 +168,19 @@ func (w Animals) WildRow(species string) (game.WildlifeRow, bool) {
 func (w Animals) Buttons() []uikit.Button {
 	r := w.Rect()
 	cols := animalColsFor(r.W, w.Wild)
+	hy := w.headBtnY(r)
 	out := []uikit.Button{
-		{ID: "animals.view.colony", Label: w.sh.T("Colony"), X: r.X + r.W - 192, Y: r.Y + hudlayout.WindowPad, W: 84, H: 24, Selected: !w.Wild,
+		{ID: "animals.view.colony", Label: w.sh.T("Colony"), X: r.X + r.W - 192, Y: hy, W: 84, H: 24, Selected: !w.Wild,
 			Tip: w.sh.T("Colony animals\nTame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector.")},
-		{ID: "animals.view.wild", Label: w.sh.T("Wild"), X: r.X + r.W - 102, Y: r.Y + hudlayout.WindowPad, W: 84, H: 24, Selected: w.Wild,
+		{ID: "animals.view.wild", Label: w.sh.T("Wild"), X: r.X + r.W - 102, Y: hy, W: 84, H: 24, Selected: w.Wild,
 			Tip: w.sh.T("Wild animals\nWild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal.")},
 	}
 	if !w.Wild {
-		out = append(out, uikit.Button{ID: AutoSlaughterBtnID, Label: w.sh.T("Auto-slaughter"), X: r.X + r.W - 332, Y: r.Y + hudlayout.WindowPad, W: 130, H: 24,
+		out = append(out, uikit.Button{ID: AutoSlaughterBtnID, Label: w.sh.T("Auto-slaughter"), X: r.X + r.W - 332, Y: hy, W: 130, H: 24,
 			Tip: w.sh.T("Auto-slaughter\nKeep each tame species at a herd size: handlers slaughter the surplus once a day.")})
 	}
 	if w.Wild {
-		for i, row := range w.wildlife() {
-			y := r.Y + animalsRowTop + float32(i*animalRowH)
-			if y+animalRowH > r.Y+r.H {
-				break
-			}
-			out = append(out,
-				uikit.Button{ID: "animals.focus." + row.Species, X: r.X + hudlayout.WindowPad, Y: y, W: float32(cols.at(wildBtn) - 2*hudlayout.WindowPad), H: animalRowH - 2},
-				uikit.Button{ID: "animals.wild.hunt." + row.Species, Label: w.sh.T("Hunt all"), X: r.X + float32(cols.at(wildBtn)), Y: y, W: 90, H: 24, Selected: row.Hunted > 0},
-				uikit.Button{ID: "animals.wild.tame." + row.Species, Label: w.sh.T("Tame one"), X: r.X + float32(cols.at(wildBtn)) + 96, Y: y, W: 90, H: 24, Selected: row.TameMarked > 0},
-				uikit.Button{ID: "animals.wild.cancel." + row.Species, Label: w.sh.T("Cancel"), X: r.X + float32(cols.at(wildBtn)) + 192, Y: y, W: 80, H: 24},
-			)
-		}
-		return out
+		return append(out, w.wildButtons(r)...)
 	}
 	for i, an := range w.tame() {
 		y := r.Y + animalsRowTop + float32(i*animalRowH)
@@ -350,7 +344,11 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 	if w.Wild {
 		title = lang.Tf(w.sh, "Wildlife  (%d species)", len(w.wildlife()))
 	}
-	gfx.Text(screen, gfx.Ellipsize(title, gfx.Label, float64(r.W)-2*hudlayout.WindowPad-340), float64(r.X)+hudlayout.WindowPad, gfx.CenterTop(float64(r.Y)+hudlayout.WindowPad, 24, gfx.Label), gfx.Label)
+	titleW := float64(r.W) - 2*hudlayout.WindowPad - 340
+	if w.Wild {
+		titleW = float64(r.W) - hudlayout.WindowPad - 210
+	}
+	gfx.Text(screen, gfx.Ellipsize(title, gfx.Label, titleW), float64(r.X)+hudlayout.WindowPad, gfx.CenterTop(float64(w.headBtnY(r)), 24, gfx.Label), gfx.Label)
 	mx, my := w.sh.Cursor()
 	if w.Wild {
 		w.drawWild(screen, r)
@@ -424,44 +422,121 @@ func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 	}
 }
 
-func (w Animals) drawWild(screen *ebiten.Image, r uikit.Button) {
-	x0, y0 := int(r.X), int(r.Y)
-	cols := animalColsFor(r.W, true)
-	head := y0 + animalsRowTop - 18
-	for _, h := range []struct {
-		x int
-		s string
-	}{{wildLabel, w.sh.T("Species")}, {wildCount, w.sh.T("Count")}, {wildDiet, w.sh.T("Diet")}, {wildPred, w.sh.T("Pred.")}, {wildTame, w.sh.T("Tame chance")}, {wildMeat, w.sh.T("Meat each")}, {wildMarks, w.sh.T("Marked")}} {
-		if cols.shown(h.x) {
-			uikit.DrawLabel(screen, x0+cols.at(h.x), head, h.s)
-		}
+// headBtnY is the top of the header row's 24 px controls: the Wild list
+// has a WildHeadH band, the Colony list the window pad.
+func (w Animals) headBtnY(r uikit.Button) float32 {
+	if w.Wild {
+		return r.Y + (hudlayout.WildHeadH-24)/2
 	}
-	rows := w.wildlife()
-	for i, row := range rows {
-		y := y0 + animalsRowTop + i*animalRowH
-		if y+animalRowH > int(r.Y+r.H) {
+	return r.Y + hudlayout.WindowPad
+}
+
+// winRect is the Animals window as a gfx rect.
+func (w Animals) winRect() gfx.Rect {
+	r := w.Rect()
+	return gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
+}
+
+// wildListRect is where the wild rows scroll: under the header, down to the
+// window's bottom, scroll track included.
+func wildListRect(win gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: win.X, Y: win.Y + hudlayout.WildHeadH, W: win.W, H: max(0, win.H-hudlayout.WildHeadH)}
+}
+
+// wildRowRect is row i of the wild list at scroll offset off: the single
+// source of the draw, the hit test, the buttons and the arrow (UIS-064).
+func wildRowRect(win gfx.Rect, i int, off float32) gfx.Rect {
+	l := wildListRect(win)
+	return gfx.Rect{X: l.X, Y: l.Y + float32(i*animalRowH) - off, W: l.W - uikit.ScrollBarW, H: animalRowH}
+}
+
+// wildOff is the wild list's scroll offset this frame.
+func (w Animals) wildOff() float32 {
+	if k := w.kit(); k != nil {
+		return k.Scroll[wildScrollID]
+	}
+	return 0
+}
+
+// wildBtnRects are a wild row's Hunt, Tame and Cancel buttons, right to left
+// from the scroll bar.
+func wildBtnRects(row gfx.Rect) (hunt, tame, cancel gfx.Rect) {
+	y := row.Y + (row.H-24)/2
+	x := row.Right() - wildPad - wildCancelW
+	cancel = gfx.Rect{X: x, Y: y, W: wildCancelW, H: 24}
+	x -= wildBtnGap + wildTameW
+	tame = gfx.Rect{X: x, Y: y, W: wildTameW, H: 24}
+	x -= wildBtnGap + wildHuntW
+	hunt = gfx.Rect{X: x, Y: y, W: wildHuntW, H: 24}
+	return hunt, tame, cancel
+}
+
+// wildRowVisible reports the whole row lies inside the list (the rows cut by
+// an edge carry no buttons).
+func wildRowVisible(win, row gfx.Rect) bool {
+	l := wildListRect(win)
+	return row.Y >= l.Y && row.Bottom() <= l.Bottom()
+}
+
+// wildTip is the row's hover card: the columns the 515 px window leaves out.
+func (w Animals) wildTip(row game.WildlifeRow) string {
+	s := lang.Tf(w.sh, "%s\nDiet: %s\nMeat each: %d\nMarked: hunt %d, tame %d\nClick to look at one.", row.Label, row.Diet, row.Meat, row.Hunted, row.TameMarked)
+	if row.Predator {
+		s += "\n" + w.sh.T("Predator: it hunts other animals.")
+	}
+	return s
+}
+
+// wildButtons are the visible wild rows' buttons: the look-at row, then Hunt
+// all, Tame one and Cancel.
+func (w Animals) wildButtons(r uikit.Button) []uikit.Button {
+	win, off := w.winRect(), w.wildOff()
+	var out []uikit.Button
+	for i, row := range w.wildlife() {
+		rr := wildRowRect(win, i, off)
+		if rr.Y > wildListRect(win).Bottom() {
 			break
 		}
-		w.sh.DrawAnimalIcon(screen, game.AnimalView{Species: row.Species, Label: row.Label}, float64(r.X)+16, float64(y), 26)
-		ty := y + 6
-		uikit.DrawLabelClip(screen, x0+wildLabel, ty, wildCount-wildLabel-6, row.Label)
-		uikit.DrawLabelClip(screen, x0+cols.at(wildCount), ty, wildDiet-wildCount-6, lang.Tf(w.sh, "x%d", row.Count))
-		if cols.shown(wildDiet) {
-			uikit.DrawLabelClip(screen, x0+cols.at(wildDiet), ty, wildPred-wildDiet-6, row.Diet)
+		if !wildRowVisible(win, rr) {
+			continue
 		}
+		hunt, tame, cancel := wildBtnRects(rr)
+		out = append(out,
+			uikit.Button{ID: "animals.focus." + row.Species, X: rr.X + wildPad, Y: rr.Y, W: hunt.X - wildBtnGap - rr.X - wildPad, H: rr.H - 2, Tip: w.wildTip(row)},
+			uikit.Button{ID: "animals.wild.hunt." + row.Species, Label: w.sh.T("Hunt all"), X: hunt.X, Y: hunt.Y, W: hunt.W, H: hunt.H, Selected: row.Hunted > 0},
+			uikit.Button{ID: "animals.wild.tame." + row.Species, Label: w.sh.T("Tame one"), X: tame.X, Y: tame.Y, W: tame.W, H: tame.H, Selected: row.TameMarked > 0},
+			uikit.Button{ID: "animals.wild.cancel." + row.Species, Label: w.sh.T("Cancel"), X: cancel.X, Y: cancel.Y, W: cancel.W, H: cancel.H},
+		)
+	}
+	return out
+}
+
+func (w Animals) drawWild(screen *ebiten.Image, r uikit.Button) {
+	win, off := w.winRect(), w.wildOff()
+	l := wildListRect(win)
+	sub := gfx.ClipTo(screen, gfx.Rect{X: l.X, Y: l.Y, W: l.W - uikit.ScrollBarW, H: l.H})
+	ls := gfx.Body
+	rows := w.wildlife()
+	for i, row := range rows {
+		rr := wildRowRect(win, i, off)
+		if rr.Bottom() < l.Y || rr.Y > l.Bottom() {
+			continue
+		}
+		uikit.RowStripe(sub, rr, i)
+		w.sh.DrawAnimalIcon(sub, game.AnimalView{Species: row.Species, Label: row.Label}, float64(rr.X+wildIconX), float64(rr.Y+2), 26)
+		ty := gfx.CenterTop(float64(rr.Y), float64(rr.H), ls)
+		put := func(x, maxW float32, s string) {
+			gfx.Text(sub, gfx.Ellipsize(s, ls, float64(maxW)), float64(rr.X+x), ty, ls)
+		}
+		put(wildLabelX, wildCountX-wildLabelX-6, row.Label)
+		put(wildCountX, wildTameX-wildCountX-6, lang.Tf(w.sh, "x%d", row.Count))
+		put(wildTameX, wildWarnX-wildTameX-4, lang.Tf(w.sh, "%d%% tame", row.TameChance))
 		if row.Predator {
-			drawWarning(screen, float32(x0+cols.at(wildPred)+6), float32(y+13))
-		}
-		uikit.DrawLabelClip(screen, x0+cols.at(wildTame), ty, wildMeat-wildTame-6, fmt.Sprintf("%d%%", row.TameChance))
-		if cols.shown(wildMeat) {
-			uikit.DrawLabelClip(screen, x0+cols.at(wildMeat), ty, wildMarks-wildMeat-6, strconv.Itoa(row.Meat))
-		}
-		if cols.shown(wildMarks) {
-			uikit.DrawLabelClip(screen, x0+cols.at(wildMarks), ty, wildBtn-wildMarks-8, lang.Tf(w.sh, "hunt %d, tame %d", row.Hunted, row.TameMarked))
+			drawWarning(sub, rr.X+wildWarnX+6, rr.Y+rr.H/2)
 		}
 	}
 	if len(rows) == 0 {
-		uikit.DrawLabel(screen, x0+52, y0+animalsRowTop, w.sh.T("No wild animals in sight."))
+		uikit.DrawLabel(screen, int(l.X)+wildLabelX, int(l.Y)+6, w.sh.T("No wild animals in sight."))
 	}
 }
 
@@ -626,7 +701,13 @@ func animalAreaCell(tr lang.Tr, an game.AnimalView, area string) string {
 // Declare declares the Area dropdown of every visible non-penned
 // animal row (the AREA-UI selector, keyed by the animal's id).
 func (w Animals) Declare(sw, sh int) {
-	if !w.live() || !w.Open || w.Mode != "animals" || w.Wild {
+	if !w.live() || !w.Open || w.Mode != "animals" {
+		return
+	}
+	if w.Wild { // UIS-064: the rows scroll in a 12 px track
+		if l := wildListRect(w.winRect()); !l.Empty() {
+			w.kit().ScrollArea(wildScrollID, l, float32(len(w.wildlife())*animalRowH), uikit.ScrollOpts{Step: animalRowH * 3})
+		}
 		return
 	}
 	r := w.Rect()
@@ -681,19 +762,22 @@ func (w Animals) hoveredWildRow() (game.WildlifeRow, float32, bool) {
 	if !w.Open || !w.Wild || !w.live() {
 		return game.WildlifeRow{}, 0, false
 	}
-	r := w.Rect()
+	win, off := w.winRect(), w.wildOff()
 	mx, my := w.sh.Cursor()
-	fy := float32(my) - (r.Y + animalsRowTop)
-	if float32(mx) < r.X || float32(mx) >= r.X+r.W || fy < 0 {
+	l := wildListRect(win)
+	if !l.Hit(mx, my) || float32(mx) >= l.Right()-uikit.ScrollBarW {
 		return game.WildlifeRow{}, 0, false
 	}
-	i := int(fy) / animalRowH
 	rows := w.wildlife()
-	y := r.Y + animalsRowTop + float32(i*animalRowH)
-	if i >= len(rows) || y+animalRowH > r.Y+r.H {
+	i := int((float32(my) - l.Y + off) / animalRowH)
+	if i < 0 || i >= len(rows) {
 		return game.WildlifeRow{}, 0, false
 	}
-	return rows[i], y + animalRowH/2, true
+	rr := wildRowRect(win, i, off)
+	if !rr.Hit(mx, my) {
+		return game.WildlifeRow{}, 0, false
+	}
+	return rows[i], rr.Y + rr.H/2, true
 }
 
 // WildArrow is the arrow of the hovered Wild row (CTL-019): from the row's

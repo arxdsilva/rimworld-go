@@ -120,12 +120,6 @@ func (w *Flow) FactionColumns(rows []FacRow) []uikit.TableCol {
 	return landingPage{w}.factionColumns(rows)
 }
 
-// FactionsTable declares the Factions table (also the colony's Factions
-// window); pick, when set, runs for a row picked.
-func (w *Flow) FactionsTable(r gfx.Rect, rows []FacRow, sel *int, pick func(FacRow)) {
-	landingPage{w}.factionsTable(r, rows, sel, pick)
-}
-
 // BackstoryLine is "Childhood: Title" with the description as a tooltip
 // (also the colony's Bio tab).
 func (w *Flow) BackstoryLine(x, y, width float32, label, title, desc, id string) {

@@ -11,7 +11,6 @@ import (
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
-	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"strings"
 	"testing"
 
@@ -86,8 +85,8 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 	if a.uiModalTop() != windows.ColFacModalID {
 		t.Fatalf("top modal = %q, want %q", a.uiModalTop(), windows.ColFacModalID)
 	}
-	if !hasWidget(a, wizard.FacTableID+".body") {
-		t.Fatal("the window has no faction table")
+	if !hasWidget(a, windows.ColFacListID+".0") { // UIS-068: the window's own scrolling rows, not the wizard's table
+		t.Fatal("the window has no faction rows")
 	}
 
 	rows := colonyFactionRows(a.renderer.game.Factions())

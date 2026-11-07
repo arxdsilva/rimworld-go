@@ -3,6 +3,9 @@ package windows
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -38,7 +41,7 @@ func openWild(animals ...game.AnimalView) (*arrowShell, Animals) {
 	w.Open, w.Mode, w.Wild = true, "animals", true
 	a := w.Animals()
 	r := a.Rect()
-	sh.mx, sh.my = int(r.X)+40, int(r.Y)+animalsRowTop+animalRowH/2
+	sh.mx, sh.my = int(r.X)+40, int(r.Y)+hudlayout.WildHeadH+animalRowH/2
 	return sh, a
 }
 
@@ -87,13 +90,71 @@ func TestWildRowArrowNeedsAVisibleAnimal(t *testing.T) {
 		t.Fatal("no arrow without a hovered row")
 	}
 	r := a.Rect()
-	sh.mx, sh.my = int(r.X)+40, int(r.Y)+animalsRowTop+animalRowH+animalRowH/2 // the boar row: none of it
+	sh.mx, sh.my = int(r.X)+40, int(r.Y)+hudlayout.WildHeadH+animalRowH+animalRowH/2 // the boar row: none of it
 	if _, _, _, _, ok := a.WildArrow(); ok {
 		t.Fatal("a species with no animal shows no arrow")
 	}
 	a.Wild = false
-	sh.mx, sh.my = int(r.X)+40, int(r.Y)+animalsRowTop+animalRowH/2
+	sh.mx, sh.my = int(r.X)+40, int(r.Y)+hudlayout.WildHeadH+animalRowH/2
 	if _, _, _, _, ok := a.WildArrow(); ok {
 		t.Fatal("the Colony list has no arrow")
 	}
 }
+
+// TestWildRowsHitAtEveryScrollOffset (UIS-064): at every scroll offset the
+// row under the cursor, the row's buttons and the arrow's row all come from
+// wildRowRect, so they name the same species.
+func TestWildRowsHitAtEveryScrollOffset(t *testing.T) {
+	t.Parallel()
+	var rows []game.WildlifeRow
+	for i := 0; i < 40; i++ {
+		rows = append(rows, game.WildlifeRow{Species: "sp" + uitoa(uint64(i)), Label: "Sp", Count: 1})
+	}
+	fs := &fakeShell{}
+	sh := &arrowShell{fakeShell: fs}
+	fs.env.Game = wildReader{rows: rows}
+	w := New(sh)
+	w.Open, w.Mode, w.Wild = true, "animals", true
+	a := w.Animals()
+	win := a.winRect()
+	list := wildListRect(win)
+	fs.kit = uikit.New(fakeHost{fs})
+	fs.kit.Scroll = map[string]float32{}
+	if ww(a) != hudlayout.WildW {
+		t.Fatalf("wild window wants %v wide", ww(a))
+	}
+	maxOff := float32(len(rows)*animalRowH) - list.H
+	if maxOff <= 0 {
+		t.Fatalf("40 rows fit in %v", list.H)
+	}
+	for off := float32(0); off <= maxOff; off += 7 {
+		fs.kit.Scroll[wildScrollID] = off
+		btns := map[string]uikit.Button{}
+		for _, b := range a.Buttons() {
+			btns[b.ID] = b
+		}
+		for i, row := range rows {
+			rr := wildRowRect(win, i, off)
+			inside := rr.Bottom() > list.Y && rr.Y < list.Bottom()
+			sh.mx, sh.my = int(rr.X)+40, int(rr.Y+rr.H/2)
+			got, _, hov := a.hoveredWildRow()
+			// the centre of a row cut by an edge may lie outside the list
+			if centreIn := float32(sh.my) >= list.Y && float32(sh.my) < list.Bottom(); inside && centreIn {
+				if !hov || got.Species != row.Species {
+					t.Fatalf("off %v row %d: hover %v %v", off, i, got.Species, hov)
+				}
+			} else if hov && got.Species == row.Species {
+				t.Fatalf("off %v row %d is hit outside the list", off, i)
+			}
+			b, has := btns["animals.wild.hunt."+row.Species]
+			if has != wildRowVisible(win, rr) {
+				t.Fatalf("off %v row %d: hunt button present %v, visible %v", off, i, has, wildRowVisible(win, rr))
+			}
+			if has && (b.Y < rr.Y || b.Y+b.H > rr.Bottom() || b.X+b.W > rr.Right()) {
+				t.Fatalf("off %v row %d: hunt button %+v outside row %+v", off, i, b, rr)
+			}
+		}
+	}
+}
+
+func ww(a Animals) float32 { w, _ := a.want(); return w }

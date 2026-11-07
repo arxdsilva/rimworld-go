@@ -110,7 +110,7 @@ type architectPanes struct{ a *App }
 
 func (p architectPanes) Schedule() architect.Schedule {
 	return architect.Schedule{Win: p.a.win.Rect(), Rows: p.a.win.Schedule().Rows(),
-		NameW: windows.WorkNameW, CellW: windows.SchedCellW, Top: windows.SchedTop, RowH: windows.SchedRowH}
+		NameW: windows.SchedNameW, CellW: windows.SchedCellW, Top: windows.SchedTop, RowH: windows.SchedRowH}
 }
 func (p architectPanes) PaneButtons() []uikit.Button         { return p.a.insp.PaneButtons() }
 func (p architectPanes) SelectedPawn() (game.PawnView, bool) { return p.a.insp.SelectedPawn() }

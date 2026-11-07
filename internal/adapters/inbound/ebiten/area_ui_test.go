@@ -195,9 +195,43 @@ func TestAreaNewDisabledAtCap(t *testing.T) {
 	}
 }
 
+// UIS-062: the Schedule's area column is a strip of segments while the areas
+// fit at SchedSegMin; past that it is the dropdown again (the next test).
+func TestScheduleAllowedAreaStrip(t *testing.T) {
+	t.Parallel()
+	s := areaStub()
+	a, f := areaApp(t, s)
+	a.win.Open, a.win.Mode = true, "schedule"
+	f.Frame(t, a)
+	for _, id := range []string{"sched.area.1.-1", "sched.area.1.-2", "sched.area.1.3", "sched.area.1.5"} {
+		if !hasWidget(a, id) {
+			t.Errorf("strip lacks segment %s", id)
+		}
+	}
+	if w, ok := a.uiSt().Find("sched.area.1.3"); !ok || w.Label != "Indoors" {
+		t.Fatalf("Ada's current segment: found=%v label %q", ok, w.Label)
+	}
+	if hasWidget(a, "sched.area.0.-1") || hasWidget(a, "sched.area.1") {
+		t.Fatal("the Everyone row has an area, or the dropdown shows beside the strip")
+	}
+	for _, tc := range []struct {
+		seg  string
+		want int
+	}{{"sched.area.1.5", 5}, {"sched.area.1.-1", command.AreaUnrestricted}, {"sched.area.1.-2", command.AreaHome}} {
+		press(t, a, f, tc.seg)
+		f.Frame(t, a)
+		if c := lastAreaCmd(s); c.Kind != command.AssignArea || c.Pawn != 1 || c.Index != tc.want {
+			t.Fatalf("%s: command %+v, want AssignArea Pawn 1 Index %d", tc.seg, c, tc.want)
+		}
+	}
+}
+
 func TestScheduleAllowedAreaDropdown(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
+	for i := 0; i < 6; i++ { // eight areas: ten segments would be under 40 px
+		s.areas = append(s.areas, game.AreaView{Index: 2 + i, ID: uint16(10 + i), Name: "A", Cells: 1})
+	}
 	a, f := areaApp(t, s)
 	a.win.Open, a.win.Mode = true, "schedule"
 	f.Frame(t, a)

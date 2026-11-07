@@ -24,9 +24,10 @@ import (
 
 const (
 	// SchedAreaW and SchedAreaGap are the Allowed area column the area
-	// selector declares right of the hours (its width, and its gap).
-	SchedAreaW   = 170
-	SchedAreaGap = 8
+	// selector declares right of the hours (UIS-062: a segmented strip 270
+	// wide and a gap of 7; architect/area_select.go mirrors both).
+	SchedAreaW   = hudlayout.SchedAreaW
+	SchedAreaGap = hudlayout.SchedAreaGap
 	// SchedCellW is the hour cell's pitch (a 19 box and 2 gap), SchedRowH the
 	// row pitch (a 28 box and 2 gap), SchedTop the first row below the top
 	// (UIS-062). The grid starts at schedGridX, which the Architect's area
@@ -35,7 +36,10 @@ const (
 	SchedRowH  = 30
 	SchedTop   = 70
 
-	schedGridX   = 12 + WorkNameW
+	// SchedNameW is the name column left of the hours (UIS-062: the window is
+	// 1011 wide at the reference's 1010); architect/area_select.go mirrors it.
+	SchedNameW   = 200
+	schedGridX   = 12 + SchedNameW
 	schedBrushY  = hudlayout.WindowPad
 	schedBottom  = 60
 	schedCellBox = SchedCellW - 2

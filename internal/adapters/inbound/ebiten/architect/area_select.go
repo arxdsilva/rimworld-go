@@ -2,8 +2,12 @@ package architect
 
 import (
 	"strconv"
+	"strings"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
@@ -16,11 +20,13 @@ import (
 // picker. The panels hand their geometry over through Panes.
 
 const (
-	// SchedAreaW is the Schedule column's width.
-	SchedAreaW    = 170
+	// SchedAreaW is the Schedule column's width (UIS-062), mirrored from
+	// windows.SchedAreaW.
+	SchedAreaW    = hudlayout.SchedAreaW
 	schedAreaMinW = 80 // narrower than this and the column is left out
 	// SchedAreaGap is the gap before the Schedule column.
-	SchedAreaGap = 8
+	SchedAreaGap = hudlayout.SchedAreaGap
+	schedSegGap  = 2 // between the area strip's segments
 	// AreaChipID is the colonist pane's allowed-area chip (it opens the
 	// area picker; the pane's own name for it is paneAreaChipID).
 	AreaChipID = "inspector.area"
@@ -57,9 +63,11 @@ func scheduleRect(s Schedule, row int) (gfx.Rect, bool) {
 }
 
 // scheduleColumn is the Schedule tab's "Allowed area" column: one
-// dropdown per colonist, emitting AssignArea{Pawn, Index: ref}.
+// strip of segments per colonist (a dropdown when the areas do not fit),
+// emitting AssignArea{Pawn, Index: ref}.
 func (a *Areas) scheduleColumn(s Schedule) {
 	r := s.Win
+	strip := false
 	if hr, ok := scheduleRect(s, 0); ok {
 		a.sh.Kit().Label(hr.X, hr.Y-float32(gfx.LineH(gfx.Small))-1, a.sh.T("Allowed area"), gfx.WithColor(gfx.Small, uikit.TextDim))
 	}
@@ -76,8 +84,60 @@ func (a *Areas) scheduleColumn(s Schedule) {
 		if !known {
 			continue
 		}
-		a.Dropdown("sched.area."+strconv.FormatUint(id, 10), br, ref, func(ref int) { a.Assign(pawn, ref) })
+		if a.areaStrip(pawn, br, ref) {
+			strip = true
+		} else {
+			a.Dropdown("sched.area."+strconv.FormatUint(id, 10), br, ref, func(ref int) { a.Assign(pawn, ref) })
+		}
 	}
+	if hr, ok := scheduleRect(s, 0); ok && strip { // the dropdown's picker holds "Manage..."; the strip has none
+		mr := gfx.Rect{X: hr.Right() - 96, Y: hr.Y - 25, W: 96, H: 22}
+		if a.sh.Kit().Button("sched.area.manage", mr, a.sh.T("Manage..."), uikit.BtnOpts{Tip: a.sh.T("Manage allowed areas...")}) {
+			a.OpenManager()
+		}
+	}
+}
+
+// schedStripSegW is one segment's width for a strip of n choices in w px
+// (UIS-062), and whether it is at least hudlayout.SchedSegMin.
+func schedStripSegW(w float32, n int) (float32, bool) {
+	if n <= 0 {
+		return 0, false
+	}
+	seg := (w - schedSegGap*float32(n-1)) / float32(n)
+	return seg, seg >= hudlayout.SchedSegMin
+}
+
+// areaStrip draws colonist pawn's allowed area as a strip of equal segments
+// (Unrestricted, Home, then each area), the current one filled; a click
+// assigns exactly what the dropdown's pick does. It reports false, drawing
+// nothing, when the segments would be narrower than SchedSegMin (the caller
+// then falls back to the dropdown).
+func (a *Areas) areaStrip(pawn entity.EntityID, br gfx.Rect, cur int) bool {
+	sim := a.sim()
+	if sim == nil {
+		return false
+	}
+	opts := areaPickOpts(a.sh, sim.Areas(), true)
+	seg, ok := schedStripSegW(br.W, len(opts))
+	if !ok {
+		return false
+	}
+	k := a.sh.Kit()
+	cur = areaRef(cur)
+	_, body, _ := strings.Cut(AssignAreaTipIn(a.sh), "\n")
+	for i, o := range opts {
+		r := gfx.Rect{X: br.X + float32(i)*(seg+schedSegGap), Y: br.Y, W: seg, H: br.H}
+		id := "sched.area." + strconv.FormatUint(uint64(pawn), 10) + "." + strconv.Itoa(o.Ref)
+		if k.Button(id, r, o.Label, uikit.BtnOpts{Selected: o.Ref == cur, Tip: o.Label + "\n" + body}) {
+			a.Assign(pawn, o.Ref)
+		}
+		if o.Has {
+			sw := o.Swatch
+			k.Queue(func(dst *ebiten.Image) { gfx.FillRect(dst, r.X+2, r.Bottom()-4, r.W-4, 2, sw, false) })
+		}
+	}
+	return true
 }
 
 // Chip is the pane's allowed-area chip for colonist p, "Area: Indoors"

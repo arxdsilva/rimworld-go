@@ -3,6 +3,7 @@ package windows
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
@@ -28,8 +29,8 @@ func TestAnimalColumnsDropToFit(t *testing.T) {
 	if c := animalColsFor(colonyFullW, false); len(c) != 0 {
 		t.Fatalf("a full-width window drops %v", c)
 	}
-	if c := animalColsFor(wildFullW, true); len(c) != 0 {
-		t.Fatalf("a full-width wild list drops %v", c)
+	if c := animalColsFor(hudlayout.WildW, true); len(c) != 0 { // UIS-064: the Wild list keeps one column set at any width
+		t.Fatalf("the wild list drops %v", c)
 	}
 	for _, w := range []float32{1672, 1248, 1032, 900, 865, 830} {
 		c := animalColsFor(w, false)
@@ -38,12 +39,6 @@ func TestAnimalColumnsDropToFit(t *testing.T) {
 		}
 		if c.at(colBtn) < colMaster || !c.shown(colName) || !c.shown(colMaster) || !c.shown(colArea) || !c.shown(colFollow) {
 			t.Errorf("colony list at %v px lost a needed column: %v", w, c)
-		}
-	}
-	for _, w := range []float32{984, 865, 700} {
-		c := animalColsFor(w, true)
-		if end := float32(c.at(wildBtn) + 272 + 12); end > w {
-			t.Errorf("wild list at %v px ends at %v", w, end)
 		}
 	}
 	// Doing and Training go first, then Preg., and the columns before a
@@ -362,7 +357,7 @@ func TestWorkColumnsFollowOrderForHeadersAndCells(t *testing.T) {
 			if len(b.ID) > len(ids.PrefixWorkHead)+1 {
 				col = col + 10*int(b.ID[len(b.ID)-2]-'0')
 			}
-			if b.X != WorkCellRect(uikit.Button{X: r.X, Y: r.Y, W: r.W, H: r.H}, 0, col).X {
+			if b.X != workHeadRect(uikit.Button{X: r.X, Y: r.Y, W: r.W, H: r.H}, col).X { // UIS-061: centred on the box
 				t.Fatalf("header %s at %v", b.ID, b.X)
 			}
 		}

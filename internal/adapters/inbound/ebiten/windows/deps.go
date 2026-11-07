@@ -37,6 +37,8 @@ type Env struct {
 // wizard's) in the table's order.
 type Faction struct {
 	Name, TypeLabel, Tech string
+	Leader                string // "Warden Iska Vell" (empty: not shown)
+	Settlements           int
 	Goodwill              int
 	Relation              faction.Relation
 	Standing              string     // the relation's word ("Hostile")
@@ -83,10 +85,6 @@ type Host interface {
 	ManageAreas()
 	// Float opens the order menu at (x, y) with opts; nil opts closes it.
 	Float(x, y float32, opts []game.OrderOption)
-	// FactionsTable declares the Factions table over Labels.Factions at
-	// the top of body, at most maxH tall (more rows scroll), and returns
-	// the rest of body; sel is the picked row.
-	FactionsTable(body gfx.Rect, maxH float32, sel *int) (rest gfx.Rect)
 }
 
 // Shell composes the roles the feature calls with its Host.

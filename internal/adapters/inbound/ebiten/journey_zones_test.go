@@ -221,13 +221,12 @@ func TestJourneyZonesAllowedAreaAndAreas(t *testing.T) {
 	}
 	j.leaveArch()
 
-	// Assign from the Schedule tab's dropdown.
+	// Assign from the Schedule tab's area strip (UIS-062).
 	j.key("F2", 0)
-	dd := fmt.Sprintf("sched.area.%d", pawn)
-	if !j.clickID(dd) {
-		t.Fatal("dropdown disabled")
+	seg := func(ref int) string { return fmt.Sprintf("sched.area.%d.%d", pawn, ref) }
+	if !j.clickID(seg(id)) {
+		t.Fatal("area segment disabled")
 	}
-	j.clickID(fmt.Sprintf("areapick.row.%d", id))
 	if c, ok := j.lastCmd(command.AssignArea); !ok || c.Pawn != uint64(pawn) || c.Index != id {
 		t.Fatalf("AssignArea %+v ok=%v", c, ok)
 	}
@@ -235,13 +234,11 @@ func TestJourneyZonesAllowedAreaAndAreas(t *testing.T) {
 		t.Fatalf("colonist's area %d, want %d", got, id)
 	}
 	// Unrestrict again so deleting needs no confirmation.
-	j.clickID(dd)
-	j.clickID("areapick.row.-1")
+	j.clickID(seg(command.AreaUnrestricted))
 	if got := j.g.AreaOf(pawn); got == id {
 		t.Fatal("still assigned")
 	}
-	j.clickID(dd)
-	j.clickID("areapick.manage")
+	j.clickID("sched.area.manage")
 	j.clickID(fmt.Sprintf("areas.delete.%d", id))
 	if c, ok := j.lastCmd(command.DeleteArea); !ok || c.Index != id {
 		t.Fatalf("DeleteArea %+v ok=%v", c, ok)

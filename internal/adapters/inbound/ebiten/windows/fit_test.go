@@ -32,7 +32,7 @@ func TestMainTabWindowsFitOneStepScreen(t *testing.T) {
 		"research": func(w *Set) { w.Show("research") },
 	}
 	// Factions and History may be cut: their lists scroll.
-	fills := map[string]bool{"history": true, "research": true, "factions": true}
+	fills := map[string]bool{"history": true, "research": true, "factions": true, "wildlife": true}
 	for name, do := range open {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -46,11 +46,11 @@ func TestMainTabWindowsFitOneStepScreen(t *testing.T) {
 			if ww <= 0 || wh <= 0 {
 				t.Fatalf("%s wants nothing: %vx%v", name, ww, wh)
 			}
-			l := hudlayout.Compute(sw, sh, hudlayout.Inputs{Colonists: 3, WindowW: ww, WindowH: wh})
+			l := hudlayout.Compute(sw, sh, hudlayout.Inputs{Colonists: 3, WindowW: ww, WindowH: wh, FullWidthWindow: name == "research"}) // UIS-065
 			if wild, drops := name == "wildlife", name == "animals" || name == "wildlife"; drops {
 				full := colonyFullW
-				if wild {
-					full = wildFullW
+				if wild { // UIS-064: the Wild list is WildW wide and drops nothing
+					full = hudlayout.WildW
 				}
 				for _, c := range animalColsFor(l.Window.W, wild) {
 					full -= c.w
