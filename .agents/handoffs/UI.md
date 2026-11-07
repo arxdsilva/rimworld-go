@@ -233,7 +233,7 @@ Gameplay UI sizes and scaling to the reference · 2026-11-07 · 2687260c0 (UIS-1
 - Open: UIS-008 step-list cell width; UIS-075 Options close X; UIS-032 letter hover card; UIS-073 frameless letter (`RunModals` ignores `Frameless`); UIS-061/062/064/065/068 window details; UIS-041/066 Quests. Reference captures still owed (17–39 colonists, 20+ commands, mid-job pawn, tame animal, 1.75×, message stacks): a later UIS pass. `env.DecalMinTile` is still 32.
 
 ## UIS-label-fit
-Command labels stay inside their cells · 2026-11-07 · (commit pending)
+Command labels stay inside their cells · 2026-11-07 · 9e3e97f9f
 - Fixed: command and Architect labels ("Draft", "Butcher table", the "+N" more cell) hung below their 75 px cells: `drawCmdLabel` anchored the last baseline 6 below the cell (the UIS-051 reference measure). The label block is now laid out from its measured height (`gfx.Measure`), its bottom `CmdLabelPadB` 2 above the cell's bottom; the icon fills what is left (min `CmdIconMin` 24). `CmdLabelLines` also bounds height: a label too tall for two lines ellipsizes to one. The more cell fits its caption the same way.
 - Fixed: text centred with `y+(h-LineH)/2` sat ~1.3 px low, so descenders crossed button edges. New `gfx.CenterTop(y, h, st)` centres cap height and clamps glyphs inside the box; 54 call sites rewritten (AST `gofmt -r`), plus health rows and the staggered Work headers.
 - Decisions (user, 2026-11-07): text never leaves its box, which replaces the UIS-051 hanging label (row now `kept`). Rows go back to `CmdStride`; `CmdLabelBelow`, `CmdLabelBand`, `CmdRowPitch` and `visCmdRegions` are gone.
