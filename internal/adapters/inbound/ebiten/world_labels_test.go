@@ -3,6 +3,7 @@ package ebiten
 import (
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
@@ -201,6 +202,43 @@ func TestWorldIconsAreScaleInvariant(t *testing.T) {
 		e := imgs[0]
 		for _, d := range [][3]float64{{float64(e.X), float64(ref.X), 0.5}, {float64(e.Y), float64(ref.Y), 0.5}, {float64(e.W), float64(ref.W), 0.5}} {
 			wlNear(t, sc.name+" vs ui1", d[0], d[1], d[2])
+		}
+	}
+}
+
+// TestPawnNameUnderTheCellAtUIScaleNotZoom (UIS-088, UIS-089): a
+// colonist's name plate hangs NamePlateGap logical px under its cell,
+// centred on it, text + NamePlatePad wide and NamePlateH tall times the UI
+// scale, the same size at every zoom.
+func TestPawnNameUnderTheCellAtUIScaleNotZoom(t *testing.T) {
+	for _, s := range []float64{1, 2} {
+		withUIScale(t, s)
+		us := float32(s)
+		var size [2]float32
+		for _, zoom := range []float64{camerapkg.MinZoom, 1, camerapkg.MaxZoom} {
+			r := New(&stubSim{w: 32, h: 32})
+			r.cam = camerapkg.Camera{Zoom: zoom, Unit: camerapkg.UnitFor(720), Placed: true}
+			marks := traceMarks(t, r)
+			v := r.liveView()
+			cl := &creature.Cull{White: r.pipe().LOD.WhiteImg()}
+			creature.DrawPawnName(r.pipe().Creatures, v, cl, ebiten.NewImage(640, 480), "Ada", 5.5, 7)
+			plates, texts := ofKind(*marks, "pawn-name-plate"), ofKind(*marks, "pawn-name-text")
+			if len(plates) != 1 || len(texts) != 1 {
+				t.Fatalf("ui %v zoom %v: %d plates, %d texts", s, zoom, len(plates), len(texts))
+			}
+			p := plates[0]
+			cx, bottom := r.worldToScreenF(5.5, 7)
+			if !near32(p.a+p.c/2, cx) || !near32(p.b, bottom+creature.NamePlateGap*us) {
+				t.Errorf("ui %v zoom %v: plate %+v, want centred on %v, top %v", s, zoom, p, cx, bottom+creature.NamePlateGap*us)
+			}
+			wantW := (gfx.TextW("Ada", gfx.Small) + creature.NamePlatePad) * us
+			if !near32(p.c, wantW) || !near32(p.d, creature.NamePlateH*us) {
+				t.Errorf("ui %v zoom %v: plate %vx%v, want %vx%v", s, zoom, p.c, p.d, wantW, creature.NamePlateH*us)
+			}
+			if size != [2]float32{} && (p.c != size[0] || p.d != size[1]) {
+				t.Errorf("ui %v: the plate changed size with the zoom: %vx%v, was %vx%v", s, p.c, p.d, size[0], size[1])
+			}
+			size = [2]float32{p.c, p.d}
 		}
 	}
 }

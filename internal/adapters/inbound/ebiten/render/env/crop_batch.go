@@ -41,7 +41,7 @@ import (
 // shows the wilted sprite, shrinks towards CropMinShrink and, over the
 // last 30%, fades out one unit at a time, so a tile thins out visibly.
 //
-// Level of detail by on-screen tile size: from LiveMin every unit; below
+// Level of detail by on-screen tile size: from DetailMin every unit; below
 // it one representative unit a tile; the map bake draws marks
 // (CropMarkColor). Furrows (overlay/tilled_*) lie in the ground pass under
 // every crop cell, turned a quarter on a north-south field.
@@ -63,7 +63,7 @@ const (
 	CropJitterAlong  = 0.08
 	CropJitterAcross = 0.04
 	// cropLODScale is the size of the one unit a tile draws below
-	// LiveMin, so the tile keeps its mass.
+	// DetailMin, so the tile keeps its mass.
 	cropLODScale = 1.3
 	// cropLeanMax limits a unit's lean, radians; cropWobble is the gentle
 	// per-unit sway on top of the tile's wind lean.
@@ -719,7 +719,7 @@ func (e *Layer) DrawCropObj(v *render.View, dst *ebiten.Image, w *game.WorldView
 	units := cb.units
 	gs := set.Scale(CropGrowthStage(*p), p.Growth)
 	tint := CropDamageTint(p.Damage, p.DamageKind)
-	live := tile >= LiveMin
+	live := tile >= DetailMin
 	repScale, repAlpha := 1.0, 1.0
 	if !live { // one unit for the tile: the last to go, centred, larger
 		last := units[0]

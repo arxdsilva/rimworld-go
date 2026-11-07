@@ -72,9 +72,12 @@ func benchDraw(b *testing.B, setup func(*game.Game)) {
 
 // BenchmarkDrawArt500 is one world frame of the grown 500² colony
 // (internal/application/scenario; set RIMWORLD_FIXTURE_DIR to keep the
-// fixture between runs) at each zoom the LOD tiers cover: z1 (64 px
-// tiles, live), z0.5 and z0.25 (32 and 16 px, baked chunks) and zmin (the
-// furthest zoom-out, the whole-map bake). The sim is paused, so only the
+// fixture between runs) at each zoom the LOD tiers cover, in an 800-px
+// tall window (cells of 800/48 px, UIS-080): z1 (the default zoom, 16.7 px
+// cells, baked chunks), zmax (the closest zoom, 36 px, live), px64 (64 px
+// cells, live: the art's own size and the pre-UIS-080 z1, kept for A/B
+// against older runs) and zmin (the furthest zoom-out, the whole-map bake,
+// 6.7 px on a 500² map). The sim is paused, so only the
 // draw is timed; draw-calls/op counts lit sprites, water tiles and baked
 // pages (light.go litRenderer.calls). NG-1 §6.1: ≤ 6 ms and ≤ 6 000 draw
 // calls at every zoom.
@@ -106,8 +109,8 @@ func benchDrawGrown(b *testing.B, side int) {
 		name string
 		zoom float64 // 0: the furthest zoom-out
 		run  bool    // the sim runs at normal speed (its tick is not timed): bakes follow the changes
-	}{{"z1", 1, false}, {"z0.5", 0.5, false}, {"z0.25", 0.25, false}, {"zmin", 0, false},
-		{"z0.25-run", 0.25, true}, {"zmin-run", 0, true}} {
+	}{{"z1", 1, false}, {"zmax", camerapkg.MaxZoom, false}, {"px64", camerapkg.TileSize / camerapkg.UnitFor(800), false},
+		{"zmin", 0, false}, {"z1-run", 1, true}, {"zmin-run", 0, true}} {
 		b.Run(z.name, func(b *testing.B) {
 			g, err := appscenario.Load(data)
 			if err != nil {

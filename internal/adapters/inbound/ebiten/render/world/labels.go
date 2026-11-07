@@ -18,10 +18,16 @@ import (
 )
 
 // StackCountMinTile: below this tile size (px) counts would just clutter.
+// It sits between the default zoom (22.5 px at 1080: hidden) and the
+// furthest zoom-in (49 px: shown), as in the reference (UIS-090).
 const StackCountMinTile = 36
 
-// drawStackCounts prints each ground stack's quantity in the bottom-right
-// corner of its tile, on a small dark tag so it reads over any sprite.
+// countTagGap is the logical gap between a cell's bottom edge and its
+// count tag's top (UIS-090).
+const countTagGap = 1
+
+// drawStackCounts prints each ground stack's quantity on a small dark tag
+// centred under its tile, so it reads over any sprite (UIS-090).
 func (lb *Labels) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile float64) {
 	if tile < StackCountMinTile {
 		return
@@ -42,7 +48,9 @@ func (lb *Labels) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile f
 	lb.heapCounts(screen, tile)
 }
 
-// tileCount prints n in the bottom-right corner of tile (x, y).
+// tileCount prints n on a tag centred under tile (x, y): the tag's top
+// countTagGap logical px below the cell's bottom edge, its size following
+// the UI scale, never the zoom (UIS-090).
 func (lb *Labels) tileCount(screen *ebiten.Image, x, y, n int, tile float64) {
 	s := strconv.Itoa(n)
 	sx, sy := lb.worldToScreen(x, y)
@@ -51,7 +59,8 @@ func (lb *Labels) tileCount(screen *ebiten.Image, x, y, n int, tile float64) {
 	k := float32(1 / gfx.UIScale())
 	tw := gfx.TextW(s, gfx.Small) + 6
 	th := gfx.LineStep(gfx.Small) - 2
-	drawCountTag(screen, s, sx*k+float32(tile)*k-tw-2, sy*k+float32(tile)*k-th-2, tw, th)
+	t := float32(tile) * k
+	drawCountTag(screen, s, sx*k+t/2-tw/2, sy*k+t+countTagGap, tw, th)
 }
 
 // drawCountTag is the small dark tag with s at logical (x, y), tw x th.

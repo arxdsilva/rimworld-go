@@ -145,8 +145,8 @@ func TestViewSidecarRoundTrip(t *testing.T) {
 	if _, _, err := s.Load(path); err != nil {
 		t.Fatalf("a save without a sidecar loads: %v", err)
 	}
-	want := ViewFile{CX: 12.25, CY: 7.5, Zoom: 1.75}
-	if err := s.SaveView("My colony", want); err != nil {
+	want := ViewFile{CX: 12.25, CY: 7.5, Zoom: 1.75, Version: ViewVersion} // SaveView stamps the version
+	if err := s.SaveView("My colony", ViewFile{CX: 12.25, CY: 7.5, Zoom: 1.75}); err != nil {
 		t.Fatal(err)
 	}
 	if got, ok := s.LoadView(path); !ok || !reflect.DeepEqual(got, want) {
@@ -192,7 +192,7 @@ func TestViewSidecarPerMap(t *testing.T) {
 		t.Fatalf("per map %+v %v, want %+v", got.PerMap(), ok, views)
 	}
 
-	os.WriteFile(filepath.Join(s.Dir, "Two-maps"+ViewExt), []byte(`{"CX":3,"CY":4,"Zoom":2}`), 0o644)
+	os.WriteFile(filepath.Join(s.Dir, "Two-maps"+ViewExt), []byte(`{"CX":3,"CY":4,"Zoom":2,"v":1}`), 0o644)
 	got, ok = s.LoadView(path)
 	if want := map[game.MapID]ViewFile{0: {CX: 3, CY: 4, Zoom: 2}}; !ok || !reflect.DeepEqual(got.PerMap(), want) {
 		t.Fatalf("an old sidecar is map 0's: %+v %v", got.PerMap(), ok)
@@ -203,5 +203,33 @@ func TestViewSidecarPerMap(t *testing.T) {
 	got, ok = s.LoadView(path)
 	if want := map[game.MapID]ViewFile{2: {CX: 1, CY: 2, Zoom: 1}}; !ok || !reflect.DeepEqual(got.PerMap(), want) {
 		t.Fatalf("only the valid cameras load: %+v %v", got.PerMap(), ok)
+	}
+}
+
+// TestViewSidecarOldVersionLoadsAtDefaultZoom (UIS-087): a sidecar written
+// before the zoom followed the window (no "v") loads every valid camera at
+// the default zoom with its centre kept; a current one keeps its zoom.
+func TestViewSidecarOldVersionLoadsAtDefaultZoom(t *testing.T) {
+	s := Store{Dir: t.TempDir()}
+	path := filepath.Join(s.Dir, "Old"+Ext)
+	side := filepath.Join(s.Dir, "Old"+ViewExt)
+	os.WriteFile(side, []byte(`{"CX":30.5,"CY":12.25,"Zoom":2.5,"maps":{"3":{"CX":4,"CY":5,"Zoom":0.3},"4":{"CX":1,"CY":1,"Zoom":0}}}`), 0o644)
+	got, ok := s.LoadView(path)
+	if !ok || got.Version != ViewVersion {
+		t.Fatalf("old sidecar: %+v %v, want version %d", got, ok, ViewVersion)
+	}
+	want := map[game.MapID]ViewFile{0: {CX: 30.5, CY: 12.25, Zoom: DefaultZoom}, 3: {CX: 4, CY: 5, Zoom: DefaultZoom}}
+	if !reflect.DeepEqual(got.PerMap(), want) {
+		t.Fatalf("old cameras %+v, want the default zoom at the saved centres %+v", got.PerMap(), want)
+	}
+	os.WriteFile(side, []byte(`{"CX":30.5,"CY":12.25,"Zoom":1.8,"v":1}`), 0o644)
+	if got, ok := s.LoadView(path); !ok || got.PerMap()[0].Zoom != 1.8 {
+		t.Fatalf("a current sidecar keeps its zoom: %+v %v", got, ok)
+	}
+	if err := s.SaveView("Old", ViewFile{CX: 2, CY: 3, Zoom: 0.5}); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := s.LoadView(path); !ok || got.Version != ViewVersion || got.Zoom != 0.5 {
+		t.Fatalf("a saved sidecar is current: %+v %v", got, ok)
 	}
 }

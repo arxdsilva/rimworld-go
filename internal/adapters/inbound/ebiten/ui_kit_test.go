@@ -806,6 +806,7 @@ func TestWheelRoutingMenuVsCamera(t *testing.T) {
 	// Over the colony, a modal's list scrolls and the camera stays put; off
 	// the list the wheel zooms the map as before.
 	ca, _, cs := inputColony(t)
+	ca.renderer.cam.Zoom = playZoom // inside the player's range: a wheel step in can zoom
 	ca.renderer.smooth.Instant = true
 	lr := gfx.Rect{X: 300, Y: 200, W: 300, H: 200}
 	ca.uiPushModal(modal{ID: "list", Title: "List", W: 400, H: 300, Draw: func(a *App, body gfx.Rect) {

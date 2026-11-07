@@ -89,7 +89,7 @@ func (k *Bakes) drawChunkBake(screen *ebiten.Image, w *game.WorldView, cx, cy in
 	c := cy*((mw+cs-1)/cs) + cx
 	x0, y0 := cx*cs, cy*cs
 	ver, tufts := cv.Ver, k.LOD.Tier == Chunk && k.Cam.Tile() < env.GrassLiveMin
-	if tufts { // 16–24 px: the image holds the chunk's tufts too (render/env)
+	if tufts { // the chunk tier (12–20 px): the image holds the chunk's tufts too (render/env)
 		ver = env.GrassBakeKey(ver, k.Env.GrassChunkSig(k.v, w, cx, cy, k.Index))
 	}
 	b, bake := k.LOD.Chunks.get(c, ver, k.LOD.budget > 0)
@@ -110,7 +110,7 @@ func (k *Bakes) drawChunkBake(screen *ebiten.Image, w *game.WorldView, cx, cy in
 }
 
 // bakeTufts bakes the grass tufts of tiles x0..x1-1 × y0..y1-1 into dst
-// at px per tile, tile (x0, y0) at (ox, oy) (the 16–24 px chunk images).
+// at px per tile, tile (x0, y0) at (ox, oy) (the chunk tier's images).
 func (k *Bakes) bakeTufts(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 int, px, ox, oy float64) {
 	k.WithBake(dst, px, x0, y0, ox, oy, func(sw, sh int, tile float64) {
 		k.Env.DrawGrassBatch(k.v, dst, w, x0, y0, x1-1, y1-1, tile, sw, sh, env.GrassMidCap, k.LOD.Baking, k.Index)

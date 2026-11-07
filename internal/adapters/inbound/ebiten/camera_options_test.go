@@ -123,9 +123,11 @@ func TestCameraPauseOnLoad(t *testing.T) {
 }
 
 func cameraRenderer() (*Renderer, camerapkg.Viewport) {
-	r := New(&stubSim{w: 64, h: 64})
+	// a map wider than the window at its 12.5-px cells (UIS-080), the cell
+	// already the window's so no sync rescales the offsets
+	r := New(&stubSim{w: 256, h: 256})
 	v := camerapkg.Viewport{X1: 800, Y1: 600}
-	r.cam = camerapkg.Camera{Zoom: 1, Placed: true, OffsetX: 500, OffsetY: 500}
+	r.cam = camerapkg.Camera{Zoom: 1, Unit: camerapkg.UnitFor(v.H()), Placed: true, OffsetX: 500, OffsetY: 500}
 	return r, v
 }
 
@@ -196,7 +198,7 @@ func TestShakeFromBlastsAndLightning(t *testing.T) {
 		t.Fatal("a new blast shakes")
 	}
 	r.smooth.Fx.Clear()
-	r.watchThreats(blast(12, 60)) // far from the view
+	r.watchThreats(blast(12, 200)) // far from the view (tiles 40..104 at 12.5-px cells)
 	if r.smooth.Fx.Active() {
 		t.Fatal("a far blast does not")
 	}

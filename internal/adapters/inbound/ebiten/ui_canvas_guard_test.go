@@ -117,6 +117,9 @@ var canvasExempt = map[string]string{
 	"render/env/environment.go:flush":                  "world: weather triangle batch",
 	"devtools/mapfields.go:DrawMapFields":              "world: dev map-field layer over the map",
 
+	// the selection brackets on the selected footprint, with the camera (UIS-092)
+	"render/overlay/select_brackets.go:DrawSelectBrackets": "world: selection brackets on tiles",
+
 	// overlays anchored to tiles (the UI around them uses the canvas)
 	"render/world/labels.go:drawBreakClouds":         "world: storm clouds over colonists (stack counts and icons use the canvas)",
 	"render/world/labels.go:drawBuildingDamage":      "world: damage bars under buildings",

@@ -6,11 +6,13 @@ import (
 )
 
 func testLimits() Limits {
-	return Limits{V: Viewport{X0: 0, Y0: 0, X1: 800, Y1: 600}, MapW: 100, MapH: 100, MinZoom: 0.2}
+	return Limits{V: Viewport{X0: 0, Y0: 0, X1: 800, Y1: 600}, MapW: 400, MapH: 400, MinZoom: 0.2}
 }
 
+// testCam is a camera already at testLimits' cell (Step syncs it to the
+// viewport: 600 / CellsTall = 12.5 px).
 func testCam() *Camera {
-	return &Camera{Zoom: 1, Placed: true, OffsetX: 1000, OffsetY: 1000}
+	return &Camera{Zoom: 1, Placed: true, OffsetX: 1000, OffsetY: 1000, Unit: UnitFor(600)}
 }
 
 const dt60 = 1.0 / 60
@@ -52,7 +54,7 @@ func TestPanDoesNotOvershootBounds(t *testing.T) {
 	var s Smooth
 	c := testCam()
 	lim := testLimits()
-	hi := 100*TileSize*c.Zoom - lim.V.X1 + EdgeSlack*lim.V.W()
+	hi := lim.MapW*c.Tile() - lim.V.X1 + EdgeSlack*lim.V.W()
 	for i := 0; i < 600; i++ {
 		s.PushPan(1, 0)
 		s.Step(dt60, c, lim)
@@ -73,7 +75,7 @@ func TestZoomEasesToTargetAnchoredAtCursor(t *testing.T) {
 	c := testCam()
 	lim := testLimits()
 	ax, ay := 300.0, 200.0
-	tile := float64(TileSize)
+	tile := c.Unit
 	wx, wy := (ax+c.OffsetX)/(tile*c.Zoom), (ay+c.OffsetY)/(tile*c.Zoom)
 	s.ZoomAt(1.1, ax, ay)
 	s.Step(dt60, c, lim)

@@ -239,11 +239,11 @@ func TestTameNameSitsUnderItsAnimalAtScale(t *testing.T) {
 			if !near32(p.a+p.c/2, ax) || !near32(p.b, ay) {
 				t.Errorf("plate %+v is not centred under the animal at (%v,%v)", p, ax, ay)
 			}
-			// sized in the same units as the text: logical width + 6 and
-			// 14 high, times the UI scale
+			// sized in the same units as the text: logical width + 3 and
+			// 12 high (the colonists' plate, UIS-089), times the UI scale
 			us := float32(s)
-			if wantW := (gfx.TextW("Bessie", gfx.Small) + 6) * us; !near32(p.c, wantW) || !near32(p.d, 14*us) {
-				t.Errorf("plate is %vx%v, want %vx%v", p.c, p.d, wantW, 14*us)
+			if wantW := (gfx.TextW("Bessie", gfx.Small) + 3) * us; !near32(p.c, wantW) || !near32(p.d, 12*us) {
+				t.Errorf("plate is %vx%v, want %vx%v", p.c, p.d, wantW, 12*us)
 			}
 			// the text anchor is the plate's centre top (physical, drawn
 			// once through worldText), not scaled twice
@@ -289,12 +289,14 @@ func TestTameNameHiddenWhenZoomedOutOrUnnamed(t *testing.T) {
 
 // --- the camera on a chase auto-pause -------------------------------------
 
-// chaseCamera is a renderer on a 64x64 map at zoom 1 (64 px tiles), top
-// left of the map at the top left of an 800x520 viewport, with colonist 1
-// at (cx, cy) chased by animal 10 at (ax, ay).
+// chaseCamera is a renderer on a 64x64 map at 64 px tiles (the zoom for
+// that cell in the 520-px tall viewport, UIS-080), top left of the map at
+// the top left of an 800x520 viewport, with colonist 1 at (cx, cy) chased
+// by animal 10 at (ax, ay).
 func chaseCamera(cx, cy, ax, ay int) (*Renderer, game.WorldView) {
 	r := New(&stubSim{w: 64, h: 64, pawns: []game.PawnView{{ID: 1, Name: "Ada", X: cx, Y: cy}}})
-	r.cam = camerapkg.Camera{Zoom: 1, Placed: true}
+	unit := camerapkg.UnitFor(520)
+	r.cam = camerapkg.Camera{Zoom: camerapkg.TileSize / unit, Unit: unit, Placed: true}
 	r.cueBus().Voice.View = camerapkg.Viewport{X0: 0, Y0: 40, X1: 800, Y1: 560}
 	w := game.WorldView{
 		Animals: []game.AnimalView{{ID: 10, Species: "timber_wolf", Label: "timber wolf", Hostile: true, TargetID: 1, X: ax, Y: ay}},

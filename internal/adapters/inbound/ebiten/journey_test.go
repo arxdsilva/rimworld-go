@@ -32,8 +32,9 @@ import (
 // (TestEveryInputActionHasAJourney).
 //
 // Conventions: the colony is a 24x24 game.New map (no fog, no intro
-// letter), paused, with the inputColony camera: tile (x, y) sits at screen
-// (64x, 64y+32), rows 0..8 and columns 6..19 are open map clear of the HUD.
+// letter), paused, with the inputColony camera (inputCamera): tile (x, y)
+// sits at screen (64x, 64y+32), rows 0..8 and columns 6..19 are open map
+// clear of the HUD.
 // The wall clock is pinned (a.now), so Draws step the camera by the 8 ms
 // the journey adds and the Update budget never holds a tick back.
 
@@ -105,7 +106,9 @@ func newJourney(t *testing.T, opts ...jOpt) *journey {
 	r.smooth.Instant = false
 	r.speed = speedPaused
 	if c.game == nil {
-		r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY, r.cam.Placed = 1, 0, -32, true
+		inputCamera(a)
+	} else {
+		artZoomAboutCentre(a) // a scenario keeps its landing view, at the input tests' 64-px cells
 	}
 	return j
 }

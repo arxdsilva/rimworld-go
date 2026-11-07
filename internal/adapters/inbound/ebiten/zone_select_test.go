@@ -28,7 +28,7 @@ func (s *zoneSim) CanZoneAt(kind string, x, y int) bool {
 }
 
 // zoneApp is a paused colony over a stub holding zones, with the camera
-// placed so tile (x, y) sits at screen (64x, 64y+32). Tiles in columns 8..16
+// placed so tile (x, y) sits at screen (64x, 64y+32) (inputCamera). Tiles in columns 8..16
 // and rows 1..5 are open map, clear of the pane and the command grid.
 func zoneApp(t *testing.T, zones ...game.ZoneView) (*App, *zoneSim, *fakeInput) {
 	t.Helper()
@@ -36,7 +36,7 @@ func zoneApp(t *testing.T, zones ...game.ZoneView) (*App, *zoneSim, *fakeInput) 
 	s := &zoneSim{stubSim: st, temp: 150}
 	a, f := colonyApp(t, st)
 	a.renderer.game = s
-	a.renderer.cam.OffsetX, a.renderer.cam.OffsetY = 0, -32
+	inputCamera(a)
 	f.Frame(t, a)
 	return a, s, f
 }

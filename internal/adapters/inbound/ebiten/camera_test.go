@@ -34,15 +34,15 @@ func TestColonyViewportIsTheWholeScreen(t *testing.T) {
 func TestCameraClampsToTheWholeScreen(t *testing.T) {
 	t.Parallel()
 	v := camerapkg.ColonyViewport(1280, 720)
-	r := New(&stubSim{w: 40, h: 40})
+	r := New(&stubSim{w: 160, h: 160}) // wider and taller than the window at 15-px cells (UIS-080)
 	r.cam.Zoom = 1
 	r.ClampCamera(v) // first call: centred on the map
 	tile := r.cam.Tile()
-	if cx := (v.X0+v.X1)/2 + r.cam.OffsetX; cx != 20*tile {
-		t.Errorf("map centre at %v, want %v: not centred on the screen", cx, 20*tile)
+	if cx := (v.X0+v.X1)/2 + r.cam.OffsetX; cx != 80*tile {
+		t.Errorf("map centre at %v, want %v: not centred on the screen", cx, 80*tile)
 	}
-	if cy := (v.Y0+v.Y1)/2 + r.cam.OffsetY; cy != 20*tile {
-		t.Errorf("map centre y at %v, want %v", cy, 20*tile)
+	if cy := (v.Y0+v.Y1)/2 + r.cam.OffsetY; cy != 80*tile {
+		t.Errorf("map centre y at %v, want %v", cy, 80*tile)
 	}
 	r.cam.OffsetX, r.cam.OffsetY = -1e6, -1e6 // pushed to the top-left limit
 	r.ClampCamera(v)
@@ -57,10 +57,10 @@ func TestCameraClampsToTheWholeScreen(t *testing.T) {
 	}
 	r.cam.OffsetX, r.cam.OffsetY = 1e6, 1e6 // and the bottom-right
 	r.ClampCamera(v)
-	if right := 40*tile - r.cam.OffsetX; right < v.X1-camerapkg.EdgeSlack*v.W()-1e-6 {
+	if right := 160*tile - r.cam.OffsetX; right < v.X1-camerapkg.EdgeSlack*v.W()-1e-6 {
 		t.Errorf("the map's right edge %v is further in than the slack from %v", right, v.X1)
 	}
-	if bottom := 40*tile - r.cam.OffsetY; bottom < v.Y1-camerapkg.EdgeSlack*v.H()-1e-6 || bottom > v.Y1-camerapkg.EdgeSlack*v.H()+1e-6 {
+	if bottom := 160*tile - r.cam.OffsetY; bottom < v.Y1-camerapkg.EdgeSlack*v.H()-1e-6 || bottom > v.Y1-camerapkg.EdgeSlack*v.H()+1e-6 {
 		t.Errorf("the map's bottom edge %v should end the slack %v above the screen's bottom %v", bottom, camerapkg.EdgeSlack*v.H(), v.Y1)
 	}
 }
@@ -136,5 +136,22 @@ func TestZoomAnchorsOverTheFormerTopStrip(t *testing.T) {
 	}
 	if gx, gy := r.screenToWorld(x, y); math.Abs(gx-wx) > 0.01 || math.Abs(gy-wy) > 0.01 {
 		t.Fatalf("the cursor's world point moved: (%v,%v), want (%v,%v)", gx, gy, wx, wy)
+	}
+}
+
+// TestZoomRangeIsAboutSixtyFiveNotches (UIS-081, UIS-082): the zoom runs
+// 0.40 to 2.18 of the default, about 1.026 a wheel notch, so about 65
+// notches end to end (9 to 49 px cells at 1080).
+func TestZoomRangeIsAboutSixtyFiveNotches(t *testing.T) {
+	t.Parallel()
+	if camerapkg.MinZoom != 0.40 || camerapkg.MaxZoom != 2.18 {
+		t.Fatalf("zoom range %v..%v, want 0.40..2.18", camerapkg.MinZoom, camerapkg.MaxZoom)
+	}
+	n := math.Log(camerapkg.MaxZoom/camerapkg.MinZoom) / math.Log(1+zoomStep)
+	if n < 60 || n > 70 {
+		t.Fatalf("%.1f wheel notches end to end, want about 65", n)
+	}
+	if lo, hi := camerapkg.MinZoom*camerapkg.UnitFor(1080), camerapkg.MaxZoom*camerapkg.UnitFor(1080); math.Abs(lo-9) > 0.01 || math.Abs(hi-49.05) > 0.01 {
+		t.Fatalf("cells %v..%v px at 1080, want 9..49", lo, hi)
 	}
 }

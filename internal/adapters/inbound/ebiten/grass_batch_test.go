@@ -217,9 +217,9 @@ func TestGrassSnowFade(t *testing.T) {
 	}
 }
 
-// TestGrassLODTiers: ≥ 48 px all copies live, 24–48 px at most four per
-// tile live, 16–24 px tufts baked into the chunk images, under 16 px a
-// grass tint in the map bake.
+// TestGrassLODTiers: ≥ 48 px all copies live, 20–48 px at most four per
+// tile live, 12–20 px tufts baked into the chunk images, under 12 px a
+// grass tint in the map bake (UIS-086).
 func TestGrassLODTiers(t *testing.T) {
 	t.Parallel()
 	w := grassWorld(64, 64, 100)
@@ -234,12 +234,12 @@ func TestGrassLODTiers(t *testing.T) {
 		t.Fatalf("32 px: %d quads, want 1..%d (four a tile)", q, 4*tiles)
 	}
 	baked := r.pipe().LOD.Grass.Baked
-	lodFrame(r, 20)
+	lodFrame(r, 16)
 	if r.pipe().LOD.Grass.Quads != 0 {
-		t.Fatalf("20 px drew %d live tuft quads, want them baked", r.pipe().LOD.Grass.Quads)
+		t.Fatalf("16 px drew %d live tuft quads, want them baked", r.pipe().LOD.Grass.Quads)
 	}
 	if r.pipe().LOD.Grass.Baked == baked {
-		t.Fatal("20 px: no tufts baked into the chunk images")
+		t.Fatal("16 px: no tufts baked into the chunk images")
 	}
 	tints := r.pipe().LOD.Grass.Tinted
 	lodFrame(r, 8)
@@ -249,17 +249,17 @@ func TestGrassLODTiers(t *testing.T) {
 }
 
 // TestChunkVersionFollowsGrassGrowth: in the baked-tuft tier a growth
-// change rebakes only its chunk; the plain chunk tier ignores grass.
+// change rebakes only its chunk; the live tier bakes no chunk for it.
 func TestChunkVersionFollowsGrassGrowth(t *testing.T) {
 	t.Parallel()
 	w := grassWorld(64, 64, 100)
 	r, sim := grassRenderer(w, 64, 64)
-	lodFrame(r, 20)
+	lodFrame(r, 16)
 	first := r.pipe().LOD.Chunks.Bakes
 	if first == 0 {
 		t.Fatal("no chunk baked")
 	}
-	lodFrame(r, 20)
+	lodFrame(r, 16)
 	if r.pipe().LOD.Chunks.Bakes != first {
 		t.Fatalf("an unchanged frame rebaked %d chunks", r.pipe().LOD.Chunks.Bakes-first)
 	}
@@ -269,11 +269,11 @@ func TestChunkVersionFollowsGrassGrowth(t *testing.T) {
 	}
 	g[8*64+8] = 10 // shoots in chunk (0,0)
 	sim.world.GrassGrowth, sim.world.GrassVer = g, 2
-	lodFrame(r, 20)
+	lodFrame(r, 16)
 	if got := r.pipe().LOD.Chunks.Bakes - first; got != 1 {
 		t.Fatalf("one regrown tile rebaked %d chunks, want 1", got)
 	}
-	// the 24–48 px tier bakes no tufts: growth never rebakes it
+	// the live tier (20 px up) draws its tufts live: growth never bakes
 	r2, sim2 := grassRenderer(grassWorld(64, 64, 100), 64, 64)
 	lodFrame(r2, 32)
 	b := r2.pipe().LOD.Chunks.Bakes

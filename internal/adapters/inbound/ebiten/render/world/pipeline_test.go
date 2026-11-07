@@ -194,7 +194,7 @@ func rigWorld(w, h int) game.WorldView {
 }
 
 // TestPipelineTiersAndBakes is the zoom tiers through the pipeline alone:
-// live at 64 px (no bakes), chunk bakes at 32 px for the chunks in view,
+// live at 64 px (no bakes), chunk bakes at 16 px for the chunks in view,
 // the whole-map bake at 8 px; an unchanged frame bakes nothing more, and
 // the frame's chunk lists cover the view.
 func TestPipelineTiersAndBakes(t *testing.T) {
@@ -207,12 +207,12 @@ func TestPipelineTiersAndBakes(t *testing.T) {
 	if len(l.Views) == 0 || r.src.routes != 1 {
 		t.Fatalf("64 px: %d chunk views, %d order routes", len(l.Views), r.src.routes)
 	}
-	r.frame(32)
-	if l.Tier != Chunk || len(l.Chunks.ByChunk) != 2 { // 640×400 at 32 px: chunks (0,0) and (1,0)
-		t.Fatalf("32 px: tier %d, %d chunks baked, want the 2 in view", l.Tier, len(l.Chunks.ByChunk))
+	r.frame(16)
+	if l.Tier != Chunk || len(l.Chunks.ByChunk) != 6 { // 640×400 at 16 px: 40×25 tiles, chunks (0..2, 0..1)
+		t.Fatalf("16 px: tier %d, %d chunks baked, want the 6 in view", l.Tier, len(l.Chunks.ByChunk))
 	}
 	bakes := l.Chunks.Bakes
-	r.frame(32)
+	r.frame(16)
 	if l.Chunks.Bakes != bakes {
 		t.Fatalf("an unchanged frame rebaked %d chunks", l.Chunks.Bakes-bakes)
 	}

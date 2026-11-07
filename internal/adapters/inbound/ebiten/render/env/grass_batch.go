@@ -31,11 +31,11 @@ import (
 //
 // Level of detail by on-screen tile size:
 //
-//	≥ 48 px   every copy, live sway;
-//	24–48 px  at most GrassMidCap copies a tile, live sway;
-//	16–24 px  GrassMidCap copies baked into the chunk images (no sway);
+//	≥ 48 px   every copy, live sway (DetailMin);
+//	20–48 px  at most GrassMidCap copies a tile, live sway;
+//	12–20 px  GrassMidCap copies baked into the chunk images (no sway);
 //	          the bake's key folds in the chunk's grass (GrassChunkSig);
-//	< 16 px   a soft grass tint baked into the map image (GrassMapSig).
+//	< 12 px   a soft grass tint baked into the map image (GrassMapSig).
 
 const (
 	// GrassCellJitter is how far a copy may sit from its grid cell's
@@ -45,10 +45,10 @@ const (
 	GrassEdgeSpill = 0.15
 	// grassLeanMax is the grass lean limit (ART §27.3), radians.
 	grassLeanMax = 0.35
-	// GrassLiveMin is the tile size (px) from which tufts are drawn live;
-	// below it the chunk tier bakes them.
-	GrassLiveMin = 24.0
-	// GrassMidCap is the copies a tile draws below LiveMin.
+	// GrassLiveMin is the tile size (px) from which tufts are drawn live:
+	// the live tier's (LiveMin); below it the chunk tier bakes them.
+	GrassLiveMin = LiveMin
+	// GrassMidCap is the copies a tile draws below DetailMin.
 	GrassMidCap = 4
 	// tuftRefH is a short tuft's height at scale 1, in tiles: the atlas
 	// sizes every tuft sprite by the short set's median height, so the

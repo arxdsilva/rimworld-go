@@ -97,8 +97,9 @@ const (
 )
 
 // ZoomNear is the zoom at or closer than which effects play at full
-// volume and full stereo width.
-const ZoomNear = 1.5
+// volume and full stereo width: the default zoom (48 cells of the window's
+// height, UIS-080), so only zooming out past it fades them.
+const ZoomNear = 1.0
 
 // ZoomEar is how the camera's distance shapes the effects: from ZoomNear
 // out to the map's zoom-out limit (zoomOut) they get quieter, narrower in

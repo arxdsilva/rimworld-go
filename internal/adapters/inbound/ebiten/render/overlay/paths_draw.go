@@ -15,8 +15,10 @@ import (
 // faint dotted polyline to its goal; drafted ones are bolder, the
 // selected one white and last. Presentation only, from PawnView.Path.
 
-// pathMinZoom is the zoom below which only the goal markers are drawn.
-const pathMinZoom = 0.35
+// pathMinZoom is the art zoom (render.View.ArtZoom) below which only the
+// goal markers are drawn: about 14-point tiles, so the default zoom of a
+// 720-point window (15) still shows the lines (UIS-080).
+const pathMinZoom = 0.22
 
 type pathSeg struct{ ax, ay, bx, by float32 }
 
@@ -95,11 +97,11 @@ func (o *Set) DrawPaths(v *render.View, screen *ebiten.Image, sw, sh int, tile f
 	if v.HasSelect {
 		sel = uint64(v.Selected)
 	}
-	plans := PlanPaths(v.Pawns, sel, v.HasSelect, v.Cam.Zoom, sw, sh, v.WorldToScreenF, pos)
+	plans := PlanPaths(v.Pawns, sel, v.HasSelect, v.ArtZoom(), sw, sh, v.WorldToScreenF, pos)
 	if len(plans) == 0 {
 		return
 	}
-	th := PathStroke(v.Cam.Zoom)
+	th := PathStroke(v.ArtZoom())
 	style := func(match func(PawnPathPlan) bool, w float32, c color.NRGBA) {
 		var path vector.Path
 		any := false
@@ -147,7 +149,7 @@ func colorScaleOf(c color.NRGBA) ebiten.ColorScale {
 	return cs
 }
 
-// PathStroke is the path line width: 1..3 points at the zoom, in physical
+// PathStroke is the path line width: 1..3 points at the art zoom, in physical
 // pixels (x dev) so it keeps its apparent thickness.
 func PathStroke(zoom float64) float32 {
 	return float32(min(3, max(1, zoom*1.5)) * camera.ScreenDev())

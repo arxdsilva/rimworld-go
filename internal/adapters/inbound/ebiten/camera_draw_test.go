@@ -12,6 +12,7 @@ import (
 func colonyForCameraDraw(t *testing.T) (*App, *time.Time, *ebiten.Image) {
 	t.Helper()
 	a, _, _ := liveColony(t, 0)
+	a.renderer.cam.Zoom = artZoom(a) // 64-px cells: the 16-tile map outgrows the window
 	fakeOn(a).Frame(t, a)
 	clock := time.Unix(1000, 0)
 	a.now = func() time.Time { return clock }

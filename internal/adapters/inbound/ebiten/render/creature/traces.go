@@ -10,7 +10,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -53,7 +52,7 @@ func (c *Set) DrawAnimalOverlays(v *render.View, pass sprite.Pass, cull *Cull, s
 		if !cull.InView(an.X, an.Y, pad, padS) {
 			continue
 		}
-		// the map tier (< 16 px tiles) draws no decals (lod.go): a snore's
+		// the map tier (< 12 px tiles) draws no decals (lod.go): a snore's
 		// "z" would be under two pixels there
 		if an.Sleeping && !cull.MapTier && c.AnimalResting(v, *an) {
 			wx, wy := c.AnimalAt(v, *an)
@@ -143,15 +142,6 @@ func (c *Set) DrawChaseLines(v *render.View, cull *Cull, screen *ebiten.Image, w
 	}
 }
 
-// Name plate metrics, in logical pixels like the text they back: the
-// padding around the name, the plate's height, and how far the text sits
-// above the plate's top edge.
-const (
-	namePlatePad  = 6
-	namePlateH    = 14
-	nameTextRaise = 2
-)
-
 // NameMinTile is the smallest tile (physical px) a tame animal's name
 // shows at: the zoom the stack counts show from (labels.go).
 const NameMinTile = 36
@@ -173,22 +163,11 @@ func AnimalLabel(mode string, an *game.AnimalView) string {
 }
 
 // DrawAnimalName puts a tame animal's name on a dark plate, centred
-// under the tile point (wx, wy) in tiles. The anchor is a world
-// position (physical pixels): the text goes through worldText, which
-// converts it to logical once, and the plate is sized in physical pixels
-// from the same logical text size, so both scale with the UI together.
+// under the tile point (wx, wy) in tiles: the colonists' plate
+// (names.go), its top on that point.
 func (c *Set) DrawAnimalName(v *render.View, cull *Cull, screen *ebiten.Image, name string, wx, wy float64) {
 	sx, sy := v.WorldToScreenF(wx, wy)
-	k := float32(gfx.UIScale())
-	pw, ph := (gfx.TextW(name, gfx.Small)+namePlatePad)*k, float32(namePlateH)*k
-	if v.Tracing() {
-		v.MarkDrawn("name-plate", sx-pw/2, sy, pw, ph)
-		v.MarkDrawn("name-text", sx, sy-nameTextRaise*k, 0, 0)
-	}
-	c.solidRect(cull, screen, sx-pw/2, sy, pw, ph, color.RGBA{16, 12, 8, 150})
-	st := gfx.Small
-	st.Align = gfx.AlignCenter
-	gfx.WorldText(screen, name, float64(sx), float64(sy-nameTextRaise*k), st)
+	drawNamePlate(c, v, cull, screen, name, sx, sy, "name-plate", "name-text")
 }
 
 // Trace styling.

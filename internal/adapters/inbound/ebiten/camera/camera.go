@@ -34,8 +34,8 @@ func ColonyViewportPhysical(sw, sh int, s float64) Viewport {
 }
 
 // ScreenDev is the density the map renders at (1 when unset): the
-// screen's device pixel density x the map's render scale. The map's tile
-// size is TileSize x zoom x ScreenDev.
+// screen's device pixel density x the map's render scale. Line widths and
+// pan speeds are in points x ScreenDev; the tile size is not (Unit).
 func ScreenDev() float64 {
 	if d := gfx.CurrentScale().Dev * gfx.CurrentScale().WorldK(); d > 0 && !math.IsNaN(d) && !math.IsInf(d, 0) {
 		return d
@@ -74,10 +74,15 @@ type Camera struct {
 	OffsetX, OffsetY float64
 	Zoom             float64
 	Placed           bool // Clamp has centred it on the map once
-	// Dev is the screen's device pixel density the tile size is
-	// multiplied by (PLAY-012: the map renders at physical resolution);
-	// 0 means 1, as in a bake's camera (lod.go withBake). SyncDev sets it.
+	// Dev is the screen's device pixel density (render scale folded in):
+	// pan speeds are in points x Dev; 0 means 1. SyncDev sets it.
 	Dev float64
+	// Unit is one cell's size in map pixels at zoom 1: the window's height
+	// in map pixels / CellsTall (UIS-080), so the default zoom shows
+	// CellsTall cells of window height at any window, density or UI scale.
+	// 0 means TileSize, as in a bake's camera (lod.go WithBake). Clamp and
+	// Step set it from the viewport (SyncUnit).
+	Unit float64
 	// pend is a view Resume queued for the next Clamp (a loaded save's).
 	pend    View
 	hasPend bool
@@ -85,7 +90,8 @@ type Camera struct {
 
 // View is where a camera looks, independent of pixel size, screen density
 // and window size: the world point at the middle of the viewport in tiles,
-// and the apparent zoom. It is what a save remembers (VIEW-001).
+// and the zoom as a multiple of the default (UIS-080). It is what a save
+// remembers (VIEW-001).
 type View struct{ CX, CY, Zoom float64 }
 
 // View is the world point at the middle of v, in tiles, with the zoom.
@@ -117,24 +123,35 @@ func (c *Camera) Resume(w View) {
 	c.pend, c.hasPend, c.Placed = w, true, false
 }
 
-// Tile is the on-screen size of one Tile in physical pixels.
-func (c *Camera) Tile() float64 {
-	if c.Dev > 0 {
-		return float64(TileSize) * c.Zoom * c.Dev
+// Tile is the on-screen size of one tile in map pixels: Unit x zoom.
+func (c *Camera) Tile() float64 { return c.unit() * c.Zoom }
+
+// unit is Unit, or TileSize for a camera never synced to a viewport.
+func (c *Camera) unit() float64 {
+	if c.Unit > 0 {
+		return c.Unit
 	}
-	return float64(TileSize) * c.Zoom
+	return TileSize
 }
 
+// UnitFor is the cell size at zoom 1 for a window h map pixels tall.
+func UnitFor(h float64) float64 { return h / CellsTall }
+
 const (
-	// TileSize is the on-screen pixel size of one logical tile at zoom 1,
-	// matching the art-spec reference of 64 px/tile.
+	// TileSize is the art reference: the pixel size a sprite drawn 1:1
+	// fills (64 px/tile, ART spec), and the tile of a camera never synced
+	// to a viewport (a bake's: px per tile as given).
 	TileSize = 64
+	// CellsTall is how many cells of window height the default zoom shows
+	// (UIS-080): a cell is 22.5 px at 1080, 15 at 720.
+	CellsTall = 48
 	// PanPixels is the pan distance of one 60 fps frame at normal speed.
 	PanPixels = 8
-	// MinZoom is the absolute zoom-out floor; the map-fit limit is MinZoomFor.
-	MinZoom = 0.1
-	// MaxZoom is the furthest zoom-in.
-	MaxZoom = 3.0
+	// MinZoom is the zoom-out floor (UIS-081: 9 px cells at 1080); a map
+	// smaller than that shows is held at its fit (MinZoomFor).
+	MinZoom = 0.40
+	// MaxZoom is the furthest zoom-in (49 px cells at 1080).
+	MaxZoom = 2.18
 )
 
 const (
@@ -212,11 +229,13 @@ func (s *Smooth) ZoomAt(factor, sx, sy float64) {
 	s.AnchorX, s.AnchorY = sx, sy
 }
 
-// Step advances the camera by dt seconds and applies the bounds.
+// Step advances the camera by dt seconds and applies the bounds; the
+// cell size follows the viewport's height first (SyncUnit).
 func (s *Smooth) Step(dt float64, c *Camera, lim Limits) {
 	if dt < 0 {
 		dt = 0
 	}
+	c.SyncUnit(lim.V.H(), s)
 	s.stepZoom(dt, c, lim)
 	s.stepPan(dt, c)
 	s.clamp(c, lim)
@@ -296,35 +315,43 @@ func (s *Smooth) clamp(c *Camera, lim Limits) {
 	c.OffsetX, c.OffsetY = cx, cy
 }
 
-// SyncDev adopts the screen's density dev, rescaling the camera's physical
-// offsets and the smoother's velocity so every point-space position keeps
-// showing the same world point (HiDPI toggled, or the window moved to
-// another screen). The zoom is apparent, so it does not change.
-func (c *Camera) SyncDev(dev float64, s *Smooth) {
-	old := c.Dev
-	if old <= 0 {
-		old = 1
-	}
-	if dev == c.Dev {
+// SyncDev adopts the screen's density dev (pan speeds). The tile size
+// does not depend on it: a new density changes the window's height in map
+// pixels, which the next Clamp or Step folds in (SyncUnit).
+func (c *Camera) SyncDev(dev float64) { c.Dev = dev }
+
+// SyncUnit adopts the cell size of a window h map pixels tall
+// (UnitFor), rescaling the offsets, the smoother's velocity and anchor
+// and the glide's memory (s may be nil) so the world point at the
+// viewport's top-left corner stays put: a resize, HiDPI toggled or the
+// window moved to another screen. A non-positive h changes nothing.
+func (c *Camera) SyncUnit(h float64, s *Smooth) {
+	u := UnitFor(h)
+	if !(u > 0) || math.IsInf(u, 0) || u == c.Unit {
 		return
 	}
-	k := dev / old
+	k := u / c.unit()
 	c.OffsetX *= k
 	c.OffsetY *= k
+	c.Unit = u
+	if s == nil {
+		return
+	}
 	s.Vx *= k
 	s.Vy *= k
 	s.AnchorX *= k
 	s.AnchorY *= k
-	c.Dev = dev
+	s.Fx.rescale(k)
 }
 
 // MinZoomFor is the furthest zoom-out for a mapW x mapH tile map seen
-// through v: the whole map fits with a small margin, unless that would
-// leave more than 1-MinCover of the screen black along its wider side.
-// v is in physical pixels (one tile is TileSize x dev at zoom 1), so the
-// limit is the same apparent zoom at any density.
+// through v (map pixels, the whole window): MinZoom (UIS-085), unless the
+// map is so small that the floor would leave more than 1-MinCover of the
+// screen black along its wider side; then the zoom at which the whole map
+// fits with a small margin, never past the default. The cell is
+// UnitFor(v.H()), so the limit is the same zoom at any density.
 func (c *Camera) MinZoomFor(v Viewport, mapW, mapH int) float64 {
-	unit := (&Camera{Zoom: 1, Dev: c.Dev}).Tile()
+	unit := UnitFor(v.H())
 	mw := float64(mapW) * unit
 	mh := float64(mapH) * unit
 	if v.W() <= 0 || v.H() <= 0 || mw <= 0 || mh <= 0 {
@@ -332,18 +359,20 @@ func (c *Camera) MinZoomFor(v Viewport, mapW, mapH int) float64 {
 	}
 	fx, fy := v.W()/mw, v.H()/mh
 	z := math.Max(math.Min(fx, fy)*(1-fitSlack), math.Max(fx, fy)*MinCover)
-	return math.Max(0.1, math.Min(z, 1))
+	return math.Max(MinZoom, math.Min(z, 1))
 }
 
 // Clamp keeps the zoom in range and the map in view. Each map edge may be
 // scrolled at most EdgeSlack of the viewport inside it; on an axis where
 // the map is smaller than that it is centred instead. The first call
 // centres the camera on the map, or on landing (a tile) when it is set and
-// not the map's centre. v is the physical map viewport.
+// not the map's centre. v is the physical map viewport: the whole window,
+// whose height sets the cell size (SyncUnit).
 func (c *Camera) Clamp(v Viewport, mapW, mapH int, landing [2]int) {
 	if v.W() <= 0 || v.H() <= 0 {
 		return
 	}
+	c.SyncUnit(v.H(), nil)
 	if mz := c.MinZoomFor(v, mapW, mapH); c.Zoom < mz {
 		c.Zoom = mz
 	}

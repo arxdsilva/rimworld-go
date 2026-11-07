@@ -152,8 +152,9 @@ var (
 	penFillClr   = color.RGBA{R: 150, G: 104, B: 62, A: 60}
 )
 
-// ZoneStroke is the outline width at the current zoom, clamped 1..3 points
-// and drawn in physical pixels (x dev) so it keeps its apparent thickness.
+// ZoneStroke is the outline width at an art zoom (render.View.ArtZoom),
+// clamped 1..3 points and drawn in physical pixels (x dev) so it keeps its
+// apparent thickness.
 func ZoneStroke(zoom float64) float32 {
 	return float32(min(3, max(1, 2*zoom)) * camera.ScreenDev())
 }
@@ -256,7 +257,7 @@ func (o *Zones) drawPaletteRun(v *render.View, run EdgeRun, c color.RGBA, sw, sh
 	if !runVisible(v, run, sw, sh, 8) {
 		return
 	}
-	th := ZoneStroke(v.Cam.Zoom)
+	th := ZoneStroke(v.ArtZoom())
 	ax, ay := v.WorldToScreenF(float64(run.X0), float64(run.Y0))
 	bx, by := v.WorldToScreenF(float64(run.X1), float64(run.Y1))
 	off := th / 2
@@ -370,7 +371,7 @@ func (o *Zones) DrawZoneRun(v *render.View, b *gfx.TriBatch, kind string, run Ed
 		o.DrawFenceRun(v, b, run, tile)
 		return
 	}
-	th := ZoneStroke(v.Cam.Zoom)
+	th := ZoneStroke(v.ArtZoom())
 	ax, ay := v.WorldToScreenF(float64(run.X0), float64(run.Y0))
 	bx, by := v.WorldToScreenF(float64(run.X1), float64(run.Y1))
 	off := th / 2
@@ -415,7 +416,7 @@ func (o *Zones) DrawZoneHighlight(v *render.View, ch *Chunks, screen *ebiten.Ima
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), zoneSelFillClr, false)
 		}
 	}
-	th := ZoneStroke(v.Cam.Zoom) * 1.5
+	th := ZoneStroke(v.ArtZoom()) * 1.5
 	off := th / 2
 	for _, run := range o.ZoneGeomOf(z).Runs {
 		if !runVisible(v, run, sw, sh, 8) {
@@ -636,8 +637,10 @@ func ZoneLabelLayout(text string, boxW, boxH, cx, cy, capSize float64) ZoneLabel
 			return ZoneLabelPlan{}
 		}
 	}
-	tw, _ := gfx.Measure(label, st)
-	w, h := tw+2*px, gfx.LineH(st)-2+2*py // lineH has 2 px of leading below the glyphs
+	// the glyph box (ascent + descent), not the line: the type scale's
+	// pitches (UIS-1) are shorter than a Title-size glyph box
+	tw, th := gfx.Measure(label, st)
+	w, h := tw+2*px, th+2*py
 	if h > boxH {
 		return ZoneLabelPlan{}
 	}

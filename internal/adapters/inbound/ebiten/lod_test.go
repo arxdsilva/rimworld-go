@@ -56,13 +56,13 @@ func TestLODSwitchesByZoom(t *testing.T) {
 	if r.pipe().LOD.Tier != worldpkg.Live || r.pipe().LOD.Chunks.Bakes != 0 || r.pipe().LOD.Pages.Pages != nil {
 		t.Fatalf("64 px: tier %d, %d chunk bakes, pages %v", r.pipe().LOD.Tier, r.pipe().LOD.Chunks.Bakes, r.pipe().LOD.Pages.Pages != nil)
 	}
-	lodFrame(r, 32)
+	lodFrame(r, 16) // the chunk tier is 12..20 px (UIS-086)
 	if r.pipe().LOD.Tier != worldpkg.Chunk || r.pipe().LOD.Chunks.Bakes == 0 {
-		t.Fatalf("32 px: tier %d, %d chunk bakes", r.pipe().LOD.Tier, r.pipe().LOD.Chunks.Bakes)
+		t.Fatalf("16 px: tier %d, %d chunk bakes", r.pipe().LOD.Tier, r.pipe().LOD.Chunks.Bakes)
 	}
-	// 640×400 at 32 px is 20×12.5 tiles: chunks (0,0) and (1,0)
-	if n := len(r.pipe().LOD.Chunks.ByChunk); n != 2 {
-		t.Fatalf("32 px baked %d chunks, want the 2 in view", n)
+	// 640×400 at 16 px is 40×25 tiles: chunks (0..2, 0..1)
+	if n := len(r.pipe().LOD.Chunks.ByChunk); n != 6 {
+		t.Fatalf("16 px baked %d chunks, want the 6 in view", n)
 	}
 	lodFrame(r, 8)
 	if r.pipe().LOD.Tier != worldpkg.Map || r.pipe().LOD.Pages.Pages == nil || r.pipe().LOD.Pages.Pages[0] == nil {
@@ -83,12 +83,12 @@ func TestChunkBakeInvalidatedOnVersion(t *testing.T) {
 	t.Parallel()
 	w := lodWorld(64, 64)
 	r, sim := lodRenderer(w, 64, 64)
-	lodFrame(r, 24)
+	lodFrame(r, 16)
 	first := r.pipe().LOD.Chunks.Bakes
 	if first == 0 {
 		t.Fatal("no chunk baked")
 	}
-	lodFrame(r, 24)
+	lodFrame(r, 16)
 	if r.pipe().LOD.Chunks.Bakes != first {
 		t.Fatalf("an unchanged frame rebaked %d chunks", r.pipe().LOD.Chunks.Bakes-first)
 	}
@@ -96,7 +96,7 @@ func TestChunkBakeInvalidatedOnVersion(t *testing.T) {
 	t2 := append([]uint8(nil), w.Terrain...)
 	t2[8*64+8] = t2[2*64+2]
 	sim.world.Terrain, sim.world.StructVer = t2, 2
-	lodFrame(r, 24)
+	lodFrame(r, 16)
 	if got := r.pipe().LOD.Chunks.Bakes - first; got != 1 {
 		t.Fatalf("one changed chunk rebaked %d", got)
 	}
@@ -156,8 +156,9 @@ func TestAnimalPadsFromLargestCanvas(t *testing.T) {
 	if pad, padS := r.animalPads(64); pad != 5 || padS != 4 {
 		t.Fatalf("pads %d, %d at 64 px tiles, want 5, 4", pad, padS)
 	}
-	if pad, padS := r.animalPads(8); pad != 8 || padS != 7 {
-		t.Fatalf("pads %d, %d at 8 px tiles (drawn at 16), want 8, 7", pad, padS)
+	// half the minimum creature size (9 px since UIS-093): bodies drawn twice the cell
+	if pad, padS := r.animalPads(worldpkg.CreatureMinTile / 2); pad != 8 || padS != 7 {
+		t.Fatalf("pads %d, %d at %v px tiles (drawn at %v), want 8, 7", pad, padS, worldpkg.CreatureMinTile/2, worldpkg.CreatureMinTile)
 	}
 	bare := bareRenderer()
 	bare.art = envArt("terrain/soil_00")

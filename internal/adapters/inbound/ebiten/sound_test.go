@@ -252,7 +252,7 @@ func TestDayWeight(t *testing.T) {
 
 func TestDirectorFadesWithZoom(t *testing.T) {
 	t.Parallel()
-	a, rec := soundApp(&stubSim{w: 48, h: 40})
+	a, rec := soundApp(&stubSim{w: 200, h: 200}) // big enough to zoom out to MinZoom (UIS-085)
 	r := a.renderer
 	v := camerapkg.ColonyViewport(a.sw, a.sh)
 	hear := func(zoom, dx float64) []soundCall {

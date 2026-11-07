@@ -16,7 +16,7 @@ import (
 // cursor and the camera are physical) and change the gfx scale (gfx.SetScale), so they must
 // not run in parallel.
 
-const barPawnID = entity.EntityID(7) // hidpiColony's colonist, at tile (21, 19)
+const barPawnID = entity.EntityID(7) // hidpiColony's colonist, at tile (hidpiPawnX, hidpiPawnY)
 
 // clickBarSlot left-clicks the colonist's bar slot through the real input
 // path (two Updates: press, then release).
@@ -51,7 +51,7 @@ func barColony(t *testing.T) (*App, *fakeInput) {
 
 func pawnCentred(a *App) bool {
 	v := a.mapViewport()
-	sx, sy := a.renderer.worldToScreenF(21.5, 19.5)
+	sx, sy := a.renderer.worldToScreenF(hidpiPawnX+0.5, hidpiPawnY+0.5)
 	return math.Abs(float64(sx)-(v.X0+v.X1)/2) <= 1.5 && math.Abs(float64(sy)-(v.Y0+v.Y1)/2) <= 1.5
 }
 
@@ -70,7 +70,7 @@ func TestBarDoubleClickCentresCamera(t *testing.T) {
 	}
 	clickBarSlot(t, a, f, barPawnID)
 	if !pawnCentred(a) {
-		sx, sy := a.renderer.worldToScreenF(21.5, 19.5)
+		sx, sy := a.renderer.worldToScreenF(hidpiPawnX+0.5, hidpiPawnY+0.5)
 		t.Fatalf("after a double click the colonist is drawn at (%v,%v), want the viewport centre of %+v", sx, sy, a.mapViewport())
 	}
 	if !a.renderer.HasSelect() || a.renderer.Selected() != barPawnID {

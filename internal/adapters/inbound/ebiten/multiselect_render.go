@@ -2,7 +2,6 @@
 package ebiten
 
 import (
-	"image/color"
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
@@ -232,48 +231,47 @@ func (a *App) drawBoxSelect(screen *ebiten.Image) {
 	gfx.StrokeRect(screen, x0, y0, x1-x0, y1-y0, 1, uikit.Accent, false)
 }
 
-// drawAnimalMark draws the selection mark on the animal's tile; the
-// panel itself is the inspect pane (animalPane).
+// drawSelectBrackets draws the selection brackets (UIS-092) around the
+// w x h tiles from world point (wx, wy), in map pixels like the map.
+// A free function so App keeps its method budget (SOLID_GO §10).
+func drawSelectBrackets(r *Renderer, screen *ebiten.Image, wx, wy float64, w, h int) {
+	tile := r.cam.Tile()
+	sx, sy := r.worldToScreenF(wx, wy)
+	overlaypkg.DrawSelectBrackets(screen, r.pipe().LOD.WhiteImg(), float64(sx), float64(sy),
+		float64(max(w, 1))*tile, float64(max(h, 1))*tile, tile)
+}
+
+// drawAnimalMark brackets the animal's tile; the panel itself is the
+// inspect pane (animalPane).
 func (a *App) drawAnimalMark(screen *ebiten.Image) {
 	an, ok := a.insp.SelectedAnimal()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
-	if a.renderer.art != nil {
-		wx, wy := a.renderer.interpAnimal(an)
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, wx, wy, a.shell.TilePx(), a.pw, a.ph) // physical, like the map
-	}
+	wx, wy := a.renderer.interpAnimal(an)
+	drawSelectBrackets(a.renderer, screen, wx, wy, 1, 1)
 }
 
-// drawFrameMark marks the selected blueprint's tiles on the map. The
-// pane (cmds_build.go) is the blueprint's panel now.
+// drawFrameMark brackets the selected blueprint's footprint on the map.
+// The pane (cmds_build.go) is the blueprint's panel now.
 func (a *App) drawFrameMark(screen *ebiten.Image) {
 	f, ok := a.insp.SelectedFrame()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
-	if a.renderer.art != nil {
-		bw, bh := max(f.W, 1), max(f.H, 1)
-		for dy := 0; dy < bh; dy++ {
-			for dx := 0; dx < bw; dx++ {
-				a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(f.X+dx), float64(f.Y+dy), a.shell.TilePx(), a.pw, a.ph) // physical, like the map
-			}
-		}
-	}
+	drawSelectBrackets(a.renderer, screen, float64(f.X), float64(f.Y), f.W, f.H)
 }
 
 // "cloth carpet" -> cloth_carpet
 
-// drawItemMark draws the selection mark on the stack's tile; the
-// panel itself is the inspect pane (itemPane).
+// drawItemMark brackets the stack's tile; the panel itself is the
+// inspect pane (itemPane).
 func (a *App) drawItemMark(screen *ebiten.Image) {
 	it, ok := a.sel.SelectedItem()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
-	if a.renderer.art != nil {
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.shell.TilePx(), a.pw, a.ph) // physical, like the map
-	}
+	drawSelectBrackets(a.renderer, screen, float64(it.X), float64(it.Y), 1, 1)
 }
 
 // plantIconKey is the sprite key of the plant's icon.
@@ -285,16 +283,14 @@ func (a *App) plantIconKey(p game.PlantView) string {
 	return key
 }
 
-// drawPlantMark draws the selection mark on the plant's tile; the
-// panel itself is the inspect pane (plantPane).
+// drawPlantMark brackets the plant's tile; the panel itself is the
+// inspect pane (plantPane).
 func (a *App) drawPlantMark(screen *ebiten.Image) {
 	p, ok := a.sel.SelectedPlant()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
-	if a.renderer.art != nil {
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(p.X), float64(p.Y), a.shell.TilePx(), a.pw, a.ph) // physical, like the map
-	}
+	drawSelectBrackets(a.renderer, screen, float64(p.X), float64(p.Y), 1, 1)
 }
 
 // drawBuildingMark marks the selected building on the map. The pane
@@ -309,9 +305,8 @@ func (a *App) drawBuildingMark(screen *ebiten.Image) {
 
 func (a *App) drawBuildingSelection(screen *ebiten.Image, b game.BuildingView) {
 	tile := a.shell.TilePx()
-	sx, sy := a.shell.WorldToScreen(b.X, b.Y)
-	w, h := float32(float64(max(b.W, 1))*tile), float32(float64(max(b.H, 1))*tile)
-	vector.StrokeRect(screen, sx+1, sy+1, w-2, h-2, 2, uikit.Accent, false)
+	// UIS-092: brackets at the whole footprint
+	drawSelectBrackets(a.renderer, screen, float64(b.X), float64(b.Y), b.W, b.H)
 	if b.Kind == overlaypkg.SentryTurretKind { // turret_draw.go: its reach
 		a.renderer.drawRangeRing(screen, b.X, b.Y, overlaypkg.TurretRangeTiles, overlaypkg.TokenNRGBA(uikit.Accent))
 	}

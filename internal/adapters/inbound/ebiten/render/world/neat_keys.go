@@ -280,9 +280,9 @@ func (b *base) stackSlot(p *neatPiece, it *game.ItemView) (ax, ay, k float64, ok
 }
 
 // showsCount reports a stack of qty in this piece prints its count at tile:
-// never in a closed piece, only at the closest zoom tier with many slots.
+// never in a closed piece, only from DetailMin with many slots.
 func (p *neatPiece) showsCount(qty int, tile float64) bool {
-	return p.show != showNone && qty > 1 && (p.slots < neatManySlots || TierFor(tile) == Live)
+	return p.show != showNone && qty > 1 && (p.slots < neatManySlots || tile >= DetailMin)
 }
 
 // stackOnEnd is the pose that stands a sprite of footprint fw x fh on end

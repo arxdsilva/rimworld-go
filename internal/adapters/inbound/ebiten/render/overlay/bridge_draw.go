@@ -110,7 +110,7 @@ func BridgeLabelAt(w game.WorldView, x, y int) string {
 // sprites. Tiles are physical pixels (v.Cam).
 func (o *Set) DrawFoundation(v *render.View, ps sprite.Pass, ch *Chunks, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	v.LayerDrawn("foundation")
-	if !ch.Live || v.Art == nil { // baked below 48 px (lod.go)
+	if !ch.Live || v.Art == nil { // baked below the live tier (lod.go)
 		return
 	}
 	set := o.Bridges.Sync(w)

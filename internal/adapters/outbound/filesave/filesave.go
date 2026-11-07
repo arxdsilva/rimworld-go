@@ -135,9 +135,45 @@ const ViewExt = ".rwview"
 // survives another window size or screen density). The top level is map
 // 0's camera and Maps every other open map's by its decimal id (MAP-1), so
 // a sidecar written before there were several maps loads as map 0's.
+// Version is the zoom's unit (ViewVersion); only the top level carries it.
 type ViewFile struct {
 	CX, CY, Zoom float64
+	Version      int                 `json:"v,omitempty"`
 	Maps         map[string]ViewFile `json:"maps,omitempty"`
+}
+
+// ViewVersion is the sidecar's current zoom unit. 0 (no "v"): a multiple
+// of a fixed 64 px tile. 1 (UIS-087): a multiple of the default zoom,
+// whose cell is the window's height / 48. The old unit cannot be carried
+// over (it depended on the window it was saved at), so an older sidecar
+// loads at the default zoom with its centres kept (ViewFile.upgraded).
+const ViewVersion = 1
+
+// DefaultZoom is the zoom an older sidecar's cameras load at.
+const DefaultZoom = 1.0
+
+// upgraded is v in the current unit: an older sidecar's valid cameras at
+// DefaultZoom, their centres kept (an invalid one stays invalid, so it is
+// still left out).
+func (v ViewFile) upgraded() ViewFile {
+	if v.Version >= ViewVersion {
+		return v
+	}
+	if v.valid() {
+		v.Zoom = DefaultZoom
+	}
+	if v.Maps != nil {
+		maps := make(map[string]ViewFile, len(v.Maps))
+		for k, m := range v.Maps {
+			if m.valid() {
+				m.Zoom = DefaultZoom
+			}
+			maps[k] = m
+		}
+		v.Maps = maps
+	}
+	v.Version = ViewVersion
+	return v
 }
 
 // valid reports the camera is finite with a positive zoom.
@@ -187,9 +223,10 @@ func viewPath(savePath string) string {
 }
 
 // SaveView writes the camera sidecar for slot atomically (temp file and
-// rename), replacing any earlier one.
+// rename), replacing any earlier one, stamped with ViewVersion.
 func (s Store) SaveView(slot string, v ViewFile) error {
 	slot = sanitize(slot)
+	v.Version = ViewVersion
 	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("encode view: %w", err)
@@ -202,7 +239,8 @@ func (s Store) SaveView(slot string, v ViewFile) error {
 
 // LoadView reads the camera sidecar beside the save at savePath. A missing
 // or unreadable file, or one without a single valid camera, reports false:
-// the save loads as it always did. PerMap gives the cameras by map.
+// the save loads as it always did. An older sidecar comes back in the
+// current unit (upgraded). PerMap gives the cameras by map.
 func (s Store) LoadView(savePath string) (ViewFile, bool) {
 	data, err := os.ReadFile(viewPath(savePath))
 	if err != nil {
@@ -212,5 +250,5 @@ func (s Store) LoadView(savePath string) (ViewFile, bool) {
 	if json.Unmarshal(data, &v) != nil || len(v.PerMap()) == 0 {
 		return ViewFile{}, false
 	}
-	return v, true
+	return v.upgraded(), true
 }

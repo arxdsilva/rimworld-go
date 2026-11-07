@@ -124,6 +124,11 @@ func (s *sceneSet) switchTo(r *Renderer, id game.MapID) {
 	old := r.mapScene
 	s.park(old)
 	sc := s.ensure(id)
+	if old != nil && old.cam.Unit > 0 {
+		// the window's cell (UIS-080) before the next clamp, so a jump
+		// right after the switch (a colonist's portrait) centres in it
+		sc.cam.SyncUnit(old.cam.Unit*camerapkg.CellsTall, nil)
+	}
 	s.cur = id
 	r.mapScene = sc
 	r.smooth.Halt() // no pan or zoom coasting onto the other map

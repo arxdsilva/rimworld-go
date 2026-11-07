@@ -48,9 +48,12 @@ type Simulation interface {
 var _ Simulation = (*game.Game)(nil)
 
 const (
-	// absolute floor; the map-fit limit is minZoomFor
-
-	zoomStep = 0.1
+	// zoomStep is one wheel notch: x1.026, about 65 notches from the
+	// zoom-out floor to the furthest zoom-in (UIS-082).
+	zoomStep = 0.026
+	// keyZoomNotches is the notches one zoom key press steps (x1.108, the
+	// old key step), so the keys need not be pressed 65 times.
+	keyZoomNotches = 4
 )
 
 // speed is a presentation-only game-speed tier. It controls how often
@@ -356,10 +359,10 @@ func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) (toWorld bo
 	pf := &r.smooth.Prefs
 	toWorld = pf.WorldOut && camerapkgpkg.WantsWorld(r.cam.Zoom, r.MinZoomFor(v), r.smooth.Zooming, in.zoom < 0 || in.wheel < 0)
 	for ; in.zoom > 0; in.zoom-- {
-		r.smooth.ZoomAt(1+zoomStep, cx, cy)
+		r.smooth.ZoomAt(math.Pow(1+zoomStep, keyZoomNotches), cx, cy)
 	}
 	for ; in.zoom < 0; in.zoom++ {
-		r.smooth.ZoomAt(1/(1+zoomStep), cx, cy)
+		r.smooth.ZoomAt(math.Pow(1+zoomStep, -keyZoomNotches), cx, cy)
 	}
 	if in.wheel != 0 {
 		ax, ay := camerapkgpkg.ZoomAnchor(!pf.CenterZoom, in.wx, in.wy, v) // OPT-021
@@ -378,17 +381,20 @@ func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) (toWorld bo
 	return toWorld
 }
 
-// SyncDev adopts the screen's density (camera.Camera.SyncDev).
-func (r *Renderer) SyncDev() { r.cam.SyncDev(camerapkgpkg.ScreenDev(), &r.smooth) }
+// SyncDev adopts the screen's density (camera.Camera.SyncDev): pan speeds.
+// The cell size follows the viewport (ClampCamera, stepCamera).
+func (r *Renderer) SyncDev() { r.cam.SyncDev(camerapkgpkg.ScreenDev()) }
 
 // MinZoomFor is the furthest zoom-out for this map and viewport.
 func (r *Renderer) MinZoomFor(v camerapkgpkg.Viewport) float64 {
 	return r.cam.MinZoomFor(v, r.game.Width(), r.game.Height())
 }
 
-// ClampCamera keeps the zoom in range and the map in view.
+// ClampCamera keeps the zoom in range and the map in view; the cell size
+// follows v, the whole window in map pixels (UIS-080).
 func (r *Renderer) ClampCamera(v camerapkgpkg.Viewport) {
 	r.SyncDev()
+	r.cam.SyncUnit(v.H(), &r.smooth)
 	r.cam.Clamp(v, r.game.Width(), r.game.Height(), r.game.World().Landing)
 }
 
@@ -404,6 +410,7 @@ const camMaxDt = 0.1
 // so panning and zoom run at the display rate rather than at 60 TPS. Input
 // mapping in Update sees the previous Draw's camera: one frame of lag.
 func (r *Renderer) stepCamera(dt float64, v camerapkgpkg.Viewport) {
+	r.cam.SyncUnit(v.H(), &r.smooth) // a resize since the last Update
 	fxStep(r, dt)
 	if r.smooth.Instant || r.smooth.Idle() {
 		return

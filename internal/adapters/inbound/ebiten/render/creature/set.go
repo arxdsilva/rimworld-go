@@ -97,7 +97,7 @@ type Layer struct {
 type Cull struct {
 	X0, Y0, X1, Y1 int  // the visible tiles, inclusive
 	ViewSet        bool // a frame has set the view; unset, every tile counts
-	MapTier        bool // the map tier (< 16 px tiles) draws no decals
+	MapTier        bool // the map tier (< 12 px tiles) draws no decals
 	Pad, PadS      int  // an animal's pads at this tile size (sides, south)
 	MotionPad      int  // animals within this many tiles keep a motion track
 	// MinTile is the smallest tile size creatures are drawn at.

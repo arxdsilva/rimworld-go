@@ -153,7 +153,7 @@ func TestCallIntervalScales(t *testing.T) {
 
 func TestCallRateCaps(t *testing.T) {
 	t.Parallel()
-	r := newBus(0.5)
+	r := newBus(1) // the default zoom: a 64-tile map's zoom-out floor is 0.8 at 720 (UIS-085)
 	species := []string{"deer", "cow", "horse", "goat", "sheep", "cat", "husky", "chicken", "duck", "pig", "elk", "lynx"}
 	var herd []game.AnimalView
 	for i := 0; i < 40; i++ {
@@ -233,8 +233,8 @@ func TestZoomEar(t *testing.T) {
 		zoom, gain, pan float64
 		perID           int
 	}{
-		{3.0, 1, 1, 3}, {1.5, 1, 1, 3}, {1.0, 0.748, 0.874, 3},
-		{0.5, 0.317, 0.658, 1}, {0.3, 0, 0.5, 1}, {0.2, 0, 0.5, 1},
+		{3.0, 1, 1, 3}, {1.5, 1, 1, 3}, {1.0, 1, 1, 3}, // ZoomNear is the default zoom (UIS-080)
+		{0.7, 0.704, 0.852, 3}, {0.5, 0.424, 0.712, 2}, {0.3, 0, 0.5, 1}, {0.2, 0, 0.5, 1},
 	}
 	for _, c := range cases {
 		g, p, n := ZoomEar(c.zoom, out)

@@ -20,7 +20,7 @@ type View struct {
 	Art *art.Catalog  // the sprite catalog (nil without art)
 
 	SW, SH     int     // the destination in map pixels
-	Tile       float64 // tile size in map pixels (zoom x TileSize)
+	Tile       float64 // tile size in map pixels (Cam.Tile: the cell unit x zoom)
 	Zoom, Dev  float64 // camera zoom and the device factor (render scale folded in)
 	MapW, MapH int
 
@@ -61,6 +61,18 @@ type Prefs struct {
 type Trace struct {
 	Layer      func(name string)
 	AnimalMark func(kind string, a, b, c, d float32)
+}
+
+// ArtZoom is the tile in points as a share of the 64-point art reference
+// (camera.TileSize): what the zoom meant before the cell unit followed the
+// window (UIS-080). Line widths and the path cull are tuned to it, so they
+// keep their look at a given tile size.
+func (v *View) ArtZoom() float64 {
+	d := v.Dev
+	if d <= 0 {
+		d = 1
+	}
+	return v.Cam.Tile() / (camera.TileSize * d)
 }
 
 // LayerDrawn notes a ground layer for the layer-order tests.

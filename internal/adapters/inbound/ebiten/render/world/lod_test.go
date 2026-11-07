@@ -11,7 +11,7 @@ func TestTierFor(t *testing.T) {
 	for _, c := range []struct {
 		tile float64
 		want Tier
-	}{{64, Live}, {48, Live}, {47.9, Chunk}, {32, Chunk}, {16, Chunk}, {15.9, Map}, {6.4, Map}} {
+	}{{64, Live}, {22.5, Live}, {20, Live}, {19.9, Chunk}, {16, Chunk}, {12, Chunk}, {11.9, Map}, {9, Map}, {6.4, Map}} { // UIS-086
 		if got := TierFor(c.tile); got != c.want {
 			t.Fatalf("TierFor(%v) = %d, want %d", c.tile, got, c.want)
 		}

@@ -23,7 +23,7 @@ func TestJumpToCentresOnPhysicalViewport(t *testing.T) {
 			a.renderer.cam.Zoom = 1
 			a.centreOnPawn(7)
 			v := a.mapViewport()
-			sx, sy := a.renderer.worldToScreenF(21.5, 19.5)
+			sx, sy := a.renderer.worldToScreenF(hidpiPawnX+0.5, hidpiPawnY+0.5)
 			if math.Abs(float64(sx)-(v.X0+v.X1)/2) > 1.5 || math.Abs(float64(sy)-(v.Y0+v.Y1)/2) > 1.5 {
 				t.Fatalf("pawn drawn at (%v,%v), want the viewport centre of %+v", sx, sy, v)
 			}
@@ -38,10 +38,10 @@ func TestDevMenuPicksPhysicalTile(t *testing.T) {
 	set := a.settings
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
-	f.MoveTo(a, 21, 19)
+	f.MoveTo(a, hidpiPawnX, hidpiPawnY)
 	f.Key(t, a, "Slash", 0)
-	if !a.tools.State.Menu || a.tools.State.TX != 21 || a.tools.State.TY != 19 {
-		t.Fatalf("dev menu %v at tile %d,%d, want 21,19", a.tools.State.Menu, a.tools.State.TX, a.tools.State.TY)
+	if !a.tools.State.Menu || a.tools.State.TX != hidpiPawnX || a.tools.State.TY != hidpiPawnY {
+		t.Fatalf("dev menu %v at tile %d,%d, want %d,%d", a.tools.State.Menu, a.tools.State.TX, a.tools.State.TY, hidpiPawnX, hidpiPawnY)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestBoxSelectPhysical(t *testing.T) {
 	}{{"dev2", 2, 0}, {"ui1.5", 1, 150}} {
 		t.Run(c.name, func(t *testing.T) {
 			a, f := hidpiColony(t, c.dev, c.ui)
-			f.Drag(t, a, inputframe.Left, 20, 18, 22, 20, 0)
+			f.Drag(t, a, inputframe.Left, hidpiPawnX-1, hidpiPawnY-1, hidpiPawnX+1, hidpiPawnY+1, 0)
 			if !a.sel.Grouped() && !(a.renderer.HasSelect() && a.renderer.Selected() == 7) {
 				t.Fatal("a box around the pawn did not select it")
 			}

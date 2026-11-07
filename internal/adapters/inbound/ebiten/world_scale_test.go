@@ -160,19 +160,20 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 }
 
 // TestRenderScaleToggleKeepsTheView: switching Full -> Half keeps the tile
-// under every screen point (syncDev rescales the camera, like HiDPI).
+// under every screen point (the cell follows the map viewport's height,
+// which halves, and the camera rescales with it, like HiDPI; UIS-080).
 func TestRenderScaleToggleKeepsTheView(t *testing.T) {
-	r := New(&stubSim{w: 40, h: 40})
+	r := New(&stubSim{w: 200, h: 200})
 	r.cam = camerapkg.Camera{Zoom: 1.3, OffsetX: 410, OffsetY: 195, Placed: true}
 	old := gfx.CurrentScale()
 	t.Cleanup(func() { gfx.SetScale(old) })
 	gfx.SetScale(gfx.Scale{Dev: 2, UI: 1, S: 2, World: 1})
-	r.SyncDev()
+	r.ClampCamera(camerapkg.Viewport{X1: 2560, Y1: 1440}) // 1280x720 points at Full
 	wx, wy := r.screenToWorld(600, 400)
 	sc := gfx.CurrentScale()
 	sc.World = 0.5
 	gfx.SetScale(sc)
-	r.SyncDev()
+	r.ClampCamera(camerapkg.Viewport{X1: 1280, Y1: 720}) // the same window at Half
 	if gx, gy := r.screenToWorld(300, 200); math.Abs(gx-wx) > 1e-9 || math.Abs(gy-wy) > 1e-9 {
 		t.Fatalf("after Full -> Half: (%v,%v), want (%v,%v)", gx, gy, wx, wy)
 	}

@@ -100,6 +100,10 @@ func TestJourneyMapsFrameClickSwitches(t *testing.T) {
 func TestJourneyMapsBarColonistOfAnotherMapJumps(t *testing.T) {
 	t.Parallel()
 	j, away, pawn := mapsJourney(t)
+	// the away map's scene at the input tests' 64-px cells, where it is wider
+	// than the window and so can centre on him (at its default zoom it fits
+	// whole and is centred, UIS-080)
+	j.a.renderer.scenes.ensure(away).cam.Zoom = artZoom(j.a)
 	if !j.clickID(fmt.Sprintf("bar.pawn.%d", pawn)) {
 		t.Fatal("the portrait is disabled")
 	}

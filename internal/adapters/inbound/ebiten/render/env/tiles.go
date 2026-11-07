@@ -8,12 +8,22 @@ import (
 // Zoom tiers by on-screen tile size, as the renderer's lod.go draws them
 // (its lodLiveMin, lodChunkMin, decalMinTile and visPad must equal these:
 // TestEnvTiersMatchLOD).
+//
+// Since UIS-086 the cell follows the window (camera.CellsTall: 22.5 px at
+// 1080, 9 to 49 px over the zoom range), so the ground is live from just
+// under the default zoom, the chunk bakes cover 12-20 px and the map bake
+// only the far end; DetailMin keeps the full grass and crop detail where
+// it was (48 px), as their cost grows with the cells in view.
 const (
 	// LiveMin is the tile size (px) from which the world draws live.
-	LiveMin = 48.0
+	LiveMin = 20.0
 	// ChunkMin is the tile size from which chunk bakes draw, the map bake
 	// below.
-	ChunkMin = 16.0
+	ChunkMin = 12.0
+	// DetailMin is the tile size from which grass draws every copy and
+	// crops every unit, and many-slot shelves print their counts; below
+	// it the capped forms (GrassMidCap, one crop unit).
+	DetailMin = 48.0
 	// DecalMinTile is the tile size ground-cover decals (snow cover,
 	// drifts, frost) need; below it the smooth veil alone shows.
 	DecalMinTile = 32.0

@@ -36,8 +36,9 @@ func optToggle(j *journey, tab, id string, get func() bool, want bool) {
 // pointer.
 func TestJourneyCameraZoomToMouseOffZoomsAboutTheMiddle(t *testing.T) {
 	t.Parallel()
-	j := newJourney(t)
+	j := newJourney(t, jSize(64, 64))
 	optToggle(j, "gameplay", "options.zoomtomouse", func() bool { return j.a.settings.Camera.ZoomToMouse }, false)
+	j.a.renderer.cam.Zoom = playZoom // room to zoom in
 	j.draw(1)
 	r := j.a.renderer
 	v := j.a.mapViewport()

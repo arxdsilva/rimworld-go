@@ -255,16 +255,19 @@ func TestZoneLabelEllipsizesThenHides(t *testing.T) {
 }
 
 // zlFrame draws z's label once on a renderer whose camera shows the zone
-// centre at the screen centre plus pan, at the given scales and zoom. It
-// returns the renderer and the events drawn.
+// centre at the screen centre plus pan, at the given scales and zoom. The
+// zoom is in art cells (64 px x dev at 1, the pre-UIS-080 zoom), turned
+// into the window's own cell (1/48 of its height). It returns the renderer
+// and the events drawn.
 func zlFrame(t *testing.T, z game.ZoneView, sc wlScale, zoom float64, pan [2]float64) (*Renderer, []gfx.TraceEvent) {
 	t.Helper()
 	wlSetScale(t, sc)
 	got := wlTrace(t)
 	r := New(&stubSim{w: 64, h: 64})
-	r.cam.Zoom, r.cam.Dev = zoom, sc.dev
-	tile := r.cam.Tile()
 	sw, sh := int(1280*sc.dev), int(720*sc.dev)
+	r.cam.Unit, r.cam.Dev = camerapkg.UnitFor(float64(sh)), sc.dev
+	r.cam.Zoom = zoom * camerapkg.TileSize * sc.dev / r.cam.Unit
+	tile := r.cam.Tile()
 	cx := float64(z.MinX+z.MaxX+1) / 2
 	cy := float64(z.MinY+z.MaxY+1) / 2
 	r.cam.OffsetX = cx*tile - float64(sw)/2 + pan[0]
@@ -323,8 +326,9 @@ func TestZoneLabelStaysInsideTheZoneAtScale(t *testing.T) {
 						first, firstPan = &plate, pan
 						continue
 					}
-					wlNear(t, "plate x shift", float64(plate.X-first.X), -(pan[0] - firstPan[0]), 0.5)
-					wlNear(t, "plate y shift", float64(plate.Y-first.Y), -(pan[1] - firstPan[1]), 0.5)
+					// (fills snap to whole device px since UIS-1: within a pixel)
+					wlNear(t, "plate x shift", float64(plate.X-first.X), -(pan[0] - firstPan[0]), 1)
+					wlNear(t, "plate y shift", float64(plate.Y-first.Y), -(pan[1] - firstPan[1]), 1)
 				}
 			}
 		}

@@ -76,7 +76,7 @@ type Chunks struct {
 	Views              []game.ChunkView
 	VX0, VY0, VX1, VY1 int
 	ViewSet            bool // a frame has set the view; before, every tile counts
-	Live               bool // the live tier (48 px a tile and up)
+	Live               bool // the live tier (env.LiveMin, 20 px a tile, and up)
 	WholeMap           bool // the whole-map bake tier
 	Baking             bool // drawing into a bake: no live parts
 }

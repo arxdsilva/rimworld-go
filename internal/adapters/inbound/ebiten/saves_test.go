@@ -45,14 +45,14 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 
 func TestSaveWritesViewAndLoadResumesIt(t *testing.T) {
 	t.Parallel()
-	a := testApp(&stubSim{w: 40, h: 40})
+	a := testApp(&stubSim{w: 160, h: 160}) // wider than the window at 15-px cells (UIS-080)
 	views := map[string]map[game.MapID]camera.View{}
 	a.cfg.Saves = SaveHooks{
 		Save: func(Simulation, string) error { return nil },
 		List: func() ([]ports.SaveSlot, error) {
 			return []ports.SaveSlot{{Name: "s", Path: "s", Date: "Year 1", Colonists: 3}}, nil
 		},
-		Load:     func(path string) (Simulation, string, error) { return &stubSim{w: 40, h: 40}, path, nil },
+		Load:     func(path string) (Simulation, string, error) { return &stubSim{w: 160, h: 160}, path, nil },
 		SaveView: func(slot string, v map[game.MapID]camera.View) error { views[slot] = v; return nil },
 		LoadView: func(path string) (map[game.MapID]camera.View, bool) { v, ok := views[path]; return v, ok },
 	}

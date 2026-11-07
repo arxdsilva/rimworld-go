@@ -107,6 +107,13 @@ func (f *Fx) Offset() (dx, dy float64) {
 	return dx, dy
 }
 
+// rescale scales the glide and the remembered offset by k (a new cell
+// size, Camera.SyncUnit), so the rescaled camera is not taken for a jump.
+func (f *Fx) rescale(k float64) {
+	f.GlideX, f.GlideY = f.GlideX*k, f.GlideY*k
+	f.rx, f.ry = f.rx*k, f.ry*k
+}
+
 func clampAbs(v, lim float64) float64 { return math.Max(-lim, math.Min(lim, v)) }
 
 // WantsWorld reports a zoom-out request that has nowhere left to go: the

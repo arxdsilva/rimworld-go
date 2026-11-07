@@ -3,7 +3,6 @@ package world
 import (
 	"cmp"
 	"image/color"
-	"math"
 	"slices"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -12,7 +11,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
@@ -125,7 +123,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		p.drawSprite(screen, "overlay/blueprint", none, float64(f.X), float64(f.Y), tile, sw, sh)
 	}
 
-	if lt == Live { // floor markings and carpets lie on the floor (baked below 48 px)
+	if lt == Live { // floor markings and carpets lie on the floor (baked below LiveMin)
 		for _, cv := range views {
 			for _, i := range cv.Buildings {
 				if int(i) >= len(w.Buildings) {
@@ -167,7 +165,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	p.Env.Trees.SweepTreeFades(v)
 	p.Overlays.DrawPaths(v, screen, sw, sh, tile, p.interpWorld)
 	draws := p.draws[:0]
-	if lt == Live { // rock is baked below 48 px
+	if lt == Live { // rock is baked below LiveMin
 		draws = p.addRockDraws(w, draws)
 	}
 	if lt != Map {
@@ -329,15 +327,31 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	clM.White = l.WhiteImg()
 	p.Creatures.DrawAnimalOverlays(v, p.Pass(), &clM, screen, w, tile)
 	creature.DrawFarPawns(p.Creatures, v, &clM, screen, w) // OPT-016: dots and silhouettes at the map tier
+	p.drawPawnNames(&clM, screen)
 	if v.HasSelect {
-		for _, pw := range v.Pawns {
-			if pw.ID == v.Selected {
-				wx, wy := p.interpWorld(pw)
+		for i := range v.Pawns {
+			if pw := &v.Pawns[i]; pw.ID == v.Selected {
+				wx, wy := p.interpWorld(*pw)
 				wx, wy = CreatureAt(wx, wy, tile, ct)
-				k := 1 + 0.045*math.Sin(float64(v.Present)/7)
-				p.DrawSpritePose(screen, "overlay/selection", none, wx, wy, ct, motion.Pose{Px: 0.5, Py: 0.5, Sx: k, Sy: k})
+				sx, sy := v.WorldToScreenF(wx, wy)
+				overlay.DrawSelectBrackets(screen, l.WhiteImg(), float64(sx), float64(sy), ct, ct, ct) // UIS-092: the cell it is drawn on
 			}
 		}
+	}
+}
+
+// drawPawnNames puts every colonist's name under the cell it is drawn on
+// (UIS-088), at every zoom and never decluttered; off-view ones are
+// skipped.
+func (p *Pipeline) drawPawnNames(cl *creature.Cull, screen *ebiten.Image) {
+	v := p.v
+	for i := range v.Pawns {
+		pw := &v.Pawns[i]
+		if pw.Name == "" || !light.Colonist(pw) || !p.LOD.InView(pw.X, pw.Y, 2, 2) {
+			continue
+		}
+		wx, wy := p.interpWorld(*pw)
+		creature.DrawPawnName(p.Creatures, v, cl, screen, pw.Name, wx+0.5, wy+1)
 	}
 }
 
@@ -391,7 +405,7 @@ func (p *Pipeline) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 }
 
 // drawTufts draws the visible grass over the ground (render/env): the
-// tuft batch, every copy from LiveMin and at most env.GrassMidCap from
+// tuft batch, every copy from DetailMin and at most env.GrassMidCap from
 // env.GrassLiveMin (below that the chunk images hold the tufts), then the
 // cut marks.
 func (p *Pipeline) drawTufts(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
@@ -402,7 +416,7 @@ func (p *Pipeline) drawTufts(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	p.LOD.Grass.Quads = 0
 	if tile >= env.GrassLiveMin {
 		limit := 9
-		if tile < LiveMin {
+		if tile < DetailMin {
 			limit = env.GrassMidCap
 		}
 		p.Env.GrassBatchOf(v, screen, &w, x0, y0, x1, y1, tile, sw, sh, limit, p.LOD.Baking)
@@ -465,7 +479,7 @@ var smoothFallbackCS = sprite.ColorScale{0.65, 0.9, 1.35, 1}
 // traced only when there is some.
 func (p *Pipeline) DrawFloorLayers(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	p.layer("floors")
-	if p.LOD.Tier == Live { // baked below 48 px (lod.go)
+	if p.LOD.Tier == Live { // baked below LiveMin (lod.go)
 		for _, cv := range p.LOD.Views {
 			for _, i := range cv.Buildings {
 				if int(i) >= len(w.Buildings) {

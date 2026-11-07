@@ -15,6 +15,11 @@ import (
 // key (PERF-002 steps the smoothing per Draw), so every one of these holds
 // or presses through Update and then Draws on the pinned clock.
 
+// playZoom is a zoom inside the player's range for the camera journeys
+// whose zoom matters: newJourney's inputCamera draws 64-px cells, a zoom
+// past MaxZoom since UIS-080 (48 cells of the window's height).
+const playZoom = 1.5
+
 func panSign(v float64) float64 {
 	switch {
 	case v > 0.5:
@@ -131,7 +136,8 @@ func TestJourneyCameraZoomKeys(t *testing.T) {
 	}{{"PageDown", true}, {"Equal", true}, {"PageUp", false}, {"Minus", false}} {
 		t.Run(c.key, func(t *testing.T) {
 			t.Parallel()
-			j := newJourney(t)
+			j := newJourney(t, jSize(64, 64))
+			j.a.renderer.cam.Zoom = playZoom // room to zoom both ways
 			j.draw(1)
 			z0 := j.a.renderer.cam.Zoom
 			j.key(c.key, 0)
@@ -147,7 +153,8 @@ func TestJourneyCameraZoomKeys(t *testing.T) {
 // so the tile under it stays put.
 func TestJourneyCameraWheelZoomsAtCursor(t *testing.T) {
 	t.Parallel()
-	j := newJourney(t)
+	j := newJourney(t, jSize(64, 64))
+	j.a.renderer.cam.Zoom = playZoom
 	j.draw(1)
 	r := j.a.renderer
 	j.f.MoveTo(j.a, 12, 5)
@@ -275,8 +282,9 @@ func TestJourneyCameraRestoredOnLoad(t *testing.T) {
 		SaveView: func(slot string, v map[game.MapID]camerapkg.View) error { views[slot] = v; return nil },
 		LoadView: func(path string) (map[game.MapID]camerapkg.View, bool) { v, ok := views[path]; return v, ok },
 	}
-	j.draw(1)
 	r := j.a.renderer
+	r.cam.Zoom = playZoom // a zoom the player can reach: a load clamps to MaxZoom
+	j.draw(1)
 	r.cam.OffsetX += 200
 	r.cam.OffsetY += 150
 	j.draw(1)

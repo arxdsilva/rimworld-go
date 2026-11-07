@@ -23,7 +23,7 @@ const (
 	WorkBarW       = 0.6
 	workBarH       = 0.06
 	workBarTop     = 0.82 // the bar's top from the work tile's top edge
-	WorkBarMinTile = 24.0 // physical px per tile below which no bar is drawn
+	WorkBarMinTile = 16.0 // physical px per tile below which no bar is drawn (UIS-094: the default zoom, 22.5 px at 1080, shows bars)
 )
 
 // workBarOutline is the bar's dark edge.

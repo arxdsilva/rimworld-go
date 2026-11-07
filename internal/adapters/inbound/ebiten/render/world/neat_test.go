@@ -287,10 +287,10 @@ func TestNeatLookupsAllocateNothing(t *testing.T) {
 	}
 }
 
-// TestShowsCount: closed pieces never; many slots only at the closest tier.
+// TestShowsCount: closed pieces never; many slots only from DetailMin.
 func TestShowsCount(t *testing.T) {
 	few, many, closed := neatByName["display shelf"], neatByName["open shelf"], neatByName["safe"]
-	near, mid := float64(LiveMin), float64(LiveMin)-1
+	near, mid := float64(DetailMin), float64(DetailMin)-1
 	for _, c := range []struct {
 		p    *neatPiece
 		qty  int

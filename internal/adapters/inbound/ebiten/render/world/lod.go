@@ -16,20 +16,22 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// Level of detail by on-screen tile size (NG-1 §6.7 E5):
+// Level of detail by on-screen tile size (NG-1 §6.7 E5, retuned by
+// UIS-086 for 9-49 px cells: the default zoom is 22.5 px at 1080):
 //
-//	≥ 48 px   live: every tile and object drawn as today;
-//	16–48 px  chunk: each chunk's ground (terrain, edges, water, smoothed
+//	≥ 20 px   live: every tile and object drawn as today;
+//	12–20 px  chunk: each chunk's ground (terrain, edges, water, smoothed
 //	          stone, rock, floors, carpets) is a baked 16 px/tile image
 //	          (chunk_cache.go), drawn lit per tile; objects stay live;
-//	< 16 px   map: one whole-map bake at 4 px/tile in ≤ 4096-px pages,
+//	< 12 px   map: one whole-map bake at 4 px/tile in ≤ 4096-px pages,
 //	          ground, a soft grass tint, buildings and plants as marks; no
 //	          colonist shadows, tufts, decals or item sprites; creatures keep a
-//	          minimum size and selection rings stay.
+//	          minimum size and selection brackets stay.
 //
-// Grass tufts (render/env) are live from 24 px (at most four a tile
-// below 48 px) and baked into the chunk images from 16 to 24 px; the
-// bake keys then fold in the chunk's grass (GrassChunkSig, GrassMapSig).
+// Grass tufts (render/env) are live from 20 px (at most four a tile
+// below env.DetailMin, 48 px) and baked into the chunk images from 12 to
+// 20 px; the bake keys then fold in the chunk's grass (GrassChunkSig,
+// GrassMapSig).
 //
 // Bakes are unlit albedo; drawBaked lights them per tile through lit.kage
 // (flat, as the ground is lit live), so day, night, roofs and lamps read
@@ -49,6 +51,9 @@ const (
 const (
 	LiveMin  = env.LiveMin  // px per tile: live from here up
 	ChunkMin = env.ChunkMin // px per tile: chunk bakes from here up, the map bake below
+	// DetailMin is the tile size from which grass, crops and many-slot
+	// shelves show their full detail (env.DetailMin).
+	DetailMin = env.DetailMin
 	// chunkBakePx and mapBakePx are the bakes' pixels per tile.
 	chunkBakePx = 16
 	mapBakePx   = 4
@@ -59,8 +64,10 @@ const (
 	// least this tile size; below it the smooth veil alone shows (puddles
 	// are always the veil).
 	DecalMinTile = env.DecalMinTile
-	// CreatureMinTile is the smallest tile size creatures are drawn at.
-	CreatureMinTile = 16.0
+	// CreatureMinTile is the smallest tile size creatures are drawn at:
+	// the zoom-out floor at 1080 (UIS-093), so a pawn is its plain sprite
+	// scaled by the cell; only smaller windows draw it a little larger.
+	CreatureMinTile = 9.0
 )
 
 // TierFor is the tier for an on-screen tile size.

@@ -272,7 +272,7 @@ func (c *Set) DrawParticles(v *render.View, cull *Cull, screen *ebiten.Image, ti
 			alpha *= 0.3
 		}
 		if cull.MapTier {
-			continue // the map tier (< 16 px tiles) draws no decals (lod.go): kept, not drawn
+			continue // the map tier (< 12 px tiles) draws no decals (lod.go): kept, not drawn
 		}
 		sx, sy := v.WorldToScreenF(x, y)
 		if rr := float32(rad) + 1; sx+rr < float32(b.Min.X) || sx-rr > float32(b.Max.X) || sy+rr < float32(b.Min.Y) || sy-rr > float32(b.Max.Y) {

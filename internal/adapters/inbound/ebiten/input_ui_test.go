@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/orders"
@@ -111,8 +112,35 @@ func inputColony(t *testing.T, at ...[2]int) (*App, *stubSim, *fakeInput) {
 	a.renderer.speed = speedPaused
 	// Tile (x, y) at screen (64x, 64y+32): rows 0..8 and, right of the
 	// inspector panels, columns 6..19 are open map.
-	a.renderer.cam.OffsetX, a.renderer.cam.OffsetY = 0, -32
+	inputCamera(a)
 	return a, s, f
+}
+
+// inputCamera places the input tests' camera: 64-px cells (the art's own
+// size, a zoom of TileSize / the window's cell, past the player's MaxZoom
+// since UIS-080 made the cell 1/48 of the window's height) with tile (x, y)
+// at screen (64x, 64y+32), so the tests' screen geometry stays fixed.
+func inputCamera(a *App) {
+	c := &a.renderer.cam
+	c.Zoom = artZoom(a)
+	c.OffsetX, c.OffsetY, c.Placed = 0, -32, true
+}
+
+// artZoomAboutCentre sets artZoom keeping the world point at the middle of
+// the window where it is.
+func artZoomAboutCentre(a *App) {
+	c, v := &a.renderer.cam, a.mapViewport()
+	mx, my := (v.X0+v.X1)/2, (v.Y0+v.Y1)/2
+	k := artZoom(a) / c.Zoom
+	c.Zoom *= k
+	c.OffsetX, c.OffsetY = (c.OffsetX+mx)*k-mx, (c.OffsetY+my)*k-my
+}
+
+// artZoom is the zoom at which a's map cell is the art's 64 px (TileSize):
+// the pre-UIS-080 zoom 1, so the tests' small maps (16 to 40 tiles) still
+// outgrow the window and the camera can pan.
+func artZoom(a *App) float64 {
+	return camerapkg.TileSize / camerapkg.UnitFor(a.mapViewport().H())
 }
 
 func cmdsOf(s *stubSim, k command.Kind) []command.Command {
@@ -763,7 +791,9 @@ func TestGizmoKeysPressInspectorButtons(t *testing.T) {
 
 func TestWheelZoomsUnlessALogTookIt(t *testing.T) {
 	t.Parallel()
-	a, _, f := inputColony(t)
+	a, s, f := inputColony(t)
+	s.w, s.h = 64, 64              // wider than the window at playZoom: the middle drag can pan
+	a.renderer.cam.Zoom = playZoom // inside the player's range: room to zoom both ways
 	a.renderer.smooth.Instant = true
 	z := a.renderer.cam.Zoom
 	f.Cur.WheelY = 1

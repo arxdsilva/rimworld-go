@@ -45,6 +45,69 @@ func TestViewRoundTripAcrossViewportsAndDensity(t *testing.T) {
 	}
 }
 
+// TestCellFollowsTheWindowHeight (UIS-080, UIS-084): the default zoom
+// shows CellsTall cells of window height, so a cell is the window's height
+// / 48 in map pixels at any width; a resize keeps the world point at the
+// top-left corner.
+func TestCellFollowsTheWindowHeight(t *testing.T) {
+	for _, c := range []struct{ w, h, cell float64 }{{1920, 1080, 22.5}, {1280, 720, 15}, {5120, 2762, 57.541666}} {
+		cam := Camera{Zoom: 1}
+		v := Viewport{0, 0, c.w, c.h}
+		cam.Clamp(v, 250, 250, [2]int{})
+		if math.Abs(cam.Tile()-c.cell) > 1e-3 {
+			t.Errorf("%vx%v: cell %v, want %v", c.w, c.h, cam.Tile(), c.cell)
+		}
+		if rows := v.H() / cam.Tile(); math.Abs(rows-CellsTall) > 1e-9 {
+			t.Errorf("%vx%v: %v cells tall at the default zoom, want %d", c.w, c.h, rows, CellsTall)
+		}
+	}
+	cam := Camera{Zoom: 1.5}
+	cam.Clamp(Viewport{0, 0, 1920, 1080}, 250, 250, [2]int{})
+	wx, wy := cam.OffsetX/cam.Tile(), cam.OffsetY/cam.Tile()
+	var s Smooth
+	s.Vx = 100
+	cam.SyncUnit(720, &s)
+	if gx, gy := cam.OffsetX/cam.Tile(), cam.OffsetY/cam.Tile(); math.Abs(gx-wx) > 1e-9 || math.Abs(gy-wy) > 1e-9 {
+		t.Errorf("resize moved the top-left world point: (%v,%v), want (%v,%v)", gx, gy, wx, wy)
+	}
+	if cam.Tile() != 15*1.5 || math.Abs(s.Vx-100*15/22.5) > 1e-9 {
+		t.Errorf("after the resize: tile %v, velocity %v", cam.Tile(), s.Vx)
+	}
+	if b := (Camera{Zoom: 0.5}); b.Tile() != TileSize/2 {
+		t.Errorf("a camera never synced (a bake's) is px per tile as given: %v", b.Tile())
+	}
+}
+
+// TestZoomOutFloorIsFixedUnlessTheMapIsSmall (UIS-085): MinZoom on a map
+// bigger than the floor shows; a small map is held at its fit, never past
+// the default zoom.
+func TestZoomOutFloorIsFixedUnlessTheMapIsSmall(t *testing.T) {
+	var c Camera
+	v := Viewport{0, 0, 1920, 1080}
+	for _, side := range []int{250, 325} {
+		if z := c.MinZoomFor(v, side, side); z != MinZoom {
+			t.Errorf("%d map: floor %v, want %v", side, z, MinZoom)
+		}
+	}
+	// 9 px cells at 1080: 120 rows and 213 columns at the floor
+	if cell := UnitFor(1080) * MinZoom; math.Abs(cell-9) > 1e-9 {
+		t.Errorf("floor cell %v px at 1080, want 9", cell)
+	}
+	if cell := UnitFor(1080) * MaxZoom; math.Abs(cell-49.05) > 1e-9 {
+		t.Errorf("max cell %v px at 1080, want 49.05", cell)
+	}
+	small := c.MinZoomFor(v, 60, 60) // 60 rows: the floor would leave most of the screen black
+	if small <= MinZoom || small > 1 {
+		t.Errorf("60 map: floor %v, want between %v and 1", small, MinZoom)
+	}
+	if long := 60 * UnitFor(1080) * small / 1920; long < MinCover-1e-9 {
+		t.Errorf("60 map at its floor covers %v of the width, want at least %v", long, MinCover)
+	}
+	if z := c.MinZoomFor(v, 10, 10); z != 1 {
+		t.Errorf("a tiny map stops at the default zoom, got %v", z)
+	}
+}
+
 func TestResumeClampsAndIgnoresBadViews(t *testing.T) {
 	v := Viewport{0, 0, 1000, 800}
 	var c Camera
