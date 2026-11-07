@@ -113,7 +113,8 @@ use these primitives.
     -   Define spacing, row heights, icon sizes, text sizes, border
         widths, modal sizes, and minimum click targets centrally.
     -   Scale must not change simulation or map coordinates.
--   [ ] **Typography hierarchy**
+    -   Reference sizes, scale steps and the central size table: UIS-* rows in `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md` (UIS-1).
+-   [ ] **Typography hierarchy** (the reference cap heights and their mapping to our sizes: UIS font rows in `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md`)
     -   Game title.
     -   window title.
     -   section heading.

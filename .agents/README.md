@@ -66,6 +66,7 @@ Each file holds the decisions, wiki constants and phase rows for one area. Load 
 | SHT-* | `SHOOTING_GAP_ANALYSIS.md` | Accuracy, aim time, interception, shot information |
 | STK-ST | `STORAGE_GAP_ANALYSIS.md` | Stack counts per tile, the dumping stockpile |
 | TEMP-* | `TEMPERATURE_GAP_ANALYSIS.md` | Climate, room thermodynamics, comfort, clothing, temperature UI |
+| UIS-* | `UI_SCALE_GAP_ANALYSIS.md` | Gameplay UI sizes, scale steps, zoom range, world labels |
 | WRK-* | `WORK_PRIORITIES_GAP_ANALYSIS.md` | The Work tab, tie-break between work types, task order |
 | WG-* | `WORLDGEN_GAP_ANALYSIS.md` | Create world and starting-site screens, globe look |
 

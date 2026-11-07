@@ -1872,8 +1872,8 @@ and Developer tabs below.
 -   [x] reduced effects/flashing (Reduced flashing caps lightning; Reduced
     motion freezes the menu drift, drops embers and dust, and snaps the
     camera);
--   [ ] tooltip delay (OPT-017);
--   [ ] larger small text (OPT-009);
+-   [x] tooltip delay (OPT-017);
+-   [x] larger small text (OPT-009);
 -   [ ] other supported accessibility options.
 
 ------------------------------------------------------------------------

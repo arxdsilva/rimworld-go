@@ -176,7 +176,7 @@ Run `make arch` before every commit that touches a type, an interface or an impo
 - Interface assertions: `var _ I = (*T)(nil)`.
 - The one documented process-wide GPU canvas state (`gfx`), used on the main goroutine only and listed in the budget file.
 
-**Not allowed.** Any other variable assigned at runtime. That covers `curUIScale`, `tracePass`, `traceVia`, `canvasTrace`, `drawTrace`, `appBackground`, `appWindow` and `animalMarkTrace`. Each moves onto the type that owns it, or becomes a constructor option.
+**Not allowed.** Any other variable assigned at runtime. The globals §1 lists are gone: the UI scale and the draw traces are fields of `gfx`'s documented state (above), and the rest moved onto the types that own them. A new one moves onto its owner, or becomes a constructor option.
 
 A test hook becomes a field on its owner, nil in production. It is not a global that a test swaps and restores.
 

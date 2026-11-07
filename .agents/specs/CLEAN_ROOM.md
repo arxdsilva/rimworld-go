@@ -39,6 +39,7 @@ Numbers from the published RimWorld wiki are tuning data where the table allows 
 | Neat Storage furniture set (mod) | NST-* | `.agents/gaps/NEAT_STORAGE_GAP_ANALYSIS.md` | 2026-11-03 | The mod's published sizes and per-cell capacities | Costs, stuff, beauty, hit points, filters, work and looks |
 | RimHUD (mod) | RHUD-* | `.agents/gaps/RIMHUD_GAP_ANALYSIS.md` | 2026-11-03 | Behaviour only: what the mod does | Everything: its repository has no license, so no code, text, names or colours enter this repo; the mod's name appears only in the gap file, never in code or UI |
 | Common Sense (mod) | CSE-* | `.agents/gaps/COMMON_SENSE_GAP_ANALYSIS.md` | 2026-11-03 | Behaviour only: what the mod does | Everything: its repository has no license, so no code, text, names or colours enter this repo |
+| Gameplay UI sizes and scaling | UIS-* | `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md` | 2026-11-06 | On-screen sizes, proportions, UI scale steps and zoom range measured in the running game (1.6.4871, Core) | Art, icons, colours, fonts, text and code; screenshots never enter the repo |
 
 Notes:
 - ENG-003 covers wiki numbers only. A mod's numbers are not the wiki's: Common Sense thresholds recorded in its gap file are our tuning to change, not an ENG-003 use.
