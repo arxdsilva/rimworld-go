@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/postpone"
 	"slices"
 
 	"rimworld-go/internal/application/game/craft"
@@ -228,7 +229,7 @@ func (h craftCrafters) Postponed(id, bench entity.EntityID) bool {
 	return h.g.postponedFor(id, job.Bill, bench, 0, 0) // SIM-027
 }
 func (h craftCrafters) Postpone(id, bench entity.EntityID) {
-	h.g.postpone(postKey{Pawn: id, Kind: job.Bill, Target: bench}, job.Unreachable)
+	h.g.postpone(postpone.Key{Pawn: id, Kind: job.Bill, Target: bench}, job.Unreachable)
 }
 func (h craftCrafters) RecipeLocked(id recipe.ID) bool { return h.g.recipeLocked(id) }
 func (h craftCrafters) Now() uint64                    { return uint64(h.g.clock.Now()) }

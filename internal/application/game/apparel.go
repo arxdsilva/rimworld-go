@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/postpone"
 	"slices"
 
 	"rimworld-go/internal/application/game/craft"
@@ -201,7 +202,7 @@ func (h outfitWalks) Postponed(id entity.EntityID, kind job.Kind, target entity.
 	return h.g.postponedFor(id, kind, target, x, y)
 }
 func (h outfitWalks) PutOff(id entity.EntityID, kind job.Kind, target entity.EntityID, x, y int, until uint64) {
-	h.g.putOff(postKey{Pawn: id, Kind: kind, Target: target, X: x, Y: y}, until)
+	h.g.putOff(postpone.Key{Pawn: id, Kind: kind, Target: target, X: x, Y: y}, until)
 }
 func (h outfitWalks) Allowed(id entity.EntityID, x, y int) bool   { return h.g.areaAllows(id, x, y) }
 func (h outfitWalks) Reachable(id entity.EntityID, x, y int) bool { return h.g.reachable(id, x, y) }

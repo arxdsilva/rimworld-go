@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/postpone"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -162,7 +163,7 @@ func TestZoneClearSkipsReservedAndPostponedPlants(t *testing.T) {
 	}
 	g.reserve.ReleaseOwner(other)
 
-	g.postpone(postKey{Pawn: id, Kind: job.Cut, Target: pid}, job.Blocked)
+	g.postpone(postpone.Key{Pawn: id, Kind: job.Cut, Target: pid}, job.Blocked)
 	if g.assignZoneClear(id) {
 		t.Fatal("cleared a plant this pawn had put off")
 	}

@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/aqua"
 	"rimworld-go/internal/application/game/industry"
+	"rimworld-go/internal/application/game/postpone"
 	"sort"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -366,7 +367,7 @@ func (h tankHost) Postponed(id entity.EntityID, k job.Kind, t entity.EntityID) b
 	return h.g.postponedFor(id, k, t, 0, 0)
 }
 func (h tankHost) PutOff(id entity.EntityID, k job.Kind, t entity.EntityID) {
-	h.g.postpone(postKey{Pawn: id, Kind: k, Target: t}, job.Unreachable)
+	h.g.postpone(postpone.Key{Pawn: id, Kind: k, Target: t}, job.Unreachable)
 }
 
 // DropFish leaves qty fish, allowed, on the first tile around (x, y) with

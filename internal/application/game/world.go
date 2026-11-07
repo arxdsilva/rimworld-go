@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/postpone"
 	"slices"
 	"sort"
 	"strings"
@@ -307,7 +308,7 @@ func (g *Game) nearestPlant(id entity.EntityID, k job.Kind, want func(plant.Plan
 		if g.reachable(id, p.X, p.Y) {
 			return c.id
 		}
-		g.postpone(postKey{Pawn: id, Kind: k, Target: c.id}, job.Unreachable)
+		g.postpone(postpone.Key{Pawn: id, Kind: k, Target: c.id}, job.Unreachable)
 	}
 	return 0
 }

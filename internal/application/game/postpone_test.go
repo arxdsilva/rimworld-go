@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 	"reflect"
+	"rimworld-go/internal/application/game/postpone"
 	"strings"
 	"testing"
 
@@ -402,7 +403,7 @@ func TestPostponeSaveRoundTrip(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	fid := readyWall(t, g, 5, 5)
 	bob := postWorker(t, g, 12, 8, "Bob", work.Construct)
-	g.postpone(postKey{Pawn: bob, Kind: job.Construct, Target: fid}, job.Blocked)
+	g.postpone(postpone.Key{Pawn: bob, Kind: job.Construct, Target: fid}, job.Blocked)
 	g.postponeTile(bob, job.Mine, 3, 4)
 	c := command.Command{Kind: command.MovePawn, Pawn: uint64(bob), X: 9, Y: 9}
 	g.orderQueue[bob] = []queuedOrder{{cmd: c, label: "Go to (9, 9)", retryAt: 1234, tries: 2}}
@@ -434,10 +435,10 @@ func TestPostponedLinesInView(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	fid := readyWall(t, g, 5, 5)
 	bob := postWorker(t, g, 12, 8, "Bob")
-	g.postpone(postKey{Pawn: bob, Kind: job.Construct, Target: fid}, job.Blocked)
+	g.postpone(postpone.Key{Pawn: bob, Kind: job.Construct, Target: fid}, job.Blocked)
 	g.postponeTile(bob, job.Mine, 3, 4)
 	sid, _ := g.SpawnStack(item.Wood, 5, 1, 1)
-	g.postpone(postKey{Pawn: bob, Kind: job.Haul, Target: sid}, job.Unreachable)
+	g.postpone(postpone.Key{Pawn: bob, Kind: job.Haul, Target: sid}, job.Unreachable)
 	g.postponeTile(bob, job.Clean, 2, 2)
 	got := pawnView(g, bob).Postponed
 	// soonest retry first, then by job kind; at most three

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"testing"
 
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -15,23 +16,23 @@ import (
 // sorts per colonist): postponedTops must give exactly its lines.
 func (g *Game) postponedLinesRef(id entity.EntityID) []string {
 	p := &g.postponed
-	if len(p.m) == 0 {
+	if p.Len() == 0 {
 		return nil
 	}
 	now := uint64(g.clock.Now())
-	stale := p.rev != g.grid.Version()
-	var es []postEntry
-	for k, v := range p.m {
+	stale := p.Rev != g.grid.Version()
+	var es []postpone.Entry
+	p.All(func(k postpone.Key, v postpone.Val) {
 		if k.Pawn != id || now >= v.Until || v.Unreach && stale || g.postTargetGone(k) {
-			continue
+			return
 		}
-		es = append(es, postEntry{k, v.Until, v.Unreach})
-	}
-	sortPostEntries(es)
+		es = append(es, postpone.Entry{Key: k, Until: v.Until, Unreach: v.Unreach})
+	})
+	postpone.SortEntries(es)
 	sort.SliceStable(es, func(i, j int) bool { return es[i].Until < es[j].Until })
 	var out []string
 	for _, e := range es {
-		if len(out) == postViewLines {
+		if len(out) == postpone.ViewLines {
 			break
 		}
 		if e.Unreach {
@@ -52,16 +53,16 @@ func TestPostponedTopsMatchFullSort(t *testing.T) {
 	rng := rand.New(rand.NewPCG(1, 2))
 	kinds := []job.Kind{job.Mine, job.Haul, job.Construct, job.Clean, job.Cut}
 	for round := 0; round < 50; round++ {
-		g.postponed.m = map[postKey]postVal{}
+		g.postponed.Load(nil)
 		n := rng.IntN(60)
 		for i := 0; i < n; i++ {
-			k := postKey{
+			k := postpone.Key{
 				Pawn: entity.EntityID(1 + rng.IntN(5)),
 				Kind: kinds[rng.IntN(len(kinds))],
 				X:    rng.IntN(4), Y: rng.IntN(4),
 			}
 			// few distinct retry times, so ties are common; some expired
-			g.postponed.m[k] = postVal{Until: now - 2 + uint64(rng.IntN(6))*30, Unreach: rng.IntN(3) == 0}
+			g.postponed.Put(k, postpone.Val{Until: now - 2 + uint64(rng.IntN(6))*30, Unreach: rng.IntN(3) == 0})
 		}
 		tops := g.postponedTops(nil)
 		for id := entity.EntityID(0); id <= 6; id++ {

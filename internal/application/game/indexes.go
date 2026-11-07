@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 	"fmt"
+	"rimworld-go/internal/application/game/postpone"
 	"slices"
 	"unsafe"
 
@@ -451,7 +452,7 @@ type viewCache struct {
 	worldOK, pawnsOK   bool
 	pawns              []PawnView
 	// postBuf is the snapshot's reused postponed-work scratch (postponedTops).
-	postBuf []postTop
+	postBuf []postpone.Top
 	// logs memoises logLines per creature (eventlog.go).
 	logs map[entity.EntityID]logLinesMemo
 	// stains memoises the sorted stains (stains.go fillStainView).

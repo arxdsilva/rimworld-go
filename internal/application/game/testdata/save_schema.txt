@@ -1206,9 +1206,9 @@ saveState.PostOrders{}.Label string
 saveState.PostOrders{}.RetryAt uint64
 saveState.PostOrders{}.Tries int
 saveState.PostSweep uint64
-saveState.Postponed []rimworld-go/internal/application/game.postEntry
-saveState.Postponed[] rimworld-go/internal/application/game.postEntry
-saveState.Postponed[].Key rimworld-go/internal/application/game.postKey
+saveState.Postponed []rimworld-go/internal/application/game/postpone.Entry
+saveState.Postponed[] rimworld-go/internal/application/game/postpone.Entry
+saveState.Postponed[].Key rimworld-go/internal/application/game/postpone.Key
 saveState.Postponed[].Key.Kind rimworld-go/internal/domain/ai/job.Kind = uint8
 saveState.Postponed[].Key.Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Postponed[].Key.Target rimworld-go/internal/domain/sim/entity.EntityID = uint64

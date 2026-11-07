@@ -5,50 +5,35 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// checkPostKinds fails unless p.kinds lists exactly m's keys by pawn and
-// kind.
-func checkPostKinds(t *testing.T, p *postState) {
+// checkPostKinds fails unless p's per-pawn, per-kind key lists hold exactly
+// its entries (through the exported API: every entry is listed once under
+// its pawn and kind, and the lists hold no more keys than there are entries).
+func checkPostKinds(t *testing.T, p *postpone.Store) {
 	t.Helper()
+	type pk struct {
+		pawn entity.EntityID
+		kind job.Kind
+	}
+	seen := map[pk]bool{}
 	n := 0
-	for pk, l := range p.kinds {
-		if len(l) == 0 {
-			t.Fatalf("empty list kept for %v", pk)
+	p.All(func(k postpone.Key, _ postpone.Val) {
+		l := p.Keys(k.Pawn, k.Kind)
+		if c := slices.Index(l, k); c < 0 || slices.Index(l[c+1:], k) >= 0 {
+			t.Fatalf("%v not listed exactly once under its pawn and kind: %v", k, l)
 		}
-		for _, k := range l {
-			if _, ok := p.m[k]; !ok || k.Pawn != pk.Pawn || k.Kind != pk.Kind {
-				t.Fatalf("listed %v under %v, in m: %v", k, pk, ok)
-			}
+		if !seen[pk{k.Pawn, k.Kind}] {
+			seen[pk{k.Pawn, k.Kind}] = true
+			n += len(l)
 		}
-		n += len(l)
+	})
+	if n != p.Len() {
+		t.Fatalf("lists hold %d keys, store %d", n, p.Len())
 	}
-	if n != len(p.m) {
-		t.Fatalf("lists hold %d keys, m %d", n, len(p.m))
-	}
-}
-
-// TestPostKindsTrackEntries: the per-pawn, per-kind key lists follow every
-// put, renewal and drop, and a reindex rebuilds them.
-func TestPostKindsTrackEntries(t *testing.T) {
-	t.Parallel()
-	p := newPostState()
-	rng := rand.New(rand.NewPCG(7, 1))
-	kinds := []job.Kind{job.Haul, job.Cut, job.Repair}
-	for i := 0; i < 5000; i++ {
-		k := postKey{Pawn: entity.EntityID(1 + rng.IntN(3)), Kind: kinds[rng.IntN(len(kinds))],
-			Target: entity.EntityID(rng.IntN(6))}
-		if _, ok := p.m[k]; ok && rng.IntN(2) == 0 {
-			p.drop(k)
-		} else {
-			p.put(k, postVal{Until: uint64(i)})
-		}
-		checkPostKinds(t, &p)
-	}
-	p.reindex()
-	checkPostKinds(t, &p)
 }
 
 // TestPostponedTargetsCoverPostponedFor: a colony at work keeps the lists
@@ -67,12 +52,14 @@ func TestPostponedTargetsCoverPostponedFor(t *testing.T) {
 				if rng.IntN(2) == 0 {
 					why = job.Unreachable
 				}
-				g.postpone(postKey{Pawn: id, Kind: job.Haul, Target: g.itemIDs[rng.IntN(len(g.itemIDs))]}, why)
+				g.postpone(postpone.Key{Pawn: id, Kind: job.Haul, Target: g.itemIDs[rng.IntN(len(g.itemIDs))]}, why)
 			}
 		}
 		g.Step(150)
-		checkPostKinds(t, &g.postponed)
-		for k := range g.postponed.m {
+		checkPostKinds(t, &g.postponed.Store)
+		var all []postpone.Key
+		g.postponed.All(func(k postpone.Key, _ postpone.Val) { all = append(all, k) })
+		for _, k := range all {
 			if k.Target == 0 {
 				continue
 			}
@@ -84,7 +71,7 @@ func TestPostponedTargetsCoverPostponedFor(t *testing.T) {
 				}
 			}
 		}
-		checkPostKinds(t, &g.postponed)
+		checkPostKinds(t, &g.postponed.Store)
 	}
 	if seen == 0 {
 		t.Fatal("nothing stayed put off: the test no longer exercises postponement")

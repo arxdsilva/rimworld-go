@@ -2,6 +2,7 @@ package game
 
 import (
 	"cmp"
+	"rimworld-go/internal/application/game/postpone"
 	"slices"
 
 	"rimworld-go/internal/application/game/care"
@@ -113,7 +114,7 @@ func (g *Game) rejectOutOfArea(id entity.EntityID, rec job.Record) {
 		g.noFood[id] = uint64(g.clock.Now()) + foodRetry
 		return
 	}
-	g.postpone(postKeyOf(id, rec), job.Unreachable) // postpone.go
+	g.postpone(postpone.KeyOf(id, rec), job.Unreachable) // postpone.go
 }
 
 // huntGivenUp reports that hunter id's prey, at tp, has stayed outside

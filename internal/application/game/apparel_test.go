@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"rimworld-go/internal/application/game/postpone"
 	"slices"
 	"strings"
 	"testing"
@@ -215,13 +216,13 @@ func TestDressOutOfAreaFallsBackToNextBest(t *testing.T) {
 // next best, and Equip is postponable work.
 func TestDressSkipsPostponedGarment(t *testing.T) {
 	t.Parallel()
-	if !postponable(job.Equip) {
+	if !postpone.Postponable(job.Equip) {
 		t.Fatal("a failed Equip should be put off, so the next best is tried")
 	}
 	g, id := dressGame(t, 16, 8, -100)
 	wool, _ := g.SpawnStack(item.WoolParka, 1, 6, 3)
 	g.SpawnStack(item.Parka, 1, 9, 3)
-	g.postpone(postKey{Pawn: id, Kind: job.Equip, Target: wool}, job.Blocked)
+	g.postpone(postpone.Key{Pawn: id, Kind: job.Equip, Target: wool}, job.Blocked)
 	if l := g.postponedLines(id); len(l) != 1 || !strings.HasPrefix(l[0], "wear wool parka: blocked") {
 		t.Fatalf("put-off lines %q", l)
 	}

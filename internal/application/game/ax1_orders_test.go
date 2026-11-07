@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"rimworld-go/internal/application/game/postpone"
 	"testing"
 
 	"rimworld-go/internal/application/game/orders"
@@ -317,7 +318,7 @@ func TestOrdersMarksSurviveSave(t *testing.T) {
 func TestInstallJobsAreOrdersJobs(t *testing.T) {
 	t.Parallel()
 	for _, k := range []job.Kind{job.Uninstall, job.Install, job.OpenContainer} {
-		if !postponable(k) {
+		if !postpone.Postponable(k) {
 			t.Fatalf("%v is put off when out of reach", k)
 		}
 	}

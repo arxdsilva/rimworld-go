@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -105,7 +106,7 @@ func (g *Game) assignRope(id entity.EntityID) bool {
 	tx, ty, ok := g.besideSpot(id, ap.X, ap.Y)
 	c := g.penRegion(bestPen)
 	if !ok || !g.reachable(id, c.x, c.y) {
-		g.postpone(postKey{Pawn: id, Kind: job.Rope, Target: best}, job.Unreachable)
+		g.postpone(postpone.Key{Pawn: id, Kind: job.Rope, Target: best}, job.Unreachable)
 		return false
 	}
 	return g.startJob(id, job.Record{Kind: job.Rope, Target: best, TX: tx, TY: ty, WorkLeft: ropeWork, Dest: bestPen})
@@ -145,7 +146,7 @@ func (g *Game) doRope(id entity.EntityID, j job.Record) {
 		c := g.penRegion(m)
 		path, ok := g.pathTo(id, c.x, c.y)
 		if !ok {
-			g.postpone(postKey{Pawn: id, Kind: job.Rope, Target: j.Target}, job.Unreachable)
+			g.postpone(postpone.Key{Pawn: id, Kind: job.Rope, Target: j.Target}, job.Unreachable)
 			done(job.Fail, job.Unreachable)
 			return
 		}
@@ -168,7 +169,7 @@ func (g *Game) doRope(id entity.EntityID, j job.Record) {
 		return
 	}
 	if j.WorkLeft--; j.WorkLeft <= 0 {
-		g.postpone(postKey{Pawn: id, Kind: job.Rope, Target: j.Target}, job.Blocked)
+		g.postpone(postpone.Key{Pawn: id, Kind: job.Rope, Target: j.Target}, job.Blocked)
 		done(job.Fail, job.Blocked)
 		return
 	}

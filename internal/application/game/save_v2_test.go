@@ -99,7 +99,7 @@ func TestSaveV2RoundTripSetup(t *testing.T) {
 	if !reflect.DeepEqual(h.exportSkillLive(), g.exportSkillLive()) || g.exportSkillLive() == nil {
 		t.Fatal("skill state beyond the bios was not saved")
 	}
-	if !reflect.DeepEqual(h.stains.dripN, g.stains.dripN) || h.postponed.sweepAt != g.postponed.sweepAt {
+	if !reflect.DeepEqual(h.stains.dripN, g.stains.dripN) || h.postponed.SweepAt != g.postponed.SweepAt {
 		t.Fatal("drip counters or the postponed sweep were not saved")
 	}
 	// The loaded game continues exactly as the original.

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/gameplay"
 	"slices"
 
@@ -141,7 +142,7 @@ func (g *Game) assignZoneClear(id entity.EntityID) bool {
 		}
 		p, _ := g.plants.Get(best)
 		if !g.reachable(id, p.X, p.Y) {
-			g.postpone(postKey{Pawn: id, Kind: job.Cut, Target: best}, job.Unreachable)
+			g.postpone(postpone.Key{Pawn: id, Kind: job.Cut, Target: best}, job.Unreachable)
 			tried = append(tried, best)
 			continue
 		}

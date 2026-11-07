@@ -20,6 +20,7 @@ import (
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/application/game/outfit"
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/recreate"
 	rlab "rimworld-go/internal/application/game/research"
@@ -217,7 +218,7 @@ type saveState struct {
 	Exposure   map[entity.EntityID][2]int
 	NoComfort  map[entity.EntityID]uint64
 	NoFood     map[entity.EntityID]uint64     // absent in older saves
-	Postponed  []postEntry                    // absent in older saves (SIM-027)
+	Postponed  []postpone.Entry               // absent in older saves (SIM-027)
 	PostSweep  uint64                         // the next postponed sweep (v2; absent: the first tick)
 	PostOrders map[entity.EntityID]savedOrder // orders being followed; absent in older saves
 	RestedFree map[entity.EntityID]bool       // absent in older saves
@@ -596,7 +597,7 @@ func exportMapFields(g *Game, s *saveState) {
 	s.ItemIDs, s.Stacks, s.FrameIDs, s.Frames = g.itemIDs, exportStore(g.stacks), g.frameIDs, exportStore(g.frames)
 	s.BldgIDs, s.Bldgs, s.PlantIDs, s.Plants = g.bldgIDs, exportStore(g.bldgs), g.plantIDs, exportStore(g.plants)
 	s.Terr, s.Mines = g.terr, g.mines
-	s.Postponed, s.PostSweep, s.PostOrders = g.exportPostponed(), g.postponed.sweepAt, g.exportOrders()
+	s.Postponed, s.PostSweep, s.PostOrders = g.exportPostponed(), g.postponed.SweepAt, g.exportOrders()
 	s.RaiderIDs, s.Raiders, s.RaidGroups = g.raiderIDs, g.raiders, g.raidGroups
 	s.RoomGrid, s.RoomTemps, s.Thermo = g.roomGrid, g.thermo.Temps, g.thermo.Export()
 	s.Claims = g.reserve.Export()
@@ -815,7 +816,7 @@ func importMapFields(g *Game, s *saveState) {
 	g.wl = s.Wildlife
 	setMap(&g.mines, s.Mines)
 	g.importPostponed(s.Postponed)
-	g.postponed.sweepAt = s.PostSweep
+	g.postponed.SweepAt = s.PostSweep
 	g.importOrders(s.PostOrders)
 	setMap(&g.raiders, s.Raiders)
 	g.raiderIDs, g.raidGroups = s.RaiderIDs, s.RaidGroups

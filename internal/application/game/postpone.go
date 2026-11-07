@@ -2,11 +2,10 @@ package game
 
 import (
 	"fmt"
-	"slices"
-	"sort"
 	"strings"
 
 	"rimworld-go/internal/application/game/orders"
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
@@ -28,208 +27,83 @@ const (
 	// postSweepEvery: expired entries and entries whose target is gone are
 	// swept this often (lookups also drop expired entries lazily).
 	postSweepEvery = clock.TicksPerHour
-	// postViewLines caps the postponed-work lines in a colonist's view.
-	postViewLines = 3
 	// workTries caps the candidates a nearest-first giver tries per call.
 	workTries = 8
 	// orderBlockedTries: a player order blocked this many times is dropped.
 	orderBlockedTries = 3
 )
 
-// postKey names one piece of postponed work: a pawn, a job kind and its
-// target (an entity, or a tile when Target is 0).
-type postKey struct {
-	Pawn   entity.EntityID
-	Kind   job.Kind
-	Target entity.EntityID
-	X, Y   int
-}
-
-// postVal is when the work may be tried again, and whether it was put off
-// for being out of reach (cleared when walkability changes).
-type postVal struct {
-	Until   uint64
-	Unreach bool
-}
-
-// postEntry is one saved postponement.
-type postEntry struct {
-	Key     postKey
-	Until   uint64
-	Unreach bool // absent in older saves
-}
-
-// postState is the postponed work and the player orders being followed.
-// Maps are only looked up in decisions; whole-map passes (walkability
-// clear, sweep) only delete, so iteration order never matters.
+// postState is the postponed work (postpone.Store) and the player orders
+// being followed.
 type postState struct {
-	m map[postKey]postVal
-	// kinds lists m's keys per pawn and job kind (in no particular order:
-	// only membership is read), so a giver's candidate loop can tell which
-	// targets are put off without hashing a full key per candidate. Never
-	// saved: rebuilt with m.
-	kinds   map[postPawnKind][]postKey
-	rev     uint64 // grid revision the out-of-reach entries were judged at
-	sweepAt uint64
+	postpone.Store
 	// orders is the player order each colonist is following now, so a
 	// blocked one can go back on its queue.
 	orders map[entity.EntityID]queuedOrder
 	ord    *orders.Orders // game/orders (AX-1), built by ordersOf (move.go); never saved here
 }
 
-// postPawnKind is the part of a postKey postState.kinds groups by.
-type postPawnKind struct {
-	Pawn entity.EntityID
-	Kind job.Kind
-}
-
 func newPostState() postState {
-	return postState{m: make(map[postKey]postVal), kinds: make(map[postPawnKind][]postKey),
-		orders: make(map[entity.EntityID]queuedOrder)}
-}
-
-// put records k (listed once however often it is renewed).
-func (p *postState) put(k postKey, v postVal) {
-	if _, ok := p.m[k]; !ok {
-		if p.kinds == nil {
-			p.kinds = make(map[postPawnKind][]postKey)
-		}
-		pk := postPawnKind{k.Pawn, k.Kind}
-		p.kinds[pk] = append(p.kinds[pk], k)
-	}
-	p.m[k] = v
-}
-
-// drop forgets k, which is in m.
-func (p *postState) drop(k postKey) {
-	delete(p.m, k)
-	pk := postPawnKind{k.Pawn, k.Kind}
-	l := p.kinds[pk]
-	if i := slices.Index(l, k); i >= 0 {
-		l[i] = l[len(l)-1]
-		l = l[:len(l)-1]
-	}
-	if len(l) == 0 {
-		delete(p.kinds, pk)
-	} else {
-		p.kinds[pk] = l
-	}
-}
-
-// reindex rebuilds kinds from m.
-func (p *postState) reindex() {
-	if p.kinds == nil {
-		p.kinds = make(map[postPawnKind][]postKey, len(p.m))
-	}
-	clear(p.kinds)
-	for k := range p.m {
-		pk := postPawnKind{k.Pawn, k.Kind}
-		p.kinds[pk] = append(p.kinds[pk], k)
-	}
-}
-
-// postponable reports job kinds whose givers skip postponed targets.
-func postponable(k job.Kind) bool {
-	switch k {
-	case job.Haul, job.FillHopper, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
-		job.Bill, job.Hunt, job.Refuel, job.Repair, job.Research, job.OperateDrill, job.ScanGround, job.ScanMinerals, job.Clean, job.Bury,
-		job.Roof, job.Unroof, job.Equip, job.Uninstall, job.Install, job.OpenContainer, // AX-1
-		job.StockTank, job.NetTank: // FISH-*
-		return true
-	}
-	return false
-}
-
-// postKeyOf is the postponement key of pawn id's job j: its work target
-// (the bench or fire for bills and refuelling; the frame, trough or load
-// once a haul is carrying), else the tile worked on.
-func postKeyOf(id entity.EntityID, j job.Record) postKey {
-	if j.Kind.Hauls() {
-		j.Kind = job.Haul // FOOD-4: a hopper fill is put off as a haul
-	}
-	target := j.Target
-	switch j.Kind {
-	case job.Refuel, job.Bill:
-		target = j.Dest
-	case job.Haul:
-		if j.Carry != 0 {
-			target = j.Carry
-			if j.Dest != 0 {
-				target = j.Dest
-			}
-		}
-	case job.Bury:
-		if j.Carry != 0 {
-			target = j.Carry
-		}
-	}
-	if target != 0 {
-		return postKey{Pawn: id, Kind: j.Kind, Target: target}
-	}
-	switch j.Kind {
-	case job.Mine, job.Smooth, job.Clean, job.Roof, job.Unroof, job.Cut:
-		return postKey{Pawn: id, Kind: j.Kind, X: j.DestX, Y: j.DestY}
-	}
-	return postKey{Pawn: id, Kind: j.Kind, X: j.TX, Y: j.TY}
+	return postState{Store: postpone.New(), orders: make(map[entity.EntityID]queuedOrder)}
 }
 
 // postponeJob puts pawn id's failed job j off when it failed for being
 // blocked or out of reach.
 func (g *Game) postponeJob(id entity.EntityID, j job.Record) {
-	if j.Fail != job.Blocked && j.Fail != job.Unreachable || !postponable(j.Kind) {
+	if j.Fail != job.Blocked && j.Fail != job.Unreachable || !postpone.Postponable(j.Kind) {
 		return
 	}
-	g.postpone(postKeyOf(id, j), j.Fail)
+	g.postpone(postpone.KeyOf(id, j), j.Fail)
 }
 
 // postpone puts the work k off: Blocked for postBlockedTicks, Unreachable
 // for postUnreachTicks (or until walkability changes).
-func (g *Game) postpone(k postKey, why job.FailReason) {
+func (g *Game) postpone(k postpone.Key, why job.FailReason) {
 	p := &g.postponed
 	g.postSync()
 	now := uint64(g.clock.Now())
-	v := postVal{Until: now + postBlockedTicks}
+	v := postpone.Val{Until: now + postBlockedTicks}
 	if why == job.Unreachable {
-		v = postVal{Until: now + postUnreachTicks, Unreach: true}
+		v = postpone.Val{Until: now + postUnreachTicks, Unreach: true}
 	}
-	p.put(k, v)
+	p.Put(k, v)
 }
 
 // putOff records k as put off until tick until (not as out of reach): the
 // dress cooldown (apparel.go).
-func (g *Game) putOff(k postKey, until uint64) {
+func (g *Game) putOff(k postpone.Key, until uint64) {
 	g.postSync()
-	g.postponed.put(k, postVal{Until: until})
+	g.postponed.Put(k, postpone.Val{Until: until})
 }
 
 // postponeTile puts tile work (mining, roofing, cleaning, grass) off as
 // out of reach.
 func (g *Game) postponeTile(id entity.EntityID, kind job.Kind, x, y int) {
-	g.postpone(postKey{Pawn: id, Kind: kind, X: x, Y: y}, job.Unreachable)
+	g.postpone(postpone.Key{Pawn: id, Kind: kind, X: x, Y: y}, job.Unreachable)
 }
 
 // postponedFor reports whether pawn id has put this work off.
 func (g *Game) postponedFor(id entity.EntityID, kind job.Kind, target entity.EntityID, x, y int) bool {
 	p := &g.postponed
-	if len(p.m) == 0 {
+	if p.Len() == 0 {
 		return false
 	}
 	g.postSync()
-	k := postKey{id, kind, target, x, y}
-	if len(p.kinds[postPawnKind{id, kind}]) == 0 {
+	k := postpone.Key{Pawn: id, Kind: kind, Target: target, X: x, Y: y}
+	if !p.Has(id, kind) {
 		if checkIndex(g) {
-			if _, ok := p.m[k]; ok {
+			if _, ok := p.Get(k); ok {
 				panic(fmt.Sprintf("postponedFor(%v): unlisted entry", k))
 			}
 		}
 		return false // nothing of this kind put off for this pawn
 	}
-	v, ok := p.m[k]
+	v, ok := p.Get(k)
 	if !ok {
 		return false
 	}
 	if uint64(g.clock.Now()) >= v.Until {
-		p.drop(k) // lazily pruned
+		p.Drop(k) // lazily pruned
 		return false
 	}
 	return true
@@ -244,11 +118,11 @@ func (g *Game) postponedFor(id entity.EntityID, kind job.Kind, target entity.Ent
 func (g *Game) postponedTargets(id entity.EntityID, kind job.Kind, buf []entity.EntityID) []entity.EntityID {
 	p := &g.postponed
 	buf = buf[:0]
-	if len(p.m) == 0 {
+	if p.Len() == 0 {
 		return buf
 	}
 	g.postSync()
-	for _, k := range p.kinds[postPawnKind{id, kind}] {
+	for _, k := range p.Keys(id, kind) {
 		if k.Target != 0 {
 			buf = append(buf, k.Target)
 		}
@@ -261,15 +135,15 @@ func (g *Game) postponedTargets(id entity.EntityID, kind job.Kind, buf []entity.
 func (g *Game) postSync() {
 	p := &g.postponed
 	rev := g.grid.Version()
-	if p.rev == rev {
+	if p.Rev == rev {
 		return
 	}
-	p.rev = rev
-	for k, v := range p.m {
+	p.Rev = rev
+	p.All(func(k postpone.Key, v postpone.Val) {
 		if v.Unreach {
-			p.drop(k)
+			p.Drop(k)
 		}
-	}
+	})
 }
 
 // postSweep runs once per postSweepEvery: it drops expired entries,
@@ -277,16 +151,16 @@ func (g *Game) postSync() {
 func (g *Game) postSweep() {
 	p := &g.postponed
 	now := uint64(g.clock.Now())
-	if now < p.sweepAt {
+	if now < p.SweepAt {
 		return
 	}
-	p.sweepAt = now + postSweepEvery
+	p.SweepAt = now + postSweepEvery
 	g.postSync()
-	for k, v := range p.m {
+	p.All(func(k postpone.Key, v postpone.Val) {
 		if now >= v.Until || !g.postPawnHere(k.Pawn) || g.postTargetGone(k) {
-			p.drop(k)
+			p.Drop(k)
 		}
-	}
+	})
 	for id := range p.orders {
 		if !g.followingOrder(id) {
 			delete(p.orders, id)
@@ -301,7 +175,7 @@ func (g *Game) postPawnHere(id entity.EntityID) bool {
 }
 
 // postTargetGone reports an entity target that no longer exists.
-func (g *Game) postTargetGone(k postKey) bool {
+func (g *Game) postTargetGone(k postpone.Key) bool {
 	t := k.Target
 	if t == 0 {
 		return false
@@ -372,42 +246,14 @@ func (g *Game) orderText(id entity.EntityID, q queuedOrder) string {
 	return strings.ToLower(l[:1]) + l[1:]
 }
 
-func (g *Game) exportPostponed() []postEntry {
+func (g *Game) exportPostponed() []postpone.Entry {
 	g.postSync() // what a continuing game would drop next
-	out := make([]postEntry, 0, len(g.postponed.m))
-	for k, v := range g.postponed.m {
-		out = append(out, postEntry{k, v.Until, v.Unreach})
-	}
-	sortPostEntries(out)
-	return out
+	return g.postponed.Export()
 }
 
-func sortPostEntries(out []postEntry) {
-	sort.Slice(out, func(i, j int) bool {
-		a, b := out[i].Key, out[j].Key
-		if a.Pawn != b.Pawn {
-			return a.Pawn < b.Pawn
-		}
-		if a.Kind != b.Kind {
-			return a.Kind < b.Kind
-		}
-		if a.Target != b.Target {
-			return a.Target < b.Target
-		}
-		if a.X != b.X {
-			return a.X < b.X
-		}
-		return a.Y < b.Y
-	})
-}
-
-func (g *Game) importPostponed(in []postEntry) {
-	g.postponed.m = make(map[postKey]postVal, len(in))
-	for _, e := range in {
-		g.postponed.m[e.Key] = postVal{e.Until, e.Unreach}
-	}
-	g.postponed.reindex()
-	g.postponed.rev = g.grid.Version()
+func (g *Game) importPostponed(in []postpone.Entry) {
+	g.postponed.Load(in)
+	g.postponed.Rev = g.grid.Version()
 }
 
 // exportOrders is the player order each colonist follows (saved).
@@ -427,103 +273,60 @@ func (g *Game) importOrders(in map[entity.EntityID]savedOrder) {
 }
 
 // postponedLines is pawn id's postponed work for its view, soonest retry
-// first, at most postViewLines ("build wall: blocked, retry in 12 s",
+// first, at most postpone.ViewLines ("build wall: blocked, retry in 12 s",
 // "haul to stockpile: can't reach"). Read-only.
 func (g *Game) postponedLines(id entity.EntityID) []string {
 	return g.postponedLinesIn(g.postponedTops(nil), id)
 }
 
-// postTop is one pawn's first postViewLines postponed entries in view
-// order: soonest retry first, ties by key (sortPostEntries' order).
-type postTop struct {
-	pawn entity.EntityID
-	n    int
-	e    [postViewLines]postEntry
-}
-
-// postViewBefore is the view order of postponed entries: retry time, then
-// key (the order a key sort followed by a stable sort on Until gives).
-func postViewBefore(a, b *postEntry) bool {
-	if a.Until != b.Until {
-		return a.Until < b.Until
-	}
-	x, y := a.Key, b.Key
-	if x.Pawn != y.Pawn {
-		return x.Pawn < y.Pawn
-	}
-	if x.Kind != y.Kind {
-		return x.Kind < y.Kind
-	}
-	if x.Target != y.Target {
-		return x.Target < y.Target
-	}
-	if x.X != y.X {
-		return x.X < y.X
-	}
-	return x.Y < y.Y
-}
-
 // postponedTops is, per pawn, the postponed work a view shows (not
 // expired, not about to clear, target still there), its first
-// postViewLines entries only, in one pass over the map (no sort): the
+// postpone.ViewLines entries only, in one pass over the map (no sort): the
 // snapshot gathers it once for every colonist. It reuses buf.
-func (g *Game) postponedTops(buf []postTop) []postTop {
+func (g *Game) postponedTops(buf []postpone.Top) []postpone.Top {
 	p := &g.postponed
 	buf = buf[:0]
-	if len(p.m) == 0 {
+	if p.Len() == 0 {
 		return buf
 	}
 	now := uint64(g.clock.Now())
-	stale := p.rev != g.grid.Version() // out-of-reach entries about to clear
-	for k, v := range p.m {
+	stale := p.Rev != g.grid.Version() // out-of-reach entries about to clear
+	p.All(func(k postpone.Key, v postpone.Val) {
 		if now >= v.Until || v.Unreach && stale || g.postTargetGone(k) || k.Kind == job.Equip && k.Target == 0 {
-			continue // (an Equip with no target: a dress cooldown, not work)
+			return // (an Equip with no target: a dress cooldown, not work)
 		}
-		e := postEntry{k, v.Until, v.Unreach}
-		var t *postTop
+		var t *postpone.Top
 		for i := range buf {
-			if buf[i].pawn == k.Pawn {
+			if buf[i].Pawn == k.Pawn {
 				t = &buf[i]
 				break
 			}
 		}
 		if t == nil {
-			buf = append(buf, postTop{pawn: k.Pawn})
+			buf = append(buf, postpone.Top{Pawn: k.Pawn})
 			t = &buf[len(buf)-1]
 		}
-		// insert e into the pawn's sorted top list, dropping the last
-		i := t.n
-		for i > 0 && postViewBefore(&e, &t.e[i-1]) {
-			i--
-		}
-		if i >= postViewLines {
-			continue
-		}
-		if t.n < postViewLines {
-			t.n++
-		}
-		copy(t.e[i+1:t.n], t.e[i:t.n-1])
-		t.e[i] = e
-	}
+		t.Add(postpone.Entry{Key: k, Until: v.Until, Unreach: v.Unreach})
+	})
 	return buf
 }
 
 // postponedLinesIn is postponedLines over tops, postponedTops' result.
-func (g *Game) postponedLinesIn(tops []postTop, id entity.EntityID) []string {
-	var t *postTop
+func (g *Game) postponedLinesIn(tops []postpone.Top, id entity.EntityID) []string {
+	var t *postpone.Top
 	for i := range tops {
-		if tops[i].pawn == id {
+		if tops[i].Pawn == id {
 			t = &tops[i]
 			break
 		}
 	}
-	if t == nil || t.n == 0 {
+	if t == nil || t.N == 0 {
 		return nil
 	}
 	now := uint64(g.clock.Now())
 	var out []string
-	for _, e := range t.e[:t.n] {
-		if len(out) == postViewLines {
+	for _, e := range t.E[:t.N] {
+		if len(out) == postpone.ViewLines {
 			break
 		}
 		if e.Unreach {
@@ -537,7 +340,7 @@ func (g *Game) postponedLinesIn(tops []postTop, id entity.EntityID) []string {
 }
 
 // postLabel names postponed work for the view.
-func (g *Game) postLabel(k postKey) string {
+func (g *Game) postLabel(k postpone.Key) string {
 	t := k.Target
 	switch k.Kind {
 	case job.Construct:

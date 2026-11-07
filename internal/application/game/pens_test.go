@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/postpone"
 	"strings"
 	"testing"
 
@@ -236,7 +237,7 @@ func TestRopeRefusedOutsideHandlerReach(t *testing.T) {
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	handlerOnly(g, ada)
-	g.postpone(postKey{Pawn: ada, Kind: job.Rope, Target: cow}, job.Unreachable)
+	g.postpone(postpone.Key{Pawn: ada, Kind: job.Rope, Target: cow}, job.Unreachable)
 	if g.assignRope(ada) {
 		t.Fatal("a postponed rope job is not taken")
 	}
