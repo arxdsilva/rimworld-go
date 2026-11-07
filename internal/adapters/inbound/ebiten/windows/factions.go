@@ -7,6 +7,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/faction"
@@ -20,11 +21,12 @@ import (
 
 const (
 	ColFacModalID = "colony.factions"
-	colFacW       = 1120
-	colFacH       = 640
-	colFacListMax = 290 // the table's height cap; more rows scroll
+	colFacW       = 1010 // UIS-068
+	colFacListMax = 290  // the table's height cap; more rows scroll
 	colFacChartH  = 128
 	colFacAxisW   = 40
+	colFacRowH    = 34  // the table's row, wizard.FacRowH (its owner: the wizard)
+	colFacDetailH = 190 // the picked faction's chart and events under the table
 )
 
 // Toggle opens the window, or closes it when it is the open one.
@@ -38,10 +40,23 @@ func (w Factions) Launch() {
 	}
 	sel := 0
 	w.OpenKit(uikit.Modal{
-		ID: ColFacModalID, Title: w.sh.T("Factions"), W: colFacW, H: colFacH, Anchor: w.Anchor,
+		ID: ColFacModalID, Title: w.sh.T("Factions"), W: colFacW, H: w.height(), Anchor: w.Anchor, Frameless: true,
 		Draw: func(body gfx.Rect) { w.body(body, &sel) },
 	})
 }
+
+// height is the window's outer height: the inner margins, the table (capped,
+// then it scrolls) and the detail under it.
+func (w Factions) height() float32 {
+	n := 0
+	if w.live() {
+		n = len(w.sh.Factions())
+	}
+	return float32(2*hudlayout.WindowPad) + min(float32(uikit.TableHeaderH+n*colFacRowH+4), colFacListMax) + 10 + colFacDetailH
+}
+
+// size is the window's outer size.
+func (w Factions) size() (float32, float32) { return colFacW, w.height() }
 
 // body declares the table over the live rows and the
 // selected faction's detail under it.
@@ -65,7 +80,7 @@ func (w Factions) detail(r gfx.Rect, row Faction) {
 	chartR, evR := right.SplitH(right.W * 0.56)
 	left.W -= 12
 
-	hs := gfx.Large
+	hs := gfx.Title
 	hs.Color = uikit.Heading
 	y := left.Y
 	w.kit().Label(left.X, y, uikit.FitText(row.Name, hs, left.W), hs)

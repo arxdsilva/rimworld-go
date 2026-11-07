@@ -412,9 +412,13 @@ func TestWindowCloseClick(t *testing.T) {
 	a, f := winApp(t, winStub(3))
 	a.win.History().Launch()
 	f.Frame(t, a)
-	press(t, a, f, "modal."+windowspkg.HistoryModalID+".close")
+	if _, ok := a.uiSt().Find("modal." + windowspkg.HistoryModalID + ".close"); ok {
+		t.Fatal("a main-tab window has no X (UIS-060)")
+	}
+	a.applyClick("tab.history") // its tab closes it
+	f.Frame(t, a)
 	if a.win.Open || a.uiModalTop() != "" {
-		t.Fatal("the X closes the window")
+		t.Fatal("the tab closes the window")
 	}
 	a.applyClick("tab.work")
 	a.win.Click("win.close")
@@ -636,6 +640,7 @@ func TestWindowWantsAreSizes(t *testing.T) {
 			}
 			a.sw, a.sh = 1920, 1080
 			f.Frame(t, a)
+			w, h = a.win.Want() // Research asks for a share of the screen (UIS-065)
 			win := a.hud().Window
 			if win.W != w || win.H > h+0.01 {
 				t.Errorf("%s: wants %vx%v, got %vx%v on a 1920x1080 screen", c.name, w, h, win.W, win.H)
@@ -683,6 +688,7 @@ func TestScheduleWindowKeepsItsCells(t *testing.T) {
 func TestResearchWindowKeepsItsProjects(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(3))
+	a.sw, a.sh = 1920, 1080 // the 140 x 40 boxes at a 190 x 70 stride need the room
 	click(t, a, "tab.research")
 	f.Frame(t, a)
 	have := map[string]bool{}

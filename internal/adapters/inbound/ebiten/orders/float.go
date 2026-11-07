@@ -19,12 +19,15 @@ import (
 // right-click order menu. All actions are typed commands; the menu
 // content and its disabled reasons come from the host's OrdersAt.
 
-// Row sizes of the float menu.
+// Row sizes of the float menu (UIS-070, UIS-071): rows of hudlayout.FloatRowH,
+// as wide as the widest label plus hudlayout.FloatPadW, no minimum width, no
+// footer.
 const (
-	FloatRowH = 22
-	floatMinW = 200
-	// FloatHintH is the footer row under the order menu.
-	FloatHintH = 18
+	FloatRowH = hudlayout.FloatRowH
+	// floatPadL is the row's left padding, floatTextIcon the text's offset on
+	// a row with an icon.
+	floatPadL     = 6
+	floatTextIcon = 32
 )
 
 // Float is the open float menu.
@@ -53,16 +56,13 @@ func floatLabel(o game.OrderOption) string {
 // FloatRect is the menu's box, kept on the screen and above the tab strip.
 func (c *Controller) FloatRect() uikit.Button {
 	f := &c.Float
-	w := floatMinW
+	w := 0
 	for _, o := range f.Opts {
-		if n := int(gfx.TextW(floatLabel(o), gfx.Body)) + 28; n > w {
+		if n := int(gfx.TextW(floatLabel(o), gfx.Body)) + hudlayout.FloatPadW; n > w {
 			w = n
 		}
 	}
 	h := len(f.Opts) * FloatRowH
-	if f.Pick == nil {
-		h += FloatHintH
-	}
 	x, y := f.X, f.Y
 	if f.Up {
 		y -= float32(h)
@@ -90,10 +90,19 @@ func (c *Controller) FloatButtons() []uikit.Button {
 		out = append(out, uikit.Button{
 			ID: ids.PrefixFloat + strconv.Itoa(i), Label: floatLabel(o),
 			X: r.X, Y: r.Y + float32(i*FloatRowH), W: r.W, H: FloatRowH,
-			Disabled: o.Disabled, Reason: o.Reason,
+			Disabled: o.Disabled, Reason: o.Reason, Tip: c.floatTip(),
 		})
 	}
 	return out
+}
+
+// floatTip is an order row's tooltip: the Shift-queue hint (an options menu
+// queues nothing).
+func (c *Controller) floatTip() string {
+	if c.Float.Pick != nil {
+		return ""
+	}
+	return c.sh.T("Shift: queue (max 3)")
 }
 
 // DrawFloat draws the menu.
@@ -103,9 +112,6 @@ func (c *Controller) DrawFloat(screen *ebiten.Image) {
 	}
 	r := c.FloatRect()
 	uikit.DrawPanel(screen, r.X-2, r.Y-2, r.W+4, r.H+4)
-	if c.Float.Pick == nil {
-		gfx.Text(screen, c.sh.T("Shift: queue (max 3)"), float64(r.X)+10, float64(r.Y+r.H)-FloatHintH, gfx.WithColor(gfx.Small, uikit.TextDim))
-	}
 	mx, my := c.sh.Cursor()
 	for i, b := range c.FloatButtons() {
 		fill := uikit.Btn
@@ -120,10 +126,12 @@ func (c *Controller) DrawFloat(screen *ebiten.Image) {
 		if b.Disabled {
 			ts = gfx.WithColor(gfx.Body, uikit.TextDim)
 		}
+		tx := float64(b.X) + floatPadL
 		if ic := FloatIcon(c.Float.Opts[i]); ic != "" {
-			gfx.Icon(screen, c.sh.Icon(ic), float64(b.X+b.W)-FloatRowH+3, float64(b.Y)+3, FloatRowH-6)
+			gfx.Icon(screen, c.sh.Icon(ic), float64(b.X)+floatPadL, float64(b.Y)+(float64(b.H)-hudlayout.FloatIcon)/2, hudlayout.FloatIcon)
+			tx = float64(b.X) + floatTextIcon
 		}
-		gfx.Text(screen, gfx.Ellipsize(b.Label, ts, float64(b.W)-20), float64(b.X)+10, float64(b.Y)+(float64(b.H)-gfx.LineH(ts))/2, ts)
+		gfx.Text(screen, gfx.Ellipsize(b.Label, ts, float64(b.X+b.W)-tx-6), tx, float64(b.Y)+(float64(b.H)-gfx.LineH(ts))/2, ts)
 	}
 }
 
@@ -158,7 +166,7 @@ func (c *Controller) OpenPick(x, y float32, up bool, entries []game.OrderOption,
 }
 
 func (c *Controller) openAt(opts []game.OrderOption, tx, ty int, sx, sy float32) {
-	c.Float = Float{Open: true, X: sx + 6, Y: sy + 4, Opts: opts, TX: tx, TY: ty}
+	c.Float = Float{Open: true, X: sx, Y: sy, Opts: opts, TX: tx, TY: ty}
 }
 
 // OpenOrders opens the order menu for the selected pawn at tile (tx, ty).

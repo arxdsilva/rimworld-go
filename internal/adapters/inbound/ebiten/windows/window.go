@@ -18,7 +18,9 @@ import (
 //     schedule.go, research.go, animals.go);
 //   - any other Mode is the id of a modeless kit modal (assign, history,
 //     factions, world): its definition is Set.modal and the kit declares
-//     it on the screen layer (Declare: Kit.RunWindow).
+//     it on the screen layer (Declare: Kit.RunWindow). Assign, History and
+//     Factions are Frameless: no title bar, no X, pad hudlayout.WindowPad
+//     (UIS-060); the tab bar or Escape closes them.
 //
 // Because they share Open, a tab click, a key or Escape closes or replaces
 // any window alike, the inspectors and the Architect give way while one
@@ -76,9 +78,23 @@ func (w *Set) Want() (float32, float32) {
 		return w.Animals().want()
 	}
 	if w.KitOpen() {
-		return w.modal.W, w.modal.H
+		return w.kitSize()
 	}
 	return 0, 0
+}
+
+// kitSize is the open kit window's content-fitted outer size (UIS-060):
+// each window knows its rows; one without a rule keeps the size it opened with.
+func (w *Set) kitSize() (float32, float32) {
+	switch w.modal.ID {
+	case AssignModalID:
+		return Assign{w}.size()
+	case HistoryModalID:
+		return History{w}.size()
+	case ColFacModalID:
+		return Factions{w}.size()
+	}
+	return w.modal.W, w.modal.H
 }
 
 // Rect is the open window's rectangle: the layout's Window rect (zero

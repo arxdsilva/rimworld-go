@@ -3,21 +3,22 @@ package uikit
 import (
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// Scroll views (NG-1 §1.4): a rectangle over taller content with an 8 px
+// Scroll views (NG-1 §1.4): a rectangle over taller content with a 12 px
 // scrollbar, wheel routing, a draggable thumb, PageUp/PageDown and a
 // virtualised selectable list on top. Offsets live in Kit.Scroll[id].
 
 const (
-	ScrollBarW   = 8
+	ScrollBarW   = 12 // UIS-077 (estimate +-2)
 	scrollMinThb = 24
-	ScrollStep   = 48 // px per wheel notch when the caller gives none
-	ListRowH     = 26
-	pageFrac     = 0.9 // a PageUp/PageDown moves this much of the view
+	ScrollStep   = 48                 // px per wheel notch when the caller gives none
+	ListRowH     = hudlayout.MenuRowH // a menu row (UIS-017)
+	pageFrac     = 0.9                // a PageUp/PageDown moves this much of the view
 )
 
 // ScrollOpts are a scroll area's optional parts.

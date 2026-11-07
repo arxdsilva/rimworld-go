@@ -10,7 +10,7 @@ import (
 // Tooltip metrics (NG-1 §1.4).
 const (
 	TipDelay = 24  // frames the cursor rests before the card shows (the default; Access.TipFrames)
-	TipMaxW  = 360 // card width cap in px
+	TipMaxW  = 268 // card width cap in px (UIS-015)
 )
 
 // CountHeld runs before the frame is resolved against the bindings: it

@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -59,7 +60,7 @@ const (
 	wildMeat      = 490
 	wildMarks     = 576
 	wildBtn       = 700 // Hunt all, Tame one, Cancel
-	animalsRowTop = 84
+	animalsRowTop = 60  // pad 18, the 24-high button row, the column heads
 )
 
 // animalCol is a column of the Colony or Wild list that is left out when
@@ -133,7 +134,7 @@ func (w Animals) want() (float32, float32) {
 	} else if w.live() {
 		rows = len(w.tame())
 	}
-	return float32(width), float32(max(160, animalsRowTop+rows*animalRowH+8))
+	return float32(width), float32(max(160, animalsRowTop+rows*animalRowH+hudlayout.WindowPad))
 }
 
 // wildlife is the game's wild species list, read again only when the
@@ -163,11 +164,13 @@ func (w Animals) Buttons() []uikit.Button {
 	r := w.Rect()
 	cols := animalColsFor(r.W, w.Wild)
 	out := []uikit.Button{
-		{ID: "animals.view.colony", Label: w.sh.T("Colony"), X: r.X + r.W - 190, Y: r.Y + 6, W: 84, H: 24, Selected: !w.Wild},
-		{ID: "animals.view.wild", Label: w.sh.T("Wild"), X: r.X + r.W - 100, Y: r.Y + 6, W: 84, H: 24, Selected: w.Wild},
+		{ID: "animals.view.colony", Label: w.sh.T("Colony"), X: r.X + r.W - 192, Y: r.Y + hudlayout.WindowPad, W: 84, H: 24, Selected: !w.Wild,
+			Tip: w.sh.T("Colony animals\nTame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector.")},
+		{ID: "animals.view.wild", Label: w.sh.T("Wild"), X: r.X + r.W - 102, Y: r.Y + hudlayout.WindowPad, W: 84, H: 24, Selected: w.Wild,
+			Tip: w.sh.T("Wild animals\nWild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal.")},
 	}
 	if !w.Wild {
-		out = append(out, uikit.Button{ID: AutoSlaughterBtnID, Label: w.sh.T("Auto-slaughter"), X: r.X + r.W - 330, Y: r.Y + 6, W: 130, H: 24,
+		out = append(out, uikit.Button{ID: AutoSlaughterBtnID, Label: w.sh.T("Auto-slaughter"), X: r.X + r.W - 332, Y: r.Y + hudlayout.WindowPad, W: 130, H: 24,
 			Tip: w.sh.T("Auto-slaughter\nKeep each tame species at a herd size: handlers slaughter the surplus once a day.")})
 	}
 	if w.Wild {
@@ -177,7 +180,7 @@ func (w Animals) Buttons() []uikit.Button {
 				break
 			}
 			out = append(out,
-				uikit.Button{ID: "animals.focus." + row.Species, X: r.X + 12, Y: y, W: float32(cols.at(wildBtn) - 24), H: animalRowH - 2},
+				uikit.Button{ID: "animals.focus." + row.Species, X: r.X + hudlayout.WindowPad, Y: y, W: float32(cols.at(wildBtn) - 2*hudlayout.WindowPad), H: animalRowH - 2},
 				uikit.Button{ID: "animals.wild.hunt." + row.Species, Label: w.sh.T("Hunt all"), X: r.X + float32(cols.at(wildBtn)), Y: y, W: 90, H: 24, Selected: row.Hunted > 0},
 				uikit.Button{ID: "animals.wild.tame." + row.Species, Label: w.sh.T("Tame one"), X: r.X + float32(cols.at(wildBtn)) + 96, Y: y, W: 90, H: 24, Selected: row.TameMarked > 0},
 				uikit.Button{ID: "animals.wild.cancel." + row.Species, Label: w.sh.T("Cancel"), X: r.X + float32(cols.at(wildBtn)) + 192, Y: y, W: 80, H: 24},
@@ -347,7 +350,7 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 	if w.Wild {
 		title = lang.Tf(w.sh, "Wildlife  (%d species)", len(w.wildlife()))
 	}
-	gfx.Text(screen, gfx.Ellipsize(title, gfx.Label, float64(r.W)-12-200), float64(r.X)+12, float64(r.Y)+8, gfx.Label)
+	gfx.Text(screen, gfx.Ellipsize(title, gfx.Label, float64(r.W)-2*hudlayout.WindowPad-340), float64(r.X)+hudlayout.WindowPad, float64(r.Y)+hudlayout.WindowPad+(24-gfx.LineH(gfx.Label))/2, gfx.Label)
 	mx, my := w.sh.Cursor()
 	if w.Wild {
 		w.drawWild(screen, r)
@@ -367,8 +370,7 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 	x0, y0 := int(r.X), int(r.Y)
 	cols := animalColsFor(r.W, false)
-	uikit.DrawFitSmall(screen, w.sh.T("Tame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector."), float64(x0+12), float64(y0+34), float64(r.W)-24, gfx.Body)
-	head := y0 + animalsRowTop - 22
+	head := y0 + animalsRowTop - 18
 	for _, h := range []struct {
 		x int
 		s string
@@ -425,8 +427,7 @@ func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 func (w Animals) drawWild(screen *ebiten.Image, r uikit.Button) {
 	x0, y0 := int(r.X), int(r.Y)
 	cols := animalColsFor(r.W, true)
-	uikit.DrawFitSmall(screen, w.sh.T("Wild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal."), float64(x0+12), float64(y0+34), float64(r.W)-24, gfx.Body)
-	head := y0 + animalsRowTop - 22
+	head := y0 + animalsRowTop - 18
 	for _, h := range []struct {
 		x int
 		s string

@@ -89,7 +89,7 @@ func TestKitWindowOpensTogglesAndCloses(t *testing.T) {
 	if !w.KitOpen() || w.KitID() != AssignModalID || w.Mode != AssignModalID {
 		t.Fatalf("Assign not open: mode %q kit %q", w.Mode, w.KitID())
 	}
-	if sw, shh := w.Want(); sw != assignW || shh != assignH || w.Anchor() != sh.WindowRect() {
+	if sw, shh := w.Want(); sw != assignW || shh != assignHeight(0) || w.Anchor() != sh.WindowRect() {
 		t.Fatalf("want %vx%v anchor %v", sw, shh, w.Anchor())
 	}
 	if len(sh.intents) != 2 || sh.intents[1] != (ports.CloseArchitect{}) || sh.floats != 2 {

@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
@@ -70,10 +71,19 @@ func NextPriority(v int) int {
 	return v + 1
 }
 
+// The Work window's measures at UI step 1 (UIS-061): row pitch 30, cell
+// stride 39, name column 240, first row 97 below the top, 60 under the last
+// row. The cell box is 25 high; ours is workCellW-4 wide (35, not the
+// reference 25) to hold the skill level, the priority and the passion glyph.
 const (
-	workRowH  = 22
-	WorkNameW = 110
-	workCellW = 46 // wide enough for the skill level, the priority and the passion glyph
+	workRowH   = 30
+	WorkNameW  = 240
+	workCellW  = 39
+	workCellH  = 25
+	workTop    = 97
+	workBottom = 60
+	workHeadY  = 60 // the header buttons' top; two staggered label rows
+	workHeadH  = 37
 )
 
 // WorkColSkill is the skill each work column trains and is paced by
@@ -145,13 +155,15 @@ func workSlot(col int) int {
 // WorkCellRect is the rectangle of colonist row's cell in column col (a
 // work.Type's index), placed at the column's workSlot.
 func WorkCellRect(r uikit.Button, row, col int) gfx.Rect {
-	hx := r.X + 12 + WorkNameW
-	y := r.Y + 48 + float32(row*workRowH)
-	return gfx.Rect{X: hx + float32(workSlot(col)*workCellW), Y: y, W: workCellW - 4, H: workRowH - 2}
+	hx := r.X + hudlayout.WindowPad + WorkNameW
+	y := r.Y + workTop + float32(row*workRowH)
+	return gfx.Rect{X: hx + float32(workSlot(col)*workCellW), Y: y, W: workCellW - 4, H: workCellH}
 }
 
 // workRowShown reports the row fits the panel.
-func workRowShown(r uikit.Button, row int) bool { return int(r.Y)+48+row*workRowH <= int(r.Y+r.H)-20 }
+func workRowShown(r uikit.Button, row int) bool {
+	return int(r.Y)+workTop+row*workRowH+workRowH <= int(r.Y+r.H)-hudlayout.WindowPad
+}
 
 // hint is the header's one-line legend.
 func (w Work) hint() string {
@@ -268,7 +280,7 @@ func (w Work) Tips(sw, sh int) {
 	for _, t := range work.Order {
 		col := int(t)
 		cr := WorkCellRect(r, 0, col)
-		w.kit().Tip("work.hdr."+uikit.Num(col), gfx.Rect{X: cr.X, Y: r.Y + 22, W: cr.W, H: 22}, w.help(col))
+		w.kit().Tip("work.hdr."+uikit.Num(col), gfx.Rect{X: cr.X, Y: r.Y + workHeadY, W: cr.W, H: workHeadH}, w.help(col))
 	}
 	for row, p := range w.sh.Pawns() {
 		if !workRowShown(r, row) {
@@ -294,8 +306,9 @@ func (w Work) want() (float32, float32) {
 	if w.live() {
 		n = len(w.sh.Pawns())
 	}
-	hint := 12 + gfx.TextW(w.sh.T("Work priorities"), gfx.Label) + 16 + gfx.TextW(w.hint(), gfx.Small) + 12
-	return max(float32(12+WorkNameW+len(WorkColumns)*workCellW+8), float32(hint)), float32(max(160, 48+n*workRowH+20))
+	pad := float32(hudlayout.WindowPad)
+	hint := pad + gfx.TextW(w.hint(), gfx.Small) + pad
+	return max(pad+WorkNameW+float32(len(WorkColumns)*workCellW)+pad, hint), float32(max(160, workTop+n*workRowH+workBottom))
 }
 
 func WorkCellValue(p game.PawnView, col int) string {
@@ -319,7 +332,7 @@ func (w Work) buttons() []uikit.Button {
 			continue
 		}
 		cr := WorkCellRect(r, 0, col)
-		out = append(out, uikit.Button{ID: ids.PrefixWorkHead + strconv.Itoa(col), X: cr.X, Y: r.Y + 22, W: cr.W, H: 22, Quiet: true})
+		out = append(out, uikit.Button{ID: ids.PrefixWorkHead + strconv.Itoa(col), X: cr.X, Y: r.Y + workHeadY, W: cr.W, H: workHeadH, Quiet: true})
 	}
 	return out
 }
@@ -327,12 +340,12 @@ func (w Work) buttons() []uikit.Button {
 // cellButtons are the priority cells alone (an incapable one disabled).
 func (w Work) cellButtons() []uikit.Button {
 	r := w.Rect()
-	hx := int(r.X) + 12 + WorkNameW
+	hx := int(r.X) + hudlayout.WindowPad + WorkNameW
 	pawns := w.sh.Pawns()
 	out := make([]uikit.Button, 0)
 	for row, p := range pawns {
-		y := int(r.Y) + 48 + row*workRowH
-		if y > int(r.Y+r.H)-20 {
+		y := int(r.Y) + workTop + row*workRowH
+		if !workRowShown(r, row) {
 			break
 		}
 		for col := range WorkColumns {
@@ -345,7 +358,7 @@ func (w Work) cellButtons() []uikit.Button {
 				X:     float32(hx + workSlot(col)*workCellW),
 				Y:     float32(y),
 				W:     float32(workCellW - 4),
-				H:     float32(workRowH - 2),
+				H:     float32(workCellH),
 			}
 			if why, inc := w.incapable(p, col); inc {
 				// An incapable cell is hatched and can't be clicked: the
@@ -363,31 +376,35 @@ func WorkTypeForCol(col int) (command.WorkType, bool) {
 	return w.cmd, ok
 }
 
-// draw draws the Work window.
+// draw draws the Work window: the panel, a title line with the legend, the
+// column names on two staggered rows, then a row per colonist.
 func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 	r := w.Rect()
+	pad := float64(hudlayout.WindowPad)
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
-	gfx.Text(screen, w.sh.T("Work priorities"), float64(r.X)+12, float64(r.Y)+8, gfx.WithColor(gfx.Label, uikit.Heading))
-	hintX := float64(r.X) + 12 + float64(gfx.TextW(w.sh.T("Work priorities"), gfx.Label)) + 16
-	gfx.Text(screen, gfx.Ellipsize(w.hint(), gfx.Small, float64(r.X+r.W)-12-hintX),
-		hintX, float64(r.Y)+8+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
-	hx := int(r.X) + 12 + WorkNameW
+	title := w.sh.T("Work priorities")
+	gfx.Text(screen, title, float64(r.X)+pad, float64(r.Y)+pad, gfx.WithColor(gfx.Label, uikit.Heading))
+	hintX := float64(r.X) + pad + float64(gfx.TextW(title, gfx.Label)) + 16
+	gfx.Text(screen, gfx.Ellipsize(w.hint(), gfx.Small, float64(r.X+r.W)-pad-hintX),
+		hintX, float64(r.Y)+pad+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
+	hx := int(r.X) + hudlayout.WindowPad + WorkNameW
 	for i := range WorkColumns {
-		gfx.Text(screen, w.colName(i), float64(hx+workSlot(i)*workCellW)+float64(workCellW-4)/2, float64(r.Y)+28, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter})
+		slot := workSlot(i)
+		y := float64(r.Y) + workHeadY + float64(slot%2)*gfx.LineH(gfx.Small) + 4 // staggered rows
+		gfx.Text(screen, w.colName(i), float64(hx+slot*workCellW)+float64(workCellW-4)/2, y, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter})
 	}
 	pawns := w.sh.Pawns()
 	for row, p := range pawns {
-		y := int(r.Y) + 48 + row*workRowH
-		if y > int(r.Y+r.H)-20 {
+		if !workRowShown(w.Rect(), row) {
 			break
 		}
-		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, WorkNameW-8), float64(r.X)+12, float64(y)+(workRowH-2-gfx.LineH(gfx.Body))/2, gfx.Body)
+		y := int(r.Y) + workTop + row*workRowH
+		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, WorkNameW-8), float64(r.X)+pad, float64(y)+(workCellH-gfx.LineH(gfx.Body))/2, gfx.Body)
 	}
 	mx, my := w.sh.Cursor()
 	drawButtons(screen, w.cellButtons(), mx, my)
 	for row, p := range pawns {
-		y := int(r.Y) + 48 + row*workRowH
-		if y > int(r.Y+r.H)-20 {
+		if !workRowShown(w.Rect(), row) {
 			break
 		}
 		for col := range WorkColumns {
@@ -395,7 +412,7 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 			if v == "" {
 				continue
 			}
-			cell := WorkCellRect(r, row, col)
+			cell := WorkCellRect(w.Rect(), row, col)
 			if p.Incapable.Enabled(work.Type(col)) {
 				drawHatch(screen, cell)
 				continue

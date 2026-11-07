@@ -48,8 +48,8 @@ func TestFloatPickHasNoQueueFooter(t *testing.T) {
 	}
 	a.ord.CloseFloat()
 	a.ord.Float = orders.Float{Open: true, X: 300, Y: 300, Opts: pickEntries()}
-	if r := a.ord.FloatRect(); r.H != float32(3*orders.FloatRowH+orders.FloatHintH) {
-		t.Fatalf("the order menu keeps its footer: h=%v", r.H)
+	if r := a.ord.FloatRect(); r.H != float32(3*orders.FloatRowH) {
+		t.Fatalf("an order menu is only its rows too (UIS-071: the Shift hint is each row's tip): h=%v", r.H)
 	}
 }
 

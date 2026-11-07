@@ -20,8 +20,11 @@ import (
 const (
 	HistoryModalID = "colony.history"
 	historyRowH    = 22
-	historyTabH    = 28
+	historyTabH    = 31 // UIS-067
 	historyWhenW   = 120
+	// historyW x historyH is the window's outer size, shared with Quests (UIS-067).
+	historyW = 1010
+	historyH = 641
 )
 
 // rowStripe shades every other row (the Bio tab's stripe).
@@ -59,10 +62,13 @@ func (w History) Launch() {
 		return
 	}
 	w.OpenKit(uikit.Modal{
-		ID: HistoryModalID, Title: w.sh.T("History"), W: 640, H: 520, Anchor: w.Anchor,
+		ID: HistoryModalID, Title: w.sh.T("History"), W: historyW, H: historyH, Anchor: w.Anchor, Frameless: true,
 		Draw: func(body gfx.Rect) { w.body(body) },
 	})
 }
+
+// size is the window's outer size.
+func (w History) size() (float32, float32) { return historyW, historyH }
 
 // body declares the scrolling list of entries.
 func (w History) body(body gfx.Rect) {

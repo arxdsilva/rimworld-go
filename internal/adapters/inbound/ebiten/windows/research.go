@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
@@ -33,9 +34,13 @@ import (
 // research_tree.go keeps the state and caches, research_layout.go lays
 // the prerequisite graph out.
 
-// researchWant is the window's wanted size: as much of the screen as the
-// layout gives (it clamps to the room above the tab strip).
-const researchWantW, researchWantH = 1600, 1000
+// The window's wanted height is researchHeightShare of the room above the
+// tab bar, at least researchMinH (UIS-065: 731 of 1046 measured, one data
+// point); its width is the room left of the right column.
+const (
+	researchHeightShare = 0.68
+	researchMinH        = 480
+)
 
 // LockedBy is the research project still gating an unlock key ("" if none).
 func (w Research) LockedBy(key string) string {
@@ -46,7 +51,10 @@ func (w Research) LockedBy(key string) string {
 }
 
 // want is the Research window's wanted size.
-func (w Research) want() (float32, float32) { return researchWantW, researchWantH }
+func (w Research) want() (float32, float32) {
+	sw, sh := w.sh.Size()
+	return float32(sw - hudlayout.RightW - hudlayout.HudMargin), max(researchMinH, researchHeightShare*float32(sh-hudlayout.TabsH))
+}
 
 // storyReader is the optional reader of the colony's story settings (a
 // commitment colony has no developer tools).
@@ -185,11 +193,12 @@ func (w Research) draw(screen *ebiten.Image, sw, sh int) {
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
 	g := w.geometry()
 	mx, my := w.sh.Cursor()
-	gfx.Text(screen, w.sh.T("Research"), float64(r.X)+12, float64(r.Y)+6, gfx.WithColor(gfx.Label, uikit.Heading))
-	hintX := float64(r.X) + 12 + float64(gfx.TextW(w.sh.T("Research"), gfx.Label)) + 16
+	pad := float64(hudlayout.WindowPad)
+	gfx.Text(screen, w.sh.T("Research"), float64(r.X)+pad, float64(r.Y)+pad, gfx.WithColor(gfx.Label, uikit.Heading))
+	hintX := float64(r.X) + pad + float64(gfx.TextW(w.sh.T("Research"), gfx.Label)) + 16
 	hint, c := w.headline(st)
-	if right := float64(r.X+r.W) - 12; right-hintX > 40 {
-		gfx.Text(screen, gfx.Ellipsize(hint, gfx.Small, right-hintX), hintX, float64(r.Y)+6+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2,
+	if right := float64(r.X+r.W) - pad; right-hintX > 40 {
+		gfx.Text(screen, gfx.Ellipsize(hint, gfx.Small, right-hintX), hintX, float64(r.Y)+pad+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2,
 			gfx.WithColor(gfx.Small, c))
 	}
 	if st.qlow != "" && !g.search.Empty() {

@@ -115,8 +115,8 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 	}
 	f.Frame(t, a)
 
-	// Close ends it.
-	press(t, a, f, "modal."+windows.ColFacModalID+".close")
+	// Its tab closes it: a main-tab window has no X (UIS-060).
+	press(t, a, f, "tab.factions")
 	if a.uiSt().ModalOpen() {
 		t.Fatal("the window should close")
 	}

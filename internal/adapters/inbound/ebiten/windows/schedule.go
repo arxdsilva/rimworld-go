@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -26,9 +27,19 @@ const (
 	// selector declares right of the hours (its width, and its gap).
 	SchedAreaW   = 170
 	SchedAreaGap = 8
-	SchedCellW   = 26
-	SchedRowH    = 24
-	SchedTop     = 78 // first row below the header and brushes
+	// SchedCellW is the hour cell's pitch (a 19 box and 2 gap), SchedRowH the
+	// row pitch (a 28 box and 2 gap), SchedTop the first row below the top
+	// (UIS-062). The grid starts at schedGridX, which the Architect's area
+	// selector (architect/area_select.go) mirrors as 12 + NameW.
+	SchedCellW = 21
+	SchedRowH  = 30
+	SchedTop   = 70
+
+	schedGridX   = 12 + WorkNameW
+	schedBrushY  = hudlayout.WindowPad
+	schedBottom  = 60
+	schedCellBox = SchedCellW - 2
+	schedRowBox  = SchedRowH - 2
 )
 
 var schedBrushes = []schedule.Activity{schedule.Anything, schedule.Work, schedule.Recreation, schedule.Sleep}
@@ -56,17 +67,17 @@ func (w Schedule) buttons() []uikit.Button {
 	var out []uikit.Button
 	for i, b := range schedBrushes {
 		out = append(out, uikit.Button{ID: ids.PrefixSchedBrush + strconv.Itoa(int(b)), Label: b.String(),
-			X: r.X + 12 + float32(i*118), Y: r.Y + 30, W: 112, H: 26, Selected: w.Brush == b})
+			X: r.X + hudlayout.WindowPad + float32(i*118), Y: r.Y + schedBrushY, W: 112, H: 26, Selected: w.Brush == b})
 	}
-	gx := r.X + 12 + WorkNameW
+	gx := r.X + schedGridX
 	for row, id := range w.Rows() {
 		y := r.Y + SchedTop + float32(row*SchedRowH)
-		if y > r.Y+r.H-20 {
+		if y+schedRowBox > r.Y+r.H-hudlayout.WindowPad {
 			break
 		}
 		for h := 0; h < 24; h++ {
 			out = append(out, uikit.Button{ID: ids.PrefixSchedCell + strconv.FormatUint(id, 10) + "." + strconv.Itoa(h),
-				X: gx + float32(h*SchedCellW), Y: y, W: SchedCellW - 2, H: SchedRowH - 3})
+				X: gx + float32(h*SchedCellW), Y: y, W: schedCellBox, H: schedRowBox})
 		}
 	}
 	return out
@@ -91,16 +102,16 @@ func (w Schedule) want() (float32, float32) {
 	if w.live() {
 		rows = len(w.Rows())
 	}
-	return float32(12 + WorkNameW + 24*SchedCellW + SchedAreaGap + SchedAreaW + 12), float32(max(160, SchedTop+rows*SchedRowH+20))
+	return float32(schedGridX + 24*SchedCellW + SchedAreaGap + SchedAreaW + hudlayout.WindowPad), float32(max(160, SchedTop+rows*SchedRowH+schedBottom))
 }
 
 func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 	r := w.Rect()
+	pad := float64(hudlayout.WindowPad)
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
-	gfx.Text(screen, w.sh.T("Schedule"), float64(r.X)+12, float64(r.Y)+6, gfx.WithColor(gfx.Label, uikit.Heading))
-	hintX := float64(r.X) + 12 + float64(gfx.TextW(w.sh.T("Schedule"), gfx.Label)) + 16
-	gfx.Text(screen, gfx.Ellipsize(w.sh.T("pick an activity, then click or drag across the hours"), gfx.Small, float64(r.X+r.W)-12-hintX),
-		hintX, float64(r.Y)+6+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
+	hintX := float64(r.X) + pad + 4*118 + 8
+	gfx.Text(screen, gfx.Ellipsize(w.sh.T("pick an activity, then click or drag across the hours"), gfx.Small, float64(r.X+r.W)-pad-hintX),
+		hintX, float64(r.Y)+pad+(26-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
 	mx, my := w.sh.Cursor()
 	for _, b := range w.buttons() {
 		if !strings.HasPrefix(b.ID, ids.PrefixSchedBrush) {
@@ -110,7 +121,7 @@ func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 		v, _ := strconv.Atoi(strings.TrimPrefix(b.ID, ids.PrefixSchedBrush))
 		gfx.FillRect(screen, b.X+b.W-16, b.Y+8, 10, 10, schedColor(schedule.Activity(v)), false)
 	}
-	gx := int(r.X) + 12 + WorkNameW
+	gx := int(r.X) + schedGridX
 	for h := 0; h < 24; h += 3 {
 		gfx.Text(screen, fmt.Sprintf("%02d", h), float64(gx+h*SchedCellW+2), float64(int(r.Y)+SchedTop)-gfx.LineH(gfx.Small)-1, gfx.WithColor(gfx.Small, uikit.TextDim))
 	}
@@ -121,7 +132,7 @@ func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 	now := w.sh.Date().Hour
 	for row, id := range w.Rows() {
 		y := int(r.Y) + SchedTop + row*SchedRowH
-		if y > int(r.Y+r.H)-20 {
+		if y+schedRowBox > int(r.Y+r.H)-hudlayout.WindowPad {
 			break
 		}
 		name := w.sh.T("Everyone")
@@ -129,16 +140,16 @@ func (w Schedule) draw(screen *ebiten.Image, sw, sh int) {
 		if p, ok := byID[id]; ok {
 			name, grid = w.sh.PawnLabel(p), p.Schedule
 		}
-		gfx.Text(screen, gfx.Ellipsize(name, gfx.Body, WorkNameW-8), float64(r.X)+12, float64(y)+(SchedRowH-3-gfx.LineH(gfx.Body))/2, gfx.Body)
+		gfx.Text(screen, gfx.Ellipsize(name, gfx.Body, schedGridX-hudlayout.WindowPad-8), float64(r.X)+pad, float64(y)+(schedRowBox-gfx.LineH(gfx.Body))/2, gfx.Body)
 		for h := 0; h < 24; h++ {
 			x := float32(gx + h*SchedCellW)
 			c := uikit.BtnDisabled
 			if grid != nil && h < len(grid) {
 				c = schedColor(grid[h])
 			}
-			gfx.FillRect(screen, x, float32(y), SchedCellW-2, SchedRowH-3, c, false)
+			gfx.FillRect(screen, x, float32(y), schedCellBox, schedRowBox, c, false)
 			if h == now {
-				gfx.StrokeRect(screen, x, float32(y), SchedCellW-2, SchedRowH-3, 2, uikit.Text, false)
+				gfx.StrokeRect(screen, x, float32(y), schedCellBox, schedRowBox, 2, uikit.Text, false)
 			}
 		}
 	}

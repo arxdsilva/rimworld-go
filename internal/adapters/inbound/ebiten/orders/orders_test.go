@@ -5,6 +5,8 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -39,8 +41,8 @@ func TestFloatRectFooterAndUpward(t *testing.T) {
 		t.Fatalf("a pick menu is its rows and ends at its anchor: %+v", r)
 	}
 	c.Float = Float{Open: true, X: 300, Y: 300, Opts: entries()}
-	if r := c.FloatRect(); r.H != 3*FloatRowH+FloatHintH {
-		t.Fatalf("the order menu keeps its footer: %+v", r)
+	if r := c.FloatRect(); r.H != 3*FloatRowH {
+		t.Fatalf("the order menu has no footer (UIS-071): %+v", r)
 	}
 	if got := len(c.FloatButtons()); got != 3 {
 		t.Fatalf("buttons = %d", got)
@@ -72,7 +74,7 @@ func TestRightClickDraftedWalksAndUndraftedOpensMenu(t *testing.T) {
 	f.cmds, f.pawns = nil, []game.PawnView{{ID: 1}}
 	f.opts = []game.OrderOption{{Label: "Go here"}}
 	c.RightClickTile(4, 5, 10, 10)
-	if len(f.cmds) != 0 || !c.Float.Open || c.Float.X != 16 {
+	if len(f.cmds) != 0 || !c.Float.Open || c.Float.X != 10 { // the menu opens at the click (UIS-071)
 		t.Fatalf("an undrafted colonist gets the menu: %+v %+v", f.cmds, c.Float)
 	}
 	f.opts = nil
@@ -186,5 +188,22 @@ func TestDraftedRightClickOnPawnOrderOpensMenu(t *testing.T) {
 	c.RightClickTile(4, 5, 10, 10)
 	if len(f.cmds) != 0 || !c.Float.Open {
 		t.Fatalf("a pawn-targeted option opens the menu: %+v open=%v", f.cmds, c.Float.Open)
+	}
+}
+
+// TestFloatWidthIsTheWidestLabelPlusPad (UIS-070): no minimum width, and the
+// menu is its widest label plus FloatPadW wide.
+func TestFloatWidthIsTheWidestLabelPlusPad(t *testing.T) {
+	t.Parallel()
+	c := New(newFake())
+	c.OpenPick(300, 300, false, []game.OrderOption{{Label: "Go"}}, func(int) {})
+	want := float32(int(gfx.TextW("Go", gfx.Body)) + hudlayout.FloatPadW)
+	if r := c.FloatRect(); r.W != want || r.W >= 200 {
+		t.Fatalf("width %v, want %v with no minimum", r.W, want)
+	}
+	c.OpenPick(300, 300, false, []game.OrderOption{{Label: "Go"}, {Label: "A much longer order label"}}, func(int) {})
+	want = float32(int(gfx.TextW("A much longer order label", gfx.Body)) + hudlayout.FloatPadW)
+	if r := c.FloatRect(); r.W != want {
+		t.Fatalf("width %v, want %v", r.W, want)
 	}
 }

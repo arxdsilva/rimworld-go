@@ -115,7 +115,7 @@ func (st *researchState) buildPanel(w float32) {
 	}
 	n := &st.nodes[st.sel]
 	v := n.v
-	add(v.Label, gfx.Large, uikit.Heading)
+	add(v.Label, gfx.Title, uikit.Heading)
 	add(research.TechLevel(n.level).String(), gfx.Small, uikit.TextDim)
 	gap(4)
 	add(v.Desc, gfx.Small, uikit.Text)

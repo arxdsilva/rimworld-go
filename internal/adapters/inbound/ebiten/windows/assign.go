@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -27,7 +28,6 @@ import (
 const (
 	AssignModalID = "colony.assign"
 	assignW       = 880
-	assignH       = 480
 	AssignRowH    = 30
 	assignNameW   = 140
 	assignHeadH   = 24
@@ -82,9 +82,22 @@ func (w Assign) Launch() {
 		return
 	}
 	w.OpenKit(uikit.Modal{
-		ID: AssignModalID, Title: w.sh.T("Assign"), W: assignW, H: assignH, Anchor: w.Anchor,
+		ID: AssignModalID, Title: w.sh.T("Assign"), W: assignW, H: assignHeight(0), Anchor: w.Anchor, Frameless: true,
 		Draw: func(body gfx.Rect) { w.body(body) },
 	})
+}
+
+// assignHeight is the window's outer height for n colonists (UIS-063): the
+// inner margin, the header row, a row per colonist, the default care and
+// button rows, and the inner margin (reference: 70 above the first row, 60
+// under the last).
+func assignHeight(n int) float32 {
+	return float32(2*hudlayout.WindowPad + assignHeadH + n*AssignRowH + 2*AssignRowH + 10)
+}
+
+// size is the window's outer size: assignW wide, as tall as its colonists.
+func (w Assign) size() (float32, float32) {
+	return assignW, assignHeight(len(w.rows()))
 }
 
 // assignRow is one colonist's row.

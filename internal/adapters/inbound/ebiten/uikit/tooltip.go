@@ -8,13 +8,14 @@ import (
 )
 
 // Tooltips (NG-1 §1.4): a card that shows after the cursor has rested on
-// a widget with a tip for tipDelay frames (0.4 s). Up to 360 px wide,
-// wrapped, kept inside the screen. A tip is "Title\nbody": the title in
-// tsLabel, the body in tsSmall; a single line is a title.
+// a widget with a tip for tipDelay frames (0.4 s). TipMaxW (268) px wide,
+// wrapped, kept inside the screen. A tip is "Title\nbody": both in Body,
+// the title coloured, one blank line between them (UIS-015); a single line
+// is a title.
 
 const (
-	tipPad    = 8
-	tipGap    = 2  // between title and body
+	tipPadX   = 4  // including the 1 px border: the text is TipMaxW-2*tipPadX wide
+	tipPadY   = 7  // the height is a line pitch per line plus 2*tipPadY
 	TipMargin = 4  // screen edge clearance
 	tipOffX   = 14 // card offset from the cursor
 	tipOffY   = 20
@@ -32,26 +33,26 @@ type TipCard struct {
 // the bottom, and clamped inside the sw x sh screen.
 func TipLayout(tip string, sw, sh, mx, my int) TipCard {
 	title, body, _ := strings.Cut(tip, "\n")
-	inner := float64(TipMaxW - 2*tipPad)
-	c := TipCard{Title: gfx.WrapPx(title, gfx.Label, inner)}
+	inner := float64(TipMaxW - 2*tipPadX)
+	c := TipCard{Title: gfx.WrapPx(title, gfx.Body, inner)}
 	if strings.TrimSpace(body) != "" {
-		c.Body = gfx.WrapPx(body, gfx.Small, inner)
+		c.Body = gfx.WrapPx(body, gfx.Body, inner)
 	}
 	var w, h float64
 	for _, l := range c.Title {
-		lw, _ := gfx.Measure(l, gfx.Label)
+		lw, _ := gfx.Measure(l, gfx.Body)
 		w = max(w, lw)
-		h += gfx.LineH(gfx.Label)
+		h += gfx.LineH(gfx.Body)
 	}
 	for _, l := range c.Body {
-		lw, _ := gfx.Measure(l, gfx.Small)
+		lw, _ := gfx.Measure(l, gfx.Body)
 		w = max(w, lw)
-		h += gfx.LineH(gfx.Small)
+		h += gfx.LineH(gfx.Body)
 	}
 	if len(c.Body) > 0 {
-		h += tipGap
+		h += gfx.LineH(gfx.Body) // the blank line between title and body
 	}
-	bw, bh := float32(w)+2*tipPad, float32(h)+2*tipPad
+	bw, bh := float32(w)+2*tipPadX, float32(h)+2*tipPadY
 	x, y := float32(mx+tipOffX), float32(my+tipOffY)
 	if x+bw > float32(sw-TipMargin) {
 		x = float32(sw-TipMargin) - bw
@@ -84,18 +85,18 @@ func (k *Kit) paintTooltip(dst *ebiten.Image) {
 	c := TipLayout(k.tip.text, sw, sh, k.mx, k.my)
 	FillRect(dst, c.Box, Tooltip)
 	StrokeRect(dst, c.Box, TooltipEdge)
-	y := float64(c.Box.Y + tipPad)
-	x := float64(c.Box.X + tipPad)
-	ts := gfx.Label
+	y := float64(c.Box.Y + tipPadY)
+	x := float64(c.Box.X + tipPadX)
+	ts := gfx.Body
 	ts.Color = Heading
 	for _, l := range c.Title {
 		gfx.Text(dst, l, x, y, ts)
 		y += gfx.LineH(ts)
 	}
 	if len(c.Body) > 0 {
-		y += tipGap
-		bs := gfx.Small
-		bs.Color = TextDim
+		y += gfx.LineH(gfx.Body)
+		bs := gfx.Body
+		bs.Color = Text
 		for _, l := range c.Body {
 			gfx.Text(dst, l, x, y, bs)
 			y += gfx.LineH(bs)

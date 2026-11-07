@@ -157,7 +157,7 @@ func TestResearchTreeReachesEveryProjectAndStartsOne(t *testing.T) { // sets the
 // A drag on empty space pans the graph.
 func TestResearchTreeDragPans(t *testing.T) {
 	a, f := winApp(t, researchStub(16, -1))
-	winScreen(t, a, 640, 360, 2) // 200 % on 1280x720: the graph does not fit
+	winScreen(t, a, 1280, 768, 2) // 2x on 2560x1536, the smallest screen a step above 1 allows (UIS-003)
 	a.applyClick("tab.research")
 	f.Frame(t, a)
 	v := treeView(t, a).R

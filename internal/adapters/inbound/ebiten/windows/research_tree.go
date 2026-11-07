@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
@@ -25,15 +26,16 @@ import (
 
 // Tree geometry, in logical pixels.
 const (
-	rtNodeW   = 132 // a project's box
-	rtNodeH   = 38
-	rtColStep = 172 // node width + the gap the lines bend in
-	rtRowStep = 50
-	rtPad     = 14 // around the graph
-	rtHeadH   = 30 // the title row
-	rtSearchH = 22 // the search row above the graph
-	rtBandH   = 16 // the tech-level names strip
-	rtWheel   = 48 // px a wheel notch pans
+	rtNodeW   = 140 // a project's box (UIS-065)
+	rtNodeH   = 40
+	rtColStep = 190 // node width + the gap the lines bend in
+	rtRowStep = 70
+	rtPad     = 14                       // around the graph
+	rtHeadH   = hudlayout.WindowPad + 24 // the window's inner margin and the title row
+	rtSearchW = 174                      // the search field (UIS-065)
+	rtSearchH = 24                       // the search row above the graph
+	rtBandH   = 16                       // the tech-level names strip
+	rtWheel   = 48                       // px a wheel notch pans
 	rtPanelW  = 290
 	rtPanelLo = 150
 )
@@ -60,7 +62,7 @@ type researchGeom struct {
 func researchGeometry(r gfx.Rect, dev bool) researchGeom {
 	g := researchGeom{win: r}
 	pw := min(rtPanelW, max(rtPanelLo, r.W*0.3))
-	g.panel = gfx.Rect{X: r.X + 8, Y: r.Y + rtHeadH, W: pw, H: max(0, r.H-rtHeadH-8)}
+	g.panel = gfx.Rect{X: r.X + hudlayout.WindowPad, Y: r.Y + rtHeadH, W: pw, H: max(0, r.H-rtHeadH-hudlayout.WindowPad)}
 	g.start = gfx.Rect{X: g.panel.X + 8, Y: g.panel.Bottom() - 8 - 26, W: max(0, pw-16), H: 26}
 	top := g.start.Y
 	if dev {
@@ -68,8 +70,8 @@ func researchGeometry(r gfx.Rect, dev bool) researchGeom {
 		top = g.finish.Y
 	}
 	g.body = gfx.Rect{X: g.panel.X + 8, Y: g.panel.Y + 8, W: max(0, pw-16), H: max(0, top-6-(g.panel.Y+8))}
-	g.right = gfx.Rect{X: g.panel.Right() + 8, Y: g.panel.Y, W: max(0, r.Right()-8-(g.panel.Right()+8)), H: g.panel.H}
-	sw := min(200, g.right.W*0.5)
+	g.right = gfx.Rect{X: g.panel.Right() + 8, Y: g.panel.Y, W: max(0, r.Right()-hudlayout.WindowPad-(g.panel.Right()+8)), H: g.panel.H}
+	sw := min(rtSearchW, g.right.W*0.5)
 	g.search = gfx.Rect{X: g.right.Right() - sw, Y: g.right.Y, W: sw, H: rtSearchH}
 	g.band = gfx.Rect{X: g.right.X, Y: g.right.Y + rtSearchH + 4, W: g.right.W, H: rtBandH}
 	g.view = gfx.Rect{X: g.right.X, Y: g.band.Bottom(), W: g.right.W, H: max(0, g.right.Bottom()-g.band.Bottom())}
