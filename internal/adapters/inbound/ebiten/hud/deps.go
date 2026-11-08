@@ -202,13 +202,6 @@ func (c *Chrome) live() bool { return c.sh.Env().Game != nil }
 
 func (c *Chrome) kit() *uikit.Kit { return c.sh.Kit() }
 
-// drawButtons draws hand-placed buttons, hovered under the pointer.
-func drawButtons(screen *ebiten.Image, buttons []uikit.Button, mx, my int) {
-	for _, b := range buttons {
-		uikit.DrawButton(screen, b, b.Contains(mx, my))
-	}
-}
-
 // icon is the ui_icon sprite name (nil when the art has none).
 func (c *Chrome) icon(name string) *ebiten.Image {
 	cat := c.sh.Env().Icons

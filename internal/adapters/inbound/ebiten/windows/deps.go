@@ -198,10 +198,3 @@ func (w *Set) kit() *uikit.Kit { return w.sh.Kit() }
 
 // live reports a colony is up (the windows draw nothing on a menu).
 func (w *Set) live() bool { return w.sh.Env().Game != nil }
-
-// drawButtons draws hand-placed buttons, hovered under the pointer.
-func drawButtons(screen *ebiten.Image, buttons []uikit.Button, mx, my int) {
-	for _, b := range buttons {
-		uikit.DrawButton(screen, b, b.Contains(mx, my))
-	}
-}

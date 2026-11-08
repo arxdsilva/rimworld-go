@@ -49,7 +49,7 @@ func questOf(g *Game) *quest.Quests {
 }
 
 func (h questHost) roles() quest.Roles {
-	return quest.Roles{World: h, Clock: h, Sites: h, Pawns: h, Items: h, Threats: h, Letters: h, Goodwill: h, Rolls: h, Builder: questSite{h.g}}
+	return quest.Roles{World: h, Clock: h, Sites: h, Pawns: h, Items: h, Threats: h, Letters: h, Goodwill: h, Rolls: h, Builder: questSite(h)}
 }
 
 // questTick runs the offer cadence (day) or the due timers (hour).
@@ -157,7 +157,7 @@ func (h questHost) Join(id entity.EntityID) bool {
 	return h.onPawnMap(id, func() bool {
 		ok := h.g.visitor(id) // not dead; a downed guest may join
 		if ok {
-			careGuests{h.g}.join(id)               // visitors.go
+			careGuests(h).join(id)                 // visitors.go
 			h.g.remember(id, mood.RescuedByColony) // QST-057, QST-068
 		}
 		return ok
@@ -399,7 +399,7 @@ func (h questSite) Camp(c mapgen.Compound, f int, arms []item.Kind, seed uint64)
 	if len(c.Posts) == 0 {
 		return 0
 	}
-	mapsSettle{h.g}.Settle(c, f, arms, seed)
+	mapsSettle(h).Settle(c, f, arms, seed)
 	return h.g.raidGroups[len(h.g.raidGroups)-1].Size
 }
 

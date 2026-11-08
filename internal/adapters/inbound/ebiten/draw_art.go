@@ -105,13 +105,6 @@ func ghostFill(c architect.GhostCell) color.RGBA {
 	return color.RGBA{90, 200, 90, 120}
 }
 
-// drawSprite draws a world sprite in the live frame (the selection's
-// marks, multiselect_render.go).
-func (r *Renderer) drawSprite(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int) {
-	p := r.pipe()
-	p.Paint.Draw(r.liveView(), p.Pass(), screen, key, tint, wx, wy, tile, sw, sh)
-}
-
 // drawZoneHighlight outlines zone z (render/overlay Zones).
 func (r *Renderer) drawZoneHighlight(screen *ebiten.Image, w game.WorldView, z game.ZoneView, sw, sh int, tile float64) {
 	p := r.pipe()

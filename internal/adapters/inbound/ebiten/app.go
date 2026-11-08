@@ -773,10 +773,6 @@ func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []s
 	a.drawButtons(screen, buttons, mx, my)
 }
 
-func drawDim(screen *ebiten.Image, sw, sh int) {
-	gfx.FillRect(screen, 0, 0, float32(sw), float32(sh), uikit.Dim, false)
-}
-
 // NewApp returns an App on the boot screen. Simulation is not created
 // until Start is pressed.
 func NewApp(cfg AppConfig) *App {

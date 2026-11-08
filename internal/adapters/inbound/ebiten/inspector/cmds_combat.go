@@ -59,10 +59,8 @@ var threatResponses = [...]struct{ name, tip string }{
 	{"ignore", "Carry on with work and ignore threats."},
 }
 
-// threatCommand is the colonist's Threat response button: each click moves
-// to the next response (default, flee, attack, ignore). Colonists only.
-func threatCommand(p game.PawnView) []Button { return threatCommandIn(lang.English{}, p) }
-
+// threatCommandIn is the colonist's Threat response button: each click
+// moves to the next response (default, flee, attack, ignore). Colonists only.
 func threatCommandIn(tr lang.Tr, p game.PawnView) []Button {
 	if p.Hostile || p.Prisoner || p.Visitor || p.Status != "alive" {
 		return nil

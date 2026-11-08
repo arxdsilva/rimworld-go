@@ -99,9 +99,7 @@ func careIcon(p medcare.Policy) string {
 	return "ui_icon/care_best"
 }
 
-// careTip is a care level's hover card.
-func careTip(p medcare.Policy) string { return careTipIn(lang.English{}, p) }
-
+// careTipIn is a care level's hover card.
 func careTipIn(tr lang.Tr, p medcare.Policy) string {
 	var body string
 	switch p {
