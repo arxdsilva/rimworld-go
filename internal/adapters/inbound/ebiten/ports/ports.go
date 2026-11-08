@@ -199,7 +199,8 @@ type SwitchMap struct{ Map game.MapID }
 
 // OpenWorld shows the full-screen world view with world object Select
 // selected ("" for none; "caravan:<id>", "map:<id>", "settlement:<tile>",
-// "site:<id>", "pod:<id>", "tile:<n>"); CloseWorld returns to the map.
+// "quest:<id>" (a quest's site, by quest id), "site:<id>", "pod:<id>",
+// "tile:<n>"); CloseWorld returns to the map.
 type OpenWorld struct{ Select string }
 type CloseWorld struct{}
 
