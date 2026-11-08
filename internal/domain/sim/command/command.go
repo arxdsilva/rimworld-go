@@ -446,6 +446,9 @@ const (
 	// SetRewardPref sets whether faction Index accepts goodwill as a quest
 	// reward (Enabled; QST-083).
 	SetRewardPref
+	// DevOfferQuest offers a quest of kind Index (a quest.KindID) now, if
+	// that kind can be offered (developer mode, journeys and captures).
+	DevOfferQuest
 )
 
 // EditApparelPolicy modes (Command.Mode), GEAR-3 contract.

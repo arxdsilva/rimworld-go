@@ -19,6 +19,8 @@ const (
 	ErrNoQuest Error = "quest: no such quest"
 	ErrNoKind  Error = "quest: kind not registered"
 	ErrOp      Error = "quest: unknown command"
+	// ErrCannotOffer: that kind cannot be offered now (OpOffer).
+	ErrCannotOffer Error = "quest: that kind cannot be offered now"
 )
 
 // Quests is the quests root: every quest ever offered, sorted by id (ids

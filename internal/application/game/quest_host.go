@@ -78,7 +78,7 @@ func questCommand(g *Game, c command.Command) {
 	}
 	cmd := map[command.Kind]quest.Cmd{command.AcceptQuest: quest.Accept(id, c.Count), command.DismissQuest: quest.Dismiss(id),
 		command.RestoreQuest: quest.Restore(id), command.FulfilRequest: quest.Fulfil(id, uint64(c.Target)),
-		command.Negotiate: quest.Negotiate(id, uint64(c.Target)), command.SetRewardPref: quest.SetPref(c.Index, c.Enabled)}[c.Kind]
+		command.Negotiate: quest.Negotiate(id, uint64(c.Target)), command.SetRewardPref: quest.SetPref(c.Index, c.Enabled), command.DevOfferQuest: quest.OfferKind(qd.KindID(c.Index))}[c.Kind]
 	if err := q.Apply(cmd); err != nil {
 		g.worldNote("The quest order was refused: %v.", err)
 	}
@@ -196,7 +196,7 @@ func (h questHost) BestSocial(cid uint64) (entity.EntityID, int, bool) {
 func (h questHost) Pod(lines []trade.Line, _ uint64) bool {
 	g, cur := h.g, h.g.mapState
 	defer func() { g.mapState = cur }()
-	g.mapState = g.maps[0] // quests run only in a set-up colony, which has its first map
+	g.mapState = g.maps[0]                       // quests run only in a set-up colony, which has its first map
 	g.sendTradePod(slices.Clone(lines), h.Now()) // trade_orbital.go
 	return len(lines) > 0
 }

@@ -24,6 +24,8 @@ const (
 	// OpSetPref sets whether goodwill is accepted as a reward from Faction
 	// (On; QST-083).
 	OpSetPref
+	// OpOffer offers a quest of Kind now, if it can be (developer mode).
+	OpOffer
 )
 
 // Cmd is one player command (built with Accept, Dismiss, ...).
@@ -35,6 +37,7 @@ type Cmd struct {
 	// Faction is 1 + index, as qd.Quest.Giver.
 	Faction int
 	On      bool
+	Kind    qd.KindID
 }
 
 // Accept accepts offer id with reward option choice.
@@ -57,14 +60,23 @@ func SetPref(ref int, acceptGoodwill bool) Cmd {
 	return Cmd{Op: OpSetPref, Faction: ref, On: acceptGoodwill}
 }
 
+// OfferKind offers a quest of kind k now (the developer's offer).
+func OfferKind(k qd.KindID) Cmd { return Cmd{Op: OpOffer, Kind: k} }
+
 // Apply runs player command c at the clock's tick. Errors: ErrNoQuest,
-// ErrNoKind, ErrOp, or the domain's (qd.ErrMove, qd.ErrChoice).
+// ErrNoKind, ErrOp, ErrCannotOffer, or the domain's (qd.ErrMove, qd.ErrChoice).
 func (q *Quests) Apply(c Cmd) error {
 	if c.Op == OpSetPref {
 		q.setPref(c.Faction-1, c.On)
 		return nil
 	}
-	if c.Op == OpNone || c.Op > OpSetPref {
+	if c.Op == OpOffer {
+		if _, ok := q.Offer(c.Kind); !ok {
+			return ErrCannotOffer
+		}
+		return nil
+	}
+	if c.Op == OpNone || c.Op > OpOffer {
 		return ErrOp
 	}
 	i, ok := q.find(c.Quest)

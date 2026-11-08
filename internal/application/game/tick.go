@@ -95,7 +95,7 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetZonePriority, // haul_priority.go (PLAY-023)
 		command.ProposeTrade, command.CloseTrade, command.CommsCallTrader, command.CommsGift,
 		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms, // trade_session.go, comms.go (PLAY-024)
-		command.AcceptQuest, command.DismissQuest, command.RestoreQuest, command.FulfilRequest, command.Negotiate, command.SetRewardPref: // quest_host.go (QST-1)
+		command.AcceptQuest, command.DismissQuest, command.RestoreQuest, command.FulfilRequest, command.Negotiate, command.SetRewardPref, command.DevOfferQuest: // quest_host.go (QST-1)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetGameplayToggle, command.SetGameplayLimit, command.SetBenchClean, command.MarkUnload, command.DropGear, command.ConsumeFromPack, command.SetApparelForced:
 		senseOf(g).Apply(c) // game/sense (CSE)

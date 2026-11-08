@@ -11,7 +11,7 @@ func (g *Game) applyHostCommand(c command.Command) {
 	pawn, target := entity.EntityID(c.Pawn), entity.EntityID(c.Target)
 	switch c.Kind {
 	case command.AcceptQuest, command.DismissQuest, command.RestoreQuest, command.FulfilRequest,
-		command.Negotiate, command.SetRewardPref:
+		command.Negotiate, command.SetRewardPref, command.DevOfferQuest:
 		questCommand(g, c) // quest_host.go (QST-1)
 	case command.AddOperation:
 		g.cmdAddOperation(pawn, c.Index, c.Build, c.Stuff) // surgery.go

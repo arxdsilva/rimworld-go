@@ -141,6 +141,23 @@ func TestCampClearedThroughTheGame(t *testing.T) {
 	}
 }
 
+func TestDevOfferQuestCommandOffers(t *testing.T) {
+	t.Parallel()
+	g, _ := campScene(t)
+	before := len(questViews(g))
+	g.Enqueue(command.Command{Kind: command.DevOfferQuest, Index: int(qd.Camp)})
+	g.Step(1)
+	vs := questViews(g)
+	if len(vs) != before+1 || vs[len(vs)-1].Kind != qd.Camp || vs[len(vs)-1].State != qd.Offered {
+		t.Fatalf("the dev offer made %+v", vs)
+	}
+	g.Enqueue(command.Command{Kind: command.DevOfferQuest, Index: int(qd.NumKinds)})
+	g.Step(1)
+	if got := len(questViews(g)); got != before+1 {
+		t.Fatalf("an unknown kind offered a quest: %d quests", got)
+	}
+}
+
 // pieces counts map m's buildings by kind.
 func pieces(m *mapState) map[construction.Kind]int {
 	count := map[construction.Kind]int{}
