@@ -861,6 +861,22 @@ func DevArrive(g *Game, id entity.EntityID, tile int) {
 	maps.DevArrive(fleetOf(g), id, tile, uint64(g.clock.Now()))
 }
 
+// DevClearHostiles removes map id's raiders but not its guests (a quest
+// camp's guards around its prisoner), for the journeys.
+func DevClearHostiles(g *Game, id MapID) {
+	if m := mapByID(g, uint32(id)); m != nil {
+		g.viewGen++
+		cur := g.mapState
+		g.mapState = m
+		for _, r := range slices.Clone(m.raiderIDs) {
+			if !g.visitor(r) {
+				g.removeRaider(r)
+			}
+		}
+		g.mapState = cur
+	}
+}
+
 // SetMaxColonies is command.SetColonyCap: Options' Max colonies (MAP-06).
 func SetMaxColonies(g *Game, n int) { g.worldS().maxColonies = max(1, min(n, maps.ColonyCapLimit)) }
 

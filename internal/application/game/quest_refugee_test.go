@@ -62,7 +62,9 @@ func refugeeSiteWith(t *testing.T, guards bool) (*Game, qd.ID, entity.EntityID, 
 func TestRefugeeOfferHelpJoinsThem(t *testing.T) {
 	t.Parallel()
 	g, id, guest, m := refugeeSite(t)
-	if n, _ := questOf(g).Get(id); n.Parts[0].Count == 0 || len(m.raidGroups) != 1 || m.raidGroups[0].Size == 0 {
+	// the guards are the first group; an approach roll may add an ambush
+	// group beside them (QST-056)
+	if n, _ := questOf(g).Get(id); n.Parts[0].Count == 0 || len(m.raidGroups) == 0 || m.raidGroups[0].Size == 0 {
 		t.Fatalf("armed strangers stand by the guest: %+v groups %+v", n.Parts[0], m.raidGroups)
 	}
 	want := questView(t, g, id).Rewards[0].Pawn.Name

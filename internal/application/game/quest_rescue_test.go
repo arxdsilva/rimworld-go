@@ -61,6 +61,11 @@ func rescueSite(t *testing.T) (g *Game, id qd.ID, guest entity.EntityID, m *mapS
 	return g, id, guest, m, cell
 }
 
+// rescueSteps bounds the 60-tick steps a free order may take: the doer
+// may start at the far edge of the site map and its job may be retried
+// once (about 95 steps on the world fixture's site).
+const rescueSteps = 160
+
 // rescueIndustrialLayout is the kind's industrial layout (kinds.rescueIndustrial).
 const rescueIndustrialLayout = 1
 
@@ -133,7 +138,7 @@ func TestRescueFreeThePrisoner(t *testing.T) {
 	claimCamp(g, m)
 	g.Step(1)
 	freeOrder(g, doer, guest)
-	for i := 0; i < 60 && questView(t, g, id).State == qd.Active; i++ {
+	for i := 0; i < rescueSteps && questView(t, g, id).State == qd.Active; i++ {
 		g.Step(60)
 	}
 	v := questView(t, g, id)
@@ -174,7 +179,7 @@ func TestRescueSurvivesSaveAndLoad(t *testing.T) {
 	doer := m.pawnIDs[0]
 	for _, x := range []*Game{g, h} {
 		freeOrder(x, doer, guest)
-		for i := 0; i < 60 && questView(t, x, id).State == qd.Active; i++ {
+		for i := 0; i < rescueSteps && questView(t, x, id).State == qd.Active; i++ {
 			x.Step(60)
 		}
 	}

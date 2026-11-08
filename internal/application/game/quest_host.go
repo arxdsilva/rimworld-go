@@ -376,6 +376,13 @@ func (h mapsQuests) SiteCensus(q, id uint32, c maps.Census) bool {
 	return ok && n.State == qd.Active
 }
 
+// SiteRules: quest q's site may draw an unknown threat (its Def), and its
+// target is the faction behind it (maps/questsite.go, QST-017, 051, 056).
+func (h mapsQuests) SiteRules(q uint32) (bool, int) {
+	n, ok := h.g.worldSt.quests.Get(qd.ID(q))
+	return ok && qd.DefOf(n.Kind).Approach, n.Target
+}
+
 func (h mapsQuests) SiteClosed(q, id uint32) {
 	questSignal(h.g, quest.Signal{Kind: quest.SigMapClosed, Quest: qd.ID(q), Map: id})
 }
