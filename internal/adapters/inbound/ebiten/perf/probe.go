@@ -45,6 +45,7 @@ type Probe struct {
 	tick0       uint64
 	held        int
 	BudgetHeld0 int
+	dropped0    int // the budget's dropped ticks as the measured span starts
 	// The GAR numbers (frames.go): the gap histogram, Updates per Draw and
 	// the GC over the measured span.
 	hist Hist
@@ -84,7 +85,7 @@ func (m *Meter) ProbeUpdate() bool {
 		st.report = Report(st, env.Scale) + fmt.Sprintf(", %dx%d physical; %d ticks, speed held %d times; %v",
 			env.PW, env.PH, env.Tick-st.tick0, st.held, m.sh.ArtMem()) + BudgetLine(st, env.Held, env.MaxOwed)
 		log.Print(st.report)
-		detail := Detail(st, st.gc.End())
+		detail := Detail(st, st.gc.End()) + fmt.Sprintf(" dropped_ticks=%d", env.Dropped-st.dropped0)
 		log.Print(detail)
 		st.report += "\n" + detail
 		return true
@@ -96,6 +97,7 @@ func (m *Meter) ProbeUpdate() bool {
 	if !st.measured && st.drawn && now.After(st.warmupTo) {
 		st.measured = true
 		st.BudgetHeld0 = env.Held // the budget line covers the measured span
+		st.dropped0 = env.Dropped
 		m.sh.ResetMaxOwed()
 		st.gc.Begin()
 		if p.Measuring != nil {

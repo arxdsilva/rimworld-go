@@ -26,9 +26,31 @@ const updateBudget = 5 * time.Millisecond
 //   - nominal: the speed tier's ticks per Update the debt was taken at;
 //   - held: how many Updates stopped short (the probe and the overlay
 //     report it);
-//   - maxOwed: the largest debt seen.
+//   - maxOwed: the largest debt seen;
+//   - dropped: ticks the cap threw away (the colony ran slower than its
+//     speed tier; GAR E1 makes this visible);
+//   - draws, drawsAtUpdate, frameSpent: the frame's budget (GAR E1). When
+//     the clock catches up and two Updates run before one Draw, the second
+//     gets only what the first left of updateBudget, so a heavy frame is
+//     not followed by a second heavy Update in the same frame. Before the
+//     first Draw (tests, headless) each Update has the whole budget.
 type tickDebt struct {
-	owed, nominal, held, maxOwed int
+	owed, nominal, held, maxOwed, dropped int
+	draws, drawsAtUpdate                  uint64
+	frameSpent                            time.Duration
+}
+
+// noteDraw closes a frame for the budget (Draw calls it).
+func (d *tickDebt) noteDraw() { d.draws++ }
+
+// left is the budget this Update may still spend: the whole budget in a
+// new frame, what the frame's earlier Updates left otherwise.
+func (d *tickDebt) left() time.Duration {
+	if d.draws == 0 || d.draws != d.drawsAtUpdate {
+		d.frameSpent = 0
+	}
+	d.drawsAtUpdate = d.draws
+	return updateBudget - d.frameSpent
 }
 
 // advanceColony runs this Update's ticks (the tier's plus any owed) under
@@ -42,12 +64,15 @@ func (a *App) advanceColony() {
 	}
 	want := nominal + d.owed
 	var more func(int) bool
+	start := a.now()
 	if nominal > 1 && a.cfg.Capture == nil {
-		start := a.now()
-		more = func(int) bool { return a.now().Sub(start) < updateBudget }
+		budget := d.left()
+		more = func(int) bool { return a.now().Sub(start) < budget }
 	}
 	done := r.advanceTicks(want, more)
+	d.frameSpent += a.now().Sub(start)
 	d.owed = min(want-done, nominal)
+	d.dropped += want - done - d.owed
 	if done < want {
 		d.held++
 	}

@@ -71,7 +71,7 @@ func (h perfHost) Now() time.Time { return h.a.now() }
 // Env is the running game, the window, the Update budget and the probe.
 func (h perfHost) Env() perf.Env {
 	a := h.a
-	e := perf.Env{PW: a.pw, PH: a.ph, Held: a.debt.held, MaxOwed: a.debt.maxOwed, Scale: a.scale, Probe: a.cfg.FPSProbe}
+	e := perf.Env{PW: a.pw, PH: a.ph, Held: a.debt.held, MaxOwed: a.debt.maxOwed, Dropped: a.debt.dropped, Scale: a.scale, Probe: a.cfg.FPSProbe}
 	if r := a.renderer; r != nil {
 		e.InGame, e.Stepped, e.Tick, e.Date, e.Speed = true, r.mo.Stepped, uint64(r.game.Tick()), r.game.Date(), int(r.speed)
 	}

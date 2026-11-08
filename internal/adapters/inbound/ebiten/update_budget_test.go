@@ -178,3 +178,57 @@ func TestFPSReportShowsBudget(t *testing.T) {
 		t.Fatalf("budget line %q", got)
 	}
 }
+
+// GAR E1: two Updates before one Draw share the frame's budget, and the
+// next Draw gives the next Update the whole budget back.
+func TestBudgetSpansAFrame(t *testing.T) {
+	t.Parallel()
+	a, sim, f, d := budgetColony(t, speedVeryFast)
+	*d = 2 * time.Millisecond
+	a.debt.noteDraw() // a frame was drawn: the budget is per frame from here
+	if got := stepFrame(t, a, sim, f); got != 3 {
+		t.Fatalf("first Update of the frame: stepped %d, want 3 (2 ms ticks, 5 ms budget)", got)
+	}
+	if got := stepFrame(t, a, sim, f); got != 1 {
+		t.Fatalf("second Update before the Draw: stepped %d, want 1 (the frame's budget is spent)", got)
+	}
+	a.debt.noteDraw()
+	if got := stepFrame(t, a, sim, f); got != 3 {
+		t.Fatalf("after the Draw: stepped %d, want 3", got)
+	}
+}
+
+// The time an Update spends after stepping (read models, animation, the
+// pipeline's per-Update work) counts against the frame's budget too.
+func TestBudgetCoversPostStep(t *testing.T) {
+	t.Parallel()
+	a, sim, f, d := budgetColony(t, speedVeryFast)
+	*d = time.Millisecond
+	a.debt.noteDraw()
+	stepFrame(t, a, sim, f)
+	if a.debt.frameSpent < 5*time.Millisecond {
+		t.Fatalf("frame spent %v after a full-budget Update, want at least 5 ms", a.debt.frameSpent)
+	}
+	a.debt.frameSpent += 10 * time.Millisecond // a slow post-step in the same frame
+	if got := stepFrame(t, a, sim, f); got != 1 {
+		t.Fatalf("an Update after a slow post-step steps only its unconditional tick, got %d", got)
+	}
+}
+
+// Ticks the debt cap throws away are counted, and the probe reports them.
+func TestDroppedTicksReported(t *testing.T) {
+	t.Parallel()
+	a, sim, f, d := budgetColony(t, speedVeryFast)
+	*d = 6 * time.Millisecond
+	for range 4 {
+		stepFrame(t, a, sim, f)
+	}
+	// Each Update wants 6 plus what it owes and steps 1; the debt is capped
+	// at 6. Owed goes 5, 6, 6, 6, so the drops are 0, 4, 5, 5.
+	if a.debt.dropped != 14 {
+		t.Fatalf("dropped %d, want 14", a.debt.dropped)
+	}
+	if e := (perfHost{a}).Env(); e.Dropped != 14 {
+		t.Fatalf("perf env dropped %d, want 14", e.Dropped)
+	}
+}

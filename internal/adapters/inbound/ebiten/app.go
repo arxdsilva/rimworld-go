@@ -960,6 +960,7 @@ func (a *App) Update() error {
 // Draw paints the current full screen and any overlay.
 func (a *App) Draw(screen *ebiten.Image) {
 	defer a.fpsProbeDraw(time.Now())
+	a.debt.noteDraw()            // update_budget.go: the next Update starts a new frame's budget
 	defer a.capBackgroundDraw()  // background.go: ~20 fps while running in the background
 	defer a.perfEndDraw(a.now()) // perf_stats.go: runs before the throttle sleeps (PERF-002)
 	a.syncUIScale()              // ui_scale.go: the canvas and the font draw at this scale

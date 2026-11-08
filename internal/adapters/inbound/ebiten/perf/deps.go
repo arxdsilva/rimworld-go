@@ -14,6 +14,7 @@ type Env struct {
 	Stepped int  // simulation ticks the last Update ran
 	Held    int  // Updates the budget held short so far
 	MaxOwed int  // the largest tick debt seen
+	Dropped int  // ticks the budget's debt cap threw away so far
 	PW, PH  int  // the physical window
 	Tick    uint64
 	Date    clock.Date
