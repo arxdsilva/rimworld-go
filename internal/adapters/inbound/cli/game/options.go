@@ -35,6 +35,9 @@ type Options struct {
 	MemProfile string
 	Trace      string
 	FPSProbe   int
+	// SaveDir replaces the per-user saves folder for this run (probes,
+	// benchmarks: their autosaves never touch the player's saves).
+	SaveDir string
 
 	// HiDPI and VSync are nil unless their flag was given: only a given
 	// flag overrides the Graphics setting.
@@ -77,6 +80,7 @@ func parse(args []string, out io.Writer) (Options, error) {
 	fs.StringVar(&o.CPUProfile, "cpuprofile", "", "dev: write a CPU profile to this file")
 	fs.StringVar(&o.MemProfile, "memprofile", "", "dev: write a heap profile to this file on exit")
 	fs.StringVar(&o.Trace, "trace", "", "dev: write an execution trace to this file")
+	fs.StringVar(&o.SaveDir, "save-dir", "", "dev: save and autosave into this folder instead of the per-user saves folder")
 	fs.IntVar(&o.FPSProbe, "fpsprobe", 0, "dev: run the colony for this many seconds at -capture-speed (2 = 3 ticks/frame) and -capture-zoom, log frame stats and quit")
 	fs.BoolVar(&hidpi, "hidpi", true, "dev: render at the screen's true resolution; overrides the Graphics setting for this run without saving it")
 	fs.StringVar(&o.Graphics, "graphics", "", "dev: apply this graphics tier (high, medium, low) for this run without saving it, captures and -fpsprobe included")

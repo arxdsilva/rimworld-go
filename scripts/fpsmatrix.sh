@@ -14,7 +14,10 @@
 # A cell is <scene>-z<zoom>-s<speed>; speed is the -capture-speed tier
 # (1 = 1x, 2 = 3x, 3 = 6x). The daycross cells start at 23:00, so midnight
 # (every daily and hourly site at once) falls inside the measured span at
-# 1x and early in it at 6x. The first run after a build pays first-use
+# 1x and early in it at 6x. The autosave cell starts at 05:00, so the 06:00
+# autosave falls about 40 s into the measured span at 1x. Saves go to
+# bin/fpsmatrix-saves (-save-dir), never the player's folder, and the log
+# notes each cell's new save files. The first run after a build pays first-use
 # bakes: run the matrix twice and keep the second. An fps probe is an
 # "art"-class job (make agent-budget): run it alone, window focused.
 set -euo pipefail
@@ -31,9 +34,11 @@ all="quiet-z0.1-s1 quiet-z0.1-s2 quiet-z0.1-s3
 quiet-z0.25-s1 quiet-z0.25-s2 quiet-z0.25-s3
 quiet-z0.8-s1 quiet-z0.8-s2 quiet-z0.8-s3
 quiet-z2-s1 quiet-z2-s2 quiet-z2-s3
-daycross-z0.8-s1 daycross-z0.8-s3"
+daycross-z0.8-s1 daycross-z0.8-s3
+autosave-z0.8-s1"
 cells=${CELLS:-$all}
 
+saves=bin/fpsmatrix-saves
 mkdir -p bin
 go build -o bin/game ./cmd/game
 mode=$(system_profiler SPDisplaysDataType 2>/dev/null | grep -E 'Resolution|UI Looks like' | tr -s ' ' | paste -sd ';' - || true)
@@ -46,14 +51,17 @@ for cell in $cells; do
   speed=${cell##*-s}
   hour=-1
   [ "$scene" = daycross ] && hour=23
+  [ "$scene" = autosave ] && hour=5
+  rm -rf "$saves" && mkdir -p "$saves"
   echo "## $cell" | tee -a "$log"
   out=$(bin/game -noaudio -scenario grown -seed 1 -width 500 -height 500 -hour "$hour" \
-    -capture-speed "$speed" -capture-zoom "$zoom" -fpsprobe "$seconds" ${EXTRA:-} 2>&1 | grep 'fps probe' || true)
+    -capture-speed "$speed" -capture-zoom "$zoom" -fpsprobe "$seconds" -save-dir "$saves" ${EXTRA:-} 2>&1 | grep 'fps probe' || true)
   if [ -z "$out" ]; then
     echo "fpsmatrix: $cell printed no probe line (crash?); stopping" | tee -a "$log" >&2
     exit 1
   fi
   echo "$out" | tee -a "$log"
+  echo "saves written: $(ls "$saves" | wc -l | tr -d ' ')" | tee -a "$log"
   main=$(grep 'fps probe:' <<<"$out" | head -1)
   detail=$(grep 'fps probe detail:' <<<"$out" | head -1)
   fps=$(sed -E 's/.*avg ([0-9.]+) fps.*/\1/' <<<"$main")

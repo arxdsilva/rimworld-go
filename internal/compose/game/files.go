@@ -27,9 +27,13 @@ func cardFiles(capturing bool) uiadapter.CardFiles {
 	return uiadapter.CardFiles{Store: store, Open: openfolder.Open, Folder: store.Dir}
 }
 
-// saveHooks wires the UI's save/load to the per-user saves folder.
-func saveHooks() uiadapter.SaveHooks {
+// saveHooks wires the UI's save/load to the per-user saves folder, or to
+// dir when one is given (-save-dir).
+func saveHooks(dir string) uiadapter.SaveHooks {
 	store, err := filesave.Default()
+	if dir != "" {
+		store, err = filesave.Store{Dir: dir}, nil
+	}
 	if err != nil {
 		log.Printf("saving disabled: %v", err)
 		return uiadapter.SaveHooks{}

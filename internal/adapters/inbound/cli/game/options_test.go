@@ -14,11 +14,11 @@ import (
 func TestOnlyGivenGraphicsFlagsOverride(t *testing.T) {
 	t.Parallel()
 	o, err := Parse([]string{"game"})
-	if err != nil || o.HiDPI != nil || o.VSync != nil || o.SeedSet || o.Seed != 1 || o.Hour != -1 {
+	if err != nil || o.HiDPI != nil || o.VSync != nil || o.SeedSet || o.Seed != 1 || o.Hour != -1 || o.SaveDir != "" {
 		t.Fatalf("defaults: %+v %v", o, err)
 	}
-	o, err = Parse([]string{"game", "-hidpi=false", "-vsync", "-seed", "7", "-scenario", "zoo"})
-	if err != nil || o.HiDPI == nil || *o.HiDPI || o.VSync == nil || !*o.VSync || !o.SeedSet || o.Seed != 7 || o.Scenario != "zoo" {
+	o, err = Parse([]string{"game", "-hidpi=false", "-vsync", "-seed", "7", "-scenario", "zoo", "-save-dir", "bin/saves"})
+	if err != nil || o.SaveDir != "bin/saves" || o.HiDPI == nil || *o.HiDPI || o.VSync == nil || !*o.VSync || !o.SeedSet || o.Seed != 7 || o.Scenario != "zoo" {
 		t.Fatalf("given: %+v %v", o, err)
 	}
 }
