@@ -578,12 +578,15 @@ const (
 	// OrderFreePrisoner (QST-2f): free the quest prisoner Target from its
 	// cell; it acts on a pawn.
 	OrderFreePrisoner
+	// OrderOfferHelp (QST-5): walk to the quest's downed refugee Target and
+	// offer help, which takes them into the colony; it acts on a pawn.
+	OrderOfferHelp
 )
 
 // TargetsPawn reports an order that acts on the pawn in Command.Target
-// rather than on the tile (SIM-062, QST-2f).
+// rather than on the tile (SIM-062, QST-2f, QST-5).
 func (o Order) TargetsPawn() bool {
-	return o >= OrderRescue && o <= OrderCarryToPrisonBed || o == OrderFreePrisoner
+	return o >= OrderRescue && o <= OrderCarryToPrisonBed || o == OrderFreePrisoner || o == OrderOfferHelp
 }
 
 // Command is applied on a simulation tick, never by the UI directly.
