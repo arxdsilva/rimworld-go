@@ -333,6 +333,10 @@ func (c Alerts) Current() []Alert {
 		}
 		out = append(out, extra...)
 	}
+	if al, ok := QuestExpiringAlertIn(c.sh, w, uint64(c.sh.Tick())); ok { // alerts_quest.go (QST-134)
+		al.Sev, al.Explain = SevWarning, AlertExplain(al.Key)
+		out = append(out, al)
+	}
 	out = markMaps(c.sh, out, env.Game)
 	c.alerts = alertsMemo{key: k, out: out, ok: true}
 	return out
@@ -529,6 +533,10 @@ func (c Alerts) Focus(id string) {
 	key := strings.TrimPrefix(id, ids.PrefixAlert)
 	if d, ok := c.sh.(ports.Dispatcher); ok && key == ResearchAlertKey {
 		d.Do(ports.ShowWindow{Mode: "research"})
+		return
+	}
+	if id, ok := questOfAlertKey(key); ok { // alerts_quest.go: open that quest
+		showQuest(c.sh, id)
 		return
 	}
 	if key == GoneAlertKey { // ending.go: back to the everyone-gone screen
@@ -730,6 +738,7 @@ var alertExplanations = map[string]string{
 	"research":      "A research bench and a colonist who does research are ready, but no project is picked. Open the Research tab, select a project and press Start research.",
 	"fishdying":     "A fish tank's stock is dying: the power is out, the air is too hot or cold for the fish, or the feeder is empty. Fix what the tank's pane names, and keep feed in stock for the haulers.",
 	"gone":          "Nobody is left in the colony. Click to open the screen again: eight hours after the last one went, new wanderers can set out to start over, up to seven groups in all.",
+	"questexpiring": "A quest offer will lapse within a day. Click to read it in the Quests window and accept it, or let it go.",
 	"unhappy":       "Colonists are in a poor mood and close to breaking. Look at what drags it down: hunger, rest, comfort and room to breathe.",
 	"shipwaking":    "The ship reactor is waking, and its call draws raiders and machines until it is fully awake. Wall it in and keep colonists near it: if it falls, the waking is lost.",
 	"shipready":     "The ship is complete and its reactor awake. Board colonists into its stasis caskets, then select any ship part and press Launch ship to leave the planet. This ends the colony's story.",

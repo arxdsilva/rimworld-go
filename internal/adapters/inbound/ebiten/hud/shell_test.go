@@ -23,6 +23,7 @@ type fakeShell struct {
 	set      config.Settings
 	present  uint64
 	cmds     []command.Command
+	intents  []ports.Intent
 	centred  [][2]float64
 	jumps    []ports.Spot
 	ui       uikit.Kit

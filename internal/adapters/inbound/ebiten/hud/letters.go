@@ -66,6 +66,19 @@ func LetterKind(kind string) int {
 	return 2
 }
 
+// questLetterClr is the frame role of a quest-offer letter's tile (QST-131):
+// blue-grey, apart from a threat's red and an info letter's blue.
+var questLetterClr = color.RGBA{R: 0x8A, G: 0x9B, B: 0xB4, A: 0xFF}
+
+// letterTint is the tile colour of letter l: its kind's, except an info
+// letter about a quest (an offer), which takes the quest frame role.
+func letterTint(l game.LetterView) color.RGBA {
+	if l.Quest != 0 && LetterKind(l.Kind) == LetterKind("info") {
+		return questLetterClr
+	}
+	return LetterColor(l.Kind)
+}
+
 // LetterColor is the colour of a letter kind.
 func LetterColor(kind string) color.RGBA { return LetterKinds[LetterKind(kind)].Clr }
 
@@ -342,6 +355,13 @@ func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 			{ID: "give", Label: c.sh.T("Give"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() { answer(0) }},
 			{ID: "refuse", Label: c.sh.T("Refuse"), Closes: true, OnClick: func() { answer(1) }},
 		}
+	}
+	if l.Quest != 0 && l.ID != 0 { // QST-133: the quest the letter is about
+		label := c.sh.T("View quest")
+		if LetterKind(l.Kind) != LetterKind("info") {
+			label = c.sh.T("View related quest")
+		}
+		buttons = append(buttons, uikit.ModalButton{ID: "quest", Label: label, Closes: true, OnClick: func() { showQuest(c.sh, l.Quest) }})
 	}
 	if letterHasPlace(l) {
 		buttons = append(buttons, uikit.ModalButton{ID: "jump", Label: c.sh.T("Jump to"), Closes: true, OnClick: func() { c.jumpToLetter(l) }})
