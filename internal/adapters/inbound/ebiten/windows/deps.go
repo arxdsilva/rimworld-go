@@ -68,9 +68,6 @@ type Labels interface {
 	// DrawPassion draws the passion glyph of level p (1 minor, 2 major),
 	// or stars at text baseline ty while the icon is missing.
 	DrawPassion(dst *ebiten.Image, p int, x, y, size float64, st gfx.TextStyle, ty float64)
-	// DrawPortrait draws look l's portrait fitted into (x, y, w, h); false
-	// while the art is missing (QST-137: a pawn reward's chip).
-	DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, h float64) bool
 }
 
 // Host is what the feature needs of the program that no ports role
@@ -91,6 +88,9 @@ type Host interface {
 	ManageAreas()
 	// Float opens the order menu at (x, y) with opts; nil opts closes it.
 	Float(x, y float32, opts []game.OrderOption)
+	// DrawPortrait draws look l's portrait fitted into (x, y, w, h); false
+	// while the art is missing (QST-137: a pawn reward's chip).
+	DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, h float64) bool
 }
 
 // Shell composes the roles the feature calls with its Host.
