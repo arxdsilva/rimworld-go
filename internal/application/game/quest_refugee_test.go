@@ -53,6 +53,9 @@ func refugeeSiteWith(t *testing.T, guards bool) (*Game, qd.ID, entity.EntityID, 
 	if s, _ := g.vital.Get(guest); s.Status != health.Downed {
 		t.Fatalf("the guest is %v, want downed", s.Status)
 	}
+	if g.bleedingNow(guest) {
+		t.Fatal("the guest bleeds: a refugee's wounds do not (QST-055)")
+	}
 	return g, id, guest, m
 }
 

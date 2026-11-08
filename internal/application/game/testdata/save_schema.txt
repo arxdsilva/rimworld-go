@@ -1808,6 +1808,7 @@ saveState.Trade.Pods[].Items[].Building uint8
 saveState.Trade.Pods[].Items[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Trade.Pods[].Items[].Qty int
 saveState.Trade.Pods[].Landed bool
+saveState.Trade.Pods[].Reward bool
 saveState.Trade.Pods[].Tick uint64
 saveState.Trade.Pods[].X int
 saveState.Trade.Pods[].Y int
@@ -2662,6 +2663,7 @@ saveState.World.Atlas.Maps[].Done uint8
 saveState.World.Atlas.Maps[].Empty uint8
 saveState.World.Atlas.Maps[].Expires uint64
 saveState.World.Atlas.Maps[].Faction int
+saveState.World.Atlas.Maps[].Foe int
 saveState.World.Atlas.Maps[].HasLand bool
 saveState.World.Atlas.Maps[].Hostile bool
 saveState.World.Atlas.Maps[].ID uint32
@@ -2673,6 +2675,8 @@ saveState.World.Atlas.Maps[].Opened uint64
 saveState.World.Atlas.Maps[].PackBy uint64
 saveState.World.Atlas.Maps[].Quest uint32
 saveState.World.Atlas.Maps[].Raided bool
+saveState.World.Atlas.Maps[].Reinforce uint64
+saveState.World.Atlas.Maps[].Reinforced bool
 saveState.World.Atlas.Maps[].ResumeDest int
 saveState.World.Atlas.Maps[].Routed uint8
 saveState.World.Atlas.Maps[].Tile int

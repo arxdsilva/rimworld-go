@@ -130,7 +130,11 @@ func (g *Game) landTradePod(p tradePod) {
 	for _, l := range p.Items {
 		g.dropGoods(l, bx, by, false)
 	}
-	g.message(bx, by, "A drop pod with your purchases has landed.")
+	if p.Reward {
+		g.message(bx, by, "A drop pod with your quest reward has landed.")
+	} else {
+		g.message(bx, by, "A drop pod with your purchases has landed.")
+	}
 }
 
 // tradePodViews are the trade drop pods for the renderer (ArrivalView).

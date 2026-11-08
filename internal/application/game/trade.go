@@ -86,6 +86,7 @@ type tradePod struct {
 	Tick   uint64
 	Landed bool
 	Items  []trade.Line
+	Reward bool // a quest's reward, not a purchase (QST-089)
 }
 
 // factionCooldown is faction id Faction's request cooldowns (saved).

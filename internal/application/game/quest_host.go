@@ -198,6 +198,7 @@ func (h questHost) Pod(lines []trade.Line, _ uint64) bool {
 	defer func() { g.mapState = cur }()
 	g.mapState = g.maps[0]                       // quests run only in a set-up colony, which has its first map
 	g.sendTradePod(slices.Clone(lines), h.Now()) // trade_orbital.go
+	g.trade.pods[len(g.trade.pods)-1].Reward = len(lines) > 0
 	return len(lines) > 0
 }
 
@@ -412,6 +413,7 @@ func (h questSite) Downed(seed uint64, f, x, y int) (entity.EntityID, bool) {
 	id, ok := h.guest(seed, f, x, y)
 	if ok {
 		h.g.hurt(id, health.DownedInjury+10, 0)
+		h.g.bodies[id].Fresh = 0 // hurt made the body; a refugee's wounds never bleed (QST-055)
 	}
 	return id, ok
 }
@@ -443,16 +445,30 @@ func (h questSite) guest(seed uint64, f, x, y int) (entity.EntityID, bool) {
 // in its cell (QST-067). It reads quests only when an order or the menu asks.
 type careCaptives struct{ g *Game }
 
-// Held reports whether guest id is an active rescue's prisoner, not yet freed.
-func (h careCaptives) Held(id entity.EntityID) bool {
+// holder is the active quest of kind k whose person (Parts[1]) is guest
+// id, not yet done.
+func (h careCaptives) holder(id entity.EntityID, k qd.KindID) (qd.ID, bool) {
 	if q := questOf(h.g); q != nil && h.g.visitor(id) {
 		for _, v := range questViews(h.g) {
-			if n, ok := q.Get(v.ID); ok && v.Kind == qd.Rescue && v.State == qd.Active && len(n.Parts) > 1 && n.Parts[1].Pawn == uint64(id) && !n.Parts[1].Done {
-				return true
+			if n, ok := q.Get(v.ID); ok && v.Kind == k && v.State == qd.Active && len(n.Parts) > 1 && n.Parts[1].Pawn == uint64(id) && !n.Parts[1].Done {
+				return v.ID, true
 			}
 		}
 	}
-	return false
+	return 0, false
+}
+
+// Held: guest id is an active rescue's prisoner, not yet freed; Helpable:
+// an active refugee quest's person, not yet helped (QST-057).
+func (h careCaptives) Held(id entity.EntityID) bool     { _, ok := h.holder(id, qd.Rescue); return ok }
+func (h careCaptives) Helpable(id entity.EntityID) bool { _, ok := h.holder(id, qd.Refugee); return ok }
+
+// Helped is the offer-help order done: the refugee kind joins id and
+// succeeds (Join remembers the rescue).
+func (h careCaptives) Helped(_, id entity.EntityID) {
+	if qid, ok := h.holder(id, qd.Refugee); ok {
+		_ = questOf(h.g).Apply(quest.Fulfil(qid, 0))
+	}
 }
 
 // Freed is the free order done: the kind joins id and succeeds (QST-068).

@@ -203,3 +203,21 @@ func TestQuestGeneratorDeterministic(t *testing.T) {
 		}
 	}
 }
+
+// TestQuestPointsIgnoreTheStorytellerRoll: a quest's points never take the
+// storyteller's 50-150 % roll (QST-028); only the raid formula itself.
+func TestQuestPointsIgnoreTheStorytellerRoll(t *testing.T) {
+	t.Parallel()
+	g := worldGame(t)
+	h := questHost{g}
+	want := h.Points()
+	if want <= 0 {
+		t.Fatalf("points %d, want some", want)
+	}
+	for _, pct := range []int{50, 100, 150} {
+		g.ng.plan.PointsPct = pct
+		if got := h.Points(); got != want {
+			t.Fatalf("with the storyteller at %d %%, quest points %d, want %d", pct, got, want)
+		}
+	}
+}
