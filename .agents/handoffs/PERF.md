@@ -147,3 +147,13 @@ The LOD tiers follow the cells in view (GAR-155) · 2026-11-08 · f34ce4515
 - Decisions: the cause was bisected in PERF-004 to UIS-2d (`049a90108`), which rebased the cell on the window's map-pixel height but left the tiers in map pixels, so a HiDPI window never left the live tier. Tiers in points match the UIS-086 tuning, which was done for 9–49 px cells at 1080.
 - Limits: not seen on screen: captures render at density 1 (`ui_scale.go:27`), so no 5K frame was reviewed. Below zoom 0.7 a HiDPI window draws the bakes at 2× their texels (chunk 16, map 4 px a tile), the detail a 1440p screen shows.
 - Open: the user's look at the far zoom on 5K; if it reads too soft, bake at dev × texels (chunk 32, map 8; memory ×4). z0.8 and z1 still miss 60 (draw 11.6–15.5 ms): the render-command list (E7) and GAR-156.
+
+## PERF-006-frame-pacing
+Walkers move the same distance every frame: a paced animation clock (GAR-091) · 2026-11-08 · 2ca49b972
+- Changed: pawns and animals no longer lurch while walking. Ebitengine runs a frame's Updates back to back, so `frameAlpha`, measured from the last Update's wall time, cannot see the second one. Below 60 fps (zoom 0.6 at 59, zoom 0.8 and 1 at 42-54) a walker advanced 2 ticks in some frames and 1 in others; at 60 a 2-then-0 pair advanced 2, 1, 0. GAR-155 made the far zooms smooth enough to show it.
+- Changed: `render/motion.State.Pace` keeps a drawn clock. App.Draw feeds it the seconds since the previous Draw. It advances by the measured tick rate and pulls toward the old interpolation point `Tick - (1-Alpha)*Stepped`.
+- Numbers: per-frame displacement CV, unpaced to paced: 59 fps 0.13 to 0.02, 53 fps 0.30 to 0.04, 42 fps 0.35 to 0.05, 2-then-0 0.51 to 0.06; steady 60 stays 0.
+- Decisions: the pull is τ 0.25 s and the rate average 1.5 s; a gentler pull gained under 0.005 CV. The clock is clamped to [tick - 2 Updates, tick] and never goes back. It snaps after a Draw gap over 0.25 s or a load, holds exactly within 0.001 tick (a pause freezes), and re-seeds at the tier's rate on a speed change or when ticks return after 5 idle Draws (the pause menu keeps the tier).
+- Decisions: captures never pace, so their frames stay deterministic. The sim, saves and the state hash are untouched; this is presentation only.
+- HUD: none. Smoothness is what the player sees; the root test `TestWalkSmoothWithZeroOrTwoUpdates` states it.
+- Open: GAR-081 and GAR-082, the budget at 1x and a cap on ticks per frame, are separate.
