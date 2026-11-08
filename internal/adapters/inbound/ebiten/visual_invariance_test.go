@@ -576,7 +576,7 @@ func visPanels() []visPanel {
 		}, visSelRegions},
 	)
 	// the main tabs' windows, all in the Window rect
-	for _, tab := range []string{"work", "schedule", "research", "animals", "wildlife", "assign", "history"} {
+	for _, tab := range []string{"work", "schedule", "research", "animals", "wildlife", "assign", "history", "quests"} {
 		ps = append(ps, visPanel{
 			name:    "tab_" + tab,
 			open:    func(t *testing.T, s *visualScene) { s.a.applyClick("tab." + tab) },

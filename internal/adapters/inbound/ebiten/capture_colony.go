@@ -5,6 +5,8 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
+	qd "rimworld-go/internal/domain/quest"
+	"rimworld-go/internal/domain/sim/command"
 	"slices"
 	"strings"
 
@@ -52,7 +54,7 @@ var colonyCaptures = []string{
 	"factions-colony", "bio", "work-incapable", "arrival", "options-story", "options-habits",
 	"letter-intro", "arch-hospital", "arch-cabinet", "arch-storage", "arch-locked", "chips", "world",
 	"dossier", "dossier-float", "dossier-log", "dossier-animal",
-	"dossier-setup", "dossier-setup-sections", "dossier-setup-presets", "dossier-setup-colours",
+	"dossier-setup", "dossier-setup-sections", "dossier-setup-presets", "dossier-setup-colours", "quests",
 }
 
 // colonyCapture reports ui is one of them.
@@ -167,6 +169,13 @@ func (a *App) captureColonyUI(ui string) {
 	case "world":
 		a.cursor = &[2]int{-100, -100}
 		a.world.Show("")
+	case "quests":
+		a.cursor = &[2]int{-100, -100}
+		for _, k := range []qd.KindID{qd.Camp, qd.Stash, qd.Joiner, qd.Request} {
+			a.renderer.game.Enqueue(command.Command{Kind: command.DevOfferQuest, Index: int(k)})
+		}
+		a.renderer.game.Step(1)
+		a.win.Quests().Launch()
 	case "factions-colony":
 		a.cursor = &[2]int{-100, -100}
 		a.win.Factions().Launch()
