@@ -1,7 +1,7 @@
 # internal/adapters/outbound/ebitenaudio
 
 ## Purpose
-Plays the game's sound list through Ebitengine's audio package. It is the concrete `Sound` the Ebitengine client talks to; `cmd/game` wires it in. Loads `assets/metadata/audio/audio.json` and the files it names under `assets/generated/audio`, then mixes one-shots, positional loops and music on the audio device at 48 kHz, honoring the player's volume settings.
+Plays the game's sound list through Ebitengine's audio package. It is the concrete `Sound` the Ebitengine client talks to; `internal/compose/game` wires it in. Loads `assets/metadata/audio/audio.json` and the files it names under `assets/generated/audio`, then mixes one-shots, positional loops and music on the audio device at 48 kHz, honoring the player's volume settings.
 
 ## Owns
 - `Engine`: `Has`, `Play`, `Loop`, `Music`, `SetVolumes`, `Update` (exactly the client's `Sound` port; it never imports the client).

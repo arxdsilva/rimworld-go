@@ -6,8 +6,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"slices"
 
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"rimworld-go/internal/platform/config"
 )
 
@@ -149,21 +147,16 @@ func renderScaleOf(g config.Graphics) float64 {
 	return 1
 }
 
-// monitorScale is the current monitor's device scale factor (1 when
-// there is no monitor yet).
-func monitorScale() float64 {
-	if m := ebiten.Monitor(); m != nil {
-		return m.DeviceScaleFactor()
-	}
-	return 1
-}
-
-// deviceScale is the screen's raw device scale factor (tests inject devFn).
+// deviceScale is the screen's raw device scale factor: AppConfig.DeviceScale
+// (the display adapter's live monitor read; tests inject their own), 1
+// without one. The App never asks Ebitengine for the monitor itself: since
+// v2.10 that starts GLFW on the calling goroutine, which macOS traps off the
+// main thread (every test that builds an App).
 func (a *App) deviceScale() float64 {
 	if a.devFn != nil {
 		return a.devFn()
 	}
-	return monitorScale()
+	return 1
 }
 
 // LayoutF (ebiten.LayoutFer) makes the screen physical: the outside size

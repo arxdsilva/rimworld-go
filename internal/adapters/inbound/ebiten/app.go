@@ -108,6 +108,9 @@ type AppConfig struct {
 	Saves SaveHooks
 	// Settings loads and stores the Options (zero value: defaults, not saved).
 	Settings options.Hooks
+	// DeviceScale reads the current monitor's device scale factor, live
+	// (nil: 1, as with no monitor; tests).
+	DeviceScale func() float64
 	// Window applies fullscreen and VSync (nil: leave the window alone).
 	Window func(fullscreen, vsync bool)
 	// Display applies the window size preset (a config.WindowSizes entry,
@@ -136,7 +139,7 @@ type AppConfig struct {
 	CardFiles CardFiles
 }
 
-// Usage is what the App reports about a session (cmd/game wires usagehttp).
+// Usage is what the App reports about a session (internal/compose/game wires usagehttp).
 // Frame runs on every update and must stay cheap; true means a Snapshot is
 // due.
 type Usage interface {
@@ -181,7 +184,8 @@ type App struct {
 	// sw, sh are the logical screen size every layout and hit test reads;
 	// pw, ph the physical one (sw x scale.s). outW, outH are the window in
 	// points and devRaw the screen's device factor from the last LayoutF;
-	// devFn replaces the monitor in tests (ui_scale.go).
+	// devFn reads the monitor's device scale (AppConfig.DeviceScale, or a
+	// test's; ui_scale.go).
 	sw, sh     int
 	pw, ph     int
 	scale      gfx.Scale
@@ -833,6 +837,7 @@ func NewApp(cfg AppConfig) *App {
 
 		scale:  gfx.UnitScale,
 		devRaw: 1,
+		devFn:  cfg.DeviceScale,
 	}
 	a.shell = newShell(a)
 	a.sel = selection.New(a.shell, selHost{a})

@@ -3,7 +3,7 @@ package ebiten
 import "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 
 // ScenarioStore keeps custom scenario files (NG-1 §2.3, §5.7). It is
-// consumer-owned (by the wizard): cmd/game wires the outbound scenariofile
+// consumer-owned (by the wizard): internal/compose/game wires the outbound scenariofile
 // adapter.
 type ScenarioStore = wizard.ScenarioStore
 

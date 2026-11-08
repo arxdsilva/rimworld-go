@@ -358,7 +358,7 @@ func (a *App) handleWindowClose() bool {
 }
 
 // hardwareTotal is the computer's memory in bytes: 0 when the hardware is
-// unknown (no reader, or it could not tell). cmd/game reads the hardware
+// unknown (no reader, or it could not tell). compose/game reads the hardware
 // once at startup, so asking every frame costs nothing.
 func (a *App) hardwareTotal() uint64 {
 	if a.cfg.Hardware == nil {

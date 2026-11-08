@@ -8,7 +8,7 @@ The main menu screen: the hero splash and the colony diorama behind it, the butt
 - `Diorama` and `LoadDiorama(root)`: the menu scene loaded from assets.
 - `NewestSlot(slots []ports.SaveSlot) int`: picks the slot Continue uses.
 - `Host` (8 methods): `LoadSplash`, `LoadMenuScene`, `Version`, `MenuTick`, `HasSaves`, `LowRAMNotice`, `DismissRAMNotice`, `DrawFlame`.
-- `Updates` (`update_notice.go`, 2 methods): `UpdateAvailable`, `DownloadUpdate`. `cmd/game` wires `outbound/updatecheck`. Separate from `Host`, which is at the 8-method limit.
+- `Updates` (`update_notice.go`, 2 methods): `UpdateAvailable`, `DownloadUpdate`. `internal/compose/game` wires `outbound/updatecheck`. Separate from `Host`, which is at the 8-method limit.
 - `VersionLine`, `UpdateCard`: the running version with any newer one, and the notice's card.
 - `Shell` = `Sizer + Settings + Widgets + Host + Updates`.
 

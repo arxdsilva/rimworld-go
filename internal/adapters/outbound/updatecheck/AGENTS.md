@@ -21,4 +21,4 @@ Domain, application, ports and inbound adapter packages.
 - `UpdateAvailable` and `DownloadUpdate` run on the game loop and never wait on the network or the browser.
 - Only a tag that parses as a full release (`vX.Y.Z`) is offered. Anything else, including `dev`, is neither newer nor older.
 - The browser only ever opens the constant `pageURL`. Nothing read from the network reaches the browser.
-- Off for version `dev`, captures, the frame-rate probe and developer overrides (`cmd/game/update.go`).
+- Off for version `dev`, captures, the frame-rate probe and developer overrides (`internal/compose/game/update.go`).

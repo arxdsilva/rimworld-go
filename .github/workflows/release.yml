@@ -55,7 +55,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       NAME: rimworld-go-${{ github.ref_name }}-${{ matrix.target }}
-      LDFLAGS: -s -w -X main.version=${{ github.ref_name }}
+      LDFLAGS: -s -w -X rimworld-go/internal/platform/buildinfo.Version=${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

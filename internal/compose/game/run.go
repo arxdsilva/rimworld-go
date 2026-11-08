@@ -60,6 +60,7 @@ func Run(opts cligame.Options, version string, d Display) {
 		Scenarios:     scenarioStore(shot != nil),
 		FPSProbe:      probe,
 		NewSimBuilder: newSimBuilder,
+		DeviceScale:   d.DeviceScale, // the App never reads the monitor itself
 		Window:        d.Window,
 		Display:       d.Apply,               // OPT-029
 		Cursor:        d.Cursor,              // OPT-028

@@ -24,7 +24,7 @@ import (
 //   - the directory holds exactly one entry, main.go (no other files,
 //     tests, sub-directories or non-Go files);
 //   - main.go declares only func main (imports aside);
-//   - it has at most cmdMaxLines lines (cmdLineCap names the exceptions);
+//   - it has at most cmdMaxLines lines;
 //   - its body has no for, range, switch, select or go statements, no
 //     function literals, and no string literal over cmdMaxString runes.
 //
@@ -37,16 +37,9 @@ const (
 	cmdMaxString = 40
 )
 
-// cmdLineCap raises the line cap for a package, with its reason.
-var cmdLineCap = map[string]int{
-	"game": 120, // the game wires the most adapters: window, audio, saves, content, mods, probes.
-}
-
 // cmdTODO: packages not yet cut to wiring. Delete a line in the commit that
 // moves its package; never add one.
-var cmdTODO = map[string]bool{
-	"game": true,
-}
+var cmdTODO = map[string]bool{}
 
 func TestCmdIsWiringOnly(t *testing.T) {
 	t.Parallel()
@@ -185,25 +178,21 @@ func cmdPackage(dir, name string) ([]string, error) {
 	if !hasMain {
 		return append(reasons, "has no main.go"), nil
 	}
-	main, err := mainRules(filepath.Join(dir, "main.go"), name)
+	main, err := mainRules(filepath.Join(dir, "main.go"))
 	if err != nil {
 		return nil, err
 	}
 	return append(reasons, main...), nil
 }
 
-func mainRules(path, name string) ([]string, error) {
+func mainRules(path string) ([]string, error) {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 	var reasons []string
-	limit := cmdMaxLines
-	if n, ok := cmdLineCap[name]; ok {
-		limit = n
-	}
-	if n := strings.Count(string(src), "\n"); n > limit {
-		reasons = append(reasons, fmt.Sprintf("main.go: %d lines (limit %d)", n, limit))
+	if n := strings.Count(string(src), "\n"); n > cmdMaxLines {
+		reasons = append(reasons, fmt.Sprintf("main.go: %d lines (limit %d)", n, cmdMaxLines))
 	}
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, src, parser.SkipObjectResolution)

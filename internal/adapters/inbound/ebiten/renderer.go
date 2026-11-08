@@ -31,7 +31,7 @@ import (
 )
 
 // Simulation is the composition root's union of the readers and the
-// command sink the client needs of the colony (sim_ports.go): cmd/game
+// command sink the client needs of the colony (sim_ports.go): compose/game
 // hands one in and the root stores it; every feature and layer depends on
 // its own smaller interface (SOLID_GO.md §6), never on this union.
 type Simulation interface {

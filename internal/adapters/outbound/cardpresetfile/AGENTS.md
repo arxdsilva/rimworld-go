@@ -1,7 +1,7 @@
 # internal/adapters/outbound/cardpresetfile
 
 ## Purpose
-Keeps the colonist card's presets (DOS-6, RHUD-360, 368, 369, 377) as one JSON file each in `<user config dir>/rimworld-go/dossier/`, beside the settings file. Fills `dossier.PresetStore` (`List`, `Load`, `Save`, `Delete`); the setup window's Presets tab reaches it only through that consumer-owned role, and it is constructed in `cmd/game`.
+Keeps the colonist card's presets (DOS-6, RHUD-360, 368, 369, 377) as one JSON file each in `<user config dir>/rimworld-go/dossier/`, beside the settings file. Fills `dossier.PresetStore` (`List`, `Load`, `Save`, `Delete`); the setup window's Presets tab reaches it only through that consumer-owned role, and it is constructed in `internal/compose/game`.
 
 ## Owns
 `Store{Dir}`, `Default()`, `ErrName`, `MaxBytes`, `MaxName`.

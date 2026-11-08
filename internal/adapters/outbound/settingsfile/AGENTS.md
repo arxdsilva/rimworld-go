@@ -1,7 +1,7 @@
 # internal/adapters/outbound/settingsfile
 
 ## Purpose
-Stores the player's settings (`internal/platform/config.Settings`) as one JSON file, `<user config dir>/rimworld-go/settings.json`, next to the saves folder. The UI reaches it only through `ebiten.SettingsHooks`, wired in `cmd/game` (`settingsHooks`).
+Stores the player's settings (`internal/platform/config.Settings`) as one JSON file, `<user config dir>/rimworld-go/settings.json`, next to the saves folder. The UI reaches it only through `ebiten.SettingsHooks`, wired in `internal/compose/game` (`settingsHooks`).
 
 ## Owns
 `Store{Path}`, `Default()`, `Load()`, `Save()`.

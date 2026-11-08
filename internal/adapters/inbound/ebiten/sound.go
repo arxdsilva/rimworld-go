@@ -2,7 +2,7 @@ package ebiten
 
 import "rimworld-go/internal/platform/config"
 
-// Sound is where the client sends audio (cmd/game wires the Ebitengine
+// Sound is where the client sends audio (internal/compose/game wires the Ebitengine
 // audio adapter, internal/adapters/outbound/ebitenaudio). Ids, buses,
 // variants and loudness come from the sound list
 // (assets/metadata/audio/audio.json). This package never imports an audio

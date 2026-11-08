@@ -25,7 +25,7 @@ In this package:
 - `<pkg>_compat.go` — each feature's root side: its `Host` adapter, its `Shell` composition and its constructor. Nothing else belongs there; a wrapper that only forwards is deleted in the change that repoints its last caller (SOLID_GO §11).
 - `colony_compose.go` — the colony screen's composition: the widget declaration order, the draw order over the features, the chrome hit union, the `hud()` layout memo over `hudlayout.Compute`.
 - `hotkeys.go`, `input_frame.go` — the context stack and action routing (UI-016); `ui_scale.go`, `world_scale.go` — logical, physical and map pixels (PLAY-012, PERF-002); `background.go`, `sound_director.go`, `capture*.go`, `screen_boot.go`, `screen_loading.go`, `screen_pause.go`.
-- `Renderer` (`renderer.go`) — the colony camera, speed tiers, the selected pawn, the command queue, `advanceTicks` and `Draw`: fills `render.View` and calls the layers. The host adapters the layers need (`envHost`, `creatureHost`, `cueHost`, …) live beside each layer's compat file. `Simulation` is the union of eight consumer groups (`sim_ports.go`), stored only here and in `cmd/game`.
+- `Renderer` (`renderer.go`) — the colony camera, speed tiers, the selected pawn, the command queue, `advanceTicks` and `Draw`: fills `render.View` and calls the layers. The host adapters the layers need (`envHost`, `creatureHost`, `cueHost`, …) live beside each layer's compat file. `Simulation` is the union of eight consumer groups (`sim_ports.go`), stored only here and in `internal/compose/game`.
 
 ## Depends on
 - `internal/application/game` through the consumer-owned groups in `sim_ports.go` (`SimStepper`, `SimCommander`, `SimFrame`, `SimWorld`, `SimPlacement`, `SimColony`, `SimTabs`, `SimChunks`); a feature or layer declares its own smaller interface over the same methods.
@@ -34,13 +34,13 @@ In this package:
 - `pkg/mathx` (`Abs`).
 
 ## Must not depend on
-- concrete `*game.Game` pointers except at `cmd/game` (composition root) and the compile-time `var _ Simulation = (*game.Game)(nil)` assertion
-- `ebiten/v2/audio` or any audio library: sound goes through the `Sound` port (`sound.go`; cmd/game wires `internal/adapters/outbound/ebitenaudio`)
+- concrete `*game.Game` pointers except at `internal/compose/game` (composition root) and the compile-time `var _ Simulation = (*game.Game)(nil)` assertion
+- `ebiten/v2/audio` or any audio library: sound goes through the `Sound` port (`sound.go`; `internal/compose/game` wires `internal/adapters/outbound/ebitenaudio`)
 - a sub-package importing this root; a feature importing another feature (cross-feature requests are `ports.Intent`s the shell dispatches)
 
 ## Contracts
 - The simulation is created only when the player presses Start (or a capture starts one). Menus run with `renderer == nil`; every shell role is safe then (reads return the zero value, writes do nothing).
-- The wizard turns its draft into a `game.Setup` and builds the colony step by step behind the loading screen (`wizard.Loader`); `cmd/game` wraps `game.NewColonyBuilder`. Return to main menu drops the renderer so the menu stays headless. The pause overlay skips `Renderer.advance` and map input.
+- The wizard turns its draft into a `game.Setup` and builds the colony step by step behind the loading screen (`wizard.Loader`); `internal/compose/game` wraps `game.NewColonyBuilder`. Return to main menu drops the renderer so the menu stays headless. The pause overlay skips `Renderer.advance` and map input.
 - Escape on colony (`handleColonyEscape`): hidden UI, order/debug menu, formation drag, Move mode, Architect tool, Architect, windows, building/frame/zone/group/animal/item/plant/pawn selection, then pause — each feature exposes its `Escape`-style call; the root keeps the order.
 - HUD, inspector, Architect and windows consume pointer hits before map selection (`colonyChromeHit`). Disabled buttons do not navigate; they expose a reason string.
 - Input (UI-016): only `inputframe` reads Ebitengine's keyboard and mouse; `App.Update` polls once into the frame and resolves actions against the context stack (text > modal > tool > panel > map > global > dev). A pressed key fires at most one action; a used mouse press is taken so later handlers skip it. Bindings live in `config.Settings.Controls`; labels use `ports.Settings.KeyHint`, so they always show the live key.
@@ -71,7 +71,7 @@ Benchmarks: `BenchmarkDrawArt500` / `BenchmarkDrawArt250` (with a draw-call coun
 - Time budget: the Update time budget may carry ticks to the next Update at 3x and faster. It moves ticks between Updates, never changes their order, and captures are exempt. Speed tiers only change how often `App` calls `advance`.
 - Decomposition recipe (ARCH-001…006, `.agents/handoffs/ARCH.md`): the lead lays the stubs (`deps.go` with `Shell`/`Host`, root `<pkg>_compat.go` with the host adapter and constructor, the App pointer) and pre-migrates fields other files read; agents move files with disjoint ownership.
 - Agents never edit lead-owned files; they leave `lead_edits_<pkg>.pl` scripts the lead applies when they report (an exported-field rename breaks every other agent's build until then; apply perl only to files that match, never `*.go`).
-- Mechanical sweeps use `go/types` tools, not regexes: pass-through wrappers map by AST shape, alias uses are rewritten by exact `file:line:col`; "tests-only" is not dead (`NewApp`, `Update`, `Draw` are called by cmd/game); interface-implementing methods show 0 direct uses.
+- Mechanical sweeps use `go/types` tools, not regexes: pass-through wrappers map by AST shape, alias uses are rewritten by exact `file:line:col`; "tests-only" is not dead (`NewApp`, `Update`, `Draw` are called by `internal/compose/game`); interface-implementing methods show 0 direct uses.
 - Never pass a pointer to a frame local through an interface method in a draw path: it escapes and costs +2 allocs per frame (found by `-benchmem` and `-gcflags=-m=2`). The gate is a back-to-back `DrawArt500/z1` A/B against a worktree of HEAD, not averages.
 - Where the presentation knowledge went (these used to be sections of this file; each now lives with its owner's AGENTS.md and doc.go):
   - Original art, placement, the draw order, linked walls/fences/rock, stone tints, the art catalog's memory and prewarm, `TestGeneratedArtCoversRenderer` → `art/`, `render/sprite`, `render/world`.

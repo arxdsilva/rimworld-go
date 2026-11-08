@@ -22,4 +22,4 @@ Domain, application, ports and inbound adapter packages. Values arrive as plain 
 - 2xx: done. 429, 5xx and network errors: keep and back off, up to 15 minutes, honouring `Retry-After`. Any other status: drop the batch. Redirects are not followed.
 - A failed request is silent: nothing is logged or shown, and nothing can stop the game. The events wait in the queue for the next attempt that works. This package does not import `log`.
 - The queue holds 256 events and drops the oldest. Nothing is written to disk.
-- Off for version `dev`, captures, the frame-rate probe and developer overrides (`cmd/game/usage.go`). `RIMWORLD_USAGE_ENDPOINT` points a build at another server, and also enables `dev` builds, for local testing.
+- Off for version `dev`, captures, the frame-rate probe and developer overrides (`internal/compose/game/usage.go`). `RIMWORLD_USAGE_ENDPOINT` points a build at another server, and also enables `dev` builds, for local testing.

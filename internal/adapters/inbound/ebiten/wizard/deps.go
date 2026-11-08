@@ -19,7 +19,7 @@ import (
 )
 
 // ScenarioStore keeps custom scenario files (NG-1 §2.3, §5.7). It is
-// consumer-owned: cmd/game wires the outbound scenariofile adapter.
+// consumer-owned: internal/compose/game wires the outbound scenariofile adapter.
 type ScenarioStore interface {
 	List() ([]ScenarioFile, error)
 	Load(name string) ([]byte, error)
