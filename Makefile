@@ -62,6 +62,21 @@ fps:  ## uncapped frame-rate probe of the grown 500x500 colony at 3x, zoom 0.1 a
 fps-matrix:  ## VSync-on probe matrix of the grown 500x500 colony (bin/fpsmatrix-$(TAG).csv); run it alone
 	@scripts/fpsmatrix.sh $(or $(TAG),$(shell git rev-parse --short HEAD)) $(or $(SECONDS),45)
 
+# Archify (tt-a1i/archify, Apache-2.0) is a global skill, not a module: docs only, never CI (THIRD_PARTY_NOTICES "Docs tooling").
+ARCHIFY ?= $(HOME)/.claude/skills/archify/bin/archify.mjs
+DIAGRAMS := $(basename $(filter-out %.delivery.json %.receipt.json %.finalize-summary.json,$(wildcard docs/architecture/*.json)))
+
+.PHONY: diagrams
+diagrams:  ## re-render docs/architecture/*.html from their JSON specs with Archify (needs node and the archify skill)
+	@command -v node >/dev/null || { echo "diagrams: install Node.js"; exit 1; }
+	@test -f "$(ARCHIFY)" || { echo "diagrams: install Archify: npx -y skills@latest add https://archify.si --skill archify --agent claude-code --global --copy --yes"; exit 1; }
+	@set -e; for f in $(DIAGRAMS); do \
+		n=$$(basename $$f); t=$$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['diagram_type'])" $$f.json); \
+		echo "diagram $$n ($$t)"; \
+		ARCHIFY_UPDATE_CHECK_DISABLED=1 node "$(ARCHIFY)" finalize $$t $$f.json $$f.html --quality showcase --repo-root $(CURDIR) --out-dir bin/archify/$$n --json >/dev/null; \
+	done
+	@ARCHIFY_UPDATE_CHECK_DISABLED=1 node "$(ARCHIFY)" compare architecture docs/architecture/system-architecture.json docs/architecture/target-architecture.json docs/architecture/architecture-delta.html --repo-root $(CURDIR) >/dev/null
+
 .PHONY: test
 test: test-unit
 

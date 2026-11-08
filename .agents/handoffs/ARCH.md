@@ -72,3 +72,13 @@ Every `cmd/<tool>` is one wiring-only `main.go` (GAR Part A) · 2026-11-08 · 32
 - Proofs (no behaviour change): `bin/game -h` byte-equal, `-h` exit 0 and bad flag exit 2; audiogen's 698 files, normalgen's 6,625 maps, atlasgen and mapgen sheets byte-equal; benchmark state hash `0x1d627205b64ad514` equal; `make test-journeys` passes; capture scene renders.
 - Limits: the ebiten root is at its file ceiling, hence `ebiten/display` as its own package.
 - Open: `cmd/replay`, `cmd/contentlint` behaviour (GAR E10). `TestSkillLinksMatch` fails because `.claude/skills` was removed, pending the user's decision.
+
+## ARCH-008-gar-analysis-adrs
+GAR gap analysis, ADRs 0001-0004 and the architecture diagrams (GAR Parts B and D) · 2026-11-08 · pending
+- Changed: `.agents/gaps/GAME_ARCHITECTURE_GAP_ANALYSIS.md` holds 106 GAR rows in ten bands (scheduler, parallel, events, loop, sim fixes, read models, render, text and UI, hitches, tooling), each with a source, our file:line, a state, an impact and a phase, plus the PERF-004 baseline.
+- Changed: `docs/adr/0001`-`0004` record the user's picks with pros and cons: a systems scheduler, parallel pure stages under one writer, an event queue everywhere, and a render-command list.
+- Changed: `docs/architecture/` holds 14 Archify diagrams (JSON spec plus HTML) and `architecture-delta.html`. `make diagrams` re-renders them byte-equal. The delivery receipts hold local paths and are gitignored.
+- Decisions: the one-owner rule stands. The scheduler is the only writer, and pure stages read a frozen view on one injected `Pool` and are applied in entity-ID order. MASTER_SPEC §55, HEXAGONAL §12, §17 and §21 and the performance skill say so. AGENTS.md is at its byte budget, so its one-owner line is unchanged. Disjoint-write parallel systems stay out of scope.
+- Decisions: Archify is docs tooling only (THIRD_PARTY_NOTICES "Docs tooling"); CI never runs it.
+- Limits: the arch guards `TestSystemsDeclareStores`, `TestQueryPortsDoNotMutate` and `TestNoGoStatementsInSim` land with the code they guard (GAR E2, E3, E4), not here.
+- Open: GAR E1-E11 and the Part F gate. `TestSkillLinksMatch` still fails pending the user's `.claude/skills` decision (ARCH-007).

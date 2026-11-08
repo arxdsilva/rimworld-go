@@ -1,0 +1,201 @@
+{
+ "schema_version": 1,
+ "diagram_type": "sequence",
+ "meta": {
+  "title": "Target parallel stage: Plan, Compute, Apply (ADR 0002)",
+  "output": "docs/architecture/parallel-stage.html",
+  "quality_profile": "showcase",
+  "locale": "en"
+ },
+ "participants": [
+  {
+   "id": "owner",
+   "type": "backend",
+   "label": "Scheduler (owner)",
+   "sublabel": "the only writer"
+  },
+  {
+   "id": "view",
+   "type": "database",
+   "label": "Frozen view",
+   "sublabel": "world, frozen epoch"
+  },
+  {
+   "id": "pool",
+   "type": "cloud",
+   "label": "Pool port",
+   "sublabel": "platform/pool, 8 lanes"
+  },
+  {
+   "id": "lane1",
+   "type": "cloud",
+   "label": "Worker lane 1",
+   "sublabel": "pure Compute"
+  },
+  {
+   "id": "lane7",
+   "type": "cloud",
+   "label": "Worker lane 7",
+   "sublabel": "pure Compute"
+  },
+  {
+   "id": "out",
+   "type": "messagebus",
+   "label": "Results out[i]",
+   "sublabel": "index-addressed buffer"
+  },
+  {
+   "id": "stores",
+   "type": "database",
+   "label": "Stores",
+   "sublabel": "component.Store[T]"
+  }
+ ],
+ "segments": [
+  {
+   "from": 148,
+   "to": 200,
+   "label": "Plan"
+  },
+  {
+   "from": 204,
+   "to": 508,
+   "label": "Compute"
+  },
+  {
+   "from": 512,
+   "to": 648,
+   "label": "Apply"
+  }
+ ],
+ "messages": [
+  {
+   "id": "warm",
+   "from": "owner",
+   "to": "view",
+   "y": 160,
+   "label": "warm caches, freeze",
+   "note": "Plan: tasks sorted by entity ID"
+  },
+  {
+   "id": "run",
+   "from": "owner",
+   "to": "pool",
+   "y": 216,
+   "label": "Run(stage, tasks)",
+   "variant": "emphasis",
+   "note": "chunk size from the task count"
+  },
+  {
+   "id": "claim1",
+   "from": "pool",
+   "to": "lane1",
+   "y": 272,
+   "label": "claim chunk (atomic)"
+  },
+  {
+   "id": "claim7",
+   "from": "pool",
+   "to": "lane7",
+   "y": 300,
+   "label": "claim chunk (atomic)"
+  },
+  {
+   "id": "read1",
+   "from": "lane1",
+   "to": "view",
+   "y": 328,
+   "label": "read only"
+  },
+  {
+   "id": "res1",
+   "from": "lane1",
+   "to": "out",
+   "y": 356,
+   "label": "out[i] = result",
+   "note": "RNG keyed on seed, tick, stage, entity"
+  },
+  {
+   "id": "read7",
+   "from": "lane7",
+   "to": "view",
+   "y": 412,
+   "label": "read only"
+  },
+  {
+   "id": "res7",
+   "from": "lane7",
+   "to": "out",
+   "y": 440,
+   "label": "out[j] = result"
+  },
+  {
+   "id": "wait",
+   "from": "pool",
+   "to": "owner",
+   "y": 468,
+   "label": "Wait returns",
+   "variant": "return",
+   "note": "owner ran chunks while it waited"
+  },
+  {
+   "id": "walk",
+   "from": "owner",
+   "to": "out",
+   "y": 524,
+   "label": "walk in index order"
+  },
+  {
+   "id": "vals",
+   "from": "out",
+   "to": "owner",
+   "y": 552,
+   "label": "values, not pointers",
+   "variant": "return"
+  },
+  {
+   "id": "apply",
+   "from": "owner",
+   "to": "stores",
+   "y": 580,
+   "label": "typed mutations",
+   "variant": "emphasis",
+   "note": "Apply: lower ID wins, loser re-plans"
+  },
+  {
+   "id": "thaw",
+   "from": "owner",
+   "to": "view",
+   "y": 636,
+   "label": "end of stage"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "One writer",
+   "items": [
+    "Compute never sees a mutator; it writes only its own out[task index]",
+    "No writes happen during a stage: the owner is inside it, and a frozen epoch panics on mutation in test and race builds",
+    "Lazy caches are warmed in Plan, never filled in Compute"
+   ]
+  },
+  {
+   "dot": "violet",
+   "title": "Deterministic merge",
+   "items": [
+    "Merge in task-index (entity-ID) order, never completion order",
+    "A lane's panic is recorded; after Wait the owner re-panics with the lowest failing index",
+    "TestParallelEqualsSerial: 1 lane, 8 lanes and a shuffled claim order give one state hash"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Target design from docs/adr/0002-parallel-pure-stages.md (uncommitted), not repository-backed",
+    "Two of the seven worker lanes are drawn"
+   ]
+  }
+ ]
+}

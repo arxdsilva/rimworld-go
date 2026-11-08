@@ -29,6 +29,12 @@
 - **License:** SIL Open Font License 1.1. The full text is in [`internal/adapters/inbound/ebiten/gfx/fontdata/OFL.txt`](internal/adapters/inbound/ebiten/gfx/fontdata/OFL.txt).
 - **What:** `NotoSans-Regular.ttf` and `NotoSans-SemiBold.ttf` (hinted static builds from the notofonts release site), embedded unmodified as the interface font (NG-1).
 
+## Docs tooling
+
+- **Archify** ([tt-a1i/archify](https://github.com/tt-a1i/archify) 3.2.0, Apache-2.0) renders the diagrams in [`docs/architecture/`](docs/architecture/README.md) from their JSON specs (`make diagrams`).
+- It is a global agent skill installed outside the repo. No code from it is vendored, and the game never links it.
+- The committed HTML is its output. CI never runs it.
+
 ## Go modules
 
 The game's binary links these modules. Their license files, with any NOTICE file, are in [`third_party/go-modules`](third_party/go-modules), refreshed by `make licenses`. A test in `internal/arch` fails when a module in `go.mod` is missing from this table.

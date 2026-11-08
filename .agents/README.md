@@ -48,6 +48,7 @@ Each file holds the decisions, wiki constants and phase rows for one area. Load 
 | CSE-* | `COMMON_SENSE_GAP_ANALYSIS.md` | Common Sense habit rules (tidying, bills, packs, joy, wandering) |
 | DEF-* | `DEFENCE_GAP_ANALYSIS.md` | Ranged/melee, armor, cover, traps, turrets, mortars, doors, raids, mechanoids |
 | FOOD-* | `FOOD_GAP_ANALYSIS.md` | Growing, animals and butchering, cooking, preservation, eating, hunger |
+| GAR-* | `GAME_ARCHITECTURE_GAP_ANALYSIS.md` | Game architecture vs the chosen target (scheduler, parallel stages, events, render-command list), the "always 60" frame budget and probe baseline; ADRs in `/docs/adr/`, diagrams in `/docs/architecture/` |
 | GEAR-*, OUT-* | `GEAR_GAP_ANALYSIS.md` | The Gear tab and apparel policies (outfits) |
 | HRV-* | `HARVEST_GAP_ANALYSIS.md` | Who harvests, batching, yield and speed |
 | MED-* | `MEDICAL_GAP_ANALYSIS.md` | Wounds, bleeding, tending, infection, diseases, anatomy, bionics, surgery, aging |

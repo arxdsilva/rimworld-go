@@ -379,6 +379,10 @@ Workers may compute:
 
 They must not directly mutate authoritative stores.
 
+The target shape (ADR 0001, ADR 0002 in `docs/adr/`):
+- **Systems.** A systems scheduler (`game/sched`) runs each system with its declared `Reads` and `Writes` component stores, its `Every`/`Stagger` period and its `After` order. The order is deterministic and starts out equal to today's phase order. A system's own state lives in its own saved store.
+- **Pure stages.** A stage runs on the one `Pool` port (built in `internal/compose`, implemented in `internal/platform/pool`) over a frozen view, and returns results that the scheduler applies serially in entity-ID order. `go` statements appear only in the pool implementation.
+
 Determinism and the no-goroutine-per-entity rule: `.agents/specs/MASTER_SPEC.md` §6–7, §55.
 
 ---
@@ -479,6 +483,11 @@ Events should:
 
 Avoid generic `map[string]any` events.
 
+The target (ADR 0003, `docs/adr/0003-event-queue.md`):
+- **Events.** Every cross-system effect is a typed event in `domain/sim/event`. Events are appended to the tick's queue and drained at fixed boundaries, after each system, in emit order. The queue is empty at every tick's end. Work that must cross ticks goes on the saved timer heap.
+- **Queries.** A system reads another system's state only through a **query port**, whose methods return values and never mutate.
+- **Commands.** External commands stay the entry point; the commands system turns each one into events.
+
 ---
 
 # 18. State Machines
@@ -552,6 +561,11 @@ UI-only intent
 Renderer never calls entity stores to mutate game state.
 
 Inside the client the same rule repeats one level down (SOLID_GO.md §7, ARCH-004/005): the root `Renderer` fills one `render.View` per frame (camera, art, this frame's world and pawns, clocks, options) and the draw layers under `render/` (`motion`, `light`, `sprite`, `env`, `creature`, `overlay`, `cue`, `minimap`, `world`) read that view and each other's exported types, never the `Renderer`; each layer's needs of the simulation are a small consumer-owned interface (`env.Chunks`, `world.Source`) taking values, never a pointer to a frame local through an interface call. The App's features (`hud`, `inspector`, `architect`, `windows`, `orders`, …) see the shell only through the `ports` roles plus a small `Host` their `deps.go` declares, send cross-feature requests as `ports.Intent`s, and never import the root or one another; the root's `<pkg>_compat.go` holds the host adapters. The simulation reaches the root as the union `Simulation` of eight consumer groups (`sim_ports.go`), stored only at the composition root.
+
+The target (ADR 0004, `docs/adr/0004-render-command-list.md`) is a render-command list:
+- **Emit, never draw.** Layers emit commands into one per-frame arena (`render/cmdlist`) through a small emitter port, and never draw to an `*ebiten.Image` themselves. The 64-bit key is `pass | layer | sub | seq`, so sorting keeps today's draw order exactly.
+- **Merge.** Adjacent commands with the same target, shader, sources, blend and uniforms merge into one draw.
+- **Light in the vertices.** Per-sprite light data rides in vertex attributes.
 
 Renderer-specific data such as sprite handles, camera transforms, screen pixels, and animation interpolation stay outside domain packages. Visual production (scale, pivots, palettes, sprites, icons, UI chrome, atlases) follows `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`; named screens, windows, overlays, and HUD layout follow `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` (the screen flow is §0). Those specs do not move presentation ownership into the domain.
 

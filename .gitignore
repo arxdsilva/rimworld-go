@@ -27,3 +27,8 @@ assets/metadata/pawn/*_m_heavy_*
 assets/metadata/pawn/*_f_thin_*
 assets/metadata/pawn/*_f_avg_*
 assets/metadata/pawn/*_f_heavy_*
+
+# Archify delivery receipts hold this machine's absolute paths (docs/architecture/README.md)
+docs/architecture/*.delivery.json
+docs/architecture/*.receipt.json
+docs/architecture/*.finalize-summary.json

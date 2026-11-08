@@ -1,0 +1,211 @@
+{
+ "schema_version": 2,
+ "diagram_type": "workflow",
+ "meta": {
+  "title": "Target scheduler: one tick (ADR 0001, 0002, 0003)",
+  "output": "docs/architecture/scheduler.html",
+  "quality_profile": "showcase",
+  "locale": "en"
+ },
+ "lanes": [
+  {
+   "id": "events",
+   "label": "event queue (domain/sim/event)"
+  },
+  {
+   "id": "driver",
+   "label": "scheduler goroutine, the only writer"
+  },
+  {
+   "id": "pool",
+   "label": "pool: 7 workers plus the owner"
+  }
+ ],
+ "mainPath": [
+  "commands",
+  "timers",
+  "needs",
+  "drain1",
+  "plan",
+  "compute",
+  "apply",
+  "drain2",
+  "end"
+ ],
+ "nodes": [
+  {
+   "id": "commands",
+   "lane": "driver",
+   "col": 0,
+   "type": "frontend",
+   "label": "commands",
+   "sublabel": "typed input from the UI",
+   "tag": "phase 1"
+  },
+  {
+   "id": "timers",
+   "lane": "driver",
+   "col": 1,
+   "type": "backend",
+   "label": "timers",
+   "sublabel": "due (Due, Seq) entries emit"
+  },
+  {
+   "id": "needs",
+   "lane": "driver",
+   "col": 2,
+   "type": "backend",
+   "label": "system: needs",
+   "sublabel": "Reads Pawn, Writes Need",
+   "tag": "Every 1"
+  },
+  {
+   "id": "drain1",
+   "lane": "events",
+   "col": 2,
+   "type": "messagebus",
+   "label": "drain",
+   "sublabel": "FIFO, gen + 1, capped"
+  },
+  {
+   "id": "plan",
+   "lane": "driver",
+   "col": 3,
+   "type": "backend",
+   "label": "stage Plan",
+   "sublabel": "tasks by entity ID, warm caches",
+   "tag": "serial"
+  },
+  {
+   "id": "compute",
+   "lane": "pool",
+   "col": 3,
+   "type": "cloud",
+   "label": "Compute x 8 lanes",
+   "sublabel": "frozen view, keyed RNG",
+   "tag": "pure"
+  },
+  {
+   "id": "apply",
+   "lane": "driver",
+   "col": 4,
+   "type": "backend",
+   "label": "stage Apply",
+   "sublabel": "out[i] in ID order",
+   "tag": "serial"
+  },
+  {
+   "id": "drain2",
+   "lane": "events",
+   "col": 4,
+   "type": "messagebus",
+   "label": "drain",
+   "sublabel": "handlers write own state"
+  },
+  {
+   "id": "end",
+   "lane": "driver",
+   "col": 5,
+   "type": "security",
+   "label": "end of tick",
+   "sublabel": "assert the queue is empty"
+  }
+ ],
+ "edges": [
+  {
+   "id": "c_t",
+   "from": "commands",
+   "to": "timers",
+   "label": "then timers",
+   "role": "main"
+  },
+  {
+   "id": "t_n",
+   "from": "timers",
+   "to": "needs",
+   "label": "schedule order",
+   "role": "main"
+  },
+  {
+   "id": "n_d",
+   "from": "needs",
+   "to": "drain1",
+   "label": "emits",
+   "role": "main"
+  },
+  {
+   "id": "d_p",
+   "from": "drain1",
+   "to": "plan",
+   "label": "next system",
+   "role": "main"
+  },
+  {
+   "id": "p_c",
+   "from": "plan",
+   "to": "compute",
+   "label": "fork tasks",
+   "role": "main",
+   "variant": "emphasis"
+  },
+  {
+   "id": "c_a",
+   "from": "compute",
+   "to": "apply",
+   "label": "merge by index",
+   "role": "main",
+   "variant": "emphasis"
+  },
+  {
+   "id": "a_d",
+   "from": "apply",
+   "to": "drain2",
+   "label": "emits",
+   "role": "main"
+  },
+  {
+   "id": "d_e",
+   "from": "drain2",
+   "to": "end",
+   "label": "last system",
+   "role": "main"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "violet",
+   "title": "Systems (ADR 0001)",
+   "items": [
+    "Each system declares Name, Phase, Reads, Writes, After/Before, Every/Offset/Stagger, RunIf",
+    "Order: Kahn over (phase rank, name), built once; the resolved order is a golden file",
+    "A conflict with no order between two systems fails the build unless AmbiguousWith gives a reason"
+   ]
+  },
+  {
+   "dot": "cyan",
+   "title": "Parallel stage (ADR 0002)",
+   "items": [
+    "Plan is serial, Compute is pure and writes only out[task index], Apply is serial",
+    "Merge in task-index order, never completion order; the lower ID wins",
+    "Runs inline below minParallelTasks, and in captures and replays"
+   ]
+  },
+  {
+   "dot": "emerald",
+   "title": "Events (ADR 0003)",
+   "items": [
+    "A tick runs commands, timers, systems in order, then the end checks",
+    "One drain after each emitting system keeps today's order",
+    "The queue is empty at every tick's end, so it is in neither the hash nor the save"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Target design, not repository-backed: docs/adr/0001-systems-scheduler.md, 0002-parallel-pure-stages.md, 0003-event-queue.md (uncommitted)",
+    "needs and the path-search stage are examples of a system and a stage"
+   ]
+  }
+ ]
+}

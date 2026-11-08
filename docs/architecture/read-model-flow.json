@@ -1,0 +1,331 @@
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "Read models today: stores to the screen",
+  "output": "docs/architecture/read-model-flow.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "repository": {
+   "url": "git@github.com:arxdsilva/rimworld-go.git",
+   "link_mode": "local-only",
+   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
+  }
+ },
+ "stages": [
+  {
+   "label": "state"
+  },
+  {
+   "label": "memo"
+  },
+  {
+   "label": "read models"
+  },
+  {
+   "label": "port"
+  },
+  {
+   "label": "presentation"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "step",
+   "type": "backend",
+   "label": "Game.Step",
+   "sublabel": "viewGen++ each tick",
+   "stage": 0,
+   "row": 0,
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 1318,
+     "end_line": 1330,
+     "label": "Step bumps viewGen"
+    }
+   ]
+  },
+  {
+   "id": "stores",
+   "type": "database",
+   "label": "component stores",
+   "sublabel": "names, needs, vitals, positions",
+   "stage": 0,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 763,
+     "end_line": 766,
+     "label": "stores"
+    },
+    {
+     "path": "internal/application/game/game.go",
+     "line": 848,
+     "end_line": 858,
+     "label": "more stores"
+    },
+    {
+     "path": "internal/domain/sim/component/component.go",
+     "line": 25,
+     "end_line": 36,
+     "label": "Store[T]"
+    }
+   ]
+  },
+  {
+   "id": "cache",
+   "type": "messagebus",
+   "label": "viewCache",
+   "sublabel": "key [tick, viewGen]",
+   "stage": 1,
+   "row": 0,
+   "sources": [
+    {
+     "path": "internal/application/game/indexes.go",
+     "line": 389,
+     "end_line": 423,
+     "label": "viewCache"
+    },
+    {
+     "path": "internal/application/game/indexes.go",
+     "line": 494,
+     "end_line": 498,
+     "label": "SetViewCache, viewKey"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/renderer.go",
+     "line": 188,
+     "end_line": 207,
+     "label": "renderer turns it on"
+    }
+   ]
+  },
+  {
+   "id": "world",
+   "type": "backend",
+   "label": "World()",
+   "sublabel": "memo hit, or rebuild",
+   "stage": 1,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 1482,
+     "end_line": 1491,
+     "label": "World memo"
+    },
+    {
+     "path": "internal/application/game/game.go",
+     "line": 1493,
+     "label": "world rebuild"
+    }
+   ]
+  },
+  {
+   "id": "snap",
+   "type": "backend",
+   "label": "Snapshot()",
+   "sublabel": "memo hit, or rebuild",
+   "stage": 1,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 1335,
+     "end_line": 1344,
+     "label": "Snapshot memo"
+    }
+   ]
+  },
+  {
+   "id": "wv",
+   "type": "database",
+   "label": "WorldView",
+   "sublabel": "value read model",
+   "stage": 2,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 570,
+     "label": "WorldView"
+    }
+   ]
+  },
+  {
+   "id": "pv",
+   "type": "database",
+   "label": "[]PawnView",
+   "sublabel": "one value per pawn",
+   "stage": 2,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 85,
+     "label": "PawnView"
+    }
+   ]
+  },
+  {
+   "id": "port",
+   "type": "security",
+   "label": "SimWorld port",
+   "sublabel": "Snapshot, World, lookups",
+   "stage": 3,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/sim_ports.go",
+     "line": 46,
+     "end_line": 57,
+     "label": "SimWorld"
+    }
+   ]
+  },
+  {
+   "id": "layers",
+   "type": "frontend",
+   "label": "render layers",
+   "sublabel": "pipeSource per layer",
+   "stage": 4,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/layers.go",
+     "line": 112,
+     "end_line": 127,
+     "label": "pipeSource"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 81,
+     "end_line": 85,
+     "label": "DrawArt reads both"
+    }
+   ]
+  },
+  {
+   "id": "hud",
+   "type": "frontend",
+   "label": "colony HUD",
+   "sublabel": "bars, tabs, inspector",
+   "stage": 4,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/colony_compose.go",
+     "line": 172,
+     "end_line": 196,
+     "label": "drawColonyHUD"
+    }
+   ]
+  }
+ ],
+ "flows": [
+  {
+   "id": "f0",
+   "from": "step",
+   "to": "stores",
+   "label": "tick writes",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f1",
+   "from": "step",
+   "to": "cache",
+   "label": "new key"
+  },
+  {
+   "id": "f2",
+   "from": "cache",
+   "to": "world",
+   "label": "same key: hit"
+  },
+  {
+   "id": "f3",
+   "from": "cache",
+   "to": "snap",
+   "label": "same key: hit"
+  },
+  {
+   "id": "f4",
+   "from": "stores",
+   "to": "world",
+   "label": "rebuild on miss"
+  },
+  {
+   "id": "f5",
+   "from": "stores",
+   "to": "snap",
+   "label": "rebuild on miss"
+  },
+  {
+   "id": "f6",
+   "from": "world",
+   "to": "wv",
+   "label": "WorldView",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f7",
+   "from": "snap",
+   "to": "pv",
+   "label": "pawn views",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f8",
+   "from": "wv",
+   "to": "port",
+   "label": "World()"
+  },
+  {
+   "id": "f9",
+   "from": "pv",
+   "to": "port",
+   "label": "Snapshot()"
+  },
+  {
+   "id": "f10",
+   "from": "port",
+   "to": "layers",
+   "label": "read models",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f11",
+   "from": "port",
+   "to": "hud",
+   "label": "read only"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "One rebuild per state",
+   "items": [
+    "World() and Snapshot() keep their last result until the tick or viewGen changes",
+    "Step and ApplyPending bump viewGen, so every Draw between two ticks shares one rebuild",
+    "The renderer turns the cache on; other callers get a fresh rebuild"
+   ]
+  },
+  {
+   "dot": "violet",
+   "title": "Read only",
+   "items": [
+    "The renderer sees the game only through its consumer-owned ports",
+    "Read models are values: the UI cannot reach into a store"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Pinned to commit c27bd1512 (local-only)"
+   ]
+  }
+ ]
+}

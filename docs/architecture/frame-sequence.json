@@ -1,0 +1,351 @@
+{
+ "schema_version": 1,
+ "diagram_type": "sequence",
+ "meta": {
+  "title": "One frame: Update, then Draw, then present",
+  "output": "docs/architecture/frame-sequence.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "repository": {
+   "url": "git@github.com:arxdsilva/rimworld-go.git",
+   "link_mode": "local-only",
+   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
+  }
+ },
+ "participants": [
+  {
+   "id": "ebiten",
+   "type": "external",
+   "label": "Ebitengine loop",
+   "sublabel": "RunGame, SetTPS(60)",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/display/display.go",
+     "line": 72,
+     "end_line": 85,
+     "label": "Screen.Run"
+    }
+   ]
+  },
+  {
+   "id": "app",
+   "type": "frontend",
+   "label": "App",
+   "sublabel": "Update and Draw",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 859,
+     "end_line": 964,
+     "label": "App.Update"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 388,
+     "end_line": 401,
+     "label": "tick"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 967,
+     "end_line": 1078,
+     "label": "App.Draw"
+    }
+   ]
+  },
+  {
+   "id": "budget",
+   "type": "frontend",
+   "label": "Update budget",
+   "sublabel": "tickDebt, 5 ms",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/update_budget.go",
+     "line": 21,
+     "label": "updateBudget"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/update_budget.go",
+     "line": 58,
+     "end_line": 81,
+     "label": "advanceColony"
+    }
+   ]
+  },
+  {
+   "id": "renderer",
+   "type": "frontend",
+   "label": "Renderer",
+   "sublabel": "ticks, layers",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/renderer.go",
+     "line": 229,
+     "end_line": 261,
+     "label": "advanceTicks"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/renderer.go",
+     "line": 493,
+     "end_line": 523,
+     "label": "Renderer.Draw"
+    }
+   ]
+  },
+  {
+   "id": "game",
+   "type": "backend",
+   "label": "Game",
+   "sublabel": "application/game",
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 1318,
+     "end_line": 1330,
+     "label": "Game.Step"
+    },
+    {
+     "path": "internal/application/game/phases.go",
+     "line": 41,
+     "end_line": 62,
+     "label": "runPhases"
+    },
+    {
+     "path": "internal/application/game/game.go",
+     "line": 1482,
+     "end_line": 1491,
+     "label": "World memo"
+    }
+   ]
+  },
+  {
+   "id": "hud",
+   "type": "frontend",
+   "label": "Colony HUD",
+   "sublabel": "bars, tabs, windows",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/colony_compose.go",
+     "line": 172,
+     "end_line": 196,
+     "label": "drawColonyHUD"
+    }
+   ]
+  },
+  {
+   "id": "gpu",
+   "type": "external",
+   "label": "GPU and display",
+   "sublabel": "present at vsync",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/display/display.go",
+     "line": 27,
+     "label": "SetVsyncEnabled"
+    }
+   ]
+  }
+ ],
+ "segments": [
+  {
+   "from": 148,
+   "to": 564,
+   "label": "Update"
+  },
+  {
+   "from": 568,
+   "to": 900,
+   "label": "Draw"
+  },
+  {
+   "from": 904,
+   "to": 956,
+   "label": "Present"
+  }
+ ],
+ "messages": [
+  {
+   "id": "upd",
+   "from": "ebiten",
+   "to": "app",
+   "y": 160,
+   "label": "Update()",
+   "note": "60 ticks per second"
+  },
+  {
+   "id": "adv",
+   "from": "app",
+   "to": "budget",
+   "y": 216,
+   "label": "advanceColony()",
+   "note": "colony screen only"
+  },
+  {
+   "id": "ticks",
+   "from": "budget",
+   "to": "renderer",
+   "y": 272,
+   "label": "advanceTicks(want, more)",
+   "note": "5 ms cap when speed > 1"
+  },
+  {
+   "id": "step",
+   "from": "renderer",
+   "to": "game",
+   "y": 328,
+   "label": "Step(1) x n",
+   "variant": "emphasis",
+   "note": "viewGen++, runPhases, Advance"
+  },
+  {
+   "id": "stepret",
+   "from": "game",
+   "to": "renderer",
+   "y": 384,
+   "label": "tick done",
+   "variant": "return"
+  },
+  {
+   "id": "post",
+   "from": "renderer",
+   "to": "game",
+   "y": 412,
+   "label": "World()",
+   "note": "post-step: pawns, cues, threats"
+  },
+  {
+   "id": "postret",
+   "from": "game",
+   "to": "renderer",
+   "y": 468,
+   "label": "WorldView",
+   "variant": "return"
+  },
+  {
+   "id": "advret",
+   "from": "renderer",
+   "to": "budget",
+   "y": 496,
+   "label": "ticks run",
+   "variant": "return"
+  },
+  {
+   "id": "mark",
+   "from": "budget",
+   "to": "app",
+   "y": 524,
+   "label": "markUpdate()",
+   "variant": "return"
+  },
+  {
+   "id": "upddone",
+   "from": "app",
+   "to": "ebiten",
+   "y": 552,
+   "label": "Update returns",
+   "variant": "return"
+  },
+  {
+   "id": "draw",
+   "from": "ebiten",
+   "to": "app",
+   "y": 580,
+   "label": "Draw(screen)",
+   "note": "noteDraw, stepCamera"
+  },
+  {
+   "id": "rdraw",
+   "from": "app",
+   "to": "renderer",
+   "y": 636,
+   "label": "Draw(dst)",
+   "note": "world pass, layers in order"
+  },
+  {
+   "id": "read",
+   "from": "renderer",
+   "to": "game",
+   "y": 692,
+   "label": "World(), Snapshot()",
+   "note": "memo keyed on tick, viewGen"
+  },
+  {
+   "id": "readret",
+   "from": "game",
+   "to": "renderer",
+   "y": 748,
+   "label": "read models",
+   "variant": "return"
+  },
+  {
+   "id": "world",
+   "from": "renderer",
+   "to": "app",
+   "y": 776,
+   "label": "world drawn",
+   "variant": "return",
+   "note": "CompositeWorld, Flush"
+  },
+  {
+   "id": "hudm",
+   "from": "app",
+   "to": "hud",
+   "y": 832,
+   "label": "drawColonyHUD()",
+   "variant": "emphasis"
+  },
+  {
+   "id": "hudret",
+   "from": "hud",
+   "to": "app",
+   "y": 860,
+   "label": "HUD painted",
+   "variant": "return"
+  },
+  {
+   "id": "drawdone",
+   "from": "app",
+   "to": "ebiten",
+   "y": 888,
+   "label": "Draw returns",
+   "variant": "return"
+  },
+  {
+   "id": "present",
+   "from": "ebiten",
+   "to": "gpu",
+   "y": 916,
+   "label": "present frame",
+   "variant": "emphasis",
+   "note": "waits for vsync"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "Update",
+   "items": [
+    "advanceColony asks ticksWanted for the speed, then steps one tick at a time",
+    "At speed 2x and up, the loop stops when the 5 ms budget runs out",
+    "Post-step work runs once per Update, after the last Step"
+   ]
+  },
+  {
+   "dot": "violet",
+   "title": "Draw",
+   "items": [
+    "The renderer reads World() and Snapshot(); both are memoised on tick and viewGen",
+    "Layers draw in a fixed order (see render-pipeline)",
+    "The HUD paints over the composited world"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Pinned to commit c27bd1512 (local-only)",
+    "Measured: update 3.3 ms and draw 15.5 ms on average at zoom 0.8 (see frame-budget)"
+   ]
+  }
+ ]
+}

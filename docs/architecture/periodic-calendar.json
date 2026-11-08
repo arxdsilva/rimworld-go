@@ -1,0 +1,160 @@
+{
+ "schema_version": 1,
+ "diagram_type": "timeline",
+ "meta": {
+  "title": "Periodic gates around the day tick: today against the staggered target",
+  "output": "docs/architecture/periodic-calendar.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "evidence": "illustrative",
+  "timezone": "UTC"
+ },
+ "lanes": [
+  {
+   "id": "g250",
+   "label": "every 250 ticks"
+  },
+  {
+   "id": "hour",
+   "label": "every hour (2,500)"
+  },
+  {
+   "id": "day",
+   "label": "every day (60,000)"
+  },
+  {
+   "id": "target",
+   "label": "target: staggered (ADR 0001)"
+  }
+ ],
+ "events": [
+  {
+   "id": "h57500",
+   "at": "2026-01-01T15:58:20Z",
+   "title": "tick 57,500: hourly gates",
+   "detail": "rows 7, 15, 18, 21, 23, 29, 30, 35, 36; the 250-tick rows fire too",
+   "lane": "hour",
+   "kind": "default"
+  },
+  {
+   "id": "g57500",
+   "at": "2026-01-01T15:58:20Z",
+   "title": "tick 57,500: 250-tick gates",
+   "detail": "rows 3, 5, 6, 8, 10, 13, 28, 32, 34, 41 together",
+   "lane": "g250",
+   "kind": "default"
+  },
+  {
+   "id": "g59750",
+   "at": "2026-01-01T16:35:50Z",
+   "title": "tick 59,750: 250-tick gates",
+   "detail": "climate, weather, pens, troughs, eggs, rearm",
+   "lane": "g250",
+   "kind": "default"
+  },
+  {
+   "id": "d60000",
+   "at": "2026-01-01T16:40:00Z",
+   "title": "tick 60,000: 41 of 46 gates at once",
+   "detail": "every item walked 3-4 times, every building and animal twice, every patient",
+   "lane": "day",
+   "kind": "alert"
+  },
+  {
+   "id": "h60000",
+   "at": "2026-01-01T16:40:00Z",
+   "title": "tick 60,000: hourly gates",
+   "detail": "the medical hour and the hourly item passes, on the day tick",
+   "lane": "hour",
+   "kind": "alert"
+  },
+  {
+   "id": "g60000",
+   "at": "2026-01-01T16:40:00Z",
+   "title": "tick 60,000: 250-tick gates",
+   "detail": "the same ten rows, also on the day tick",
+   "lane": "g250",
+   "kind": "alert"
+  },
+  {
+   "id": "g60250",
+   "at": "2026-01-01T16:44:10Z",
+   "title": "tick 60,250: 250-tick gates",
+   "detail": "back to ten rows",
+   "lane": "g250",
+   "kind": "default"
+  },
+  {
+   "id": "t59750",
+   "at": "2026-01-01T16:35:50Z",
+   "title": "slot (now + mix(id)) % 250",
+   "detail": "each item, building or animal on its own tick of the period",
+   "lane": "target",
+   "kind": "recovery"
+  },
+  {
+   "id": "t60000",
+   "at": "2026-01-01T16:40:00Z",
+   "title": "day tick: only O(1) gates left",
+   "detail": "rows 3, 7, 8, 10, 13, 21, 24, 35 spread by entity",
+   "lane": "target",
+   "kind": "recovery"
+  },
+  {
+   "id": "t60250",
+   "at": "2026-01-01T16:44:10Z",
+   "title": "slot (now + mix(id)) % 250",
+   "detail": "about 1/250 of the walk on any one tick",
+   "lane": "target",
+   "kind": "recovery"
+  },
+  {
+   "id": "t62500",
+   "at": "2026-01-01T17:21:40Z",
+   "title": "daily-only jobs at fixed hour offsets",
+   "detail": "rows 12, 16, 17, 19, for example hour 1",
+   "lane": "target",
+   "kind": "change"
+  },
+  {
+   "id": "h62500",
+   "at": "2026-01-01T17:21:40Z",
+   "title": "tick 62,500: hourly gates",
+   "detail": "the hour after the day tick",
+   "lane": "hour",
+   "kind": "default"
+  }
+ ],
+ "layout": {
+  "breaks": "auto"
+ },
+ "cards": [
+  {
+   "dot": "amber",
+   "title": "A synthetic clock",
+   "items": [
+    "Illustrative: one tick is drawn as one second from 2026-01-01T00:00Z, so tick 60,000 shows as 16:40",
+    "The clock is TicksPerHour 2,500 and a 24-hour day of 60,000 ticks (domain/sim/clock)",
+    "Times are tick numbers, not wall-clock records"
+   ]
+  },
+  {
+   "dot": "rose",
+   "title": "Today",
+   "items": [
+    "Each gate tests now % P on the global clock, so every entity runs on the same tick",
+    "At now % 60000 == 0, 41 of the 46 global gates fire together (GAR-007)",
+    "Every 250th tick bunches 10 rows; every hour adds 9 more"
+   ]
+  },
+  {
+   "dot": "emerald",
+   "title": "Target",
+   "items": [
+    "ADR 0001 (docs/adr, uncommitted): due when t mod Every == Offset, with a per-entity Stagger slot",
+    "TestDayTickUnderBudget: the worst tick is 1.5 ms or less",
+    "Row numbers refer to the O-sched gate inventory of the GAR analysis"
+   ]
+  }
+ ]
+}

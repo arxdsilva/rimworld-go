@@ -1460,6 +1460,8 @@ Content registry should track which mod/file produced or patched every definitio
 
 Reference target: modern 6-core laptop, 16 GB RAM, integrated graphics supported.
 
+The "always 60" frame targets, the 16.67 ms frame budget and the measured baseline are in `.agents/gaps/GAME_ARCHITECTURE_GAP_ANALYSIS.md` (family GAR); the probe matrix is `make fps-matrix`, VSync on.
+
 Aspirational simulation targets:
 
 | Scenario | Goal |
@@ -1499,7 +1501,14 @@ No goroutine per pawn and no channel-driven gameplay architecture.
 
 One authoritative goroutine/thread owns simulation mutation.
 
-Parallel work is snapshot → compute → ordered commit.
+Parallel work is snapshot → compute → ordered commit. Under ADR 0002 (`docs/adr/0002-parallel-pure-stages.md`):
+- the scheduler goroutine is the only writer;
+- a pure stage reads a frozen view of the stores and returns results, which the scheduler applies serially in entity-ID order;
+- workers come from one fixed pool (`Pool` port, built in `internal/compose`), never a goroutine per call, pawn or job;
+- randomness inside a stage is derived per task from (seed, tick, stage, entity), never a shared stream;
+- pool sizes 1, 2 and 8 must give the same state hash (`TestParallelEqualsSerial`).
+
+Systems that mutate different stores at the same time are out of scope and need a new ADR.
 
 Safe candidates:
 - pathfinding;

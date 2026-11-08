@@ -39,6 +39,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | ARCH-005-app-features | The App's features leave the root | 2026-10-28 | [ARCH.md](ARCH.md#arch-005-app-features) |
 | ARCH-006-sweep | The sweep: the root keeps only the composition | 2026-10-28 | [ARCH.md](ARCH.md#arch-006-sweep) |
 | ARCH-007-cmd-wiring-only | Every `cmd/<tool>` is one wiring-only `main.go` (GAR Part A) | 2026-11-08 | [ARCH.md](ARCH.md#arch-007-cmd-wiring-only) |
+| ARCH-008-gar-analysis-adrs | GAR gap analysis, ADRs 0001-0004 and the architecture diagrams (GAR Parts B and D) | 2026-11-08 | [ARCH.md](ARCH.md#arch-008-gar-analysis-adrs) |
 | ART-000-agent-pipeline-integration | Art spec wired into the agent pipeline | 2026-09-08 | [ART.md](ART.md#art-000-agent-pipeline-integration) |
 | ART-001-vendor-pack-renderer | CC0 vendor character pack in the renderer | 2026-09-08 | [ART.md](ART.md#art-001-vendor-pack-renderer) |
 | ART-002-presentation-animation-clock | Presentation animation clock | 2026-09-08 | [ART.md](ART.md#art-002-presentation-animation-clock) |

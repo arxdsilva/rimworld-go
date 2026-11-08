@@ -1,0 +1,246 @@
+{
+ "schema_version": 3,
+ "diagram_type": "lifecycle",
+ "meta": {
+  "title": "Autosave: the synchronous save today, the async save job in the target",
+  "output": "docs/architecture/autosave-lifecycle.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "repository": {
+   "url": "git@github.com:arxdsilva/rimworld-go.git",
+   "link_mode": "local-only",
+   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
+  }
+ },
+ "mainPath": [
+  "playing",
+  "due",
+  "snapshot",
+  "encode",
+  "write",
+  "done"
+ ],
+ "states": [
+  {
+   "id": "playing",
+   "type": "start",
+   "label": "playing",
+   "sublabel": "checks each Update",
+   "step": "1",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/options/saves.go",
+     "line": 55,
+     "end_line": 66,
+     "label": "TickAutosave gates"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 388,
+     "end_line": 401,
+     "label": "tick calls TickAutosave"
+    }
+   ]
+  },
+  {
+   "id": "due",
+   "type": "decision",
+   "label": "autosave due",
+   "sublabel": "hour 6, day gap",
+   "step": "2",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/options/saves.go",
+     "line": 67,
+     "end_line": 76,
+     "label": "hour and day check"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/options/saves.go",
+     "line": 21,
+     "label": "AutosaveHour = 6"
+    }
+   ]
+  },
+  {
+   "id": "snapshot",
+   "type": "active",
+   "label": "snapshot",
+   "sublabel": "copy at tick end",
+   "tag": "target",
+   "step": "3"
+  },
+  {
+   "id": "encode",
+   "type": "active",
+   "label": "encode",
+   "sublabel": "worker: gob, gzip",
+   "tag": "target",
+   "step": "4"
+  },
+  {
+   "id": "write",
+   "type": "active",
+   "label": "write",
+   "sublabel": "temp, fsync, rename",
+   "tag": "target",
+   "step": "5"
+  },
+  {
+   "id": "done",
+   "type": "success",
+   "label": "saved",
+   "sublabel": "HUD clears",
+   "tag": "target",
+   "step": "6"
+  },
+  {
+   "id": "sync",
+   "type": "active",
+   "label": "sync save (today)",
+   "sublabel": "gob, gzip and write inside Update",
+   "tag": "today",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/options/saves.go",
+     "line": 39,
+     "end_line": 49,
+     "label": "SaveNow"
+    },
+    {
+     "path": "internal/application/game/save.go",
+     "line": 496,
+     "end_line": 590,
+     "label": "Game.Save: gob and gzip"
+    },
+    {
+     "path": "internal/platform/atomicfile/atomicfile.go",
+     "line": 13,
+     "end_line": 45,
+     "label": "temp, fsync, rename"
+    }
+   ]
+  },
+  {
+   "id": "failed",
+   "type": "failure",
+   "label": "save failed",
+   "sublabel": "reported to the player",
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/options/saves.go",
+     "line": 43,
+     "end_line": 45,
+     "label": "save failed hint"
+    }
+   ]
+  }
+ ],
+ "transitions": [
+  {
+   "id": "t1",
+   "from": "playing",
+   "to": "due",
+   "label": "06:00"
+  },
+  {
+   "id": "t2",
+   "from": "due",
+   "to": "snapshot",
+   "label": "async"
+  },
+  {
+   "id": "t3",
+   "from": "snapshot",
+   "to": "encode",
+   "label": "copied"
+  },
+  {
+   "id": "t4",
+   "from": "encode",
+   "to": "write",
+   "label": "bytes"
+  },
+  {
+   "id": "t5",
+   "from": "write",
+   "to": "done",
+   "label": "done",
+   "variant": "emphasis"
+  },
+  {
+   "id": "t6",
+   "from": "done",
+   "to": "playing",
+   "label": "next day"
+  },
+  {
+   "id": "t7",
+   "from": "due",
+   "to": "sync",
+   "label": "SaveNow(slot)",
+   "variant": "dashed",
+   "note": "today: blocks Update"
+  },
+  {
+   "id": "t8",
+   "from": "sync",
+   "to": "playing",
+   "label": "Update returns",
+   "variant": "dashed"
+  },
+  {
+   "id": "t9",
+   "from": "sync",
+   "to": "failed",
+   "label": "error",
+   "variant": "dashed"
+  },
+  {
+   "id": "t10",
+   "from": "write",
+   "to": "failed",
+   "label": "error"
+  },
+  {
+   "id": "t11",
+   "from": "encode",
+   "to": "failed",
+   "label": "error"
+  },
+  {
+   "id": "t12",
+   "from": "failed",
+   "to": "playing",
+   "label": "next autosave"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "rose",
+   "title": "Today",
+   "items": [
+    "At hour 6 TickAutosave calls SaveNow on the Update goroutine",
+    "Game.Save encodes gob, gzips at BestSpeed, then the file store writes through atomicfile",
+    "Measured in the autosave probe cell: one 42.7 ms Update and frames up to 63 ms (bin/fpsmatrix-timejump.csv, 2026-11-08)"
+   ]
+  },
+  {
+   "dot": "emerald",
+   "title": "Target (GAR-190, game/savejob)",
+   "items": [
+    "A deep-copy snapshot of at most 2 ms at the tick boundary",
+    "One worker does gob, gzip, a temp file, fsync and rename; one save in flight",
+    "Saving... shows in the HUD; failures are reported"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "States tagged today cite commit c27bd1512 (local-only)",
+    "States tagged target come from the GAR gap analysis (uncommitted) and have no source yet"
+   ]
+  }
+ ]
+}

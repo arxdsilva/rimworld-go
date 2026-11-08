@@ -1,0 +1,198 @@
+{
+ "schema_version": 1,
+ "diagram_type": "waterfall",
+ "meta": {
+  "title": "Frame budget: the 16.67 ms target against the measured baseline",
+  "output": "docs/architecture/frame-budget.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "evidence": "illustrative",
+  "unit": "ms"
+ },
+ "spans": [
+  {
+   "id": "target",
+   "name": "Target frame: 16.67 ms at 60 Hz",
+   "start": 0,
+   "end": 16.67,
+   "status": "ok",
+   "service": "target",
+   "detail": "GAR Target: the frame budget table"
+  },
+  {
+   "id": "t_sim",
+   "name": "sim at 6x",
+   "start": 0,
+   "end": 5.0,
+   "status": "ok",
+   "parent": "target",
+   "service": "target",
+   "detail": "6 ticks; the worst single tick 1.5 ms"
+  },
+  {
+   "id": "t_post",
+   "name": "post-step",
+   "start": 5.0,
+   "end": 5.7,
+   "status": "ok",
+   "parent": "target",
+   "service": "target",
+   "detail": "pawn sync, cues, threat watch"
+  },
+  {
+   "id": "t_reads",
+   "name": "read models",
+   "start": 5.7,
+   "end": 6.2,
+   "status": "ok",
+   "parent": "target",
+   "service": "target",
+   "detail": "World() and Snapshot() rebuilds"
+  },
+  {
+   "id": "t_ui",
+   "name": "UI",
+   "start": 6.2,
+   "end": 7.2,
+   "status": "ok",
+   "parent": "target",
+   "service": "target",
+   "detail": "input, HUD layout"
+  },
+  {
+   "id": "t_drawcpu",
+   "name": "draw CPU",
+   "start": 7.2,
+   "end": 11.2,
+   "status": "ok",
+   "parent": "target",
+   "service": "target",
+   "detail": "all world layers and the HUD"
+  },
+  {
+   "id": "t_gc",
+   "name": "GC",
+   "start": 11.2,
+   "end": 11.7,
+   "status": "ok",
+   "parent": "target",
+   "service": "target",
+   "detail": "amortised collector cost"
+  },
+  {
+   "id": "t_slack",
+   "name": "slack",
+   "start": 11.7,
+   "end": 16.7,
+   "status": "ok",
+   "parent": "target",
+   "service": "target",
+   "detail": "headroom for spikes"
+  },
+  {
+   "id": "t_worst",
+   "name": "worst tick",
+   "start": 0,
+   "end": 1.5,
+   "status": "ok",
+   "parent": "t_sim",
+   "service": "target",
+   "detail": "TestDayTickUnderBudget bound (GAR-007)"
+  },
+  {
+   "id": "z08",
+   "name": "Measured: zoom 0.8, 1x (work 18.9 ms)",
+   "start": 0,
+   "end": 18.9,
+   "status": "error",
+   "service": "measured zoom 0.8",
+   "detail": "probe average; over the 16.67 ms budget"
+  },
+  {
+   "id": "z08_upd",
+   "name": "Update (avg)",
+   "start": 0,
+   "end": 3.3,
+   "status": "ok",
+   "parent": "z08",
+   "service": "measured zoom 0.8",
+   "detail": "average Update CPU"
+  },
+  {
+   "id": "z08_draw",
+   "name": "Draw (avg)",
+   "start": 3.3,
+   "end": 18.8,
+   "status": "error",
+   "parent": "z08",
+   "service": "measured zoom 0.8",
+   "detail": "average Draw CPU, 15.5 ms"
+  },
+  {
+   "id": "z08_p99",
+   "name": "Frame gap p99, zoom 0.8",
+   "start": 0,
+   "end": 30.4,
+   "status": "error",
+   "service": "measured zoom 0.8",
+   "detail": "p99 gap at Draw entry; target 16.7 ms"
+  },
+  {
+   "id": "z01",
+   "name": "Measured: zoom 0.4, 1x, before GAR-155 (work 45.0 ms)",
+   "start": 0,
+   "end": 45.0,
+   "status": "error",
+   "service": "measured zoom 0.4",
+   "detail": "probe average; 2.7 times the budget"
+  },
+  {
+   "id": "z01_upd",
+   "name": "Update (avg)",
+   "start": 0,
+   "end": 3.3,
+   "status": "ok",
+   "parent": "z01",
+   "service": "measured zoom 0.4",
+   "detail": "work minus draw"
+  },
+  {
+   "id": "z01_draw",
+   "name": "Draw (avg)",
+   "start": 3.3,
+   "end": 45.0,
+   "status": "error",
+   "parent": "z01",
+   "service": "measured zoom 0.4",
+   "detail": "average Draw CPU, 41.7 ms"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "amber",
+   "title": "Where the numbers come from",
+   "items": [
+    "Measured rows are probe averages from bin/fpsmatrix-baseline.csv (2026-11-08, commit c27bd1512), not a trace",
+    "Each bar is an average laid end to end, so this is illustrative, not one recorded frame",
+    "Budget segments are the Target table in the GAR gap analysis"
+   ]
+  },
+  {
+   "dot": "rose",
+   "title": "Reading it",
+   "items": [
+    "Draw CPU is the overrun: 15.5 ms at zoom 0.8 against a 4.0 ms budget",
+    "At zoom 0.4 (the farthest; the matrix's 0.1 is held there), draw was 41.7 ms; GAR-155 (f34ce4515) brought it to 5.0 ms",
+    "Parent and child bars overlap; their durations are never summed"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Targets",
+   "items": [
+    "Work: 11 ms or less on average, 14 ms or less at p99",
+    "p99 frame gap: 16.7 ms or less, VSync on"
+   ]
+  }
+ ]
+}

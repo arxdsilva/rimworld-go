@@ -1,0 +1,236 @@
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "Target event flow (ADR 0003)",
+  "output": "docs/architecture/event-flow.html",
+  "quality_profile": "showcase",
+  "locale": "en"
+ },
+ "stages": [
+  {
+   "label": "emitters"
+  },
+  {
+   "label": "queue"
+  },
+  {
+   "label": "dispatch"
+  },
+  {
+   "label": "state"
+  },
+  {
+   "label": "outputs"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "commands",
+   "type": "frontend",
+   "label": "commands",
+   "sublabel": "typed, from the UI",
+   "stage": 0,
+   "row": 0
+  },
+  {
+   "id": "timers",
+   "type": "database",
+   "label": "timer heap",
+   "sublabel": "(Due, Seq), saved",
+   "stage": 0,
+   "row": 1
+  },
+  {
+   "id": "systems",
+   "type": "backend",
+   "label": "systems",
+   "sublabel": "emit in schedule order",
+   "stage": 0,
+   "row": 2
+  },
+  {
+   "id": "columns",
+   "type": "messagebus",
+   "label": "Column[T] per kind",
+   "sublabel": "value payloads, reused",
+   "stage": 1,
+   "row": 0
+  },
+  {
+   "id": "spine",
+   "type": "messagebus",
+   "label": "spine",
+   "sublabel": "Ref{Kind, Idx, Seq, Cause}",
+   "stage": 1,
+   "row": 1
+  },
+  {
+   "id": "dispatch",
+   "type": "backend",
+   "label": "dispatch",
+   "sublabel": "exhaustive switch on Kind",
+   "stage": 2,
+   "row": 1
+  },
+  {
+   "id": "handlers",
+   "type": "backend",
+   "label": "handlers",
+   "sublabel": "static slice per kind",
+   "stage": 2,
+   "row": 2
+  },
+  {
+   "id": "ports",
+   "type": "security",
+   "label": "query ports",
+   "sublabel": "read-only, 8 methods or fewer",
+   "stage": 3,
+   "row": 2
+  },
+  {
+   "id": "stores",
+   "type": "database",
+   "label": "stores",
+   "sublabel": "each system's own state",
+   "stage": 3,
+   "row": 1
+  },
+  {
+   "id": "log",
+   "type": "external",
+   "label": "event log",
+   "sublabel": "derived, off by default",
+   "stage": 4,
+   "row": 0
+  },
+  {
+   "id": "replay",
+   "type": "external",
+   "label": "cmd/replay",
+   "sublabel": "first differing tick",
+   "stage": 4,
+   "row": 1
+  },
+  {
+   "id": "outbox",
+   "type": "frontend",
+   "label": "outbox",
+   "sublabel": "UI toasts and audio",
+   "stage": 4,
+   "row": 2
+  }
+ ],
+ "flows": [
+  {
+   "id": "f0",
+   "from": "commands",
+   "to": "columns",
+   "label": "command events",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f1",
+   "from": "timers",
+   "to": "columns",
+   "label": "due events"
+  },
+  {
+   "id": "f2",
+   "from": "systems",
+   "to": "spine",
+   "label": "emit (Seq)",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f3",
+   "from": "columns",
+   "to": "spine",
+   "label": "Idx per event"
+  },
+  {
+   "id": "f4",
+   "from": "spine",
+   "to": "dispatch",
+   "label": "Seq order",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f5",
+   "from": "dispatch",
+   "to": "handlers",
+   "label": "by Kind",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f6",
+   "from": "handlers",
+   "to": "stores",
+   "label": "own writes",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f7",
+   "from": "stores",
+   "to": "ports",
+   "label": "values, IDs"
+  },
+  {
+   "id": "f8",
+   "from": "ports",
+   "to": "handlers",
+   "label": "read-only",
+   "variant": "security"
+  },
+  {
+   "id": "f9",
+   "from": "spine",
+   "to": "log",
+   "label": "per tick",
+   "variant": "dashed"
+  },
+  {
+   "id": "f10",
+   "from": "log",
+   "to": "replay",
+   "label": "re-simulate",
+   "variant": "dashed"
+  },
+  {
+   "id": "f11",
+   "from": "dispatch",
+   "to": "outbox",
+   "label": "copy after tick",
+   "variant": "dashed"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "emerald",
+   "title": "The contract",
+   "items": [
+    "Events are past-tense facts; a request with one owner stays a typed command",
+    "An event emitted while draining goes to the tail of the same drain, generation + 1, with caps",
+    "Handlers never call handlers; they get the event, their query ports, an emitter and their own state"
+   ]
+  },
+  {
+   "dot": "amber",
+   "title": "Persistence",
+   "items": [
+    "The queue is empty at every tick's end: it is in neither the state hash nor the save",
+    "The timer heap is the one new save section",
+    "The event log is derived; replay input stays the save, the seed and the command stream"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Target design from docs/adr/0003-event-queue.md (uncommitted), not repository-backed",
+    "domain/sim/event exists at c27bd1512 only as a doc stub"
+   ]
+  }
+ ]
+}

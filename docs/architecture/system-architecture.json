@@ -1,0 +1,582 @@
+{
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "rimworld-go system architecture (today)",
+  "output": "docs/architecture/system-architecture.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "repository": {
+   "url": "git@github.com:arxdsilva/rimworld-go.git",
+   "link_mode": "local-only",
+   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
+  },
+  "legend": {
+   "entries": {
+    "external": {
+     "label": "cmd entry point (wiring only)"
+    },
+    "security": {
+     "label": "composition root"
+    },
+    "frontend": {
+     "label": "inbound adapter"
+    },
+    "backend": {
+     "label": "application"
+    },
+    "database": {
+     "label": "domain (headless, deterministic)"
+    },
+    "messagebus": {
+     "label": "outbound adapter"
+    },
+    "cloud": {
+     "label": "platform and pkg"
+    }
+   }
+  }
+ },
+ "components": [
+  {
+   "id": "cmd_game",
+   "type": "external",
+   "label": "cmd/game",
+   "sublabel": "main.go: Parse, then Run",
+   "pos": [
+    40,
+    200
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "cmd/game/main.go",
+     "line": 1,
+     "end_line": 22,
+     "label": "wiring-only main"
+    },
+    {
+     "path": "internal/arch/cmd_test.go",
+     "line": 16,
+     "end_line": 42,
+     "label": "cmd wiring-only rules"
+    }
+   ]
+  },
+  {
+   "id": "cmd_tools",
+   "type": "external",
+   "label": "cmd/* tools",
+   "sublabel": "mapgen, simulate, atlasgen",
+   "pos": [
+    40,
+    700
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "cmd/simulate/main.go",
+     "line": 1,
+     "end_line": 12,
+     "label": "simulate main"
+    },
+    {
+     "path": "cmd/mapgen/main.go",
+     "line": 1,
+     "end_line": 11,
+     "label": "mapgen main"
+    }
+   ]
+  },
+  {
+   "id": "cli_game",
+   "type": "frontend",
+   "label": "cli/game",
+   "sublabel": "flags to Options",
+   "pos": [
+    380,
+    40
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/game/doc.go",
+     "line": 1,
+     "end_line": 5,
+     "label": "cli/game package doc"
+    },
+    {
+     "path": "internal/adapters/inbound/cli/game/options.go",
+     "line": 53,
+     "label": "Parse"
+    }
+   ]
+  },
+  {
+   "id": "compose",
+   "type": "security",
+   "label": "compose/game",
+   "sublabel": "builds every concrete type",
+   "pos": [
+    380,
+    200
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/compose/game/doc.go",
+     "line": 1,
+     "end_line": 8,
+     "label": "composition root doc"
+    },
+    {
+     "path": "internal/compose/game/run.go",
+     "line": 20,
+     "end_line": 98,
+     "label": "Run builds AppConfig"
+    },
+    {
+     "path": "internal/compose/game/files.go",
+     "line": 32,
+     "end_line": 49,
+     "label": "saveHooks"
+    }
+   ]
+  },
+  {
+   "id": "cli_tools",
+   "type": "frontend",
+   "label": "cli/<tool>",
+   "sublabel": "one package per tool",
+   "pos": [
+    380,
+    700
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/simulate/run.go",
+     "line": 14,
+     "label": "simulate.Main"
+    },
+    {
+     "path": "internal/adapters/inbound/cli/mapgen/mapgen.go",
+     "line": 10,
+     "label": "mapgen.Main"
+    },
+    {
+     "path": "internal/adapters/inbound/cli/atlasgen/atlasgen.go",
+     "line": 25,
+     "label": "atlasgen.Main"
+    }
+   ]
+  },
+  {
+   "id": "app",
+   "type": "frontend",
+   "label": "ebiten App",
+   "sublabel": "Update, Draw, screens",
+   "pos": [
+    720,
+    40
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 859,
+     "end_line": 964,
+     "label": "App.Update"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 967,
+     "end_line": 1078,
+     "label": "App.Draw"
+    }
+   ]
+  },
+  {
+   "id": "renderer",
+   "type": "frontend",
+   "label": "ebiten Renderer",
+   "sublabel": "layers, camera, HUD",
+   "pos": [
+    720,
+    200
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/renderer.go",
+     "line": 1,
+     "end_line": 5,
+     "label": "never mutates the domain"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/renderer.go",
+     "line": 33,
+     "end_line": 48,
+     "label": "Simulation port"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/sim_ports.go",
+     "line": 14,
+     "end_line": 57,
+     "label": "small sim roles"
+    }
+   ]
+  },
+  {
+   "id": "subpkgs",
+   "type": "backend",
+   "label": "game/* sub-packages",
+   "sublabel": "58 packages, Host ports",
+   "pos": [
+    1060,
+    40
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/application/game/aqua/deps.go",
+     "line": 9,
+     "end_line": 16,
+     "label": "aqua.Host (sub-package-owned)"
+    },
+    {
+     "path": "internal/arch/solid_test.go",
+     "line": 75,
+     "end_line": 76,
+     "label": "sub-packages never import root"
+    }
+   ]
+  },
+  {
+   "id": "game",
+   "type": "backend",
+   "label": "application/game",
+   "sublabel": "Game: Step, Snapshot, World",
+   "pos": [
+    1060,
+    200
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/application/game/game.go",
+     "line": 1318,
+     "end_line": 1330,
+     "label": "Game.Step"
+    },
+    {
+     "path": "internal/application/game/phases.go",
+     "line": 41,
+     "end_line": 62,
+     "label": "runPhases"
+    }
+   ]
+  },
+  {
+   "id": "domain",
+   "type": "database",
+   "label": "domain",
+   "sublabel": "sim stores, commands, clock",
+   "pos": [
+    1400,
+    200
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/domain/sim/component/component.go",
+     "line": 25,
+     "end_line": 36,
+     "label": "component.Store[T]"
+    },
+    {
+     "path": "internal/domain/sim/command/command.go",
+     "line": 1,
+     "end_line": 5,
+     "label": "typed command catalog"
+    },
+    {
+     "path": "internal/arch/solid_test.go",
+     "line": 63,
+     "end_line": 69,
+     "label": "domain import bans"
+    }
+   ]
+  },
+  {
+   "id": "outbound",
+   "type": "messagebus",
+   "label": "outbound adapters",
+   "sublabel": "filesave, settings, audio",
+   "pos": [
+    720,
+    380
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/outbound/filesave/filesave.go",
+     "line": 67,
+     "end_line": 83,
+     "label": "Store.Save and write"
+    },
+    {
+     "path": "internal/adapters/outbound/settingsfile/settingsfile.go",
+     "line": 13,
+     "end_line": 14,
+     "label": "settingsfile imports"
+    },
+    {
+     "path": "internal/adapters/outbound/ebitenaudio/engine.go",
+     "line": 15,
+     "end_line": 16,
+     "label": "ebitenaudio imports"
+    }
+   ]
+  },
+  {
+   "id": "platform",
+   "type": "cloud",
+   "label": "platform",
+   "sublabel": "atomicfile, config, profiling",
+   "pos": [
+    720,
+    540
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "internal/platform/atomicfile/atomicfile.go",
+     "line": 13,
+     "end_line": 45,
+     "label": "atomicfile.Write"
+    },
+    {
+     "path": "internal/platform/config/doc.go",
+     "line": 1,
+     "end_line": 5,
+     "label": "config package doc"
+    },
+    {
+     "path": "internal/platform/profiling/profiling.go",
+     "line": 14,
+     "label": "profiling.Start"
+    }
+   ]
+  },
+  {
+   "id": "pkg",
+   "type": "cloud",
+   "label": "pkg",
+   "sublabel": "randx and other stdlib helpers",
+   "pos": [
+    1400,
+    380
+   ],
+   "size": [
+    180,
+    76
+   ],
+   "sources": [
+    {
+     "path": "pkg/randx/randx.go",
+     "line": 1,
+     "end_line": 4,
+     "label": "seeded explicit RNG"
+    },
+    {
+     "path": "internal/arch/solid_test.go",
+     "line": 71,
+     "label": "pkg is stdlib only"
+    }
+   ]
+  }
+ ],
+ "boundaries": [
+  {
+   "kind": "region",
+   "label": "cmd (wiring only)",
+   "wraps": [
+    "cmd_game",
+    "cmd_tools"
+   ]
+  },
+  {
+   "kind": "region",
+   "label": "inbound ebiten",
+   "wraps": [
+    "app",
+    "renderer"
+   ]
+  },
+  {
+   "kind": "region",
+   "label": "application",
+   "wraps": [
+    "subpkgs",
+    "game"
+   ]
+  }
+ ],
+ "connections": [
+  {
+   "id": "main_parse",
+   "from": "cmd_game",
+   "to": "cli_game",
+   "label": "Parse(os.Args)"
+  },
+  {
+   "id": "main_run",
+   "from": "cmd_game",
+   "to": "compose",
+   "label": "Run(opts, Screen)",
+   "variant": "emphasis"
+  },
+  {
+   "id": "tools_main",
+   "from": "cmd_tools",
+   "to": "cli_tools",
+   "label": "Main / Run"
+  },
+  {
+   "id": "compose_app",
+   "from": "compose",
+   "to": "app",
+   "label": "NewApp(AppConfig)",
+   "variant": "emphasis"
+  },
+  {
+   "id": "compose_out",
+   "from": "compose",
+   "to": "outbound",
+   "label": "SaveHooks"
+  },
+  {
+   "id": "app_renderer",
+   "from": "app",
+   "to": "renderer",
+   "label": "Draw(dst)"
+  },
+  {
+   "id": "renderer_game",
+   "from": "renderer",
+   "to": "game",
+   "label": "Simulation port",
+   "variant": "emphasis"
+  },
+  {
+   "id": "game_subpkgs",
+   "from": "game",
+   "to": "subpkgs",
+   "label": "implements Host"
+  },
+  {
+   "id": "game_domain",
+   "from": "game",
+   "to": "domain",
+   "label": "stores, commands",
+   "variant": "emphasis"
+  },
+  {
+   "id": "subpkgs_domain",
+   "from": "subpkgs",
+   "to": "domain",
+   "label": "domain types"
+  },
+  {
+   "id": "out_game",
+   "from": "outbound",
+   "to": "game",
+   "label": "g.Save(w)"
+  },
+  {
+   "id": "out_platform",
+   "from": "outbound",
+   "to": "platform",
+   "label": "atomicfile.Write"
+  },
+  {
+   "id": "domain_pkg",
+   "from": "domain",
+   "to": "pkg",
+   "label": "randx"
+  },
+  {
+   "id": "tools_game",
+   "from": "cli_tools",
+   "to": "game",
+   "label": "headless runs",
+   "variant": "dashed"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "Dependencies point inward",
+   "items": [
+    "Every arrow is an import: adapters to application to domain",
+    "internal/arch/solid_test.go fails the build on a reversed edge",
+    "Domain, application and pkg use only the standard library"
+   ]
+  },
+  {
+   "dot": "violet",
+   "title": "Consumer-owned ports",
+   "items": [
+    "The Renderer owns Simulation, eight small roles in sim_ports.go",
+    "Each game sub-package owns its Host; the root implements it",
+    "Only cmd imports compose/game; compose builds the concrete types"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Pinned to commit c27bd1512 (local-only)",
+    "compose/game/run.go and cli/game/options.go have uncommitted edits; cited at the commit",
+    "Diagram 14 (target-architecture) adds the Part E packages"
+   ]
+  }
+ ]
+}

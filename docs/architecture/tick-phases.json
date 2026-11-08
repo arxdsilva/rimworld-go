@@ -1,0 +1,456 @@
+{
+ "schema_version": 2,
+ "diagram_type": "workflow",
+ "meta": {
+  "title": "Tick phases: 15 in a fixed order, per map, every tick",
+  "output": "docs/architecture/tick-phases.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "repository": {
+   "url": "git@github.com:arxdsilva/rimworld-go.git",
+   "link_mode": "local-only",
+   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
+  }
+ },
+ "lanes": [
+  {
+   "id": "order",
+   "label": "Step order, per map (read down each column)"
+  }
+ ],
+ "mainPath": [
+  "commands",
+  "plants",
+  "power",
+  "climate",
+  "medical",
+  "needs",
+  "ai",
+  "jobs",
+  "social",
+  "animals",
+  "threats",
+  "incidents",
+  "worldp",
+  "weather",
+  "movement"
+ ],
+ "nodes": [
+  {
+   "id": "commands",
+   "lane": "order",
+   "col": 0,
+   "type": "frontend",
+   "label": "commands",
+   "sublabel": "every tick: queued commands",
+   "sources": [
+    {
+     "path": "internal/application/game/tick.go",
+     "line": 37,
+     "end_line": 52,
+     "label": "phaseCommands"
+    },
+    {
+     "path": "internal/application/game/phases.go",
+     "line": 7,
+     "label": "PhaseCommands"
+    }
+   ],
+   "tag": "first",
+   "yOffset": -110
+  },
+  {
+   "id": "plants",
+   "lane": "order",
+   "col": 0,
+   "type": "backend",
+   "label": "plants",
+   "sublabel": "every tick: grass, a few chunks",
+   "sources": [
+    {
+     "path": "internal/application/game/world.go",
+     "line": 218,
+     "end_line": 221,
+     "label": "phasePlants"
+    }
+   ],
+   "yOffset": 0
+  },
+  {
+   "id": "power",
+   "lane": "order",
+   "col": 0,
+   "type": "backend",
+   "label": "power",
+   "sublabel": "every 50 ticks, or a flare's end",
+   "sources": [
+    {
+     "path": "internal/application/game/power.go",
+     "line": 196,
+     "end_line": 204,
+     "label": "phasePower"
+    },
+    {
+     "path": "internal/application/game/phases.go",
+     "line": 9,
+     "label": "PLAY-021: before climate"
+    }
+   ],
+   "tag": "before climate",
+   "yOffset": 110
+  },
+  {
+   "id": "climate",
+   "lane": "order",
+   "col": 1,
+   "type": "backend",
+   "label": "climate",
+   "sublabel": "heat every 120, the rest every 250",
+   "sources": [
+    {
+     "path": "internal/application/game/climate.go",
+     "line": 183,
+     "end_line": 198,
+     "label": "phaseClimate"
+    }
+   ],
+   "yOffset": -110
+  },
+  {
+   "id": "medical",
+   "lane": "order",
+   "col": 1,
+   "type": "backend",
+   "label": "medical",
+   "sublabel": "hourly: bleeding, infection",
+   "sources": [
+    {
+     "path": "internal/application/game/bleed.go",
+     "line": 23,
+     "end_line": 40,
+     "label": "phaseMedical"
+    },
+    {
+     "path": "internal/application/game/phases.go",
+     "line": 11,
+     "label": "MED-01 hourly"
+    }
+   ],
+   "tag": "patients index",
+   "yOffset": 0
+  },
+  {
+   "id": "needs",
+   "lane": "order",
+   "col": 1,
+   "type": "backend",
+   "label": "needs",
+   "sublabel": "every tick, every pawn",
+   "sources": [
+    {
+     "path": "internal/application/game/tick.go",
+     "line": 359,
+     "label": "phaseNeeds"
+    }
+   ],
+   "yOffset": 110
+  },
+  {
+   "id": "ai",
+   "lane": "order",
+   "col": 2,
+   "type": "backend",
+   "label": "ai",
+   "sublabel": "every tick: clear done jobs, pick",
+   "sources": [
+    {
+     "path": "internal/application/game/tick.go",
+     "line": 475,
+     "label": "phaseAI"
+    },
+    {
+     "path": "internal/application/game/tick.go",
+     "line": 500,
+     "end_line": 515,
+     "label": "clears completed jobs"
+    }
+   ],
+   "tag": "before jobs",
+   "yOffset": -110
+  },
+  {
+   "id": "jobs",
+   "lane": "order",
+   "col": 2,
+   "type": "backend",
+   "label": "jobs",
+   "sublabel": "every tick: advance job steps",
+   "sources": [
+    {
+     "path": "internal/application/game/tick.go",
+     "line": 1099,
+     "label": "phaseJobs"
+    }
+   ],
+   "yOffset": 0
+  },
+  {
+   "id": "social",
+   "lane": "order",
+   "col": 2,
+   "type": "backend",
+   "label": "social",
+   "sublabel": "due talks; daily upkeep",
+   "sources": [
+    {
+     "path": "internal/application/game/social.go",
+     "line": 36,
+     "end_line": 48,
+     "label": "phaseSocial"
+    },
+    {
+     "path": "internal/application/game/phases.go",
+     "line": 15,
+     "label": "ENG-003: after jobs"
+    }
+   ],
+   "tag": "after jobs",
+   "yOffset": 110
+  },
+  {
+   "id": "animals",
+   "lane": "order",
+   "col": 3,
+   "type": "backend",
+   "label": "animals",
+   "sublabel": "reflexes each tick, decide by bucket",
+   "sources": [
+    {
+     "path": "internal/application/game/animals.go",
+     "line": 83,
+     "end_line": 125,
+     "label": "phaseAnimals"
+    }
+   ],
+   "tag": "before movement",
+   "yOffset": -110
+  },
+  {
+   "id": "threats",
+   "lane": "order",
+   "col": 3,
+   "type": "backend",
+   "label": "threats",
+   "sublabel": "storyteller at nextThreat, turrets",
+   "sources": [
+    {
+     "path": "internal/application/game/raids.go",
+     "line": 58,
+     "end_line": 78,
+     "label": "phaseThreats"
+    }
+   ],
+   "yOffset": 0
+  },
+  {
+   "id": "incidents",
+   "lane": "order",
+   "col": 3,
+   "type": "backend",
+   "label": "incidents",
+   "sublabel": "herds; nature event when due",
+   "sources": [
+    {
+     "path": "internal/application/game/incidents.go",
+     "line": 85,
+     "end_line": 95,
+     "label": "phaseIncidents"
+    }
+   ],
+   "tag": "after animals",
+   "yOffset": 110
+  },
+  {
+   "id": "worldp",
+   "lane": "order",
+   "col": 4,
+   "type": "backend",
+   "label": "world",
+   "sublabel": "visitors; caravans every FormCheck",
+   "sources": [
+    {
+     "path": "internal/application/game/world_state.go",
+     "line": 157,
+     "end_line": 172,
+     "label": "phaseWorld"
+    },
+    {
+     "path": "internal/application/game/phases.go",
+     "line": 19,
+     "label": "ENG-003: after incidents"
+    }
+   ],
+   "tag": "after incidents",
+   "yOffset": -110
+  },
+  {
+   "id": "weather",
+   "lane": "order",
+   "col": 4,
+   "type": "backend",
+   "label": "weather",
+   "sublabel": "new block every 15,000; ease 250",
+   "sources": [
+    {
+     "path": "internal/application/game/weather.go",
+     "line": 58,
+     "end_line": 79,
+     "label": "phaseWeather"
+    },
+    {
+     "path": "internal/application/game/weather.go",
+     "line": 25,
+     "label": "weatherBlockTicks"
+    }
+   ],
+   "yOffset": 0
+  },
+  {
+   "id": "movement",
+   "lane": "order",
+   "col": 4,
+   "type": "database",
+   "label": "movement",
+   "sublabel": "every tick, ascending entity ID",
+   "sources": [
+    {
+     "path": "internal/application/game/tick.go",
+     "line": 1562,
+     "end_line": 1584,
+     "label": "phaseMovement"
+    }
+   ],
+   "tag": "last",
+   "yOffset": 110
+  }
+ ],
+ "edges": [
+  {
+   "id": "e_commands_plants",
+   "from": "commands",
+   "to": "plants",
+   "role": "main"
+  },
+  {
+   "id": "e_plants_power",
+   "from": "plants",
+   "to": "power",
+   "role": "main"
+  },
+  {
+   "id": "e_power_climate",
+   "from": "power",
+   "to": "climate",
+   "role": "main",
+   "label": "PLAY-021"
+  },
+  {
+   "id": "e_climate_medical",
+   "from": "climate",
+   "to": "medical",
+   "role": "main"
+  },
+  {
+   "id": "e_medical_needs",
+   "from": "medical",
+   "to": "needs",
+   "role": "main",
+   "label": "patients first"
+  },
+  {
+   "id": "e_needs_ai",
+   "from": "needs",
+   "to": "ai",
+   "role": "main"
+  },
+  {
+   "id": "e_ai_jobs",
+   "from": "ai",
+   "to": "jobs",
+   "role": "main",
+   "label": "jobs cleared"
+  },
+  {
+   "id": "e_jobs_social",
+   "from": "jobs",
+   "to": "social",
+   "role": "main",
+   "label": "ENG-003"
+  },
+  {
+   "id": "e_social_animals",
+   "from": "social",
+   "to": "animals",
+   "role": "main"
+  },
+  {
+   "id": "e_animals_threats",
+   "from": "animals",
+   "to": "threats",
+   "role": "main"
+  },
+  {
+   "id": "e_threats_incidents",
+   "from": "threats",
+   "to": "incidents",
+   "role": "main"
+  },
+  {
+   "id": "e_incidents_worldp",
+   "from": "incidents",
+   "to": "worldp",
+   "role": "main",
+   "label": "ENG-003"
+  },
+  {
+   "id": "e_worldp_weather",
+   "from": "worldp",
+   "to": "weather",
+   "role": "main"
+  },
+  {
+   "id": "e_weather_movement",
+   "from": "weather",
+   "to": "movement",
+   "role": "main"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "How a tick runs",
+   "items": [
+    "Game.Step bumps viewGen, runs runPhases on each map, then advances the clock",
+    "runPhases is a fixed array of 15 method values; a PhaseObserver may time each",
+    "Most phases gate their own work on now % interval inside the body"
+   ]
+  },
+  {
+   "dot": "amber",
+   "title": "Order constraints live in comments",
+   "items": [
+    "power before climate; medical before needs; AI before jobs; jobs before social",
+    "animals before movement; incidents after animals; world after incidents; movement last",
+    "Target (ADR 0001, docs/adr, uncommitted): each becomes an After/Before edge with a golden"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Pinned to commit c27bd1512 (local-only)",
+    "Intervals: powerInterval 50, EqualiseInterval 120, climateInterval 250, TicksPerHour 2,500"
+   ]
+  }
+ ]
+}

@@ -90,7 +90,9 @@ Use Go benchmarks, `pprof`, trace, and long-run heap checks.
 
 Parallelize only pure or snapshot-based work.
 
-Authoritative mutation remains single-owner and ordered.
+Authoritative mutation remains single-owner and ordered. A parallel stage (ADR 0002) reads a frozen view, runs on the one injected `Pool` (never `go` in sim code), writes only to per-task result slices (pad per-worker counters to 128 bytes), derives its RNG per task from (seed, tick, stage, entity), and is kept only if its A/B gains 0.2 ms or more in its worst probe cell; it ships with `TestParallelEqualsSerial` at pool sizes 1, 2 and 8.
+
+Frame-rate work is measured with `make fps-matrix` (VSync on, never off) against the GAR targets.
 
 ## Performance regression rule
 

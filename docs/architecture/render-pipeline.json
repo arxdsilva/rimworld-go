@@ -1,0 +1,582 @@
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "Render pipeline today: layers in draw order",
+  "output": "docs/architecture/render-pipeline.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "repository": {
+   "url": "git@github.com:arxdsilva/rimworld-go.git",
+   "link_mode": "local-only",
+   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
+  },
+  "legend": {
+   "entries": {
+    "default": {
+     "label": "next layer, same target (dst)"
+    },
+    "emphasis": {
+     "label": "hand-off to a batch, image or the screen"
+    }
+   }
+  }
+ },
+ "stages": [
+  {
+   "label": "ground"
+  },
+  {
+   "label": "floors and marks"
+  },
+  {
+   "label": "objects"
+  },
+  {
+   "label": "effects and fog"
+  },
+  {
+   "label": "compose"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "live",
+   "type": "backend",
+   "label": "1 ground, live tier",
+   "sublabel": "one lit quad per visible tile",
+   "stage": 0,
+   "row": 0,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 392,
+     "end_line": 405,
+     "label": "drawTerrainArt"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/light/light.go",
+     "line": 1060,
+     "end_line": 1064,
+     "label": "SyncUniforms, then a draw"
+    }
+   ]
+  },
+  {
+   "id": "water",
+   "type": "backend",
+   "label": "1b water tiles",
+   "sublabel": "water shader, one draw per tile",
+   "stage": 0,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/base.go",
+     "line": 157,
+     "end_line": 159,
+     "label": "water branch"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/env/water_draw.go",
+     "line": 148,
+     "label": "DrawTrianglesShader32"
+    }
+   ]
+  },
+  {
+   "id": "lod",
+   "type": "backend",
+   "label": "1c chunk ground",
+   "sublabel": "one batch per baked chunk",
+   "stage": 0,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 100,
+     "end_line": 105,
+     "label": "LOD branch"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/lod.go",
+     "line": 459,
+     "end_line": 487,
+     "label": "drawGroundLOD"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/lod.go",
+     "line": 123,
+     "label": "BakeBudget 24"
+    }
+   ]
+  },
+  {
+   "id": "tufts",
+   "type": "backend",
+   "label": "4 grass tufts",
+   "sublabel": "one grass batch",
+   "stage": 0,
+   "row": 3,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 411,
+     "end_line": 425,
+     "label": "drawTufts"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/env/grass_batch.go",
+     "line": 608,
+     "end_line": 613,
+     "label": "single batch"
+    }
+   ]
+  },
+  {
+   "id": "cover",
+   "type": "backend",
+   "label": "5 ground cover",
+   "sublabel": "snow veil per chunk, decals",
+   "stage": 1,
+   "row": 0,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 108,
+     "label": "DrawGroundCover"
+    }
+   ]
+  },
+  {
+   "id": "floors",
+   "type": "backend",
+   "label": "6 floors, conduits",
+   "sublabel": "lit per floor; stains batched",
+   "stage": 1,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 110,
+     "end_line": 113,
+     "label": "foundation, floors, conduits"
+    }
+   ]
+  },
+  {
+   "id": "zones",
+   "type": "backend",
+   "label": "7 zones and plans",
+   "sublabel": "one fill batch per zone kind",
+   "stage": 1,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 115,
+     "end_line": 121,
+     "label": "zones, plan, snow-clear"
+    }
+   ]
+  },
+  {
+   "id": "prints",
+   "type": "backend",
+   "label": "8 blueprints",
+   "sublabel": "one sprite draw each",
+   "stage": 1,
+   "row": 3,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 122,
+     "end_line": 148,
+     "label": "blueprints, carpets, frames"
+    }
+   ]
+  },
+  {
+   "id": "shadows",
+   "type": "backend",
+   "label": "9 shadows",
+   "sublabel": "one TriBatch of blob quads",
+   "stage": 2,
+   "row": 0,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 150,
+     "end_line": 154,
+     "label": "shadows"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/light/shadow.go",
+     "line": 180,
+     "end_line": 210,
+     "label": "blob batch"
+    }
+   ]
+  },
+  {
+   "id": "objects",
+   "type": "backend",
+   "label": "11 objects, sorted",
+   "sublabel": "lit draw per sprite layer",
+   "stage": 2,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 167,
+     "end_line": 256,
+     "label": "sort, then runDraw"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/objects.go",
+     "line": 20,
+     "end_line": 23,
+     "label": "crops flushed first"
+    }
+   ]
+  },
+  {
+   "id": "crops",
+   "type": "backend",
+   "label": "crops",
+   "sublabel": "batched, flushed at interleaves",
+   "stage": 2,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 257,
+     "label": "FlushCrops"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/env/crop_batch.go",
+     "line": 827,
+     "end_line": 836,
+     "label": "DrawLitBatch"
+    }
+   ]
+  },
+  {
+   "id": "fires",
+   "type": "backend",
+   "label": "13 glow and fires",
+   "sublabel": "one image draw per flame",
+   "stage": 2,
+   "row": 3,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 263,
+     "end_line": 267,
+     "label": "glow, fires"
+    }
+   ]
+  },
+  {
+   "id": "labels",
+   "type": "frontend",
+   "label": "14 labels and bars",
+   "sublabel": "text and vector, per call",
+   "stage": 3,
+   "row": 0,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 268,
+     "end_line": 286,
+     "label": "labels, bars, particles"
+    }
+   ]
+  },
+  {
+   "id": "weather",
+   "type": "frontend",
+   "label": "15 weather",
+   "sublabel": "up to 3 full-screen fills",
+   "stage": 3,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 287,
+     "label": "DrawWeather"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/env/environment.go",
+     "line": 996,
+     "end_line": 1007,
+     "label": "three FillRects"
+    }
+   ]
+  },
+  {
+   "id": "lightning",
+   "type": "frontend",
+   "label": "16 lightning",
+   "sublabel": "a full-screen fill per flash",
+   "stage": 3,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 289,
+     "label": "DrawLightning"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/env/environment.go",
+     "line": 1078,
+     "label": "FillRect"
+    }
+   ]
+  },
+  {
+   "id": "fog",
+   "type": "frontend",
+   "label": "17 fog",
+   "sublabel": "one image draw per fog chunk",
+   "stage": 3,
+   "row": 3,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 290,
+     "end_line": 292,
+     "label": "fog layer"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/render/overlay/fog_draw.go",
+     "line": 116,
+     "end_line": 164,
+     "label": "DrawFogLayer"
+    }
+   ]
+  },
+  {
+   "id": "marks",
+   "type": "frontend",
+   "label": "18 marks and names",
+   "sublabel": "one sprite or text per mark",
+   "stage": 3,
+   "row": 4,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+     "line": 293,
+     "end_line": 340,
+     "label": "floaters to brackets"
+    }
+   ]
+  },
+  {
+   "id": "overlays",
+   "type": "frontend",
+   "label": "19 map overlays",
+   "sublabel": "roof, fertility, power",
+   "stage": 4,
+   "row": 0,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/renderer.go",
+     "line": 515,
+     "end_line": 521,
+     "label": "post-world overlays"
+    }
+   ]
+  },
+  {
+   "id": "composite",
+   "type": "security",
+   "label": "20 composite",
+   "sublabel": "full-screen BlendCopy if scaled",
+   "stage": 4,
+   "row": 1,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/gfx/worldpass.go",
+     "line": 113,
+     "end_line": 117,
+     "label": "CompositeWorld"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 1028,
+     "end_line": 1032,
+     "label": "composite, then Flush"
+    }
+   ]
+  },
+  {
+   "id": "hud",
+   "type": "frontend",
+   "label": "colony HUD",
+   "sublabel": "bars, tabs, windows",
+   "stage": 4,
+   "row": 2,
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/colony_compose.go",
+     "line": 172,
+     "end_line": 196,
+     "label": "drawColonyHUD"
+    },
+    {
+     "path": "internal/adapters/inbound/ebiten/app.go",
+     "line": 1040,
+     "label": "called from Draw"
+    }
+   ]
+  }
+ ],
+ "flows": [
+  {
+   "id": "f0",
+   "from": "live",
+   "to": "water",
+   "label": "same loop"
+  },
+  {
+   "id": "f1",
+   "from": "live",
+   "to": "tufts",
+   "label": "dst"
+  },
+  {
+   "id": "f2",
+   "from": "lod",
+   "to": "tufts",
+   "label": "chunk tier"
+  },
+  {
+   "id": "f3",
+   "from": "tufts",
+   "to": "cover",
+   "label": "dst"
+  },
+  {
+   "id": "f4",
+   "from": "cover",
+   "to": "floors",
+   "label": "dst"
+  },
+  {
+   "id": "f5",
+   "from": "floors",
+   "to": "zones",
+   "label": "dst"
+  },
+  {
+   "id": "f6",
+   "from": "zones",
+   "to": "prints",
+   "label": "dst"
+  },
+  {
+   "id": "f7",
+   "from": "prints",
+   "to": "shadows",
+   "label": "dst"
+  },
+  {
+   "id": "f8",
+   "from": "shadows",
+   "to": "objects",
+   "label": "dst"
+  },
+  {
+   "id": "f9",
+   "from": "objects",
+   "to": "crops",
+   "label": "crop verts",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f10",
+   "from": "crops",
+   "to": "fires",
+   "label": "dst"
+  },
+  {
+   "id": "f11",
+   "from": "fires",
+   "to": "labels",
+   "label": "dst"
+  },
+  {
+   "id": "f12",
+   "from": "labels",
+   "to": "weather",
+   "label": "dst"
+  },
+  {
+   "id": "f13",
+   "from": "weather",
+   "to": "lightning",
+   "label": "dst"
+  },
+  {
+   "id": "f14",
+   "from": "lightning",
+   "to": "fog",
+   "label": "dst"
+  },
+  {
+   "id": "f15",
+   "from": "fog",
+   "to": "marks",
+   "label": "dst"
+  },
+  {
+   "id": "f16",
+   "from": "marks",
+   "to": "overlays",
+   "label": "dst"
+  },
+  {
+   "id": "f17",
+   "from": "overlays",
+   "to": "composite",
+   "label": "world image",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f18",
+   "from": "composite",
+   "to": "hud",
+   "label": "screen",
+   "variant": "emphasis"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "Order",
+   "items": [
+    "DrawArt draws layers 1 to 18 into one target (dst), in a fixed order",
+    "Numbers follow the GAR render inventory; the tier picks live tiles or chunk bakes",
+    "Crops are batched but flushed before any non-plant object, so they split the object run"
+   ]
+  },
+  {
+   "dot": "rose",
+   "title": "Where draws multiply",
+   "items": [
+    "Live ground and water issue one draw per visible tile; fog one per chunk",
+    "Each lit draw syncs its uniforms first",
+    "Weather adds up to three full-screen fills at the backing resolution"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Pinned to commit c27bd1512 (local-only)",
+    "Measured draw: 15.5 ms at zoom 0.8, 41.7 ms at zoom 0.1 (frame-budget)",
+    "Target: render-cmdlist (ADR 0004)"
+   ]
+  }
+ ]
+}

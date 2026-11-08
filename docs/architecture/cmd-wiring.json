@@ -1,0 +1,664 @@
+{
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "cmd wiring: every main.go is wiring only",
+  "output": "docs/architecture/cmd-wiring.html",
+  "quality_profile": "showcase",
+  "locale": "en",
+  "repository": {
+   "url": "git@github.com:arxdsilva/rimworld-go.git",
+   "link_mode": "local-only",
+   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
+  },
+  "legend": {
+   "entries": {
+    "external": {
+     "label": "cmd/*/main.go"
+    },
+    "frontend": {
+     "label": "inbound adapter"
+    },
+    "security": {
+     "label": "composition root"
+    },
+    "cloud": {
+     "label": "platform"
+    }
+   }
+  }
+ },
+ "components": [
+  {
+   "id": "cmd_game",
+   "type": "external",
+   "label": "cmd/game",
+   "sublabel": "22 lines: Parse, then Run",
+   "pos": [
+    40,
+    172
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/game/main.go",
+     "line": 1,
+     "end_line": 22,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_game",
+   "type": "frontend",
+   "label": "cli/game",
+   "sublabel": "flags to Options, exit codes",
+   "pos": [
+    340,
+    40
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/game/doc.go",
+     "line": 1,
+     "end_line": 5,
+     "label": "package doc"
+    },
+    {
+     "path": "internal/adapters/inbound/cli/game/options.go",
+     "line": 53,
+     "label": "Parse"
+    }
+   ]
+  },
+  {
+   "id": "compose",
+   "type": "security",
+   "label": "compose/game",
+   "sublabel": "composition root: Run",
+   "pos": [
+    340,
+    128
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/compose/game/doc.go",
+     "line": 1,
+     "end_line": 8,
+     "label": "composition root doc"
+    },
+    {
+     "path": "internal/compose/game/run.go",
+     "line": 20,
+     "end_line": 98,
+     "label": "Run"
+    }
+   ]
+  },
+  {
+   "id": "display",
+   "type": "frontend",
+   "label": "ebiten/display",
+   "sublabel": "Screen.Run: SetTPS, RunGame",
+   "pos": [
+    340,
+    216
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/ebiten/display/display.go",
+     "line": 72,
+     "end_line": 85,
+     "label": "Screen.Run"
+    }
+   ]
+  },
+  {
+   "id": "buildinfo",
+   "type": "cloud",
+   "label": "platform/buildinfo",
+   "sublabel": "Version, set by -ldflags",
+   "pos": [
+    340,
+    304
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/platform/buildinfo/buildinfo.go",
+     "line": 3,
+     "end_line": 5,
+     "label": "Version"
+    }
+   ]
+  },
+  {
+   "id": "cmd_atlasgen",
+   "type": "external",
+   "label": "cmd/atlasgen",
+   "sublabel": "main.go, 11 lines",
+   "pos": [
+    40,
+    420
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/atlasgen/main.go",
+     "line": 1,
+     "end_line": 11,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_atlasgen",
+   "type": "frontend",
+   "label": "cli/atlasgen",
+   "sublabel": "imports pkg/flatyaml",
+   "pos": [
+    340,
+    420
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/atlasgen/atlasgen.go",
+     "line": 19,
+     "end_line": 25,
+     "label": "imports and Main"
+    }
+   ]
+  },
+  {
+   "id": "cmd_audiogen",
+   "type": "external",
+   "label": "cmd/audiogen",
+   "sublabel": "main.go, 13 lines",
+   "pos": [
+    40,
+    504
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/audiogen/main.go",
+     "line": 1,
+     "end_line": 13,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_audiogen",
+   "type": "frontend",
+   "label": "cli/audiogen",
+   "sublabel": "pkg audiomanifest, sfxsynth",
+   "pos": [
+    340,
+    504
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/audiogen/run.go",
+     "line": 17,
+     "end_line": 18,
+     "label": "imports"
+    },
+    {
+     "path": "internal/adapters/inbound/cli/audiogen/run.go",
+     "line": 66,
+     "label": "Run"
+    }
+   ]
+  },
+  {
+   "id": "cmd_benchmark",
+   "type": "external",
+   "label": "cmd/benchmark",
+   "sublabel": "main.go, 12 lines",
+   "pos": [
+    40,
+    588
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/benchmark/main.go",
+     "line": 1,
+     "end_line": 12,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_benchmark",
+   "type": "frontend",
+   "label": "cli/benchmark",
+   "sublabel": "application game, scenario",
+   "pos": [
+    340,
+    588
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/benchmark/run.go",
+     "line": 10,
+     "end_line": 16,
+     "label": "imports and Main"
+    }
+   ]
+  },
+  {
+   "id": "cmd_mapgen",
+   "type": "external",
+   "label": "cmd/mapgen",
+   "sublabel": "main.go, 11 lines",
+   "pos": [
+    40,
+    672
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/mapgen/main.go",
+     "line": 1,
+     "end_line": 11,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_mapgen",
+   "type": "frontend",
+   "label": "cli/mapgen",
+   "sublabel": "domain/world mapgen, planet",
+   "pos": [
+    340,
+    672
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/mapgen/run.go",
+     "line": 15,
+     "end_line": 20,
+     "label": "domain imports"
+    },
+    {
+     "path": "internal/adapters/inbound/cli/mapgen/mapgen.go",
+     "line": 10,
+     "label": "Main"
+    }
+   ]
+  },
+  {
+   "id": "cmd_normalgen",
+   "type": "external",
+   "label": "cmd/normalgen",
+   "sublabel": "main.go, 11 lines",
+   "pos": [
+    40,
+    756
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/normalgen/main.go",
+     "line": 1,
+     "end_line": 11,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_normalgen",
+   "type": "frontend",
+   "label": "cli/normalgen",
+   "sublabel": "pkg flatyaml, spritenormals",
+   "pos": [
+    340,
+    756
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/normalgen/normalgen.go",
+     "line": 19,
+     "end_line": 24,
+     "label": "imports and Main"
+    }
+   ]
+  },
+  {
+   "id": "cmd_rambudget",
+   "type": "external",
+   "label": "cmd/rambudget",
+   "sublabel": "main.go, 12 lines",
+   "pos": [
+    670,
+    420
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/rambudget/main.go",
+     "line": 1,
+     "end_line": 12,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_rambudget",
+   "type": "frontend",
+   "label": "cli/rambudget",
+   "sublabel": "platform/sysinfo",
+   "pos": [
+    960,
+    420
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/rambudget/run.go",
+     "line": 7,
+     "end_line": 12,
+     "label": "import and Main"
+    }
+   ]
+  },
+  {
+   "id": "cmd_sfxgen",
+   "type": "external",
+   "label": "cmd/sfxgen",
+   "sublabel": "main.go, 13 lines",
+   "pos": [
+    670,
+    504
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/sfxgen/main.go",
+     "line": 1,
+     "end_line": 13,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_sfxgen",
+   "type": "frontend",
+   "label": "cli/sfxgen",
+   "sublabel": "outbound/sfxapi",
+   "pos": [
+    960,
+    504
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/sfxgen/run.go",
+     "line": 12,
+     "label": "imports sfxapi"
+    },
+    {
+     "path": "internal/adapters/inbound/cli/sfxgen/run.go",
+     "line": 59,
+     "label": "Run"
+    }
+   ]
+  },
+  {
+   "id": "cmd_simulate",
+   "type": "external",
+   "label": "cmd/simulate",
+   "sublabel": "main.go, 12 lines",
+   "pos": [
+    670,
+    588
+   ],
+   "size": [
+    180,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/simulate/main.go",
+     "line": 1,
+     "end_line": 12,
+     "label": "main"
+    }
+   ]
+  },
+  {
+   "id": "cli_simulate",
+   "type": "frontend",
+   "label": "cli/simulate",
+   "sublabel": "application/game, headless",
+   "pos": [
+    960,
+    588
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "internal/adapters/inbound/cli/simulate/run.go",
+     "line": 9,
+     "end_line": 14,
+     "label": "import and Main"
+    }
+   ]
+  },
+  {
+   "id": "cmd_stubs",
+   "type": "external",
+   "label": "cmd/replay, contentlint",
+   "sublabel": "TODO stubs, import nothing",
+   "pos": [
+    670,
+    672
+   ],
+   "size": [
+    210,
+    64
+   ],
+   "sources": [
+    {
+     "path": "cmd/replay/main.go",
+     "line": 1,
+     "end_line": 5,
+     "label": "replay stub"
+    },
+    {
+     "path": "cmd/contentlint/main.go",
+     "line": 1,
+     "end_line": 5,
+     "label": "contentlint stub"
+    }
+   ]
+  }
+ ],
+ "boundaries": [
+  {
+   "kind": "region",
+   "label": "the game client",
+   "wraps": [
+    "cmd_game",
+    "cli_game",
+    "compose",
+    "display",
+    "buildinfo"
+   ]
+  }
+ ],
+ "connections": [
+  {
+   "id": "g_parse",
+   "from": "cmd_game",
+   "to": "cli_game",
+   "label": "Parse(os.Args)"
+  },
+  {
+   "id": "g_run",
+   "from": "cmd_game",
+   "to": "compose",
+   "label": "Run(opts)",
+   "variant": "emphasis"
+  },
+  {
+   "id": "g_screen",
+   "from": "cmd_game",
+   "to": "display",
+   "label": "Screen{}"
+  },
+  {
+   "id": "g_version",
+   "from": "cmd_game",
+   "to": "buildinfo",
+   "label": "Version"
+  },
+  {
+   "id": "e_atlasgen",
+   "from": "cmd_atlasgen",
+   "to": "cli_atlasgen",
+   "label": "Main(args)"
+  },
+  {
+   "id": "e_audiogen",
+   "from": "cmd_audiogen",
+   "to": "cli_audiogen",
+   "label": "Run(args)"
+  },
+  {
+   "id": "e_benchmark",
+   "from": "cmd_benchmark",
+   "to": "cli_benchmark",
+   "label": "Main(args)"
+  },
+  {
+   "id": "e_mapgen",
+   "from": "cmd_mapgen",
+   "to": "cli_mapgen",
+   "label": "Main(args)"
+  },
+  {
+   "id": "e_normalgen",
+   "from": "cmd_normalgen",
+   "to": "cli_normalgen",
+   "label": "Main(args)"
+  },
+  {
+   "id": "e_rambudget",
+   "from": "cmd_rambudget",
+   "to": "cli_rambudget",
+   "label": "Main(out, err)"
+  },
+  {
+   "id": "e_sfxgen",
+   "from": "cmd_sfxgen",
+   "to": "cli_sfxgen",
+   "label": "Run(args, env)"
+  },
+  {
+   "id": "e_simulate",
+   "from": "cmd_simulate",
+   "to": "cli_simulate",
+   "label": "Main(argv)"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "Wiring only",
+   "items": [
+    "Each main.go calls one cli entry point and exits with its code",
+    "internal/arch/cmd_test.go caps a main at 80 lines and lists no exceptions",
+    "Only cmd/game imports compose/game (TestOnlyCmdImportsCompose)"
+   ]
+  },
+  {
+   "dot": "amber",
+   "title": "Stubs",
+   "items": [
+    "cmd/replay and cmd/contentlint are empty TODO entry points",
+    "ADR 0003 (docs/adr, uncommitted) gives replay its event log"
+   ]
+  },
+  {
+   "dot": "slate",
+   "title": "Evidence",
+   "items": [
+    "Pinned to commit c27bd1512 (local-only)",
+    "Sublabels name what each cli package imports",
+    "No before-state compare: the pre-ARCH-007 tree was not rendered"
+   ]
+  }
+ ]
+}
