@@ -1399,7 +1399,7 @@ Long graphs require downsampling rather than rendering every sample.
 
 # 31. Quest Screen
 
-Rows, measured sizes and decisions: `.agents/gaps/QUESTS_GAP_ANALYSIS.md` (QST-120..139). Three tabs, Available, Active and Historical, replace the four states below (decision 2 there).
+Rows, measured sizes and decisions: `.agents/gaps/QUESTS_GAP_ANALYSIS.md` (QST-120..139). Opened by the Quests tab (F7), a quest letter or the "Quest expires soon" alert; code `windows/quests*.go`.
 
 ## Purpose
 
@@ -1407,10 +1407,11 @@ Track available, active and completed structured opportunities.
 
 ## Quest list
 
--   available;
--   active;
--   completed;
--   failed.
+Three tabs (decision 2 in the gap file):
+
+-   Available: offers, each with the time left to accept;
+-   Active: accepted quests, with the time left before the deadline, if any;
+-   Historical: succeeded, failed and expired quests, plus any the player dismissed (restorable).
 
 ## Detail
 
@@ -1425,10 +1426,10 @@ Track available, active and completed structured opportunities.
 
 ## Actions
 
--   accept;
--   decline;
--   choose reward;
--   jump to target.
+-   accept for one reward option (choosing the reward is the accept);
+-   dismiss and restore (only moves the quest between tabs; an offer nobody accepts expires);
+-   reward preferences: per faction, whether goodwill is acceptable as a reward;
+-   jump to the quest's site on the world map, or back to the colony.
 
 Active quests show objective progress and countdowns.
 

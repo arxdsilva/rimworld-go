@@ -115,7 +115,7 @@ Old saves keep settlement doors held open from before MAP-17. They aren't migrat
 | "It is still possible to continue by waiting until a wanderer event appears." "a wanderer event or refugee chased quest can restart the colony." | The event needed a living colonist | It fits a gone colony, and the arrival ends the game over | Ending |
 | "a menu similar to the game creation menu" | List and card, no portrait or passions | Portrait and passion glyphs on the card | Ending |
 | Pawn count, arrival gear, commitment mode | | No page says. Kept: the setup's group size, what `spawnGenerated` gives, available in commitment | Silent |
-| | | A legacy colony (no setup) still has no option: `hasSetup` gates much else. The refugee quest doesn't exist here, so it isn't offered | |
+| | | A legacy colony (no setup) still has no option: `hasSetup` gates much else. Quests exist now (QST, `.agents/gaps/QUESTS_GAP_ANALYSIS.md`), only in a set-up colony. The threatened joiner can still be offered with no colonist left (`quest/hourly.go` weights it by colony size, highest at zero), so it could restart the colony as the wanderer event does (untested: no test drives a gone colony through it); the downed refugee needs a caravan to reach its site, so it can't | |
 
 Older saves that launched before this keep their passengers as stashed, so they don't count as gone, as before.
 

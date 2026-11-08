@@ -466,7 +466,7 @@ Each line is one more line in `sheet.SkillTip`. Where a pure domain formula exis
 | RHUD-307 | Traits, comma list (`Traits`) | dossier/sheet/lines_misc.go:TraitsLine | done | DOS-3 widget `traits` |
 | RHUD-308 | Traits tooltip: each with a description | dossier/sheet/tips.go:TraitsTip | done | DOS-2 `sheet.TraitsTip` |
 | RHUD-309 | Component info: emerging and recharge lines (`CompInfo`) | DLC | excluded | DLC-only comps |
-| RHUD-310 | Component info: quest strings | No quest read model found in `game/game.go`; spec §31 | excluded | No quest strings on pawns |
+| RHUD-310 | Component info: quest strings | The quest read model exists now (`WorldView.Quests`, `game/quest/view.go`), but no pawn carries a quest tag: a quest's pawn is a reward preview (`PawnPreview`) or, once on a map, an ordinary guest or prisoner | excluded | No quest strings on pawns: nothing to show until a quest marks pawns (QST, `.agents/gaps/QUESTS_GAP_ANALYSIS.md`) |
 | RHUD-311 | Component info: comp strings joined | dossier/build.go:pawnNotes | done | DOS-3 widget `notes` reusing `AnimalPregLine`, `AnimalHuntLine`, `ExposureLines` |
 | RHUD-312 | Prisoner line: resistance (`PrisonerInfo`) | dossier/sheet/lines_misc.go:CaptiveLine | done | DOS-3 widget `captive` |
 | RHUD-313 | Prisoner line: unrecruitable | No such state in `PrisonerView` | excluded | Every prisoner is recruitable |
