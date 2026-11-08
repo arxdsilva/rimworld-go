@@ -75,11 +75,15 @@ func TestQuestSiteInspectorViewsQuest(t *testing.T) {
 	v.Show("quest:4")
 	frame(sh, v, -1, -1, inputframe.Raw{})
 	title, lines, gs := (inspector{v}).inspect()
-	if title != "Hostile camp" || len(lines) != 3 || lines[0].label != "Faction" || lines[1].label != "Time left" {
+	if title != "Outlaw camp" || len(lines) != 3 || lines[0].label != "Faction" || lines[1].label != "Time left" {
 		t.Fatalf("pane %q %v", title, lines)
 	}
-	if len(gs) != 1 || gs[0].why != "" {
+	if len(gs) != 2 || gs[0].why != "" || gs[1].name != "send" || gs[1].why != "" {
 		t.Fatalf("gizmos %v", gs)
+	}
+	gizmoOf(t, v, "send").run()
+	if sh.formed != 1 {
+		t.Fatal("Send caravan opens the Form caravan dialog")
 	}
 	sh.intents = nil
 	gizmoOf(t, v, "quest").run()

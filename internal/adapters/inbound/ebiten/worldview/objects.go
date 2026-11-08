@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/axview"
+	"rimworld-go/internal/application/game/quest"
 	qd "rimworld-go/internal/domain/quest"
 )
 
@@ -153,25 +154,10 @@ func holdsTile(objs []Object, t int) bool {
 	return false
 }
 
-// QuestTitle is a quest kind's name.
+// QuestTitle is a quest kind's name (the game's own, "Quest" for none).
 func QuestTitle(tr lang.Tr, k qd.KindID) string {
-	switch k {
-	case qd.Joiner:
-		return tr.T("Joiner request")
-	case qd.OreLump:
-		return tr.T("Ore lump")
-	case qd.Stash:
-		return tr.T("Stash")
-	case qd.Refugee:
-		return tr.T("Refugee")
-	case qd.Camp:
-		return tr.T("Hostile camp")
-	case qd.Rescue:
-		return tr.T("Prisoner rescue")
-	case qd.Request:
-		return tr.T("Trade request")
-	case qd.Talks:
-		return tr.T("Peace talks")
+	if n := quest.KindName(k); n != "" {
+		return tr.T(n)
 	}
 	return tr.T("Quest")
 }

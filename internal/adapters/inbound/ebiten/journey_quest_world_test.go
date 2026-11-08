@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	qd "rimworld-go/internal/domain/quest"
@@ -62,6 +63,15 @@ func TestJourneyQuestSiteViewQuest(t *testing.T) {
 	if !hasWidget(j.a, id) {
 		t.Fatalf("no marker %s on the globe", id)
 	}
+	if !j.clickID("world.act.send") {
+		t.Fatal("Send caravan is disabled")
+	}
+	j.update(2)
+	if j.a.uiModalTop() != dialogs.FormCaravanID {
+		t.Fatalf("modal %q, want the Form caravan dialog", j.a.uiModalTop())
+	}
+	j.key("Escape", 0)
+	j.update(2)
 	if !j.clickID("world.act.quest") {
 		t.Fatal("View quest is disabled")
 	}

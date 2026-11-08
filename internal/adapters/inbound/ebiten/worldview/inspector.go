@@ -312,10 +312,35 @@ func (v inspector) inspectQuest(o *Object) (string, []line, []gizmo) {
 		lines = append(lines, line{v.sh.T("Time left"), v.sh.T("no limit")})
 	}
 	lines = append(lines, line{"", v.questLine(q)})
-	id := q.ID
+	id, tile := q.ID, o.Tile
 	return o.Label, lines, []gizmo{{name: "quest", label: v.sh.T("View quest"),
 		tip: v.sh.T("View quest\nOpen the Quests window on this quest."),
-		run: func() { v.sh.Do(ports.ShowQuest{ID: uint32(id)}) }}}
+		run: func() { v.sh.Do(ports.ShowQuest{ID: uint32(id)}) }},
+		v.sendGizmo(tile)}
+}
+
+// sendGizmo is "Send caravan" to tile: the Form caravan dialog of our first
+// colony with people, bound for tile.
+func (v inspector) sendGizmo(tile int) gizmo {
+	home := -1
+	for i := range v.objs {
+		if o := &v.objs[i]; o.Kind == KindMap && o.Map.Kind == "colony" && o.Map.Colonists > 0 {
+			home = int(o.Map.ID)
+			break
+		}
+	}
+	why := ""
+	if home < 0 {
+		why = v.sh.T("Nobody to form a caravan.")
+	}
+	return gizmo{name: "send", label: v.sh.T("Send caravan"), why: why,
+		tip: v.sh.T("Send caravan\nChoose who and what travels here."),
+		run: func() {
+			if g := v.sh.Env().Game; g != nil && int(g.ViewedMap()) != home {
+				v.sh.Do(ports.SwitchMap{Map: game.MapID(home)})
+			}
+			v.sh.FormCaravan(func() int { return tile })
+		}}
 }
 
 // questFaction is the name of the faction behind quest q.
