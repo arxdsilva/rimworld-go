@@ -1,4 +1,4 @@
-package main
+package logfile
 
 import (
 	"os"
@@ -10,7 +10,7 @@ func TestLogFileKeepsTheLastRunAsPrev(t *testing.T) {
 	t.Parallel()
 	dir := filepath.Join(t.TempDir(), "logs")
 	for _, run := range []string{"first run\n", "second run\n"} {
-		f, err := openLogFile(dir)
+		f, err := Open(dir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -21,7 +21,7 @@ func TestLogFileKeepsTheLastRunAsPrev(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for name, want := range map[string]string{logName: "second run\n", logPrevName: "first run\n"} {
+	for name, want := range map[string]string{name: "second run\n", prevName: "first run\n"} {
 		b, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatal(err)

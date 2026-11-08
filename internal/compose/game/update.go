@@ -1,4 +1,4 @@
-package main
+package game
 
 import "rimworld-go/internal/adapters/outbound/updatecheck"
 

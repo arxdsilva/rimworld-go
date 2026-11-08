@@ -1,11 +1,9 @@
-package main
+package game
 
 import (
 	"log"
 	"os"
 	"runtime"
-
-	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/outbound/settingsfile"
 	"rimworld-go/internal/adapters/outbound/usagehttp"
@@ -39,7 +37,7 @@ func usageEndpoint(buildVersion, override string, devRun bool) string {
 // usageTracker builds the tracker, or returns nil when this run sends
 // nothing. It runs before the App loads the settings, so the App sees the
 // install ID and later saves keep it.
-func usageTracker(devRun bool) *usagehttp.Tracker {
+func usageTracker(version string, devRun bool, screen sizer) *usagehttp.Tracker {
 	endpoint := usageEndpoint(version, os.Getenv(usageEndpointEnv), devRun)
 	if endpoint == "" {
 		return nil
@@ -52,7 +50,7 @@ func usageTracker(devRun bool) *usagehttp.Tracker {
 	if !ok {
 		return nil
 	}
-	w, h := ebiten.Monitor().Size()
+	w, h := screen.MonitorSize()
 	return usagehttp.New(usagehttp.Config{
 		Endpoint:  endpoint,
 		InstallID: settings.Telemetry.InstallID,
