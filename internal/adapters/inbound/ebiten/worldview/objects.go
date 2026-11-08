@@ -7,18 +7,21 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/axview"
+	qd "rimworld-go/internal/domain/quest"
 )
 
 // Kind is a world object's kind. The order is the pick order on a shared
-// tile: our maps first, then caravans, settlements, mineral sites, pods.
+// tile: our maps first, then caravans, settlements, quest sites, mineral
+// sites, pods.
 type Kind uint8
 
 const (
 	KindMap Kind = iota
 	KindCaravan
 	KindSettlement
-	KindSite // a mineral site a scanner found (not yet a map)
-	KindPod  // a transport pod group in flight
+	KindQuest // an open quest's site (QST-113), keyed by the quest id
+	KindSite  // a mineral site a scanner found (not yet a map)
+	KindPod   // a transport pod group in flight
 )
 
 // String is the kind's word in selection keys and widget ids.
@@ -30,6 +33,8 @@ func (k Kind) String() string {
 		return "caravan"
 	case KindSettlement:
 		return "settlement"
+	case KindQuest:
+		return "quest"
 	case KindSite:
 		return "site"
 	}
@@ -37,8 +42,8 @@ func (k Kind) String() string {
 }
 
 // Object is one thing on the world map. Key is its selection key
-// ("map:2", "caravan:7", "settlement:<tile>", "site:<tile>", "pod:<n>",
-// ports.OpenWorld's Select); ID its widget id ("world.obj.map.2").
+// ("map:2", "caravan:7", "settlement:<tile>", "quest:<id>", "site:<tile>",
+// "pod:<n>", ports.OpenWorld's Select); ID its widget id ("world.obj.map.2").
 type Object struct {
 	Kind  Kind
 	Key   string
@@ -49,6 +54,7 @@ type Object struct {
 	Map        game.MapView       // KindMap
 	Caravan    game.CaravanView   // KindCaravan
 	Settlement game.WorldSiteView // KindSettlement
+	Quest      game.QuestView     // KindQuest
 	Site       axview.Site        // KindSite
 	Pod        axview.PodFlight   // KindPod (Tile is its target)
 
@@ -71,15 +77,16 @@ func newObject(k Kind, n uint64, tile int, label string) Object {
 
 // readModels are the read models the objects come from, as read once.
 type readModels struct {
-	maps  []game.MapView
-	world game.WorldMapView
-	sites []game.WorldSiteView
-	ax    axview.World
-	tiles int // the planet's tile count (objects off it are dropped)
+	maps   []game.MapView
+	world  game.WorldMapView
+	sites  []game.WorldSiteView
+	quests []game.QuestView
+	ax     axview.World
+	tiles  int // the planet's tile count (objects off it are dropped)
 }
 
 // buildObjects lists every world object of r, in pick order (maps,
-// caravans, settlements, mineral sites, pods), each kind in read order.
+// caravans, settlements, quest sites, mineral sites, pods), each kind in read order.
 func buildObjects(dst []Object, r readModels) []Object { return buildObjectsIn(lang.English{}, dst, r) }
 
 // buildObjectsIn is buildObjects in the player's language.
@@ -112,6 +119,13 @@ func buildObjectsIn(tr lang.Tr, dst []Object, r readModels) []Object {
 			dst = append(dst, o)
 		}
 	}
+	for _, q := range r.quests { // an open quest's site, unless a map or a settlement holds the tile
+		if (q.State == qd.Offered || q.State == qd.Active) && on(q.Tile) && !holdsTile(dst, q.Tile) {
+			o := newObject(KindQuest, uint64(q.ID), q.Tile, QuestTitle(tr, q.Kind))
+			o.Quest = q
+			dst = append(dst, o)
+		}
+	}
 	for _, s := range r.ax.Sites {
 		if on(int(s.Tile)) {
 			o := newObject(KindSite, uint64(s.Tile), int(s.Tile), capFirst(s.Mineral)+" site")
@@ -127,6 +141,39 @@ func buildObjectsIn(tr lang.Tr, dst []Object, r readModels) []Object {
 		}
 	}
 	return dst
+}
+
+// holdsTile reports a map or a settlement object already stands on tile t.
+func holdsTile(objs []Object, t int) bool {
+	for i := range objs {
+		if objs[i].Tile == t && (objs[i].Kind == KindMap || objs[i].Kind == KindSettlement) {
+			return true
+		}
+	}
+	return false
+}
+
+// QuestTitle is a quest kind's name.
+func QuestTitle(tr lang.Tr, k qd.KindID) string {
+	switch k {
+	case qd.Joiner:
+		return tr.T("Joiner request")
+	case qd.OreLump:
+		return tr.T("Ore lump")
+	case qd.Stash:
+		return tr.T("Stash")
+	case qd.Refugee:
+		return tr.T("Refugee")
+	case qd.Camp:
+		return tr.T("Hostile camp")
+	case qd.Rescue:
+		return tr.T("Prisoner rescue")
+	case qd.Request:
+		return tr.T("Trade request")
+	case qd.Talks:
+		return tr.T("Peace talks")
+	}
+	return tr.T("Quest")
 }
 
 // find is the index of the object with key k, -1 none.

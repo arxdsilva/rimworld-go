@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldinfo"
 	"rimworld-go/internal/application/game"
+	qd "rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/caravan"
@@ -114,6 +115,8 @@ func (v inspector) inspect() (string, []line, []gizmo) {
 		return v.inspectCaravan(o)
 	case KindSettlement:
 		return v.inspectSettlement(o)
+	case KindQuest:
+		return v.inspectQuest(o)
 	case KindSite:
 		return o.Label, []line{{"Found by", "the mineral scanner"}, {"Gone in", hoursLeft(o.Site.Expires, uint64(v.sh.Tick()))},
 			{"", "Send a caravan or pods to mine it."}}, nil
@@ -248,7 +251,7 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 			attackWhy = a.AttackReason(id)
 		}
 	}
-	return o.Label, lines, []gizmo{
+	gizmos := []gizmo{
 		{name: "travel", label: "Travel", why: travelWhy, tip: "Travel\nPick a tile on the globe; the route and how long it takes show before you confirm.",
 			run: func() { router(v).startRoute(id, tile) }},
 		{name: "return", label: retLabel, why: retWhy, tip: "Return\nThe caravan turns round and comes home the way it went.",
@@ -261,6 +264,97 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 			run: func() { v.attackSettlement(id, site, settled) }},
 		{name: "split", label: "Split", why: notYet, tip: "Split\nSplitting a caravan in two."},
 	}
+	return o.Label, lines, append(gizmos, v.questGizmos(c)...)
+}
+
+// questGizmos are the quest actions of caravan c standing on the tile of an
+// open quest (QST-118, QST-119): "Fulfil request" on an active trade
+// request, "Negotiate" on offered or active peace talks. The read model
+// does not say what the caravan carries, so the game refuses a short load
+// with a note.
+func (v inspector) questGizmos(c game.CaravanView) []gizmo {
+	why := ""
+	if c.State == caravan.Forming.Label() {
+		why = v.sh.T("Still forming at the colony.")
+	}
+	var out []gizmo
+	for _, q := range v.quests {
+		if q.Tile != c.Tile || c.Tile < 0 {
+			continue
+		}
+		id, cid := q.ID, c.ID
+		switch {
+		case q.Kind == qd.Request && q.State == qd.Active:
+			out = append(out, gizmo{name: "fulfil", label: v.sh.T("Fulfil request"), why: why,
+				tip: v.sh.T("Fulfil request\nHand the requested goods over from this caravan."),
+				run: func() { v.send(command.Command{Kind: command.FulfilRequest, Index: int(id), Target: cid}) }})
+		case q.Kind == qd.Talks && (q.State == qd.Active || q.State == qd.Offered):
+			out = append(out, gizmo{name: "negotiate", label: v.sh.T("Negotiate"), why: why,
+				tip: v.sh.T("Negotiate\nHold peace talks with this caravan's envoys."),
+				run: func() { v.send(command.Command{Kind: command.Negotiate, Index: int(id), Target: cid}) }})
+		}
+	}
+	return out
+}
+
+// inspectQuest is a quest site: the quest's kind, who gives it, the time
+// left and a line about it, with a gizmo that opens the Quests window on it.
+func (v inspector) inspectQuest(o *Object) (string, []line, []gizmo) {
+	q := o.Quest
+	lines := []line{{v.sh.T("Faction"), v.questFaction(q)}}
+	at, now := q.Deadline, uint64(v.sh.Tick())
+	if q.State == qd.Offered {
+		at = q.AcceptBy
+	}
+	if at > 0 {
+		lines = append(lines, line{v.sh.T("Time left"), hoursLeft(at, now)})
+	} else {
+		lines = append(lines, line{v.sh.T("Time left"), v.sh.T("no limit")})
+	}
+	lines = append(lines, line{"", v.questLine(q)})
+	id := q.ID
+	return o.Label, lines, []gizmo{{name: "quest", label: v.sh.T("View quest"),
+		tip: v.sh.T("View quest\nOpen the Quests window on this quest."),
+		run: func() { v.sh.Do(ports.ShowQuest{ID: uint32(id)}) }}}
+}
+
+// questFaction is the name of the faction behind quest q.
+func (v inspector) questFaction(q game.QuestView) string {
+	ref := q.Giver
+	if ref == 0 {
+		ref = q.Target
+	}
+	if g := v.sh.Env().Game; g != nil && ref > 0 {
+		for _, f := range g.Factions() {
+			if f.ID == ref-1 {
+				return f.Name
+			}
+		}
+	}
+	return v.sh.T("Nobody in particular")
+}
+
+// questLine is one line about what the quest asks, by kind.
+func (v inspector) questLine(q game.QuestView) string {
+	switch q.Kind {
+	case qd.Joiner:
+		return v.sh.T("Someone in trouble asks to join us.")
+	case qd.OreLump:
+		return v.sh.T("Reach the ore before it is gone.")
+	case qd.Stash:
+		return v.sh.T("Goods lie hidden here under guard.")
+	case qd.Refugee:
+		return v.sh.T("A hurt traveller waits here for help.")
+	case qd.Camp:
+		return v.sh.T("A hostile camp to clear out.")
+	case qd.Rescue:
+		return v.sh.T("A prisoner is held here.")
+	case qd.Request:
+		return v.sh.T("Bring the goods they asked for.")
+	case qd.Talks:
+		return v.sh.T("Send a caravan to talk peace.")
+	}
+	return v.sh.T("A quest waits here.")
 }
 
 // attackSettlement sends caravan id's attack at once on a hostile

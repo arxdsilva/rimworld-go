@@ -23,6 +23,7 @@ const (
 	iconCaravan   = "ui_icon/caravan"
 	iconPod       = "ui_icon/pod_flight"
 	iconMining    = "ui_icon/mining_site"
+	iconQuest     = "ui_icon/quest_site"
 )
 
 // markLook is how object o's marker draws: the icon key ("" none: the
@@ -34,6 +35,8 @@ func markLook(o *Object) (key string, tint color.RGBA) {
 		return iconCaravan, uikit.Heading
 	case KindPod:
 		return iconPod, uikit.Heading
+	case KindQuest:
+		return iconQuest, uikit.Accent
 	case KindSite:
 		return iconMining, uikit.Accent
 	case KindSettlement:

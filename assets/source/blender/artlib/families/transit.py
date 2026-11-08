@@ -27,9 +27,10 @@ attachments in canvas pixels).
   beacon lamp on the tower.
 - overlay/hitching_spot (1x1, flat marking): a dashed chalk ring round a
   hitching post with a coil of rope and two hoof prints.
-- ui_icon/pod_flight and ui_icon/mining_site: world-map markers in the
-  caravan marker's badge style (dark disc, coloured line glyph): a capsule
-  climbing on its trail, and a pick over an ore outcrop.
+- ui_icon/pod_flight, ui_icon/mining_site and ui_icon/quest_site: world-map
+  markers in the caravan marker's badge style (dark disc, coloured line
+  glyph): a capsule climbing on its trail, a pick over an ore outcrop and a
+  pennant on a staff over a mound (a quest's site).
 
     make art FAMILIES=transit
 """
@@ -239,10 +240,19 @@ def _g_mining_site(xx, yy, c):
     return [rock, np.minimum(handle, head)]
 
 
+def _g_quest_site(xx, yy, c):
+    """A pennant on a staff over a small mound: a quest's place on the map."""
+    staff = O._seg(xx, yy, c - 8, c + 24, c - 8, c - 26)
+    flag = O._polyline(xx, yy, [(c - 8, c - 26), (c + 22, c - 15), (c - 8, c - 4)])
+    mound = O._arc(xx, yy, c - 4, c + 40, 16, 235, 305)
+    return [mound, np.minimum(staff, flag)]
+
+
 def markers():
     t = O._base_tokens()
     return [O._badge_icon("pod_flight", t, _g_pod_flight, (0.98, 0.70, 0.40)),
-            O._badge_icon("mining_site", t, _g_mining_site, (0.80, 0.82, 0.62))]
+            O._badge_icon("mining_site", t, _g_mining_site, (0.80, 0.82, 0.62)),
+            O._badge_icon("quest_site", t, _g_quest_site, (0.62, 0.78, 0.96))]
 
 
 # ------------------------------------------------------------------- icons
