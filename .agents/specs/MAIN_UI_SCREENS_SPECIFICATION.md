@@ -2317,7 +2317,7 @@ required before a polished external build.
 -   [-] World Map (SIM-046: World tab F8 with globe and caravan list; no object selection)
 -   [-] Caravan Formation (SIM-046: colonists and destination only)
 -   [-] Caravan Inspector (SIM-046: caravan list in the World tab)
--   [ ] Quest
+-   [x] Quest (QST-3: the Quests tab (F7) and window per §31: Available/Active/Historical lists, detail with coloured text, reward choice, pawn card, links, Reward preferences; quest letters, the expiring alert and the world-site marker; `.agents/gaps/QUESTS_GAP_ANALYSIS.md`)
 -   [-] Transport Pod (AX-9: §36's loading (dialog, pod and launcher panes) and targeting (World tab picker, pods in flight); no range ring, attack or founding)
 
 ## Wave UI-8 --- Campaign completion

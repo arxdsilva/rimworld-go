@@ -2264,46 +2264,46 @@ exchange for rewards. citeturn2search0
 
 ## 29.1 Quest framework
 
--   [ ] **Quest state**
+-   [x] **Quest state** (QST-1: Offered, Active, Succeeded, Failed, Expired; accept is the Offered to Active move; QST-001..019)
     -   offered.
     -   accepted.
     -   active.
     -   succeeded.
     -   failed.
     -   expired.
--   [ ] **Quest choice/reward**
+-   [x] **Quest choice/reward** (QST-1/3: one or three options, chosen in the window or the letter; QST-080..099)
     -   One or more reward options where appropriate.
--   [ ] **Quest timers**
+-   [x] **Quest timers** (QST-1: accept-by and deadline on the due heap; part timers; QST-5 the 60-hour reinforcements, QST-017)
     -   Offer expiry.
     -   completion deadline.
     -   delayed follow-up.
--   [ ] **Quest-generated world object**
+-   [x] **Quest-generated world object** (QST-2/3: the quest site on the globe, its map laid on arrival, packed up after; QST-100..119)
     -   Temporary site.
     -   map generated on arrival.
     -   cleanup after resolution.
 
 ## 29.2 Base quest archetypes
 
--   [ ] **Rescue downed/captured person**
--   [ ] **Prisoner rescue**
--   [ ] **Item stash**
--   [ ] **Bandit/outpost attack**
--   [ ] **Trade request**
--   [ ] **Deliver requested items**
--   [ ] **Hospitality/refugee-style temporary guests if base-version
-    appropriate**
--   [ ] **Peace talks/diplomatic site**
--   [ ] **AI persona/core-style rare objective**
--   [ ] **Distress signal/ambush variant**
+-   [x] **Rescue downed/captured person** (QST-2d downed refugee, Offer help order; QST-055..059)
+-   [x] **Prisoner rescue** (QST-2f, Free prisoner order; QST-065..069)
+-   [x] **Item stash** (QST-2c; QST-050..054)
+-   [x] **Bandit/outpost attack** (QST-2e hostile camp; QST-060..064)
+-   [x] **Trade request** (QST-2g; QST-070..074)
+-   [x] **Deliver requested items** (QST-2g: Fulfil request from a caravan at the settlement)
+-   [x] **Hospitality/refugee-style temporary guests if base-version
+    appropriate** (not base-version: the hospitality variants need DLC content, gap "Not applicable"; the base threatened joiner is QST-2a)
+-   [x] **Peace talks/diplomatic site** (QST-2h; QST-075..079)
+-   [-] **AI persona/core-style rare objective** (kept out by gap decision 3: our ending is the colony-built ship; a far ancient-ship site is a separate ending feature, QST-180..184)
+-   [-] **Distress signal/ambush variant** (the site approach roll can spring an ambush, QST-051/056, and talks can end in one, QST-079; the crashed-pod refugee is an incident, not a quest, by gap decision 5: QST-175..179 open as an incident follow-up)
 
 Use original narrative text and generated names.
 
 ## 29.3 Rewards
 
--   [ ] **Items/silver**
--   [ ] **Goodwill**
--   [ ] **Joiner/recruit**
--   [ ] **Rare technology/item reward**
+-   [x] **Items/silver** (QST-1 reward pools, budget from points)
+-   [x] **Goodwill** (QST-1, per-faction preference QST-083)
+-   [x] **Joiner/recruit** (pawn rewards with a preview, QST-087/088)
+-   [x] **Rare technology/item reward** (6fe747221: spacer gear, implants, nanomed kits, advanced components and schematics in the camp, stash and request pools)
 
 ------------------------------------------------------------------------
 
