@@ -1,4 +1,4 @@
-package main
+package sfxgen
 
 import (
 	"os"
@@ -21,7 +21,7 @@ var lengths = map[string][2]float64{"call": {1.0, 2.5}, "attack": {0.5, 1.2}, "h
 
 func TestPromptsCoverRoster(t *testing.T) {
 	t.Parallel()
-	p, err := loadPrompts("../../assets/source/audio/animal_prompts.json")
+	p, err := loadPrompts("../../../../../assets/source/audio/animal_prompts.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestPromptsCoverRoster(t *testing.T) {
 		keys = append(keys, sp.String())
 	}
 	// the art roster (animal_roster.py) must name the same species
-	py, err := os.ReadFile("../../assets/source/blender/artlib/families/animal_roster.py")
+	py, err := os.ReadFile("../../../../../assets/source/blender/artlib/families/animal_roster.py")
 	if err != nil {
 		t.Fatal(err)
 	}

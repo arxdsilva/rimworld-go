@@ -1,4 +1,4 @@
-package main
+package sfxgen
 
 import (
 	"context"
@@ -43,7 +43,7 @@ func TestBackendSelection(t *testing.T) {
 		t.Fatalf("default backend %q out %q, want moss and its raw dir", a.cfg.backend, a.cfg.out)
 	}
 	if m.python != "/home/u/.cache/rimworld-go/moss/venv/bin/python" || m.model != "/home/u/.cache/rimworld-go/moss/MOSS-SoundEffect-v2.0" ||
-		m.runner != "cmd/sfxgen/moss/generate.py" || m.steps != 100 || m.cfgScale != 4 || m.device != "auto" || m.minFreeGB != 24 {
+		m.runner != "assets/source/tools/moss/generate.py" || m.steps != 100 || m.cfgScale != 4 || m.device != "auto" || m.minFreeGB != 24 {
 		t.Fatalf("moss defaults = %+v", m)
 	}
 	env["XDG_CACHE_HOME"] = "/cache"

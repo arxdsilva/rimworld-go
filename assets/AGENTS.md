@@ -145,7 +145,7 @@ source/audio/moss/raw/                     # MOSS takes before review (git-ignor
   scores played by synthesized guitar, strings, horn, bass and drums
   through a reverb): edit a score, then `make music`.
 - Ambience beds (day, night, rain) and animal voices are generated with
-  the local MOSS-SoundEffect model (`cmd/sfxgen`, `cmd/sfxgen/moss/generate.py`)
+  the local MOSS-SoundEffect model (`cmd/sfxgen`, `assets/source/tools/moss/generate.py`)
   and approved by ear. Import an approved ambience take with
   `scripts/audio_import.sh` (loudness, 48 kHz, seamless loops, Vorbis,
   sound-list entry). Every sound must be shareable: `make audio-check`

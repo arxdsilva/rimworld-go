@@ -945,7 +945,7 @@ with sidecar metadata.
 -   **Ambience beds** (day, night, rain) are generated with the local
     MOSS-SoundEffect v2.0 model from the prompts in
     `assets/source/audio/prompts.json` (20 s takes through
-    `cmd/sfxgen/moss/generate.py`), reviewed by a person, and imported
+    `assets/source/tools/moss/generate.py`), reviewed by a person, and imported
     with `scripts/audio_import.sh … <seed>` (loudness, seamless loop,
     sound-list entry with `source: moss` and the seed).
 -   **Animal voices** (call, attack, hurt, die per species, the 9 voice

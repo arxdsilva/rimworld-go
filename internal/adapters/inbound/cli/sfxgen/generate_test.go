@@ -1,4 +1,4 @@
-package main
+package sfxgen
 
 import (
 	"errors"
@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"rimworld-go/internal/adapters/outbound/sfxapi"
 )
 
 func threeSounds() []row {
@@ -207,8 +209,8 @@ func TestFailsOn401And402(t *testing.T) {
 			t.Fatalf("HTTP %d: logged a take", code)
 		}
 	}
-	var fe fatalError
-	if !errors.As(fatalError{"x"}, &fe) {
+	var fe sfxapi.FatalError
+	if !errors.As(sfxapi.FatalError{Msg: "x"}, &fe) {
 		t.Fatal("fatalError")
 	}
 }
@@ -385,7 +387,7 @@ func TestSelectAndModes(t *testing.T) {
 
 func TestLedgerRoundTripKeepsRealFile(t *testing.T) {
 	t.Parallel()
-	const real = "../../assets/source/audio/elevenlabs/ledger.json"
+	const real = "../../../../../assets/source/audio/elevenlabs/ledger.json"
 	want, err := os.ReadFile(real)
 	if err != nil {
 		t.Skip(err)

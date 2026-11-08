@@ -1,4 +1,4 @@
-package main
+package sfxgen
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"rimworld-go/internal/adapters/outbound/sfxapi"
 )
 
 // skip is a sound the run leaves alone, and why.
@@ -61,7 +63,7 @@ func decide(sel []Sound, l *Ledger, retry, free bool, supersede string) (todo []
 // remaining is the credits a run may still spend before the reserve: the
 // budget less the ledger, and when the API counter is read, the smaller of
 // that and the API's own headroom.
-func (a *app) remaining(l *Ledger, sub *subscription) int {
+func (a *app) remaining(l *Ledger, sub *sfxapi.Subscription) int {
 	r := a.cfg.budget - l.spent() - a.cfg.reserve
 	if sub != nil {
 		r = min(r, sub.Limit-sub.Used-a.cfg.reserve)
@@ -93,14 +95,14 @@ func (a *app) generate() error {
 	}
 	todo, skips := decide(sel, l, a.cfg.retry, false, a.cfg.supersede)
 	ctx := context.Background()
-	var sub subscription
-	var subp *subscription
+	var sub sfxapi.Subscription
+	var subp *sfxapi.Subscription
 	startUsed := 0
 	if a.cfg.budgetFromAPI {
 		if a.key == "" {
 			return errors.New(keyEnv + " is not set (needed for -budget-from-api)")
 		}
-		if sub, err = a.subscription(ctx); err != nil {
+		if sub, err = a.api().Subscription(ctx); err != nil {
 			return err
 		}
 		subp = &sub
@@ -128,13 +130,13 @@ func (a *app) generate() error {
 			fmt.Fprintf(a.stdout, "stop: %s needs about %d credits but only %d remain before the %d reserve\n", s.ID, est, remaining, a.cfg.reserve)
 			break
 		}
-		audio, err := a.synthesize(ctx, p.text(s), s.Seconds, p.Defaults.PromptInfluence)
+		audio, err := a.api().Synthesize(ctx, p.text(s), s.Seconds, p.Defaults.PromptInfluence)
 		if err != nil {
 			return fmt.Errorf("%s: %w", s.ID, err)
 		}
 		credits := est
 		if a.cfg.budgetFromAPI {
-			after, err := a.subscription(ctx)
+			after, err := a.api().Subscription(ctx)
 			if err != nil {
 				return fmt.Errorf("%s: %w", s.ID, err)
 			}
