@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/mapgen"
@@ -128,6 +129,9 @@ type PawnPreview struct {
 	Name      string
 	Age       int
 	Backstory string
+	Look      look.Look // the portrait (QST-137)
+	Best      skill.ID  // the highest skill, the first on a tie
+	BestLevel int
 }
 
 // Pawns makes, joins and reads the pawns quests are about.

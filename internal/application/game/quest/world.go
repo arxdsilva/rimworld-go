@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/pawngen"
+	"rimworld-go/internal/domain/pawn/skill"
 )
 
 // Helpers for the game's role adapters (quest_host.go): pure functions of
@@ -70,7 +71,14 @@ func PreviewOf(seed uint64) PawnPreview {
 	if bs == 0 {
 		bs = p.Childhood
 	}
-	return PawnPreview{Name: name, Age: int(p.AgeDays) / pawngen.DaysPerYear, Backstory: backstory.DefOf(bs).Title}
+	best := skill.ID(0)
+	for s := range skill.NumSkills {
+		if p.Skills[s].Level > p.Skills[best].Level {
+			best = s
+		}
+	}
+	return PawnPreview{Name: name, Age: int(p.AgeDays) / pawngen.DaysPerYear, Backstory: backstory.DefOf(bs).Title,
+		Look: p.Look, Best: best, BestLevel: int(p.Skills[best].Level)}
 }
 
 // KindName is kind k's name (ours, clean room; "" for none).

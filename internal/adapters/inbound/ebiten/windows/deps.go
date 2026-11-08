@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -67,6 +68,9 @@ type Labels interface {
 	// DrawPassion draws the passion glyph of level p (1 minor, 2 major),
 	// or stars at text baseline ty while the icon is missing.
 	DrawPassion(dst *ebiten.Image, p int, x, y, size float64, st gfx.TextStyle, ty float64)
+	// DrawPortrait draws look l's portrait fitted into (x, y, w, h); false
+	// while the art is missing (QST-137: a pawn reward's chip).
+	DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, h float64) bool
 }
 
 // Host is what the feature needs of the program that no ports role

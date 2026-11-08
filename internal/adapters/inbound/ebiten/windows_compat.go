@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/medcare"
 )
 
@@ -168,6 +169,10 @@ func (h windowsHost) DrawAnimalIcon(dst *ebiten.Image, an game.AnimalView, x, y,
 
 func (h windowsHost) DrawPassion(dst *ebiten.Image, p int, x, y, size float64, st gfx.TextStyle, ty float64) {
 	h.a.insp.Tabs().DrawPassion(dst, p, x, y, size, st, ty)
+}
+
+func (h windowsHost) DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, ht float64) bool {
+	return drawLookPortrait(dst, h.a.art, l, x, y, w, ht)
 }
 
 // colonyRows are the live Factions table rows (none off the colony).
