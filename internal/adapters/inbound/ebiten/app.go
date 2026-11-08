@@ -1002,12 +1002,19 @@ func (a *App) Draw(screen *ebiten.Image) {
 			gfx.SetPass("hud")
 		} else if a.renderer != nil {
 			now := a.now()
-			if a.cfg.Capture == nil && !a.stamp.draw.IsZero() && a.nav.overlay() != overlayPause {
+			dt := 0.0
+			if !a.stamp.draw.IsZero() {
+				dt = now.Sub(a.stamp.draw).Seconds()
+			}
+			if a.cfg.Capture == nil && dt > 0 && a.nav.overlay() != overlayPause {
 				a.renderer.SyncDev() // the viewport is in this frame's map pixels
-				a.renderer.stepCamera(now.Sub(a.stamp.draw).Seconds(), a.mapViewport())
+				a.renderer.stepCamera(dt, a.mapViewport())
 			}
 			a.stamp.draw = now
 			a.renderer.mo.SetAlpha(a.frameAlpha())
+			if a.cfg.Capture == nil && a.renderer.game != nil { // render/motion/pace.go (GAR-091)
+				a.renderer.mo.Pace(a.renderer.game.Tick(), dt, a.renderer.ticksWanted(), float64(ebiten.TPS()))
+			}
 			a.syncTreeFocus() // tree_focus.go: hover, selection and ghost see through canopies
 			// world_scale.go: the map, and what the tools mark on it, draw
 			// into the render-scaled offscreen when there is one; its canvas

@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -748,5 +749,120 @@ func TestAnimTUsesSteppedTicks(t *testing.T) {
 	// alphaMax (< 1) leaves at most (1-alphaMax)*3 ticks between them.
 	if math.Abs(r.liveView().AnimT-prevTick) > 1e-6 || r.liveView().AnimT-prev > (1-motionpkg.AlphaMax)*3+1e-9 || r.liveView().AnimT < prev {
 		t.Fatalf("animT jumped across a held advance: prev %v (tick %v) now %v", prev, prevTick, r.liveView().AnimT)
+	}
+}
+
+// walkFrames is one frame schedule: Draws at fps, and either a fixed
+// Updates-per-frame pattern (Ebitengine's clock drifting against the
+// display) or, with no pattern, Ebitengine's own catch-up: each frame runs
+// as many 60 TPS Updates as the elapsed time owes.
+type walkFrames struct {
+	name    string
+	fps     float64
+	pattern []int
+}
+
+// framedWalk drives a straight walker frame by frame on a fake wall clock,
+// the way Ebitengine does with VSync: the frame's Updates run back to back
+// (each stamps markUpdate), then the Draw sets alpha and, when paced, paces
+// the clock as App.Draw does. It returns one motion sample per Draw.
+func framedWalk(t *testing.T, tpf int, wf walkFrames, paced bool) (samples []drawSample, lo, hi float64) {
+	t.Helper()
+	mv := &scriptMover{id: 1, path: line(5, 5, 1, 0, 14), start: 10}
+	r := New(newMotionSim(mv))
+	r.speed = speedFor(tpf)
+	a := testApp(&stubSim{w: 8, h: 8})
+	t0 := time.Unix(100, 0)
+	now := t0
+	a.now = func() time.Time { return now }
+	frame := time.Duration(float64(time.Second) / wf.fps)
+	tickDur := time.Second / 60
+	var drawn time.Time
+	var owed time.Duration
+	for f := 0; f < int(7*wf.fps)/tpf; f++ {
+		now = t0.Add(time.Duration(f) * frame)
+		n := 0
+		if wf.pattern != nil {
+			n = wf.pattern[f%len(wf.pattern)]
+		} else {
+			owed += frame
+			n = int(owed / tickDur)
+			owed -= time.Duration(n) * tickDur
+		}
+		for range n {
+			r.advance()
+			now = now.Add(time.Millisecond) // the Update's own cost
+			a.markUpdate()
+		}
+		now = now.Add(time.Millisecond) // the Draw follows
+		dt := 0.0
+		if !drawn.IsZero() {
+			dt = now.Sub(drawn).Seconds()
+		}
+		drawn = now
+		r.mo.SetAlpha(a.frameAlpha())
+		if paced {
+			r.mo.Pace(r.game.Tick(), dt, r.ticksWanted(), 60)
+		}
+		animT := r.liveView().AnimT
+		samples = append(samples, drawSample{t: animT, m: r.mo.PawnMotion(1, animT)})
+	}
+	return samples, float64(mv.enter[2]), float64(mv.enter[len(mv.path)-1])
+}
+
+// cruiseSteps is the per-Draw displacement while the walker cruises.
+func cruiseSteps(t *testing.T, s []drawSample, lo, hi float64, what string) []float64 {
+	t.Helper()
+	var ds []float64
+	for i := 1; i < len(s); i++ {
+		if s[i].t < s[i-1].t {
+			t.Fatalf("%s: animT went back %.3f -> %.3f", what, s[i-1].t, s[i].t)
+		}
+		if s[i-1].t >= lo && s[i].t <= hi {
+			ds = append(ds, dist(s[i-1].m, s[i].m))
+		}
+	}
+	if len(ds) < 20 {
+		t.Fatalf("%s: only %d cruise frames", what, len(ds))
+	}
+	return ds
+}
+
+// TestWalkSmoothWithZeroOrTwoUpdates (GAR-091): Ebitengine runs Updates
+// on its own clock. Below 60 fps some frames get two Updates back to back;
+// at 60 its clock drifting against the display gives a frame two and the
+// next none. Both Updates stamp the same instant, so alpha alone advances
+// the walker 2 ticks in one frame and 1 or 0 in the others. Paced, every
+// frame moves the same distance: CV at most 0.1, no frame beyond half or
+// one and a half times the mean.
+func TestWalkSmoothWithZeroOrTwoUpdates(t *testing.T) {
+	t.Parallel()
+	schedules := []walkFrames{
+		{name: "steady 60", fps: 60, pattern: []int{1}},
+		{name: "two-then-none", fps: 60, pattern: []int{1, 1, 1, 2, 0, 1, 1}},
+		{name: "none-then-two", fps: 60, pattern: []int{1, 1, 1, 0, 2, 1, 1}},
+		{name: "59 fps", fps: 59},
+		{name: "53 fps", fps: 53},
+		{name: "42 fps", fps: 42},
+	}
+	for _, wf := range schedules {
+		for _, tpf := range []int{1, 3} {
+			what := fmt.Sprintf("%s %dx", wf.name, tpf)
+			s, lo, hi := framedWalk(t, tpf, wf, true)
+			ds := cruiseSteps(t, s, lo, hi, what)
+			mean, cv := meanCV(ds)
+			if cv > 0.1 {
+				t.Errorf("%s: per-frame displacement CV %.3f > 0.1", what, cv)
+			}
+			for _, d := range ds {
+				if d > 1.5*mean || d < 0.5*mean {
+					t.Errorf("%s: a frame moved %.4f tiles, mean %.4f (CV %.3f)", what, d, mean, cv)
+					break
+				}
+			}
+			u, ulo, uhi := framedWalk(t, tpf, wf, false)
+			_, ucv := meanCV(cruiseSteps(t, u, ulo, uhi, what+" unpaced"))
+			t.Logf("%s: mean %.5f tiles/frame, CV %.4f (unpaced %.4f)", what, mean, cv, ucv)
+		}
 	}
 }

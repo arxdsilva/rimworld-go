@@ -70,6 +70,7 @@ type State[B any] struct {
 	Ref     float64 // animT the previous draws ended at
 	synced  bool
 	gen     uint64
+	pace    pace // the drawn clock (pace.go)
 }
 
 // SetAlpha records the Draw's position inside the update interval.
@@ -88,9 +89,13 @@ func (mo *State[B]) SetAlpha(a float64) {
 // It trails the simulation by one update (Tick - (1-alpha)*stepped), so
 // every step it draws has already happened: positions interpolate between
 // known states instead of extrapolating, and the clock stays continuous
-// and monotonic across speed changes and pauses.
+// and monotonic across speed changes and pauses. Once a Draw has paced
+// the clock at this tick (pace.go), it is the drawn clock.
 func (mo *State[B]) AnimT(tick clock.Tick) float64 {
-	return float64(tick) - (1-mo.Alpha)*float64(mo.Stepped)
+	if tk := float64(tick); mo.pace.on && tk == mo.pace.tick {
+		return mo.pace.t
+	}
+	return mo.target(float64(tick))
 }
 
 // PawnMotion is the on-screen motion of a colonist or raider at animT t.
