@@ -217,6 +217,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PERF-001-tickgrown-regression | `BenchmarkTickGrown` regression after ENG-003 | 2026-10-24 | [PERF.md](PERF.md#perf-001-tickgrown-regression) |
 | PERF-002-120fps-one-percent-low | The 1 % low on 500x500 maps (issue #6) | 2026-10-27 | [PERF.md](PERF.md#perf-002-120fps-one-percent-low) |
 | PERF-003-render-cap | The render cap (Mac kernel panics of 2026-11-04) | 2026-11-04 | [PERF.md](PERF.md#perf-003-render-cap) |
+| PERF-004-gar-baseline | The VSync-on probe matrix baseline (GAR C3) | 2026-11-08 | [PERF.md](PERF.md#perf-004-gar-baseline) |
 | PLAY010_PLAN | PLAY-010 play-feedback batch (14 items, up to 15 agents) | 2026-10-23 | [PLAY.md](PLAY.md#play010_plan) |
 | PLAY011_PLAN | PLAY-011 auto-oriented doors and gates, in-place material swaps, unmovable fences | 2026-10-24 | [PLAY.md](PLAY.md#play011_plan) |
 | PLAY012_PLAN | PLAY-012 Plan tool and crisp UI scaling (Auto + presets, HiDPI) | 2026-10-24 | [PLAY.md](PLAY.md#play012_plan) |
