@@ -36,6 +36,8 @@ const (
 var campPool = []qd.PoolItem{
 	{Kind: item.Silver}, {Kind: item.Steel}, {Kind: item.Components},
 	{Kind: item.IndustrialMedicine}, {Kind: item.Plasteel}, {Kind: item.Gold},
+	// rare goods (checklist 29.3): spacer gear the giver can spare
+	{Kind: item.ChargeRifle, Max: 1}, {Kind: item.ShieldBelt, Max: 1}, {Kind: item.AdvancedHelmet, Max: 1},
 }
 
 // Camp is the hostile camp to clear (QST-060..064): a faction that is not

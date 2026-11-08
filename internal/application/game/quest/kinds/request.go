@@ -33,6 +33,8 @@ var requestKinds = [...]item.Kind{
 var requestRewards = []qd.PoolItem{
 	{Kind: item.Silver}, {Kind: item.Steel}, {Kind: item.Components},
 	{Kind: item.HerbalMedicine}, {Kind: item.Cloth}, {Kind: item.Plasteel},
+	// rare goods (checklist 29.3): a settlement's medical stock
+	{Kind: item.ServoArm, Max: 1}, {Kind: item.OpticImplant, Max: 1}, {Kind: item.NanomedKit, Max: 6},
 }
 
 // Request is the trade request delivered by caravan (QST-070..074, 095, 118):

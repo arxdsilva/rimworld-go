@@ -30,6 +30,8 @@ const (
 var stashPool = []qd.PoolItem{
 	{Kind: item.Silver}, {Kind: item.Steel}, {Kind: item.Components},
 	{Kind: item.Plasteel}, {Kind: item.Gold}, {Kind: item.Cloth}, {Kind: item.HerbalMedicine},
+	// rare goods (checklist 29.3)
+	{Kind: item.AdvancedComponents, Max: 4}, {Kind: item.NanomedKit, Max: 6}, {Kind: item.Schematic, Max: 1},
 }
 
 // Stash is the item stash site (QST-050..054): goods lie on a land tile
