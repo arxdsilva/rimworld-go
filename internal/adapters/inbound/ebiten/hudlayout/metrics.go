@@ -293,4 +293,30 @@ const (
 	FactionHeadH  = 150
 	FactionFootH  = 55
 	FactionGutter = 16
+	// The Quests window (QST-120..139, measured): QuestsW x QuestsH,
+	// frameless; the list column QuestsListW over QuestsTabH tabs and
+	// QuestRowH rows, QuestsGap to the detail pane QuestsDetailW. A row's
+	// stars are QuestStar each; the search field QuestSearchH and the
+	// preferences button QuestPrefsBtnH sit under the list. A reward panel is
+	// QuestRewardW wide, QuestRewardH1..3 tall for 1..3 chip lines, its
+	// Accept button QuestAcceptW wide; link lines are QuestLinkPitch apart.
+	// The reward-preferences dialog is QuestPrefsW x QuestPrefsH.
+	QuestsW        = 1010
+	QuestsH        = 641
+	QuestsListW    = 351
+	QuestsGap      = 16
+	QuestsDetailW  = 607
+	QuestsTabH     = 32
+	QuestRowH      = 32
+	QuestStar      = 15
+	QuestSearchH   = 22
+	QuestPrefsBtnH = 38
+	QuestRewardW   = 556
+	QuestRewardH1  = 44
+	QuestRewardH2  = 72
+	QuestRewardH3  = 100
+	QuestAcceptW   = 98
+	QuestLinkPitch = 25
+	QuestPrefsW    = 700
+	QuestPrefsH    = 440
 )

@@ -117,6 +117,8 @@ func (h hudHost) TabOn(id string) bool {
 		return a.win.KitID() == windows.HistoryModalID
 	case ids.TabFactions:
 		return a.win.KitID() == windows.ColFacModalID
+	case ids.TabQuests:
+		return a.win.KitID() == windows.QuestsModalID
 	}
 	return false
 }

@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/economy/item"
@@ -188,15 +186,15 @@ func (Camp) Detail(q qd.Quest) []quest.Line {
 		return nil
 	}
 	out := []quest.Line{
-		{Key: "quest.camp.giver", Args: []string{strconv.Itoa(q.Giver)}},
-		{Key: "quest.camp.target", Args: []string{strconv.Itoa(q.Target)}},
-		{Key: "quest.camp.site", Args: []string{strconv.Itoa(site.Tile)}},
+		{Key: "quest.camp.giver", Args: []quest.Arg{quest.Faction(q.Giver)}},
+		{Key: "quest.camp.target", Args: []quest.Arg{quest.Faction(q.Target)}},
+		{Key: "quest.camp.site", Args: []quest.Arg{quest.Tile(site.Tile)}},
 	}
 	if q.Deadline != 0 {
-		out = append(out, quest.Line{Key: "quest.camp.deadline", Args: []string{strconv.FormatUint(q.Deadline, 10)}})
+		out = append(out, quest.Line{Key: "quest.camp.deadline", Args: []quest.Arg{quest.Tick(q.Deadline)}})
 	}
 	if site.Map != 0 {
-		out = append(out, quest.Line{Key: "quest.camp.standing", Args: []string{strconv.Itoa(guard.Count), strconv.Itoa(site.Count)}})
+		out = append(out, quest.Line{Key: "quest.camp.standing", Args: []quest.Arg{quest.Num(guard.Count), quest.Num(site.Count)}})
 	}
 	return out
 }

@@ -92,6 +92,9 @@ func (a *App) handleTabKeys() {
 		a.applyClick("tab.research")
 	case f.Fired(input.TabAssign):
 		a.win.Assign().Toggle()
+	case f.Fired(input.TabQuests):
+		a.win.Quests().Toggle() // QST-138
+
 	case f.Fired(input.TabWorld):
 		a.world.Toggle() // worldview
 	case f.Fired(input.MapNext), f.Fired(input.MapPrev):

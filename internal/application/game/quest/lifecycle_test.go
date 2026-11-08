@@ -473,6 +473,12 @@ func TestSetPrefAndCtx(t *testing.T) {
 	if s := q.Export(); s == nil || len(s.NoGoodwill) != 1 || s.NoGoodwill[0] != 0 {
 		t.Fatalf("export = %+v", s)
 	}
+	if got := q.NoGoodwill(); len(got) != 1 || got[0] != 1 {
+		t.Fatalf("NoGoodwill = %v, want [1] (refs)", got)
+	}
+	if (*Quests)(nil).NoGoodwill() != nil {
+		t.Fatal("a nil root declines something")
+	}
 	q.Apply(SetPref(1, true))
 	if !q.AcceptsGoodwill(1) {
 		t.Fatal("SetPref on did not hold")

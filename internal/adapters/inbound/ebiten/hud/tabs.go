@@ -34,6 +34,7 @@ var hudTabSpecs = []struct {
 	{ids.TabAnimals, "Animals", input.TabAnimals, ""},
 	{ids.TabWildlife, "Wildlife", input.TabWildlife, ""},
 	{ids.TabResearch, "Research", input.TabResearch, ""},
+	{ids.TabQuests, "Quests", input.TabQuests, ""}, // QST-138, UIS-041
 	{ids.TabWorld, "World", input.TabWorld, ""},
 	{ids.TabHistory, "History", input.TabHistory, "tab_history"},
 	{ids.TabFactions, "Factions", "", "tab_factions"},

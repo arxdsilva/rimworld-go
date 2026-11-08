@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -159,9 +157,9 @@ func (Refugee) Detail(q qd.Quest) []quest.Line {
 	site, p := q.Parts[refugeeSite], q.Parts[refugeePawn]
 	pv := quest.PreviewOf(p.Seed)
 	lines := []quest.Line{
-		{Key: "quest.refugee.site", Args: []string{strconv.Itoa(site.Tile)}},
-		{Key: "quest.refugee.deadline", Args: []string{strconv.FormatUint(q.Deadline, 10)}},
-		{Key: "quest.refugee.pawn", Args: []string{pv.Name, strconv.Itoa(pv.Age)}},
+		{Key: "quest.refugee.site", Args: []quest.Arg{quest.Tile(site.Tile)}},
+		{Key: "quest.refugee.deadline", Args: []quest.Arg{quest.Tick(q.Deadline)}},
+		{Key: "quest.refugee.pawn", Args: []quest.Arg{quest.Text(pv.Name), quest.Num(pv.Age)}},
 	}
 	switch {
 	case q.State == qd.Succeeded:

@@ -29,11 +29,11 @@ type Kind interface {
 	Detail(q qd.Quest) []Line
 }
 
-// Line is one read-model line: a lang key and its arguments, never final
-// text.
+// Line is one read-model line: a lang key and its typed arguments (arg.go),
+// never final text.
 type Line struct {
 	Key  string
-	Args []string
+	Args []Arg
 }
 
 // Verdict is what a kind decides about its quest: VerdictNone,

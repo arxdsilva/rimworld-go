@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/economy/trade"
 	qd "rimworld-go/internal/domain/quest"
@@ -70,7 +68,7 @@ func (OreLump) Detail(q qd.Quest) []quest.Line {
 	p := q.Parts[0]
 	l := p.Lines[0]
 	return []quest.Line{
-		{Key: "quest.orelump.lump", Args: []string{strconv.Itoa(int(l.Kind)), strconv.Itoa(l.Qty)}},
-		{Key: "quest.orelump.reach", Args: []string{strconv.Itoa(p.Tile)}},
+		{Key: "quest.orelump.lump", Args: []quest.Arg{quest.Item(l.Kind), quest.Num(l.Qty)}},
+		{Key: "quest.orelump.reach", Args: []quest.Arg{quest.Tile(p.Tile)}},
 	}
 }

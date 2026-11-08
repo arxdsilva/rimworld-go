@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
@@ -123,9 +121,9 @@ func (Request) Detail(q qd.Quest) []quest.Line {
 	}
 	p, l := q.Parts[0], q.Parts[0].Lines[0]
 	return []quest.Line{
-		{Key: "quest.request.item", Args: []string{strconv.Itoa(int(l.Kind))}},
-		{Key: "quest.request.count", Args: []string{strconv.Itoa(l.Qty)}},
-		{Key: "quest.request.tile", Args: []string{strconv.Itoa(p.Tile)}},
-		{Key: "quest.request.giver", Args: []string{strconv.Itoa(q.Giver)}},
+		{Key: "quest.request.item", Args: []quest.Arg{quest.Item(l.Kind)}},
+		{Key: "quest.request.count", Args: []quest.Arg{quest.Num(l.Qty)}},
+		{Key: "quest.request.tile", Args: []quest.Arg{quest.Tile(p.Tile)}},
+		{Key: "quest.request.giver", Args: []quest.Arg{quest.Faction(q.Giver)}},
 	}
 }

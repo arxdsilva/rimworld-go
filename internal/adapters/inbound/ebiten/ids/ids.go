@@ -58,6 +58,22 @@ const (
 	TabHistory   = "tab.history"
 	TabAssign    = "tab.assign"
 	TabFactions  = "tab.factions"
+	TabQuests    = "tab.quests"
+
+	// The Quests window (QST-3). A trailing "." takes the quest id; Accept
+	// takes "<id>.<option>" (option -1 for a quest without a choice).
+	QuestsAvail   = "quests.avail"
+	QuestsActive  = "quests.active"
+	QuestsHistory = "quests.history"
+	QuestsSearch  = "quests.search"
+	QuestsPrefs   = "quests.prefs"
+	QuestRow      = "quest.row."
+	QuestAccept   = "quest.accept."
+	QuestDismiss  = "quest.dismiss."
+	QuestRestore  = "quest.restore."
+	QuestJump     = "quest.jump."
+	QuestColony   = "quest.colony."
+	QuestPref     = "quest.pref." // + faction ref: the reward-preference toggle
 
 	MenuNewGame  = "menu.newgame"
 	MenuLoad     = "menu.load"

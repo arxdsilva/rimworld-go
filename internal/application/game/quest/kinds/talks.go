@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
@@ -229,23 +227,23 @@ func (Talks) Detail(q qd.Quest) []quest.Line {
 	if p == nil {
 		return nil
 	}
-	tile := strconv.Itoa(p.Tile)
+	tile := quest.Tile(p.Tile)
 	lines := []quest.Line{
-		{Key: "quest.talks.host", Args: []string{strconv.Itoa(q.Giver)}},
-		{Key: "quest.talks.site", Args: []string{tile}},
+		{Key: "quest.talks.host", Args: []quest.Arg{quest.Faction(q.Giver)}},
+		{Key: "quest.talks.site", Args: []quest.Arg{tile}},
 	}
 	keys := talkResultKeys()
 	switch {
 	case p.Count == talkNoSite:
 		return append(lines, quest.Line{Key: "quest.talks.nosite"})
 	case p.Count > 0 && p.Count <= len(keys):
-		lines = append(lines, quest.Line{Key: keys[p.Count-1], Args: []string{strconv.Itoa(p.Points)}})
+		lines = append(lines, quest.Line{Key: keys[p.Count-1], Args: []quest.Arg{quest.Num(p.Points)}})
 		if len(p.Lines) > 0 {
-			lines = append(lines, quest.Line{Key: "quest.talks.gift", Args: []string{strconv.Itoa(qd.Value(p.Lines))}})
+			lines = append(lines, quest.Line{Key: "quest.talks.gift", Args: []quest.Arg{quest.Num(qd.Value(p.Lines))}})
 		}
 		return lines
 	case q.State == qd.Active:
-		return append(lines, quest.Line{Key: "quest.talks.caravan", Args: []string{tile}})
+		return append(lines, quest.Line{Key: "quest.talks.caravan", Args: []quest.Arg{tile}})
 	}
 	return lines
 }

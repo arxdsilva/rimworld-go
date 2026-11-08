@@ -53,8 +53,8 @@ func TestTalksOfferIsActiveAtASiteOfTheHost(t *testing.T) {
 		t.Fatalf("letters = %+v, want one offer letter at tile 40", e.letters.list)
 	}
 	d := q.View()[0].Detail
-	if len(d) != 3 || d[0].Key != "quest.talks.host" || d[0].Args[0] != "2" ||
-		d[1].Key != "quest.talks.site" || d[1].Args[0] != "40" || d[2].Key != "quest.talks.caravan" {
+	if len(d) != 3 || d[0].Key != "quest.talks.host" || d[0].Args[0] != quest.Faction(2) ||
+		d[1].Key != "quest.talks.site" || d[1].Args[0] != quest.Tile(40) || d[2].Key != "quest.talks.caravan" {
 		t.Fatalf("detail = %+v", d)
 	}
 }

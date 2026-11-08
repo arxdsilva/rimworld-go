@@ -136,6 +136,16 @@ func (h windowsHost) AnimalLabel(an game.AnimalView) string  { return inspector.
 func (h windowsHost) AnimalHealth(an game.AnimalView) string { return inspector.AnimalHealthCell(an) }
 func (h windowsHost) CareShort(p medcare.Policy) string      { return inspector.CareShort(p) }
 
+// FactionName is faction ref's name (ref 1 + its index; "" for none).
+func (h windowsHost) FactionName(ref int) string {
+	if r := h.a.renderer; r != nil {
+		if fs := r.game.Factions(); ref >= 1 && ref <= len(fs) {
+			return fs[ref-1].Name
+		}
+	}
+	return ""
+}
+
 func (h windowsHost) Factions() []windows.Faction {
 	rows := h.colonyRows()
 	tr := &h.a.shell.shellTexts
@@ -256,6 +266,7 @@ func (a *App) historyTabUI(sw, sh int) {
 }
 func (a *App) factionsTabUI(sw, sh int) {
 	a.tabWidget(sw, sh, ids.TabFactions, false, a.win.Factions().Toggle)
+	a.tabWidget(sw, sh, ids.TabQuests, false, a.win.Quests().Toggle) // QST-138
 }
 func (a *App) worldTabUI(sw, sh int) { a.tabWidget(sw, sh, ids.TabWorld, false, a.world.Toggle) }
 

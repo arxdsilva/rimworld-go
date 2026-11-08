@@ -626,8 +626,9 @@ type WorldView struct {
 	Messages []MessageView
 	// Letters (PLAY-018) are the letter stack, newest last: kept and saved
 	// until the player dismisses one (command.DismissLetter), at most 40.
-	Letters []LetterView
-	Quests  []QuestView // QST-1: every quest, ids ascending (memoized; quest_host.go)
+	Letters    []LetterView
+	Quests     []QuestView // QST-1: every quest, ids ascending (memoized; quest_host.go)
+	NoGoodwill []int       // QST-083: faction refs whose goodwill the player declines as a reward
 	// Stored (PLAY-018) is what the colony holds in its stockpiles, one row
 	// per item kind, for the resource list (the Food/Wood/... totals above
 	// still count every loose stack).
@@ -1499,6 +1500,7 @@ func (g *Game) world() WorldView {
 		Messages:    g.messageViews(),
 		Letters:     g.sharedLetters(), // letters.go (PLAY-018)
 		Quests:      questViews(g),
+		NoGoodwill:  questOf(g).NoGoodwill(),
 		Zones:       g.zoneViews(),
 		Schedule:    g.scheduleView(),
 	}

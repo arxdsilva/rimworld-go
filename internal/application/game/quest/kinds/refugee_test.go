@@ -253,7 +253,7 @@ func TestRefugeeDetail(t *testing.T) {
 	if got := keys(n); !reflect.DeepEqual(got, []string{"quest.refugee.site", "quest.refugee.deadline", "quest.refugee.pawn", "quest.refugee.waiting"}) {
 		t.Fatalf("%v", got)
 	}
-	if l := k.Detail(n)[2]; len(l.Args) != 2 || l.Args[0] == "" {
+	if l := k.Detail(n)[2]; len(l.Args) != 2 || l.Args[0].Kind != quest.ArgText || l.Args[0].S == "" {
 		t.Fatalf("pawn line %+v", l)
 	}
 	fresh := n

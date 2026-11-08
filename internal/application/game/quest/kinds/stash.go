@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/economy/item"
@@ -163,11 +161,11 @@ func (Stash) Detail(q qd.Quest) []quest.Line {
 		return nil
 	}
 	out := []quest.Line{
-		{Key: "quest.stash.site", Args: []string{strconv.Itoa(q.Parts[0].Tile)}},
-		{Key: "quest.stash.deadline", Args: []string{strconv.FormatUint(q.Deadline, 10)}},
+		{Key: "quest.stash.site", Args: []quest.Arg{quest.Tile(q.Parts[0].Tile)}},
+		{Key: "quest.stash.deadline", Args: []quest.Arg{quest.Tick(q.Deadline)}},
 	}
 	for _, l := range q.Rewards[0].Lines {
-		out = append(out, quest.Line{Key: "quest.stash.item", Args: []string{strconv.Itoa(int(l.Kind)), strconv.Itoa(l.Qty)}})
+		out = append(out, quest.Line{Key: "quest.stash.item", Args: []quest.Arg{quest.Item(l.Kind), quest.Num(l.Qty)}})
 	}
 	return out
 }

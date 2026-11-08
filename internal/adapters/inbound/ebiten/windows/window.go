@@ -93,6 +93,8 @@ func (w *Set) kitSize() (float32, float32) {
 		return History{w}.size()
 	case ColFacModalID:
 		return Factions{w}.size()
+	case QuestsModalID:
+		return Quests{w}.size()
 	}
 	return w.modal.W, w.modal.H
 }

@@ -11,15 +11,15 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 )
 
-// The tab strip at 1280 and 1920 logical px (UIS-041 to UIS-043): eight
-// text tabs of unit = floor(W / (8 + 3 x IconTabShare)), then the History,
+// The tab strip at 1280 and 1920 logical px (UIS-041 to UIS-043, QST-138):
+// nine text tabs of unit = floor(W / (9 + 3 x IconTabShare)), 182 at 1920, then the History,
 // Factions and Menu icon tabs at half of it, the last one taking the rest;
 // the tabs tile the strip, the icon tabs carry their name in the tooltip,
 // and every text label fits left-aligned at TabLabelX without an ellipsis.
 func TestTabStripWidthsAt1280And1920(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(3))
-	want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.world", "tab.history", "tab.factions", "tab.menu"}
+	want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.quests", "tab.world", "tab.history", "tab.factions", "tab.menu"}
 	icons := map[string]bool{"tab.history": true, "tab.factions": true, "tab.menu": true}
 	for _, size := range [][2]int{{1280, 720}, {1920, 1080}} {
 		a.sw, a.sh = size[0], size[1]
@@ -27,7 +27,7 @@ func TestTabStripWidthsAt1280And1920(t *testing.T) {
 		if len(bs) != len(want) {
 			t.Fatalf("%v: %d tabs, want %d", size, len(bs), len(want))
 		}
-		unit := float32(math.Floor(float64(a.sw) / (8 + 3*hudlayout.IconTabShare)))
+		unit := float32(math.Floor(float64(a.sw) / (9 + 3*hudlayout.IconTabShare)))
 		half := float32(math.Floor(float64(unit) * hudlayout.IconTabShare))
 		x := float32(0)
 		for i, b := range bs {

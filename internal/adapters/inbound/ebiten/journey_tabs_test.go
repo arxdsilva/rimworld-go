@@ -210,10 +210,29 @@ func TestJourneyTabsWorldAndHistory(t *testing.T) {
 	}
 }
 
-// TestJourneyTabsReservedKeysToast: F7 (Quests) and T (Beauty) only toast.
+// TestJourneyTabsQuests: F7 opens the Quests window and closes it again;
+// the Quests tab does the same (QST-138).
+func TestJourneyTabsQuests(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t)
+	j.key("F7", 0)
+	if got := j.a.uiModalTop(); got != "colony.quests" {
+		t.Fatalf("F7 opened %q", got)
+	}
+	j.key("F7", 0)
+	if got := j.a.uiModalTop(); got != "" {
+		t.Fatalf("F7 again left %q open", got)
+	}
+	j.clickID("tab.quests")
+	if got := j.a.uiModalTop(); got != "colony.quests" {
+		t.Fatalf("the Quests tab opened %q", got)
+	}
+}
+
+// TestJourneyTabsReservedKeysToast: T (Beauty) only toasts.
 func TestJourneyTabsReservedKeysToast(t *testing.T) {
 	t.Parallel()
-	for _, k := range []string{"F7", "T"} {
+	for _, k := range []string{"T"} {
 		t.Run(k, func(t *testing.T) {
 			t.Parallel()
 			j := newJourney(t)

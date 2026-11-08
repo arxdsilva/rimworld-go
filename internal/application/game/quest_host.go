@@ -196,9 +196,7 @@ func (h questHost) BestSocial(cid uint64) (entity.EntityID, int, bool) {
 func (h questHost) Pod(lines []trade.Line, _ uint64) bool {
 	g, cur := h.g, h.g.mapState
 	defer func() { g.mapState = cur }()
-	if len(g.maps) > 0 {
-		g.mapState = g.maps[0]
-	}
+	g.mapState = g.maps[0] // quests run only in a set-up colony, which has its first map
 	g.sendTradePod(slices.Clone(lines), h.Now()) // trade_orbital.go
 	return len(lines) > 0
 }

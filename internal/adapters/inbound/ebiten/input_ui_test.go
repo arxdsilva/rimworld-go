@@ -218,7 +218,15 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 	if a.world.Open() {
 		t.Fatal("F8 again closes the world view")
 	}
-	for _, k := range []string{"F7", "T"} { // V is live since PLAY-021 (TestVHotkeyFlicksTheSelectedDevice)
+	f.Key(t, a, "F7", 0)
+	if a.uiModalTop() != windows.QuestsModalID {
+		t.Fatalf("F7 should open Quests, top modal %q", a.uiModalTop())
+	}
+	f.Key(t, a, "F7", 0)
+	if a.uiModalTop() == windows.QuestsModalID {
+		t.Fatal("F7 again closes Quests")
+	}
+	for _, k := range []string{"T"} { // V is live since PLAY-021 (TestVHotkeyFlicksTheSelectedDevice); F7 since QST-138
 		f.Key(t, a, k, 0)
 		ts := a.liveToasts()
 		if len(ts) == 0 || !strings.Contains(ts[len(ts)-1].Text, input.NotYet) {

@@ -271,7 +271,7 @@ func (s *stubKind) PartDue(c Ctx, q *qd.Quest, part int) Verdict {
 }
 func (s *stubKind) Ended(c Ctx, q *qd.Quest) { s.ended++ }
 func (s *stubKind) Detail(q qd.Quest) []Line {
-	return []Line{{Key: "quest.stub.detail", Args: []string{strconv.Itoa(int(q.ID))}}}
+	return []Line{{Key: "quest.stub.detail", Args: []Arg{Num(int(q.ID))}}}
 }
 
 // stateOf is quest id's state (fails the test when missing).

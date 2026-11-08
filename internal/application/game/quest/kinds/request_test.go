@@ -167,7 +167,7 @@ func TestRequestScalesAndDetail(t *testing.T) {
 		t.Fatalf("value does not grow with points: %d %d", qd.Value(a.Parts[0].Lines), qd.Value(b.Parts[0].Lines))
 	}
 	d := (Request{}).Detail(b)
-	if len(d) != 4 || d[0].Key != "quest.request.item" || d[3].Args[0] != "1" {
+	if len(d) != 4 || d[0].Key != "quest.request.item" || d[3].Args[0] != quest.Faction(1) {
 		t.Fatalf("detail %+v", d)
 	}
 	if (Request{}).Detail(qd.Quest{}) != nil {

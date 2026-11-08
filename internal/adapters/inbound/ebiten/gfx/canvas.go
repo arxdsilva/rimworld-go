@@ -66,6 +66,16 @@ func snapSpan(x, w, s float32) (float32, float32) {
 	return float32(math.Round(float64(x * s))), max(1, float32(math.Ceil(float64(w*s-0.01))))
 }
 
+// keepIn is a snapped length l from p: a span whose true end lies on or
+// inside the image's edge never rounds past it (the last tab at a
+// fractional scale, which ends on the screen's right edge).
+func keepIn(p, l, end float32, edge int) float32 {
+	if e := float32(edge); end <= e+0.01 && p+l > e {
+		return max(1, e-p)
+	}
+	return l
+}
+
 // snapWidth is a stroke width in device pixels at scale s: whole and at
 // least 1 at a fractional s (UIS-011).
 func snapWidth(width, s float32) float32 {
@@ -87,6 +97,10 @@ func FillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool) {
 	if !aa {
 		px, pw = snapSpan(x, w, s)
 		py, ph = snapSpan(y, h, s)
+		if dst != nil {
+			pw = keepIn(px, pw, (x+w)*s, dst.Bounds().Dx())
+			ph = keepIn(py, ph, (y+h)*s, dst.Bounds().Dy())
+		}
 	}
 	if cur.canvasTrace != nil {
 		cur.canvasTrace("fill", px, py, pw, ph)

@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -186,9 +184,9 @@ func (Rescue) Detail(q qd.Quest) []quest.Line {
 		state = "quest.rescue.held"
 	}
 	return []quest.Line{
-		{Key: "quest.rescue.site", Args: []string{strconv.Itoa(site.Tile), strconv.Itoa(q.Target)}},
-		{Key: "quest.rescue.deadline", Args: []string{strconv.FormatUint(q.Deadline, 10)}},
-		{Key: "quest.rescue.pawn", Args: []string{strconv.FormatUint(pawn.Seed, 10)}},
+		{Key: "quest.rescue.site", Args: []quest.Arg{quest.Tile(site.Tile), quest.Faction(q.Target)}},
+		{Key: "quest.rescue.deadline", Args: []quest.Arg{quest.Tick(q.Deadline)}},
+		{Key: "quest.rescue.pawn", Args: []quest.Arg{quest.Text(quest.PreviewOf(pawn.Seed).Name)}},
 		{Key: state},
 	}
 }

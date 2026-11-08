@@ -60,6 +60,8 @@ type Labels interface {
 	CareShort(medcare.Policy) string
 	// Factions are the Factions table's rows, the Swarm last.
 	Factions() []Faction
+	// FactionName is faction ref's name (ref 1 + its index; "" for none).
+	FactionName(ref int) string
 	// DrawAnimalIcon draws an animal's species icon (or its initial).
 	DrawAnimalIcon(dst *ebiten.Image, an game.AnimalView, x, y, size float64)
 	// DrawPassion draws the passion glyph of level p (1 minor, 2 major),
@@ -147,11 +149,13 @@ type Set struct {
 	outfit *outfitState
 
 	research *researchState // the Research tab's tree, selection and caches (research_tree.go, RSCH-2)
+
+	quests *questsState // the Quests window's tab and pick (quests.go, QST-3)
 }
 
 // New builds the feature over its shell.
 func New(sh Shell) *Set {
-	return &Set{sh: sh, storage: &storageState{}, food: &foodState{}, outfit: &outfitState{}}
+	return &Set{sh: sh, storage: &storageState{}, food: &foodState{}, outfit: &outfitState{}, quests: &questsState{}}
 }
 
 // The windows, each a view over the set.
@@ -172,6 +176,8 @@ type (
 	Factions struct{ *Set }
 	// Storage is the storage zone settings window (PRD-4).
 	Storage struct{ *Set }
+	// Quests is the Quests tab: the offers, the active and the ended quests.
+	Quests struct{ *Set }
 )
 
 func (w *Set) Work() Work         { return Work{w} }
@@ -182,6 +188,7 @@ func (w *Set) Research() Research { return Research{w} }
 func (w *Set) History() History   { return History{w} }
 func (w *Set) Factions() Factions { return Factions{w} }
 func (w *Set) Storage() Storage   { return Storage{w} }
+func (w *Set) Quests() Quests     { return Quests{w} }
 
 func (w *Set) kit() *uikit.Kit { return w.sh.Kit() }
 

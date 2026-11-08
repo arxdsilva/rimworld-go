@@ -203,6 +203,10 @@ type SwitchMap struct{ Map game.MapID }
 type OpenWorld struct{ Select string }
 type CloseWorld struct{}
 
+// ShowQuest opens the Quests window on quest ID (QST-3): its tab, its row
+// selected; an unknown id opens the window as it was.
+type ShowQuest struct{ ID uint32 }
+
 // OpenInfoCard opens the read-only Info window (GEAR-006) on one thing: a
 // pawn's gear row (Pawn, with Mode and Index as command.MarkUnload's), a
 // map item or building (ID), or, with neither, an item kind name (Kind).
@@ -232,6 +236,7 @@ func (JumpTo) isIntent()          {}
 func (SwitchMap) isIntent()       {}
 func (OpenWorld) isIntent()       {}
 func (CloseWorld) isIntent()      {}
+func (ShowQuest) isIntent()       {}
 func (OpenInfoCard) isIntent()    {}
 
 // Screen is a full-screen route of the client (presentation only; it never

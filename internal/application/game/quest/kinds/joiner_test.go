@@ -312,7 +312,7 @@ func TestJoinerDetail(t *testing.T) {
 			t.Fatalf("%v: %v want %v", c.q.State, got, c.want)
 		}
 	}
-	if l := k.Detail(cases[0].q)[0]; len(l.Args) != 1 || l.Args[0] != "1" {
+	if l := k.Detail(cases[0].q)[0]; len(l.Args) != 1 || l.Args[0] != quest.Faction(1) {
 		t.Fatalf("args %v", l.Args)
 	}
 }

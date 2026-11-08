@@ -2,7 +2,6 @@ package kinds
 
 import (
 	"reflect"
-	"strconv"
 	"testing"
 
 	"rimworld-go/internal/application/game/quest"
@@ -74,8 +73,8 @@ func TestCampOfferedByAFriendAgainstAnEnemy(t *testing.T) {
 		t.Fatal("the camp was laid before its map opened")
 	}
 	d := q.View()[0].Detail
-	want := []quest.Line{{Key: "quest.camp.giver", Args: []string{"1"}},
-		{Key: "quest.camp.target", Args: []string{strconv.Itoa(n.Target)}}, {Key: "quest.camp.site", Args: []string{"40"}}}
+	want := []quest.Line{{Key: "quest.camp.giver", Args: []quest.Arg{quest.Faction(1)}},
+		{Key: "quest.camp.target", Args: []quest.Arg{quest.Faction(n.Target)}}, {Key: "quest.camp.site", Args: []quest.Arg{quest.Tile(40)}}}
 	if !reflect.DeepEqual(d, want) {
 		t.Fatalf("detail = %+v, want %+v", d, want)
 	}

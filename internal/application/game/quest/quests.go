@@ -158,6 +158,19 @@ func (q *Quests) defOf(k qd.KindID) qd.Def {
 	return qd.DefOf(k)
 }
 
+// NoGoodwill is the faction refs (1 + index) whose goodwill the player
+// declines as a reward, ascending (the preference dialog's read; nil-safe).
+func (q *Quests) NoGoodwill() []int {
+	if q == nil {
+		return nil
+	}
+	out := make([]int, len(q.noGoodwill))
+	for i, f := range q.noGoodwill {
+		out[i] = f + 1
+	}
+	return out
+}
+
 // declines: the player turned goodwill rewards off for faction index f.
 func (q *Quests) declines(f int) bool {
 	_, found := slices.BinarySearch(q.noGoodwill, f)

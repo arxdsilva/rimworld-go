@@ -104,7 +104,7 @@ func TestOreLumpDeterministicAndDetail(t *testing.T) {
 	}
 	var k OreLump
 	d := k.Detail(na)
-	if len(d) != 2 || d[0].Key != "quest.orelump.lump" || d[0].Args[1] != "2300" || d[1].Args[0] != "33" {
+	if len(d) != 2 || d[0].Key != "quest.orelump.lump" || d[0].Args[1] != quest.Num(2300) || d[1].Args[0] != quest.Tile(33) {
 		t.Fatalf("detail %+v", d)
 	}
 	if k.Detail(qd.Quest{}) != nil {

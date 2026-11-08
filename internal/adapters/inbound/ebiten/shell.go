@@ -410,6 +410,8 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.win.Storage().Open(it.Zone)
 	case ports.ShowWindow:
 		a.win.Show(it.Mode)
+	case ports.ShowQuest:
+		a.win.Quests().Select(it.ID) // QST-3
 	case ports.CloseWindows:
 		a.win.Open = false
 	case ports.SelectPawn:

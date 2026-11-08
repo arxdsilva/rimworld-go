@@ -90,7 +90,7 @@ func winApp(t *testing.T, s *stubSim) (*App, *fakeInput) {
 func TestTabStripKeepsOrderAndEdgesAtEverySize(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(3))
-	want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.world", "tab.history", "tab.factions", "tab.menu"}
+	want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.quests", "tab.world", "tab.history", "tab.factions", "tab.menu"}
 	icon := map[string]bool{"tab.history": true, "tab.factions": true, "tab.menu": true}
 	for _, size := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		a.sw, a.sh = size[0], size[1]

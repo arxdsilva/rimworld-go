@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/faction"
 	qd "rimworld-go/internal/domain/quest"
@@ -169,7 +167,7 @@ func (Joiner) Ended(quest.Ctx, *qd.Quest) {}
 // Detail names the giver (its ref, 1 + index, for the window to resolve)
 // and, vaguely, the trouble to come.
 func (Joiner) Detail(q qd.Quest) []quest.Line {
-	lines := []quest.Line{{Key: "quest.joiner.about", Args: []string{strconv.Itoa(q.Giver)}}}
+	lines := []quest.Line{{Key: "quest.joiner.about", Args: []quest.Arg{quest.Faction(q.Giver)}}}
 	switch {
 	case q.State == qd.Offered:
 		lines = append(lines, quest.Line{Key: "quest.joiner.warning"})
