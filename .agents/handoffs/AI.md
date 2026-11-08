@@ -15,3 +15,10 @@ One `.agents/` folder for every agent tool · 2026-11-06 · 76d605d04
 - Limits: the big specs (ART, MAIN_UI, MASTER, GO) were trimmed only of restated rules; their bodies are unchanged, so `.agents/specs` is 344 KB (was 352 KB).
 - No HUD/UI representation: agent guidance only, no player-observable change. No checklist row covers this work. No determinism, save or mod impact (Go changes are comments plus the guard test).
 - Open: Cursor skill discovery is unverified; Cursor reaches skills through the router named in root.
+
+## AI-002-no-tool-folders
+Agent files live only in `.agents/`; the repo keeps no tool folder · 2026-11-08 · pending
+- Changed: after `.claude/` was removed (`660f5d4c2`), `TestSkillLinksMatch` gave way to `TestNoToolFolders`, which fails if `.claude`, `.cursor`, `.codex`, `.windsurf` or `.gemini` exists at the root. `TestNoStaleAgentPaths` no longer lets a line name Cursor's folder for its `mcp.json`.
+- Changed: AGENTS.md, `.agents/README.md` §8 and §9, AI_TOKEN_OPTIMIZATION §32a, PARALLEL_WORK, `docs/DEVELOPING.md` and `tools/blender-mcp/README.md` say each tool is pointed at `.agents/` from its user's own settings. Every tool now opens the router skill at task start.
+- Decisions: the user's rule (2026-11-08) is that anything agent-related lives in `.agents/`. The root AGENTS.md budget went down to 5,198 bytes.
+- Open: the root `.mcp.json` (Blender and ElevenLabs servers) still sits outside `.agents/`, because that is where Claude Code reads project MCP servers; moving it is the user's call.

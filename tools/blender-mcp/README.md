@@ -17,8 +17,8 @@ the **server** (`uvx blender-mcp`) is started by the agent and talks to it.
 3. Point your agent at the server:
    - **Claude Code**: nothing to do. `.mcp.json` at the repo root registers
      `blender`; approve it when Claude Code asks, then check with `/mcp`.
-   - **Cursor**: nothing to do. `.cursor/mcp.json` registers it; enable it
-     under Settings > MCP.
+   - **Cursor**: add a `blender` server (`uvx blender-mcp`) in your own
+     Cursor MCP settings; the repo keeps no tool folder.
    - **Claude desktop app** (macOS): run `install-blender-mcp.command`, then
      restart the app.
 

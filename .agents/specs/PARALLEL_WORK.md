@@ -123,7 +123,7 @@ Notes:
 - **Stopped agents stay listed.** A stopped agent stays listed but is not running, and messaging it resumes it, so stopping costs nothing if you later need it.
 - **Clearing rows by hand:** the user can clear a failed or stopped row sooner with `x` in `/tasks`.
 - **Explore and Plan agents are one-shot.** Size their prompt to finish in one go.
-- **Running-agent limit:** `.claude/settings.json` sets `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=30` (the Claude Code default is 20); a session started before that line keeps the old limit. `make agent-budget` can still be stricter.
+- **Running-agent limit:** the user's Claude Code settings set `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=30` (the Claude Code default is 20); a session started before that line keeps the old limit. `make agent-budget` can still be stricter.
 
 ## 6. Pick the cheapest competent model
 
@@ -144,4 +144,4 @@ Every subagent runs on the **cheapest model that can do its job well**. Choose p
 | State the model and a one-line reason in every launch, and add a Model column to every phase table | Leave the model implicit (it then inherits the lead's) |
 | Keep the lead on the session's model | Use other models (e.g. `fable`) unless the user asks for it |
 
-**Enforced by hooks (`.claude/settings.json`).** `.agents/hooks/agent_model_guard.py` denies a `general-purpose` or untyped spawn with no `model`, so the tier is always a choice. Forks and agent types with their own model are exempt. `Explore` runs on `haiku` through `.claude/agents/Explore.md`: it locates code, and judgement stays with the lead or an `opus` agent. An explicit `model` on a spawn still overrides it.
+**Enforced by hooks (wired from the user's tool settings; the repo has no tool folder).** `.agents/hooks/agent_model_guard.py` denies a `general-purpose` or untyped spawn with no `model`, so the tier is always a choice. Forks and agent types with their own model are exempt. `Explore` runs on `haiku` through `.claude/agents/Explore.md`: it locates code, and judgement stays with the lead or an `opus` agent. An explicit `model` on a spawn still overrides it.

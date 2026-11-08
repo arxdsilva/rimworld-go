@@ -29,6 +29,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | ID | Title | Date | Ledger |
 |---|---|---|---|
 | AI-001-agents-folder | One `.agents/` folder for every agent tool | 2026-11-06 | [AI.md](AI.md#ai-001-agents-folder) |
+| AI-002-no-tool-folders | Agent files live only in `.agents/`; the repo keeps no tool folder | 2026-11-08 | [AI.md](AI.md#ai-002-no-tool-folders) |
 | AIL-1-stuck-downed | No exposure state holds a colonist down forever | 2026-11-06 | [MED.md](MED.md#ail-1-stuck-downed) |
 | AIL-2-open-air | Heatstroke victims are carried into cool open air | 2026-11-06 | [MED.md](MED.md#ail-2-open-air) |
 | ARCH-001-solid-rule-and-guard | SOLID rule and the arch guard | 2026-10-28 | [ARCH.md](ARCH.md#arch-001-solid-rule-and-guard) |

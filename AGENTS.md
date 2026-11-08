@@ -4,10 +4,10 @@ Read only what the current task needs.
 
 ## Where things are
 - `.agents/README.md` indexes every spec, checklist, gap, ledger, skill, template and hook.
-- At task start, Cursor and Codex open `.agents/skills/rimworld-go-router/SKILL.md`; Claude lists the skills itself.
+- At task start, open `.agents/skills/rimworld-go-router/SKILL.md`.
 - Specs are in `.agents/specs/`, the two checklists in `.agents/backlog/`, gap analyses in `.agents/gaps/`.
 - History: `.agents/handoffs/INDEX.md` and the family ledgers beside it.
-- `.cursor/` holds only `mcp.json`; `.claude/` only settings, the Explore agent and skill links.
+- Agent files live only in `.agents/`: no `.claude`, `.cursor` or other tool folder (`TestNoToolFolders`).
 
 ## Non-negotiables
 - Dependencies point inward: adapters → application → domain.

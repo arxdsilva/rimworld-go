@@ -109,15 +109,10 @@ Claude discovers them by description; Cursor and Codex open the router first. A 
 
 ## 8. Hooks (`hooks/`)
 
-`read_guard.py` (denies large shell views and whole-file Reads) and `agent_model_guard.py` (requires a named model on `general-purpose` agents), both run from `.claude/settings.json`. Tests: `python3 .agents/hooks/test_hooks.py`. Details: `AI_TOKEN_OPTIMIZATION` §32a.
+`read_guard.py` (denies large shell views and whole-file Reads) and `agent_model_guard.py` (requires a named model on `general-purpose` agents), wired from each user's own tool settings (the repo has no tool folder). Tests: `python3 .agents/hooks/test_hooks.py`. Details: `AI_TOKEN_OPTIMIZATION` §32a.
 
-Guard: `internal/arch/agents_test.go` (run by `make arch` and CI) fails on paths into the old tool folders, broken links or `.agents/` paths, ledger anchors that name no section, `.claude/skills` links that do not match `.agents/skills`, ledger sections missing from `INDEX.md`, and a root `AGENTS.md` over its byte budget (`internal/arch/agents_budget.txt`, only shrinks).
+Guard: `internal/arch/agents_test.go` (run by `make arch` and CI) fails on paths into the old tool folders, broken links or `.agents/` paths, ledger anchors that name no section, a tool folder (`.claude/`, `.cursor/`, …) in the repo, ledger sections missing from `INDEX.md`, and a root `AGENTS.md` over its byte budget (`internal/arch/agents_budget.txt`, only shrinks).
 
 ## 9. Tool adapters
 
-| Path | Holds | Why it must sit there |
-|---|---|---|
-| `.cursor/mcp.json` | Cursor MCP servers | Cursor reads MCP config only from `.cursor/` |
-| `.claude/settings.json` | Permissions, hooks, attribution settings | Claude Code reads settings only from `.claude/` |
-| `.claude/agents/Explore.md` | The Explore subagent definition | Claude Code loads subagents from `.claude/agents/` |
-| `.claude/skills/*` | Symlinks to `.agents/skills/*` | Claude Code discovers skills only from `.claude/skills/` |
+None. Agent files live only in `.agents/`; the repository has no `.claude/`, `.cursor/` or other tool folder (`internal/arch` `TestNoToolFolders`). Each tool is pointed at `.agents/` (skills, hooks, subagents) from its user's own settings.

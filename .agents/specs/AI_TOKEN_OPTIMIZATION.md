@@ -517,8 +517,7 @@ Advisory rules in this guide did not hold: most subagent work ran on the lead's 
 | Long shell views go through ranged Read | `.agents/hooks/read_guard.py` | Over 150 lines per command (`READ_GUARD_MAX_VIEW_LINES`) |
 | Big files are read in ranges | `.agents/hooks/read_guard.py` | Whole-file Read over 500 lines (`READ_GUARD_MIN_LINES`) |
 | `general-purpose` agents name a model | `.agents/hooks/agent_model_guard.py` | Any spawn with no `model` |
-| `Explore` runs on Haiku | `.claude/agents/Explore.md` | Explicit `model` overrides it |
-| Context stays small | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in `.claude/settings.json` | Auto-compact at 300k |
+| Context stays small | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in the user's Claude Code settings | Auto-compact at 300k |
 
 Small shell views stay allowed on purpose. Through Read they print the same text, so denying them only adds a call, and every call re-reads the whole context. `READ_GUARD=off` disables the read guard.
 

@@ -41,7 +41,7 @@ Related commands and notes:
 - `make media`: records the gallery as short animated WebPs through the game's `-capture` flag.
 - `make clips`: captures frame sequences and packs them into animated WebP with `scripts/frames_to_webp.py`. Needs python3 and Pillow.
 - `make art` re-renders the sprites in Blender, then `make normals` writes their normal maps.
-- To let an AI agent drive a live Blender (Blender MCP), see [`tools/blender-mcp`](../tools/blender-mcp/README.md). `.mcp.json` and `.cursor/mcp.json` register the server for Claude Code and Cursor.
+- To let an AI agent drive a live Blender (Blender MCP), see [`tools/blender-mcp`](../tools/blender-mcp/README.md). `.mcp.json` registers the server for Claude Code; other tools add it from their own settings.
 
 ## Sound
 

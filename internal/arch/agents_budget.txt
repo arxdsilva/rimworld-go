@@ -1,3 +1,3 @@
 # Byte budget of the root AGENTS.md (TestRootAgentsBudget). It only shrinks:
 # move detail to its canonical home in .agents/ and leave a pointer.
-5238
+5198

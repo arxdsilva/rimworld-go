@@ -6,16 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
 )
 
 // The agent-guidance guard (AI-001). All agent guidance lives in .agents/
-// (.agents/README.md); the tool folders keep only what each tool cannot
-// find elsewhere. These tests keep paths, links, skill links, ledgers and the
-// size of the always-loaded root AGENTS.md from drifting.
+// (.agents/README.md), and the repository has no tool-specific folder.
+// These tests keep paths, links, the absence of tool folders, ledgers and
+// the size of the always-loaded root AGENTS.md from drifting.
 
 // Text files the guard reads; everything else (images, sounds, binaries) is skipped.
 var guardExts = map[string]bool{
@@ -69,8 +68,7 @@ func guardFiles(t *testing.T, root string) []guardFile {
 }
 
 // Outside .agents/ (whose ledgers record history), nothing names the old
-// tool-specific homes; a line may name Cursor's folder only to say it
-// holds mcp.json.
+// tool-specific homes.
 func TestNoStaleAgentPaths(t *testing.T) {
 	t.Parallel()
 	root := moduleRoot(t)
@@ -81,7 +79,7 @@ func TestNoStaleAgentPaths(t *testing.T) {
 			continue
 		}
 		for n, line := range strings.Split(f.body, "\n") {
-			if strings.Contains(line, cursor) && !strings.Contains(line, "mcp.json") {
+			if strings.Contains(line, cursor) {
 				t.Errorf("%s:%d names %s; agent guidance lives in .agents/ (.agents/README.md)", f.rel, n+1, cursor)
 			}
 			if strings.Contains(line, hooks) {
@@ -174,44 +172,17 @@ func ledgerHeadings(t *testing.T, root string) map[string]map[string]bool {
 	return out
 }
 
-// Claude Code finds project skills only in .claude/skills/, so each skill in
-// .agents/skills/ has exactly one link there, and nothing else lives there.
-func TestSkillLinksMatch(t *testing.T) {
+// Agent guidance lives only in .agents/ (AGENTS.md): the repository has no
+// tool-specific folder. Each tool is pointed at .agents/ from its user's own
+// settings.
+func TestNoToolFolders(t *testing.T) {
 	t.Parallel()
 	root := moduleRoot(t)
-	want := dirNames(t, filepath.Join(root, ".agents", "skills"))
-	got := dirNames(t, filepath.Join(root, ".claude", "skills"))
-	if strings.Join(want, ",") != strings.Join(got, ",") {
-		t.Fatalf(".claude/skills %v must match .agents/skills %v (one relative symlink each)", got, want)
-	}
-	for _, name := range want {
-		link := filepath.Join(root, ".claude", "skills", name)
-		dest, err := os.Readlink(link)
-		if err != nil {
-			t.Errorf(".claude/skills/%s must be a symlink: %v", name, err)
-			continue
-		}
-		if filepath.ToSlash(dest) != "../../.agents/skills/"+name {
-			t.Errorf(".claude/skills/%s points to %s, want ../../.agents/skills/%s", name, dest, name)
-		}
-		if _, err := os.Stat(filepath.Join(link, "SKILL.md")); err != nil {
-			t.Errorf(".claude/skills/%s does not resolve to a SKILL.md: %v", name, err)
+	for _, dir := range []string{".claude", ".cur" + "sor", ".codex", ".windsurf", ".gemini"} {
+		if _, err := os.Stat(filepath.Join(root, dir)); err == nil {
+			t.Errorf("%s/ exists; agent files live only in .agents/ (AGENTS.md)", dir)
 		}
 	}
-}
-
-func dirNames(t *testing.T, dir string) []string {
-	t.Helper()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var out []string
-	for _, e := range entries {
-		out = append(out, e.Name())
-	}
-	sort.Strings(out)
-	return out
 }
 
 // Root AGENTS.md loads in every session of every tool, so its size has a
