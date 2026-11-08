@@ -306,12 +306,12 @@ func (l Lifecycle) forgetMeta(id uint32) {
 	a.Queue = slices.DeleteFunc(a.Queue, func(r Request) bool { return r.Op != OpOpen && r.Map == id })
 }
 
-// Label is map id's switcher label, kind and pack-up countdown at now
-// (map 0 and unknown ids: label and kind as given).
-func (l Lifecycle) Label(id uint32, label, kind string, now uint64) (string, string, int) {
+// Label is map id's switcher label and kind (map 0 and unknown ids: as
+// given), its pack-up ticks left at now and its reinforcements' (QST-017).
+func (l Lifecycle) Label(id uint32, label, kind string, now uint64) (string, string, int, int) {
 	m := l.f.a.Meta(id)
 	if m == nil {
-		return label, kind, 0
+		return label, kind, 0, 0
 	}
 	name := l.f.h.TileName(m.Tile)
 	if m.Lump != 0 {
@@ -320,5 +320,5 @@ func (l Lifecycle) Label(id uint32, label, kind string, now uint64) (string, str
 	if m.Kind == Colony {
 		name = fmt.Sprintf("Colony %d", id)
 	}
-	return name, m.Kind.String(), l.f.a.Countdown(id, now)
+	return name, m.Kind.String(), l.f.a.Countdown(id, now), l.f.a.Reinforcing(id, now)
 }

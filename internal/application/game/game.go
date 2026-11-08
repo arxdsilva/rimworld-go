@@ -1060,13 +1060,13 @@ type MapID uint32
 
 // MapView is one open map for the map switcher and the world view (MAP-0).
 type MapView struct {
-	ID        MapID
-	Label     string // "Colony", a site or settlement name
-	Kind      string // "colony", "site", "settlement" or "encounter"
-	Tile      int    // world tile, -1 without a world
-	Colonists int    // our colonists standing on it
-	Threat    bool   // hostiles on the map
-	Countdown int    // ticks left to pack up before it closes; 0: none
+	ID                   MapID
+	Label                string // "Colony", a site or settlement name
+	Kind                 string // "colony", "site", "settlement" or "encounter"
+	Tile                 int    // world tile, -1 without a world
+	Colonists            int    // our colonists standing on it
+	Threat               bool   // hostiles on the map
+	Countdown, Reinforce int    // ticks left to pack up before it closes, and to a quest site's reinforcements (QST-017); 0: none
 }
 
 // primary reports whether the current pass runs the colony-wide work: the
@@ -1131,7 +1131,7 @@ func mapView(g *Game, m *mapState) MapView {
 	if m.id == 0 {
 		v.Tile = g.colonyTile()
 	}
-	v.Label, v.Kind, v.Countdown = mapsLabel(g, m.id, v.Label, v.Kind) // world_state.go: game/maps' atlas
+	v.Label, v.Kind, v.Countdown, v.Reinforce = mapsLabel(g, m.id, v.Label, v.Kind) // world_state.go: game/maps' atlas
 	cur := g.mapState
 	g.mapState = m
 	for _, id := range g.pawnIDs {

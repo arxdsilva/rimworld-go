@@ -137,6 +137,9 @@ func (v inspector) inspectMap(o *Object) (string, []line, []gizmo) {
 	if m.Countdown > 0 {
 		lines = append(lines, line{"Packs up in", durationText(m.Countdown)})
 	}
+	if m.Reinforce > 0 {
+		lines = append(lines, line{"Reinforcements in", durationText(m.Reinforce)})
+	}
 	switch {
 	case o.razed:
 		lines = append(lines, line{"", "The settlement that stood here is gone."})

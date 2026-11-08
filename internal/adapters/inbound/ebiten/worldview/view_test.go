@@ -570,7 +570,7 @@ func TestMapGizmos(t *testing.T) {
 	t.Parallel()
 	g := colonyGame(t)
 	other := landTile(t, 10)
-	g.maps = append(g.maps, game.MapView{ID: 3, Label: "Oak camp", Kind: "site", Tile: other, Colonists: 2, Countdown: 5 * clock.TicksPerHour})
+	g.maps = append(g.maps, game.MapView{ID: 3, Label: "Oak camp", Kind: "site", Tile: other, Colonists: 2, Countdown: 5 * clock.TicksPerHour, Reinforce: 7 * clock.TicksPerHour})
 	sh, v := newFake(g)
 	v.Show("map:0")
 	frame(sh, v, -1, -1, inputframe.Raw{})
@@ -585,6 +585,9 @@ func TestMapGizmos(t *testing.T) {
 	_, lines, _ := (inspector{v}).inspect()
 	if !slices.ContainsFunc(lines, func(l line) bool { return l.label == "Packs up in" && strings.Contains(l.value, "5 hours") }) {
 		t.Fatalf("no pack-up countdown in %v", lines)
+	}
+	if !slices.ContainsFunc(lines, func(l line) bool { return l.label == "Reinforcements in" && strings.Contains(l.value, "7 hours") }) {
+		t.Fatalf("no reinforcements countdown in %v", lines)
 	}
 	gizmoOf(t, v, "reform").run()
 	if c := sh.cmds[len(sh.cmds)-1]; c.Kind != command.CaravanReform || c.Target != 3 {

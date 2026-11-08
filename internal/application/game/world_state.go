@@ -617,9 +617,9 @@ func mapsFlush(g *Game) {
 func mapsApply(g *Game, c command.Command) { fleetOf(g).Life().Apply(c) }
 
 // mapsLabel is map id's switcher label, kind and pack-up countdown.
-func mapsLabel(g *Game, id uint32, label, kind string) (string, string, int) {
+func mapsLabel(g *Game, id uint32, label, kind string) (string, string, int, int) {
 	if g.worldSt == nil || id == 0 {
-		return label, kind, 0
+		return label, kind, 0, 0
 	}
 	return fleetOf(g).Life().Label(id, label, kind, uint64(g.clock.Now()))
 }
