@@ -14,6 +14,10 @@ func (c *Care) Do(id entity.EntityID, j job.Record) {
 	case job.FeedPatient:
 		c.Feed.Do(id, j)
 	case job.Strip:
+		if j.Count == helpMark {
+			c.Help.Do(id, j) // help.go (QST-055)
+			return
+		}
 		if j.Count == freeMark {
 			c.Free.Do(id, j) // free.go (QST-067)
 			return

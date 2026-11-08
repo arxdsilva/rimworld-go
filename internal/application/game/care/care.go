@@ -25,6 +25,7 @@ type Care struct {
 	Strip      *Stripping
 	Giving     *Giving  // gift.go (CSE-007)
 	Free       *Freeing // free.go (QST-067)
+	Help       *Helping // help.go (QST-055)
 	h          Host
 	pr         Prison
 	gu         Guests
@@ -57,6 +58,7 @@ func New(h Host, r Roles) *Care {
 	c.Visits, c.Strip = newVisits(c, r.Social), newStripping(c, r.Gear)
 	c.Giving = &Giving{c: c, r: r.Gifts}
 	c.Free = newFreeing(c, r.Captives)
+	c.Help = newHelping(c, r.Captives)
 	return c
 }
 

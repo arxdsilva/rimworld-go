@@ -28,6 +28,12 @@ type Captives interface {
 	// Freed: colonist by freed id. The host joins it to the colony and
 	// signals the quest; Held(id) is false afterwards.
 	Freed(by, id entity.EntityID)
+	// Helpable: id is the person an active refugee quest lies on its site,
+	// still a visitor and not yet helped (QST-055).
+	Helpable(id entity.EntityID) bool
+	// Helped: colonist by offered id help. The host joins it to the colony
+	// and signals the quest; Helpable(id) is false afterwards.
+	Helped(by, id entity.EntityID)
 }
 
 // Freeing is the free-prisoner component (Care.Free).

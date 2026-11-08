@@ -33,6 +33,7 @@ var pawnVerbs = [...]struct {
 	{command.OrderStrip, "Strip %s"},
 	{command.OrderCarryToPrisonBed, "Take %s to bed"},
 	{command.OrderFreePrisoner, "Free %s"},
+	{command.OrderOfferHelp, "Offer help to %s"},
 }
 
 // PawnOrders are the care entries of doer's menu at (x, y), for every

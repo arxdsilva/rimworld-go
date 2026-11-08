@@ -15,6 +15,15 @@ const heldID entity.EntityID = 31
 type fakeCaptives struct {
 	held  map[entity.EntityID]bool
 	freed [][2]entity.EntityID
+	// help: the helpable person and who helped them
+	help   map[entity.EntityID]bool
+	helped [][2]entity.EntityID
+}
+
+func (f *fakeCaptives) Helpable(id entity.EntityID) bool { return f.help[id] }
+func (f *fakeCaptives) Helped(by, id entity.EntityID) {
+	f.helped = append(f.helped, [2]entity.EntityID{by, id})
+	delete(f.help, id)
 }
 
 func (f *fakeCaptives) Held(id entity.EntityID) bool { return f.held[id] }
