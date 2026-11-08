@@ -70,4 +70,16 @@ func TestStashSiteOpensWithGoodsAndGuards(t *testing.T) {
 	if guards == 0 {
 		t.Fatalf("no guards of faction ref %d: %+v", questView(t, g, id).Target, site.raidGroups)
 	}
+	// The replay check: with the site's rooms and roofs settled (one tick),
+	// a loaded game goes on as the saved one does.
+	g.Step(1)
+	h := saveAndLoad(t, g)
+	if h.StateHash() != g.StateHash() {
+		t.Fatal("state hash differs after save and load, stash site open")
+	}
+	nextHours(g, 2)
+	nextHours(h, 2)
+	if h.StateHash() != g.StateHash() || questView(t, h, id).State != qd.Succeeded {
+		t.Fatal("a loaded game goes on as the saved one does")
+	}
 }
