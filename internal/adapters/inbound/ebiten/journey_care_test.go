@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/pawn/needs"
+	qd "rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -210,5 +212,93 @@ func TestJourneyHudJoinOfferAccept(t *testing.T) {
 	}
 	if !joined {
 		t.Fatal("accepted, the stranger is not a colonist")
+	}
+}
+
+// careSiteJourney is a wizard colony whose caravan stands on the site of an
+// active quest of kind k, with that site's map entered and in view. It
+// returns the journey, the quest's person (a visitor on the site) and a
+// colonist there.
+func careSiteJourney(t *testing.T, k qd.KindID) (*journey, game.PawnView, uint64) {
+	t.Helper()
+	j, p := worldColony(t)
+	q := offerQuest(t, j, k, true)
+	// the quest's tile may lie beyond the planet's land routes: send the
+	// caravan to a reachable site, then set it down on the quest's tile
+	s, _ := nearestSite(j, p, false)
+	c := sendCaravan(j, j.g.Snapshot()[0].ID, s.Tile)
+	game.DevArrive(j.g, entity.EntityID(c.ID), q.Tile)
+	j.g.Step(2)
+	j.g.Enqueue(command.Command{Kind: command.EnterMap, Target: c.ID})
+	j.g.Step(2)
+	for _, m := range j.g.Maps() {
+		if m.Kind != "colony" {
+			j.g.ViewMap(m.ID)
+		}
+	}
+	j.update(2)
+	var person game.PawnView
+	for _, p := range j.g.Snapshot() {
+		if p.Visitor {
+			person = p
+		}
+	}
+	if person.ID == 0 {
+		t.Fatalf("fixture: no quest person on the site map: %+v", j.g.Snapshot())
+	}
+	doer, _ := careFirstColonist(j)
+	return j, person, doer
+}
+
+// careSiteOrder selects the colonist, right-clicks the person and picks the
+// row starting label, and returns the Prioritize command that left.
+func careSiteOrder(t *testing.T, j *journey, person game.PawnView, doer uint64, label string) command.Command {
+	t.Helper()
+	dossierOff(j)
+	careSelect(j, doer)
+	labels := careRightClickSettled(j, person.X, person.Y)
+	j.pick(label)
+	c, ok := j.lastCmd(command.Prioritize)
+	if !ok {
+		t.Fatalf("%s sent no Prioritize; menu %q", label, labels)
+	}
+	return c
+}
+
+// TestJourneyOrdersFreePrisoner (QST-067): on a rescue quest's site the
+// held prisoner offers "Free <name>" in the float menu, carrying the order
+// for the selected colonist. With the camp's guards standing the row is
+// disabled ("cannot reach": the cell's door is the enemy's), so the click
+// sends nothing yet; clearing the guards needs a game-side dev hook, which
+// the client cannot reach (TODO(QST-153): then pick the row and assert the
+// Prioritize command as TestJourneyOrdersOfferHelp does).
+func TestJourneyOrdersFreePrisoner(t *testing.T) {
+	t.Parallel()
+	j, person, doer := careSiteJourney(t, qd.Rescue)
+	dossierOff(j)
+	careSelect(j, doer)
+	labels := careRightClickSettled(j, person.X, person.Y)
+	var row *game.OrderOption
+	for _, o := range j.g.OrdersAt(entity.EntityID(doer), person.X, person.Y) {
+		if o.Label == "Free "+person.Name {
+			row = &o
+		}
+	}
+	if row == nil {
+		t.Fatalf("no Free %s row; menu %q", person.Name, labels)
+	}
+	if c := row.Cmd; c.Kind != command.Prioritize || c.Order != command.OrderFreePrisoner || c.Pawn != doer || c.Target != uint64(person.ID) {
+		t.Fatalf("Free carries %+v, want Prioritize/OrderFreePrisoner doer %d target %d", c, doer, person.ID)
+	}
+}
+
+// TestJourneyOrdersOfferHelp (QST-057): on a refugee quest's site the downed
+// person offers "Offer help to <name>".
+func TestJourneyOrdersOfferHelp(t *testing.T) {
+	t.Parallel()
+	j, person, doer := careSiteJourney(t, qd.Refugee)
+	c := careSiteOrder(t, j, person, doer, "Offer help to "+person.Name)
+	if c.Order != command.OrderOfferHelp || c.Pawn != doer || c.Target != uint64(person.ID) {
+		t.Fatalf("Offer help sent %+v, want OrderOfferHelp doer %d target %d", c, doer, person.ID)
 	}
 }
