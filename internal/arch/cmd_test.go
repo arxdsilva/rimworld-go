@@ -45,8 +45,7 @@ var cmdLineCap = map[string]int{
 // cmdTODO: packages not yet cut to wiring. Delete a line in the commit that
 // moves its package; never add one.
 var cmdTODO = map[string]bool{
-	"game":   true,
-	"mapgen": true,
+	"game": true,
 }
 
 func TestCmdIsWiringOnly(t *testing.T) {
