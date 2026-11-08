@@ -1,4 +1,4 @@
-package main
+package mapgen
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"rimworld-go/cmd/mapgen/render"
+	"rimworld-go/internal/adapters/inbound/cli/mapgen/render"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/site"
 )
@@ -196,18 +196,18 @@ func TestRunErrors(t *testing.T) {
 
 func TestMainRun(t *testing.T) {
 	var o, e bytes.Buffer
-	if c := run([]string{"-out", t.TempDir(), "-size", "24", "-scale", "1"}, &o, &e); c != 0 {
+	if c := Main([]string{"-out", t.TempDir(), "-size", "24", "-scale", "1"}, &o, &e); c != 0 {
 		t.Fatalf("exit %d: %s", c, e.String())
 	}
-	if c := run([]string{}, &o, &e); c != 2 {
+	if c := Main([]string{}, &o, &e); c != 2 {
 		t.Fatalf("missing -out exit %d", c)
 	}
-	if c := run([]string{"-h"}, &o, &e); c != 2 {
+	if c := Main([]string{"-h"}, &o, &e); c != 2 {
 		t.Fatalf("-h exit %d", c)
 	}
 	file := filepath.Join(t.TempDir(), "f")
 	os.WriteFile(file, nil, 0o644)
-	if c := run([]string{"-out", filepath.Join(file, "x"), "-size", "24"}, &o, &e); c != 1 {
+	if c := Main([]string{"-out", filepath.Join(file, "x"), "-size", "24"}, &o, &e); c != 1 {
 		t.Fatalf("run error exit %d", c)
 	}
 }

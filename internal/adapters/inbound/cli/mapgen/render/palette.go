@@ -1,5 +1,5 @@
 // Package render turns a generated map's fields into PNG-ready images for
-// the cmd/mapgen debug tool. It is pure Go (image only), with its own
+// the mapgen debug tool. It is pure Go (image only), with its own
 // palettes; nothing here is shared with the game's renderer.
 package render
 

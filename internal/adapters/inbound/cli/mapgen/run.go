@@ -1,4 +1,4 @@
-package main
+package mapgen
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"rimworld-go/cmd/mapgen/render"
+	"rimworld-go/internal/adapters/inbound/cli/mapgen/render"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/mapgen"
