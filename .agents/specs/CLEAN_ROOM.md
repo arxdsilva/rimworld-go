@@ -41,6 +41,7 @@ Numbers from the published RimWorld wiki are tuning data where the table allows 
 | Common Sense (mod) | CSE-* | `.agents/gaps/COMMON_SENSE_GAP_ANALYSIS.md` | 2026-11-03 | Behaviour only: what the mod does | Everything: its repository has no license, so no code, text, names or colours enter this repo |
 | Gameplay UI sizes and scaling | UIS-* | `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md` | 2026-11-06 | On-screen sizes, proportions, UI scale steps and zoom range measured in the running game (1.6.4871, Core) | Art, icons, colours, fonts, text and code; screenshots never enter the repo |
 | Quests | QST-* | `.agents/gaps/QUESTS_GAP_ANALYSIS.md` | 2026-11-07 | Wiki numbers (timers, cadence, points, star multipliers, reward caps, goodwill deltas, outcome odds); on-screen sizes and flow measured in the running game (Core only) | Quest names, letter and description text, art and code; the game's assemblies and Def XML are never read; screenshots never enter the repo |
+| Game architecture research (public books, talks, papers, engine docs and source) | GAR-* | `.agents/gaps/GAME_ARCHITECTURE_GAP_ANALYSIS.md` | 2026-11-08 | Ideas and published numbers only, each with its URL: scheduling, parallelism, events, render batching, frame pacing, runtime tuning | Code, text and diagrams from any source; nothing about RimWorld's internals |
 
 Notes:
 - ENG-003 covers wiki numbers only. A mod's numbers are not the wiki's: Common Sense thresholds recorded in its gap file are our tuning to change, not an ENG-003 use.
