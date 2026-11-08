@@ -282,10 +282,11 @@ func DecodeNormal(texel [4]float32, has bool) [3]float32 {
 	return [3]float32{n[0] / l, n[1] / l, n[2] / l}
 }
 
-// LitShader is lit.kage, compiled on first use; nil when it failed (Err).
+// LitShader is lit.kage (SharedLit: compiled and warmed once per process,
+// usually on the boot screen); nil when it failed (Err).
 func (l *Lit) LitShader() *ebiten.Shader {
 	if l.Shader == nil && l.Err == nil {
-		l.Shader, l.Err = ebiten.NewShader(LitKage)
+		l.Shader, l.Err = SharedLit()
 	}
 	return l.Shader
 }

@@ -78,6 +78,8 @@ var canvasExempt = map[string]string{
 	"render/creature/set.go:solidRect":                 "world: a creature-layer rectangle as a sprite",
 	"render/light/light.go:Draw":                       "world: the light pass",
 	"render/light/light.go:SourceOf":                   "world: the light pass",
+	"render/light/warm.go:Compile":                     "world: shader warm-up, one off-screen pixel (GAR E9)",
+	"render/light/warm.go:WarmScreen":                  "world: shader warm-up, a zero-area triangle (GAR E9)",
 	"render/creature/anim.go:DrawParticles":            "world: particles",
 	"render/creature/anim.go:DrawSpritePose":           "world: posed sprite blit",
 	"render/creature/anim.go:DrawWorkGlow":             "world: work glow on tiles",

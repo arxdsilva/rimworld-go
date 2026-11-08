@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"image/color"
 	"math"
+	"sync"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -46,12 +47,25 @@ type Water struct {
 	OnDraw func(key string, shader bool)
 }
 
-// WaterShader is water.kage, compiled on first use; nil when it fails.
+// WaterShader is water.kage (SharedWater), on first use; nil when it fails.
 func (wr *Water) WaterShader() *ebiten.Shader {
 	if wr.Shader == nil && wr.Err == nil {
-		wr.Shader, wr.Err = ebiten.NewShader(WaterKage)
+		wr.Shader, wr.Err = SharedWater()
 	}
 	return wr.Shader
+}
+
+// SharedWater is water.kage, compiled and warmed once per process
+// (light.Compile, GAR E9).
+var SharedWater = sync.OnceValues(func() (*ebiten.Shader, error) { return light.Compile(WaterKage) })
+
+// WarmShaders compiles the world shaders (lit, water) and builds their
+// screen pipelines on dst, so the first colony frame compiles nothing.
+// The boot and main-menu screens call it; it changes no pixel.
+func WarmShaders(dst *ebiten.Image) {
+	lit, _ := light.SharedLit()
+	water, _ := SharedWater()
+	light.WarmScreen(dst, lit, water)
 }
 
 // waterStill reports water that does not move: Reduced Motion, or simple

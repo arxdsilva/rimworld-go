@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
+	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
@@ -975,9 +976,11 @@ func (a *App) Draw(screen *ebiten.Image) {
 	switch a.nav.screen() {
 	case portspkg.ScreenBoot:
 		a.stamp.draw = time.Time{}
+		envpkg.WarmShaders(screen) // GAR E9: the world shaders compile here, not on the first colony frame
 		a.drawBoot(screen, sw, sh)
 	case portspkg.ScreenMainMenu:
 		a.stamp.draw = time.Time{}
+		envpkg.WarmShaders(screen)
 		a.menuScreen.Draw(screen, sw, sh)
 	case portspkg.ScreenScenario:
 		a.drawScenario(screen, sw, sh)
