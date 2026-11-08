@@ -1,4 +1,4 @@
-package main
+package audiogen
 
 import (
 	"encoding/json"

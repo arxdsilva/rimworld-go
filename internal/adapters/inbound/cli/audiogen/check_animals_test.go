@@ -1,4 +1,4 @@
-package main
+package audiogen
 
 import (
 	"strings"
@@ -62,14 +62,14 @@ func TestParseVoiceGroupsAndRealTable(t *testing.T) {
 		t.Fatalf("got %v, %v", got, err)
 	}
 	// the real table: parsed from the renderer source, it covers the roster
-	if err := checkAnimals("../../assets", mustManifest(t)); err != nil {
+	if err := checkAnimals("../../../../../assets", mustManifest(t)); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func mustManifest(t *testing.T) audiomanifest.Manifest {
 	t.Helper()
-	m, err := readManifest("../../assets")
+	m, err := readManifest("../../../../../assets")
 	if err != nil {
 		t.Fatal(err)
 	}

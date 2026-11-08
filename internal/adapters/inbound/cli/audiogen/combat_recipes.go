@@ -1,4 +1,4 @@
-package main
+package audiogen
 
 import s "rimworld-go/pkg/sfxsynth"
 
