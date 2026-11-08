@@ -30,7 +30,7 @@ func TestIndexConflictFallsBackToListOrder(t *testing.T) {
 	g.bldgIDs = append(g.bldgIDs, id)
 	g.bldgs.Set(id, construction.Building{Kind: construction.Wall, X: 3, Y: 3})
 	g.noteBuilding(id)
-	if !g.idx.bldgs.conflict[3*10+3] {
+	if !g.idx.bldgs.Conflict[3*10+3] {
 		t.Fatal("cell not marked conflicted")
 	}
 	if got := g.layerBldgAt(3, 3, construction.LayerObject); got != first {

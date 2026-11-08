@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"rimworld-go/internal/application/game/idindex"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -27,7 +28,7 @@ import (
 type jobIndexes struct {
 	// marks: plants with a harvest, cut or zone flag — the only ones
 	// nearestPlant's wants (haul.WantsHarvest, Cut, wantsZoneChop) can match.
-	marks idSet
+	marks idindex.Set
 	// cands, scanCands: nearestPlant scratch.
 	cands, scanCands []plantCand
 	// plantGen counts changes to the plant list (spawnPlant, removePlant,
@@ -37,44 +38,6 @@ type jobIndexes struct {
 
 // plantsChanged records a plant added to or removed from the lists.
 func (g *Game) plantsChanged() { g.idx.jobs.plantGen++ }
-
-// idSet is an insertion-ordered set of ids built from one store.
-type idSet struct {
-	ids   []entity.EntityID
-	in    map[entity.EntityID]struct{}
-	src   any
-	built bool
-}
-
-func (s *idSet) reset(src any) {
-	s.ids, s.src, s.built = s.ids[:0], src, true
-	if s.in == nil {
-		s.in = map[entity.EntityID]struct{}{}
-	} else {
-		clear(s.in)
-	}
-}
-
-func (s *idSet) add(id entity.EntityID) {
-	if _, ok := s.in[id]; !ok {
-		s.in[id] = struct{}{}
-		s.ids = append(s.ids, id)
-	}
-}
-
-// keep drops every id ok rejects (in place, order kept).
-func (s *idSet) keep(ok func(entity.EntityID) bool) {
-	kept := s.ids[:0]
-	for _, id := range s.ids {
-		if ok(id) {
-			kept = append(kept, id)
-		} else {
-			delete(s.in, id)
-		}
-	}
-	clear(s.ids[len(kept):])
-	s.ids = kept
-}
 
 // warmIndexes builds what a loaded or newly set-up game would otherwise
 // build on its first tick (E4: no first-tick spike): the cell indexes,
@@ -102,13 +65,13 @@ func plantMarked(p plant.Plant) bool { return p.Designated || p.Cut || p.Zone }
 
 // plantMarks is the marked-plant set, built from the lists on first use
 // and whenever the plant store was replaced (Load).
-func (g *Game) plantMarks() *idSet {
+func (g *Game) plantMarks() *idindex.Set {
 	s := &g.idx.jobs.marks
-	if !s.built || s.src != g.plants {
-		s.reset(g.plants)
+	if !s.From(g.plants) {
+		s.Reset(g.plants)
 		for _, id := range g.plantIDs {
 			if p, ok := g.plants.Get(id); ok && plantMarked(p) {
-				s.add(id)
+				s.Add(id)
 			}
 		}
 	}
@@ -118,8 +81,8 @@ func (g *Game) plantMarks() *idSet {
 // notePlantMark records that plant id may have gained a harvest, cut or
 // zone flag (every place that sets one calls it).
 func (g *Game) notePlantMark(id entity.EntityID) {
-	if s := &g.idx.jobs.marks; s.built && s.src == g.plants {
-		s.add(id)
+	if s := &g.idx.jobs.marks; s.From(g.plants) {
+		s.Add(id)
 	}
 }
 
@@ -144,7 +107,7 @@ func (g *Game) plantCands(id entity.EntityID, k job.Kind, want func(plant.Plant)
 	// postponedFor is false (and prunes nothing) for a plant not put off
 	var postBuf [8]entity.EntityID
 	post := g.postponedTargets(id, k, postBuf[:0])
-	for _, pid := range s.ids {
+	for _, pid := range s.IDs {
 		p := g.plants.Ref(pid) // read only: nothing below changes the store
 		if p == nil || !plantMarked(*p) {
 			stale = true
@@ -162,7 +125,7 @@ func (g *Game) plantCands(id entity.EntityID, k job.Kind, want func(plant.Plant)
 		cs = append(cs, plantCand{pid, pathing.Dist(pos.X, pos.Y, p.X, p.Y)})
 	}
 	if stale {
-		s.keep(func(pid entity.EntityID) bool {
+		s.Keep(func(pid entity.EntityID) bool {
 			p, ok := g.plants.Get(pid)
 			return ok && plantMarked(p)
 		})

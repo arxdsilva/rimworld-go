@@ -3,11 +3,12 @@ package game
 import (
 	"bytes"
 	"fmt"
-	"rimworld-go/internal/application/game/postpone"
 	"slices"
 	"unsafe"
 
 	"rimworld-go/internal/application/game/haul"
+	"rimworld-go/internal/application/game/idindex"
+	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -44,59 +45,7 @@ func checkIndex(g *Game) bool {
 }
 
 // cellSlots is one id per cell, for a fixed number of layers.
-type cellSlots struct {
-	w, h     int
-	slots    [][]entity.EntityID // [layer][cell]
-	conflict map[int]bool        // cells answered by scan
-	offMap   bool                // some footprint reached off the map: off-map queries scan
-	src      any                 // the store the index was built from
-	built    bool
-}
-
-func (c *cellSlots) reset(w, h, layers int, src any) {
-	c.w, c.h, c.src, c.built, c.offMap = w, h, src, true, false
-	c.conflict = nil
-	if len(c.slots) != layers {
-		c.slots = make([][]entity.EntityID, layers)
-	}
-	for l := range c.slots {
-		if len(c.slots[l]) != w*h {
-			c.slots[l] = make([]entity.EntityID, w*h)
-		} else {
-			clear(c.slots[l])
-		}
-	}
-}
-
-func (c *cellSlots) stale(w, h int, src any) bool {
-	return !c.built || c.w != w || c.h != h || c.src != src
-}
-
-// cell is the slot index of (x, y), or -1 off the map.
-func (c *cellSlots) cell(x, y int) int {
-	if uint(x) >= uint(c.w) || uint(y) >= uint(c.h) {
-		return -1
-	}
-	return y*c.w + x
-}
-
-// put records id on (x, y) in layer l; live reports whether an id
-// already there still covers the cell (then the cell is conflicted).
-func (c *cellSlots) put(l, x, y int, id entity.EntityID, live func(entity.EntityID) bool) {
-	i := c.cell(x, y)
-	if i < 0 {
-		c.offMap = true
-		return
-	}
-	if old := c.slots[l][i]; old != 0 && old != id && live(old) {
-		if c.conflict == nil {
-			c.conflict = map[int]bool{}
-		}
-		c.conflict[i] = true
-		return
-	}
-	c.slots[l][i] = id
-}
+type cellSlots = idindex.Cells
 
 // coversCell reports whether a k building or frame facing f at (x, y)
 // covers (px, py), without allocating for single-tile kinds.
@@ -126,11 +75,11 @@ const blockLayers = int(construction.LayerFoundation) + 1
 
 func (g *Game) plantIndex() *cellSlots {
 	ix := &g.idx.plants
-	if ix.stale(g.grid.Width(), g.grid.Height(), g.plants) {
-		ix.reset(g.grid.Width(), g.grid.Height(), 1, g.plants)
+	if ix.Stale(g.grid.Width(), g.grid.Height(), g.plants) {
+		ix.Reset(g.grid.Width(), g.grid.Height(), 1, g.plants)
 		for _, id := range g.plantIDs {
 			if p, ok := g.plants.Get(id); ok {
-				ix.put(0, p.X, p.Y, id, g.plantLive(p.X, p.Y))
+				ix.Put(0, p.X, p.Y, id, g.plantLive(p.X, p.Y))
 			}
 		}
 	}
@@ -147,10 +96,10 @@ func (g *Game) plantLive(x, y int) func(entity.EntityID) bool {
 // notePlant indexes a plant just added to plantIDs.
 func (g *Game) notePlant(id entity.EntityID, p plant.Plant) {
 	ix := &g.idx.plants
-	if ix.stale(g.grid.Width(), g.grid.Height(), g.plants) {
+	if ix.Stale(g.grid.Width(), g.grid.Height(), g.plants) {
 		return // built from the lists on first use
 	}
-	ix.put(0, p.X, p.Y, id, g.plantLive(p.X, p.Y))
+	ix.Put(0, p.X, p.Y, id, g.plantLive(p.X, p.Y))
 }
 
 func (g *Game) plantAt(x, y int) entity.EntityID {
@@ -165,14 +114,14 @@ func (g *Game) plantAt(x, y int) entity.EntityID {
 
 func (g *Game) plantAtIndexed(x, y int) entity.EntityID {
 	ix := g.plantIndex()
-	i := ix.cell(x, y)
-	if i < 0 || ix.conflict[i] {
-		if i < 0 && !ix.offMap {
+	i := ix.Cell(x, y)
+	if i < 0 || ix.Conflict[i] {
+		if i < 0 && !ix.OffMap {
 			return 0
 		}
 		return g.plantAtScan(x, y)
 	}
-	if id := ix.slots[0][i]; id != 0 {
+	if id := ix.IDs[0][i]; id != 0 {
 		if p := g.plants.Ref(id); p != nil && p.X == x && p.Y == y {
 			return id
 		}
@@ -233,21 +182,21 @@ func (lx layered) note(id entity.EntityID) {
 	}
 	cells, _, _ := construction.Footprint(p.kind, p.facing, p.x, p.y)
 	for _, c := range cells {
-		lx.ix.put(int(l), c[0], c[1], id, func(o entity.EntityID) bool { return lx.live(o, l, c[0], c[1]) })
+		lx.ix.Put(int(l), c[0], c[1], id, func(o entity.EntityID) bool { return lx.live(o, l, c[0], c[1]) })
 	}
 }
 
 // at is the indexed id in layer l on (x, y); scan reports the cell must
 // be answered by scanning.
 func (lx layered) at(x, y int, l construction.Layer) (id entity.EntityID, scan bool) {
-	i := lx.ix.cell(x, y)
+	i := lx.ix.Cell(x, y)
 	if i < 0 {
-		return 0, lx.ix.offMap
+		return 0, lx.ix.OffMap
 	}
-	if lx.ix.conflict[i] {
+	if lx.ix.Conflict[i] {
 		return 0, true
 	}
-	if id := lx.ix.slots[l][i]; id != 0 && lx.live(id, l, x, y) {
+	if id := lx.ix.IDs[l][i]; id != 0 && lx.live(id, l, x, y) {
 		return id, false
 	}
 	return 0, false
@@ -255,8 +204,8 @@ func (lx layered) at(x, y int, l construction.Layer) (id entity.EntityID, scan b
 
 func (g *Game) bldgIndex() layered {
 	lx := layered{ix: &g.idx.bldgs, b: g.bldgs}
-	if lx.ix.stale(g.grid.Width(), g.grid.Height(), g.bldgs) {
-		lx.ix.reset(g.grid.Width(), g.grid.Height(), numLayers, g.bldgs)
+	if lx.ix.Stale(g.grid.Width(), g.grid.Height(), g.bldgs) {
+		lx.ix.Reset(g.grid.Width(), g.grid.Height(), numLayers, g.bldgs)
 		for _, id := range g.bldgIDs {
 			lx.note(id)
 		}
@@ -266,8 +215,8 @@ func (g *Game) bldgIndex() layered {
 
 func (g *Game) frameIndex() layered {
 	lx := layered{ix: &g.idx.frames, f: g.frames}
-	if lx.ix.stale(g.grid.Width(), g.grid.Height(), g.frames) {
-		lx.ix.reset(g.grid.Width(), g.grid.Height(), numLayers, g.frames)
+	if lx.ix.Stale(g.grid.Width(), g.grid.Height(), g.frames) {
+		lx.ix.Reset(g.grid.Width(), g.grid.Height(), numLayers, g.frames)
 		for _, id := range g.frameIDs {
 			lx.note(id)
 		}
@@ -278,14 +227,14 @@ func (g *Game) frameIndex() layered {
 // noteBuilding indexes building id where it now stands (completed or
 // moved).
 func (g *Game) noteBuilding(id entity.EntityID) {
-	if !g.idx.bldgs.stale(g.grid.Width(), g.grid.Height(), g.bldgs) {
+	if !g.idx.bldgs.Stale(g.grid.Width(), g.grid.Height(), g.bldgs) {
 		layered{ix: &g.idx.bldgs, b: g.bldgs}.note(id)
 	}
 }
 
 // noteFrame indexes a frame just added to frameIDs.
 func (g *Game) noteFrame(id entity.EntityID) {
-	if !g.idx.frames.stale(g.grid.Width(), g.grid.Height(), g.frames) {
+	if !g.idx.frames.Stale(g.grid.Width(), g.grid.Height(), g.frames) {
 		layered{ix: &g.idx.frames, f: g.frames}.note(id)
 	}
 }

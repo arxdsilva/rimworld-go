@@ -69,7 +69,7 @@ func (g *Game) chunkPlants(cg chunk.Grid, c int, fn func(entity.EntityID, plant.
 	for y := y0; y < y1; y++ {
 		for x := x0; x < x1; x++ {
 			i := y*w + x
-			if ix.conflict[i] {
+			if ix.Conflict[i] {
 				for _, id := range g.plantIDs {
 					if p, ok := g.plants.Get(id); ok && p.X == x && p.Y == y {
 						fn(id, p)
@@ -77,7 +77,7 @@ func (g *Game) chunkPlants(cg chunk.Grid, c int, fn func(entity.EntityID, plant.
 				}
 				continue
 			}
-			id := ix.slots[0][i]
+			id := ix.IDs[0][i]
 			if id == 0 {
 				continue
 			}

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"weak"
 
+	"rimworld-go/internal/application/game/mapview"
 	"rimworld-go/internal/domain/world/chunk"
 )
 
@@ -24,60 +25,6 @@ const (
 	chunkReachX, chunkReachN, chunkReachS = 1, 1, 3
 )
 
-// chunkLists is one list's per-chunk buckets in compressed rows: chunk
-// c's indexes are idx[start[c]:start[c+1]].
-type chunkLists struct {
-	start []int32
-	idx   []int32
-	pos   []int32 // bucket's fill cursor
-}
-
-func (l *chunkLists) of(c int) []int32 {
-	if c < 0 || c+1 >= len(l.start) {
-		return nil
-	}
-	s := l.idx[l.start[c]:l.start[c+1]]
-	return s[:len(s):len(s)]
-}
-
-// bucket fills l with the indexes 0..n-1 by chunkOf (−1: none), in
-// ascending order per chunk (a counting sort; reuses l's slices).
-func (l *chunkLists) bucket(chunks, n int, chunkOf func(i int) int) {
-	l.start = grow32(l.start, chunks+1)
-	clear(l.start)
-	for i := 0; i < n; i++ {
-		if c := chunkOf(i); c >= 0 {
-			l.start[c+1]++
-		}
-	}
-	for c := 0; c < chunks; c++ {
-		l.start[c+1] += l.start[c]
-	}
-	l.idx = grow32(l.idx, int(l.start[chunks]))
-	l.pos = grow32(l.pos, chunks)
-	copy(l.pos, l.start[:chunks])
-	for i := 0; i < n; i++ {
-		if c := chunkOf(i); c >= 0 {
-			l.idx[l.pos[c]] = int32(i)
-			l.pos[c]++
-		}
-	}
-}
-
-func grow32(s []int32, n int) []int32 {
-	if cap(s) < n {
-		return make([]int32, n)
-	}
-	return s[:n]
-}
-
-func grow64(s []uint64, n int) []uint64 {
-	if cap(s) < n {
-		return make([]uint64, n)
-	}
-	return s[:n]
-}
-
 // ChunkIndex is the chunk read model over one WorldView at a time: Game
 // keeps one per game (ChunkLayer, PlantsIn, MinimapLayer), and a
 // simulation double can keep its own over the world it serves. Update it
@@ -87,7 +34,7 @@ type ChunkIndex struct {
 	ok   bool
 	grid chunk.Grid
 
-	plants, items, bldgs, frames chunkLists
+	plants, items, bldgs, frames mapview.Buckets
 
 	// structVer is the WorldView.StructVer terrHash was hashed at.
 	structVer uint64
@@ -173,7 +120,7 @@ func (s *ChunkIndex) Layer(cx, cy int) ChunkView {
 	c := cy*s.grid.CW + cx
 	return ChunkView{
 		Ver: s.ver[c], PlantVer: s.plantVer[c],
-		Plants: s.plants.of(c), Items: s.items.of(c), Buildings: s.bldgs.of(c), Frames: s.frames.of(c),
+		Plants: s.plants.Of(c), Items: s.items.Of(c), Buildings: s.bldgs.Of(c), Frames: s.frames.Of(c),
 	}
 }
 
@@ -186,7 +133,7 @@ func (s *ChunkIndex) PlantsIn(w *WorldView, x0, y0, x1, y1 int, buf []int32) []i
 	}
 	for cy := y0 >> chunk.Shift; cy <= y1>>chunk.Shift; cy++ {
 		for cx := x0 >> chunk.Shift; cx <= x1>>chunk.Shift; cx++ {
-			for _, i := range s.plants.of(cy*s.grid.CW + cx) {
+			for _, i := range s.plants.Of(cy*s.grid.CW + cx) {
 				if int(i) >= len(w.Plants) {
 					continue
 				}
@@ -198,21 +145,6 @@ func (s *ChunkIndex) PlantsIn(w *WorldView, x0, y0, x1, y1 int, buf []int32) []i
 		}
 	}
 	return buf
-}
-
-// mixHash folds v into h (a 64-bit multiply-xorshift; not cryptographic,
-// only for change detection).
-func mixHash(h, v uint64) uint64 {
-	h ^= v + 0x9e3779b97f4a7c15 + h<<6 + h>>2
-	h *= 0xbf58476d1ce4e5b9
-	return h ^ h>>31
-}
-
-func strHash(h uint64, s string) uint64 {
-	for i := 0; i < len(s); i++ {
-		h = mixHash(h, uint64(s[i]))
-	}
-	return mixHash(h, uint64(len(s)))
 }
 
 // Update buckets w's lists (an mw × mh map) by chunk and bumps the
@@ -232,23 +164,23 @@ func (s *ChunkIndex) Update(w *WorldView, mw, mh int) {
 		}
 		return cg.Of(x, y)
 	}
-	s.plants.bucket(n, len(w.Plants), func(i int) int { return of(w.Plants[i].X, w.Plants[i].Y) })
-	s.items.bucket(n, len(w.Items), func(i int) int { return of(w.Items[i].X, w.Items[i].Y) })
-	s.bldgs.bucket(n, len(w.Buildings), func(i int) int { return of(w.Buildings[i].X, w.Buildings[i].Y) })
-	s.frames.bucket(n, len(w.Frames), func(i int) int { return of(w.Frames[i].X, w.Frames[i].Y) })
+	s.plants.Fill(n, len(w.Plants), func(i int) int { return of(w.Plants[i].X, w.Plants[i].Y) })
+	s.items.Fill(n, len(w.Items), func(i int) int { return of(w.Items[i].X, w.Items[i].Y) })
+	s.bldgs.Fill(n, len(w.Buildings), func(i int) int { return of(w.Buildings[i].X, w.Buildings[i].Y) })
+	s.frames.Fill(n, len(w.Frames), func(i int) int { return of(w.Frames[i].X, w.Frames[i].Y) })
 
 	if !s.structOK || s.structVer != w.StructVer {
 		s.hashTerrain(w)
 		s.structVer, s.structOK = w.StructVer, true
 	}
 	// ground: terrain plus every building touching the chunk's reach
-	gh := grow64(s.scratch, n)
+	gh := mapview.Grow64(s.scratch, n)
 	s.scratch = gh
 	copy(gh, s.terrHash)
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		h := strHash(strHash(strHash(mixHash(mixHash(0, uint64(b.X)), uint64(b.Y)), b.Kind), b.Stuff), b.Facing)
-		h = mixHash(mixHash(h, uint64(b.W)), uint64(b.H))
+		h := mapview.MixString(mapview.MixString(mapview.MixString(mapview.Mix(mapview.Mix(0, uint64(b.X)), uint64(b.Y)), b.Kind), b.Stuff), b.Facing)
+		h = mapview.Mix(mapview.Mix(h, uint64(b.W)), uint64(b.H))
 		bw, bh := max(b.W, 1), max(b.H, 1)
 		// chunks whose reach overlaps the footprint
 		cx0, cx1 := max(b.X-chunkReachX, 0)>>chunk.Shift, min(b.X+bw-1+chunkReachX, cg.W-1)>>chunk.Shift
@@ -267,11 +199,11 @@ func (s *ChunkIndex) Update(w *WorldView, mw, mh int) {
 			s.gen++
 		}
 		var ph, at uint64
-		for _, i := range s.plants.of(c) {
+		for _, i := range s.plants.Of(c) {
 			p := &w.Plants[i]
-			h := mixHash(mixHash(0, uint64(p.X)), uint64(p.Y))
+			h := mapview.Mix(mapview.Mix(0, uint64(p.X)), uint64(p.Y))
 			at += h
-			h = mixHash(strHash(h, p.Species), uint64(p.Stage)<<1|uint64(boolBit(p.Harvestable)))
+			h = mapview.Mix(mapview.MixString(h, p.Species), uint64(p.Stage)<<1|uint64(mapview.Bit(p.Harvestable)))
 			ph += h
 		}
 		if ph != s.plantHash[c] || s.plantVer[c] == 0 {
@@ -283,13 +215,6 @@ func (s *ChunkIndex) Update(w *WorldView, mw, mh int) {
 			s.gen++
 		}
 	}
-}
-
-func boolBit(b bool) uint8 {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // hashTerrain hashes terrain, stone and ore over each chunk's reach.
@@ -310,7 +235,7 @@ func (s *ChunkIndex) hashTerrain(w *WorldView) {
 		for y := y0; y < y1 && tw > 0; y++ {
 			for x := x0; x < x1; x++ {
 				i := y*tw + x
-				h = mixHash(h, at(w.Terrain, i)|at(w.StoneType, i)<<8|at(w.Ore, i)<<16)
+				h = mapview.Mix(h, at(w.Terrain, i)|at(w.StoneType, i)<<8|at(w.Ore, i)<<16)
 			}
 		}
 		s.terrHash[c] = h

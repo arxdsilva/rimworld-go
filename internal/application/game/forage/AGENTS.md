@@ -6,6 +6,7 @@ A tame animal's food search rules (FEED-001). A consumer sub-package of `interna
 ## Owns
 - `Reach` (reach.go): the cells an animal can walk to (or eat from beside) on its region layer; a label compare per cell, never a search. Wild animals use it only while fences stand (`game.fenceReachable`); tame animals always, on `region.Tame` when the colony's doors and gates open for them (`game.gatesOpen`), else `region.Wild`.
 - `Pick` and `Best` (pick.go): the search result in two tiers, animal feed before meals (user decision 2026-10-30); each tier the nearest, then the bigger meal, then the lower rank (`Rank*`) and id.
+- `Rings` (rings.go): the grazers' grass search order, ring by ring out to a radius (`game.nearestGrass`, `fullestGrass`).
 - `Memory` (memory.go): saved with the wildlife state (`Wildlife.Forage`). `Skip`: spots an animal gave up on (path failed or the walk limit passed), skipped for `ForgetTicks` = 2500 (original tuning), at most four per animal. `Far`: starving animals searching their whole area or pen (`animal.FarSearch`: below 15 % until they eat or pass 25 %).
 
 ## Depends on

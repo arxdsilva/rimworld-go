@@ -741,7 +741,7 @@ func (g *Game) nearestGrass(pos Position, r int, ok func(x, y int) bool) (int, i
 	if g.grassSt().nGrowing == 0 { // every tile full: the nearest
 		var bx, by int
 		found := false
-		grassRings(pos, 0, r, func(x, y int) bool {
+		forage.Rings(pos.X, pos.Y, r, func(x, y int) bool {
 			if try(x, y) {
 				bx, by, found = x, y, true
 			}
@@ -760,7 +760,7 @@ func (g *Game) nearestGrass(pos Position, r int, ok func(x, y int) bool) (int, i
 // to the nearer ring, then ring order.
 func (g *Game) fullestGrass(pos Position, r, least int, try func(x, y int) bool) (int, int, bool) {
 	bx, by, best, last := 0, 0, 0, r
-	grassRings(pos, 0, r, func(x, y int) bool {
+	forage.Rings(pos.X, pos.Y, r, func(x, y int) bool {
 		if d := max(mathx.Abs(x-pos.X), mathx.Abs(y-pos.Y)); d > last {
 			return true
 		}
@@ -776,29 +776,6 @@ func (g *Game) fullestGrass(pos Position, r, least int, try func(x, y int) bool)
 		return false
 	})
 	return bx, by, best > 0
-}
-
-// grassRings visits the tiles at Chebyshev distance d0..r from pos, ring
-// by ring, each ring in nearestGrass's fixed order, until fn says stop.
-func grassRings(pos Position, d0, r int, fn func(x, y int) bool) {
-	if d0 == 0 {
-		if fn(pos.X, pos.Y) {
-			return
-		}
-		d0 = 1
-	}
-	for d := d0; d <= r; d++ {
-		for x := pos.X - d; x <= pos.X+d; x++ {
-			if fn(x, pos.Y-d) || fn(x, pos.Y+d) {
-				return
-			}
-		}
-		for y := pos.Y - d + 1; y <= pos.Y+d-1; y++ {
-			if fn(pos.X-d, y) || fn(pos.X+d, y) {
-				return
-			}
-		}
-	}
 }
 
 // stockpiled: (x, y) lies in a stockpile.

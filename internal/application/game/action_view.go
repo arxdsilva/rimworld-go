@@ -1,21 +1,18 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/actionview"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/orders"
-	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
-	aquarules "rimworld-go/internal/domain/building/aqua"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
-	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
-	"rimworld-go/internal/domain/world/roof"
 )
 
 // Action read model (ART §27.2). Everything here is a read-only view of
@@ -88,46 +85,12 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 	if !working {
 		return ""
 	}
-	switch j.Kind {
-	case job.Construct:
-		if fr, ok := g.frames.Get(j.Target); ok && fr.Kind == construction.Grave {
+	if j.Kind == job.Construct {
+		if fr := g.frames.Ref(j.Target); fr != nil && fr.Kind == construction.Grave {
 			return ActionDig
 		}
-		return ActionBuild
-	case job.Deconstruct, job.Uninstall, job.OpenContainer: // AX-1: crating and opening read as taking apart
-		return ActionDeconstruct
-	case job.Cut:
-		return ActionChop
-	case job.Mine:
-		return ActionMine
-	case job.Smooth:
-		return ActionSmooth
-	case job.Sow:
-		return ActionSow
-	case job.Harvest:
-		return ActionHarvest
-	case job.Eat:
-		return ActionEat
-	case job.Horseshoes:
-		return ActionHorseshoes
-	case job.Research, job.ScanGround, job.ScanMinerals:
-		return ActionResearch
-	case job.Tame:
-		return ActionTame
-	case job.Milk, job.StockTank, job.NetTank: // FISH-*: hands at an animal's side
-		return ActionMilk
-	case job.Shear:
-		return ActionShear
-	case job.Repair:
-		return ActionRepair
-	case job.Roof, job.Unroof, job.Install:
-		return ActionBuild
-	case job.Breach:
-		return ActionBreach
-	case job.Clean, job.CleanRoom, job.ClearSnow: // game/snow: shovelling reads as sweeping
-		return ActionClean
 	}
-	return ""
+	return actionview.Working(j.Kind)
 }
 
 // billAction names the bench work by the bench the bill runs at
@@ -140,6 +103,9 @@ func (g *Game) billAction(j job.Record) string {
 // workTotal is the full work of the job as its content def defines it, 0
 // when unknown.
 func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
+	if w, ok := actionview.FixedWork(j.Kind); ok {
+		return w
+	}
 	switch j.Kind {
 	case job.Construct:
 		if fr, ok := g.frames.Get(j.Target); ok {
@@ -166,8 +132,6 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 			return plant.DefOf(plant.Species(z.Crop)).SowWork
 		}
 		return SowWork
-	case job.Research, job.OperateDrill, job.ScanGround, job.ScanMinerals:
-		return rlab.Session
 	case job.Install, job.OpenContainer: // game/orders (AX-1)
 		return orders.WorkTotal(j.Kind, g.frames.Ref(j.Target))
 	case job.Tend, job.EmergencyTend:
@@ -175,22 +139,8 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 			return TendWork * 3 / 2
 		}
 		return TendWork
-	case job.Tame:
-		return animal.TameWork
-	case job.Milk, job.Shear:
-		return animal.CollectWork
-	case job.StockTank:
-		return aquarules.StockWork
-	case job.NetTank:
-		return aquarules.NetWork
-	case job.Eat:
-		return needs.EatWorkTicks
 	case job.Bury:
 		return buryWork
-	case job.Roof:
-		return roof.BuildWork
-	case job.Unroof:
-		return roof.RemoveWork
 	case job.Refuel:
 		return refuelWork
 	case job.Clean, job.CleanRoom, job.ClearSnow:
