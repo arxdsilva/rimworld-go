@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/quest"
 	qd "rimworld-go/internal/domain/quest"
@@ -67,4 +68,32 @@ func questOfAlertKey(key string) (uint32, bool) {
 	}
 	n, err := strconv.ParseUint(rest, 10, 32)
 	return uint32(n), err == nil
+}
+
+// questLetterFooter is a quest letter's footer (QST-133), exactly two rows:
+// an offer's "View quest" then "Close"; a failed or done quest's "Close"
+// then "View related quest".
+func questLetterFooter(c Right, l game.LetterView) []uikit.ModalButton {
+	view := func(label string, primary bool) uikit.ModalButton {
+		b := uikit.ModalButton{ID: "quest", Label: label, Closes: true, OnClick: func() { showQuest(c.sh, l.Quest) }}
+		if primary {
+			b.Style = uikit.BtnPrimary
+		}
+		return b
+	}
+	closeBtn := uikit.ModalButton{ID: "continue", Label: c.sh.T("Close"), Closes: true}
+	if LetterKind(l.Kind) == LetterKind("info") {
+		return []uikit.ModalButton{view(c.sh.T("View quest"), true), closeBtn}
+	}
+	closeBtn.Style = uikit.BtnPrimary
+	return []uikit.ModalButton{closeBtn, view(c.sh.T("View related quest"), false)}
+}
+
+// letterHoursLeft is the whole hours (rounded up) until a letter lapses at
+// until; 0 when it never does or already has.
+func letterHoursLeft(until, now uint64) int {
+	if until <= now {
+		return 0
+	}
+	return int((until - now + clock.TicksPerHour - 1) / clock.TicksPerHour)
 }

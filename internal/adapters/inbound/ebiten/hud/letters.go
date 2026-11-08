@@ -106,6 +106,7 @@ type LetterRow struct {
 	Letter game.LetterView // zero for the "+N older" row
 	Older  int             // > 0: the "+N older" row
 	Opens  uint64          // the "+N older" row: the newest folded letter, which a click opens
+	Hours  int             // > 0: the letter lapses in this many hours, rounded up (QST-131)
 }
 
 // LetterRowLabel is the text a row shows.
@@ -118,6 +119,9 @@ func LetterRowLabelIn(tr lang.Tr, r LetterRow) string {
 	}
 	if r.Letter.Title == "" {
 		return tr.T("Letter")
+	}
+	if r.Hours > 0 {
+		return lang.Tf(tr, "%s (%dh)", tr.T(r.Letter.Title), r.Hours)
 	}
 	return tr.T(r.Letter.Title)
 }
@@ -143,6 +147,7 @@ func (c Right) LetterRows(l hudlayout.Layout) []LetterRow {
 	if gap <= 0 {
 		gap = hudlayout.LetterGap
 	}
+	now := uint64(c.sh.Tick())
 	top := l.Letters.Bottom() - float32(n)*(hudlayout.LetterRowH+gap) + gap
 	at := func(i int) gfx.Rect {
 		return gfx.Rect{X: l.Letters.X, Y: top + float32(i)*(hudlayout.LetterRowH+gap), W: l.Letters.W, H: hudlayout.LetterRowH}
@@ -153,7 +158,7 @@ func (c Right) LetterRows(l hudlayout.Layout) []LetterRow {
 		i++
 	}
 	for _, lt := range ls[len(ls)-shown:] {
-		rows = append(rows, LetterRow{R: at(i), Letter: lt})
+		rows = append(rows, LetterRow{R: at(i), Letter: lt, Hours: letterHoursLeft(lt.Until, now)})
 		i++
 	}
 	return rows
@@ -257,7 +262,13 @@ func (c Right) LetterClick(id string) {
 	if err != nil {
 		return
 	}
-	if l, ok := c.letterByID(n); ok {
+	l, ok := c.letterByID(n)
+	switch {
+	case ok && l.Quest != 0: // QST-131: a quest letter opens its quest and goes
+		c.session().read[l.ID] = true
+		showQuest(c.sh, l.Quest)
+		c.dismissLetter(l.ID)
+	case ok:
 		c.openLetterView(l)
 	}
 }
@@ -338,6 +349,9 @@ func (c Right) openLetterView(l game.LetterView) {
 // (MAP-08), Give and Refuse (command.EncounterAnswer); then "Jump to" when
 // the letter has a place.
 func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
+	if l.Quest != 0 && l.ID != 0 {
+		return questLetterFooter(c, l)
+	}
 	buttons := []uikit.ModalButton{{ID: "continue", Label: c.sh.T("Continue"), Style: uikit.BtnPrimary, Closes: true}}
 	if l.JoinOffer && l.ID != 0 {
 		buttons = []uikit.ModalButton{
@@ -355,13 +369,6 @@ func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 			{ID: "give", Label: c.sh.T("Give"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() { answer(0) }},
 			{ID: "refuse", Label: c.sh.T("Refuse"), Closes: true, OnClick: func() { answer(1) }},
 		}
-	}
-	if l.Quest != 0 && l.ID != 0 { // QST-133: the quest the letter is about
-		label := c.sh.T("View quest")
-		if LetterKind(l.Kind) != LetterKind("info") {
-			label = c.sh.T("View related quest")
-		}
-		buttons = append(buttons, uikit.ModalButton{ID: "quest", Label: label, Closes: true, OnClick: func() { showQuest(c.sh, l.Quest) }})
 	}
 	if letterHasPlace(l) {
 		buttons = append(buttons, uikit.ModalButton{ID: "jump", Label: c.sh.T("Jump to"), Closes: true, OnClick: func() { c.jumpToLetter(l) }})

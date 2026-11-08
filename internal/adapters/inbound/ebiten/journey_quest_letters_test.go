@@ -47,24 +47,22 @@ func questJourney(t *testing.T) (*journey, game.QuestView, game.LetterView) {
 	return nil, q, game.LetterView{}
 }
 
-// TestJourneyQuestLetterOpensQuest: the offer's letter opens as a window with
-// a "View quest" row, and that row lands on the Quests window (QST-131/133).
+// TestJourneyQuestLetterOpensQuest: clicking the tile of the offer's letter
+// opens the Quests window and drops the letter (QST-131).
 func TestJourneyQuestLetterOpensQuest(t *testing.T) {
 	t.Parallel()
 	j, _, l := questJourney(t)
 	if !j.clickID(fmt.Sprintf("letter.%d", l.ID)) {
 		t.Fatal("the quest letter is not a button")
 	}
-	top := fmt.Sprintf("letter.%d", l.ID)
-	if j.a.uiModalTop() != top {
-		t.Fatalf("top modal %q, want the letter", j.a.uiModalTop())
-	}
-	if !j.clickID("modal." + top + ".quest") {
-		t.Fatal("the letter has no View quest row")
-	}
 	j.update(2)
 	if j.a.uiModalTop() != windows.QuestsModalID {
 		t.Fatalf("top modal %q, want the Quests window", j.a.uiModalTop())
+	}
+	for _, x := range j.world().Letters {
+		if x.ID == l.ID {
+			t.Fatal("the quest letter is still in the stack")
+		}
 	}
 }
 

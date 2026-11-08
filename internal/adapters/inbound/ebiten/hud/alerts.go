@@ -413,9 +413,35 @@ type AlertsKey struct {
 // stands for the alerts that did not fit.
 type AlertRow struct {
 	R      gfx.Rect
-	Al     Alert   // zero for the "+N more" row
-	More   int     // > 0: the "+N more" row
-	Hidden []Alert // what the "+N more" row stands for
+	Al     Alert    // zero for the "+N more" row
+	More   int      // > 0: the "+N more" row
+	Hidden []Alert  // what the "+N more" row stands for
+	Lines  []string // the label wrapped to the row's text width, at most alertMaxLines (QST-134)
+}
+
+const (
+	alertMaxLines  = 2  // an alert wraps to at most this many lines
+	alertLinePitch = 16 // a wrapped line's pitch
+	alertRowPad    = 6  // the row's height beyond its lines
+)
+
+// alertLines is label wrapped to width w in at most alertMaxLines lines;
+// the last line is ellipsized when the label goes on.
+func alertLines(label string, w float32) []string {
+	lines := gfx.WrapPx(label, gfx.Small, float64(w))
+	if len(lines) > alertMaxLines {
+		last := strings.TrimRight(strings.Join(lines[alertMaxLines-1:], " "), " ")
+		lines = append(lines[:alertMaxLines-1], gfx.Ellipsize(last+"…", gfx.Small, float64(w)))
+	}
+	if len(lines) == 0 {
+		lines = []string{""}
+	}
+	return lines
+}
+
+// alertRowH is the height of a row of n lines: one line keeps AlertRowH.
+func alertRowH(n int) float32 {
+	return max(float32(hudlayout.AlertRowH), float32(n*alertLinePitch+alertRowPad))
 }
 
 // AlertRowLabelIn is the text a row shows.
@@ -450,16 +476,33 @@ func (c Alerts) Rows(l hudlayout.Layout) []AlertRow {
 	if len(als) == 0 || l.AlertRows <= 0 || l.Alerts.Empty() {
 		return nil
 	}
-	shown, more := StackSplit(len(als), l.AlertRows, len(als))
+	textW := l.Alerts.W - 2*hudlayout.AlertRight
+	lines := make([][]string, len(als))
+	total := float32(0)
+	for i, al := range als {
+		lines[i] = alertLines(al.Label, textW)
+		total += alertRowH(len(lines[i]))
+	}
+	// everything shows when it fits the rect; else the rows that leave room
+	// for the "+N more" row do (at least one)
+	shown := len(als)
+	if total > l.Alerts.H+0.5 || len(als) > l.AlertRows {
+		shown, total = 0, 0
+		for shown < len(als) && shown+1 < l.AlertRows && total+alertRowH(len(lines[shown]))+hudlayout.AlertRowH <= l.Alerts.H+0.5 {
+			total += alertRowH(len(lines[shown]))
+			shown++
+		}
+		shown = max(shown, min(1, len(als)))
+	}
 	rows := make([]AlertRow, 0, shown+1)
-	at := func(i int) gfx.Rect {
-		return gfx.Rect{X: l.Alerts.X, Y: l.Alerts.Y + float32(i)*hudlayout.AlertRowH, W: l.Alerts.W, H: hudlayout.AlertRowH}
-	}
+	y := l.Alerts.Y
 	for i := 0; i < shown; i++ {
-		rows = append(rows, AlertRow{R: at(i), Al: als[i]})
+		h := alertRowH(len(lines[i]))
+		rows = append(rows, AlertRow{R: gfx.Rect{X: l.Alerts.X, Y: y, W: l.Alerts.W, H: h}, Al: als[i], Lines: lines[i]})
+		y += h
 	}
-	if more > 0 {
-		rows = append(rows, AlertRow{R: at(shown), More: more, Hidden: als[shown:]})
+	if more := len(als) - shown; more > 0 && l.AlertRows > 1 { // one row has no room for the count
+		rows = append(rows, AlertRow{R: gfx.Rect{X: l.Alerts.X, Y: y, W: l.Alerts.W, H: hudlayout.AlertRowH}, More: more, Hidden: als[shown:]})
 	}
 	return rows
 }
@@ -519,12 +562,21 @@ func (c Alerts) DrawIn(screen *ebiten.Image, l hudlayout.Layout) {
 		if row.More == 0 && r.Hit(mx, my) {
 			text = uikit.Text
 		}
-		label := uikit.FitText(AlertRowLabelIn(c.sh, row), gfx.Small, r.W-2*hudlayout.AlertRight)
-		w, _ := gfx.Measure(label, gfx.Small)
-		x := float64(r.Right()) - hudlayout.AlertRight - w
-		y := textY(r, label, gfx.Small)
-		uikit.FillRect(screen, gfx.Rect{X: float32(x) - 4, Y: r.Y + 2, W: float32(w) + 8, H: r.H - 4}, creature.Fade(uikit.Panel, 0.55))
-		gfx.Text(screen, label, x, y, gfx.WithColor(gfx.Small, text))
+		lines, plate := row.Lines, creature.Fade(uikit.Panel, 0.55)
+		if row.More > 0 {
+			lines = []string{AlertRowLabelIn(c.sh, row)}
+		} else if strings.HasPrefix(row.Al.Key, QuestExpiringKey) {
+			plate = creature.Fade(uikit.PanelBorder, 0.6) // QST-134: a grey band, not red
+		}
+		top := r.Y + (r.H-float32(len(lines)*alertLinePitch))/2
+		for i, label := range lines {
+			label = uikit.FitText(label, gfx.Small, r.W-2*hudlayout.AlertRight)
+			w, _ := gfx.Measure(label, gfx.Small)
+			x := float64(r.Right()) - hudlayout.AlertRight - w
+			lr := gfx.Rect{X: r.X, Y: top + float32(i*alertLinePitch), W: r.W, H: alertLinePitch}
+			uikit.FillRect(screen, gfx.Rect{X: float32(x) - 4, Y: lr.Y + 1, W: float32(w) + 8, H: lr.H - 1}, plate)
+			gfx.Text(screen, label, x, textY(lr, label, gfx.Small), gfx.WithColor(gfx.Small, text))
+		}
 	}
 }
 
