@@ -67,6 +67,14 @@ type Trace struct {
 // (camera.TileSize): what the zoom meant before the cell unit followed the
 // window (UIS-080). Line widths and the path cull are tuned to it, so they
 // keep their look at a given tile size.
+// LODTile is the tile size the zoom tiers (live, chunk bakes, map bake)
+// read: tile in map pixels over dev, the map pixels per point (View.Dev),
+// never above tile (GAR-155). Since UIS-2d a cell follows the window's
+// height in map pixels, so a HiDPI window shows the same cells at dev
+// times the pixels; the tiers follow the cells in view, as on a density-1
+// display. A dev below 1 (reduced world detail) keeps tile.
+func LODTile(tile, dev float64) float64 { return tile / max(1, dev) }
+
 func (v *View) ArtZoom() float64 {
 	d := v.Dev
 	if d <= 0 {

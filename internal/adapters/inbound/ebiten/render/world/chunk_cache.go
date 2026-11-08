@@ -3,6 +3,7 @@ package world
 import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/application/game"
 )
@@ -88,7 +89,7 @@ func (k *Bakes) drawChunkBake(screen *ebiten.Image, w *game.WorldView, cx, cy in
 	mw, mh := k.v.MapW, k.v.MapH
 	c := cy*((mw+cs-1)/cs) + cx
 	x0, y0 := cx*cs, cy*cs
-	ver, tufts := cv.Ver, k.LOD.Tier == Chunk && k.Cam.Tile() < env.GrassLiveMin
+	ver, tufts := cv.Ver, k.LOD.Tier == Chunk && render.LODTile(k.Cam.Tile(), k.v.Dev) < env.GrassLiveMin
 	if tufts { // the chunk tier (12–20 px): the image holds the chunk's tufts too (render/env)
 		ver = env.GrassBakeKey(ver, k.Env.GrassChunkSig(k.v, w, cx, cy, k.Index))
 	}

@@ -434,7 +434,7 @@ func (e *Layer) eachSnowChunk(v *render.View, w game.WorldView, tile float64, cr
 		sc.evict()
 	}
 	sc.budget = PuddleBakeBudget
-	sc.WantPx = WetPxFor(tile)
+	sc.WantPx = WetPxFor(render.LODTile(tile, v.Dev))
 	cost := bakeCost(sc.WantPx)
 	depth, wet := legacySnowByte(e.Snow), WetBucket(w.Wetness)
 	ncx := (mw + SnowChunkTiles - 1) / SnowChunkTiles
@@ -469,7 +469,7 @@ func (e *Layer) eachSnowChunk(v *render.View, w game.WorldView, tile float64, cr
 // lamp falloff is invisible at a few pixels a tile), through s.
 func drawChunkMask(v *render.View, screen, img *ebiten.Image, px, cx, cy, tx0, ty0, tx1, ty1 int, tile float64, col [4]float32, s Stamp) {
 	span := SnowChunkTiles
-	if tierFor(tile) == tierMap {
+	if tierFor(render.LODTile(tile, v.Dev)) == tierMap {
 		sx, sy := v.WorldToScreenF(float64(cx*span), float64(cy*span))
 		s.DrawChunkFlat(screen, img, SnowPad, SnowPad, float64(sx), float64(sy), tile*float64(span), float64(SnowChunkTiles*px), col)
 		return

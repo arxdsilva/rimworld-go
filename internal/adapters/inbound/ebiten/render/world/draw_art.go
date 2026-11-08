@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
@@ -87,7 +88,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	p.setView(sw, sh, tile)
 	p.Links.Sync(w, v.MapW, v.MapH) // rebuilt only on StructVer
 	l := p.LOD
-	l.Tier = TierFor(tile)
+	l.Tier = TierFor(render.LODTile(tile, v.Dev)) // GAR-155: by the cells in view
 	l.Crops.Begin()
 	p.Bk.syncFrameChunks() // lod.go: the chunk lists in view
 	l.Chunks.Frame++
@@ -414,7 +415,7 @@ func (p *Pipeline) drawTufts(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	x0, y0, x1, y1 := p.Env.GrassReach(v, vx0, vy0, vx1, vy1)
 	p.Env.GrassFrameMask(&w, x0, y0, x1, y1, p.Index)
 	p.LOD.Grass.Quads = 0
-	if tile >= env.GrassLiveMin {
+	if render.LODTile(tile, v.Dev) >= env.GrassLiveMin { // the live tier (GAR-155)
 		limit := 9
 		if tile < DetailMin {
 			limit = env.GrassMidCap

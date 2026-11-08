@@ -17,7 +17,10 @@ import (
 )
 
 // Level of detail by on-screen tile size (NG-1 §6.7 E5, retuned by
-// UIS-086 for 9-49 px cells: the default zoom is 22.5 px at 1080):
+// UIS-086 for 9-49 px cells: the default zoom is 22.5 px at 1080). The
+// tiers read the size in points (render.LODTile: map px over the device
+// factor, GAR-155), so the same cells in view pick the same tier on every
+// display; on a HiDPI window the bakes are drawn at dev times their texels:
 //
 //	≥ 20 px   live: every tile and object drawn as today;
 //	12–20 px  chunk: each chunk's ground (terrain, edges, water, smoothed

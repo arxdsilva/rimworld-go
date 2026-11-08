@@ -4,7 +4,28 @@ import (
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 )
+
+// The same cells in view pick the same tier at every density (GAR-155):
+// a 1080-px window at dev 1 and the same window at dev 2 (2160 map px),
+// at the farthest, a middle and the default zoom. Reduced world detail
+// (dev below 1) never raises the tier.
+func TestTierFollowsTheCellsInView(t *testing.T) {
+	t.Parallel()
+	for _, zoom := range []float64{camera.MinZoom, 0.6, 0.8, 1, camera.MaxZoom} {
+		one := TierFor(render.LODTile(camera.UnitFor(1080)*zoom, 1))
+		two := TierFor(render.LODTile(camera.UnitFor(2160)*zoom, 2))
+		if one != two {
+			t.Errorf("zoom %.2f: dev 1 tier %d, dev 2 tier %d", zoom, one, two)
+		}
+	}
+	if got := render.LODTile(30, 0.5); got != 30 {
+		t.Errorf("dev 0.5: LODTile %v, want the tile itself", got)
+	}
+}
 
 func TestTierFor(t *testing.T) {
 	t.Parallel()
