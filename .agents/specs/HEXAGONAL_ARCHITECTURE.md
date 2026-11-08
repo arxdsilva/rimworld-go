@@ -675,44 +675,24 @@ platform config
 
 # 28. Main Executables
 
-## `cmd/game`
+Every `cmd/<tool>` is **one wiring-only `main.go`** (SOLID_GO.md §8a, guarded by `internal/arch/cmd_test.go`). `main` parses its arguments through a package, builds the concrete adapters and application types, hands them over as interfaces, calls one `Run` and exits. It holds no loops, switches, closures, helper functions, tests or long strings; everything else lives in a package that follows the SOLID limits.
 
-Wires:
+| logic | home |
+| --- | --- |
+| Flags, usage text and a tool's `Run` | `internal/adapters/inbound/cli/<tool>` |
+| Composition that needs many adapters (the game: window, audio, saves, content, mods, probes) | `internal/compose/<tool>`; only `cmd/` imports it (`TestOnlyCmdImportsCompose`) |
+| Dev and capture scenes | `internal/application/devscene` |
+| Profiling and the log file | `internal/platform/profiling`, `internal/platform/logfile` |
+| Network clients a tool calls | `internal/adapters/outbound/<client>` |
 
-```text
-Ebitengine adapter
-application session
-simulation
-content filesystem
-save adapter
-metrics
-```
+The executables:
 
-## `cmd/simulate`
-
-No renderer imports.
-
-Wires:
-
-```text
-CLI
-application simulation runner
-domain
-content
-optional save output
-```
-
-## `cmd/benchmark`
-
-Runs deterministic benchmark fixtures.
-
-## `cmd/replay`
-
-Replays command streams and verifies state hashes.
-
-## `cmd/contentlint`
-
-Loads and validates definitions/mods only.
+- `cmd/game`: the client. It wires the Ebitengine adapter, the application session, the simulation, content, saves and metrics through `internal/compose/game`.
+- `cmd/simulate`: headless, with no renderer imports.
+- `cmd/benchmark`: deterministic benchmark fixtures.
+- `cmd/replay`: replays command streams and verifies state hashes.
+- `cmd/contentlint`: loads and validates definitions and mods only.
+- The asset generators (`audiogen`, `sfxgen`, `atlasgen`, `normalgen`, `mapgen`) and `rambudget`: their logic is in `cli/<tool>`.
 
 ---
 

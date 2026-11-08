@@ -167,6 +167,14 @@ Run `make arch` before every commit that touches a type, an interface or an impo
 
 ---
 
+## 8a. `cmd` Is Wiring
+
+Every `cmd/<tool>` directory holds exactly one file, `main.go`, and it declares only `func main`. It is at most 80 lines; `cmd/game` may use 120 because it wires the most adapters. The body only parses arguments through a package, builds adapters and application types, passes them on as interfaces, calls one `Run` and exits. It has no `for`, `range`, `switch`, `select` or `go` statements, no function literals, and no string literal over 40 runes. Move logic to the homes in HEXAGONAL_ARCHITECTURE.md §28.
+
+`internal/arch/cmd_test.go` enforces this. `cmdTODO` lists the packages not yet cut and only shrinks: delete a package's line in the commit that moves it.
+
+---
+
 # 9. Mutable Package-Level State
 
 **Allowed.**
