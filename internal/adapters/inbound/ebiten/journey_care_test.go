@@ -265,30 +265,19 @@ func careSiteOrder(t *testing.T, j *journey, person game.PawnView, doer uint64, 
 	return c
 }
 
-// TestJourneyOrdersFreePrisoner (QST-067): on a rescue quest's site the
-// held prisoner offers "Free <name>" in the float menu, carrying the order
-// for the selected colonist. With the camp's guards standing the row is
-// disabled ("cannot reach": the cell's door is the enemy's), so the click
-// sends nothing yet; clearing the guards needs a game-side dev hook, which
-// the client cannot reach (TODO(QST-153): then pick the row and assert the
-// Prioritize command as TestJourneyOrdersOfferHelp does).
+// TestJourneyOrdersFreePrisoner (QST-067): on a rescue quest's site, once
+// the guards are down and the camp's doors are claimed, the held prisoner
+// offers "Free <name>" and the click orders the selected colonist.
 func TestJourneyOrdersFreePrisoner(t *testing.T) {
 	t.Parallel()
 	j, person, doer := careSiteJourney(t, qd.Rescue)
-	dossierOff(j)
-	careSelect(j, doer)
-	labels := careRightClickSettled(j, person.X, person.Y)
-	var row *game.OrderOption
-	for _, o := range j.g.OrdersAt(entity.EntityID(doer), person.X, person.Y) {
-		if o.Label == "Free "+person.Name {
-			row = &o
-		}
-	}
-	if row == nil {
-		t.Fatalf("no Free %s row; menu %q", person.Name, labels)
-	}
-	if c := row.Cmd; c.Kind != command.Prioritize || c.Order != command.OrderFreePrisoner || c.Pawn != doer || c.Target != uint64(person.ID) {
-		t.Fatalf("Free carries %+v, want Prioritize/OrderFreePrisoner doer %d target %d", c, doer, person.ID)
+	game.DevClearHostiles(j.g, j.g.ViewedMap())
+	j.g.Enqueue(command.Command{Kind: command.DesignateClaim, X: 0, Y: 0, X2: 199, Y2: 199})
+	j.g.Step(5)
+	j.update(2)
+	c := careSiteOrder(t, j, j.pawn(uint64(person.ID)), doer, "Free "+person.Name)
+	if c.Order != command.OrderFreePrisoner || c.Pawn != doer || c.Target != uint64(person.ID) {
+		t.Fatalf("Free sent %+v, want OrderFreePrisoner doer %d target %d", c, doer, person.ID)
 	}
 }
 
