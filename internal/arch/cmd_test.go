@@ -47,13 +47,10 @@ var cmdLineCap = map[string]int{
 var cmdTODO = map[string]bool{
 	"atlasgen":  true,
 	"audiogen":  true,
-	"benchmark": true,
 	"game":      true,
 	"mapgen":    true,
 	"normalgen": true,
-	"rambudget": true,
 	"sfxgen":    true,
-	"simulate":  true,
 }
 
 func TestCmdIsWiringOnly(t *testing.T) {
@@ -117,7 +114,7 @@ func TestCmdViolationsSeesEachRule(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("ok/main.go", "package main\n\nimport (\n\t\"os\"\n\n\t\"x/cli\"\n)\n\nfunc main() {\n\tos.Exit(cli.Run(os.Args[1:]))\n}\n")
+	write("ok/main.go", "package main\n\nimport (\n\t\"os\"\n\n\t\"rimworld-go/internal/adapters/inbound/cli/x\"\n)\n\nfunc main() {\n\tos.Exit(cli.Run(os.Args[1:]))\n}\n")
 	write("extra/main.go", "package main\n\nfunc main() {}\n")
 	write("extra/flags.go", "package main\n")
 	write("sub/main.go", "package main\n\nfunc main() {}\n")
@@ -239,6 +236,8 @@ func mainRules(path, name string) ([]string, error) {
 	}
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch n := n.(type) {
+		case *ast.ImportSpec:
+			return false // import paths are not string literals the rule means
 		case *ast.ForStmt, *ast.RangeStmt:
 			note(n.Pos(), "a for/range statement")
 		case *ast.SwitchStmt, *ast.TypeSwitchStmt:

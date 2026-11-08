@@ -70,7 +70,7 @@ test-unit:
 
 .PHONY: simulate
 simulate:
-	go run ./cmd/simulate --seed 1 --ticks 100 --pawns 3 --width 20 --height 20
+	go run ./cmd/simulate --seed 1 --ticks 100 --width 20 --height 20
 
 # ---- art (ART spec §25) -----------------------------------------------------
 BLENDER ?= $(shell command -v blender 2>/dev/null || echo /Applications/Blender.app/Contents/MacOS/Blender)
