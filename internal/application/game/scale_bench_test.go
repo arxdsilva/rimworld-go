@@ -12,6 +12,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/scenario"
+	"rimworld-go/internal/domain/sim/clock"
 )
 
 // Engine-scale benchmarks (NG-1 §6.2, E0). Grown-colony fixtures are
@@ -91,6 +92,34 @@ func reportTicks(b *testing.B, durs []time.Duration) {
 	b.ReportMetric(ms(sum)/float64(len(durs)), "ms/tick")
 	b.ReportMetric(ms(p99), "p99-ms/tick")
 	b.ReportMetric(ms(worst3), "max-ms/3ticks")
+	b.ReportMetric(ms(sorted[len(sorted)-1]), "max-ms/tick")
+}
+
+// BenchmarkTickDayRollover500 times the ticks around midnight on the grown
+// 500² colony (GAR: the day tick fires every periodic site at once: the
+// climate block, medical, the hourly and daily sweeps, social and aging).
+// Each iteration jumps to 23:00 of a new day, steps untimed to ten ticks
+// before midnight, then times twenty single ticks across it; max-ms/tick
+// is the frame-budget number (1.5 ms is the GAR target).
+func BenchmarkTickDayRollover500(b *testing.B) {
+	g := loadFixture(b, 500, false)
+	day := int(g.Tick())/clock.TicksPerDay + 1
+	durs := make([]time.Duration, 0, 20*b.N)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		g.SkipTo(day+i, 23)
+		g.Step(clock.TicksPerHour - 10)
+		b.StartTimer()
+		for range 20 {
+			t0 := time.Now()
+			g.Step(1)
+			durs = append(durs, time.Since(t0))
+		}
+	}
+	b.StopTimer()
+	reportTicks(b, durs)
 }
 
 // BenchmarkTickGrown steps a grown colony one tick at a time.
