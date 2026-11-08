@@ -27,7 +27,7 @@ worldinfo/legend.go:/^%\.0f (mm|m)$/ # unit glyphs
 windows/research_panel.go:"Debug: finish now" # developer-mode button
 mainmenu/screen.go:/^rimworld-go( +%s)?$/ # the product name (and version)
 screen_boot.go:"rimworld-go" # the product name
-worldview/objects.go:/^(map|caravan|settlement|site|pod)$/ # Kind.String: a selection key and widget id
+worldview/objects.go:/^(map|caravan|settlement|quest|site|pod)$/ # Kind.String: a selection key and widget id
 inspector/building_inspector.go:/^[vMCx]$/ # single-glyph button faces
 inspector/hud_inspect.go:"X" # the close button's glyph
 inspector/health_ui.go:/^(Install %s \(%s\)|Remove implant \(%s\)|Amputate )$/ # matched against the simulation's English operation label; translated with it in Wave 4 (W4-SIMTEXT)
