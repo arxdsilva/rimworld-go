@@ -47,7 +47,7 @@ func Run(opts cligame.Options, version string, d Display) {
 	gfx := devGraphics{hidpi: opts.HiDPI, vsync: opts.VSync, renderScale: opts.RenderScale, tier: opts.Graphics, windowed: probe != nil}
 	devRun := shot != nil || probe != nil || opts.Scenario != "" || gfx.any()
 	usage := usageTracker(version, devRun, d)
-	scenes := devScenes{devscene.Config{Scenario: opts.Scenario, Width: opts.Width, Height: opts.Height, Hour: opts.Hour, Capturing: shot != nil}}
+	scenes := devScenes{devscene.Config{Scenario: opts.Scenario, Width: opts.Width, Height: opts.Height, Hour: opts.Hour, Day: opts.Day, Capturing: shot != nil}}
 
 	cfg := uiadapter.AppConfig{
 		DefaultSeed:   defaultSeed,

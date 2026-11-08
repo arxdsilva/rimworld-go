@@ -15,7 +15,8 @@
 # (1 = 1x, 2 = 3x, 3 = 6x). The daycross cells start at 23:00, so midnight
 # (every daily and hourly site at once) falls inside the measured span at
 # 1x and early in it at 6x. The autosave cell starts at 05:00, so the 06:00
-# autosave falls about 40 s into the measured span at 1x. Saves go to
+# autosave falls about 40 s into the measured span at 1x; it starts on day 1,
+# since the game never autosaves on day 0. Saves go to
 # bin/fpsmatrix-saves (-save-dir), never the player's folder, and the log
 # notes each cell's new save files. The first run after a build pays first-use
 # bakes: run the matrix twice and keep the second. An fps probe is an
@@ -30,8 +31,11 @@ csv=bin/fpsmatrix-$tag.csv
 
 case " $* ${EXTRA:-} " in *vsync=false*) echo "fpsmatrix: VSync stays on (PERF-003)" >&2; exit 2 ;; esac
 
-all="quiet-z0.1-s1 quiet-z0.1-s2 quiet-z0.1-s3
-quiet-z0.25-s1 quiet-z0.25-s2 quiet-z0.25-s3
+# Zooms are camera zooms: one cell is window height / 48 x zoom, held to
+# 0.40-2.18 (camera.MinZoom, MaxZoom), so 0.4 is the farthest view and 1
+# the default.
+all="quiet-z0.4-s1 quiet-z0.4-s2 quiet-z0.4-s3
+quiet-z1-s1 quiet-z1-s2 quiet-z1-s3
 quiet-z0.8-s1 quiet-z0.8-s2 quiet-z0.8-s3
 quiet-z2-s1 quiet-z2-s2 quiet-z2-s3
 daycross-z0.8-s1 daycross-z0.8-s3
@@ -49,12 +53,12 @@ for cell in $cells; do
   scene=${cell%%-*}
   zoom=$(sed -E 's/.*-z([0-9.]+)-.*/\1/' <<<"$cell")
   speed=${cell##*-s}
-  hour=-1
+  hour=-1 day=0
   [ "$scene" = daycross ] && hour=23
-  [ "$scene" = autosave ] && hour=5
+  [ "$scene" = autosave ] && hour=5 day=1 # no autosave on day 0
   rm -rf "$saves" && mkdir -p "$saves"
   echo "## $cell" | tee -a "$log"
-  out=$(bin/game -noaudio -scenario grown -seed 1 -width 500 -height 500 -hour "$hour" \
+  out=$(bin/game -noaudio -scenario grown -seed 1 -width 500 -height 500 -hour "$hour" -day "$day" \
     -capture-speed "$speed" -capture-zoom "$zoom" -fpsprobe "$seconds" -save-dir "$saves" ${EXTRA:-} 2>&1 | grep 'fps probe' || true)
   if [ -z "$out" ]; then
     echo "fpsmatrix: $cell printed no probe line (crash?); stopping" | tee -a "$log" >&2
