@@ -44,6 +44,16 @@ func TestDefs_Windows(t *testing.T) {
 	}
 }
 
+// TestDefs_Approach: only the stash and the refugee roll an unknown threat
+// at their site (QST-051, 056).
+func TestDefs_Approach(t *testing.T) {
+	for k := KindID(0); k < NumKinds; k++ {
+		if got, want := DefOf(k).Approach, k == Stash || k == Refugee; got != want {
+			t.Errorf("kind %d Approach = %v, want %v", k, got, want)
+		}
+	}
+}
+
 func TestDefs_Weights(t *testing.T) {
 	for k := KindID(1); k < NumKinds; k++ {
 		w := DefOf(k).Weight

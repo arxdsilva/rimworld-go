@@ -100,6 +100,14 @@ type Meta struct {
 	HasLand bool
 	// Quest is the quest whose site this map is (0: none; QST-101).
 	Quest uint32
+	// Foe is the hostile faction behind a quest site (1 + index; 0 none),
+	// asked of the quest when the map opens. Reinforce is when its
+	// reinforcements come, set once the job is done (0: not yet);
+	// Reinforced: they were sent, or nobody of ours was left for them
+	// (QST-017: once, never again; the pack-up waits for it).
+	Foe        int
+	Reinforce  uint64
+	Reinforced bool
 }
 
 // Op is a queued map request.

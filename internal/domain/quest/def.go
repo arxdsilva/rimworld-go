@@ -80,6 +80,11 @@ type Def struct {
 	// HasTarget: the kind fights a hostile faction (fails when it is no
 	// longer hostile, QST-011).
 	HasTarget bool
+	// Approach: an unknown threat may come at the site when its map opens
+	// (QST-051, 056: the stash and the refugee; the camp and the rescue
+	// already hold their defenders). The site rolls it as a mineral site
+	// does (game/maps oreThreat).
+	Approach bool
 }
 
 // Defs is every kind's Def, indexed by KindID (KindNone's is zero). A new
@@ -123,11 +128,11 @@ func defs() []Def {
 	}
 	d[Stash] = Def{
 		Kind: Stash, Weight: 100, AutoAccept: true,
-		DurationTicks: 16 * day, Delivery: AtSite, Violent: true,
+		DurationTicks: 16 * day, Delivery: AtSite, Violent: true, Approach: true,
 	}
 	d[Refugee] = Def{
 		Kind: Refugee, Weight: 60, Joins: true, AutoAccept: true,
-		DurationTicks: 10 * day, Delivery: Home, Violent: true,
+		DurationTicks: 10 * day, Delivery: Home, Violent: true, Approach: true,
 	}
 	d[Camp] = Def{
 		Kind: Camp, Weight: 100,

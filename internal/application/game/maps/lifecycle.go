@@ -63,7 +63,8 @@ func (l Lifecycle) Apply(c command.Command) {
 }
 
 // Flush applies the queued requests, then on the hour takes each
-// temporary map's census: the day-10 raid on a mineral site, the pack-up
+// temporary map's census: the day-10 raid on a mineral site, a quest
+// site's reinforcements 60 hours after its job is done, the pack-up
 // countdown once its job is done, the reform when it runs out, and the
 // close once nobody of ours is left. It runs once per tick, after every
 // map's phases; it leaves any map current (the caller restores its own).
@@ -113,6 +114,7 @@ func (l Lifecycle) apply(r Request, now uint64) {
 			}
 			if r.Quest != 0 && f.h.Switch(id) {
 				f.h.SiteOpened(r.Quest, id) // the quest lays its site (QST-104)
+				l.questSite(c, id, r.Quest) // questsite.go: its approach and its foe (QST-051, 056, 017)
 			} else if r.Lump != 0 && r.Kind == Site {
 				l.oreThreat(c, id) // oresite.go (QST-047)
 			}
@@ -214,7 +216,8 @@ func (l Lifecycle) hourly(id uint32, now uint64) {
 		l.close(id)
 		return
 	}
-	if m.PackBy == 0 && streak(&m.Done, !busy && JobDone(m, c)) {
+	held := reinforcing(m) && l.reinforce(m, c, busy, now) // questsite.go (QST-017): the pack-up waits for them
+	if !held && m.PackBy == 0 && streak(&m.Done, !busy && JobDone(m, c)) {
 		m.PackBy = now + packTicks
 		f.h.Letter(false, "Time to pack up", 0, "The work at %s is done. Whoever is still there leaves as a caravan in a day.", f.h.TileName(m.Tile))
 	}
