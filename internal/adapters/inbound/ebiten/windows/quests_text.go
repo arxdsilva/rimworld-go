@@ -2,7 +2,6 @@ package windows
 
 import (
 	"strconv"
-	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
@@ -135,18 +134,7 @@ func questArg(tr questTexts, a quest.Arg, now uint64) string {
 // questLine is one detail line in our words. An unknown key still shows:
 // the key and its arguments.
 func questLine(tr questTexts, l quest.Line, now uint64) string {
-	a := make([]any, len(l.Args))
-	for i, x := range l.Args {
-		a[i] = questArg(tr, x, now)
-	}
-	if s, ok := questLineKnown(tr, l.Key, a); ok {
-		return s
-	}
-	parts := []string{l.Key}
-	for _, x := range a {
-		parts = append(parts, x.(string))
-	}
-	return strings.Join(parts, " ")
+	return runsText(questRuns(tr, l, 0, now))
 }
 
 // questLineKnown formats the keys the kinds emit; ok is false for any other
@@ -245,26 +233,48 @@ func arg(a []any, i int) any {
 	return ""
 }
 
-// rewardChips are an option's chips as text, in order: the items, the
-// goodwill, the pawn, the site's loot; tips holds each chip's hover card
-// (the pawn's preview, QST-137).
-func rewardChips(tr questTexts, giver int, r quest.RewardView) (labels, tips []string) {
+// chipText is a chip's words: its label and tooltip, and for a pawn
+// reward the pawn, whose chip shows its portrait and whose hover card is
+// pawnCard (QST-137) instead of a tooltip.
+type chipText struct {
+	label, tip string
+	pawn       *quest.PawnPreview
+}
+
+// rewardChips are an option's chips in order: the items, the goodwill,
+// the pawn, the site's loot.
+func rewardChips(tr questTexts, giver int, r quest.RewardView) []chipText {
+	var out []chipText
 	for _, l := range r.Lines {
-		labels, tips = append(labels, rewardItem(tr, l)), append(tips, "")
+		out = append(out, chipText{label: rewardItem(tr, l)})
 	}
 	if r.Goodwill != 0 {
-		name := tr.FactionName(giver)
-		labels, tips = append(labels, tr.Tf("Goodwill %+d", r.Goodwill)), append(tips, name)
+		out = append(out, chipText{label: tr.Tf("Goodwill %+d", r.Goodwill), tip: tr.FactionName(giver)})
 	}
 	if r.HasPawn {
 		p := r.Pawn
-		tip := tr.Tf("%s, %d\n%s", p.Name, p.Age, p.Backstory)
-		labels, tips = append(labels, tr.Tf("%s joins", p.Name)), append(tips, tip)
+		out = append(out, chipText{label: tr.Tf("%s joins", p.Name), pawn: &p})
 	}
 	if r.SiteLoot {
-		labels, tips = append(labels, tr.T("Loot at the site")), append(tips, tr.T("Loot at the site\nWhatever the site holds is ours to take."))
+		out = append(out, chipText{label: tr.T("Loot at the site"), tip: tr.T("Loot at the site\nWhatever the site holds is ours to take.")})
 	}
-	return labels, tips
+	return out
+}
+
+// pawnCardText is the pawn chip's hover card in three blocks: who, the
+// best skill (its label apart, drawn in the highlight) and the backstory.
+type pawnCardText struct {
+	head, skillLabel, skill, story string
+}
+
+// pawnCard is p's hover card text.
+func pawnCard(tr ports.Texts, p quest.PawnPreview) pawnCardText {
+	return pawnCardText{
+		head:       tr.Tf("%s, %s", p.Name, tr.T("new colonist")),
+		skillLabel: tr.T("Best skill:"),
+		skill:      tr.Tf("%s (level %d)", tr.T(p.Best.Label()), p.BestLevel),
+		story:      tr.Tf("%s, %d years old", p.Backstory, p.Age),
+	}
 }
 
 // rewardItem is an item chip: "Wood x80".

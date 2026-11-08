@@ -12,6 +12,8 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/quest"
+	"rimworld-go/internal/domain/pawn/look"
 	qd "rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -52,7 +54,8 @@ type questText struct {
 type questChip struct {
 	r          gfx.Rect
 	label, tip string
-	plain      bool // the "worth N" note: no chip frame
+	plain      bool               // the "worth N" note: no chip frame
+	pawn       *quest.PawnPreview // a pawn reward: its portrait and card (QST-137)
 }
 
 // questDetail is the detail laid out from y 0 at x 0, contentW wide.
@@ -98,17 +101,33 @@ func (w Quests) detail(pane gfx.Rect, q *game.QuestView) {
 			run()
 		}
 	}
+	var card func(dst *ebiten.Image)
 	for i, c := range d.chips {
-		if c.tip == "" {
+		cr := gfx.Rect{X: c.r.X + ox, Y: c.r.Y + oy, W: c.r.W, H: c.r.H}
+		full := cr
+		if cr = cr.Intersect(area.View); cr.Empty() {
 			continue
 		}
-		cr := gfx.Rect{X: c.r.X + ox, Y: c.r.Y + oy, W: c.r.W, H: c.r.H}
-		if cr = cr.Intersect(area.View); !cr.Empty() {
-			k.Tip(fmt.Sprintf("quest.chip.%d.%d", q.ID, i), cr, c.tip)
+		id := fmt.Sprintf("quest.chip.%d.%d", q.ID, i)
+		switch {
+		case c.pawn != nil: // QST-137: the hover card instead of a tooltip
+			if k.Add(uikit.Widget{ID: id, Label: c.label, R: cr}) && k.IsHot(id) {
+				mx, _ := w.sh.Cursor()
+				sw, sh := w.sh.Size()
+				box, lines := layoutPawnCard(pawnCard(w.sh, *c.pawn), full, float32(mx), float32(sw), float32(sh))
+				card = func(dst *ebiten.Image) { drawPawnCard(dst, box, lines) }
+			}
+		case c.tip != "":
+			k.Tip(id, cr, c.tip)
 		}
 	}
 	hot := func(id string) bool { return k.IsHot(id) }
-	k.Queue(func(dst *ebiten.Image) { drawQuestDetail(gfx.ClipTo(dst, area.View), d, ox, oy, hot) })
+	k.Queue(func(dst *ebiten.Image) {
+		drawQuestDetail(gfx.ClipTo(dst, area.View), d, ox, oy, hot, w.sh.DrawPortrait)
+	})
+	if card != nil {
+		k.Queue(card)
+	}
 }
 
 // layoutDetail lays quest q's detail out in a column cw wide.
@@ -139,12 +158,16 @@ func (w Quests) layoutDetail(q game.QuestView, cw float32) questDetail {
 	bs := gfx.Body
 	bs.Color = uikit.Text
 	lh := float32(gfx.LineH(bs))
-	for _, l := range q.Detail {
-		for _, s := range gfx.WrapPx(questLine(w.sh, l, now), bs, float64(cw-4)) {
-			d.texts = append(d.texts, questText{s, 0, y, bs})
-			y += lh
+	facs := w.sh.Factions()
+	for _, l := range q.Detail { // QST-127: the arguments in their roles
+		rs := questRuns(w.sh, l, q.Giver, now)
+		spans, lines := layoutRuns(rs, bs, cw-4)
+		for _, sp := range spans {
+			st := bs
+			st.Color = runColor(rs[sp.run], w.sh.FactionName, facs)
+			d.texts = append(d.texts, questText{sp.s, sp.x, y + float32(sp.line)*lh, st})
 		}
-		y += questParaGap
+		y += float32(lines)*lh + questParaGap
 	}
 	y += questPanelGap
 	y = w.layoutRewards(&d, q, cw, y)
@@ -169,18 +192,22 @@ func (w Quests) layoutRewards(d *questDetail, q game.QuestView, cw, y float32) f
 	}
 	cs := gfx.Body
 	for _, o := range opts {
-		labels, tips := rewardChips(w.sh, q.Giver, q.Rewards[o])
+		chips := rewardChips(w.sh, q.Giver, q.Rewards[o])
 		if v := q.Rewards[o].Value; v > 0 {
-			labels, tips = append(labels, w.sh.Tf("worth %d", v)), append(tips, "")
+			chips = append(chips, chipText{label: w.sh.Tf("worth %d", v)})
 		}
-		ws := make([]float32, len(labels))
-		for i, l := range labels {
-			ws[i] = gfx.TextW(l, cs) + 2*questChipTextX
+		ws := make([]float32, len(chips))
+		for i, c := range chips {
+			ws[i] = gfx.TextW(c.label, cs) + 2*questChipTextX
+			if c.pawn != nil {
+				ws[i] += pawnChipIcon + pawnChipIconGo
+			}
 		}
 		p := layoutReward(ws, 0, y, cw, offer)
 		d.panels = append(d.panels, p.Panel)
-		for i, c := range p.Chips {
-			d.chips = append(d.chips, questChip{r: c, label: labels[i], tip: tips[i], plain: q.Rewards[o].Value > 0 && i == len(labels)-1})
+		for i, r := range p.Chips {
+			c := chips[i]
+			d.chips = append(d.chips, questChip{r: r, label: c.label, tip: c.tip, pawn: c.pawn, plain: q.Rewards[o].Value > 0 && i == len(chips)-1})
 		}
 		if offer {
 			w.addAccept(d, q, o, p.Accept)
@@ -261,7 +288,7 @@ func (w Quests) layoutFoot(d *questDetail, q game.QuestView, cw, y float32) floa
 
 // drawQuestDetail paints d with its origin at (ox, oy); dst is clipped to
 // the scroll view.
-func drawQuestDetail(dst *ebiten.Image, d questDetail, ox, oy float32, hot func(string) bool) {
+func drawQuestDetail(dst *ebiten.Image, d questDetail, ox, oy float32, hot func(string) bool, portrait portraitFunc) {
 	at := func(r gfx.Rect) gfx.Rect { return gfx.Rect{X: r.X + ox, Y: r.Y + oy, W: r.W, H: r.H} }
 	for _, p := range d.panels {
 		uikit.FillRect(dst, at(p), uikit.Horizon)
@@ -278,7 +305,12 @@ func drawQuestDetail(dst *ebiten.Image, d questDetail, ox, oy float32, hot func(
 			uikit.FillRect(dst, r, uikit.Btn)
 			uikit.StrokeRect(dst, r, uikit.BtnBorder)
 		}
-		gfx.Text(dst, uikit.FitText(c.label, st, r.W-2*questChipTextX), float64(r.X+questChipTextX), gfx.CenterTop(float64(r.Y), float64(r.H), st), st)
+		tx := r.X + questChipTextX
+		if c.pawn != nil {
+			drawChipPortrait(dst, tx, r.Y+(r.H-pawnChipIcon)/2, *c.pawn, portrait)
+			tx += pawnChipIcon + pawnChipIconGo
+		}
+		gfx.Text(dst, uikit.FitText(c.label, st, r.Right()-questChipTextX-tx), float64(tx), gfx.CenterTop(float64(r.Y), float64(r.H), st), st)
 	}
 	for _, t := range d.texts {
 		gfx.Text(dst, t.s, float64(t.x+ox), float64(t.y+oy), t.st)
@@ -328,4 +360,18 @@ func drawQuestGlyph(dst *ebiten.Image, r gfx.Rect, icon int, c color.RGBA) {
 	}
 	gfx.StrokeCircle(dst, cx, cy+1, 5, 1.5, c, true) // a turn back up
 	gfx.FillPoly(dst, [][2]float32{{cx - 8, cy - 3}, {cx - 2, cy - 3}, {cx - 5, cy + 2}}, c, true)
+}
+
+// portraitFunc draws a look's portrait in a box (Labels.DrawPortrait).
+type portraitFunc func(dst *ebiten.Image, l look.Look, x, y, w, h float64) bool
+
+// drawChipPortrait draws p's 16-px portrait at (x, y), or a head and
+// shoulders in the dim text colour while the art is missing.
+func drawChipPortrait(dst *ebiten.Image, x, y float32, p quest.PawnPreview, portrait portraitFunc) {
+	if portrait != nil && portrait(dst, p.Look, float64(x), float64(y), pawnChipIcon, pawnChipIcon) {
+		return
+	}
+	c := uikit.TextDim
+	gfx.FillCircle(dst, x+pawnChipIcon/2, y+5, 4, c, true)
+	gfx.FillPoly(dst, [][2]float32{{x + 2, y + pawnChipIcon}, {x + 5, y + 10}, {x + 11, y + 10}, {x + 14, y + pawnChipIcon}}, c, true)
 }

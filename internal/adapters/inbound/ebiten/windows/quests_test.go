@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
+	"rimworld-go/internal/domain/pawn/skill"
 	qd "rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -382,4 +383,174 @@ type prefShell struct{ facShell }
 
 func (prefShell) Factions() []Faction {
 	return []Faction{{Name: "Faction 1", Standing: "Neutral"}, {Name: "Faction 2", Standing: "Hostile"}}
+}
+
+// TestQuestRunsColourTheArgs (QST-127): a detail line's runs come from its
+// typed arguments: the giver warm, another faction in its relation colour,
+// numbers highlighted, the words between plain; the text is the line's.
+func TestQuestRunsColourTheArgs(t *testing.T) {
+	t.Parallel()
+	sh, _ := newFake()
+	now := uint64(clock.TicksPerDay)
+	l := quest.Line{Key: "quest.rescue.site", Args: []quest.Arg{quest.Tile(12), quest.Faction(2)}}
+	rs := questRuns(sh, l, 1, now)
+	if runsText(rs) != questLine(sh, l, now) || runsText(rs) != "Someone is locked up at tile 12, held by Faction 2." {
+		t.Fatalf("runs %q, line %q", runsText(rs), questLine(sh, l, now))
+	}
+	roles := map[string]runRole{}
+	for _, r := range rs {
+		roles[r.s] = r.role
+	}
+	if roles["Faction 2"] != runFaction || roles["tile 12"] != runPlain || roles["Someone is locked up at "] != runPlain {
+		t.Fatalf("roles %v", roles)
+	}
+	giver := questRuns(sh, quest.Line{Key: "quest.camp.giver", Args: []quest.Arg{quest.Faction(1)}}, 1, now)
+	if giver[0].role != runGiver || giver[0].s != "Faction 1" {
+		t.Fatalf("giver runs %+v", giver)
+	}
+	num := questRuns(sh, quest.Line{Key: "quest.camp.standing", Args: []quest.Arg{quest.Num(3), quest.Num(8)}}, 1, now)
+	if len(num) != 5 || num[1].role != runNumber || num[3].role != runNumber || num[3].s != "8" {
+		t.Fatalf("number runs %+v", num)
+	}
+	facs := []Faction{{Name: "Faction 2", Color: uikit.Danger}}
+	if runColor(rs[3], sh.FactionName, facs) != uikit.Danger || runColor(giver[0], sh.FactionName, facs) != uikit.Accent ||
+		runColor(num[1], sh.FactionName, facs) != uikit.Heading || runColor(rs[0], sh.FactionName, facs) != uikit.Text {
+		t.Fatal("a role has the wrong colour")
+	}
+	unk := questRuns(sh, quest.Line{Key: "quest.nobody.knows", Args: []quest.Arg{quest.Faction(2)}}, 1, now)
+	if runsText(unk) != "quest.nobody.knows Faction 2" || unk[2].role != runFaction {
+		t.Fatalf("unknown key runs %+v", unk)
+	}
+}
+
+// TestRunsWrapInsideTheWidth (QST-127): coloured runs wrap at spaces inside
+// the width, a word split over two runs ("Faction 2" then ".") stays on one
+// line, and a word wider than the line is cut, never drawn past it.
+func TestRunsWrapInsideTheWidth(t *testing.T) {
+	t.Parallel()
+	st := gfx.Body
+	rs := []questRun{{s: "A traveller from "}, {s: "People of the Quorhollow", role: runGiver}, {s: ". They ask to live with us and bring "}, {s: "12", role: runNumber}, {s: " goats."}}
+	for _, maxW := range []float32{60, 140, 260, 555} {
+		spans, lines := layoutRuns(rs, st, maxW)
+		var b strings.Builder
+		last := -1
+		for i, sp := range spans {
+			if r := sp.x + gfx.TextW(sp.s, st); r > maxW+0.5 && gfx.TextW(sp.s, st) <= maxW {
+				t.Fatalf("w %v: span %q ends at %v", maxW, sp.s, r)
+			}
+			if sp.line < last || sp.line >= lines {
+				t.Fatalf("w %v: span %d on line %d of %d", maxW, i, sp.line, lines)
+			}
+			if sp.s == "." && i > 0 && spans[i-1].line != sp.line {
+				t.Fatalf("w %v: the full stop left its word", maxW)
+			}
+			last = sp.line
+			b.WriteString(sp.s)
+		}
+		if got, want := b.String(), strings.ReplaceAll(runsText(rs), " ", ""); got != want {
+			t.Fatalf("w %v: spans spell %q, want %q", maxW, got, want)
+		}
+		if plain := len(gfx.WrapPx(runsText(rs), st, float64(maxW))); maxW >= 140 && lines != plain || maxW == 60 && lines < 4 {
+			t.Fatalf("w %v: %d lines", maxW, lines)
+		}
+	}
+	long, lines := layoutRuns([]questRun{{s: strings.Repeat("w", 80), role: runFaction}}, st, 100)
+	for _, sp := range long {
+		if sp.x+gfx.TextW(sp.s, st) > 100.5 {
+			t.Fatalf("cut word part %q ends past the line", sp.s)
+		}
+	}
+	if lines < 2 {
+		t.Fatalf("an 80-rune word fits %d line", lines)
+	}
+}
+
+// TestPawnChipShowsItsCard (QST-137): the pawn reward's chip makes room for
+// a 16-px portrait and has no tooltip; its card is 214 wide, 1 px under the
+// chip at the mouse, with three blocks a line and a blank apart (the best
+// skill's label highlighted), and flips above the chip near the bottom.
+func TestPawnChipShowsItsCard(t *testing.T) {
+	t.Parallel()
+	sh, w := questsOpen(t)
+	q := sh.world.Quests[0]
+	q.Rewards[1].Pawn.Best, q.Rewards[1].Pawn.BestLevel = skill.Medicine, 9
+	d := w.Quests().layoutDetail(q, hudlayout.QuestRewardW)
+	var chip *questChip
+	for i := range d.chips {
+		if d.chips[i].pawn != nil {
+			chip = &d.chips[i]
+		}
+	}
+	if chip == nil || chip.label != "Ana joins" || chip.tip != "" {
+		t.Fatalf("pawn chip %+v", chip)
+	}
+	if min := gfx.TextW(chip.label, gfx.Body) + 2*questChipTextX + pawnChipIcon + pawnChipIconGo; chip.r.W < min {
+		t.Fatalf("pawn chip %v wide, want room for the portrait (%v)", chip.r.W, min)
+	}
+	if wd, ok := sh.kit.Find("quest.chip.3.3"); !ok || wd.Label != "Ana joins" || wd.Tip != "" {
+		t.Fatalf("pawn chip widget %+v (%v)", wd, ok)
+	}
+	txt := pawnCard(sh, *chip.pawn)
+	if txt.head != "Ana, new colonist" || txt.skillLabel != "Best skill:" || txt.skill != "Medicine (level 9)" || txt.story != "Courier, 31 years old" {
+		t.Fatalf("card text %+v", txt)
+	}
+	at := gfx.Rect{X: 400, Y: 300, W: 99, H: 24}
+	box, lines := layoutPawnCard(txt, at, 450, 1280, 720)
+	lh := float32(gfx.LineH(gfx.Body))
+	if box.X != 450 || box.Y != at.Bottom()+1 || box.W != pawnCardW || box.H != 2*pawnCardPadY+5*lh {
+		t.Fatalf("card box %+v", box)
+	}
+	ys := map[string]float32{}
+	for _, l := range lines {
+		ys[l.s] = l.y
+		if l.x+gfx.TextW(l.s, gfx.Body) > pawnCardW-pawnCardPadX+0.5 {
+			t.Fatalf("line %q leaves the card", l.s)
+		}
+		if l.s == "Best skill:" && l.c != uikit.Accent {
+			t.Fatal("the best skill's label is not highlighted")
+		}
+	}
+	if ys["Ana, new colonist"] != pawnCardPadY || ys["Best skill:"] != pawnCardPadY+2*lh || ys["Medicine (level 9)"] != ys["Best skill:"] || ys["Courier, 31 years old"] != pawnCardPadY+4*lh {
+		t.Fatalf("block tops %v", ys)
+	}
+	low, _ := layoutPawnCard(txt, gfx.Rect{X: 1200, Y: 680, W: 99, H: 24}, 1250, 1280, 720)
+	if low.Bottom() > 680 || low.Right() > 1280-pawnCardEdge {
+		t.Fatalf("card near the corner %+v", low)
+	}
+}
+
+// TestQuestPrefsDialogIsFrameless (QST-135): no title bar and no footer;
+// the X sits 22 x 25 in the frame's top-right corner and closes the
+// dialog; each row's checkbox sits at its measured column.
+func TestQuestPrefsDialogIsFrameless(t *testing.T) {
+	t.Parallel()
+	f, _ := newFake()
+	w := New(prefShell{facShell{f, 0}})
+	f.env.Game = fakeReader{}
+	f.world = questFixture()
+	w.Quests().Launch()
+	w.Quests().openPrefs()
+	f.kit.Begin()
+	f.kit.RunModals(nil)
+	m := f.kit.Modals[len(f.kit.Modals)-1]
+	if m.ID != QuestPrefsModalID || !m.Frameless || len(m.Buttons) != 0 || m.W != hudlayout.QuestPrefsW || m.H != hudlayout.QuestPrefsH {
+		t.Fatalf("dialog %+v", m)
+	}
+	sw, shh := f.Size()
+	frame, _, _, _ := uikit.ModalGeometry(sw, shh, m)
+	x, ok := f.kit.Find(QuestPrefsCloseID)
+	if !ok || x.R.W != questPrefXW || x.R.H != questPrefXH || x.R.Right() != frame.Right()-questPrefXInset || x.R.Y != frame.Y+questPrefXInset {
+		t.Fatalf("X %+v in frame %+v (%v)", x.R, frame, ok)
+	}
+	if c, ok := f.kit.Find(ids.QuestPref + "1"); !ok || c.R.X != frame.X+hudlayout.WindowPad+questPrefCheckX {
+		t.Fatalf("checkbox %+v in frame %+v", c.R, frame)
+	}
+	if !f.kit.Click(QuestPrefsCloseID) {
+		t.Fatal("no X")
+	}
+	f.kit.Begin()
+	f.kit.RunModals(nil)
+	if f.kit.Top() == QuestPrefsModalID {
+		t.Fatal("the X left the dialog open")
+	}
 }
