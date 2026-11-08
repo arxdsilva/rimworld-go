@@ -45,6 +45,11 @@ type Probe struct {
 	tick0       uint64
 	held        int
 	BudgetHeld0 int
+	// The GAR numbers (frames.go): the gap histogram, Updates per Draw and
+	// the GC over the measured span.
+	hist Hist
+	upd  UpdatesPerDraw
+	gc   GCWindow
 }
 
 // Report is the probe's final report ("" until it ran).
@@ -79,6 +84,9 @@ func (m *Meter) ProbeUpdate() bool {
 		st.report = Report(st, env.Scale) + fmt.Sprintf(", %dx%d physical; %d ticks, speed held %d times; %v",
 			env.PW, env.PH, env.Tick-st.tick0, st.held, m.sh.ArtMem()) + BudgetLine(st, env.Held, env.MaxOwed)
 		log.Print(st.report)
+		detail := Detail(st, st.gc.End())
+		log.Print(detail)
+		st.report += "\n" + detail
 		return true
 	}
 	if env.Speed != st.speed { // a threat pause or the window losing focus
@@ -89,6 +97,7 @@ func (m *Meter) ProbeUpdate() bool {
 		st.measured = true
 		st.BudgetHeld0 = env.Held // the budget line covers the measured span
 		m.sh.ResetMaxOwed()
+		st.gc.Begin()
 		if p.Measuring != nil {
 			p.Measuring()
 		}
@@ -108,6 +117,7 @@ func BudgetLine(st *Probe, held, maxOwed int) string {
 func (m *Meter) ProbeAfterUpdate() {
 	if st := m.Probe; st.started && st.drawn && st.upStart.After(st.warmupTo) {
 		st.update = append(st.update, time.Since(st.upStart))
+		st.upd.Update()
 	}
 }
 
@@ -126,7 +136,10 @@ func (m *Meter) ProbeDraw(start time.Time) {
 	}
 	if start.After(st.warmupTo) {
 		if !st.last.IsZero() {
-			st.frames = append(st.frames, now.Sub(st.last))
+			gap := now.Sub(st.last)
+			st.frames = append(st.frames, gap)
+			st.hist.Add(gap)
+			st.upd.Draw()
 		}
 		st.draw = append(st.draw, now.Sub(start))
 	}
