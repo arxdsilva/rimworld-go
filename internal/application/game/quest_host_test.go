@@ -221,3 +221,21 @@ func TestQuestPointsIgnoreTheStorytellerRoll(t *testing.T) {
 		}
 	}
 }
+
+// TestQuestSiteTilesHaveARouteHome: every quest site tile has an overland
+// caravan route from the colony and back (QST-059): a site across water
+// could be entered by pods but never left by caravan.
+func TestQuestSiteTilesHaveARouteHome(t *testing.T) {
+	t.Parallel()
+	g := worldGame(t)
+	h, p, home := questHost{g}, g.worldPlanet(), g.colonyTile()
+	for seed := uint64(0); seed < 300; seed += 7 {
+		tile, ok := h.NearTile(seed, 6, 25)
+		if !ok {
+			t.Fatalf("seed %d: no quest tile 6-25 hops from home", seed)
+		}
+		if p.Route(home, tile) == nil || p.Route(tile, home) == nil {
+			t.Fatalf("seed %d: quest tile %d has no caravan route to the colony at %d", seed, tile, home)
+		}
+	}
+}

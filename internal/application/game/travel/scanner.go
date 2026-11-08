@@ -193,17 +193,19 @@ func (o scanner) find(target item.Kind, b construction.Building) bool {
 
 // ring is every tile SiteMinDist to SiteMaxDist hops from home, in
 // breadth-first order (deterministic: the planet's neighbour order).
-func ring(p *planet.Planet, home int) []int { return ringOf(p, home, SiteMinDist, SiteMaxDist) }
+func ring(p *planet.Planet, home int) []int { return ringOf(p, home, SiteMinDist, SiteMaxDist, false) }
 
-// ringOf is every tile lo to hi hops from home, in breadth-first order.
-func ringOf(p *planet.Planet, home, lo, hi int) []int {
+// ringOf is every tile lo to hi hops from home, in breadth-first order;
+// overland walks only through land, so each tile has a caravan route home
+// (planet.Route crosses no water).
+func ringOf(p *planet.Planet, home, lo, hi int, overland bool) []int {
 	seen := map[int32]bool{int32(home): true}
 	front, out := []int32{int32(home)}, []int(nil)
 	for d := 1; d <= hi && len(front) > 0; d++ {
 		var next []int32
 		for _, t := range front {
 			for _, nb := range p.Neighbours(int(t)) {
-				if !seen[nb] {
+				if !seen[nb] && (!overland || p.Land(int(nb))) {
 					seen[nb] = true
 					next = append(next, nb)
 					if d >= lo {
@@ -217,15 +219,16 @@ func ringOf(p *planet.Planet, home, lo, hi int) []int {
 	return out
 }
 
-// FreeTile is a land tile lo..hi hops from home with no settlement, no
-// mineral site and not taken, picked from seed (a quest site, QST-117).
+// FreeTile is a land tile lo..hi overland hops from home (a caravan can
+// reach it and come back, QST-059) with no settlement, no mineral site and
+// not taken, picked from seed (a quest site, QST-117).
 func (o Ops) FreeTile(seed uint64, lo, hi int, taken func(t int) bool) (int, bool) {
 	p, home := o.h.Planet(), o.h.ColonyTile()
 	if p == nil || home < 0 {
 		return 0, false
 	}
 	var cands []int
-	for _, t := range ringOf(p, home, lo, hi) {
+	for _, t := range ringOf(p, home, lo, hi, true) {
 		_, settled, _, _ := o.settlement(t)
 		if _, site := scanner(o).siteAt(t); !settled && !site && p.Land(t) && !taken(t) {
 			cands = append(cands, t)

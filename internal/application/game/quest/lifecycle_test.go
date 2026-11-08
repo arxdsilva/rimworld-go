@@ -360,7 +360,7 @@ func TestApplyErrors(t *testing.T) {
 		{Accept(99, 0), ErrNoQuest},
 		{Dismiss(99), ErrNoQuest},
 		{Cmd{Op: OpNone, Quest: id}, ErrOp},
-		{Cmd{Op: OpSetPref + 1, Quest: id}, ErrOp},
+		{Cmd{Op: OpOffer + 1, Quest: id}, ErrOp},
 		{Fulfil(id, 1), qd.ErrMove},
 		{Negotiate(id, 1), qd.ErrMove},
 		{Accept(id, 5), qd.ErrChoice},
