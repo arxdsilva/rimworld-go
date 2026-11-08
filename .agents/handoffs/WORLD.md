@@ -116,3 +116,29 @@ Site maps for quests; stash, refugee, camp and rescue kinds; ore-site threats ·
 - Tests: kind unit tests (`kinds` human, camp, stash, refugee, rescue); game `quest_{stash,refugee,camp,rescue,oresite}_test.go` with save/load hashes (one tick after laying: rooms and roof support are derived); `TestCampClearedThroughTheGame` asserts the pod falls at home; `care/free_test.go`; `mapgen` cell and camp layout tests.
 - HUD: quests and their sites show in `WorldView.Quests` and letters; "Free <name>" shows in the pawn's order menu. The Quests window, world marks and the lang keys the kinds' Detail lines name are QST-3.
 - Open: QST-051/056 approach roll; QST-055 hunger and bleed freeze; QST-057 carrying gated by the quest; QST-059 tending on the site; QST-113/114 world mark (QST-3).
+
+## QST-3-quests-ui
+Quests tab and window, quest letters and alert, quest sites on the globe · 2026-11-07 · dc856c4c7 e01903454 f8da51635 a4093e880 b8564a8e3 1fd95ab33 0d511c093 a18a8b552
+- Changed: the Quests text tab sits between Research and World (F7, UIS-041). The window is a frameless 1010 x 641 panel: a 351 list with Available/Active/Historical tabs, then a 607 detail pane. The list has search and Reward preferences; rows show stars and the time left. The detail has a title, dismiss/restore and timers, then coloured body runs, reward blocks ("Accept for"), links (site, colony) and the giver foot. Historical rows are tinted by outcome (UIS-066, QST-120..139).
+- Changed: a pawn reward chip carries a portrait, and its hover card shows name and role, best skill, backstory and age (`PawnPreview.Look/Best/BestLevel`). The Reward preferences dialog is frameless with its own X: one row per faction with emblem, accept-goodwill check, goodwill and relation.
+- Changed: a quest letter's tile takes the quest frame role and opens its quest (`ports.ShowQuest`); its footer offers View quest, Accept (single reward) and Close. The alert `quest.expiring` fires for an offer with under a day left. Quest sites are world objects (`quest:<id>`) with the kind's name, faction, time left and Send caravan.
+- Decisions: detail text is built from typed args (`quest.Arg`) and never parsed back; the colour runs live in `windows/quests_rich.go` because no rich-text primitive existed. A failed quest posts a caution letter, not a threat letter, because a threat letter auto-pauses (QST-014 kept). The letter heading stays in the body (UIS-073, QST-133 kept).
+- Limits: `windows.Labels` at its 8-method cap (`DrawPortrait` went to `Host`, 7); the ebiten root at 60 files, edits only; `hud.Right` trimmed to 40.
+- Tests: window tests (`quests_test.go`), journeys for every new command (accept, dismiss, restore, reward pref, fulfil, negotiate, offer help, free prisoner); `-capture-ui quests`; the window is in `TestPanelsStayInTheirPanel`.
+- Open: none in the QST rows.
+
+## QST-4-quests-verification
+The quest soak and replay checks · 2026-11-07 · 22233a811 91da20fbf d24bb6ea7
+- Changed: `command.DevOfferQuest` (Index = kind) offers a quest of one kind through `quest.OfferKind`, routed like the other host commands. It is the hook for journeys, captures and the soak; a refusal posts the usual refused message.
+- Decisions: `TestQuestSoak` offers every kind on day 0 and accepts each, then runs 20 days by default. Each day it checks that no quest is stuck past a timer; at the midpoint it checks a save/load hash and that both games run on alike. At the end some quest has ended and no site map is left open. `RIMWORLD_QUEST_SOAK_DAYS=120` runs the two years: it passes under `-race` in 4 min 23 s on this machine (20 days by default, inside CI's budget). The stash replay checks the hash across save and load and two more hours.
+- Docs: MAIN_UI §31 now describes the three tabs; the MULTIMAP and RHUD-310 quest notes are updated.
+
+## QST-5-quests-close-out
+The last open quest rows: offer help, site threats, reachability, rare rewards · 2026-11-07 · 217687f70 8efcc2d07 0706c6a2d 4c83a614c 5a3e98334 a3e681659 9263053c9 6fe747221 509620cf9 6d3baa2bf 23eec692e
+- Changed: "Offer help" is a pawn order (`OrderOfferHelp`, `care/help.go`) on the quest-bound refugee; it joins them through the quest with the +18 rescued thought (QST-057). A refugee's injury leaves no fresh stump, so they never bleed (QST-055).
+- Changed: stash and refugee sites roll the ore site's approach threat on top of their guards (`Def.Approach`, QST-051/056). A finished quest site warns of reinforcements; 60 h later the site's foe raids once if ours are still there, and only then does the 24 h pack-up start (QST-017, saved in `maps.Meta`). The world inspector shows "Reinforcements in" beside "Packs up in" (`MapView.Reinforce`).
+- Changed: quest site tiles are picked by an overland walk, so each has a caravan route home (QST-059; the scanner's ring is unchanged). A quest reward's pod lands with its own message (`tradePod.Reward`, QST-089). The camp, stash and request pools pay rare goods: spacer gear, implants, nanomed kits, advanced components, schematics (checklist 29.3).
+- Decisions: Free and Offer help are care orders read through `care.Captives` (`Held`, `Helpable`, `Helped`, `Freed`); `DevClearHostiles(g, map)` is a free function (no `Game` method) for the Free-prisoner journey. The rescue test's step bound is 160 because the reachable site is farther.
+- Limits: relief 509620cf9 (`idindex`, `actionview`, `mapview` buckets, `forage.Rings`); game lines 52,084 → 51,873 and the ceiling lowered to match; files 174; `Game` unchanged.
+- Kept out: the far ancient-ship ending site (decision 3, QST-180..184, the ship gap) and the crashed-pod refugee, which is an incident, not a quest (decision 5, QST-175..179).
+- Open: none in the QST rows. One follow-up: `SiteRuler` folded into `maps.Quester` once it has room.

@@ -255,6 +255,9 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | QST-1-quests-contract | Quests contract: domain, root, glue | 2026-11-07 | [WORLD.md](WORLD.md#qst-1-quests-contract) |
 | QST-2a-quest-kinds-without-sites | Joiner, ore lump, trade request, peace talks; the wanderer letter | 2026-11-07 | [WORLD.md](WORLD.md#qst-2a-quest-kinds-without-sites) |
 | QST-2b-quest-sites | Site maps for quests; stash, refugee, camp and rescue kinds; ore-site threats | 2026-11-07 | [WORLD.md](WORLD.md#qst-2b-quest-sites) |
+| QST-3-quests-ui | Quests tab and window, quest letters and alert, quest sites on the globe | 2026-11-07 | [WORLD.md](WORLD.md#qst-3-quests-ui) |
+| QST-4-quests-verification | The quest soak and replay checks | 2026-11-07 | [WORLD.md](WORLD.md#qst-4-quests-verification) |
+| QST-5-quests-close-out | The last open quest rows: offer help, site threats, reachability, rare rewards | 2026-11-07 | [WORLD.md](WORLD.md#qst-5-quests-close-out) |
 | QST-gap-analysis | Quests gap analysis | 2026-11-07 | [WORLD.md](WORLD.md#qst-gap-analysis) |
 | REF-1-prioritize-refuel-auto-toggle | Ordered refuels and the auto refuel switch | 2026-11-06 | [BASE.md](BASE.md#ref-1-prioritize-refuel-auto-toggle) |
 | REL-001-release-workflow | Release builds on tags | 2026-10-21 | [OPS.md](OPS.md#rel-001-release-workflow) |
