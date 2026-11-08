@@ -57,6 +57,11 @@ agent-budget:  ## how many parallel agents this machine's free RAM holds (PARALL
 fps:  ## uncapped frame-rate probe of the grown 500x500 colony at 3x, zoom 0.1 and 0.8 (PERF-002); run it alone
 	@scripts/fpsprobe.sh $(or $(TAG),$(shell git rev-parse --short HEAD)) $(or $(SECONDS),60)
 
+# GAR "always 60" matrix: every zoom and speed plus the midnight cells, VSync on (PERF-004); run it alone, window focused.
+.PHONY: fps-matrix
+fps-matrix:  ## VSync-on probe matrix of the grown 500x500 colony (bin/fpsmatrix-$(TAG).csv); run it alone
+	@scripts/fpsmatrix.sh $(or $(TAG),$(shell git rev-parse --short HEAD)) $(or $(SECONDS),45)
+
 .PHONY: test
 test: test-unit
 
