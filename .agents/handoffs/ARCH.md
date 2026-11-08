@@ -74,7 +74,7 @@ Every `cmd/<tool>` is one wiring-only `main.go` (GAR Part A) · 2026-11-08 · 32
 - Open: `cmd/replay`, `cmd/contentlint` behaviour (GAR E10). `TestSkillLinksMatch` fails because `.claude/skills` was removed, pending the user's decision.
 
 ## ARCH-008-gar-analysis-adrs
-GAR gap analysis, ADRs 0001-0004 and the architecture diagrams (GAR Parts B and D) · 2026-11-08 · pending
+GAR gap analysis, ADRs 0001-0004 and the architecture diagrams (GAR Parts B and D) · 2026-11-08 · 1cd1139be
 - Changed: `.agents/gaps/GAME_ARCHITECTURE_GAP_ANALYSIS.md` holds 106 GAR rows in ten bands (scheduler, parallel, events, loop, sim fixes, read models, render, text and UI, hitches, tooling), each with a source, our file:line, a state, an impact and a phase, plus the PERF-004 baseline.
 - Changed: `docs/adr/0001`-`0004` record the user's picks with pros and cons: a systems scheduler, parallel pure stages under one writer, an event queue everywhere, and a render-command list.
 - Changed: `docs/architecture/` holds 14 Archify diagrams (JSON spec plus HTML) and `architecture-delta.html`. `make diagrams` re-renders them byte-equal. The delivery receipts hold local paths and are gitignored.
