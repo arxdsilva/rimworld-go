@@ -65,6 +65,7 @@ Each file holds the decisions, wiki constants and phase rows for one area. Load 
 | RSC-* | `RESCUE_GAP_ANALYSIS.md` | Who is carried to which bed, carrier requirements, aftermath |
 | RSCH-* | `RESEARCH_GAP_ANALYSIS.md` | Research speed, tech levels, project table, benches, Research tab |
 | RHUD-* | `RIMHUD_GAP_ANALYSIS.md` | The RimHUD colonist card, layout editor, presets, widgets |
+| SAV-* | `SAVES_GAP_ANALYSIS.md` | Named saves per colony, overwrite and delete questions, the save list, build and content checks, damaged files, unsaved progress |
 | SHT-* | `SHOOTING_GAP_ANALYSIS.md` | Accuracy, aim time, interception, shot information |
 | STK-ST | `STORAGE_GAP_ANALYSIS.md` | Stack counts per tile, the dumping stockpile |
 | TEMP-* | `TEMPERATURE_GAP_ANALYSIS.md` | Climate, room thermodynamics, comfort, clothing, temperature UI |
