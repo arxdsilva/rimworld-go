@@ -233,6 +233,7 @@ func (o *Wiring) drawUnlitSprite(v *render.View, dst *ebiten.Image, key string, 
 	var geo ebiten.GeoM
 	geo.Scale(s, s)
 	geo.Translate(x, y)
+	o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	drawUnlit(dst, img, geo, cs)
 	return true
 }

@@ -50,6 +50,12 @@ var scenes = map[string]scene{
 	"fence": centred(fenceField),
 	// wood, food and a rifle on the ground, some of it forbidden
 	"forbid": centred(forbidScene),
+	// the forbidden stacks, a downed colonist and a bed: -capture-ui marks
+	// drafts, strip-marks and deconstruct-marks on it (GAR-161)
+	"marks": centred(func(g *game.Game, cx, cy int) {
+		forbidScene(g, cx, cy)
+		rescue(g, cx, cy)
+	}),
 	"double": func(g *game.Game, w, h int) {
 		g.BuildNow("double bed", "wood", "south", w/2-1, h/2+1)
 	},

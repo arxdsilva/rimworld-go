@@ -14,7 +14,7 @@ func TestStatsCountsFlushReasons(t *testing.T) {
 	a, big := ebiten.NewImage(8, 8), ebiten.NewImage(24, 24)
 	dst1, dst2 := ebiten.NewImage(64, 64), ebiten.NewImage(64, 64)
 	r.lit.StartFrame()
-	r.lit.BatchGround(true)
+	r.lit.Batch(true)
 	r.drawGround(dst1, a, 0)
 	r.drawGround(dst2, a, 0)   // dst
 	r.drawGround(dst2, big, 0) // page
@@ -22,7 +22,7 @@ func TestStatsCountsFlushReasons(t *testing.T) {
 	r.drawGround(dst2, a, 0)
 	r.lit.DrawGround(&r.view, dst2, a, ebiten.GeoM{}, noCS, 0, 0, true, 0) // bake
 	r.drawGround(dst2, a, 0)
-	r.lit.BatchGround(false) // end
+	r.lit.Batch(false) // end
 	st := r.lit.Stats()
 	want := map[FlushReason]int{FlushDst: 1, FlushPage: 1, FlushBlood: 1, FlushBake: 1, FlushEnd: 1}
 	for why := range NumFlushReasons {

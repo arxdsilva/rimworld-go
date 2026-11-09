@@ -328,8 +328,9 @@ type Lit struct {
 	OnDraw func(img *ebiten.Image, blood float32)
 	// ground marks the next Draw as a ground plane (DrawGround).
 	ground bool
-	// batch queues the ground pass's lit ground quads (ground_batch.go).
-	batch groundBatch
+	// batch queues the lit quads of the passes that turn it on
+	// (lit_batch.go).
+	batch litBatch
 	// Calls counts world draw Calls (lit sprites, ground batches, water
 	// tiles, baked chunk and map pages) for the draw benchmarks; it only
 	// ever grows.
@@ -1033,7 +1034,7 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	ground := l.ground
 	l.ground = false
 	if baking { // a bake: unlit albedo, lit when it is drawn
-		l.flushGround(FlushBake)
+		l.flush(FlushBake)
 		op := &l.plain
 		op.GeoM, op.Filter = geo, ebiten.FilterLinear
 		op.ColorScale.Reset()
@@ -1058,7 +1059,7 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 		sh = l.LitShader()
 	}
 	if plain || sh == nil { // lighting off, or the shader failed to compile: the plain draw
-		l.flushGround(FlushOff)
+		l.flush(FlushOff)
 		l.count()
 		op := &l.plain
 		op.GeoM, op.Filter = geo, ebiten.FilterLinear
@@ -1081,12 +1082,12 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	if src != img {
 		sx, sy = 0, 0
 	}
-	// a ground plane drawn from itself joins the ground batch: the same
-	// quad, sampled from its copy on the ground sheet
-	var slot groundSlot
-	batched := ground && l.batch.on && src == img
+	// while a pass has the batch on, the draw joins it: the same quad,
+	// sampled from the copy of src on the sheet (lit_batch.go)
+	var slot sheetSlot
+	batched := l.joins(blood)
 	if batched {
-		if slot, batched = l.groundSlotOf(v.Art, img); batched {
+		if slot, batched = l.slotOf(v.Art, img, src); batched {
 			sx, sy = slot.x, slot.y
 		}
 	}
@@ -1098,13 +1099,13 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 		l.GroundLamp(v, &l.Verts)
 	}
 	if batched {
-		l.appendGround(dst, slot.page, sh)
+		l.appendQuad(dst, slot.page, sh)
 		return
 	}
 	if blood != 0 {
-		l.flushGround(FlushBlood)
+		l.flush(FlushBlood)
 	} else {
-		l.flushGround(FlushRaw)
+		l.flush(FlushRaw)
 	}
 	l.count()
 	l.SyncUniforms()

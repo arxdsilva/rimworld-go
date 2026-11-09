@@ -52,6 +52,7 @@ func (o *Objects) DrawForbiddenMark(screen *ebiten.Image, wx, wy int, tile float
 		o.drawSprite(screen, ForbiddenKey, color.NRGBA{}, float64(wx), float64(wy), tile, sw, sh)
 		return
 	}
+	o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	sx, sy := o.worldToScreen(wx, wy)
 	t := float32(tile)
 	cx, cy, rad := sx+t*0.75, sy+t*0.25, t*0.2

@@ -151,6 +151,7 @@ func TroughKey(b game.BuildingView) string {
 // drawTroughFallback draws a feeding trough as a plain wooden box (full
 // when it holds feed) while its sprite is missing.
 func (o *Objects) drawTroughFallback(screen *ebiten.Image, b game.BuildingView, tile float64) {
+	o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	sx, sy := o.worldToScreenF(float64(b.X), float64(b.Y))
 	w, h := float32(max(b.W, 1))*float32(tile), float32(max(b.H, 1))*float32(tile)
 	pad := float32(tile) * 0.15

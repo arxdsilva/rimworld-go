@@ -154,11 +154,11 @@ func (b *base) drawGroundTile(dst *ebiten.Image, w *game.WorldView, x, y int, ti
 	} else if stoneGroundCode[code] {
 		tcs = sprite.MulCS(tcs, sprite.TintCS(b.stoneTintAt(w, x, y)))
 	}
-	if ok && IsWaterCode[code] { // render/env draws past the ground batch: off around it
-		on := b.Lit.BatchGround(false)
+	if ok && IsWaterCode[code] { // render/env draws past the lit batch: off around it
+		on := b.Lit.Batch(false)
 		b.Lit.Calls++
 		b.Env.DrawWaterTile(b.v, dst, TerrainNames[code], x, y, tile, sw, sh, tcs, b.LOD.Baking, b.Stamp)
-		b.Lit.BatchGround(on)
+		b.Lit.Batch(on)
 	} else {
 		b.DrawTile(dst, key, float64(x), float64(y), tile, sw, sh, tcs)
 	}
@@ -193,9 +193,9 @@ func (b *base) drawGroundTile(dst *ebiten.Image, w *game.WorldView, x, y int, ti
 		b.drawSpriteCS(dst, ek, none, float64(x), float64(y), tile, sw, sh, ecs)
 	}
 	if ok && IsWaterCode[code] {
-		on := b.Lit.BatchGround(false)
+		on := b.Lit.Batch(false)
 		b.Env.DrawWaterEdges(b.v, b.Pass(), dst, TerrainNames[code], nbPri, TerrainPriority["shallow_water"], x, y, tile, sw, sh, b.Stamp)
-		b.Lit.BatchGround(on)
+		b.Lit.Batch(on)
 	}
 }
 
@@ -249,6 +249,7 @@ func (b *base) AnimalPads(tile float64) (pad, padS int) { return AnimalPadsOf(b.
 
 // drawUnlit is a lit draw while baking: the plain sprite, colour-scaled.
 func (b *base) drawUnlit(dst, img *ebiten.Image, geo ebiten.GeoM, cs sprite.ColorScale) {
+	b.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
 	if cs != sprite.NoCS && cs != (sprite.ColorScale{}) {
 		op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])

@@ -372,6 +372,7 @@ func (k *Bakes) drawPlantMark(dst *ebiten.Image, p *game.PlantView, tile float64
 	op.GeoM.Scale(side, side)
 	op.GeoM.Translate(float64(sx)-side/2, float64(sy)-side/2)
 	op.ColorScale.ScaleWithColor(c)
+	k.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	dst.DrawImage(k.LOD.WhiteImg(), op)
 }
 
@@ -515,13 +516,13 @@ func (k *Bakes) drawGroundLOD(screen *ebiten.Image, w *game.WorldView, sw, sh in
 			k.DrawBaked(screen, g.img, g.x0, g.y0, g.px, g.py, g.bpx, g.tx0, g.ty0, g.tx1, g.ty1)
 			continue
 		}
-		k.Lit.BatchGround(true) // one call for the lit tiles and edges (GAR-159)
+		k.Lit.Batch(true) // one call for the lit tiles and edges (GAR-159)
 		for y := g.ty0; y <= g.ty1; y++ {
 			for x := g.tx0; x <= g.tx1; x++ {
 				k.drawGroundTile(screen, w, x, y, tile, sw, sh)
 			}
 		}
-		k.Lit.BatchGround(false)
+		k.Lit.Batch(false)
 	}
 }
 

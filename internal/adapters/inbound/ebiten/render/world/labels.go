@@ -246,6 +246,7 @@ func (lb *Labels) DrawHostileMarker(screen *ebiten.Image, p game.PawnView, wx, w
 	if p.Fleeing {
 		c = color.RGBA{230, 150, 50, 220}
 	}
+	lb.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	sx, sy := lb.worldToScreenF(wx+0.5, wy-lift)
 	w, h := float32(tile*0.13), float32(tile*0.1)
 	th := float32(tile * 0.06)

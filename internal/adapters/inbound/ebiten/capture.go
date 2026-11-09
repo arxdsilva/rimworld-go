@@ -430,6 +430,21 @@ func (a *App) captureUI(ui string) {
 				break
 			}
 		}
+	case "marks":
+		// -scenario marks: the first colonist drafted, the downed ones
+		// marked to strip, the bed and sleeping spot to deconstruct, over
+		// the forbidden stacks (the object pass's marks, GAR-161)
+		g := a.renderer.game
+		cx, cy := g.Width()/2, g.Height()/2
+		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
+			g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(pawns[0].ID), Enabled: true})
+		}
+		g.Enqueue(command.Command{Kind: command.DesignateStrip, X: cx - 12, Y: cy - 12, X2: cx + 12, Y2: cy + 12, Enabled: true})
+		g.Enqueue(command.Command{Kind: command.DesignateDeconstruct, X: cx - 4, Y: cy + 1, X2: cx - 3, Y2: cy + 4})
+		g.Step(2)
+		a.renderer.syncPawns()
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(cx+2), float64(cy-1), sw, sh)
 	case "plant", "item", "pawnactions", "move", "copy":
 		// UI-011 panels: the nearest tree, ground item, colonist or
 		// building to the map centre, selected, its panel open

@@ -170,6 +170,7 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		}
 		if sprite.IsFenceKind(b.Kind) && !o.art().Has(key) {
 			sx, sy := o.worldToScreen(b.X, b.Y)
+			o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 			sprite.DrawFenceVector(dst, sx, sy, float32(tile), b.Kind, mask, open, sprite.IsStoneStuff(b.Stuff), 255)
 			break
 		}
@@ -235,6 +236,7 @@ func (o *Objects) drawFrameObj(dst *ebiten.Image, f *game.FrameView, tile float6
 	key := o.BuildKey(f.Kind, f.Stuff, f.Facing, pm, sprite.DoorAxisEW(f.Facing), false)
 	if sprite.IsFenceKind(f.Kind) && !o.art().Has(key) {
 		sx, sy := o.worldToScreen(f.X, f.Y)
+		o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 		sprite.DrawFenceVector(dst, sx, sy, float32(tile), f.Kind, pm, false, sprite.IsStoneStuff(f.Stuff), 140)
 		return
 	}
@@ -345,6 +347,7 @@ func (o *Objects) drawItemObj(dst *ebiten.Image, it *game.ItemView, tile float64
 	if key, cs = o.StoneItem(key, it.Kind, cs); !o.art().Has(key) {
 		pad := float32(tile) * 0.3
 		sx, sy := o.worldToScreen(it.X, it.Y)
+		o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 		vector.FillRect(dst, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, color.RGBA{200, 90, 40, 255}, false)
 		return
 	}

@@ -25,6 +25,7 @@ The renderer's world pipeline: the draw order of one frame (ground, floors, zone
 ## Contracts
 - `New(Layers, Hosts, Shared, *render.View, Source)` builds the pipeline once; `Pipeline.Draw(screen)` runs one frame.
 - `Source` is consumer-owned and values only; the root's renderer satisfies it. The pipeline never writes back.
+- The object pass runs with the lit batch on (`Lit.Batch(true)` after the cord stubs, off before the last crop flush; `render/light/lit_batch.go`, GAR-161): a function it reaches that draws raw (DrawImage, vector, gfx shapes, icons and text, a flame, a triangle batch) calls its `Lit.Flush()` first. The root's `TestObjectPassFlushesBeforeRawDraws` walks the pass by name from `Objects.runDraw` and fails on a raw draw with no flush before it.
 
 ## Invariants
 - The draw order is the order the root had before the move; the layer order tests (through `render.Trace.Layer`) pin it.

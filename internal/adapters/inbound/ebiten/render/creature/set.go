@@ -140,6 +140,7 @@ func (c *Set) solidRect(cl *Cull, dst *ebiten.Image, x, y, w, h float32, clr col
 	if w <= 0 || h <= 0 || cl.White == nil {
 		return
 	}
+	c.lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	op := &c.rectOp
 	op.GeoM.Reset()
 	op.GeoM.Scale(float64(w), float64(h))

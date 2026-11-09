@@ -46,5 +46,6 @@ func (o *Fires) EmitFireParticles(v *render.View, w game.WorldView) {
 // drawFlame draws the procedural flame at world (cx, cy) (Host.Flame).
 func (o *base) drawFlame(v *render.View, dst *ebiten.Image, cx, cy, t, tile, k float64) {
 	sx, sy := v.WorldToScreenF(cx, cy)
+	o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	o.Host.Flame(dst, sx, sy, t, tile, k)
 }

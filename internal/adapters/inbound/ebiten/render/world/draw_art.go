@@ -137,7 +137,8 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	v := p.v
 	w := p.src.World()
 	v.W, v.Pawns = w, p.src.Snapshot() // this frame's world and pawns, for every layer
-	p.Lit.StartFrame() // this frame's lit-draw counts (light.Stats)
+	// this frame's lit-draw counts (light.Stats) and the batch's thrash guard
+	p.Lit.StartFrame()
 	p.Lit.Light = light.LightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
 	p.setView(sw, sh, tile)
 	p.Links.Sync(w, v.MapW, v.MapH) // rebuilt only on StructVer
@@ -300,9 +301,13 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		p.Overlays.Wiring.DrawCordStubs(v, &chW, screen, &w, sw, sh, tile) // overlay/power_cords.go: under the objects
 	}
 	p.layer("objects")
+	// one lit call per run of sprites on a sheet page (GAR-161); every raw
+	// draw the pass reaches flushes it first (TestObjectPassFlushesBeforeRawDraws)
+	p.Lit.Batch(true)
 	for i := range draws {
 		p.Ob.runDraw(screen, &w, &draws[i], tile, sw, sh)
 	}
+	p.Lit.Batch(false)
 	p.Env.FlushCrops(screen) // render/env: the last run of units
 	if lt != Map {
 		p.Overlays.Wiring.DrawCords(v, &chW, screen, &w, sw, sh, tile) // overlay/power_cords.go: over objects, under weather and fog
@@ -469,13 +474,13 @@ func (p *Pipeline) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 	x0, y0, x1, y1 := p.visibleTiles()
 	x0, y0 = max(x0-1, 0), max(y0-1, 0)
 	x1, y1 = min(x1+1, v.MapW-1), min(y1+1, v.MapH-1)
-	p.Lit.BatchGround(true) // one call for the lit tiles and edges (GAR-159)
+	p.Lit.Batch(true) // one call for the lit tiles and edges (GAR-159)
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			p.drawGroundTile(screen, &w, x, y, tile, sw, sh)
 		}
 	}
-	p.Lit.BatchGround(false)
+	p.Lit.Batch(false)
 	p.Env.DrawFurrows(v, screen, w, tile, p.frameViews(&w))            // render/env: tilled ground under crops
 	p.Env.DrawPuddleVeil(v, screen, w, sw, sh, tile, p.Stamp, p.Index) // render/env (PLAY-022): under the tufts
 	p.drawTufts(screen, w, sw, sh, tile)

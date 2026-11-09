@@ -855,6 +855,7 @@ func (e *Layer) FlushCropsOver(dst *ebiten.Image, x0, y0, x1, y1 float32) {
 // DrawLitBatch draws a triangle batch of vertices carrying per-vertex sky
 // and lamp light through the lit shader.
 func (e *Layer) DrawLitBatch(dst *ebiten.Image, verts []ebiten.Vertex, idx []uint32, src *ebiten.Image) {
+	e.Lit.Flush() // the object pass's lit batch first (every crop flush comes here)
 	e.Lit.Calls++
 	sh := e.Lit.LitShader()
 	if sh == nil { // no shader: unlit

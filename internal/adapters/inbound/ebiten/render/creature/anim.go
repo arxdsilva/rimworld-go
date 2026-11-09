@@ -50,6 +50,7 @@ func (c *Set) DrawSpritePose(v *render.View, pass sprite.Pass, screen *ebiten.Im
 		cs = sprite.NoCS
 	}
 	if strings.HasPrefix(key, "overlay/") { // selection rings and markers stay unlit
+		c.lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 		op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
 		if cs != sprite.NoCS {
 			op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
@@ -59,6 +60,7 @@ func (c *Set) DrawSpritePose(v *render.View, pass sprite.Pass, screen *ebiten.Im
 		c.lit.Draw(v, screen, img, geo, cs, wx, wy, pass.Baking, pass.Blood)
 	}
 	if ps.Flash > 0 {
+		c.lit.Flush()
 		f := ps.Flash
 		fl := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
 		fl.ColorScale.Scale(1.9*f, 0.75*f, 0.7*f, f*0.55)

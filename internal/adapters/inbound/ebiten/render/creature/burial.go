@@ -121,7 +121,11 @@ func (c *Set) DrawCorpseItem(v *render.View, pass sprite.Pass, screen *ebiten.Im
 		return
 	}
 	c.DrawFigure(v, pass, screen, p, wx, wy, tile, CorpsePlanFor(v.Art, it).Ps)
-	for _, f := range CorpseFlies(it, v.Present) {
+	flies := CorpseFlies(it, v.Present)
+	if len(flies) > 0 {
+		c.lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
+	}
+	for _, f := range flies {
 		fx, fy := v.WorldToScreenF(f[0], f[1])
 		gfx.PxDisc(screen, fx, fy, float32(math.Max(1.2, tile*0.025)), color.RGBA{24, 22, 20, 255})
 	}
@@ -203,6 +207,7 @@ func (c *Set) EmitPyre(v *render.View, b game.BuildingView) {
 
 // DrawFlame is the campfire flame and ground glow (fire.go) scaled by k.
 func (c *Set) DrawFlame(v *render.View, screen *ebiten.Image, cx, cy, t, tile, k float64) {
+	c.lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	sx, sy := v.WorldToScreenF(cx, cy)
 	DrawFlameScreen(screen, sx, sy, t, tile, k)
 }

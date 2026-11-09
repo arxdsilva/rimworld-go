@@ -70,8 +70,12 @@ func (s Stats) String() string {
 func (l *Lit) Stats() Stats { return l.stats }
 
 // StartFrame begins a frame's lit drawing: the pipeline calls it once at
-// the top of the world pass. It zeroes Stats.
-func (l *Lit) StartFrame() { l.stats = Stats{} }
+// the top of the world pass. It zeroes Stats and the batch's thrash guard
+// (a frame that starts the sheet again twice draws unbatched to its end).
+func (l *Lit) StartFrame() {
+	l.stats = Stats{}
+	l.batch.resets, l.batch.thrash = 0, false
+}
 
 // count records one draw call Lit issued (Calls, the benchmarks' total, and
 // this frame's Stats).

@@ -142,7 +142,8 @@ func benchDrawGrown(b *testing.B, side int) {
 			}
 			calls := r.lit.Calls
 			snowBakes, snowDraws := r.snowc.Bakes, r.snowc.Draws // snow_cache.go (PERF-002): 0 bakes/op once warm
-			var batched, flushRaw int // light.Stats, zeroed every frame
+			// light.Stats, zeroed every frame
+			var batched, flushRaw int
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {

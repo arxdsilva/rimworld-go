@@ -103,6 +103,7 @@ func YoungPose(ps motion.Pose, scale float64) motion.Pose {
 // side effects beyond drawing.
 func (c *Set) DrawAnimalFigure(v *render.View, pass sprite.Pass, dst *ebiten.Image, an game.AnimalView, wx, wy, tile float64) {
 	if !v.Art.Has(c.AnimalBaseKey(v, an)) {
+		c.lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 		sx, sy := v.WorldToScreenF(wx, wy)
 		vector.FillCircle(dst, sx+float32(tile)/2, sy+float32(tile)/2, float32(tile)*0.3, color.RGBA{150, 120, 80, 255}, false)
 		return

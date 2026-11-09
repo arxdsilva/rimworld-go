@@ -454,6 +454,7 @@ func (c *Set) drawCarried(v *render.View, pass sprite.Pass, screen *ebiten.Image
 // DrawSnoreFor floats small "z"s up and away from a sleeper's head (a
 // colonist or an animal).
 func (c *Set) DrawSnoreFor(v *render.View, screen *ebiten.Image, id uint64, hx, hy, tile float64) {
+	c.lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	const period = 75
 	for i := 0; i < 3; i++ {
 		t := float64((v.Present+id*29+uint64(i*period/3))%period) / period

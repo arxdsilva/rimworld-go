@@ -36,6 +36,8 @@ func (o *Objects) DrawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, til
 	if p.Drafted {
 		if img := o.art().Image("ui_icon/draft", color.NRGBA{}); img != nil {
 			sx, sy := o.worldToScreenF(wx+0.62+ps.Dx, wy-PawnMarkerLift(o.art())+ps.Dy)
+			// the lit batch first: a raw draw lands over the sprites queued before it
+			o.Lit.Flush()
 			gfx.WorldIcon(screen, img, float64(sx), float64(sy), tile*0.3/gfx.UIScale()) // tile is physical
 		}
 	}

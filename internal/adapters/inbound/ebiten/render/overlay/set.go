@@ -191,6 +191,7 @@ func (o *base) solidRect(dst *ebiten.Image, x, y, w, h float32, c color.Color) {
 	if w <= 0 || h <= 0 {
 		return
 	}
+	o.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	if o.pixel == nil {
 		o.pixel = ebiten.NewImage(1, 1)
 		o.pixel.Fill(color.White)

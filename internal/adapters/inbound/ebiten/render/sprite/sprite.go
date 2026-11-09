@@ -87,6 +87,7 @@ func (p *Painter) DrawScaled(v *render.View, ps Pass, dst *ebiten.Image, key str
 		p.Lit.Draw(v, dst, img, op.GeoM, cs, wx, wy, ps.Baking, ps.Blood)
 		return
 	}
+	p.Lit.Flush() // the lit batch first: a raw draw lands over the sprites queued before it
 	if cs != NoCS {
 		op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
 	}
