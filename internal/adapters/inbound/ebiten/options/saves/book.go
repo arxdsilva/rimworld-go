@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
-
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 )
@@ -45,20 +43,18 @@ type Book struct {
 	// session is the running colony as its saves name it (SAV-003).
 	session session
 	// progress is whether the colony changed since its last save
-	// (SAV-013: Leave asks before unsaved progress is lost).
-	//lint:ignore U1000 SAV-013 reads it
+	// (SAV-013: Leave asks before unsaved progress is lost; progress.go).
 	progress progress
 	// pending is what runs once the open save dialog or the unsaved-progress
 	// question is answered (SAV-001, SAV-013).
 	pending func()
 	// sort and filter are the Load screen's order and colony filter
-	// (ids.LoadSort, ids.LoadColony).
-	//lint:ignore U1000 the load list's sort fills it
-	sort int
-	//lint:ignore U1000 the load list's colony filter fills it
+	// (ids.LoadSort, ids.LoadColony); view is the list they show
+	// (load_screen.go).
+	sort   int
 	filter string
-	// dialog is the Save dialog (SAV-001).
-	//lint:ignore U1000 SAV-001 fills it
+	view   loadView
+	// dialog is the Save dialog (SAV-001; dialog.go).
 	dialog dialog
 	// newID makes a colony's stable id (crypto/rand, 16 hex digits; tests
 	// inject their own).
@@ -71,20 +67,26 @@ type session struct {
 	Colony, ColonyName, Name, Base string
 }
 
-// progress is when the colony last changed and was last saved, in ticks;
-// known is false until a save or load sets both.
+// progress is how far the colony's saves have caught up with it, in ticks
+// (SAV-013; its methods are in progress.go).
 type progress struct {
-	//lint:ignore U1000 SAV-013 sets and reads them
+	// dirtyAt is the latest tick seen; savedAt the encode tick of the last
+	// save written (or the tick the colony began or was loaded at).
 	dirtyAt, savedAt int64
-	//lint:ignore U1000 SAV-013 sets and reads it
+	// known is set once a save was written or loaded: "Saved N hours ago";
+	// until then the colony is "Not saved yet" and counts as unsaved.
 	known bool
+	// inflight is the background saves started and not yet reported,
+	// oldest first.
+	inflight []encoded
+	// due is a leave the player confirmed; it runs at the next PollSaves,
+	// never inside the modal's callback.
+	due func()
 }
 
 // dialog is the Save dialog's state: open, and the name typed.
 type dialog struct {
-	//lint:ignore U1000 SAV-001 fills it
 	open bool
-	//lint:ignore U1000 SAV-001 fills it
 	name string
 }
 
@@ -105,34 +107,14 @@ func (b *Book) NewColony(tick int64) {
 	name := NewSlotName()
 	b.SaveSlot, b.AutosaveDay = name, 0
 	b.session = session{Colony: b.newID(), ColonyName: name, Name: name, Base: name}
-	b.progress, b.pending = progress{}, nil
+	b.progress, b.pending = progressBegun(tick), nil
 }
 
-// OpenSaveDialog is the pause menu's Save. SAV-001 opens the Save dialog
-// (name the save, see the colony's saves, overwrite one or write a new
-// one) and calls done when it closes. Until then it saves the colony's
-// slot at once and calls done.
-func (b *Book) OpenSaveDialog(done func()) {
-	b.SaveNow(b.SaveSlot)
-	done()
-}
-
-// Leave runs proceed once the colony may be left (Return to Main Menu,
-// Quit). SAV-013 asks first when there is unsaved progress (b.progress)
-// and keeps proceed in b.pending. Today it saves a commitment colony
-// (SaveBeforeLeaving) and proceeds unless that save failed.
-func (b *Book) Leave(proceed func()) {
-	if b.SaveBeforeLeaving() {
-		proceed()
-	}
-}
-
-// SaveAndLeave is Save & Quit (to the menu or the desktop). SAV-005 saves
-// the colony's slot, waits for it and then proceeds; proceed is the
-// leaving intent, which goes through Leave, so SAV-005 must leave Leave
-// nothing to save (b.progress) or a commitment colony saves twice. Today
-// it proceeds at once and Leave saves a commitment colony, as before.
-func (b *Book) SaveAndLeave(proceed func()) { proceed() }
+// OpenSaveDialog is the pause menu's Save: the Save dialog (SAV-001,
+// dialog.go) names the save, lists the saves, and asks before replacing
+// one; done runs once the colony is saved from it (Cancel and Esc close
+// it without done).
+func (b *Book) OpenSaveDialog(done func()) { openDialog(b, done) }
 
 // Click runs a Load screen id (ids.PrefixLoad) and reports it handled:
 // false for load.back, which the root's screen intent takes.
@@ -143,13 +125,17 @@ func (b *Book) Click(id string) bool {
 			b.LoadSlot(i)
 		}
 		return true
-	case strings.HasPrefix(id, ids.PrefixLoadDelete), id == ids.LoadSort, id == ids.LoadColony:
-		return true // the load list's delete, sort and colony filter fill these
+	case id == ids.LoadSort:
+		b.cycleSort()
+		return true
+	case id == ids.LoadColony:
+		b.cycleColony()
+		return true
+	case strings.HasPrefix(id, ids.PrefixLoadDelete):
+		if i, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixLoadDelete)); err == nil {
+			askDelete(b, i) // delete.go
+		}
+		return true
 	}
 	return false
 }
-
-// DrawPauseStatus draws the colony's save status under the pause menu at
-// x, y ("Saved 2 hours ago", "Unsaved progress"; SAV-013). It draws nothing
-// yet.
-func (b *Book) DrawPauseStatus(dst *ebiten.Image, x, y float32) {}

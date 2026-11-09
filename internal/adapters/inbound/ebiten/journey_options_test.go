@@ -437,6 +437,7 @@ func TestJourneyOptionsPauseOnLoad(t *testing.T) {
 			j.key("Escape", 0)
 			j.clickID("pause.load")
 			j.clickID("load.slot.0")
+			j.clickID("modal.saves.unsaved.leave") // the journey's colony was never saved (SAV-013)
 			j.update(3)
 			if j.a.nav.screen() != ports.ScreenColony || j.a.renderer == nil {
 				t.Fatalf("after the load: screen %s", j.a.nav.screen())

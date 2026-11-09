@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/platform/config"
 )
@@ -26,6 +27,8 @@ type fakeShell struct {
 	loadErr  error
 	loaded   []string
 	deleted  []string
+	season   string  // the World read model's season, which every save's header carries
+	ui       *testUI // the widget kit, made on first use (dialog_test.go)
 }
 
 func newFake() (*fakeShell, *Book) {
@@ -38,6 +41,7 @@ func (f *fakeShell) Settings() config.Settings { return f.settings }
 func (f *fakeShell) Hint(s string)             { f.hints = append(f.hints, s) }
 func (f *fakeShell) Date() clock.Date          { return f.date }
 func (f *fakeShell) Tick() clock.Tick          { return f.tick }
+func (f *fakeShell) World() game.WorldView     { return game.WorldView{Season: f.season} }
 func (f *fakeShell) Save(meta ports.SaveMeta) error {
 	f.saved = append(f.saved, meta.Name)
 	f.metas = append(f.metas, meta)

@@ -140,16 +140,17 @@ func TestLoadListPagesThroughEverySave(t *testing.T) {
 	reached := map[int]bool{}
 	for page := 0; page < 8; page++ {
 		bs := s.LoadButtons(1280, 720)
-		if len(bs) > 1+slotRows {
-			t.Fatalf("page %d: %d buttons", page, len(bs))
+		rows := slotButtons(bs) // the save rows; sort and filter sit in the footer (SAV-012)
+		if len(rows) >= slotRows {
+			t.Fatalf("page %d: %d rows", page, len(rows))
 		}
-		for _, b := range bs[1 : len(bs)-1] {
+		for _, b := range rows {
 			var i int
 			fmt.Sscanf(b.ID, "load.slot.%d", &i)
 			reached[i] = true
 		}
-		if last := bs[len(bs)-1]; last.ID != "load.slot.-1" {
-			t.Fatalf("no page row: %s", last.ID)
+		if last := bs[len(rows)+1]; last.ID != "load.slot.-1" {
+			t.Fatalf("no page row after the rows: %s", last.ID)
 		}
 		s.LoadSlot(-1)
 	}

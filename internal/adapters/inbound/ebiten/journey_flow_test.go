@@ -237,6 +237,7 @@ func TestJourneyFlowPauseSaveHook(t *testing.T) {
 	if !j.clickID("pause.save") {
 		t.Fatal("Save is disabled with save hooks wired")
 	}
+	j.clickID("modal.save.ok") // the Save dialog, under its prefilled name
 	if len(saves.saves) != 1 {
 		t.Fatalf("the save hook ran %d times, want once", len(saves.saves))
 	}

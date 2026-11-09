@@ -53,29 +53,5 @@ func TestClickRoutesTheLoadIDs(t *testing.T) {
 	}
 }
 
-// Until SAV-001 the Save dialog saves at once; until SAV-013 leaving saves
-// a commitment colony first and stays when that fails.
-func TestTodaysSaveAndLeave(t *testing.T) {
-	t.Parallel()
-	f, b := newFake()
-	f.env.CanSave = true
-	b.SaveSlot = "col"
-	done := 0
-	b.OpenSaveDialog(func() { done++ })
-	if done != 1 || len(f.saved) != 1 || f.saved[0] != "col" || f.metas[0] != (ports.SaveMeta{Name: "col"}) {
-		t.Fatalf("done %d saved %v", done, f.metas)
-	}
-	b.Leave(func() { done++ })
-	if done != 2 || len(f.saved) != 1 {
-		t.Fatalf("reload anytime leaves unsaved: done %d saved %v", done, f.saved)
-	}
-	f.env.Commitment, f.saveErr = true, errDisk
-	b.Leave(func() { done++ })
-	if done != 2 || len(f.saved) != 2 {
-		t.Fatalf("a failed commitment save keeps the player: done %d saved %v", done, f.saved)
-	}
-	b.SaveAndLeave(func() { done++ })
-	if done != 3 || len(f.saved) != 2 {
-		t.Fatalf("SaveAndLeave proceeds and leaves the saving to Leave: done %d saved %v", done, f.saved)
-	}
-}
+// The Save dialog is dialog_test.go's; leaving and Save & Quit are
+// leave_test.go's (SAV-005, SAV-013).

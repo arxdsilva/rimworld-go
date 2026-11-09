@@ -1,11 +1,7 @@
 package saves
 
 import (
-	"fmt"
-	"time"
-
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
-	"rimworld-go/internal/application/game/savefmt"
 )
 
 // Saved games. The book only sees saves through the Saver, so it never
@@ -13,29 +9,50 @@ import (
 
 // SaveNow writes the current colony to slot and reports success (the hint
 // says what happened). With background saves (Env.AsyncSaves) it reports
-// that the save started: PollSaves says how the write went.
-func (b *Book) SaveNow(slot string) bool {
+// that the save started: PollSaves says how the write went. The header
+// names the running colony (metaFor, session.go).
+func (b *Book) SaveNow(slot string) bool { return write(b, metaFor(b, slot, false)) }
+
+// write saves the running colony with header meta (SaveNow, the autosave,
+// the Save dialog).
+func write(b *Book, meta ports.SaveMeta) bool {
+	slot := meta.Name
 	env := b.sh.SaveEnv()
 	if !env.CanSave {
 		return false
 	}
-	if err := b.sh.Save(ports.SaveMeta{Name: slot}); err != nil {
+	at := int64(b.sh.Tick()) // the save holds the colony as of this tick (SAV-013)
+	if err := b.sh.Save(meta); err != nil {
 		b.sh.Hint(b.sh.Tf("save failed: %s", err.Error()))
 		return false
 	}
-	if !env.AsyncSaves {
+	if env.AsyncSaves {
+		b.progress.started(slot, at)
+	} else {
+		b.progress.saved(at)
 		b.sh.Hint(b.sh.Tf("saved %s", slot))
 	}
 	return true
 }
 
 // PollSaves reports the background saves written since the last call: the
-// hint for each, and a Danger toast for a failure. The App calls it at
-// the start of every Update.
-func (b *Book) PollSaves() { background{b.sh}.poll() }
+// hint for each, and a Danger toast for a failure. Then it runs a leave
+// the player confirmed (SAV-013): the App calls it once per Update, a safe
+// point outside the widget kit's callbacks.
+func (b *Book) PollSaves() {
+	b.bg().poll()
+	b.runDue()
+}
 
-// background is the book's side of the background saves (Env.AsyncSaves).
-type background struct{ sh Shell }
+// background is the book's side of the background saves (Env.AsyncSaves);
+// p hears each result (SAV-013).
+type background struct {
+	sh Shell
+	p  *progress
+}
+
+// bg is the book's background saves.
+func (b *Book) bg() background { return background{b.sh, &b.progress} }
 
 func (g background) poll() {
 	if g.sh.SaveEnv().AsyncSaves {
@@ -58,6 +75,7 @@ func (g background) wait(slot string) bool {
 func (g background) report(done []SaveResult, slot string) bool {
 	ok := true
 	for _, r := range done {
+		g.p.finished(r)
 		if r.Err == nil {
 			g.sh.Hint(g.sh.Tf("saved %s", r.Slot))
 		} else {
@@ -72,70 +90,6 @@ func (g background) report(done []SaveResult, slot string) bool {
 	return ok
 }
 
-// TickAutosave saves at AutosaveHour every Options-chosen number of
-// in-game days (0: never) to <slot>-autosave, or with General.AutosavesKept
-// above one to the next of <slot>-autosave-1…N (autosaveSlot); a
-// commitment colony saves its own slot every day, whatever Options say.
-func (b *Book) TickAutosave() {
-	env := b.sh.SaveEnv()
-	if !env.CanSave || env.Capture {
-		return
-	}
-	n := b.sh.Settings().Gameplay.AutosaveDays
-	if env.Commitment {
-		n = 1 // min(Options, daily), never off
-	}
-	if n <= 0 {
-		return
-	}
-	d := b.sh.Date()
-	day := int(b.sh.Tick()) / 60000
-	if d.Hour == AutosaveHour && day-b.AutosaveDay >= n {
-		b.AutosaveDay = day
-		slot := b.SaveSlot
-		if !env.Commitment {
-			slot = autosaveSlot(b, day)
-		}
-		b.SaveNow(slot)
-	}
-}
-
-// autosaveSlot is the slot the next autosave of this colony is written
-// to. One kept autosave is <slot>-autosave, as it always was. With more it
-// is the first of <slot>-autosave-1…N that does not exist, else the one
-// written longest ago, so the oldest is overwritten; when the save list
-// cannot be read it goes round by the in-game day.
-func autosaveSlot(b *Book, day int) string {
-	base := b.SaveSlot + "-autosave"
-	kept := b.sh.Settings().General.AutosavesKept
-	if kept <= 1 {
-		return base
-	}
-	slots, err := b.sh.List()
-	if err != nil || !b.sh.SaveEnv().CanLoad {
-		return fmt.Sprintf("%s-%d", base, day%kept+1)
-	}
-	var oldest time.Time
-	pick := ""
-	for i := 1; i <= kept; i++ {
-		name := fmt.Sprintf("%s-%d", base, i)
-		at, found := time.Time{}, false
-		for _, sl := range slots {
-			if sl.Name == name {
-				at, found = sl.Modified, true
-				break
-			}
-		}
-		if !found {
-			return name
-		}
-		if pick == "" || at.Before(oldest) {
-			pick, oldest = name, at
-		}
-	}
-	return pick
-}
-
 // SaveBeforeLeaving saves a commitment colony as the player leaves it
 // (Save & Quit to Menu, Return to Main Menu, Quit, closing the window). It
 // reports whether leaving may go ahead: false only when that save failed,
@@ -146,7 +100,7 @@ func (b *Book) SaveBeforeLeaving() bool {
 	if !env.Commitment || env.Capture {
 		return true
 	}
-	return b.SaveNow(b.SaveSlot) && background{b.sh}.wait(b.SaveSlot) // a background save is checked before leaving
+	return b.SaveNow(b.SaveSlot) && b.bg().wait(b.SaveSlot) // a background save is checked before leaving
 }
 
 // RefreshSlots re-reads the save list for the load screen.
@@ -155,37 +109,11 @@ func (b *Book) RefreshSlots() {
 	if !b.sh.SaveEnv().CanLoad {
 		return
 	}
-	background{b.sh}.wait("") // the list shows a save still being written
+	b.bg().wait("") // the list shows a save still being written
 	slots, err := b.sh.List()
 	if err != nil {
 		b.sh.Hint(b.sh.Tf("cannot read saves: %s", err.Error()))
 		return
 	}
 	b.Slots = slots
-}
-
-// LoadSlot replaces the session with saved game i.
-func (b *Book) LoadSlot(i int) {
-	if i == slotNextPage { // the "more saves" row of a long list
-		_, _, pages := b.slotWindow()
-		b.SlotPage = (b.SlotPage + 1) % max(1, pages)
-		return
-	}
-	if i < 0 || i >= len(b.Slots) || !b.sh.SaveEnv().CanLoad {
-		return
-	}
-	background{b.sh}.wait("") // never read a file the queue is replacing
-	sl := b.Slots[i]
-	if sl.Err != "" {
-		b.sh.Hint(b.sh.Tf("cannot load: %s", sl.Err))
-		return
-	}
-	meta, tick, err := b.sh.Load(sl.Path)
-	if err != nil {
-		b.sh.Hint(b.sh.Tf("load failed: %s", err.Error()))
-		return
-	}
-	b.SaveSlot = savefmt.BaseSlot(meta.Name)
-	b.AutosaveDay = int(tick) / 60000
-	b.sh.Hint(b.sh.Tf("loaded %s", sl.Name))
 }

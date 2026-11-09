@@ -29,6 +29,7 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 	slot := a.opt.Saves.SaveSlot
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.save")
+	click(t, a, "modal.save.ok") // the Save dialog, under the colony's slot
 	if saved[slot] == nil {
 		t.Fatalf("pause > Save should write slot %q: %v", slot, saved)
 	}

@@ -32,8 +32,8 @@ func TestLoadButtonsCapAtNineRowsAndDisableBrokenSaves(t *testing.T) {
 		s.Slots = append(s.Slots, ports.SaveSlot{Name: "x"})
 	}
 	s.Slots[0].Err = "corrupt"
-	bs := s.LoadButtons(1280, 720)
-	if len(bs) != 1+slotRows || !bs[1].Disabled || bs[2].Disabled {
-		t.Fatalf("%d buttons, first slot disabled=%v; want back + %d rows with only the broken one off", len(bs), bs[1].Disabled, slotRows)
+	rows := slotButtons(s.LoadButtons(1280, 720)) // the save rows; sort and filter sit in the footer (SAV-012)
+	if len(rows) != slotRows-1 || !rows[0].Disabled || rows[1].Disabled {
+		t.Fatalf("%d rows, first disabled=%v; want a page of %d with only the broken one off", len(rows), rows[0].Disabled, slotRows-1)
 	}
 }

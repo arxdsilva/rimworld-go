@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/options/saves"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/domain/sim/clock"
@@ -121,9 +122,16 @@ func TestJourneySavesSaveAsNewName(t *testing.T) {
 	colony := j.a.opt.Saves.SaveSlot
 	openSave(j)
 	j.typeText("Iron Harbor")                                          // over the prefilled, selected name
-	under := buttonByID(t, j.a.pauseButtons(j.a.size()), "pause.load") // under the dialog's empty list
+	under := buttonByID(t, j.a.pauseButtons(j.a.size()), "pause.load") // under the dialog's list
+	ux, uy := under.X+under.W/2, under.Y+under.H/2
+	for x := under.X + 1; x < under.X+under.W; x += 4 { // a point of it none of the dialog's controls cover
+		if !slices.ContainsFunc(j.a.uiSt().Cur, func(w uikit.Widget) bool { return w.R.Hit(int(x), int(uy)) }) {
+			ux = x
+			break
+		}
+	}
 	s := float32(j.a.scale.S)
-	j.f.clickAt(t, j.a, int((under.X+under.W/2)*s), int((under.Y+under.H/2)*s))
+	j.f.clickAt(t, j.a, int(ux*s), int(uy*s))
 	j.f.Cur.Mx, j.f.Cur.My = -50, -50
 	if j.a.nav.screen() != ports.ScreenColony || j.a.nav.overlay() != overlayPause || j.a.uiSt().Top() != "save" || len(h.metas) != 0 {
 		t.Fatalf("a click under the dialog reached the pause menu: %s, overlay %v, top %q, saves %v",

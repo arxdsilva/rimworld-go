@@ -260,6 +260,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 		t.Fatal("reload anytime has no Save & Quit")
 	}
 	click(t, a, "pause.save")
+	click(t, a, "modal.save.ok") // the Save dialog, under the colony's slot
 	if len(log.saves) != 1 || log.saves[0] != slot {
 		t.Fatalf("manual save %v", log.saves)
 	}
@@ -291,6 +292,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 		t.Fatalf("reload anytime must not take over the close button: %v", w.handled)
 	}
 	a.apply(intent{kind: intentReturnToMenu})
+	click(t, a, "modal.saves.unsaved.leave") // unsaved since the autosave: SAV-013 asks; Leave saves nothing
 	if a.nav.screen() != ports.ScreenMainMenu || len(log.saves) != 2 {
 		t.Fatalf("return to menu: %s, saves %v", a.nav.screen(), log.saves)
 	}
@@ -300,7 +302,7 @@ func TestLoadListTagsCommitment(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.opt.Saves.Slots = []ports.SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
-	if bs := a.opt.Saves.LoadButtons(1280, 720); len(bs) != 3 || bs[1].Disabled {
+	if bs := a.opt.Saves.LoadButtons(1280, 720); len(bs) != 7 || bs[1].ID != "load.slot.0" || bs[1].Disabled { // Back, the rows, sort and colony (SAV-012), a Delete per row
 		t.Fatalf("a commitment save is listed and loadable: %+v", bs)
 	}
 }

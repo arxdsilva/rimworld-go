@@ -173,6 +173,9 @@ func TestJourneySaveAsyncLoadsTheSavedTick(t *testing.T) {
 	j.key("Escape", 0)
 	tick, hash := j.g.Tick(), j.g.StateHash() // the pause menu holds the clock
 	j.clickID("pause.save")
+	j.update(1)       // the Save dialog's field takes the keyboard, its name selected
+	j.typeText("col") // the slot savesJourney gave the colony
+	j.clickID("modal.save.ok")
 	j.g.Step(600) // while the worker may still be writing
 	j.key("Escape", 0)
 	j.update(1)
@@ -195,6 +198,7 @@ func TestJourneySaveAsyncLoadsTheSavedTick(t *testing.T) {
 		t.Fatalf("file: %v (%T); want the save's tick %d and state hash %x", err, sim, tick, hash)
 	}
 	j.clickID("load.slot.0")
+	j.clickID("modal.saves.unsaved.leave") // the colony stepped on since the save (SAV-013)
 	if g, ok := j.a.renderer.game.(*game.Game); j.a.nav.screen() != ports.ScreenColony || !ok || g == j.g {
 		t.Fatalf("after load: %s", j.a.nav.screen())
 	}
@@ -212,6 +216,7 @@ func TestJourneySaveAsyncFailure(t *testing.T) {
 	j.a.cfg.Saves = realSaves(t, filepath.Join(file, "saves"))
 	j.key("Escape", 0)
 	j.clickID("pause.save")
+	j.clickID("modal.save.ok")
 	j.a.cfg.Saves.Queue.Wait()
 	j.update(1) // the next Update reports it
 	if !strings.HasPrefix(j.a.hint, "save failed: ") || !dangerToast(j.a, j.a.hint) {
@@ -302,6 +307,7 @@ func TestReloadAnytimeAsyncSaves(t *testing.T) {
 	slot := a.opt.Saves.SaveSlot
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.save")
+	click(t, a, "modal.save.ok") // the Save dialog, under the colony's slot
 	if len(log.saves) != 1 || log.saves[0] != slot {
 		t.Fatalf("manual save %v", log.saves)
 	}
@@ -321,6 +327,7 @@ func TestReloadAnytimeAsyncSaves(t *testing.T) {
 		t.Fatalf("%d saves waiting, want the two autosaves", len(q.done))
 	}
 	a.apply(intent{kind: intentReturnToMenu})
+	click(t, a, "modal.saves.unsaved.leave") // unsaved progress asks first (SAV-013); Leave saves nothing
 	if a.nav.screen() != ports.ScreenMainMenu || len(log.saves) != 3 {
 		t.Fatalf("return to menu: %s, saves %v", a.nav.screen(), log.saves)
 	}
