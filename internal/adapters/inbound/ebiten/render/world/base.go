@@ -154,9 +154,11 @@ func (b *base) drawGroundTile(dst *ebiten.Image, w *game.WorldView, x, y int, ti
 	} else if stoneGroundCode[code] {
 		tcs = sprite.MulCS(tcs, sprite.TintCS(b.stoneTintAt(w, x, y)))
 	}
-	if ok && IsWaterCode[code] {
+	if ok && IsWaterCode[code] { // render/env draws past the ground batch: off around it
+		on := b.Lit.BatchGround(false)
 		b.Lit.Calls++
 		b.Env.DrawWaterTile(b.v, dst, TerrainNames[code], x, y, tile, sw, sh, tcs, b.LOD.Baking, b.Stamp)
+		b.Lit.BatchGround(on)
 	} else {
 		b.DrawTile(dst, key, float64(x), float64(y), tile, sw, sh, tcs)
 	}
@@ -191,7 +193,9 @@ func (b *base) drawGroundTile(dst *ebiten.Image, w *game.WorldView, x, y int, ti
 		b.drawSpriteCS(dst, ek, none, float64(x), float64(y), tile, sw, sh, ecs)
 	}
 	if ok && IsWaterCode[code] {
+		on := b.Lit.BatchGround(false)
 		b.Env.DrawWaterEdges(b.v, b.Pass(), dst, TerrainNames[code], nbPri, TerrainPriority["shallow_water"], x, y, tile, sw, sh, b.Stamp)
+		b.Lit.BatchGround(on)
 	}
 }
 

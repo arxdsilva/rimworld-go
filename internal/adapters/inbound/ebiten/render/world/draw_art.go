@@ -427,11 +427,13 @@ func (p *Pipeline) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 	x0, y0, x1, y1 := p.visibleTiles()
 	x0, y0 = max(x0-1, 0), max(y0-1, 0)
 	x1, y1 = min(x1+1, v.MapW-1), min(y1+1, v.MapH-1)
+	p.Lit.BatchGround(true) // one call for the lit tiles and edges (GAR-159)
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			p.drawGroundTile(screen, &w, x, y, tile, sw, sh)
 		}
 	}
+	p.Lit.BatchGround(false)
 	p.Env.DrawFurrows(v, screen, w, tile, p.frameViews(&w))            // render/env: tilled ground under crops
 	p.Env.DrawPuddleVeil(v, screen, w, sw, sh, tile, p.Stamp, p.Index) // render/env (PLAY-022): under the tufts
 	p.drawTufts(screen, w, sw, sh, tile)

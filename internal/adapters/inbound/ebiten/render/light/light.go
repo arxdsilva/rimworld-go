@@ -328,8 +328,11 @@ type Lit struct {
 	OnDraw func(img *ebiten.Image, blood float32)
 	// ground marks the next Draw as a ground plane (DrawGround).
 	ground bool
-	// Calls counts world draw Calls (lit sprites, water tiles, baked
-	// chunk and map pages) for the draw benchmarks; it only ever grows.
+	// batch queues the ground pass's lit ground quads (ground_batch.go).
+	batch groundBatch
+	// Calls counts world draw Calls (lit sprites, ground batches, water
+	// tiles, baked chunk and map pages) for the draw benchmarks; it only
+	// ever grows.
 	Calls int
 }
 
@@ -972,6 +975,14 @@ type uniformKey struct {
 	lampSky                                                                float32
 }
 
+// keyOfUniforms is the part of ls the uniforms carry.
+func (ls *State) keyOfUniforms() uniformKey {
+	return uniformKey{ls.SunL, ls.MoonL, ls.SunColor, ls.MoonColor, ls.SkyAmbient, ls.IndoorAmbient, ls.LampColor, ls.LampSky}
+}
+
+// uniformsStale reports whether the uniform map does not hold l.Light.
+func (l *Lit) uniformsStale() bool { return !l.keyOK || l.Light.keyOfUniforms() != l.key }
+
 // SyncUniforms copies this frame's light into the reused uniform map.
 func (l *Lit) SyncUniforms() {
 	if l.Opts.Uniforms == nil {
@@ -985,7 +996,7 @@ func (l *Lit) SyncUniforms() {
 		}
 	}
 	ls := &l.Light
-	key := uniformKey{ls.SunL, ls.MoonL, ls.SunColor, ls.MoonColor, ls.SkyAmbient, ls.IndoorAmbient, ls.LampColor, ls.LampSky}
+	key := ls.keyOfUniforms()
 	if l.keyOK && key == l.key { // the light is the frame's constant: copied once per change (GAR-154)
 		return
 	}
@@ -1020,6 +1031,7 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	ground := l.ground
 	l.ground = false
 	if baking { // a bake: unlit albedo, lit when it is drawn
+		l.flushGround()
 		op := &l.plain
 		op.GeoM, op.Filter = geo, ebiten.FilterLinear
 		op.ColorScale.Reset()
@@ -1032,7 +1044,6 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	if l.OnDraw != nil {
 		l.OnDraw(img, blood)
 	}
-	l.Calls++
 	if cs == ([4]float32{}) {
 		cs = noCS
 	}
@@ -1045,6 +1056,8 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 		sh = l.LitShader()
 	}
 	if plain || sh == nil { // lighting off, or the shader failed to compile: the plain draw
+		l.flushGround()
+		l.Calls++
 		op := &l.plain
 		op.GeoM, op.Filter = geo, ebiten.FilterLinear
 		op.ColorScale.Reset()
@@ -1066,6 +1079,15 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	if src != img {
 		sx, sy = 0, 0
 	}
+	// a ground plane drawn from itself joins the ground batch: the same
+	// quad, sampled from its copy on the ground sheet
+	var slot groundSlot
+	batched := ground && l.batch.on && src == img
+	if batched {
+		if slot, batched = l.groundSlotOf(v.Art, img); batched {
+			sx, sy = slot.x, slot.y
+		}
+	}
 	LitQuad(&l.Verts, sx, sy, float32(b.Dx()), float32(b.Dy()), geo, cs, sky, lamp, MirrorNormalOff(off, geo))
 	for i := range l.Verts { // Custom3: the figure's blood (blood_draw.go), 0 for everything else
 		l.Verts[i].Custom3 = blood
@@ -1073,6 +1095,12 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	if ground { // flat on the ground: the lamp light ramps across it, as on the bakes
 		l.GroundLamp(v, &l.Verts)
 	}
+	if batched {
+		l.appendGround(dst, slot.page, sh)
+		return
+	}
+	l.flushGround()
+	l.Calls++
 	l.SyncUniforms()
 	l.Opts.Images[0] = src
 	dst.DrawTrianglesShader32(l.Verts[:], Indices[:], sh, &l.Opts)
