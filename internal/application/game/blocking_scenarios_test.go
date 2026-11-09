@@ -20,10 +20,8 @@ import (
 // standingCreatures lists every creature that owns its cell right now.
 func standingCreatures(g *Game) []entity.EntityID {
 	var out []entity.EntityID
-	g.occ.carried = g.occ.carried[:0] // standing reads it; nothing here changes who is carried
-	g.care.Carry.Each(func(_, p entity.EntityID) {
-		g.occ.carried = append(g.occ.carried, p)
-	})
+	g.occ.carried.Reset() // standing reads it; nothing here changes who is carried
+	g.care.Carry.Each(func(_, p entity.EntityID) { g.occ.carried.Add(p) })
 	for _, ids := range [3][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
 		for _, id := range ids {
 			if g.standing(id) {

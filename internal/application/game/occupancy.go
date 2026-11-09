@@ -64,11 +64,11 @@ const (
 // saved.
 type occupancy struct {
 	w, h    int
-	cells   []entity.EntityID // standing blocker (wild animal, raider) per cell, 0 = none
-	near    []uint8           // per cell: blocker cells in its 3×3 (crowdCost's fast path)
-	marked  []int             // cells written since the last rebuild
-	stacked []stackedRec      // blockers sharing a cell with a lower ID
-	carried []entity.EntityID // patients being carried (scratch)
+	cells   []entity.EntityID              // standing blocker (wild animal, raider) per cell, 0 = none
+	near    []uint8                        // per cell: blocker cells in its 3×3 (crowdCost's fast path)
+	marked  []int                          // cells written since the last rebuild
+	stacked []stackedRec                   // blockers sharing a cell with a lower ID
+	carried spatial.IDSet[entity.EntityID] // patients being carried, as of the last rebuild
 	// partner layer (PLAY-010): colonists and tame animals, several per
 	// cell. pfirst is the lowest ID of them, pcount how many, pextra the
 	// others (in no particular order: every read is order-free, so the
@@ -88,8 +88,10 @@ type occupancy struct {
 	rpAt   uint64
 	rpPath []pathing.Point
 	// dirty: the movement phase started and the index is not rebuilt yet
-	// (it is rebuilt on first use, or by the periodic stack sweep).
-	dirty bool
+	// (it is rebuilt on first use, or by the periodic stack sweep); builds
+	// counts the rebuilds (at most one a map a tick: occupancy_test.go).
+	dirty  bool
+	builds uint64
 	// hostile caches the wild-animal / raider walkability for the phase
 	// (boxed once: handing it out allocates nothing).
 	ground     spatial.Layer // groundExtra's cached terrain and plant cost (water.go)
@@ -152,11 +154,9 @@ func (g *Game) rebuildOccupancy() {
 	o.stacked = o.stacked[:0]
 	o.pextra = o.pextra[:0]
 	o.mixed, o.shared = o.mixed[:0], o.shared[:0]
-	o.dirty = false
-	o.carried = o.carried[:0]
-	g.care.Carry.Each(func(_, p entity.EntityID) {
-		o.carried = append(o.carried, p) // order does not matter: membership only
-	})
+	o.dirty, o.builds = false, o.builds+1
+	o.carried.Reset()
+	g.care.Carry.Each(func(_, p entity.EntityID) { o.carried.Add(p) })
 	for list, ids := range [3][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
 		for _, id := range ids {
 			if list < 2 && !g.standingWalker(id) || list == 2 && !g.standing(id) {
@@ -439,19 +439,13 @@ func (g *Game) standing(id entity.EntityID) bool {
 
 // standingWalker is standing for a colonist or raider.
 func (g *Game) standingWalker(id entity.EntityID) bool {
-	v, ok := g.vital.Get(id)
-	if !ok || v.Status != health.Alive {
+	if v := g.vital.Ref(id); v == nil || v.Status != health.Alive {
 		return false
 	}
-	if j, _ := g.jobs.Get(id); j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete) {
+	if j := g.jobs.Ref(id); j != nil && j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete) {
 		return false // lying down: can be stepped over
 	}
-	for _, p := range g.occ.carried {
-		if p == id {
-			return false
-		}
-	}
-	return true
+	return !g.occ.carried.Has(id)
 }
 
 // enter decides whether id may step from -> to this tick, and keeps the
