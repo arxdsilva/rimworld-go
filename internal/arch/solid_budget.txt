@@ -12,7 +12,7 @@ fields rimworld-go/internal/application/game.Game 64
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 30
 files rimworld-go/internal/application/game 174
-lines rimworld-go/internal/application/game 51871
+lines rimworld-go/internal/application/game 51828
 methods rimworld-go/internal/adapters/inbound/ebiten.App 243
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 71
 methods rimworld-go/internal/application/game.Game 1783
