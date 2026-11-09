@@ -142,34 +142,62 @@ func (r Report) Pass(p Policy) (bool, string) {
 
 func luma(p []byte) int { return (299*int(p[0]) + 587*int(p[1]) + 114*int(p[2])) / 1000 }
 
-// EdgeMask marks the pixels of img that sit next to a strong gradient: a
-// pixel is an edge when its alpha or luma differs from any of its eight
-// neighbours by at least threshold. The result is an edge predicate for
-// Compare, built from the reference frame A.
-func EdgeMask(img *image.RGBA, threshold int) func(x, y int) bool {
+// EdgeMask marks the pixels near an anti-aliased edge. A pixel is a seed when
+// in img or any of others its alpha or luma differs from any of its eight
+// neighbours by at least threshold, or when its alpha is partial (0 < a <
+// 255). The mask is the seeds grown by one pixel in every direction. The
+// result is an edge predicate for Compare; pass both frames so an edge that
+// exists in only one of them still counts.
+func EdgeMask(img *image.RGBA, threshold int, others ...*image.RGBA) func(x, y int) bool {
 	w, h := img.Bounds().Dx(), img.Bounds().Dy()
+	seed := make([]bool, w*h)
+	for _, im := range append([]*image.RGBA{img}, others...) {
+		markSeeds(im, w, h, threshold, seed)
+	}
 	mask := make([]bool, w*h)
-	at := func(x, y int) []byte { o := y*img.Stride + x*4; return img.Pix[o : o+4] }
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			p := at(x, y)
-			l := luma(p)
-			for dy := -1; dy <= 1 && !mask[y*w+x]; dy++ {
+			if !seed[y*w+x] {
+				continue
+			}
+			for dy := -1; dy <= 1; dy++ {
 				for dx := -1; dx <= 1; dx++ {
-					nx, ny := x+dx, y+dy
-					if (dx == 0 && dy == 0) || nx < 0 || ny < 0 || nx >= w || ny >= h {
-						continue
-					}
-					q := at(nx, ny)
-					if abs(int(p[3])-int(q[3])) >= threshold || abs(l-luma(q)) >= threshold {
-						mask[y*w+x] = true
-						break
+					if nx, ny := x+dx, y+dy; nx >= 0 && ny >= 0 && nx < w && ny < h {
+						mask[ny*w+nx] = true
 					}
 				}
 			}
 		}
 	}
 	return func(x, y int) bool { return x >= 0 && y >= 0 && x < w && y < h && mask[y*w+x] }
+}
+
+func markSeeds(img *image.RGBA, w, h, threshold int, seed []bool) {
+	at := func(x, y int) []byte { o := y*img.Stride + x*4; return img.Pix[o : o+4] }
+	bw, bh := min(w, img.Bounds().Dx()), min(h, img.Bounds().Dy())
+	for y := 0; y < bh; y++ {
+		for x := 0; x < bw; x++ {
+			p := at(x, y)
+			if p[3] > 0 && p[3] < 255 {
+				seed[y*w+x] = true
+				continue
+			}
+			l := luma(p)
+			for dy := -1; dy <= 1 && !seed[y*w+x]; dy++ {
+				for dx := -1; dx <= 1; dx++ {
+					nx, ny := x+dx, y+dy
+					if (dx == 0 && dy == 0) || nx < 0 || ny < 0 || nx >= bw || ny >= bh {
+						continue
+					}
+					q := at(nx, ny)
+					if abs(int(p[3])-int(q[3])) >= threshold || abs(l-luma(q)) >= threshold {
+						seed[y*w+x] = true
+						break
+					}
+				}
+			}
+		}
+	}
 }
 
 // HeatMap returns |A-B| per channel amplified 8x (alpha forced opaque),

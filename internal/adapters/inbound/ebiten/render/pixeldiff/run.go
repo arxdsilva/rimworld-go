@@ -32,7 +32,7 @@ func Run(dir string, pol Policy, render func(variant int) *image.RGBA) (Result, 
 	if !res.Deterministic {
 		res.BaselineDrift = &drift
 	}
-	res.Report = Compare(a, b, EdgeMask(a, 48))
+	res.Report = Compare(a, b, EdgeMask(a, 48, b))
 	res.Pass, res.Reason = res.Report.Pass(pol)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return res, err

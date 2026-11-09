@@ -71,6 +71,27 @@ func TestAAToleratesEdgeNoise(t *testing.T) {
 	}
 }
 
+func TestEdgeMaskPartialAlphaAndEitherImage(t *testing.T) {
+	a := solid(9, 9, color.RGBA{10, 10, 10, 255})
+	a.SetRGBA(4, 4, color.RGBA{10, 10, 10, 100}) // partial alpha, no 48 step
+	b := solid(9, 9, color.RGBA{10, 10, 10, 255})
+	b.SetRGBA(0, 8, color.RGBA{10, 10, 10, 30}) // partial alpha only in b
+	edge := EdgeMask(a, 48, b)
+	for _, c := range [][2]int{{4, 4}, {3, 3}, {5, 5}, {4, 5}, {0, 8}, {1, 7}} {
+		if !edge(c[0], c[1]) {
+			t.Fatalf("%v must be an edge", c)
+		}
+	}
+	for _, c := range [][2]int{{1, 1}, {7, 7}, {7, 1}, {8, 0}} {
+		if edge(c[0], c[1]) {
+			t.Fatalf("%v must not be an edge", c)
+		}
+	}
+	if EdgeMask(a, 48)(0, 8) {
+		t.Fatal("without b the corner is no edge")
+	}
+}
+
 func TestSizeMismatch(t *testing.T) {
 	r := Compare(solid(2, 2, color.RGBA{}), solid(3, 2, color.RGBA{}), nil)
 	if ok, _ := r.Pass(AA); ok {
