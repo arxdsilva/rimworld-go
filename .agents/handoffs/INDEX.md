@@ -228,6 +228,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PERF-009-render-pass-order | Render draw order, prepare pass and frame constants (render-b) | 2026-11-08 | [PERF.md](PERF.md#perf-009-render-pass-order) |
 | PERF-010-async-autosave | Autosaves write on a worker goroutine (GAR-190) | 2026-11-08 | [PERF.md](PERF.md#perf-010-async-autosave) |
 | PERF-011-periodic-spread | The day, hour and 250-tick work no longer fires all at once (GAR-006..009) | 2026-11-08 | [PERF.md](PERF.md#perf-011-periodic-spread) |
+| PERF-012-sim-index-fixes | Serial index fixes before any parallel stage (sim S1–S6, S4b) | 2026-11-08 | [PERF.md](PERF.md#perf-012-sim-index-fixes) |
 | PLAY010_PLAN | PLAY-010 play-feedback batch (14 items, up to 15 agents) | 2026-10-23 | [PLAY.md](PLAY.md#play010_plan) |
 | PLAY011_PLAN | PLAY-011 auto-oriented doors and gates, in-place material swaps, unmovable fences | 2026-10-24 | [PLAY.md](PLAY.md#play011_plan) |
 | PLAY012_PLAN | PLAY-012 Plan tool and crisp UI scaling (Auto + presets, HiDPI) | 2026-10-24 | [PLAY.md](PLAY.md#play012_plan) |

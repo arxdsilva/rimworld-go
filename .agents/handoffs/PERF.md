@@ -203,3 +203,14 @@ Render draw order, prepare pass and frame constants (render-b) · 2026-11-08 · 
 - Skipped: water without per-tile region uniforms. One sheet gave 80 of 921,600 px at zoom 2 (max 1) and the old path drifted 78 px beside it: not byte-exact, nothing committed.
 - Left in GAR-145: tint bakes (`art/memory.go`) and lit pair creation; demand is known only while drawing.
 - HUD: none; no player-visible change. No determinism or save impact.
+
+## PERF-012-sim-index-fixes
+Serial index fixes before any parallel stage (sim S1–S6, S4b) · 2026-11-08 · 2ad0e20a0, 0ec242dae, d5f5c65a6, 8483e4b52, 32f209a59, 2f486ed25, 797e8a282
+- Changed: `bedOf` reads a bed list cached on structure version and building count (`rest.BedList`), claimant live (S1). `crowdCost.ExtraCost` reads a per-cell ground cost layer (`spatial.Layer`) that empties when structures, plants or the plant store move (S3). The creature and food buckets are `spatial.Grid`, filled without closures (S4). `standingWalker` reads by `Ref` and `occ.carried` is a `spatial.IDSet` bitset (S2). The creature index builds once a tick on first query (S4b).
+- Changed (behaviour): a blocked animal's repath wait doubles 45 → 720 after each failed search and resets only on a real step; a wild wanderer drops its path and re-picks at NextThink (S5; 4 searches per 600 blocked ticks, was 13). A targetless mech looks for a target on `(now+id)%15==0`; a mech that just lost its target still re-picks at once (S6).
+- Numbers (benchstat -count 6, noisy machine): `TickGrown/500` avg −12.3%, p99 −13.3%; `TickRaid/500` avg, p99 and worst within noise (worst 4.5 ms). The profiles were too short to confirm the plan's 22% (repath) and 5.5% (nearestColonist) shares.
+- Decisions: cap 720 is the first doubling past `blockedFailTicks` (600), so a jammed animal gives up on schedule. Colonists and raiders keep the eager repath rule. S4b is sound: across 149,000 instrumented ticks the index was always built before `phaseAnimals` with no creature moved.
+- Limits: `occupancy` is at 25 fields (`rpMiss`); game root at its 51828-line budget.
+- Determinism: S1–S4, S4b hash-equal on clean exports. S5 re-pinned once (797e8a282): `TestGrownGolden`, `TestScaleGolden` 48x40/seed7 and 120x120/seed7. Save: new `motionRec.RepathWait`, zero reads as 45, no SaveVersion bump.
+- HUD: none new; a backed-off animal waits, which `AnimalView.BlockedBy` already shows.
+- Open: the raid worst-tick gate (≤ 3 ms) is not met; it goes to the path stage (ARCH-010, GAR-035) and a quiet-machine rerun. GAR-109 (enraged animals' `nearestColonist`) is still per tick.
