@@ -171,6 +171,15 @@ func tick(ms *Mechs, w *mechWorld, id entity.EntityID, now uint64) {
 	w.animals[id] = a
 }
 
+// lookTick is the first tick at or after from on which targetless
+// mechanoid id looks for a target (S6: every mechLookEvery ticks).
+func lookTick(id entity.EntityID, from uint64) uint64 {
+	for (from+uint64(id))%mechLookEvery != 0 {
+		from++
+	}
+	return from
+}
+
 // TestMechShootsOnItsWeaponsCycle (DEF-4): a sniper in range of a colonist
 // stands and fires its own weapon: the first shot after its aim, then one
 // every cooldown plus aim, and it is hostile the whole time.
@@ -182,7 +191,7 @@ func TestMechShootsOnItsWeaponsCycle(t *testing.T) {
 	ms, _ := w.mechs()
 	wd := weapon.DefOf(weapon.PulseLance)
 	var at []uint64
-	for now := uint64(1); now <= 1000; now++ {
+	for now := lookTick(id, 1); now <= 1000; now++ {
 		n := len(w.shots)
 		tick(ms, w, id, now)
 		if len(w.shots) > n {
@@ -209,12 +218,12 @@ func TestMechClosesInAndBursts(t *testing.T) {
 	blade := w.mech(animal.Harrow, 0, 10)
 	gun := w.mech(animal.Bulwark, 5, 10) // the minigun reaches 30
 	ms, _ := w.mechs()
-	tick(ms, w, blade, 1)
+	tick(ms, w, blade, lookTick(blade, 1))
 	if len(w.goals) != 1 || w.goals[0] != [2]int{30, 10} || len(w.shots) != 0 {
 		t.Fatalf("the blade closes in: goals %v shots %v", w.goals, w.shots)
 	}
 	wd := weapon.DefOf(weapon.Minigun)
-	for now := uint64(1); now <= uint64(wd.Warmup+wd.Burst*wd.BurstTicks+10); now++ {
+	for start, now := lookTick(gun, 1), lookTick(gun, 1); now <= start+uint64(wd.Warmup+wd.Burst*wd.BurstTicks+10); now++ {
 		tick(ms, w, gun, now)
 	}
 	if len(w.shots) != wd.Burst {
@@ -229,18 +238,19 @@ func TestMechTargetFalls(t *testing.T) {
 	a, b := w.colonist(10, 10), w.colonist(14, 10)
 	id := w.mech(animal.Spindle, 0, 10)
 	ms, _ := w.mechs()
-	tick(ms, w, id, 1)
+	t0 := lookTick(id, 1)
+	tick(ms, w, id, t0)
 	if w.animals[id].Target != a {
 		t.Fatalf("target %d, want the nearest %d", w.animals[id].Target, a)
 	}
 	w.downed[a] = true
-	tick(ms, w, id, 2)
+	tick(ms, w, id, t0+1)
 	if w.animals[id].Target != b {
 		t.Fatalf("target %d, want %d once %d is down", w.animals[id].Target, b, a)
 	}
 	w.downed[b] = true
 	w.animals[id] = animal.State{Species: animal.Spindle, Target: b, Mode: animal.Attack}
-	tick(ms, w, id, 3)
+	tick(ms, w, id, t0+2)
 	if st := w.animals[id]; st.Target != 0 || len(w.goals) != 1 || w.goals[0] != w.home {
 		t.Fatalf("nobody standing: it heads for the colony, %+v goals %v", st, w.goals)
 	}
@@ -290,7 +300,8 @@ func TestEMPStunsThenAdapts(t *testing.T) {
 	if !ms.Stunned(id, again) {
 		t.Fatal("past its adaptation an EMP stuns it again")
 	}
-	for now := again; now < again+stun+uint64(weapon.DefOf(weapon.PulseLance).Warmup)+5; now++ {
+	// rebooted with no target, it looks within mechLookEvery ticks
+	for now := again; now < again+stun+mechLookEvery+uint64(weapon.DefOf(weapon.PulseLance).Warmup)+5; now++ {
 		tick(ms, w, id, now)
 	}
 	if len(w.shots) == 0 {
@@ -308,17 +319,19 @@ func TestGuardLeashNoFlap(t *testing.T) {
 	id := w.mech(animal.Harrow, 0, 0)
 	ms, _ := w.mechs()
 	ms.recs[id] = MechRecord{Guard: true}
-	tick(ms, w, id, 1)
+	t1 := lookTick(id, 1)
+	tick(ms, w, id, t1)
 	if w.animals[id].Target != 0 {
 		t.Fatal("beyond its leash a colonist is left alone")
 	}
 	w.pos[c] = [2]int{GuardLeash - 2, 0}
-	tick(ms, w, id, 2)
+	t2 := lookTick(id, t1+1)
+	tick(ms, w, id, t2)
 	if w.animals[id].Target != c {
 		t.Fatal("within its leash it goes for the colonist")
 	}
 	flips, had := 0, true
-	for now := uint64(3); now < 600; now++ {
+	for now := t2 + 1; now < 600; now++ {
 		x := GuardLeash + 1 + int(now%5) // pacing between the leash and the release
 		w.pos[c] = [2]int{x, 0}
 		w.pos[id] = [2]int{0, 0}
@@ -435,8 +448,9 @@ func TestMechTurnsOnTurret(t *testing.T) {
 		t.Fatalf("shots %v, want the turret first", w.shots)
 	}
 	w.turret = 0
-	tick(ms, w, id, 200)
-	tick(ms, w, id, 201)
+	for now := uint64(200); now <= lookTick(id, 201); now++ { // targetless, it looks within mechLookEvery
+		tick(ms, w, id, now)
+	}
 	if w.animals[id].Target != c {
 		t.Fatalf("target %d, want the colonist once the turret is gone", w.animals[id].Target)
 	}

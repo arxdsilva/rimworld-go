@@ -39,6 +39,9 @@ const (
 	// repathAfter: a walker held up by another walker replans around it
 	// every repathAfter blocked ticks (at most one search per period).
 	repathAfter = 45
+	// repathCap (45·2⁴, the first past blockedFailTicks): four failed
+	// searches end an animal's tries until it steps or gives up.
+	repathCap = 720
 	// occupiedCost / besideCost: extra path cost of a cell holding a
 	// creature, and of a cell next to a creature standing still.
 	occupiedCost = 40
@@ -87,9 +90,10 @@ type occupancy struct {
 	rpID   entity.EntityID
 	rpAt   uint64
 	rpPath []pathing.Point
+	rpMiss entity.EntityID // repathEvery's search for it failed; moveAnimal reads and clears it
 	// dirty: the movement phase started and the index is not rebuilt yet
 	// (it is rebuilt on first use, or by the periodic stack sweep); builds
-	// counts the rebuilds (at most one a map a tick: occupancy_test.go).
+	// counts the rebuilds (at most one a map a tick: occupancy_builds_test.go).
 	dirty  bool
 	builds uint64
 	// hostile caches the wild-animal / raider walkability for the phase
@@ -462,7 +466,7 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 		o.move(id, mp, from, to)
 		return stepGo, to
 	}
-	blocked, by := g.motionBlocked(id)
+	m := g.motionOf(id)
 	if g.targetOf(id) == occ {
 		// a hostile closing on its target stops next to it (melee reach)
 		return stepWait, from
@@ -472,16 +476,16 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 			// head-on swap (a 2-cycle) or a longer ring: the highest ID
 			// in the ring gives way, everyone else waits for it
 			if yielder != id {
-				return g.repathEvery(id, from, to, blocked, true)
+				return g.repathEvery(id, from, to, m, true)
 			}
-			return g.giveWay(id, mp, from, to, occ, blocked)
+			return g.giveWay(id, mp, from, to, occ, m.BlockedTicks)
 		}
 		// the occupant is moving on: wait for it, replan if it is stuck
-		return g.repathEvery(id, from, to, blocked, true)
+		return g.repathEvery(id, from, to, m, true)
 	}
 	// the occupant stands still: an idler makes way, and so does a
 	// colonist at work that can do it from another cell (for colonists)
-	if by == occ && blocked >= idleYieldAfter && blocked%yieldRetry == 0 &&
+	if blocked := m.BlockedTicks; m.BlockedBy == occ && blocked >= idleYieldAfter && blocked%yieldRetry == 0 &&
 		(g.idleYieldable(occ) || g.colonist(id) && g.workYieldable(occ)) {
 		g.makeWay(occ, id)
 	}
@@ -501,7 +505,7 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 			}
 		}
 	}
-	return g.repathEvery(id, from, to, blocked, false)
+	return g.repathEvery(id, from, to, m, false)
 }
 
 // holderFor is the creature that keeps mover id (a partner when mp) out of
@@ -599,15 +603,17 @@ func (g *Game) occIndex() *occupancy {
 // once per repathAfter blocked ticks, the first time after repathAfter
 // ticks. A colonist held up by a creature standing still replans at once
 // (players notice a colonist idling behind a worker; raiders and animals
-// keep the cheaper rule).
-func (g *Game) repathEvery(id entity.EntityID, from, to Position, blocked int, behindWalker bool) (stepVerdict, Position) {
+// keep the cheaper rule). An animal backs off: each failed search doubles
+// its wait (motionRec.RepathWait, set by moveAnimal from rpMiss).
+func (g *Game) repathEvery(id entity.EntityID, from, to Position, m motionRec, behindWalker bool) (stepVerdict, Position) {
 	eager := !behindWalker && g.isPawn(id) && !g.isRaider(id)
-	if blocked%repathAfter != 0 || blocked == 0 && !eager {
+	if blocked := m.BlockedTicks; blocked%max(m.RepathWait, repathAfter) != 0 || blocked == 0 && !eager {
 		return stepWait, from
 	}
 	if g.planAround(id, from, to) {
 		return stepRepath, from
 	}
+	g.occ.rpMiss = id
 	return stepWait, from
 }
 

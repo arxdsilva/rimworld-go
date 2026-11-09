@@ -3,10 +3,8 @@ package game
 import "testing"
 
 // TestBucketIndexRebuildsBounded: however many animals, searches and
-// sensors ask, the creature index is built at most twice in a tick (the
-// first query of the tick, then phaseAnimals once the jobs have run: the
-// second build is behaviour the goldens pin) and the food index at most
-// once.
+// sensors ask, the creature index and the food index are each built at
+// most once in a tick (the first query; phaseAnimals reuses it).
 func TestBucketIndexRebuildsBounded(t *testing.T) {
 	t.Parallel()
 	g := NewColony(Config{Seed: 7, Width: 120, Height: 120})
@@ -14,7 +12,7 @@ func TestBucketIndexRebuildsBounded(t *testing.T) {
 	for tick := range 1500 {
 		c0, f0 := g.wl.idx.builds, g.wl.food.builds
 		g.Step(1)
-		if d := g.wl.idx.builds - c0; d > 2 {
+		if d := g.wl.idx.builds - c0; d > 1 {
 			t.Fatalf("tick %d: creature index rebuilt %d times", tick, d)
 		}
 		if d := g.wl.food.builds - f0; d > 1 {

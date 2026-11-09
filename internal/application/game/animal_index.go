@@ -13,9 +13,9 @@ import (
 // carcass within 30") look at the few buckets around it instead of every
 // creature, item and plant on the map. Both are rebuilt from the
 // authoritative lists, never edited in place, so they hold no state of
-// their own: the creature index once per tick (phaseAnimals, or on the
-// first query of a tick), the food index on the first food search of a
-// tick. Queries confirm every hit against the live stores, and search one
+// their own: the creature index on the first query of a tick (again on
+// an arrival), the food index on the first food search of a tick.
+// Queries confirm every hit against the live stores, and search one
 // bucket ring wider than asked, so a creature that stepped (one tile at
 // most) since the rebuild is still found where it now stands.
 

@@ -48,6 +48,11 @@ const (
 	mechWanderEvery = 240
 	// mechRepathEvery paces a chasing mechanoid's path to a moving target.
 	mechRepathEvery = 30
+	// mechLookEvery paces a targetless mechanoid's look for one (S6: the
+	// nearest-colonist scan ran per mech per tick); one whose target just
+	// fell looks at once, and one with a target re-weighs it every
+	// DecideEvery.
+	mechLookEvery = 15
 	// mechBashGap is the least wait between a mechanoid's blows on a wall
 	// or door (the raiders' breach cooldown). original tuning
 	mechBashGap = 60
@@ -147,10 +152,11 @@ func (ms *Mechs) think(id entity.EntityID, a *animal.State, r *MechRecord, m ani
 		return
 	}
 	wd := weapon.DefOf(m.Weapon)
-	if a.Target != 0 && !ms.holds(a.Target, *r) {
+	lost := a.Target != 0 && !ms.holds(a.Target, *r)
+	if lost {
 		a.Target, r.Shots = 0, 0
 	}
-	if a.Target == 0 || (now+uint64(id))%animal.DecideEvery == 0 {
+	if at := now + uint64(id); lost || at%animal.DecideEvery == 0 || a.Target == 0 && at%mechLookEvery == 0 {
 		// a fallen target was dropped above; one still worth fighting is
 		// kept unless another is found (a guard's leash hysteresis)
 		if t := ms.pick(x, y, *r); t != a.Target && (t != 0 || a.Target == 0) {

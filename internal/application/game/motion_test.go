@@ -12,6 +12,13 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
+// motionBlocked reports how long id has been blocked and by whom; (0, 0)
+// when it has no record.
+func (g *Game) motionBlocked(id entity.EntityID) (ticks int, by entity.EntityID) {
+	m := g.motionOf(id)
+	return m.BlockedTicks, m.BlockedBy
+}
+
 // corridor is a w-wide, 1-tall walkable strip on row 1 (rows 0 and 2 are
 // walled), so the only route between two cells of it is straight.
 func corridor(w int) *Game {

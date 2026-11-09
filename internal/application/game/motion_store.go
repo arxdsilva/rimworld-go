@@ -32,6 +32,11 @@ type motionRec struct {
 	// StaggerUntil (CBT-1): a hit's stopping power slows its steps until
 	// this tick (game/hit Stagger). Zero in older saves.
 	StaggerUntil uint64
+	// RepathWait (S5): an animal's blocked ticks between searches around
+	// the creature in its way, doubled by each failed one up to repathCap
+	// and cleared by a step. Zero (older saves, colonists, raiders) reads
+	// as repathAfter.
+	RepathWait int
 }
 
 // motionOf is id's record. A creature without one (new, or from a save
@@ -43,21 +48,11 @@ func (g *Game) motionOf(id entity.EntityID) motionRec {
 	return motionRec{NextMoveAt: uint64(g.clock.Now()), StepTicks: TicksPerCell}
 }
 
-// motionBlocked reports how long id has been blocked and by whom; (0, 0)
-// when it has no record.
-func (g *Game) motionBlocked(id entity.EntityID) (ticks int, by entity.EntityID) {
-	m, ok := g.motion.Get(id)
-	if !ok {
-		return 0, 0
-	}
-	return m.BlockedTicks, m.BlockedBy
-}
-
 // stepped records a step taken at tick now costing cost ticks.
 func (m *motionRec) stepped(now uint64, cost int) {
 	cost = hit.StepCost(cost, m.StaggerUntil, now) // game/hit (CBT-1): staggered, a sixth of its speed
 	m.StepTick, m.StepTicks, m.NextMoveAt = now, cost, now+uint64(cost)
-	m.BlockedTicks, m.BlockedBy = 0, 0
+	m.BlockedTicks, m.BlockedBy, m.RepathWait = 0, 0, 0
 }
 
 // isDiagonal reports a step that changes both coordinates.

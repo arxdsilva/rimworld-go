@@ -194,3 +194,32 @@ func TestShipPartNeedsPoints(t *testing.T) {
 		t.Fatal("a ship part crashed on a poor colony")
 	}
 }
+
+// TestMechAcquiresWithin15Ticks (S6): a targetless mechanoid looks for a
+// colonist every 15 ticks (by id), not every tick, so one in sight is its
+// target within 15 ticks whatever the tick it starts on.
+func TestMechAcquiresWithin15Ticks(t *testing.T) {
+	t.Parallel()
+	if animal.DecideEvery%15 != 0 {
+		t.Fatalf("DecideEvery %d is not a multiple of the 15-tick look", animal.DecideEvery)
+	}
+	for start := range 15 {
+		g := New(Config{Seed: 7, Width: 40, Height: 30})
+		g.Step(start)
+		ada, _ := g.SpawnNamedPawn(20, 15, "Ada")
+		id, err := g.SpawnAnimal("spindle", 12, 15)
+		if err != nil {
+			t.Fatal(err)
+		}
+		took := 0
+		for ; took < 15; took++ {
+			if a, _ := g.animals.Get(id); a.Target == ada {
+				break
+			}
+			g.Step(1)
+		}
+		if a, _ := g.animals.Get(id); a.Target != ada {
+			t.Fatalf("start %d: no target after 15 ticks (target %d)", start, a.Target)
+		}
+	}
+}

@@ -716,6 +716,7 @@ saveState.Motion[].V rimworld-go/internal/application/game.motionRec
 saveState.Motion[].V.BlockedBy rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Motion[].V.BlockedTicks int
 saveState.Motion[].V.NextMoveAt uint64
+saveState.Motion[].V.RepathWait int
 saveState.Motion[].V.StaggerUntil uint64
 saveState.Motion[].V.StepTick uint64
 saveState.Motion[].V.StepTicks int
