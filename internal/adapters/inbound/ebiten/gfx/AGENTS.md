@@ -9,6 +9,7 @@ The client's drawing primitives, shared by the HUD and the renderer: the UI canv
 - `Rect` (16 methods) and `WinRect`.
 - `Scale`, `UnitScale`, `UIScale`, `HUDScale`, `MapUIScale`, `SetScale`.
 - `WorldPass`, `BeginWorldPass`, `EndWorldPass`, `CompositeWorld`, `FitLayer`; `TriBatch` (`Vert`, `Tri`, `Rect`, `Line`, `Flush`).
+- `aashape/` (PERF-008): anti-aliased discs, rings, lines, rects, frames and convex polygons as triangles with a 1-px alpha feather, drawn in place with one `DrawTriangles32` from a white texel, so they keep call order and merge. Every `aa` branch of the canvas primitives and `PxDisc`, `PxRing`, `PxLine`, `PxFrame` (physical pixels) go through its `Painter`, held on `cur.aa`.
 - `state.go`: `cur`, the one process-wide canvas state (UI scale, world pass, test traces). `SetPass`, `ForcePass`, `Pass`, `SetVia`, `Traced`, `SetCanvasTrace`, `SetDrawTrace`, `FogDrawn`.
 
 ## Depends on
@@ -24,6 +25,7 @@ The client's drawing primitives, shared by the HUD and the renderer: the UI canv
 
 ## Invariants
 - `cur` is the documented exception to the no-package-state rule (`.agents/specs/SOLID_GO.md` §9); it is main-goroutine only and carries one budget line in `internal/arch/solid_budget.txt` (`gfx.cur`). A second global here is a rule violation; tests reset `cur` through setters.
+- No anti-aliased `ebiten/vector` call (`…, true)`, `AntiAlias: true`) outside `aashape/guard_test.go`'s allowlist: the colonist route polylines and the concave-polygon fallback. Ebitengine draws AA vector paths through a stencil atlas per target, which cost half the Draw CPU before PERF-008.
 - The canvas guard in the root (`TestUIDrawsThroughCanvas`) requires UI draws to go through `gfx.X`.
 
 ## Hot paths
@@ -32,5 +34,6 @@ The client's drawing primitives, shared by the HUD and the renderer: the UI canv
 - `WorldPass.Flush` replays the deferred draws queued for the world pass.
 
 ## Tests
-- No test files in the package. The root's source-scanning guards (`TestUIDrawsThroughCanvas`, `TestMapPixelsComeFromMapCursor`, `TestLightsComeOnlyFromLightSources`) walk `gfx/*.go` through `packageFiles`, and the feature packages' tests exercise it.
+- `aashape` tests coverage against an exact supersampled reference (|Δ| ≤ 0.1 per pixel, area ≤ 0.5 %), 0 allocations, and the guard; `BenchmarkAAShapes`.
+- No other test files in the package. The root's source-scanning guards (`TestUIDrawsThroughCanvas`, `TestMapPixelsComeFromMapCursor`, `TestLightsComeOnlyFromLightSources`) walk `gfx/*.go` through `packageFiles`, and the feature packages' tests exercise it.
 - Coverage: not measured.
