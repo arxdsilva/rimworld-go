@@ -28,7 +28,10 @@ import (
 // mapScene is one map's presentation state. It has no methods: the
 // Renderer reads it through the embedding and sceneSet moves it.
 type mapScene struct {
-	cam camerapkg.Camera // this map's view (VIEW-001 saves one per map)
+	// Paths selects migrations' new draw paths (render.Paths); only the
+	// -capture-diff harness sets it.
+	Paths render.Paths
+	cam   camerapkg.Camera // this map's view (VIEW-001 saves one per map)
 	// last is each pawn's tile walk; mo the per-creature motion tracks and
 	// the animT clock (render/motion), each track carrying its animal's
 	// body player. Both are cleared when the map is entered again.

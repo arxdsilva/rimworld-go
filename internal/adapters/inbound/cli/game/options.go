@@ -26,6 +26,8 @@ type Options struct {
 	CaptureSpeed     int
 	CaptureTimelapse int
 
+	CaptureDiff, CaptureDiffPaths, CaptureDiffPolicy string
+
 	Scenario string
 	Biome    string // a biome key; see BiomeKeys
 	Hour     int
@@ -77,6 +79,9 @@ func parse(args []string, out io.Writer) (Options, error) {
 	fs.IntVar(&o.CaptureSpeed, "capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
 	fs.StringVar(&o.CaptureUI, "capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | zone | zone-shrink | power | power-overlay | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll | factions-colony | bio | work-incapable | arrival | options-story | options-habits | dossier | dossier-float | dossier-log | dossier-animal | dossier-setup | dossier-setup-sections | dossier-setup-presets | dossier-setup-colours | letter-intro | arch-hospital | arch-cabinet | arch-locked | chips | social | health | prisoner | history | world | quests | assign | turret | trade | perf")
 	fs.Float64Var(&o.CaptureUIScale, "capture-ui-scale", 0, "dev: with -capture, shoot at this UI scale (1280s x 720s frame) to review scaled layouts; 0 = scale 1")
+	fs.StringVar(&o.CaptureDiff, "capture-diff", "", "dev: with -capture, render the scene old/new/old into this dir (A.png B.png heat.png report.json) and exit non-zero on a policy miss or a non-deterministic scene")
+	fs.StringVar(&o.CaptureDiffPaths, "capture-diff-paths", "", "dev: with -capture-diff, the render.Paths under test, comma separated (test)")
+	fs.StringVar(&o.CaptureDiffPolicy, "capture-diff-policy", "exact", "dev: with -capture-diff, exact | aa")
 	fs.IntVar(&o.CaptureTimelapse, "capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	fs.BoolVar(&o.NoAudio, "noaudio", false, "dev: run without sound")
 	fs.StringVar(&o.CPUProfile, "cpuprofile", "", "dev: write a CPU profile to this file")

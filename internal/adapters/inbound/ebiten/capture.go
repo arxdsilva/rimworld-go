@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -10,6 +11,8 @@ import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/pixeldiff"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strings"
 
@@ -51,6 +54,10 @@ type Capture struct {
 	// scale 1) to review scaled layouts; 0 keeps captures at scale 1
 	// (PLAY-017).
 	UIScale float64
+	// DiffDir != "" runs the pixel-diff harness (-capture-diff) instead of
+	// saving Path: DiffPaths (render.ParsePaths) is the new path under test,
+	// DiffPolicy "exact" or "aa".
+	DiffDir, DiffPaths, DiffPolicy string
 }
 
 // captureScale is the UI scale a capture asks for (0: none).
@@ -84,6 +91,7 @@ type captureState struct {
 	follow  entity.EntityID
 	pan     [][2]float64 // camera waypoints (tiles) eased through over a frame sequence
 	done    bool
+	diffing bool // captureDiff is re-drawing the frame
 	err     error
 }
 
@@ -762,6 +770,12 @@ func (a *App) drawCapture(screen *ebiten.Image) {
 	if c == nil || a.capture.done || !a.capture.started || a.capture.frames < captureFrames {
 		return
 	}
+	if c.DiffDir != "" {
+		if !a.capture.diffing {
+			captureDiff(a, screen)
+		}
+		return
+	}
 	path := c.Path
 	if c.Frames > 0 {
 		if !a.capture.pending {
@@ -792,6 +806,36 @@ func (a *App) drawCapture(screen *ebiten.Image) {
 	}
 	defer f.Close()
 	a.capture.err = png.Encode(f, img)
+}
+
+// captureDiff draws the settled frame old, new, old (pixeldiff.Run) and
+// fails the run on a non-deterministic scene or a policy miss.
+func captureDiff(a *App, screen *ebiten.Image) {
+	c := a.cfg.Capture
+	a.capture.diffing, a.capture.done, a.shouldQuit = true, true, true
+	pol, ok := pixeldiff.ByName(c.DiffPolicy)
+	paths, ok2 := render.ParsePaths(c.DiffPaths)
+	if !ok || !ok2 {
+		a.capture.err = fmt.Errorf("capture-diff: unknown policy %q or paths %q", c.DiffPolicy, c.DiffPaths)
+		return
+	}
+	off := ebiten.NewImage(screen.Bounds().Dx(), screen.Bounds().Dy())
+	_, a.capture.err = pixeldiff.Run(c.DiffDir, pol, func(v int) *image.RGBA {
+		if a.renderer != nil {
+			a.renderer.Paths = render.Paths(0)
+			if v == 1 {
+				a.renderer.Paths = paths
+			}
+		}
+		off.Clear()
+		a.Draw(off)
+		img := image.NewRGBA(off.Bounds())
+		off.ReadPixels(img.Pix)
+		if v == 1 && paths.Has(render.PathsTest) { // the harness self-test: one marked pixel
+			img.SetRGBA(0, 0, color.RGBA{255, 0, 255, 255})
+		}
+		return img
+	})
 }
 
 // panAt is the camera point at progress t (0..1) along waypoints, eased

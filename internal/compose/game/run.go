@@ -33,6 +33,7 @@ func Run(opts cligame.Options, version string, d Display) {
 	if opts.Capture != "" {
 		shot = &uiadapter.Capture{Path: opts.Capture, Ticks: opts.CaptureTicks, Zoom: opts.CaptureZoom, UI: opts.CaptureUI,
 			Frames: opts.CaptureFrames, Speed: opts.CaptureSpeed, Timelapse: opts.CaptureTimelapse, UIScale: opts.CaptureUIScale,
+			DiffDir: opts.CaptureDiff, DiffPaths: opts.CaptureDiffPaths, DiffPolicy: opts.CaptureDiffPolicy,
 			Bare: devscene.Bare(opts.Scenario)} // set pieces: no scripted starter orders
 	}
 	biomeID, ok := biome.Parse(opts.Biome)
