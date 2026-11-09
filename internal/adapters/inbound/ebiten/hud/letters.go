@@ -346,7 +346,8 @@ func (c Right) openLetterView(l game.LetterView) {
 // order (UIS-073, uikit.Modal.RowActions): Continue, or, for a
 // rescued stranger's offer to join (SIM-063), Accept (command.AcceptLetter)
 // and Decline (command.DismissLetter), or, for a demand on a caravan
-// (MAP-08), Give and Refuse (command.EncounterAnswer); then "Jump to" when
+// (MAP-08), Give and Refuse (command.EncounterAnswer), or, for a letter
+// that asks a question (EAI-031), its Choices (command.AnswerLetter); then "Jump to" when
 // the letter has a place.
 func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 	if l.Quest != 0 && l.ID != 0 {
@@ -368,6 +369,18 @@ func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 		buttons = []uikit.ModalButton{
 			{ID: "give", Label: c.sh.T("Give"), Style: uikit.BtnPrimary, Closes: true, OnClick: func() { answer(0) }},
 			{ID: "refuse", Label: c.sh.T("Refuse"), Closes: true, OnClick: func() { answer(1) }},
+		}
+	}
+	if len(l.Choices) > 0 && l.ID != 0 { // EAI-031: the letter's own answers, command.AnswerLetter by index
+		buttons = buttons[:0:0]
+		for i, ch := range l.Choices {
+			style := uikit.BtnNormal
+			if i == 0 {
+				style = uikit.BtnPrimary
+			}
+			buttons = append(buttons, uikit.ModalButton{ID: "choice." + ch.Key, Label: lang.Msg(c.sh, ch.Label, ""), Style: style, Closes: true, OnClick: func() {
+				c.sh.Enqueue(command.Command{Kind: command.AnswerLetter, Target: l.ID, Mode: uint8(i)})
+			}})
 		}
 	}
 	if letterHasPlace(l) {

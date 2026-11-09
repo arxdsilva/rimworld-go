@@ -38,10 +38,10 @@ func Column(l hudlayout.Layout) gfx.Rect {
 }
 
 // PanelRects are the developer panels' rects (empty: not shown).
-type PanelRects struct{ Fields, Insp, Log gfx.Rect }
+type PanelRects struct{ Fields, Insp, Story, Log gfx.Rect }
 
 // Stack stacks the panels that are on, top to bottom in the dev column:
-// the map-fields legend, the debug inspector, then the debug log, which
+// the map-fields legend, the debug inspector, the story panel, then the debug log, which
 // takes the lines that fit.
 func (p *Panel) Stack() PanelRects {
 	var st PanelRects
@@ -66,6 +66,9 @@ func (p *Panel) Stack() PanelRects {
 	}
 	if p.State.Insp {
 		st.Insp = place(p.inspectorSize())
+	}
+	if p.State.Story {
+		st.Story = place(p.storySize())
 	}
 	if p.State.Log {
 		lines := p.logShown(int((col.Bottom()-y-devLogChrome)/devStep), col.W-20)

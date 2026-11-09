@@ -88,6 +88,55 @@ func (hv *Hives) infest(x, y int, now uint64) (int, bool) {
 	return 0, false
 }
 
+// Spots lists the cells a hive mound may rise on anywhere on the map,
+// nearest home first (ties: row-major), for the storyteller's infestation
+// (EAI-035). The list is cached per structure and day: grid, buildings and
+// roofs unchanged, home in the same place, the same day (warmth moves with
+// the weather) give the same list.
+func (hv *Hives) Spots(now uint64) [][2]int {
+	if hv.n == nil {
+		return nil
+	}
+	hx, hy := hv.h.Home()
+	g, gridVer, structVer := hv.h.Shape()
+	day := now / clock.TicksPerDay
+	c := &hv.spots
+	if c.ok && c.grid == g && c.gridVer == gridVer && c.structVer == structVer && c.hx == hx && c.hy == hy && c.day == day {
+		return c.list
+	}
+	w, h := hv.h.Size()
+	var list [][2]int
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if hv.n.HiveSpot(x, y) {
+				list = append(list, [2]int{x, y})
+			}
+		}
+	}
+	slices.SortStableFunc(list, func(a, b [2]int) int {
+		return cmp.Compare(max(mathx.Abs(a[0]-hx), mathx.Abs(a[1]-hy)), max(mathx.Abs(b[0]-hx), mathx.Abs(b[1]-hy)))
+	})
+	*c = spotCache{ok: true, grid: g, gridVer: gridVer, structVer: structVer, hx: hx, hy: hy, day: day, list: list}
+	return list
+}
+
+// infestHome raises the first hive on the nearest spot of the whole map
+// (Spots) that is still free and apart from the other hives.
+func (hv *Hives) infestHome(now uint64) (int, bool) {
+	if hv.n == nil || len(hv.hives) >= HiveCap {
+		return 0, false
+	}
+	for _, p := range hv.Spots(now) {
+		if !hv.apart(p[0], p[1]) || !hv.n.HiveSpot(p[0], p[1]) {
+			continue
+		}
+		if i, ok := hv.raise(p[0], p[1], now); ok {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 // raise places a hive mound on (x, y) and records it.
 func (hv *Hives) raise(x, y int, now uint64) (int, bool) {
 	id := hv.n.PlaceHive(x, y)

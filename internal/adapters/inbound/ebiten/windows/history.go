@@ -76,7 +76,7 @@ func (w History) body(body gfx.Rect) {
 		return
 	}
 	strip := gfx.Rect{X: body.X, Y: body.Y, W: body.W, H: historyTabH}
-	w.kit().Tabs("history.tabs", strip, []string{w.sh.T("Events"), w.sh.T("Combat"), w.sh.T("Records")}, &w.histTab, uikit.TabsOpts{})
+	w.kit().Tabs("history.tabs", strip, []string{w.sh.T("Events"), w.sh.T("Combat"), w.sh.T("Records"), w.sh.T("Wealth")}, &w.histTab, uikit.TabsOpts{})
 	body = gfx.Rect{X: body.X, Y: body.Y + historyTabH + 6, W: body.W, H: body.H - historyTabH - 6}
 	switch w.histTab {
 	case 1:
@@ -84,6 +84,9 @@ func (w History) body(body gfx.Rect) {
 		return
 	case 2:
 		w.recordsList(body)
+		return
+	case 3:
+		w.wealthList(body)
 		return
 	}
 	rows := HistoryRows(w.sh.Env().Game.History())

@@ -97,12 +97,36 @@ func (g *Game) post(m MessageView) string {
 	}
 	if m.Letter {
 		m.Kind = g.addLetter(m) // a letter is also kept in the stack
+	} else if !m.Danger && g.mergeRepeat(m) {
+		return m.Text
 	}
 	g.messages = append(g.messages, m)
 	if n := len(g.messages); n > maxMessages {
 		g.messages = append(g.messages[:0:0], g.messages[n-maxMessages:]...)
 	}
 	return m.Text
+}
+
+// repeatWindow is how long a notice's twin merges into it (EAI-032): the
+// same plain notice again within this many ticks of the last one becomes
+// "x2", "x3", ...; a danger message or a letter is never merged.
+const repeatWindow = 600
+
+// mergeRepeat folds m into the newest message with the same text on this
+// map posted within repeatWindow ticks and reports whether it did.
+func (g *Game) mergeRepeat(m MessageView) bool {
+	for i := len(g.messages) - 1; i >= 0; i-- {
+		o := &g.messages[i]
+		if m.Tick > o.Tick+repeatWindow {
+			return false // older messages are older still
+		}
+		if o.Text == m.Text && o.Map == m.Map && !o.Danger && !o.Letter && o.Focus == m.Focus {
+			o.Repeat++
+			o.Tick = m.Tick
+			return true
+		}
+	}
+	return false
 }
 
 // addLetter puts message m on the letter stack and returns the kind it got.

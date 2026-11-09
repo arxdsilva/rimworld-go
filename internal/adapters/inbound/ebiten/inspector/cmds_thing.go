@@ -172,6 +172,24 @@ func (a Animal) animalPaneState(an game.AnimalView) string {
 	return an.Mode
 }
 
+// AnimalActionLine is the extra line for an animal with something on its
+// mind (EAI): battering a door to reach a foe, mourning a lost herd mate
+// or fighting for its herd or master; "" otherwise. A grieving animal
+// that has turned on the colony reads as a manhunter.
+func AnimalActionLine(an game.AnimalView) string {
+	switch {
+	case an.Bashing:
+		return "Breaking through the door"
+	case an.Grief && an.Manhunter:
+		return "Manhunter (grief)"
+	case an.Grief:
+		return "Grieving a herd mate"
+	case an.Defending:
+		return "Defending its herd"
+	}
+	return ""
+}
+
 // animalPenLine is the pen of a penned tame animal ("Pen 1", "Roaming",
 // "Being roped"); "" for any other (a roaming tame animal has the area chip
 // instead).
@@ -194,6 +212,7 @@ func (a Animal) AnimalPaneLines(an game.AnimalView) []string {
 		}
 	}
 	add(a.animalPaneState(an))
+	add(AnimalActionLine(an))                // EAI: bashing, grieving, defending
 	for _, r := range AnimalHealthRows(an) { // animal_inspector.go (MED-09)
 		add(r)
 	}

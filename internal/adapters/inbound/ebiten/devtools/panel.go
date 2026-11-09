@@ -108,7 +108,8 @@ func (p *Panel) Actions(tx, ty int) []Action {
 		p.sh.Enqueue(command.Command{Kind: command.DevStartFire, X: tx, Y: ty})
 		return "Fire started"
 	}}
-	return append(out, kill, feed, lose, spawnImp, start, p.mapFieldsAction())
+	out = append(out, kill, feed, lose, spawnImp, start, p.mapFieldsAction())
+	return append(out, p.storyActions(fire)...)
 }
 
 // HandleKeys runs the Dev context's actions.
@@ -217,5 +218,8 @@ func (p *Panel) Draw(screen *ebiten.Image, sw, sh int) {
 	}
 	if !stack.Insp.Empty() {
 		p.drawInspector(screen, stack.Insp)
+	}
+	if !stack.Story.Empty() {
+		p.drawStory(screen, stack.Story)
 	}
 }

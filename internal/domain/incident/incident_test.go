@@ -32,9 +32,10 @@ func TestPickDeterministic(t *testing.T) {
 	// FOOD-2 added crop blight (vetoed without blightable crops), FOOD-6
 	// the eclipse (toxic fallout waits for day 60), TEMP-2 the heat wave
 	// and the cold snap (the game vetoes them out of season; the volcanic
-	// winter waits for day 60).
-	if len(seen) != 20 {
-		t.Fatalf("picked %v, want all 20 temperate nature events", seen)
+	// winter waits for day 60). EAI-031 added the chased refugee (the game
+	// vetoes it without a hostile faction to chase them).
+	if len(seen) != 21 {
+		t.Fatalf("picked %v, want all 21 temperate nature events", seen)
 	}
 }
 
@@ -115,5 +116,28 @@ func TestDiseaseBiomesAndDays(t *testing.T) {
 	}
 	if DefOf(Flu).Allowed(State{}, 14*clock.TicksPerDay, biome.TemperateForest) || !DefOf(Flu).Allowed(State{}, 15*clock.TicksPerDay, biome.TemperateForest) {
 		t.Fatal("diseases from day 15")
+	}
+}
+
+// TestQueueOrder (EAI-030): the queue stays soonest first, equal ticks in
+// the order queued, and PopDue takes only what is due.
+func TestQueueOrder(t *testing.T) {
+	var st State
+	st.Enqueue(Queued{ID: RivalRaid, At: 50, Points: 1})
+	st.Enqueue(Queued{ID: RefugeeChased, At: 20})
+	st.Enqueue(Queued{ID: RivalRaid, At: 50, Points: 2})
+	if _, ok := st.PopDue(19); ok {
+		t.Fatal("nothing is due at 19")
+	}
+	var got []int
+	for {
+		q, ok := st.PopDue(100)
+		if !ok {
+			break
+		}
+		got = append(got, q.Points)
+	}
+	if len(got) != 3 || got[0] != 0 || got[1] != 1 || got[2] != 2 {
+		t.Fatalf("order %v", got)
 	}
 }

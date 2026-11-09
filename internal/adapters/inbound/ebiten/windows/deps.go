@@ -47,6 +47,7 @@ type Faction struct {
 	Tip                   string     // what the relation means for goodwill
 	History               []int      // goodwill a day, oldest first
 	Events                []string   // the last events that moved goodwill, oldest first
+	Enemies               []string   // the factions it is at war with (EAI-015; empty: none)
 }
 
 // Labels names and draws what the root alone knows how to present.

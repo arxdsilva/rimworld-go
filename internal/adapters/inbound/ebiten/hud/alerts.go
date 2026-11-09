@@ -204,6 +204,12 @@ func raiseAlertsIn(tr lang.Tr, pawns []game.PawnView, w game.WorldView) []Alert 
 			label = lang.Tf(tr, "Siege: %d raiders", len(raiders))
 		case "sappers":
 			label = lang.Tf(tr, "Sappers: %d raiders", len(raiders))
+		case "staged assault": // EAI-016
+			label = lang.Tf(tr, "Staging: %d raiders", len(raiders))
+		case "steal":
+			label = lang.Tf(tr, "Thieves: %d raiders", len(raiders))
+		case "burn":
+			label = lang.Tf(tr, "Arsonists: %d raiders", len(raiders))
 		}
 		out = append(out, Alert{Key: "raid", Label: label, Danger: true, Targets: raiders})
 	}

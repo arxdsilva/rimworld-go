@@ -112,6 +112,10 @@ func (w Factions) header(r gfx.Rect, row Faction) {
 	rs.Color = row.Color
 	u.Label(left.X, y, uikit.FitText(lang.Tf(w.sh, "%s  (goodwill %s)", row.Standing, goodwillText(row.Goodwill)), rs, left.W), rs)
 	y += 22
+	if len(row.Enemies) > 0 { // EAI-015: who it is at war with
+		u.Label(left.X, y, uikit.FitText(lang.Tf(w.sh, "Enemies: %s", strings.Join(row.Enemies, ", ")), uikit.DimText(), left.W), uikit.DimText())
+		y += 18
+	}
 	ds := gfx.Small
 	ds.Color = uikit.TextDim
 	for i, l := range gfx.WrapPx(row.Tip, ds, float64(left.W)) {

@@ -329,5 +329,9 @@ func MessageLineIn(tr lang.Tr, m game.MessageView) string {
 	if m.Letter && m.Title != "" {
 		return lang.Tf(tr, "Letter: %s", tr.T(m.Title))
 	}
-	return lang.Msg(tr, m.Msg, m.Text)
+	line := lang.Msg(tr, m.Msg, m.Text)
+	if m.Repeat > 0 { // EAI-032: the same notice again within a few seconds
+		line = fmt.Sprintf("%s ×%d", line, m.Repeat+1)
+	}
+	return line
 }

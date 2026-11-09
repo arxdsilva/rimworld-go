@@ -22,9 +22,10 @@ const (
 
 // Hives sends hive swarms and runs the hive mounds (nest.go, CBT-4).
 type Hives struct {
-	h    Host
-	w    Wild
-	exit exitCache
+	h     Host
+	w     Wild
+	exit  exitCache
+	spots spotCache // EAI-035
 	// CBT-4: n places hive mounds and m tells a colonist near (nil:
 	// none); hives are the mounds standing, ascending ids (saved in
 	// MechSave).
@@ -43,18 +44,45 @@ type exitCache struct {
 	found              bool
 }
 
+// spotCache is Spots' last answer and what it was for.
+type spotCache struct {
+	ok                 bool
+	grid               *grid.Grid
+	gridVer, structVer uint64
+	hx, hy             int
+	day                uint64
+	list               [][2]int
+}
+
 // Swarm is the threat itself (also the game's HiveSwarm dev hook). In a
 // dark, warm, roofed cave by the rock face a hive mound rises first and
 // the swarm is its brood (CBT-4, nest.go); it then breeds and spreads.
-func (hv *Hives) Swarm() {
-	n := hiveMin + hv.h.Roll(hiveMax-hiveMin+1)
-	x, y, ok := hv.Exit()
-	if !ok {
-		if x, y, ok = hv.w.EdgeTile(); !ok {
-			return
-		}
+func (hv *Hives) Swarm() { hv.swarm(true) }
+
+// Infest is the storyteller's infestation (EAI-035): a hive rises on the
+// dark, roofed, warm spot nearest home anywhere on the map. It reports
+// false, having changed nothing, when no spot exists, and the caller sends
+// a raid instead.
+func (hv *Hives) Infest() bool { return hv.swarm(false) }
+
+// swarm is Swarm and Infest: fallback lets a swarm burst from the rock face
+// (or a map edge) when no hive spot exists.
+func (hv *Hives) swarm(fallback bool) bool {
+	hive, nested := hv.infestHome(hv.now)
+	if !nested && !fallback {
+		return false
 	}
-	hive, nested := hv.infest(x, y, hv.now)
+	n := hiveMin + hv.h.Roll(hiveMax-hiveMin+1)
+	x, y := 0, 0
+	if !nested {
+		var ok bool
+		if x, y, ok = hv.Exit(); !ok {
+			if x, y, ok = hv.w.EdgeTile(); !ok {
+				return false
+			}
+		}
+		hive, nested = hv.infest(x, y, hv.now)
+	}
 	if nested {
 		x, y = hv.hives[hive].X, hv.hives[hive].Y
 	}
@@ -89,6 +117,7 @@ func (hv *Hives) Swarm() {
 	} else if spawned > 0 {
 		hv.h.Threat("Hive swarm", x, y, "A hive swarm bursts from the rock!")
 	}
+	return true
 }
 
 // SpawnNear places s on a walkable tile within two of (x, y).

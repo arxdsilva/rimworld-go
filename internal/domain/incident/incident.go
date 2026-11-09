@@ -67,9 +67,12 @@ const (
 	HeatWave
 	ColdSnap
 	VolcanicWinter
-	// RefugeeChased (EAI-0 skeleton, Threat category, weight 0: in no pool
-	// yet): a refugee asks for shelter from the enemies chasing them.
+	// RefugeeChased (EAI-031, Nature pool): a refugee asks for shelter from
+	// the enemies chasing them; taking them in queues the pursuers' raid.
 	RefugeeChased
+	// RivalRaid (EAI-030, in no pool): a raid the story queued for a later
+	// tick (State.Queue): a rival faction's, or the refugee's pursuers'.
+	RivalRaid
 	NumIDs
 )
 
@@ -87,12 +90,19 @@ type Def struct {
 	// Disease: its weight scales with the difficulty's disease frequency
 	// (WeightAt).
 	Disease bool
+	// Helpful: the colony gains by it (a windfall, a joiner, a trade); the
+	// storyteller's positive bias draws among these (EAI-033).
+	Helpful bool
 }
 
 // Odds scales two families' weights, percent (FullFreq keeps the
 // catalogue's): diseases by the difficulty's disease frequency, climate
-// events (IsClimate) by the wizard's Extreme weather.
-type Odds struct{ Disease, Climate int }
+// events (IsClimate) by the wizard's Extreme weather. Helpful narrows the
+// draw to the helpful events (Def.Helpful; EAI-033).
+type Odds struct {
+	Disease, Climate int
+	Helpful          bool
+}
 
 var (
 	ice = biome.Of(biome.IceSheet, biome.SeaIce)
@@ -106,16 +116,16 @@ var (
 )
 
 var defs = [NumIDs]Def{
-	HerdCrossing: {Key: "herd_crossing", Name: "Herd crossing", Category: Nature, Weight: 30, Cooldown: 10, MinDay: 3, Not: ice},
-	StrayJoins:   {Key: "stray_joins", Name: "Stray joins", Category: Nature, Weight: 10, Cooldown: 15, MinDay: 5},
-	FarmAnimals:  {Key: "farm_animals", Name: "Farm animals wander in", Category: Nature, Weight: 15, Cooldown: 12, MinDay: 4, Not: ice},
-	TakenALiking: {Key: "taken_a_liking", Name: "Taken a liking", Category: Nature, Weight: 10, Cooldown: 8, MinDay: 6},
+	HerdCrossing: {Key: "herd_crossing", Name: "Herd crossing", Category: Nature, Helpful: true, Weight: 30, Cooldown: 10, MinDay: 3, Not: ice},
+	StrayJoins:   {Key: "stray_joins", Name: "Stray joins", Category: Nature, Helpful: true, Weight: 10, Cooldown: 15, MinDay: 5},
+	FarmAnimals:  {Key: "farm_animals", Name: "Farm animals wander in", Category: Nature, Helpful: true, Weight: 15, Cooldown: 12, MinDay: 4, Not: ice},
+	TakenALiking: {Key: "taken_a_liking", Name: "Taken a liking", Category: Nature, Helpful: true, Weight: 10, Cooldown: 8, MinDay: 6},
 	TimbergnawGnawing: {Key: "timbergnaw_gnawing", Name: "Timbergnaw gnawing", Category: Nature, Weight: 7, Cooldown: 20, MinDay: 10,
 		Biomes: biome.Of(biome.BorealForest, biome.Tundra, biome.ColdBog, biome.TemperateForest)},
 	MadAnimal:     {Key: "mad_animal", Name: "Mad animal", Category: Threat, Weight: 1, Cooldown: 10, MinDay: 6},
 	VisitorGroup:  {Key: "visitor_group", Name: "Visitors", Category: Nature, Weight: 12, Cooldown: 8, MinDay: 4},
-	WandererJoins: {Key: "wanderer_joins", Name: "Wanderer joins", Category: Nature, Weight: 6, Cooldown: 20, MinDay: 8},
-	Party:         {Key: "party", Name: "Party", Category: Nature, Weight: 8, Cooldown: 10, MinDay: 6},
+	WandererJoins: {Key: "wanderer_joins", Name: "Wanderer joins", Category: Nature, Helpful: true, Weight: 6, Cooldown: 20, MinDay: 8},
+	Party:         {Key: "party", Name: "Party", Category: Nature, Helpful: true, Weight: 8, Cooldown: 10, MinDay: 6},
 	SolarFlare:    {Key: "solar_flare", Name: "Solar flare", Category: Nature, Weight: 6, Cooldown: 12, MinDay: 12},
 	ShortCircuit:  {Key: "short_circuit", Name: "Short circuit", Category: Nature, Weight: 5, Cooldown: 8, MinDay: 10},
 	// MED-04: the wiki gives no weights or cooldowns for our storyteller;
@@ -127,8 +137,8 @@ var defs = [NumIDs]Def{
 	GutWorms:         {Key: "gut_worms", Name: "Gut worms", Category: Nature, Weight: 4, Cooldown: 25, MinDay: 15, Not: ice, Disease: true},
 	MuscleParasites:  {Key: "muscle_parasites", Name: "Muscle parasites", Category: Nature, Weight: 4, Cooldown: 25, MinDay: 15, Not: ice, Disease: true},
 	// PLAY-024: original tuning (.agents/handoffs/PLAY.md#play024_plan).
-	TraderCaravan: {Key: "trader_caravan", Name: "Trader caravan", Category: Nature, Weight: 14, Cooldown: 9, MinDay: 4},
-	OrbitalTrader: {Key: "orbital_trader", Name: "Orbital trader", Category: Nature, Weight: 12, Cooldown: 7, MinDay: 6},
+	TraderCaravan: {Key: "trader_caravan", Name: "Trader caravan", Category: Nature, Helpful: true, Weight: 14, Cooldown: 9, MinDay: 4},
+	OrbitalTrader: {Key: "orbital_trader", Name: "Orbital trader", Category: Nature, Helpful: true, Weight: 12, Cooldown: 7, MinDay: 6},
 	// DEF-4, wiki: Events (base weight 2.00 against a raid's 7.40; it
 	// needs 400 raid points, the game's own check). Cooldown and first day
 	// are original tuning (the wiki gives none).
@@ -151,7 +161,9 @@ var defs = [NumIDs]Def{
 	HeatWave:       {Key: "heat_wave", Name: "Heat wave", Category: Nature, Weight: 5, Cooldown: 30},
 	ColdSnap:       {Key: "cold_snap", Name: "Cold snap", Category: Nature, Weight: 5, Cooldown: 30},
 	VolcanicWinter: {Key: "volcanic_winter", Name: "Volcanic winter", Category: Nature, Weight: 1, Cooldown: 140, MinDay: 60},
-	RefugeeChased:  {Key: "refugee_chased", Name: "Refugee chased", Category: Threat},
+	// EAI-031: original tuning, a few a year, once the colony has a footing.
+	RefugeeChased: {Key: "refugee_chased", Name: "Refugee chased", Category: Nature, Weight: 3, Cooldown: 30, MinDay: 12},
+	RivalRaid:     {Key: "rival_raid", Name: "Rival raid", Category: Threat},
 }
 
 func init() {
@@ -182,8 +194,8 @@ type State struct {
 	// the absolute tick ClimateFrom to ClimateUntil (0: none).
 	Climate                   ID
 	ClimateFrom, ClimateUntil uint64
-	// Queue (EAI-0 skeleton: nothing queues yet) holds the events the
-	// storyteller has decided on and will fire later, soonest first.
+	// Queue (EAI-030) holds the events the storyteller has decided on and
+	// will fire later, soonest first (equal ticks: in the order queued).
 	Queue []Queued
 }
 
@@ -193,6 +205,28 @@ type Queued struct {
 	ID     ID
 	At     uint64
 	Points int
+}
+
+// Enqueue adds q to the queue behind every entry due no later than q.At.
+func (st *State) Enqueue(q Queued) {
+	i := len(st.Queue)
+	for i > 0 && st.Queue[i-1].At > q.At {
+		i--
+	}
+	st.Queue = append(st.Queue, Queued{})
+	copy(st.Queue[i+1:], st.Queue[i:])
+	st.Queue[i] = q
+}
+
+// PopDue takes the first queued event due by tick now off the queue; ok is
+// false when none is due.
+func (st *State) PopDue(now uint64) (Queued, bool) {
+	if len(st.Queue) == 0 || st.Queue[0].At > now {
+		return Queued{}, false
+	}
+	q := st.Queue[0]
+	st.Queue = append(st.Queue[:0:0], st.Queue[1:]...)
+	return q, true
 }
 
 // Allowed reports whether d may fire at tick now in biome b, ignoring any
@@ -287,7 +321,7 @@ func TotalOdds(c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID)
 func eligible(c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) []Def {
 	var out []Def
 	for _, d := range defs {
-		if d.Category == c && d.WeightOdds(o) > 0 && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
+		if d.Category == c && (!o.Helpful || d.Helpful) && d.WeightOdds(o) > 0 && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
 			out = append(out, d)
 		}
 	}

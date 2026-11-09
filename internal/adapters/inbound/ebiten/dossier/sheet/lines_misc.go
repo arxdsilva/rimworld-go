@@ -55,7 +55,7 @@ func ActivityLine(tr lang.Tr, p game.PawnView, c dossierview.Card) Line {
 	case p.Fleeing:
 		l.Text, l.Tone = tr.T("Fleeing"), ToneWarning
 	case p.RaidPlan != "":
-		l.Text = lang.Tf(tr, "Raiding (%s)", p.RaidPlan)
+		l.Text = lang.Tf(tr, "Raiding (%s)", planWord(tr, p.RaidPlan))
 	case c.AttackTarget != "":
 		l.Text = lang.Tf(tr, "Attacking %s", c.AttackTarget)
 	case p.Job != "" && p.Job != "idle":
@@ -249,4 +249,26 @@ func StatLine(c dossierview.Card, def string, decimals bool) Line {
 		return Line{}
 	}
 	return Line{Text: id.Label() + ": " + FormatStat(id, c.Stats[id], decimals)}
+}
+
+// planWord is a raid plan's name in the player's language (EAI-016); a plan
+// the sheet does not know keeps the game's word.
+func planWord(tr lang.Tr, plan string) string {
+	switch plan {
+	case "assault":
+		return tr.T("assault")
+	case "siege":
+		return tr.T("siege")
+	case "sappers":
+		return tr.T("sappers")
+	case "staged assault":
+		return tr.T("staged assault")
+	case "steal":
+		return tr.T("steal")
+	case "burn":
+		return tr.T("burn")
+	case "defend":
+		return tr.T("defend")
+	}
+	return plan
 }

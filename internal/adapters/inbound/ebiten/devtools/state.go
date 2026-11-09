@@ -30,6 +30,7 @@ type State struct {
 	TX, TY int  // the tile under it
 	Log    bool // debug log panel
 	Insp   bool // debug inspector panel
+	Story  bool // story panel (story.go; EAI-034)
 
 	Fields FieldsOverlay // the map fields overlay (mapfields.go)
 }

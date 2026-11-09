@@ -93,6 +93,7 @@ func (g *Game) phaseIncidents() {
 		g.climateTick(now) // weather_ng1.go (TEMP-2): the climate event's offset and end
 		g.tradeTick(now)   // trade.go (PLAY-024): requested caravans, the ship, pods, sessions; returns at once without trade
 	}
+	g.fireQueue(now) // incident_queue.go (EAI-030): queued events due now
 	if !g.wild {
 		return
 	}
@@ -158,6 +159,16 @@ func (g *Game) pickNature(now uint64) (incident.ID, bool) {
 	if total <= 0 {
 		return 0, false
 	}
+	if bias := g.storyProfile().PositiveBias; g.hasSetup() && bias > 0 && g.rng.IntN(100) < bias {
+		// EAI-033: the storyteller's positive bias draws among the helpful
+		// events (a setup colony's extra draw; a legacy colony draws none)
+		odds.Helpful = true
+		if t := incident.TotalOdds(incident.Nature, g.incidents, rn, g.biome, odds, ok); t > 0 {
+			total = t
+		} else {
+			odds.Helpful = false
+		}
+	}
 	return incident.PickOdds(incident.Nature, g.incidents, rn, g.biome, odds, g.rng.IntN(total), ok)
 }
 
@@ -201,6 +212,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.orbitalFits(now) // trade_orbital.go (PLAY-024)
 	case incident.CrashedShipPart: // raid/shippart.go (DEF-4): one at a time, from 400 raid points
 		return g.raid.Ships.Parts() == 0 && g.raidPoints(int(now/clock.TicksPerDay)) >= raid.ShipPartMinPoints
+	case incident.RefugeeChased:
+		return g.refugeeFits() // incident_queue.go (EAI-031)
 	case incident.CropBlight: // farm (FOOD-2): a healthy zone crop to strike
 		_, ok := farm.Origin(plantField{g}, now)
 		return ok
@@ -246,6 +259,8 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		return g.orbitalArrive(now) // trade_orbital.go (PLAY-024)
 	case incident.CrashedShipPart:
 		return g.raid.Ships.Crash(g.raidPoints(int(now/clock.TicksPerDay)), now) // raid/shippart.go (DEF-4)
+	case incident.RefugeeChased:
+		return g.refugeeChased(now) // incident_queue.go (EAI-031)
 	case incident.CropBlight: // farm (FOOD-2, wiki: Blight)
 		o, n, ok := farm.Strike(plantField{g}, now)
 		g.threat("Blight", o.X, o.Y, "Blight has struck the %s (%d plants). Cut the blighted plants before it spreads.", farm.CropField(o.Species), n)
