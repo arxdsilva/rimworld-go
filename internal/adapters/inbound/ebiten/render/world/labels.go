@@ -200,9 +200,9 @@ func (lb *Labels) drawFightMarker(screen *ebiten.Image, wx, wy, tile float64) {
 	c := color.RGBA{220, 40, 36, 245}
 	h, w := float32(tile*0.12), float32(tile*0.06)
 	th := float32(tile * 0.035)
-	vector.StrokeLine(screen, sx+w, sy-h, sx-w, sy, th, c, true)
-	vector.StrokeLine(screen, sx-w, sy, sx+w, sy, th, c, true)
-	vector.StrokeLine(screen, sx+w, sy, sx-w, sy+h, th, c, true)
+	gfx.PxLine(screen, sx+w, sy-h, sx-w, sy, th, c)
+	gfx.PxLine(screen, sx-w, sy, sx+w, sy, th, c)
+	gfx.PxLine(screen, sx+w, sy, sx-w, sy+h, th, c)
 }
 
 // drawBreakClouds floats a small dark storm cloud over colonists having a
@@ -218,10 +218,10 @@ func (lb *Labels) drawBreakClouds(screen *ebiten.Image, tile float64) {
 		sx, sy := lb.worldToScreenF(wx+0.5, wy-PawnMarkerLift(lb.art())-0.05+bob)
 		c := color.RGBA{70, 70, 84, 230}
 		for _, o := range [][3]float64{{-0.12, 0.02, 0.10}, {0.0, -0.03, 0.13}, {0.13, 0.02, 0.10}} {
-			vector.FillCircle(screen, sx+float32(o[0]*tile), sy+float32(o[1]*tile), float32(o[2]*tile), c, true)
+			gfx.PxDisc(screen, sx+float32(o[0]*tile), sy+float32(o[1]*tile), float32(o[2]*tile), c)
 		}
 		if (v.Present/8+uint64(p.ID))%6 == 0 { // a flicker of lightning
-			vector.StrokeLine(screen, sx, sy+float32(tile*0.08), sx-float32(tile*0.04), sy+float32(tile*0.2), 2, color.RGBA{250, 230, 120, 255}, true)
+			gfx.PxLine(screen, sx, sy+float32(tile*0.08), sx-float32(tile*0.04), sy+float32(tile*0.2), 2, color.RGBA{250, 230, 120, 255})
 		}
 	}
 }
@@ -252,8 +252,8 @@ func (lb *Labels) DrawHostileMarker(screen *ebiten.Image, p game.PawnView, wx, w
 	sx, sy := lb.worldToScreenF(wx+0.5, wy-lift)
 	w, h := float32(tile*0.13), float32(tile*0.1)
 	th := float32(tile * 0.06)
-	vector.StrokeLine(screen, sx-w, sy-h, sx, sy+h, th, c, true)
-	vector.StrokeLine(screen, sx, sy+h, sx+w, sy-h, th, c, true)
+	gfx.PxLine(screen, sx-w, sy-h, sx, sy+h, th, c)
+	gfx.PxLine(screen, sx, sy+h, sx+w, sy-h, th, c)
 }
 
 // drawBuildingDamage puts a small health bar under damaged buildings.

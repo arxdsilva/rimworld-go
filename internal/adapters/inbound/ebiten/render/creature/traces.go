@@ -7,9 +7,9 @@ import (
 	"slices"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -294,7 +294,7 @@ func (c *Set) DrawTraces(v *render.View, screen *ebiten.Image, w game.WorldView,
 				c.drawMeleeTrail(v, screen, tr, 1-age/swingTicks, tx, ty, t)
 			}
 			if age := TraceAge(rt, bloodTicks); tr.Hit && age < bloodTicks {
-				vector.FillCircle(screen, tx, ty, t*0.08*float32(1+math.Floor(age/4)), Fade(bloodClr, 1-age/bloodTicks), true)
+				gfx.PxDisc(screen, tx, ty, t*0.08*float32(1+math.Floor(age/4)), Fade(bloodClr, 1-age/bloodTicks))
 			}
 			continue
 		}
@@ -325,15 +325,15 @@ func (c *Set) DrawTraces(v *render.View, screen *ebiten.Image, w game.WorldView,
 				sx, sy = mx, my
 			}
 			p = min(p, 1)
-			vector.StrokeLine(screen, mx, my, ex, ey, 1, Fade(tracerClr, k*0.35), true)
-			vector.StrokeLine(screen, sx, sy, mx+(ex-mx)*p, my+(ey-my)*p, 3, Fade(tracerClr, k), true)
+			gfx.PxLine(screen, mx, my, ex, ey, 1, Fade(tracerClr, k*0.35))
+			gfx.PxLine(screen, sx, sy, mx+(ex-mx)*p, my+(ey-my)*p, 3, Fade(tracerClr, k))
 		}
 		if age := TraceAge(rt, flashTicks); age < flashTicks {
-			vector.FillCircle(screen, mx, my, t*0.1, Fade(flashClr, 1-age/flashTicks), true)
+			gfx.PxDisc(screen, mx, my, t*0.1, Fade(flashClr, 1-age/flashTicks))
 		}
 		if age := TraceAge(rt, puffTicks); tr.Hit && age >= 3 && age < puffTicks {
 			k := 1 - (age-3)/(puffTicks-3)
-			vector.FillCircle(screen, tx, ty, t*(0.05+0.012*float32(age)), Fade(bloodClr, k), true)
+			gfx.PxDisc(screen, tx, ty, t*(0.05+0.012*float32(age)), Fade(bloodClr, k))
 		}
 	}
 }
@@ -403,7 +403,7 @@ func (c *Set) drawMeleeTrail(v *render.View, screen *ebiten.Image, tr game.Trace
 		for i := 1; i < len(pts); i++ {
 			ax, ay := v.WorldToScreenF(pts[i-1].X, pts[i-1].Y)
 			bx, by := v.WorldToScreenF(pts[i].X, pts[i].Y)
-			vector.StrokeLine(screen, ax, ay, bx, by, 3, Fade(swingClr, k*float64(i)/float64(len(pts)-1)), true)
+			gfx.PxLine(screen, ax, ay, bx, by, 3, Fade(swingClr, k*float64(i)/float64(len(pts)-1)))
 		}
 		return
 	}
@@ -412,10 +412,10 @@ func (c *Set) drawMeleeTrail(v *render.View, screen *ebiten.Image, tr game.Trace
 	for i := 0; i < 3; i++ {
 		a1, a2 := a0+float64(i)*0.6, a0+float64(i+1)*0.6
 		rad := float64(t) * 0.35
-		vector.StrokeLine(screen,
+		gfx.PxLine(screen,
 			tx+float32(math.Cos(a1)*rad), ty+float32(math.Sin(a1)*rad),
 			tx+float32(math.Cos(a2)*rad), ty+float32(math.Sin(a2)*rad),
-			3, Fade(swingClr, k), true)
+			3, Fade(swingClr, k))
 	}
 }
 

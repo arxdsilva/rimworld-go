@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -278,7 +278,7 @@ func (c *Set) DrawParticles(v *render.View, cull *Cull, screen *ebiten.Image, ti
 		if rr := float32(rad) + 1; sx+rr < float32(b.Min.X) || sx-rr > float32(b.Max.X) || sy+rr < float32(b.Min.Y) || sy-rr > float32(b.Max.Y) {
 			continue // off screen: kept, not drawn (a vector fill costs a tessellation and a draw call)
 		}
-		vector.FillCircle(screen, sx, sy, float32(rad), Fade(p.Clr, alpha), true)
+		gfx.PxDisc(screen, sx, sy, float32(rad), Fade(p.Clr, alpha))
 	}
 	*c.Parts = kept
 }
@@ -357,8 +357,8 @@ func (c *Set) DrawWorkGlow(v *render.View, screen *ebiten.Image, tile float64) {
 		cx := float64(b.X) + float64(max(b.W, 1))*0.35
 		cy := float64(b.Y) + float64(max(b.H, 1))*0.5 - 0.35
 		sx, sy := v.WorldToScreenF(cx, cy)
-		vector.FillCircle(screen, sx, sy, float32(tile*0.42), Fade(color.RGBA{255, 170, 70, 255}, 0.2*f), true)
-		vector.FillCircle(screen, sx, sy, float32(tile*0.18), Fade(color.RGBA{255, 210, 120, 255}, 0.35*f), true)
+		gfx.PxDisc(screen, sx, sy, float32(tile*0.42), Fade(color.RGBA{255, 170, 70, 255}, 0.2*f))
+		gfx.PxDisc(screen, sx, sy, float32(tile*0.18), Fade(color.RGBA{255, 210, 120, 255}, 0.35*f))
 	}
 }
 

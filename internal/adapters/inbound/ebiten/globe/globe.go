@@ -9,7 +9,6 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
@@ -1086,7 +1085,7 @@ func (g *View) drawMarks(dst *ebiten.Image) {
 			continue
 		}
 		x, y := float64(sx), float64(sy)
-		vector.FillCircle(dst, sx, sy, float32(size*0.56), color.RGBA{10, 14, 20, 150}, true)
+		gfx.PxDisc(dst, sx, sy, float32(size*0.56), color.RGBA{10, 14, 20, 150})
 		if img := g.cat.Image(m.Key, color.NRGBA{}); img != nil {
 			// The glyphs are white: the faction accent is a colour scale.
 			b := img.Bounds()
@@ -1097,7 +1096,7 @@ func (g *View) drawMarks(dst *ebiten.Image) {
 			op.GeoM.Translate(x-size/2, y-float64(b.Dy())*s/2)
 			dst.DrawImage(img, op)
 		} else {
-			vector.FillCircle(dst, sx, sy, float32(size*0.32), color.RGBA{m.Tint.R, m.Tint.G, m.Tint.B, 255}, true)
+			gfx.PxDisc(dst, sx, sy, float32(size*0.32), color.RGBA{m.Tint.R, m.Tint.G, m.Tint.B, 255})
 		}
 	}
 	// Names, as placed by Build's collision pass: a 1 px dark shadow, then

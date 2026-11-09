@@ -263,7 +263,7 @@ func (s *Screen) DrawDiorama(screen *ebiten.Image, sw, sh int, dim float64) bool
 			ph := fract(t/150 + hashUnit(h))
 			ex := sx + float32(tile*((hashUnit(randx.Mix64(h))-0.5)*0.3+0.08*math.Sin(t/40+float64(e))))
 			ey := sy - float32(tile*(0.25+1.3*ph))
-			vector.FillCircle(screen, ex, ey, float32(math.Max(1, tile*0.022)), fade(color.RGBA{255, 170, 80, 255}, 0.8*(1-ph)), true)
+			gfx.PxDisc(screen, ex, ey, float32(math.Max(1, tile*0.022)), fade(color.RGBA{255, 170, 80, 255}, 0.8*(1-ph)))
 		}
 	}
 	for i := 0; i < motes; i++ {
@@ -272,7 +272,7 @@ func (s *Screen) DrawDiorama(screen *ebiten.Image, sw, sh int, dim float64) bool
 		if i%3 == 0 {
 			c = uikit.Dust
 		}
-		vector.FillCircle(screen, x, y, r, fade(c, al), true)
+		gfx.PxDisc(screen, x, y, r, fade(c, al))
 	}
 	if d.scrim == nil || d.scrimW != sw || d.scrimH != sh {
 		d.scrim = ebiten.NewImageFromImage(buildScrim(sw, sh))

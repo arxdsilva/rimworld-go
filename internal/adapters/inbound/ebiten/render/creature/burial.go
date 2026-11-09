@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -123,7 +123,7 @@ func (c *Set) DrawCorpseItem(v *render.View, pass sprite.Pass, screen *ebiten.Im
 	c.DrawFigure(v, pass, screen, p, wx, wy, tile, CorpsePlanFor(v.Art, it).Ps)
 	for _, f := range CorpseFlies(it, v.Present) {
 		fx, fy := v.WorldToScreenF(f[0], f[1])
-		vector.FillCircle(screen, fx, fy, float32(math.Max(1.2, tile*0.025)), color.RGBA{24, 22, 20, 255}, true)
+		gfx.PxDisc(screen, fx, fy, float32(math.Max(1.2, tile*0.025)), color.RGBA{24, 22, 20, 255})
 	}
 }
 
@@ -211,15 +211,15 @@ func (c *Set) DrawFlame(v *render.View, screen *ebiten.Image, cx, cy, t, tile, k
 // per tile; shared by the colony and the main-menu diorama.
 func DrawFlameScreen(screen *ebiten.Image, sx, sy float32, t, tile, k float64) {
 	f := 0.75 + 0.25*math.Sin(t*0.31)*math.Sin(t*0.13+2)
-	vector.FillCircle(screen, sx, sy+float32(tile*0.12), float32(tile*0.75*k), Fade(color.RGBA{255, 150, 60, 255}, 0.10*f), true)
-	vector.FillCircle(screen, sx, sy+float32(tile*0.12), float32(tile*0.42*k), Fade(color.RGBA{255, 170, 80, 255}, 0.16*f), true)
+	gfx.PxDisc(screen, sx, sy+float32(tile*0.12), float32(tile*0.75*k), Fade(color.RGBA{255, 150, 60, 255}, 0.10*f))
+	gfx.PxDisc(screen, sx, sy+float32(tile*0.12), float32(tile*0.42*k), Fade(color.RGBA{255, 170, 80, 255}, 0.16*f))
 	for i, c := range []color.RGBA{{205, 60, 30, 255}, {245, 130, 40, 255}, {255, 205, 90, 255}} {
 		base := float32(tile * (0.17 - 0.04*float64(i)) * f * k)
 		for j := 0; j < 4; j++ {
 			h := float64(j) / 4
 			sway := math.Sin(t*0.22+h*3+float64(i)) * 0.03 * h * k
 			px, py := sx+float32(sway*tile), sy-float32(h*0.32*f*k*tile)
-			vector.FillCircle(screen, px, py, base*float32(1-h*0.7), Fade(c, 0.9), true)
+			gfx.PxDisc(screen, px, py, base*float32(1-h*0.7), Fade(c, 0.9))
 		}
 	}
 }

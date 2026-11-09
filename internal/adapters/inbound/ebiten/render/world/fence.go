@@ -4,8 +4,8 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -55,6 +55,6 @@ func (o *Objects) DrawForbiddenMark(screen *ebiten.Image, wx, wy int, tile float
 	sx, sy := o.worldToScreen(wx, wy)
 	t := float32(tile)
 	cx, cy, rad := sx+t*0.75, sy+t*0.25, t*0.2
-	vector.StrokeCircle(screen, cx, cy, rad, max(t/16, 2), uikit.Danger, true)
-	vector.StrokeLine(screen, cx-rad*0.7, cy+rad*0.7, cx+rad*0.7, cy-rad*0.7, max(t/16, 2), uikit.Danger, true)
+	gfx.PxRing(screen, cx, cy, rad, max(t/16, 2), uikit.Danger)
+	gfx.PxLine(screen, cx-rad*0.7, cy+rad*0.7, cx+rad*0.7, cy-rad*0.7, max(t/16, 2), uikit.Danger)
 }

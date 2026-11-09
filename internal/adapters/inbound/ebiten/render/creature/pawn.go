@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -464,9 +464,9 @@ func (c *Set) DrawSnoreFor(v *render.View, screen *ebiten.Image, id uint64, hx, 
 		clr := Fade(color.RGBA{238, 240, 250, 255}, 0.9*math.Sin(math.Pi*t))
 		w := float32(size)
 		lw := float32(math.Max(1.5, tile*0.022))
-		vector.StrokeLine(screen, sx, sy, sx+w, sy, lw, clr, true)
-		vector.StrokeLine(screen, sx+w, sy, sx, sy+w, lw, clr, true)
-		vector.StrokeLine(screen, sx, sy+w, sx+w, sy+w, lw, clr, true)
+		gfx.PxLine(screen, sx, sy, sx+w, sy, lw, clr)
+		gfx.PxLine(screen, sx+w, sy, sx, sy+w, lw, clr)
+		gfx.PxLine(screen, sx, sy+w, sx+w, sy+w, lw, clr)
 	}
 }
 

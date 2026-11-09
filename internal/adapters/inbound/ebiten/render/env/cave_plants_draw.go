@@ -5,8 +5,8 @@ import (
 	"math"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 )
@@ -68,8 +68,8 @@ func (e *Layer) DrawDuskGlow(v *render.View, screen *ebiten.Image, w game.WorldV
 				continue
 			}
 			sx, sy := v.WorldToScreenF(float64(p.X)+0.5, float64(p.Y)+0.5)
-			vector.FillCircle(screen, sx, sy, float32(tile*duskGlowRadius), fade(duskGlowClr, DuskGlowMax*0.4*k*pulse), true)
-			vector.FillCircle(screen, sx, sy, float32(tile*duskGlowRadius*0.45), fade(duskGlowClr, DuskGlowMax*k*pulse), true)
+			gfx.PxDisc(screen, sx, sy, float32(tile*duskGlowRadius), fade(duskGlowClr, DuskGlowMax*0.4*k*pulse))
+			gfx.PxDisc(screen, sx, sy, float32(tile*duskGlowRadius*0.45), fade(duskGlowClr, DuskGlowMax*k*pulse))
 		}
 	}
 }

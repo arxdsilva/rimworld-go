@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -48,8 +47,8 @@ func DrawRoute(screen *ebiten.Image, tile float64, p game.PawnView, wx, wy float
 		if i == 1 && p.HasOrder {
 			fill = RouteTint(uikit.BtnSelected, 235) // the order in progress
 		}
-		vector.FillCircle(screen, sx, sy, rad, fill, true)
-		vector.StrokeCircle(screen, sx, sy, rad, 1.5, line, true)
+		gfx.PxDisc(screen, sx, sy, rad, fill)
+		gfx.PxRing(screen, sx, sy, rad, 1.5, line)
 		label := ">" // the order in progress
 		if i > 1 || !p.HasOrder {
 			n++
@@ -81,7 +80,7 @@ func Dashed(screen *ebiten.Image, ax, ay, bx, by, dash float32, c color.RGBA) {
 	steps := int(l / dash)
 	for i := 0; i < steps; i += 2 {
 		t0, t1 := float32(i)/float32(steps), float32(i+1)/float32(steps)
-		vector.StrokeLine(screen, ax+dx*t0, ay+dy*t0, ax+dx*t1, ay+dy*t1, 2, c, true)
+		gfx.PxLine(screen, ax+dx*t0, ay+dy*t0, ax+dx*t1, ay+dy*t1, 2, c)
 	}
 }
 
