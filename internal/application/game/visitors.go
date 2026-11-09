@@ -367,6 +367,10 @@ func (h visitFighters) NearestColonist(x, y int) (entity.EntityID, int, int, boo
 	id, p, ok := h.g.nearestColonist(Position{X: x, Y: y})
 	return id, p.X, p.Y, ok
 }
+func (h visitFighters) HitAt(id entity.EntityID) uint64 { return h.g.lastHit[id].Tick }
+func (h visitFighters) Trader(id entity.EntityID) bool {
+	return h.g.trade.caravan != nil && h.g.trade.caravan.Trader == id
+}
 
 type visitDiplomacy struct{ g *Game }
 
@@ -374,6 +378,7 @@ func (h visitDiplomacy) Factions() []faction.Faction              { return h.g.n
 func (h visitDiplomacy) Cooldown(id int) faction.Cooldowns        { return h.g.cooldownOf(id) }
 func (h visitDiplomacy) SetCooldown(id int, cd faction.Cooldowns) { h.g.setCooldown(id, cd) }
 func (h visitDiplomacy) RelDay(now uint64) int                    { return h.g.relDay(now) }
+func (h visitDiplomacy) Sided(i int, now uint64)                  { queueRival(h.g, i, now) } // factions.go
 
 // visitCarrying is visit.Carrying (visit/carry.go, MAP-23).
 type visitCarrying struct{ g *Game }

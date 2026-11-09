@@ -102,7 +102,7 @@ type Arrivals interface {
 	Letter(kind, title string, focus entity.EntityID, format string, args ...any)
 }
 
-// Fighters is the allies' fight.
+// Fighters is the allies' fight and the visitors' defence (defend.go).
 type Fighters interface {
 	RaiderIDs() []entity.EntityID
 	StandingRaider(id entity.EntityID) bool
@@ -115,6 +115,10 @@ type Fighters interface {
 	Engage(id entity.EntityID, x, y, r int, now uint64) bool
 	// NearestColonist is the standing colonist nearest (x, y).
 	NearestColonist(x, y int) (entity.EntityID, int, int, bool)
+	// HitAt is the tick id was last hit (0: never).
+	HitAt(id entity.EntityID) uint64
+	// Trader reports id is a trader caravan's trader (its guards are not).
+	Trader(id entity.EntityID) bool
 }
 
 // Carrying is carrying a wounded friend (carry.go).
@@ -139,4 +143,7 @@ type Diplomacy interface {
 	SetCooldown(id int, cd faction.Cooldowns)
 	// RelDay is the colony day of tick now.
 	RelDay(now uint64) int
+	// Sided: the colony took faction i's (index) side at tick now (its aid came);
+	// one of its enemies may queue a raid on the colony (EAI-015).
+	Sided(i int, now uint64)
 }

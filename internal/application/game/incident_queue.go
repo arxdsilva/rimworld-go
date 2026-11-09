@@ -37,6 +37,15 @@ func (g *Game) QueueIncident(id incident.ID, at uint64, points int) {
 // points) for the tick at: a rival faction's, or a refugee's pursuers.
 func (g *Game) QueueRaid(at uint64, points int) { g.QueueIncident(incident.RivalRaid, at, points) }
 
+// QueueRivalRaid queues a raid of faction fi (an index) for the tick at,
+// of points threat points (0: sized when it fires): a rival's raid
+// (EAI-015, rivalRaid in factions.go). If fi is defeated by then, any
+// hostile faction comes instead.
+func (g *Game) QueueRivalRaid(at uint64, fi, points int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.incidents.Enqueue(incident.Queued{ID: incident.RivalRaid, At: at, Points: points, Faction: fi + 1})
+}
+
 // fireQueue fires every queued event due by now, in queue order.
 func (g *Game) fireQueue(now uint64) {
 	for {
@@ -52,6 +61,9 @@ func (g *Game) fireQueue(now uint64) {
 // cooldown and the day checks, as the storyteller already chose it.
 func (g *Game) fireQueued(q incident.Queued, now uint64) {
 	if q.ID == incident.RivalRaid {
+		if q.Faction > 0 && rivalRaid(g, q.Faction-1, q.Points, now) { // factions.go (EAI-015)
+			return
+		}
 		g.queuedRaid(q.Points, now)
 		return
 	}

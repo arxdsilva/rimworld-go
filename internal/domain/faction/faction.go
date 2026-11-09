@@ -4,8 +4,6 @@
 package faction
 
 import (
-	"slices"
-
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/pkg/randx"
 )
@@ -81,22 +79,12 @@ type Faction struct {
 	History         []int16 // daily goodwill, last 60 days
 	Events          []string
 	// Enemies are the ids of the factions this one is at war with,
-	// ascending (EAI-0 skeleton: always empty yet; saves before v17 get an
-	// empty list).
+	// ascending (wars.go, EAI-015: set once by SetEnemies, never changed;
+	// a save before v17 gets them on load).
 	Enemies []int
-}
-
-// EnemyBonus is the goodwill a faction gives the colony for downing one of
-// its enemies' people (ours; EAI-0 placeholder, nothing awards it yet).
-const EnemyBonus = 2
-
-// EnemyBonusAt is the goodwill f gives the colony for downing a member of
-// faction id: EnemyBonus when f is at war with id, else 0.
-func (f Faction) EnemyBonusAt(id int) int {
-	if _, ok := slices.BinarySearch(f.Enemies, id); ok {
-		return EnemyBonus
-	}
-	return 0
+	// ThankedDay is 1 + the colony day it last gave goodwill for a beaten
+	// enemy raid (0: never; EnemyBeaten's cooldown).
+	ThankedDay int
 }
 
 // Slot is one configured faction type on the Create World screen.
@@ -193,7 +181,8 @@ func DefaultSlots() []Slot {
 	return []Slot{{Settlers, 2}, {Clans, 2}, {Drifters, 1}, {Freebooters, 1}}
 }
 
-// Generate makes the factions for the slots (names, leaders, goodwill).
+// Generate makes the factions for the slots (names, leaders, goodwill)
+// and their wars (SetEnemies).
 // Counts above a type's MaxCount are clamped; the player type is skipped.
 // Names are unique within the result.
 func Generate(slots []Slot, rng *randx.Rand) []Faction {
@@ -223,6 +212,7 @@ func Generate(slots []Slot, rng *randx.Rand) []Faction {
 			out = append(out, f)
 		}
 	}
+	SetEnemies(out) // wars.go: no draw from rng
 	return out
 }
 

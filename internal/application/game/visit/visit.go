@@ -19,7 +19,8 @@ import (
 // (Where Visitor, their faction) on the raider list as non-hostile pawns,
 // so colonists can chat with them and capture or arrest them; the visit
 // itself is driven from here, out of the raid and prisoner AI. Leaving is
-// one-way: once a visitor turns for the edge it never strolls again.
+// one-way: once a visitor turns for the edge it never strolls again. A
+// visitor takes on raiders and hostile animals near it (defend.go).
 
 const (
 	// stay is how long a group strolls before it leaves.
@@ -60,6 +61,9 @@ type Rec struct {
 	// that it gave up on that for this visit (carry.go). Absent in older saves.
 	Fetch   entity.EntityID
 	NoCarry bool
+	// Defend is the tick its defence holds until (defend.go, EAI-011; 0:
+	// not defending). Absent in older saves.
+	Defend uint64
 }
 
 // Visits is the visitor records (the host's, Records) over the host.
@@ -255,6 +259,16 @@ func (v Visits) step(a Aid, r *Rec, now uint64) bool {
 	}
 	x, y := h.Pos(r.ID)
 	j := h.Job(r.ID)
+	if !r.Ally && h.Carrying(r.ID) == 0 {
+		fight, joined := defend(h, r, x, y, j, now) // defend.go (EAI-011)
+		if joined {
+			v.joinMessage(r, x, y)
+		}
+		if fight {
+			return true
+		}
+		j = h.Job(r.ID)
+	}
 	if !r.Leaving && now >= r.LeaveAt {
 		r.Leaving, r.RetryAt = true, 0
 		h.Release(r.ID)

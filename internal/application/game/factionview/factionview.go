@@ -25,6 +25,9 @@ type Row struct {
 	History     []int16
 	Events      []string
 	Hidden      bool
+	// Enemies names the factions it is at war with, in id order (EAI-015;
+	// All fills it, Of alone leaves it empty).
+	Enemies []string
 }
 
 // Of is faction f's row.
@@ -61,7 +64,9 @@ func Of(f faction.Faction) Row {
 func All(fs []faction.Faction) []Row {
 	out := make([]Row, 0, len(fs))
 	for _, f := range fs {
-		out = append(out, Of(f))
+		r := Of(f)
+		r.Enemies = faction.EnemyNames(fs, f)
+		out = append(out, r)
 	}
 	return out
 }

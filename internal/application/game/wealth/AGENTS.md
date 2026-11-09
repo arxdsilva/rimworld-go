@@ -1,14 +1,14 @@
 # internal/application/game/wealth
 
 ## Purpose
-The colony's wealth for the storyteller (EAI-0): `Tracker` per map with `Value`, `History`, `Step(now)`, `Export`/`Import`.
+The colony's wealth for the storyteller (EAI-014): `Tracker` per map with `Value`, `History`, `Step(now)`, `Export`/`Import`.
 
 ## Contracts
-- `Counter` (one method, `Wealth() int`) is the full count; the game passes itself. The package never imports `game`.
-- The game keeps one `*Tracker` per map (`mapState.wealth`, built in `initMapHosts`) and saves `Export()` per map (`saveState.Wealth`, nil while empty).
-- EAI-0 skeleton: `Step` recounts and samples nothing, `History` stays empty, nothing in the tick calls `Step`. The v<17 migration seeds a loaded map with one `Step` (derived, not saved or hashed).
+- `Source` (one method, `WealthOf(from, to) (sum, parts)`) is the map's wealth in parts; the game passes itself (`Game.WealthOf`, story.go). The package never imports `game`.
+- The game keeps one `*Tracker` per map (`mapState.wealth`, built in `initMapHosts`) and saves `Export()` per map (`saveState.Wealth`, nil while empty). `Game.Wealth()` is `Value()`.
+- The tick calls `Step(now)` every `Stride` ticks on each map's pass (phases.go). Calling it twice at one tick is harmless; a missed slice is caught up.
 
 ## Invariants
-- Deterministic: time only from the caller's tick; no randomness.
-- The last count is derived: never saved, so a save's state hash does not depend on when it was counted.
-- No global scans on the tick: a full pass (`Counter.Wealth`) is for `Step` on its schedule and for read models, never every tick.
+- No global scan on the tick: a Step sums at most its slice's share of the parts (about parts/100); a full count (`WealthOf(0, max)`) happens only in `Value` before the first pass has finished.
+- Deterministic: time only from the caller's tick; no randomness. Everything, the pass in progress included, is saved.
+- A pass starts on an hour's first tick and ends in its last slice (a Step at any other tick, as the v<17 load's, starts nothing); the day's first finished pass is its sample; at most `HistoryDays` samples.

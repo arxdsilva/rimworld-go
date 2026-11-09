@@ -215,6 +215,7 @@ func (a Aid) arrive(c *Call, now uint64) bool {
 		return true
 	}
 	c.Here, c.LeaveAt, c.Calm = true, now+allyStay, now
+	h.Sided(ref-1, now) // its enemies take note (EAI-015)
 	h.Letter("good", "Military aid", ids[0], "%d fighters of %s have come to help defend the colony. They will fight any raiders and hostile animals, and go home once all is quiet, within a day.", len(ids), f.Name)
 	return true
 }

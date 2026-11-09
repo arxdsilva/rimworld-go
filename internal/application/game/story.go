@@ -10,8 +10,10 @@ import (
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
@@ -96,12 +98,14 @@ func (g *Game) storyThreat(roll, day int, winter bool, pct int, now uint64) {
 		return
 	}
 	switch k {
-	case raid.ThreatPack:
-		g.raid.Threats.WolfPack((2 + g.rng.IntN(2)) * 100)
+	case raid.ThreatPack: // packs sized by the threat points (animal.PackSize, EAI-005), as a raid is
+		g.raid.Threats.WolfPack(g.threatPoints() * pct / 100)
 	case raid.ThreatManhunters:
-		rageOf(g).ManhunterPack((3 + g.rng.IntN(3)) * 100)
+		rageOf(g).ManhunterPack(g.threatPoints() * pct / 100)
 	case raid.ThreatHive:
-		g.raid.Hives.Swarm()
+		if !g.raid.Hives.Infest() { // raid/hive.go (EAI-035): no hive spot, a raid instead
+			g.storyRaid(day, pct)
+		}
 	case raid.ThreatMad:
 		if !g.madAnimal(now, false) && g.threatOK(raid.ThreatRaid) { // incidents.go
 			g.storyRaid(day, pct)
@@ -201,7 +205,12 @@ func (g *Game) maxRaiders() int {
 // armed by its tech level.
 func (g *Game) storyRaid(day, pct int) {
 	fi := faction.PickRaider(g.ng.factions, g.rng)
-	pts := g.threatPoints() * pct / 100
+	factionRaid(g, fi, g.threatPoints()*pct/100, day)
+}
+
+// factionRaid sends faction fi's raid (index; -1: unattributed) at pts
+// times the faction's multiplier, armed by its tech level.
+func factionRaid(g *Game, fi, pts, day int) {
 	tech := faction.Industrial
 	if fi >= 0 {
 		d := faction.DefOf(g.ng.factions[fi].Type)
@@ -319,10 +328,10 @@ func (g *Game) fireScheduled(key string, now uint64) {
 	switch key {
 	case "raid":
 		g.storyRaid(g.relDay(now), 100)
-	case "predator_pack":
-		g.raid.Threats.WolfPack((2 + g.rng.IntN(2)) * 100)
+	case "predator_pack": // sized by the day's threat points (animal.PackSize, EAI-005)
+		g.raid.Threats.WolfPack(g.raidPoints(g.relDay(now)))
 	case "manhunter_pack":
-		rageOf(g).ManhunterPack((3 + g.rng.IntN(3)) * 100)
+		rageOf(g).ManhunterPack(g.raidPoints(g.relDay(now)))
 	case "hive_swarm":
 		g.raid.Hives.Swarm()
 	default:
@@ -470,9 +479,49 @@ func (h travelHost) LayInShip(p, c entity.EntityID) bool {
 	return shipOf(h.g).LayIn(shipHost{h.g}, p, c)
 }
 
-// WealthHistory is the current map's wealth samples, oldest first (EAI-0:
-// none are taken yet).
+// WealthHistory is the current map's daily wealth samples, oldest first
+// (game/wealth, EAI-014: the History window's graph).
 func (g *Game) WealthHistory() []wealth.Sample { return slices.Clone(g.wealth.History()) }
+
+// WealthOf is game/wealth's Source over the current map (EAI-014): the
+// colony's worth in parts, in a fixed order (the goods on the map, the
+// buildings, the tame animals, then what its colonists carry as one
+// part), summing parts from..to-1; parts is how many there are now.
+func (g *Game) WealthOf(from, to int) (sum, parts int) {
+	ni, nb, na := len(g.itemIDs), len(g.bldgIDs), len(g.animalIDs)
+	parts = ni + nb + na + 1
+	from, to = max(from, 0), min(to, parts)
+	for i := from; i < to; i++ {
+		sum += wealthPart(g, i, ni, nb, na)
+	}
+	return sum, parts
+}
+
+// wealthPart is part i's worth (ni goods, nb buildings, na animals, then
+// the gear).
+func wealthPart(g *Game, i, ni, nb, na int) int {
+	switch {
+	case i < ni:
+		if st, ok := g.stacks.Get(g.itemIDs[i]); ok {
+			return st.Kind.Value() * st.Qty
+		}
+	case i < ni+nb:
+		if b, ok := g.bldgs.Get(g.bldgIDs[i-ni]); ok && !notColonyPiece(b) { // ruins and vents are no one's wealth
+			v := construction.WoodCost(b.Kind)*2 + construction.WorkTicks(b.Kind)/20
+			if item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone {
+				v = v * 3 / 2
+			}
+			return v
+		}
+	case i < ni+nb+na:
+		if a, ok := g.animals.Get(g.animalIDs[i-ni-nb]); ok && a.Tame {
+			return animal.DefOf(a.Species).MaxHP * 2
+		}
+	default:
+		return senseOf(g).Gear.Wealth() // game/sense (CSE-036): what its colonists carry
+	}
+	return 0
+}
 
 // StoryDebugView is the storyteller's state for the developer overlay
 // (EAI-0): the current map's queued events, the tick the next threat is

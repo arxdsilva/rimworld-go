@@ -205,6 +205,9 @@ type Queued struct {
 	ID     ID
 	At     uint64
 	Points int
+	// Faction is the raiding faction of a RivalRaid (1 + its index; 0: any
+	// hostile one, picked when it fires). Absent in older saves (EAI-015).
+	Faction int
 }
 
 // Enqueue adds q to the queue behind every entry due no later than q.At.
