@@ -54,3 +54,7 @@ Entity data already lives in sparse-set `component.Store[T]` stores (`internal/d
 ## Sources
 
 Research fragment R-sched, with every URL; summarised in the gap file. Bevy schedules and run conditions; the flecs pipeline and rate filters; Unity DOTS system groups; Factorio Friday Facts #18, #67, #324, #364, #421 (sleeping, targeters, deterministic merge of wake-ups, update buckets); Victoria 3 Dev Diary #76 (tiered tick tasks, superset spikes); Game Programming Patterns (Update Method, Dirty Flag, Data Locality); Acton, CppCon 2014.
+
+## Revision (2026-11-08, ARCH-009): built
+
+Built as `internal/application/game/sched`: 27 systems from `phaseSystems(g)`, ordered once with Kahn's algorithm over (phase rank, name); colony-wide work runs as Colony systems and the exact cadence rows as `Every`/`Offset`. Every golden is unchanged and a pass costs about 58 ns with 0 allocations. Systems still declare `Legacy` access; real read and write sets come before any of them runs in parallel.

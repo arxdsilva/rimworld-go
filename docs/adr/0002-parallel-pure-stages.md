@@ -67,3 +67,7 @@ Research fragment R-parallel, with every URL:
 - Go issues #15110 and #54622: the cost of waking a parked worker.
 - Random123 and SplitMix64.
 - The Age of Empires IV and *Realms of Ruin* GDC talks.
+
+## Revision (2026-11-08, ARCH-010): the first stage
+
+The first stage is path searches, with animal movement repaths as its consumer (`game/pathstage`, `internal/platform/pool`). Requests are decided against end-of-loop occupancy and applied in ID order; with 1, 2 or 8 lanes the state hash equals serial every tick. The pool beats the bar on `BenchmarkAnimalRepath500` (1.59×, −0.57 ms) but real colonies queue few repaths, so it rarely runs. The measured raid worst tick is a first-tick cache build, not a search, which points the next work at a warm step after load (GAR-031) before more parallel stages. Animal decisions stay serial, as expected above.
