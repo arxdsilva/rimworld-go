@@ -156,13 +156,19 @@ import (
 // Re-pinned (OPT-001 Wave 4): saved messages and letters carry Msg, their
 // catalog key and args. With Msg blanked in the hash all six old pins hold;
 // the two 48x40 runs that end with no message saved keep theirs.
+// Re-pinned (GAR-006): the periodic work is spread (game/cadence). Eggs,
+// troughs and pens visit each entity on its own tick of the period; rot,
+// wear, pots, medical, census, story and the day's work run on their own
+// slots off the hour. Each entity keeps exactly its rate
+// (TestStaggeredSitesKeepTheirRate); the tick it fires on moves. Three of
+// the six runs move; same-seed runs identical (-count=2).
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0x3e5acab81c2a989d,
-	"48x40/seed7":    0x529de30845e69cf5,
+	"48x40/seed7":    0xe2bcce531fcd19c2,
 	"48x40/seed42":   0xd7d1da8681635747,
-	"120x120/seed1":  0x1fe419a463e06408,
+	"120x120/seed1":  0x64cf7b5f24124fa2,
 	"120x120/seed7":  0x8954fb673149b61d,
-	"120x120/seed42": 0x2ee99f80de174aa2,
+	"120x120/seed42": 0xada3ad9b78b85a63,
 }
 
 const scaleGoldenTicks = 20000

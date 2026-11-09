@@ -238,7 +238,11 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (OPT-001 wave 4): saved messages and letters now carry Msg,
 	// their catalog key and arguments. With Msg blanked in the hash the old
 	// pin holds, so Text and every other field are unchanged.
-	const want uint64 = 0x847a4f202c0f89ba
+	//
+	// Re-pinned (GAR-006): the periodic work is spread (game/cadence): each
+	// entity keeps its rate, on a different tick. The midnight worst tick
+	// drops from about 1.6 to 1.0 ms (BenchmarkTickDayRollover500).
+	const want uint64 = 0xdb1146b479e0e9c4
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)
