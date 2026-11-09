@@ -197,7 +197,7 @@ The day, hour and 250-tick work no longer fires all at once (GAR-006..009) · 20
 - Open: the hand staggers fold into the scheduler's `Every`/`Offset` (ARCH-009); the day-cross matrix cell on a quiet machine.
 
 ## PERF-009-render-pass-order
-Render draw order, prepare pass and frame constants (render-b) · 2026-11-08 · ce819a3f3, b1a737b35, 1c1c65c4f
+Render draw order, prepare pass and frame constants (render-b) · 2026-11-08 · ce819a3f3, b1a737b35, 1c1c65c4f, 31a7ba528
 - Changed: pixeldiff `EdgeMask` also counts partial-alpha pixels and their 1 px neighbours (GAR-158). Crops flush only when a non-plant object overlaps the queued crop box (`TestCropFlushOnlyOnOverlap`; commands 150 to 148, DrawArt500/z1 draw calls -1.6%). `Pipeline.prepare` runs chunk, map, snow, wet and fog bakes before the first world draw (GAR-145; zoom 0.5 bake frames 148 to 102 dst switches, DrawArt500 zmin -59%, px64 -56%). Creature cell sets rebuild only when a creature cell changed (GAR-153); `SyncUniforms` copies only on a light change (GAR-154; z1 -3.5%).
 - Decisions: the harness compares atlas-placement-sensitive floats, so a cross-binary run of the bake tiers differs by about 70 to 100 px (max 1, rare edge pixels), as does a baseline with three dummy images added. Steady state and the live tier are byte-identical.
 - Skipped: water without per-tile region uniforms. One sheet gave 80 of 921,600 px at zoom 2 (max 1) and the old path drifted 78 px beside it: not byte-exact, nothing committed.
