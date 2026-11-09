@@ -91,9 +91,9 @@ func (c *Combat) DrawWeaponRange(v *render.View, dst *ebiten.Image, x, y int, r 
 	cx, cy := v.WorldToScreenF(float64(x)+0.5, float64(y)+0.5)
 	t := v.Cam.Tile()
 	th := float32(max(1.5, t*0.04))
-	vector.StrokeCircle(dst, cx, cy, float32(r.Max*t), th, rangeMaxColour, true)
+	gfx.PxRing(dst, cx, cy, float32(r.Max*t), th, rangeMaxColour)
 	if r.Min > 0 && r.Min < r.Max {
-		vector.StrokeCircle(dst, cx, cy, float32(r.Min*t), th, rangeMinColour, true)
+		gfx.PxRing(dst, cx, cy, float32(r.Min*t), th, rangeMinColour)
 	}
 }
 
@@ -107,12 +107,12 @@ func (c *Combat) DrawTargetMark(v *render.View, dst *ebiten.Image, x, y int) {
 	}
 	r := float32(t * 0.62)
 	th := float32(max(1.5, t*0.06))
-	vector.StrokeCircle(dst, cx, cy, r, th, targetColour, true)
+	gfx.PxRing(dst, cx, cy, r, th, targetColour)
 	gap := r * 0.45 // four ticks crossing the ring: a crosshair
-	vector.StrokeLine(dst, cx-r-gap, cy, cx-r+gap, cy, th, targetColour, true)
-	vector.StrokeLine(dst, cx+r-gap, cy, cx+r+gap, cy, th, targetColour, true)
-	vector.StrokeLine(dst, cx, cy-r-gap, cx, cy-r+gap, th, targetColour, true)
-	vector.StrokeLine(dst, cx, cy+r-gap, cx, cy+r+gap, th, targetColour, true)
+	gfx.PxLine(dst, cx-r-gap, cy, cx-r+gap, cy, th, targetColour)
+	gfx.PxLine(dst, cx+r-gap, cy, cx+r+gap, cy, th, targetColour)
+	gfx.PxLine(dst, cx, cy-r-gap, cx, cy-r+gap, th, targetColour)
+	gfx.PxLine(dst, cx, cy+r-gap, cx, cy+r+gap, th, targetColour)
 }
 
 // ShotLines are the lines of the hit-chance card: the headline, then one
@@ -146,7 +146,7 @@ func (c *Combat) DrawShotFeedback(v *render.View, dst *ebiten.Image, s *ShotInfo
 	if s.Blocked {
 		col = losBlockColour
 	}
-	vector.StrokeLine(dst, ax, ay, bx, by, float32(max(1.5, v.Cam.Tile()*0.05)), col, true)
+	gfx.PxLine(dst, ax, ay, bx, by, float32(max(1.5, v.Cam.Tile()*0.05)), col)
 	lines := ShotLines(*s)
 	st := gfx.Small
 	k := gfx.UIScale() // map pixels per logical pixel: the card is drawn in map pixels
@@ -243,7 +243,7 @@ func (c *Combat) DrawProjectiles(v *render.View, dst *ebiten.Image, ps []Project
 			}
 			continue
 		}
-		vector.StrokeLine(dst, ax, ay, bx, by, th, tracerColour, true)
+		gfx.PxLine(dst, ax, ay, bx, by, th, tracerColour)
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
@@ -446,12 +445,12 @@ func (o *Wiring) drawPowerUnpowered(v *render.View, dst *ebiten.Image, b *game.B
 // dark rim.
 func powerDot(dst *ebiten.Image, x, y, rad float64, c color.NRGBA, fill bool, tile float64) {
 	fx, fy, fr := float32(x), float32(y), float32(rad)
-	vector.FillCircle(dst, fx, fy, fr+1.5, powerShade, true)
+	gfx.PxDisc(dst, fx, fy, fr+1.5, powerShade)
 	if fill {
-		vector.FillCircle(dst, fx, fy, fr, c, true)
+		gfx.PxDisc(dst, fx, fy, fr, c)
 		return
 	}
-	vector.StrokeCircle(dst, fx, fy, fr-0.5, float32(max(1.5, tile*0.05)), c, true)
+	gfx.PxRing(dst, fx, fy, fr-0.5, float32(max(1.5, tile*0.05)), c)
 }
 
 // DrawPowerLink draws a link line from the centre of cell from to the
@@ -460,9 +459,9 @@ func (o *Wiring) DrawPowerLink(v *render.View, dst *ebiten.Image, from, to [2]in
 	x0, y0 := v.WorldToScreenF(float64(from[0])+0.5, float64(from[1])+0.5)
 	x1, y1 := v.WorldToScreenF(float64(to[0])+0.5, float64(to[1])+0.5)
 	wd := float32(max(1.5, tile*0.05))
-	vector.StrokeLine(dst, x0, y0, x1, y1, wd+2, powerShade, true)
-	vector.StrokeLine(dst, x0, y0, x1, y1, wd, c, true)
-	vector.FillCircle(dst, x1, y1, wd*1.6, c, true)
+	gfx.PxLine(dst, x0, y0, x1, y1, wd+2, powerShade)
+	gfx.PxLine(dst, x0, y0, x1, y1, wd, c)
+	gfx.PxDisc(dst, x1, y1, wd*1.6, c)
 }
 
 // drawPowerFrame frames device b's footprint in the danger colour: it is
@@ -471,7 +470,7 @@ func (o *Wiring) drawPowerFrame(v *render.View, dst *ebiten.Image, b *game.Build
 	sx, sy := v.WorldToScreenF(float64(b.X), float64(b.Y))
 	wd := float32(max(2, tile*0.06))
 	w, h := float32(tile*float64(max(b.W, 1))), float32(tile*float64(max(b.H, 1)))
-	vector.StrokeRect(dst, sx+wd/2, sy+wd/2, w-wd, h-wd, wd, uikit.Danger, true)
+	gfx.PxFrame(dst, sx+wd/2, sy+wd/2, w-wd, h-wd, wd, uikit.Danger)
 }
 
 // ---------------------------------------------------------------- placement ghost

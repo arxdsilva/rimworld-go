@@ -86,7 +86,8 @@ func snapWidth(width, s float32) float32 {
 }
 
 // FillRect is vector.FillRect in logical pixels. Without anti-aliasing its
-// edges land on whole device pixels (snapSpan).
+// edges land on whole device pixels (snapSpan); with it, it is one
+// triangle batch (aashape), as are every anti-aliased shape here.
 func FillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool) {
 	if deferring(dst) { // world_scale.go: drawn at native size after the map
 		deferFillRect(x, y, w, h, clr, aa)
@@ -107,6 +108,10 @@ func FillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool) {
 	}
 	if cur.drawTrace != nil {
 		emitTrace(dst, "fill", "", px, py, pw, ph)
+	}
+	if aa {
+		cur.aa.Rect(dst, px, py, pw, ph, clr)
+		return
 	}
 	vector.FillRect(dst, px, py, pw, ph, clr, aa)
 }
@@ -130,6 +135,10 @@ func StrokeRect(dst *ebiten.Image, x, y, w, h, width float32, clr color.Color, a
 	}
 	if cur.drawTrace != nil {
 		emitTrace(dst, "stroke", "", px, py, pw, ph)
+	}
+	if aa {
+		cur.aa.Frame(dst, px, py, pw, ph, pwid, clr)
+		return
 	}
 	vector.StrokeRect(dst, px, py, pw, ph, pwid, clr, aa)
 }
@@ -160,6 +169,10 @@ func Line(dst *ebiten.Image, x0, y0, x1, y1, width float32, clr color.Color, aa 
 	if cur.drawTrace != nil {
 		emitBox(dst, "line", px0, py0, px1, py1, 0)
 	}
+	if aa {
+		cur.aa.Line(dst, px0, py0, px1, py1, pw, clr)
+		return
+	}
 	vector.StrokeLine(dst, px0, py0, px1, py1, pw, clr, aa)
 }
 
@@ -172,6 +185,10 @@ func FillCircle(dst *ebiten.Image, cx, cy, r float32, clr color.Color, aa bool) 
 	s := float32(UIScale())
 	if cur.drawTrace != nil {
 		emitBox(dst, "circle", cx*s, cy*s, cx*s, cy*s, r*s)
+	}
+	if aa {
+		cur.aa.Disc(dst, cx*s, cy*s, r*s, clr)
+		return
 	}
 	vector.FillCircle(dst, cx*s, cy*s, r*s, clr, aa)
 }
@@ -186,10 +203,16 @@ func StrokeCircle(dst *ebiten.Image, cx, cy, r, width float32, clr color.Color, 
 	if cur.drawTrace != nil {
 		emitBox(dst, "circle", cx*s, cy*s, cx*s, cy*s, r*s)
 	}
+	if aa {
+		cur.aa.Ring(dst, cx*s, cy*s, r*s, width*s, clr)
+		return
+	}
 	vector.StrokeCircle(dst, cx*s, cy*s, r*s, width*s, clr, aa)
 }
 
-// FillPoly fills the closed polygon through pts (logical pixels).
+// FillPoly fills the closed polygon through pts (logical pixels). An
+// anti-aliased convex one is a triangle batch; a concave one (a star)
+// stays on vector's path.
 func FillPoly(dst *ebiten.Image, pts [][2]float32, clr color.Color, aa bool) {
 	if len(pts) < 3 {
 		return
@@ -207,6 +230,9 @@ func FillPoly(dst *ebiten.Image, pts [][2]float32, clr color.Color, aa bool) {
 		}
 		emitBox(dst, "poly", x0, y0, x1, y1, 0)
 	}
+	if aa && cur.aa.ConvexPoly(dst, pts, s, clr) {
+		return
+	}
 	var p vector.Path
 	p.MoveTo(pts[0][0]*s, pts[0][1]*s)
 	for _, q := range pts[1:] {
@@ -216,6 +242,31 @@ func FillPoly(dst *ebiten.Image, pts [][2]float32, clr color.Color, aa bool) {
 	op := &vector.DrawPathOptions{AntiAlias: aa}
 	op.ColorScale.ScaleWithColor(clr)
 	vector.FillPath(dst, &p, nil, op)
+}
+
+// PxDisc fills the circle of radius r round (cx, cy), anti-aliased, in
+// physical pixels: no UI scale, no world-pass deferral (the world layers'
+// discs, at camera positions).
+func PxDisc(dst *ebiten.Image, cx, cy, r float32, clr color.Color) {
+	cur.aa.Disc(dst, cx, cy, r, clr)
+}
+
+// PxRing strokes the circle of radius r round (cx, cy), width wide,
+// anti-aliased, in physical pixels.
+func PxRing(dst *ebiten.Image, cx, cy, r, width float32, clr color.Color) {
+	cur.aa.Ring(dst, cx, cy, r, width, clr)
+}
+
+// PxLine strokes (x0, y0)-(x1, y1), width wide with butt caps,
+// anti-aliased, in physical pixels.
+func PxLine(dst *ebiten.Image, x0, y0, x1, y1, width float32, clr color.Color) {
+	cur.aa.Line(dst, x0, y0, x1, y1, width, clr)
+}
+
+// PxFrame strokes the rectangle (x, y, w, h), width wide and centred on its
+// edges, anti-aliased, in physical pixels.
+func PxFrame(dst *ebiten.Image, x, y, w, h, width float32, clr color.Color) {
+	cur.aa.Frame(dst, x, y, w, h, width, clr)
 }
 
 // ImageOp appends the UI scale to op's GeoM, for code that positions

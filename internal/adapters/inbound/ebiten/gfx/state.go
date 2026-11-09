@@ -2,11 +2,14 @@ package gfx
 
 import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx/aashape"
 )
 
 // cur is the canvas's process-wide state: the UI scale the free draw
 // functions read, the world pass that queues draws aimed at the
-// render-scaled map, and the test traces. There is one GPU canvas per
+// render-scaled map, the anti-aliased shape painter's scratch, and the
+// test traces. There is one GPU canvas per
 // process and the draw helpers are free functions by design (hundreds of
 // call sites), so this is the one documented exception to SOLID_GO.md §9:
 // main goroutine only, written by the App at the start of Update and
@@ -30,6 +33,10 @@ var cur = struct {
 	// which older tests count, never change.
 	canvasTrace func(kind string, x, y, w, h float32)
 	drawTrace   func(TraceEvent)
+	// aa draws every anti-aliased shape as one triangle batch from a white
+	// texel (aashape), reusing its vertex and index buffers; its mutex
+	// covers parallel tests that draw frames.
+	aa aashape.Painter
 }{scale: UnitScale, tracePass: "hud"}
 
 // SetScale makes s the scale the draw helpers use; a no-op when unchanged.

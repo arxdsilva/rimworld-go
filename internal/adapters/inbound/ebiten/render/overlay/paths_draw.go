@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 )
@@ -133,9 +134,9 @@ func (o *Set) DrawPaths(v *render.View, screen *ebiten.Image, sw, sh int, tile f
 		}
 		if pl.HasGoal {
 			if pl.Drafted {
-				vector.FillCircle(screen, pl.gx, pl.gy, rad*0.8, c, true)
+				gfx.PxDisc(screen, pl.gx, pl.gy, rad*0.8, c)
 			}
-			vector.StrokeCircle(screen, pl.gx, pl.gy, rad, th, c, true)
+			gfx.PxRing(screen, pl.gx, pl.gy, rad, th, c)
 		}
 		if pl.HasDrop {
 			vector.StrokeRect(screen, pl.dx-rad, pl.dy-rad, rad*2, rad*2, th, c, false)

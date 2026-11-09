@@ -61,6 +61,9 @@ var canvasExempt = map[string]string{
 	"gfx/canvas.go:Triangles32":  "the canvas: logical in, physical out",
 	"gfx/text.go:Text":           "the canvas's text path: scaled faces at physical positions",
 
+	// the anti-aliased shapes (gfx.FillCircle & co. with aa, gfx.PxDisc & co.)
+	"gfx/aashape/painter.go:flush": "the canvas's anti-aliased shapes: one triangle batch each",
+
 	// the world renderer
 	"renderer.go:drawDaylight":                         "world: the sky tint over the map",
 	"renderer.go:drawGhostRect":                        "world: the architect's drag ghost on tiles",
@@ -311,6 +314,8 @@ func scanFile(fset *token.FileSet, af *ast.File, base string) []*funcScan {
 							scan().UIScale = true
 						case "Text", "Icon", "Image", "DrawImage", "FillRect", "StrokeRect", "Line", "FillCircle", "StrokeCircle", "FillPoly", "Triangles", "Triangles32":
 							scan().Logical = append(scan().Logical, at(x, "gfx."+fn.Sel.Name))
+						case "PxDisc", "PxRing", "PxLine", "PxFrame": // anti-aliased shapes in physical pixels: raw
+							scan().Raw = append(scan().Raw, at(x, "gfx."+fn.Sel.Name))
 						}
 						return true
 					}

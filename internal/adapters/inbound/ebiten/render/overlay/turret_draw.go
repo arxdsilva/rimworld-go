@@ -6,9 +6,9 @@ import (
 	"math"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -157,7 +157,7 @@ func (o *Wiring) DrawRangeRing(v *render.View, dst *ebiten.Image, x, y int, radi
 	cx, cy := v.WorldToScreenF(float64(x)+0.5, float64(y)+0.5)
 	t := v.Cam.Tile()
 	o.PowerTrace("ring", fmt.Sprintf("%d,%d,%g", x, y, radius))
-	vector.StrokeCircle(dst, cx, cy, float32(radius*t), float32(max(1.5, t*0.04)), c, true)
+	gfx.PxRing(dst, cx, cy, float32(radius*t), float32(max(1.5, t*0.04)), c)
 }
 
 // PlacementRing is the ring a tool's ghost shows (the beacon's radius).
