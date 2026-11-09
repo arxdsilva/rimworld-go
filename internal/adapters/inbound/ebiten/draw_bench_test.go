@@ -4,6 +4,7 @@ import (
 	"os"
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -141,6 +142,7 @@ func benchDrawGrown(b *testing.B, side int) {
 			}
 			calls := r.lit.Calls
 			snowBakes, snowDraws := r.snowc.Bakes, r.snowc.Draws // snow_cache.go (PERF-002): 0 bakes/op once warm
+			var batched, flushRaw int // light.Stats, zeroed every frame
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
@@ -149,8 +151,12 @@ func benchDrawGrown(b *testing.B, side int) {
 				b.StartTimer()
 				r.pipe().Env.SetView(r.liveView(), sw, sh, tile)
 				r.drawArt(screen, sw, sh, tile)
+				st := r.lit.Stats()
+				batched, flushRaw = batched+st.Batched, flushRaw+st.Flushes[light.FlushRaw]
 			}
 			b.ReportMetric(float64(r.lit.Calls-calls)/float64(b.N), "draw-calls/op")
+			b.ReportMetric(float64(batched)/float64(b.N), "batched/op")
+			b.ReportMetric(float64(flushRaw)/float64(b.N), "flush-raw/op")
 			b.ReportMetric(float64(r.snowc.Bakes-snowBakes)/float64(b.N), "snow-bakes/op")
 			b.ReportMetric(float64(r.snowc.Draws-snowDraws)/float64(b.N), "snow-draws/op")
 		})

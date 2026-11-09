@@ -127,7 +127,7 @@ type groundBatch struct {
 // past the light layer (water through render/env) turns it off around that
 // draw and back on after. Only the pipeline's live ground pass turns it on.
 func (l *Lit) BatchGround(on bool) bool {
-	l.flushGround()
+	l.flushGround(FlushEnd)
 	was := l.batch.on
 	l.batch.on = on
 	return was
@@ -147,15 +147,22 @@ func (l *Lit) groundSlotOf(c *art.Catalog, img *ebiten.Image) (groundSlot, bool)
 	if !s.fits(b.Dx(), b.Dy()) {
 		return groundSlot{}, false
 	}
-	if s.art != c {
-		l.flushGround()
+	if s.art != c { // a new catalog (or the first use)
+		l.flushGround(FlushPage)
+		if s.art != nil {
+			l.stats.Resets++
+		}
 		s.reset(c)
 	}
 	sl, ok := s.add(img)
 	if !ok { // full: start again
-		l.flushGround()
+		l.flushGround(FlushPage)
 		s.reset(c)
+		l.stats.Resets++
 		sl, ok = s.add(img)
+	}
+	if ok {
+		l.stats.Copies++
 	}
 	return sl, ok
 }
@@ -166,10 +173,22 @@ func (l *Lit) groundSlotOf(c *art.Catalog, img *ebiten.Image) (groundSlot, bool)
 func (l *Lit) appendGround(dst *ebiten.Image, page int, sh *ebiten.Shader) {
 	b := &l.batch
 	pg := b.sheet.pages[page]
-	if len(b.idx) > 0 && (b.dst != dst || b.page != pg || b.sh != sh || len(b.verts)+4 > 4*groundBatchQuads || l.uniformsStale()) {
-		l.flushGround()
+	if len(b.idx) > 0 {
+		switch {
+		case b.dst != dst:
+			l.flushGround(FlushDst)
+		case b.page != pg:
+			l.flushGround(FlushPage)
+		case b.sh != sh:
+			l.flushGround(FlushShader)
+		case l.uniformsStale():
+			l.flushGround(FlushUniforms)
+		case len(b.verts)+4 > 4*groundBatchQuads:
+			l.flushGround(FlushFull)
+		}
 	}
 	l.SyncUniforms()
+	l.stats.Batched++
 	b.dst, b.page, b.sh = dst, pg, sh
 	n := uint32(len(b.verts))
 	b.verts = append(b.verts, l.Verts[:]...)
@@ -178,13 +197,15 @@ func (l *Lit) appendGround(dst *ebiten.Image, page int, sh *ebiten.Shader) {
 	}
 }
 
-// flushGround draws the pending ground quads in one call.
-func (l *Lit) flushGround() {
+// flushGround draws the pending ground quads in one call, counted under
+// reason.
+func (l *Lit) flushGround(why FlushReason) {
 	b := &l.batch
 	if len(b.idx) == 0 {
 		return
 	}
-	l.Calls++
+	l.count()
+	l.stats.Flushes[why]++
 	l.Opts.Images[0] = b.page
 	b.dst.DrawTrianglesShader32(b.verts, b.idx, b.sh, &l.Opts)
 	b.verts, b.idx = b.verts[:0], b.idx[:0]

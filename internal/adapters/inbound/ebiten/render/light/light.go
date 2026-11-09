@@ -334,6 +334,8 @@ type Lit struct {
 	// tiles, baked chunk and map pages) for the draw benchmarks; it only
 	// ever grows.
 	Calls int
+	// stats is this frame's lit-draw counts (stats.go).
+	stats Stats
 }
 
 // LitGap is the transparent column between a sprite and its normal map
@@ -1031,7 +1033,7 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	ground := l.ground
 	l.ground = false
 	if baking { // a bake: unlit albedo, lit when it is drawn
-		l.flushGround()
+		l.flushGround(FlushBake)
 		op := &l.plain
 		op.GeoM, op.Filter = geo, ebiten.FilterLinear
 		op.ColorScale.Reset()
@@ -1056,8 +1058,8 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 		sh = l.LitShader()
 	}
 	if plain || sh == nil { // lighting off, or the shader failed to compile: the plain draw
-		l.flushGround()
-		l.Calls++
+		l.flushGround(FlushOff)
+		l.count()
 		op := &l.plain
 		op.GeoM, op.Filter = geo, ebiten.FilterLinear
 		op.ColorScale.Reset()
@@ -1099,8 +1101,12 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 		l.appendGround(dst, slot.page, sh)
 		return
 	}
-	l.flushGround()
-	l.Calls++
+	if blood != 0 {
+		l.flushGround(FlushBlood)
+	} else {
+		l.flushGround(FlushRaw)
+	}
+	l.count()
 	l.SyncUniforms()
 	l.Opts.Images[0] = src
 	dst.DrawTrianglesShader32(l.Verts[:], Indices[:], sh, &l.Opts)

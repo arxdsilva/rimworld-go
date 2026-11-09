@@ -137,6 +137,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	v := p.v
 	w := p.src.World()
 	v.W, v.Pawns = w, p.src.Snapshot() // this frame's world and pawns, for every layer
+	p.Lit.StartFrame() // this frame's lit-draw counts (light.Stats)
 	p.Lit.Light = light.LightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
 	p.setView(sw, sh, tile)
 	p.Links.Sync(w, v.MapW, v.MapH) // rebuilt only on StructVer
