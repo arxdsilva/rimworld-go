@@ -106,17 +106,18 @@ func TestThreatPointsFormula(t *testing.T) {
 		want         int
 	}{
 		{"floor", Of(Wanderer), 0, 1, 0, 0, 35},
-		{"low wealth", s, 5000, 3, 0, 0, 100 + 75},       // 5000/50 + 25*3
+		{"low wealth", s, 4000, 3, 0, 0, 80 + 63},        // 4000/50 + 3*(20+1); EAI-013: colonists by wealth
 		{"knee one", s, 20000, 0, 0, 0, 400},             // 20000/50
-		{"mid curve", s, 60000, 2, 0, 0, 400 + 500 + 50}, // 400 + 40000/80 + 50
+		{"mid curve", s, 60000, 2, 0, 0, 400 + 500 + 65}, // 400 + 40000/80 + 2*32.5
 		{"knee two", s, 100000, 0, 0, 0, 1400},
 		{"top curve", s, 250000, 0, 0, 0, 1400 + 1000},
-		{"scale", Of(Merciless), 5000, 3, 0, 0, 350},              // (100+75) * 2
-		{"adapt up", s, 5000, 3, 0, 40, 245},                      // 175 * 1.4
-		{"adapt down", s, 5000, 3, 0, -30, 123},                   // 175 * 0.7 = 122.5 -> 123
+		{"rich colonists", s, 400000, 2, 0, 0, 1400 + 2000 + 120}, // past the last knee: 60 a colonist
+		{"scale", Of(Merciless), 4000, 3, 0, 0, 286},              // (80+63) * 2
+		{"adapt up", s, 4000, 3, 0, 40, 200},                      // 143 * 1.4 = 200.2
+		{"adapt down", s, 4000, 3, 0, -30, 100},                   // 143 * 0.7 = 100.1
 		{"adapt off ignored", Of(Wanderer), 100000, 0, 0, 40, 70}, // 1400 * 5% (no adapt)
 		{"time replaces wealth", func() Settings { x := s; x.IgnoreWealth = true; return x }(), 999999, 2, 1.5, 0, 120 + 50},
-		{"escalation", func() Settings { x := s; x.TimeEscalation = true; x.EscPerYear = 50; return x }(), 5000, 3, 2, 0, 350},
+		{"escalation", func() Settings { x := s; x.TimeEscalation = true; x.EscPerYear = 50; return x }(), 4000, 3, 2, 0, 286},
 	}
 	for _, c := range cases {
 		if got := ThreatPoints(c.s, c.wealth, c.cols, c.years, c.adapt); got != c.want {
@@ -314,5 +315,53 @@ func TestSaveModeString(t *testing.T) {
 	t.Parallel()
 	if ReloadAnytime.String() != "reload_anytime" || Commitment.String() != "commitment" {
 		t.Error("save mode strings are stable keys")
+	}
+}
+
+// TestThreatPointsCapped (EAI-013): however rich, crowded, adapted and
+// escalated a colony is, a threat never passes PointsCap, and the cap
+// leaves an ordinary colony's points alone.
+func TestThreatPointsCapped(t *testing.T) {
+	t.Parallel()
+	s := Of(Merciless)
+	s.Adaptation, s.TimeEscalation, s.EscPerYear = true, true, 100
+	if got := ThreatPoints(s, 50_000_000, 60, 10, 40); got != PointsCap {
+		t.Fatalf("a huge colony gets %d points, want the cap %d", got, PointsCap)
+	}
+	prev := 0
+	for w := 0; w <= 5_000_000; w += 50_000 {
+		got := ThreatPoints(s, w, 20, 3, 40)
+		if got > PointsCap || got < prev {
+			t.Fatalf("wealth %d: %d points (after %d), want rising and at most %d", w, got, prev, PointsCap)
+		}
+		prev = got
+	}
+	if got := ThreatPoints(Of(Seasoned), 60000, 2, 0, 0); got >= PointsCap {
+		t.Fatalf("an ordinary colony is capped at %d", got)
+	}
+}
+
+// TestColonistPointsByWealth (EAI-013): the same people draw a bigger
+// threat in a richer colony, beyond the wealth's own share, and never a
+// smaller one; with wealth ignored a colonist counts flat.
+func TestColonistPointsByWealth(t *testing.T) {
+	t.Parallel()
+	s := Of(Seasoned)
+	share := func(w int) int { return ThreatPoints(s, w, 5, 0, 0) - ThreatPoints(s, w, 0, 0, 0) }
+	poor, mid, rich := ThreatPoints(s, 0, 5, 0, 0), share(100_000), share(300_000) // no wealth: below the floor alone
+	if poor != 100 || mid != 200 || rich != 300 {
+		t.Fatalf("five colonists add %d, %d, %d at wealth 0, 100k, 300k; want 100, 200, 300", poor, mid, rich)
+	}
+	prev := 0
+	for w := 20_000; w <= 600_000; w += 1000 {
+		if got := share(w); got < prev {
+			t.Fatalf("five colonists add %d at wealth %d, less than %d before", got, w, prev)
+		}
+		prev = share(w)
+	}
+	flat := s
+	flat.IgnoreWealth = true
+	if a, b := ThreatPoints(flat, 0, 4, 1, 0), ThreatPoints(flat, 900_000, 4, 1, 0); a != b || a != 4*25+80 {
+		t.Fatalf("wealth ignored: %d and %d, want both %d", a, b, 4*25+80)
 	}
 }

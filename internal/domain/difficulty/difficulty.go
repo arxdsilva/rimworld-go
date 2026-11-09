@@ -268,6 +268,10 @@ func Valid(s Settings) []string {
 const (
 	pointsFloor   = 35
 	colonistPts   = 25
+	// PointsCap is the most a threat may ever be given (EAI-013, original
+	// tuning): wealth, colonists, adaptation and escalation never push a
+	// raid past it.
+	PointsCap = 10_000
 	timePtsPerYr  = 80
 	wealthKnee1   = 20_000
 	wealthKnee2   = 100_000
@@ -279,6 +283,21 @@ const (
 	adaptStep     = 2
 	adaptDeadBand = 3
 )
+
+// colonistCurve is the points one standing colonist adds to a threat at
+// colony wealth w (EAI-013, original tuning). The knees are wealth and
+// points per colonist, straight lines between them and flat past the
+// last: a poor colony's people draw small raids, a rich one's bigger ones.
+func colonistCurve(w int) float64 {
+	k := [...][2]float64{{0, 20}, {20_000, 25}, {100_000, 40}, {300_000, 60}}
+	x := float64(max(w, 0))
+	for i := 1; i < len(k); i++ {
+		if x <= k[i][0] {
+			return k[i-1][1] + (x-k[i-1][0])*(k[i][1]-k[i-1][1])/(k[i][0]-k[i-1][0])
+		}
+	}
+	return k[len(k)-1][1]
+}
 
 // wealthCurve is the original wealth-to-points curve of §3.3.
 func wealthCurve(w int) float64 {
@@ -294,7 +313,10 @@ func wealthCurve(w int) float64 {
 }
 
 // ThreatPoints is a threat's points (NG-1 §3.3). adapt is the current
-// Adapter.Value (ignored while adaptation is off).
+// Adapter.Value (ignored while adaptation is off). Each standing colonist
+// counts by the colony's wealth (colonistCurve; a flat colonistPts when
+// the difficulty ignores wealth), and the result stays within
+// pointsFloor..PointsCap (EAI-013).
 func ThreatPoints(s Settings, wealth, colonists int, years float64, adapt int) int {
 	if years < 0 {
 		years = 0
@@ -303,7 +325,7 @@ func ThreatPoints(s Settings, wealth, colonists int, years float64, adapt int) i
 	if s.IgnoreWealth {
 		base += float64(timePtsPerYr * years)
 	} else {
-		base += wealthCurve(wealth)
+		base = colonistCurve(wealth)*float64(max(colonists, 0)) + wealthCurve(wealth)
 	}
 	if !s.Adaptation {
 		adapt = 0
@@ -312,7 +334,7 @@ func ThreatPoints(s Settings, wealth, colonists int, years float64, adapt int) i
 	if s.TimeEscalation {
 		pts *= math.Max(0, (100+float64(float64(s.EscPerYear)*years))/100)
 	}
-	return max(int(math.Floor(pts+0.5)), pointsFloor)
+	return min(max(int(math.Floor(pts+0.5)), pointsFloor), PointsCap)
 }
 
 // Scale applies a percent setting to base (rounding half up, never below 0).
