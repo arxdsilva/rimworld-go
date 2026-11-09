@@ -35,6 +35,19 @@ func (r *rig) drawAt(dst, img *ebiten.Image, x float64, blood float32) {
 // pending is the quads the batch holds.
 func (r *rig) pending() int { return len(r.lit.batch.idx) / len(Indices) }
 
+// warm draws imgs in one frame with the batch on (each draws alone and asks
+// for its copy) and starts the next frame, which copies them in that order.
+// Calls is zeroed so a test counts its own.
+func (r *rig) warm(dst *ebiten.Image, imgs ...*ebiten.Image) {
+	r.lit.Batch(true)
+	for _, img := range imgs {
+		r.drawAt(dst, img, 0, 0)
+	}
+	r.lit.Batch(false)
+	r.lit.StartFrame()
+	r.lit.Calls = 0
+}
+
 // TestGroundBatchFlushesOnChange (GAR-159, GAR-161): lit draws queue while
 // the batch is on and go out as one call when the destination or the sheet
 // page changes, before a draw that does not join (a bloodied figure), and
@@ -43,6 +56,7 @@ func TestGroundBatchFlushesOnChange(t *testing.T) {
 	r := groundRig()
 	a, b, big, chair := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8), ebiten.NewImage(24, 24), ebiten.NewImage(4, 4)
 	dst1, dst2 := ebiten.NewImage(64, 64), ebiten.NewImage(64, 64)
+	r.warm(dst1, a, b, big)
 	if r.lit.Batch(true) {
 		t.Fatal("the batch starts off")
 	}
@@ -92,6 +106,7 @@ func TestGroundBatchBakeOffAndCatalog(t *testing.T) {
 	r := groundRig()
 	a := ebiten.NewImage(8, 8)
 	dst := ebiten.NewImage(64, 64)
+	r.warm(dst, a)
 	r.lit.Batch(true)
 	r.drawGround(dst, a, 0)
 	r.lit.DrawGround(&r.view, dst, a, ebiten.GeoM{}, noCS, 0, 0, true, 0) // a bake
@@ -114,10 +129,20 @@ func TestGroundBatchBakeOffAndCatalog(t *testing.T) {
 	}
 	r.lit.Shader, r.lit.Err = sh, err
 	r.drawGround(dst, a, 0)
-	r.view.Art = &art.Catalog{} // a new catalog: the sheet starts again
+	r.view.Art = &art.Catalog{} // a new catalog: drawn alone, asked for
 	r.drawGround(dst, a, 0)
-	if r.lit.Calls != 6 || r.pending() != 1 || len(r.lit.batch.sheet.at) != 1 || r.lit.batch.sheet.art != r.view.Art {
-		t.Fatalf("new catalog: %d calls, %d pending, %d on the sheet", r.lit.Calls, r.pending(), len(r.lit.batch.sheet.at))
+	if r.lit.Calls != 7 || r.pending() != 0 || len(r.lit.batch.sheet.want) != 1 || r.lit.Stats().Flushes[FlushNew] != 1 {
+		t.Fatalf("new catalog: %d calls, %d pending, %d asked; want 7, 0, 1", r.lit.Calls, r.pending(), len(r.lit.batch.sheet.want))
+	}
+	r.lit.Batch(false)
+	r.lit.StartFrame() // the sheet starts again for it
+	if st := r.lit.Stats(); st.Resets != 1 || st.Copies != 1 || len(r.lit.batch.sheet.at) != 1 || r.lit.batch.sheet.art != r.view.Art {
+		t.Fatalf("next frame: stats %v, %d on the sheet", st, len(r.lit.batch.sheet.at))
+	}
+	r.lit.Batch(true)
+	r.drawGround(dst, a, 0)
+	if r.pending() != 1 {
+		t.Fatalf("the new catalog's copy: %d pending, want 1", r.pending())
 	}
 	r.lit.Batch(false)
 }
@@ -126,13 +151,14 @@ type errTestShader struct{}
 
 func (errTestShader) Error() string { return "test: no shader" }
 
-// TestGroundBatchReusesItsBuffer: a warm ground pass allocates nothing
-// beyond Ebitengine's own draw call.
+// TestGroundBatchReusesItsBuffer: a warm ground pass, its StartFrame
+// included, allocates nothing beyond Ebitengine's own draw call.
 func TestGroundBatchReusesItsBuffer(t *testing.T) {
 	r := groundRig()
 	a, b := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8)
 	dst := ebiten.NewImage(64, 64)
 	pass := func() {
+		r.lit.StartFrame()
 		r.lit.Batch(true)
 		for i := range 64 {
 			img := a
@@ -143,7 +169,8 @@ func TestGroundBatchReusesItsBuffer(t *testing.T) {
 		}
 		r.lit.Batch(false)
 	}
-	pass()
+	pass() // draws alone and asks for the copies
+	pass() // copies them first, then batches
 	verts, idx := r.lit.batch.verts[:64*4], r.lit.batch.idx[:64*6]
 	sh := r.litShader()
 	r.lit.Opts.Images[0] = r.lit.batch.sheet.pages[0]
@@ -167,7 +194,7 @@ func TestLitBatchKeepsOrder(t *testing.T) {
 	r := groundRig()
 	soil, chair, lamp := ebiten.NewImage(8, 8), ebiten.NewImage(4, 4), ebiten.NewImage(6, 6)
 	dst := ebiten.NewImage(64, 64)
-	r.lit.StartFrame()
+	r.warm(dst, soil, chair, lamp)
 	r.lit.Batch(true)
 	r.drawGround(dst, soil, 0)
 	r.drawAt(dst, chair, 8, 0)
@@ -202,7 +229,7 @@ func TestLitBatchSkipsBloodBakeOff(t *testing.T) {
 	r := groundRig()
 	a := ebiten.NewImage(8, 8)
 	dst := ebiten.NewImage(64, 64)
-	r.lit.StartFrame()
+	r.warm(dst, a)
 	r.lit.Batch(true)
 	r.drawAt(dst, a, 0, 0)
 	r.drawAt(dst, a, 8, 0.4)
@@ -231,7 +258,7 @@ func TestLitBatchPairOffsetRelative(t *testing.T) {
 	spr, n := ebiten.NewImage(6, 4), ebiten.NewImage(6, 4)
 	r.view.Art = &art.Catalog{Normals: map[*ebiten.Image]*ebiten.Image{spr: n}}
 	dst := ebiten.NewImage(64, 64)
-	r.lit.StartFrame()
+	r.warm(dst, spr)
 	r.lit.Batch(true)
 	r.drawAt(dst, spr, 0, 0)
 	var mirror ebiten.GeoM
@@ -257,9 +284,9 @@ func TestLitBatchKeysByImage(t *testing.T) {
 	r.lit.batch.sheet.size = 0
 	s1, s2, n := ebiten.NewImage(6, 4), ebiten.NewImage(6, 4), ebiten.NewImage(6, 4)
 	r.view.Art = &art.Catalog{Normals: map[*ebiten.Image]*ebiten.Image{s1: n, s2: n}}
-	r.lit.Pairs.Limit = 1
 	dst := ebiten.NewImage(64, 64)
-	r.lit.StartFrame()
+	r.warm(dst, s1, s2)
+	r.lit.Pairs = PairCache{Limit: 1} // every draw below rebuilds a pair and evicts the other
 	r.lit.Batch(true)
 	r.drawAt(dst, s1, 0, 0)
 	p1, _ := r.lit.Pairs.Get(s1, r.view.Present)
@@ -271,42 +298,133 @@ func TestLitBatchKeysByImage(t *testing.T) {
 	}
 	vs := r.lit.batch.verts
 	if st := r.lit.Stats(); st.Copies != 2 || vs[0].SrcX != vs[8].SrcX || r.pending() != 3 {
-		t.Fatalf("copies %d, s1 sampled at %v then %v; want 2 copies, one place", st.Copies, vs[0].SrcX, vs[8].SrcX)
+		t.Fatalf("copies %d, s1 sampled at %v then %v; want the 2 warm copies, one place", st.Copies, vs[0].SrcX, vs[8].SrcX)
 	}
 	r.lit.Batch(false)
 }
 
-// TestLitBatchSheetResetOncePerFrame: a full sheet starts again once in a
-// frame; a frame that would need a second start draws unbatched to its end
-// (the thrash guard), and the next frame batches again.
-func TestLitBatchSheetResetOncePerFrame(t *testing.T) {
+// TestLitBatchSkipsEvictedPairCopy: an asked copy whose pair the cache has
+// since evicted (and deallocated) is not made from it; a second ask in the
+// frame takes the rebuilt pair.
+func TestLitBatchSkipsEvictedPairCopy(t *testing.T) {
+	r := groundRig()
+	r.lit.batch.sheet.size = 0
+	s1, s2, n := ebiten.NewImage(6, 4), ebiten.NewImage(6, 4), ebiten.NewImage(6, 4)
+	r.view.Art = &art.Catalog{Normals: map[*ebiten.Image]*ebiten.Image{s1: n, s2: n}}
+	r.lit.Pairs.Limit = 1
+	dst := ebiten.NewImage(64, 64)
+	r.lit.Batch(true)
+	r.drawAt(dst, s1, 0, 0)
+	r.drawAt(dst, s2, 8, 0)  // evicts s1's pair
+	r.drawAt(dst, s1, 16, 0) // rebuilds it (and evicts s2's): the ask takes the new one
+	live, _ := r.lit.Pairs.Get(s1, r.view.Present)
+	if w := r.lit.batch.sheet.want; len(w) != 2 || w[0].src != live {
+		t.Fatalf("asks %d, s1's source live %v", len(w), len(w) > 0 && w[0].src == live)
+	}
+	r.lit.Batch(false)
+	r.lit.StartFrame()
+	_, has1 := r.lit.batch.sheet.at[s1]
+	_, has2 := r.lit.batch.sheet.at[s2]
+	if st := r.lit.Stats(); st.Copies != 1 || !has1 || has2 {
+		t.Fatalf("copies %d (s1 %v, s2 %v); want s1's only: s2's pair was evicted", st.Copies, has1, has2)
+	}
+}
+
+// TestLitBatchCopiesOnlyAtFrameStart (PERF-015): a draw to a sheet page
+// between two draws to the screen ends the screen's render pass, so a frame
+// never copies: an image with no copy draws alone and asks, and the next
+// StartFrame copies the frame's asks in draw order, once each.
+func TestLitBatchCopiesOnlyAtFrameStart(t *testing.T) {
+	r := groundRig()
+	a, b, c := ebiten.NewImage(8, 8), ebiten.NewImage(6, 6), ebiten.NewImage(4, 4)
+	dst := ebiten.NewImage(64, 64)
+	r.lit.StartFrame()
+	r.lit.Batch(true)
+	for _, img := range []*ebiten.Image{a, b, a, c, b} {
+		r.drawAt(dst, img, 0, 0)
+	}
+	st := r.lit.Stats()
+	if st.Copies != 0 || r.lit.batch.sheet.used != 0 || st.Batched != 0 || st.Calls != 5 || len(r.lit.batch.sheet.want) != 3 {
+		t.Fatalf("first frame: stats %v, %d pages, %d asks; want 5 lone draws, 3 asks, no copy", st, r.lit.batch.sheet.used, len(r.lit.batch.sheet.want))
+	}
+	r.lit.Batch(false)
+	r.lit.StartFrame()
+	at := r.lit.batch.sheet.at
+	if st := r.lit.Stats(); st.Copies != 3 || len(r.lit.batch.sheet.want) != 0 || !(at[a].x < at[b].x && at[b].x < at[c].x) {
+		t.Fatalf("StartFrame: stats %v; a %v, b %v, c %v: want 3 copies in draw order", st, at[a], at[b], at[c])
+	}
+	r.lit.Batch(true)
+	for _, img := range []*ebiten.Image{a, b, a, c, b} {
+		r.drawAt(dst, img, 0, 0)
+	}
+	if st := r.lit.Stats(); st.Batched != 5 || st.Copies != 3 || r.pending() != 5 {
+		t.Fatalf("second frame: stats %v, %d pending; want all 5 batched, no new copy", st, r.pending())
+	}
+	r.lit.Batch(false)
+}
+
+// TestLitBatchFullSheetResetCooldown (no-flap): a frame whose images do not
+// fit starts the sheet again at the next StartFrame, then not again for
+// resetCooldown frames, however often the images still do not fit; the ones
+// that fit stay batched in between.
+func TestLitBatchFullSheetResetCooldown(t *testing.T) {
 	r := groundRig() // 32 px pages: one 24 px image a page
-	imgs := make([]*ebiten.Image, 2*sheetPages+1)
+	imgs := make([]*ebiten.Image, sheetPages+1)
 	for i := range imgs {
 		imgs[i] = ebiten.NewImage(24, 24)
 	}
 	dst := ebiten.NewImage(64, 64)
-	r.lit.StartFrame()
-	r.lit.Batch(true)
-	for _, img := range imgs[:sheetPages+1] { // the last one starts the sheet again
-		r.drawAt(dst, img, 0, 0)
+	var resets []int
+	const frames = 2*resetCooldown + 10
+	for f := range frames {
+		r.lit.StartFrame()
+		if r.lit.Stats().Resets > 0 {
+			resets = append(resets, f)
+		}
+		r.lit.Batch(true)
+		for _, img := range imgs {
+			r.drawAt(dst, img, 0, 0)
+		}
+		r.lit.Batch(false)
+		if f == resetCooldown/2 && r.lit.Stats().Batched != sheetPages {
+			t.Fatalf("frame %d: %d batched, want the %d that fit", f, r.lit.Stats().Batched, sheetPages)
+		}
 	}
-	if st := r.lit.Stats(); st.Resets != 1 || st.Copies != sheetPages+1 || r.lit.batch.thrash {
-		t.Fatalf("one start: stats %v, thrash %v", st, r.lit.batch.thrash)
+	if len(resets) != 3 || resets[1]-resets[0] < resetCooldown || resets[2]-resets[1] < resetCooldown {
+		t.Fatalf("resets at frames %v; want 3, at least %d frames apart", resets, resetCooldown)
 	}
-	for _, img := range imgs[sheetPages+1:] { // fills it again: a second start would thrash
-		r.drawAt(dst, img, 0, 0)
+}
+
+// TestLitBatchScatterRepacks: a frame whose batches change page every few
+// quads starts the sheet again at the next StartFrame (once per cooldown),
+// and the frame after copies its images afresh, in draw order.
+func TestLitBatchScatterRepacks(t *testing.T) {
+	r := groundRig() // 32 px pages: one 24 px image a page
+	a, b := ebiten.NewImage(24, 24), ebiten.NewImage(24, 24)
+	dst := ebiten.NewImage(64, 64)
+	r.warm(dst, a, b)
+	frame := func() Stats {
+		r.lit.StartFrame()
+		st := r.lit.Stats()
+		r.lit.Batch(true)
+		for i := range scatterMin {
+			r.drawAt(dst, []*ebiten.Image{a, b}[i%2], 0, 0) // a page change every quad
+		}
+		r.lit.Batch(false)
+		return st
 	}
-	st := r.lit.Stats()
-	if st.Resets != 1 || !r.lit.batch.thrash || r.pending() != 0 || r.lit.Opts.Images[0] != imgs[len(imgs)-1] {
-		t.Fatalf("thrash: stats %v, thrash %v, %d pending", st, r.lit.batch.thrash, r.pending())
+	if st := frame(); st.Resets != 0 {
+		t.Fatalf("a warm sheet started again before any scattered frame: %v", st)
 	}
-	r.lit.Batch(false)
-	r.lit.StartFrame() // the next frame batches again
-	r.lit.Batch(true)
-	r.drawAt(dst, imgs[0], 0, 0)
-	if r.lit.batch.thrash || r.pending() != 1 {
-		t.Fatalf("next frame: thrash %v, %d pending", r.lit.batch.thrash, r.pending())
+	if st := frame(); st.Resets != 1 || len(r.lit.batch.sheet.at) != 0 {
+		t.Fatalf("after a scattered frame: %v, %d on the sheet; want a reset", st, len(r.lit.batch.sheet.at))
 	}
-	r.lit.Batch(false)
+	if st := frame(); st.Copies != 2 || st.Resets != 0 {
+		t.Fatalf("the frame after: %v; want the 2 copies again, no reset", st)
+	}
+	for range resetCooldown - 3 {
+		if st := frame(); st.Resets != 0 {
+			t.Fatalf("a reset inside the cooldown: %v", st)
+		}
+	}
 }

@@ -1,6 +1,8 @@
 package light
 
 import (
+	"image"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
@@ -33,16 +35,42 @@ import (
 // the rebuilt pair has the same pixels, so the copy already made serves it
 // and no pending quad ever points at a pair.
 
-// sheetSize is the side of a sheet page in pixels.
-const sheetSize = 2048
+// Copies happen only at the start of a frame (StartFrame), never between
+// two draws of the frame. A draw to a sheet page between two draws to the
+// screen ends the screen's render pass, and on a 5K screen each such break
+// cost about a millisecond of GPU time: the frame after a mid-frame sheet
+// reset copied about 170 images and took 30 ms (PERF-015). So a lit draw
+// whose image is not on the sheet yet draws on its own, as before the
+// batch, and asks for a copy; the next StartFrame makes the copies in the
+// order the frame asked for them, which is draw order.
 
-// sheetPages bounds the pages (16 MB each, allocated as needed). The
-// busiest capture scenes copy about 48 MB of distinct images, four pages
-// at the shelves' fill, and a fifth was needed once the camera moved (the
-// paths scene); eight hold that with room and cap the worst case at 128
-// MB. A frame that needs more starts the sheet again once, and a second
-// time turns the batch off for that frame (the thrash guard, StartFrame).
-const sheetPages = 8
+// sheetSize is the side of a sheet page in pixels. One frame's sprites at
+// the 5K display's art scale cover about 12 to 15 million pixels with
+// their pairs (PERF-015), so at 4096 they fit on one page and the batch
+// seldom changes page; at 2048 they spread over four or five and the
+// batch changed page every few quads.
+const sheetSize = 4096
+
+// sheetPages bounds the pages (64 MB each, unmanaged, allocated as
+// needed): 128 MB at most, room for about two frames' distinct sprites, so
+// animation frames and sprites coming into view join without the sheet
+// starting again.
+const sheetPages = 2
+
+// resetCooldown is the fewest frames between two sheet resets not forced
+// by a new catalog: a sheet that cannot hold a frame's sprites draws the
+// rest on their own rather than starting again every frame.
+const resetCooldown = 120
+
+// scatterRun is the fewest quads a frame's batches should average between
+// page changes. Below it (in a frame of at least scatterMin batched quads)
+// the frame's sprites lie spread over the pages among stale copies, and the
+// next StartFrame (after the cooldown) starts the sheet again, so the frame
+// after copies them together, in draw order.
+const (
+	scatterRun = 8
+	scatterMin = 256
+)
 
 // batchQuads caps one call's quads; a longer pass flushes and goes on.
 const batchQuads = 8192
@@ -54,8 +82,13 @@ type sheetSlot struct {
 	x, y float32
 }
 
+// sheetCopy is an image a frame asked to copy and the image its lit draw
+// samples (itself or its normal-map pair).
+type sheetCopy struct{ img, src *ebiten.Image }
+
 // litSheet holds copies of the images drawn so far, packed in rows
-// (shelves) with a one-pixel transparent gutter.
+// (shelves) with a one-pixel transparent gutter, and the copies the frame
+// asked for.
 type litSheet struct {
 	art   *art.Catalog // the catalog the copies came from
 	size  int          // page side (0: sheetSize)
@@ -66,6 +99,14 @@ type litSheet struct {
 	// shelf's height.
 	x, y, rowH int
 	op         ebiten.DrawImageOptions
+	// want is the copies asked for since the last StartFrame, in order,
+	// all from catalog wantArt; wanted is each image's index in want.
+	want    []sheetCopy
+	wanted  map[*ebiten.Image]int
+	wantArt *art.Catalog
+	// frame counts StartFrames; a reset not forced by a new catalog waits
+	// for frame resetAt (resetCooldown after the last one).
+	frame, resetAt int
 }
 
 // side is the page side.
@@ -84,6 +125,7 @@ func (s *litSheet) reset(c *art.Catalog) {
 		p.Clear()
 	}
 	s.used, s.x, s.y, s.rowH = 0, 0, 0, 0
+	s.resetAt = s.frame + resetCooldown
 }
 
 // fits reports whether an image of w x h can ever go on a page.
@@ -92,7 +134,7 @@ func (s *litSheet) fits(w, h int) bool {
 }
 
 // add copies src onto the sheet as img's; ok is false when the sheet is
-// full.
+// full. Only StartFrame calls it (through copyAsked).
 func (s *litSheet) add(img, src *ebiten.Image) (sheetSlot, bool) {
 	b := src.Bounds()
 	w, h := b.Dx(), b.Dy()
@@ -105,7 +147,9 @@ func (s *litSheet) add(img, src *ebiten.Image) (sheetSlot, bool) {
 			return sheetSlot{}, false
 		}
 		if s.used == len(s.pages) {
-			s.pages = append(s.pages, ebiten.NewImage(side, side))
+			// unmanaged: a page of its own, never moved within
+			// Ebitengine's shared atlas when it is drawn to
+			s.pages = append(s.pages, ebiten.NewImageWithOptions(image.Rect(0, 0, side, side), &ebiten.NewImageOptions{Unmanaged: true}))
 		}
 		s.used++
 		s.x, s.y, s.rowH = 0, 0, 0
@@ -124,8 +168,39 @@ func (s *litSheet) add(img, src *ebiten.Image) (sheetSlot, bool) {
 	return sl, true
 }
 
+// ask records that a lit draw of img, sampling src, found no copy on the
+// sheet of catalog c; the next StartFrame copies it. A second ask for img
+// keeps the newer src (the pair cache may have rebuilt its pair); asks
+// from an earlier catalog in the same frame are dropped.
+func (s *litSheet) ask(c *art.Catalog, img, src *ebiten.Image) {
+	b := src.Bounds()
+	if !s.fits(b.Dx(), b.Dy()) {
+		return
+	}
+	if s.wantArt != c {
+		s.dropAsks()
+		s.wantArt = c
+	}
+	if i, ok := s.wanted[img]; ok {
+		s.want[i].src = src
+		return
+	}
+	if s.wanted == nil {
+		s.wanted = map[*ebiten.Image]int{}
+	}
+	s.wanted[img] = len(s.want)
+	s.want = append(s.want, sheetCopy{img, src})
+}
+
+// dropAsks forgets the asked copies (and their image references).
+func (s *litSheet) dropAsks() {
+	clear(s.want)
+	s.want = s.want[:0]
+	clear(s.wanted)
+}
+
 // litBatch is the pending lit quads: their destination, sheet page, shader,
-// vertices and indices (reused frame to frame), and the thrash guard.
+// vertices and indices (reused frame to frame), and the sheet.
 type litBatch struct {
 	on    bool
 	dst   *ebiten.Image
@@ -134,10 +209,6 @@ type litBatch struct {
 	verts []ebiten.Vertex
 	idx   []uint32
 	sheet litSheet
-	// resets counts this frame's sheet resets; thrash is set when the
-	// frame needed a second one, and keeps the batch off until StartFrame.
-	resets int
-	thrash bool
 }
 
 // Batch turns the lit batch on or off and returns whether it was on.
@@ -161,11 +232,9 @@ func (l *Lit) Flush() {
 	}
 }
 
-// slotOf is img's place on the sheet of catalog c, copying src (the image
-// a lit draw of img samples) there first; ok is false when img does not go
-// on a sheet. A sheet that must start again flushes the pending quads
-// before its pages are cleared; a second start in one frame turns the
-// batch off instead (thrash).
+// slotOf is img's place on the sheet of catalog c; ok is false when img
+// has no copy there yet, and then it asks for one (src is the image a lit
+// draw of img samples), made at the next StartFrame.
 func (l *Lit) slotOf(c *art.Catalog, img, src *ebiten.Image) (sheetSlot, bool) {
 	s := &l.batch.sheet
 	if s.art == c {
@@ -173,49 +242,75 @@ func (l *Lit) slotOf(c *art.Catalog, img, src *ebiten.Image) (sheetSlot, bool) {
 			return sl, true
 		}
 	}
-	b := src.Bounds()
-	if !s.fits(b.Dx(), b.Dy()) {
-		return sheetSlot{}, false
-	}
-	if s.art != c { // a new catalog (or the first use)
-		if s.art != nil && !l.restart() {
-			return sheetSlot{}, false
-		}
-		l.flush(FlushPage)
-		s.reset(c)
-	}
-	sl, ok := s.add(img, src)
-	if !ok { // full: start again
-		if !l.restart() {
-			return sheetSlot{}, false
-		}
-		l.flush(FlushPage)
-		s.reset(c)
-		sl, ok = s.add(img, src)
-	}
-	if ok {
-		l.stats.Copies++
-	}
-	return sl, ok
+	s.ask(c, img, src)
+	return sheetSlot{}, false
 }
 
-// restart counts a sheet reset, or reports false (and turns the batch off
-// for the rest of the frame) when this frame already had one.
-func (l *Lit) restart() bool {
-	b := &l.batch
-	if b.resets > 0 {
-		l.flush(FlushPage)
-		b.thrash = true
-		return false
+// copyAsked runs in StartFrame, before the frame draws: it starts the
+// sheet again when it must, then makes the copies the last frame asked
+// for, in order. A new catalog always starts it again. At most once per
+// resetCooldown frames it also starts again when the asked copies do not
+// fit, or when the last frame's batches (prev, its stats) averaged fewer
+// than scatterRun quads per page change (scatterMin quads or more); it
+// then drops the asks, so the next frame draws on its own and asks for
+// all its images in draw order. A copy whose pair the cache has since
+// dropped (and deallocated) is skipped: its image asks again when it is
+// drawn again.
+func (l *Lit) copyAsked(prev Stats) {
+	s := &l.batch.sheet
+	l.flush(FlushEnd) // the pages may be cleared: nothing may sample them
+	s.frame++
+	cooled := s.frame >= s.resetAt
+	scattered := prev.Batched >= scatterMin && prev.Flushes[FlushPage]*scatterRun > prev.Batched
+	switch {
+	case len(s.want) > 0 && s.art != nil && s.art != s.wantArt:
+		l.resetSheet(s.wantArt)
+	case cooled && scattered:
+		l.resetSheet(s.art)
+		s.dropAsks()
+		return
 	}
-	b.resets++
+	if len(s.want) == 0 {
+		return
+	}
+	if s.art == nil {
+		s.art = s.wantArt
+	}
+	for _, w := range s.want {
+		if !l.livePair(w.img, w.src) {
+			continue
+		}
+		if _, ok := s.add(w.img, w.src); ok {
+			l.stats.Copies++
+			continue
+		}
+		if s.frame >= s.resetAt { // full: start again, packed in the next frame's order
+			l.resetSheet(s.art)
+		}
+		break
+	}
+	s.dropAsks()
+}
+
+// resetSheet starts the sheet again for catalog c, counted in Stats.
+func (l *Lit) resetSheet(c *art.Catalog) {
+	l.batch.sheet.reset(c)
 	l.stats.Resets++
-	return true
+}
+
+// livePair reports whether src is still what a lit draw of img samples:
+// img itself, or the pair the cache holds for it.
+func (l *Lit) livePair(img, src *ebiten.Image) bool {
+	if src == img {
+		return true
+	}
+	e, ok := l.Pairs.m[img]
+	return ok && e.Value.(*pairEntry).pair == src
 }
 
 // joins reports whether a shaded lit draw with blood may join the batch.
 func (l *Lit) joins(blood float32) bool {
-	return blood == 0 && l.batch.on && !l.batch.thrash
+	return blood == 0 && l.batch.on
 }
 
 // appendQuad queues l.Verts (already placed on page) for dst with shader

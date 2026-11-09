@@ -13,7 +13,12 @@ func TestStatsCountsFlushReasons(t *testing.T) {
 	r := groundRig()
 	a, big := ebiten.NewImage(8, 8), ebiten.NewImage(24, 24)
 	dst1, dst2 := ebiten.NewImage(64, 64), ebiten.NewImage(64, 64)
-	r.lit.StartFrame()
+	r.lit.Batch(true) // the frame before: a and big draw alone and ask for copies
+	r.drawGround(dst1, a, 0)
+	r.drawGround(dst1, big, 0)
+	r.lit.Batch(false)
+	r.lit.Calls = 0
+	r.lit.StartFrame() // copies them, counted in this frame's stats
 	r.lit.Batch(true)
 	r.drawGround(dst1, a, 0)
 	r.drawGround(dst2, a, 0)   // dst

@@ -16,10 +16,11 @@ const (
 	FlushBake                        // a bake's plain albedo draw
 	FlushOff                         // lighting off or no shader: the plain draw
 	FlushEnd                         // the batch was turned off (the pass ended, or a caller draws past the light)
+	FlushNew                         // a lit draw whose image has no copy on the sheet yet draws alone (copied at the next StartFrame)
 	NumFlushReasons
 )
 
-var flushNames = [NumFlushReasons]string{"dst", "page", "shader", "uniforms", "full", "raw", "blood", "bake", "off", "end"}
+var flushNames = [NumFlushReasons]string{"dst", "page", "shader", "uniforms", "full", "raw", "blood", "bake", "off", "end", "new"}
 
 // String is the reason's short name ("raw").
 func (r FlushReason) String() string {
@@ -32,7 +33,8 @@ func (r FlushReason) String() string {
 // Stats are one frame's lit-draw counts: the calls Lit issued itself (one
 // per unbatched lit sprite, plain draw or batch), the quads that went out in
 // a batch, the batch flushes by reason, and the images copied onto the
-// batch sheet and the times it started again. StartFrame zeroes them; the
+// batch sheet and the times it started again. StartFrame zeroes them
+// (and counts the copies it makes into the new frame's); the
 // PERF probe and the draw benchmarks read them (Lit.Stats).
 type Stats struct {
 	Calls   int
@@ -70,11 +72,13 @@ func (s Stats) String() string {
 func (l *Lit) Stats() Stats { return l.stats }
 
 // StartFrame begins a frame's lit drawing: the pipeline calls it once at
-// the top of the world pass. It zeroes Stats and the batch's thrash guard
-// (a frame that starts the sheet again twice draws unbatched to its end).
+// the top of the world pass. It zeroes Stats, then makes the sheet copies
+// the last frame asked for (counted in this frame's Stats), so no copy
+// lands between two draws of the frame (lit_batch.go).
 func (l *Lit) StartFrame() {
+	prev := l.stats
 	l.stats = Stats{}
-	l.batch.resets, l.batch.thrash = 0, false
+	l.copyAsked(prev)
 }
 
 // count records one draw call Lit issued (Calls, the benchmarks' total, and

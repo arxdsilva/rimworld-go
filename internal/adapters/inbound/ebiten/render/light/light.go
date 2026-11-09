@@ -1085,7 +1085,8 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 	// while a pass has the batch on, the draw joins it: the same quad,
 	// sampled from the copy of src on the sheet (lit_batch.go)
 	var slot sheetSlot
-	batched := l.joins(blood)
+	joined := l.joins(blood)
+	batched := joined
 	if batched {
 		if slot, batched = l.slotOf(v.Art, img, src); batched {
 			sx, sy = slot.x, slot.y
@@ -1102,9 +1103,12 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 		l.appendQuad(dst, slot.page, sh)
 		return
 	}
-	if blood != 0 {
+	switch {
+	case blood != 0:
 		l.flush(FlushBlood)
-	} else {
+	case joined: // no copy on the sheet yet: asked for, drawn alone this frame
+		l.flush(FlushNew)
+	default:
 		l.flush(FlushRaw)
 	}
 	l.count()

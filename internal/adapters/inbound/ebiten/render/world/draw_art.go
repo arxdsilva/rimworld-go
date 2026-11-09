@@ -137,7 +137,8 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	v := p.v
 	w := p.src.World()
 	v.W, v.Pawns = w, p.src.Snapshot() // this frame's world and pawns, for every layer
-	// this frame's lit-draw counts (light.Stats) and the batch's thrash guard
+	// this frame's lit-draw counts (light.Stats); the sheet copies the last
+	// frame asked for, made here and never between two of the pass's draws
 	p.Lit.StartFrame()
 	p.Lit.Light = light.LightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
 	p.setView(sw, sh, tile)

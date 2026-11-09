@@ -10,6 +10,7 @@ devtools/**:* # developer mode is a debugging tool and stays English
 ports/ports.go:/^[a-z_]+$/ # screen ids (Screen.String)
 nav.go:/^[a-z]+$/ # overlay ids (overlayID.String)
 art/memory.go:* # the fps probe's memory line (make fps), never drawn in play
+render/light/stats.go:* # lit-draw counts for benchmarks and logs (GAR-161), never drawn in play
 gfx/canvas.go:* # draw-trace events for tests and the probe
 app.go:"asset warning: " # developer warning about missing generated art
 uikit/modal.go:X # the close button's glyph
