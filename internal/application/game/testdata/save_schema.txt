@@ -557,6 +557,7 @@ saveState.Incidents.NextNature uint64
 saveState.Incidents.Queue []rimworld-go/internal/domain/incident.Queued
 saveState.Incidents.Queue[] rimworld-go/internal/domain/incident.Queued
 saveState.Incidents.Queue[].At uint64
+saveState.Incidents.Queue[].Faction int
 saveState.Incidents.Queue[].ID rimworld-go/internal/domain/incident.ID = uint8
 saveState.Incidents.Queue[].Points int
 saveState.Incoming map[rimworld-go/internal/domain/sim/entity.EntityID]int
@@ -779,6 +780,7 @@ saveState.NG1.Factions[].SettlementNames []string
 saveState.NG1.Factions[].SettlementNames[] string
 saveState.NG1.Factions[].Settlements []int
 saveState.NG1.Factions[].Settlements[] int
+saveState.NG1.Factions[].ThankedDay int
 saveState.NG1.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
 saveState.NG1.IntroDone bool
 saveState.NG1.Lost bool
@@ -879,6 +881,7 @@ saveState.NG1.Setup.Factions[].SettlementNames []string
 saveState.NG1.Setup.Factions[].SettlementNames[] string
 saveState.NG1.Setup.Factions[].Settlements []int
 saveState.NG1.Setup.Factions[].Settlements[] int
+saveState.NG1.Setup.Factions[].ThankedDay int
 saveState.NG1.Setup.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
 saveState.NG1.Setup.GenVersion uint16
 saveState.NG1.Setup.GoneAt uint64
@@ -2011,11 +2014,16 @@ saveState.Vital[].V.Injury int
 saveState.Vital[].V.Status rimworld-go/internal/domain/pawn/health.Status = uint8
 saveState.W int
 saveState.Wealth rimworld-go/internal/application/game/wealth.Save
+saveState.Wealth.Counted bool
+saveState.Wealth.Cursor int
 saveState.Wealth.History []rimworld-go/internal/application/game/wealth.Sample
 saveState.Wealth.History[] rimworld-go/internal/application/game/wealth.Sample
 saveState.Wealth.History[].Tick uint64
 saveState.Wealth.History[].Value int
+saveState.Wealth.Hour uint64
 saveState.Wealth.Next uint64
+saveState.Wealth.Partial int
+saveState.Wealth.Value int
 saveState.Weather rimworld-go/internal/domain/world/weather.State
 saveState.Weather.Goal float64
 saveState.Weather.Intensity float64
@@ -2983,6 +2991,7 @@ saveState.World.Version uint8
 saveState.World.Visitors []rimworld-go/internal/application/game/visit.Rec
 saveState.World.Visitors[] rimworld-go/internal/application/game/visit.Rec
 saveState.World.Visitors[].Ally bool
+saveState.World.Visitors[].Defend uint64
 saveState.World.Visitors[].Down bool
 saveState.World.Visitors[].Faction int
 saveState.World.Visitors[].Fetch rimworld-go/internal/domain/sim/entity.EntityID = uint64
