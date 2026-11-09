@@ -2,11 +2,10 @@ package saves
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/application/game/savefmt"
 )
 
 // Saved games. The book only sees saves through the Saver, so it never
@@ -137,17 +136,6 @@ func autosaveSlot(b *Book, day int) string {
 	return pick
 }
 
-// baseSlot is a colony's slot name from the name of one of its autosaves
-// (<slot>-autosave or <slot>-autosave-N).
-func baseSlot(name string) string {
-	if i := strings.LastIndex(name, "-autosave-"); i >= 0 {
-		if _, err := strconv.Atoi(name[i+len("-autosave-"):]); err == nil {
-			return name[:i]
-		}
-	}
-	return strings.TrimSuffix(name, "-autosave")
-}
-
 // SaveBeforeLeaving saves a commitment colony as the player leaves it
 // (Save & Quit to Menu, Return to Main Menu, Quit, closing the window). It
 // reports whether leaving may go ahead: false only when that save failed,
@@ -197,7 +185,7 @@ func (b *Book) LoadSlot(i int) {
 		b.sh.Hint(b.sh.Tf("load failed: %s", err.Error()))
 		return
 	}
-	b.SaveSlot = baseSlot(meta.Name)
+	b.SaveSlot = savefmt.BaseSlot(meta.Name)
 	b.AutosaveDay = int(tick) / 60000
 	b.sh.Hint(b.sh.Tf("loaded %s", sl.Name))
 }

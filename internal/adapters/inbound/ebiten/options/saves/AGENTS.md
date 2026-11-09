@@ -5,7 +5,7 @@ The client's book of saved games: saving the running colony to its slot (manual 
 
 ## Owns
 - `Book` built by `New(sh Shell)`; the root builds it over `optionsShell` and stores it as `options.Screen.Saves`. State the root reads: `Slots`, `SlotsRead`, `SaveSlot`, `AutosaveDay`, `SlotPage`.
-- Today's behaviour: `SaveNow`, `PollSaves`, `TickAutosave`, `SaveBeforeLeaving`, `RefreshSlots`, `LoadSlot`, `LoadButtons`, `DrawLoad`; `background` (the async reports), `autosaveSlot`, `baseSlot`.
+- Today's behaviour: `SaveNow`, `PollSaves`, `TickAutosave`, `SaveBeforeLeaving`, `RefreshSlots`, `LoadSlot`, `LoadButtons`, `DrawLoad`; `background` (the async reports), `autosaveSlot`; the slot of a loaded autosave is `savefmt.BaseSlot`.
 - Contract stubs, each with the plan id that fills it: `OpenSaveDialog` (SAV-001), `NewColony` (SAV-003), `SaveAndLeave` (SAV-005), `Leave` and `DrawPauseStatus` (SAV-013), `Click` (every `load.` id; delete, sort and colony filter are no-ops until the load list's work).
 - Declared state for those items: `session`, `progress`, `pending`, `sort`, `filter`, `dialog`, `newID` (`crypto/rand`, 16 hex digits; tests set it).
 - `AutosaveHour`, `CommitLoadReason`, `EndingTag`, `NewSlotName`.
@@ -21,7 +21,7 @@ The client's book of saved games: saving the running colony to its slot (manual 
 
 ## Contracts
 - `Saver.Save(meta)` writes the slot `meta.Name`; a commitment colony's one slot goes through the same hook (SAV-024 removed `SaveCommit`).
-- `Saver.Load` returns the save's `ports.SaveMeta` and tick; the book keeps `baseSlot(meta.Name)` as the colony's slot.
+- `Saver.Load` returns the save's `ports.SaveMeta` and tick; the book keeps `savefmt.BaseSlot(meta.Name)` as the colony's slot.
 - `Click` returns false for `load.back` so the root's screen intent takes it.
 - Leaving goes through `Leave(proceed)`; Save & Quit through `SaveAndLeave(proceed)`, whose `proceed` is the leaving intent and so passes `Leave` again.
 - Autosave writes `<slot>-autosave` (or `-autosave-1…N` with `AutosavesKept` above one) after `AutosaveDays`; a commitment colony writes its slot daily.

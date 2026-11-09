@@ -127,17 +127,6 @@ func TestOneAutosaveKeepsTheOldName(t *testing.T) {
 	}
 }
 
-func TestLoadingARotatedAutosaveKeepsTheColonySlot(t *testing.T) {
-	t.Parallel()
-	for in, want := range map[string]string{
-		"colony-autosave-3": "colony", "colony-autosave": "colony", "colony": "colony", "a-autosave-b": "a-autosave-b",
-	} {
-		if got := baseSlot(in); got != want {
-			t.Errorf("baseSlot(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 // A long save list is shown a page at a time: every save is reachable, and
 // the page row is the last button.
 func TestLoadListPagesThroughEverySave(t *testing.T) {

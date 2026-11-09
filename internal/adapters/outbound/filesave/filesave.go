@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/platform/atomicfile"
 )
 
@@ -45,23 +46,9 @@ type Slot struct {
 	Err      error // unreadable / incompatible: listed but not loadable
 }
 
-// sanitize makes a slot name safe as a file name.
-func sanitize(name string) string {
-	name = strings.TrimSpace(name)
-	var b strings.Builder
-	for _, r := range name {
-		switch {
-		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
-			b.WriteRune(r)
-		case r == ' ':
-			b.WriteRune('-')
-		}
-	}
-	if b.Len() == 0 {
-		return "colony"
-	}
-	return b.String()
-}
+// sanitize makes a slot name safe as a file name (savefmt.SlotKey, which
+// the client shares).
+func sanitize(name string) string { return savefmt.SlotKey(name) }
 
 // Save writes g to the slot (replacing it) and returns the file path.
 func (s Store) Save(g *game.Game, slot string) (string, error) {

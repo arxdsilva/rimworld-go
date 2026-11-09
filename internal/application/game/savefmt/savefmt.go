@@ -1,6 +1,8 @@
-// Package savefmt is the save file's container: a gzip stream around the
-// game's gob encoding. The game encodes raw gob (it is what the state hash
-// reads); a file on disk is that stream compressed.
+// Package savefmt is the save file's container and header: a gzip stream
+// around the game's gob encoding, and the header type (Info) with the slot
+// naming rules (SlotKey, BaseSlot) the store and the client share. The game
+// encodes raw gob (it is what the state hash reads); a file on disk is that
+// stream compressed.
 package savefmt
 
 import (
