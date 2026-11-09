@@ -18,6 +18,13 @@ import (
 // holds that one block (Memory.Bash) until it is down or held open, or
 // for BashGiveUp ticks, after which it drops it and waits for the path
 // retry before a new search may start another (TestAnimalBashNoFlapOnHeldDoor).
+//
+// Cost: only a foe worth breaking in for starts a search (a manhunter's
+// or an insect's any foe, a predator's only a person or a tame animal: a
+// wild predator after wild prey just paths), the search keeps to a box
+// around the animal and its foe (breachMargin), and a search that finds
+// no block is remembered (a Bash at X -1) and not run again for
+// BreachRetry ticks.
 
 // BashGiveUp is how long an animal batters one block before giving up.
 const BashGiveUp = 2500
@@ -26,25 +33,47 @@ const BashGiveUp = 2500
 // this many ticks later (the game's own path retry).
 const bashRetry = 90
 
+// BreachRetry: an animal whose breach search found no block searches
+// again only this many ticks later.
+const BreachRetry = 600
+
+// breachMargin: the breach search keeps to the box around the animal and
+// its foe grown by this many tiles.
+const breachMargin = 12
+
 // breaker: a wild animal that breaks through to its foe: one enraged
-// (hive insects are, for good), or a predator after its prey.
-func breaker(a animal.State, def animal.Def, now uint64) bool {
-	return !a.Tame && (a.Enraged(now) || def.Predator)
+// (hive insects are, for good), or a predator after a person or a tame
+// animal.
+func (r *Rage) breaker(a animal.State, def animal.Def, now uint64) bool {
+	switch {
+	case a.Tame:
+		return false
+	case a.Enraged(now):
+		return true
+	case !def.Predator || a.Target == 0:
+		return false
+	}
+	if o := r.h.Ref(a.Target); o != nil {
+		return o.Tame
+	}
+	return r.h.IsPawn(a.Target)
 }
 
 // shutOut starts a bash for animal id (state a), whose path to its foe at
 // tp just failed: the first block on its way, unless it holds one.
 func (r *Rage) shutOut(id entity.EntityID, a *animal.State, tp Pos, now uint64) {
 	def := animal.DefOf(a.Species)
-	if !breaker(*a, def, now) {
+	if !r.breaker(*a, def, now) {
 		return
 	}
-	if _, held := r.m.Bash[id]; held {
-		return
+	if bs, held := r.m.Bash[id]; held && (bs.X >= 0 || now < bs.Since+BreachRetry) {
+		return // a block held, or no way through found lately
 	}
-	if c, ok := block(r, r.pos(id), tp, a.Tame, def.Hive); ok {
-		r.m.hold(id, Bash{X: c.X, Y: c.Y, Since: now})
+	c, ok := block(r, r.pos(id), tp, a.Tame, def.Hive)
+	if !ok {
+		c = Pos{X: -1, Y: -1} // none: remembered for BreachRetry
 	}
+	r.m.hold(id, Bash{X: c.X, Y: c.Y, Since: now})
 }
 
 // bashing runs animal id's bash, if it holds one: it walks beside the
@@ -56,8 +85,14 @@ func (r *Rage) bashing(id entity.EntityID, a *animal.State, pos Pos, now uint64)
 	if !ok {
 		return false
 	}
+	if bs.X < 0 { // no way through found: forgotten once it may search again
+		if now >= bs.Since+BreachRetry {
+			delete(r.m.Bash, id)
+		}
+		return false
+	}
 	def := animal.DefOf(a.Species)
-	if now-bs.Since > BashGiveUp || !breaker(*a, def, now) {
+	if now-bs.Since > BashGiveUp || !r.breaker(*a, def, now) {
 		delete(r.m.Bash, id)
 		a.Path, a.PathI, a.RetryAt = nil, 0, now+bashRetry
 		return false
@@ -91,14 +126,19 @@ func (r *Rage) bashing(id entity.EntityID, a *animal.State, pos Pos, now uint64)
 }
 
 // breachQuery is an animal's walk with the blocks it may break (shut
-// doors; walls too) counted open; fences stay shut.
+// doors; walls too) counted open, inside the box x0..x1, y0..y1; fences
+// stay shut.
 type breachQuery struct {
 	pathing.Query
-	r     *Rage
-	walls bool
+	r              *Rage
+	walls          bool
+	x0, y0, x1, y1 int
 }
 
 func (q breachQuery) Walkable(x, y int) bool {
+	if x < q.x0 || x > q.x1 || y < q.y0 || y > q.y1 {
+		return false
+	}
 	if q.Query.Walkable(x, y) {
 		return true
 	}
@@ -110,7 +150,10 @@ func (q breachQuery) Walkable(x, y int) bool {
 // blocks (breachQuery), as the mechanoids plan (combat.Tactics.Block).
 func block(r *Rage, pos, tp Pos, tame, walls bool) (Pos, bool) {
 	q := r.h.PathQuery(tame)
-	path, ok := r.srch.Find(breachQuery{Query: q, r: r, walls: walls}, pos.X, pos.Y, tp.X, tp.Y)
+	bq := breachQuery{Query: q, r: r, walls: walls,
+		x0: min(pos.X, tp.X) - breachMargin, y0: min(pos.Y, tp.Y) - breachMargin,
+		x1: max(pos.X, tp.X) + breachMargin, y1: max(pos.Y, tp.Y) + breachMargin}
+	path, ok := r.srch.Find(bq, pos.X, pos.Y, tp.X, tp.Y)
 	if !ok {
 		return Pos{}, false
 	}
@@ -150,5 +193,5 @@ func standBy(r *Rage, tame bool, pos, b Pos) (Pos, bool) {
 // inspector's "Breaking through the door").
 func (r *Rage) Bashing(id entity.EntityID, a animal.State, now uint64) bool {
 	bs, ok := r.m.Bash[id]
-	return ok && a.Mode == animal.Attack && now-bs.Since <= BashGiveUp
+	return ok && bs.X >= 0 && a.Mode == animal.Attack && now-bs.Since <= BashGiveUp
 }
