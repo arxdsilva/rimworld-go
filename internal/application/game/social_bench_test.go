@@ -28,7 +28,7 @@ func socialCrowd(b *testing.B, n int) *Game {
 		g.ensurePerson(id)
 	}
 	for range 3000 { // every pawn interacts, edges and logs fill
-		g.phaseSocial()
+		runPhase(g, PhaseSocial)
 		g.clock.Advance(1)
 	}
 	logs := 0
@@ -46,7 +46,7 @@ func benchSocialPhase(b *testing.B, n int) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		g.phaseSocial()
+		runPhase(g, PhaseSocial)
 		g.clock.Advance(1)
 	}
 }

@@ -3,11 +3,9 @@ package game
 import (
 	"fmt"
 
-	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/stat"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -25,11 +23,8 @@ import (
 // infections (infection.go), then the patients sweep, so right after it
 // the patients index is exactly what a scan of the bodies would give.
 func (g *Game) phaseMedical() {
-	now := uint64(g.clock.Now())
-	if !cadence.Due(now, clock.TicksPerHour, cadence.OffMedical, 0) {
-		return
-	}
-	g.stepOrganFailure() // organs.go (MED-05)
+	now := uint64(g.clock.Now()) // its hourly slot (phaseSystems: cadence.OffMedical)
+	g.stepOrganFailure()         // organs.go (MED-05)
 	g.stepBloodLoss()
 	g.stepCare(now)          // infection.go (MED-02): infections, races, healing
 	stepMalnutrition(g, now) // care_host_prison.go (FOOD-1)

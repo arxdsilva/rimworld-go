@@ -231,7 +231,7 @@ func TestThreatTargetsColonies(t *testing.T) {
 	before := len(g.messages)
 	for range 60 { // the real path: the storyteller's clock fires on the first map's pass
 		g.threatsOn, g.nextThreat = true, 0
-		g.phaseThreats()
+		runPhase(g, PhaseThreats)
 	}
 	for _, msg := range g.messages[min(before, len(g.messages)):] {
 		if msg.Danger {

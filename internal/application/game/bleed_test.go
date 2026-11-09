@@ -42,7 +42,7 @@ func addWound(t *testing.T, g *Game, id entity.EntityID, p body.Part, dmg int, k
 func medHour(g *Game) {
 	now := uint64(g.clock.Now())
 	g.clock.Advance(int(cadence.Next(now+1, clock.TicksPerHour, cadence.OffMedical, 0) - now))
-	g.phaseMedical()
+	runPhase(g, PhaseMedical)
 }
 
 func TestUntendedCutBleedsOut(t *testing.T) {

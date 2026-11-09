@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/rest"
+	"rimworld-go/internal/application/game/sched"
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/incident"
@@ -800,10 +801,10 @@ type Game struct {
 	raiderBuf []entity.EntityID // phaseThreats scratch
 	// enterHook, when set (tests only), replaces enter's verdicts.
 	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
-	// phaseObs: optional per-phase timing observer (phases.go); set only
-	// from cmd/* and benchmarks, never read by gameplay.
-	phaseObs PhaseObserver
-	viewGen  uint64
+	// systems: the phase systems in order (phases.go, game/sched); its
+	// observer is set only from cmd/* and benchmarks, never read by gameplay.
+	systems *sched.Schedule
+	viewGen uint64
 	// sk: bios, skills, stats and learning (skills.go, NG-1 PAWN-G).
 	sk skillState
 	// ng: the new-game setup's live state (setup.go, NG-1 SETUP); zero
@@ -1003,7 +1004,7 @@ func New(cfg Config) *Game {
 		streams:    rngStreams{seed: cfg.Seed},
 	}
 	g.care = care.New(newCareHost(g), care.Roles{Prison: carePrison{g}, Guests: careGuests{g}, Social: careSocial{g}, Gear: careGear{g}, Meals: careMeals{g}, Gifts: careGifts{g}, Captives: careCaptives{g}}) // care_host*.go, quest_host.go
-	g.mind = mind.New(newMindHost(g))
+	g.mind, g.systems = mind.New(newMindHost(g)), phaseSystems(g)
 	initMapHosts(g)
 	g.craft = craft.New(newCraftHost(g))    // craft_host.go
 	g.prison = prison.New(newPrisonHost(g)) // prison_host.go

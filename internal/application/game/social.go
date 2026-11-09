@@ -1,7 +1,6 @@
 package game
 
 import (
-	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/sociallog"
@@ -11,7 +10,6 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/social"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/pkg/mathx"
@@ -34,23 +32,13 @@ const (
 	partnerRadius    = 6
 )
 
-// phaseSocial runs after phaseJobs: the daily upkeep, then each due
-// colonist's interaction check and mood step. MAP-0: each map's colonists
-// talk on its pass; the daily upkeep, gatherings and visitors are the
-// colony's, on the first map's pass (even with nobody on it, once a second
-// map is open).
+// phaseSocial runs after phaseJobs and the colony's social day and
+// gatherings (phaseSystems): each due colonist's interaction check and
+// mood step. MAP-0: each map's colonists talk on its pass; visitors talk
+// on the colony's, the first map's pass (even with nobody on it, once a
+// second map is open).
 func (g *Game) phaseSocial() {
-	colony := primary(g) && (len(g.pawnIDs) > 0 || len(g.maps) > 1)
-	if !colony && len(g.pawnIDs) == 0 {
-		return
-	}
-	now := uint64(g.clock.Now())
-	if colony && g.soc != nil && cadence.Due(now, clock.TicksPerDay, cadence.OffSocialDay, 0) {
-		g.socialDay(now)
-	}
-	if colony {
-		g.gatherTick(now) // gathering.go: weddings and parties (M5)
-	}
+	colony, now := primary(g) && (len(g.pawnIDs) > 0 || len(g.maps) > 1), uint64(g.clock.Now())
 	for _, id := range g.pawnIDs {
 		u := uint64(id)
 		if (now+u*socialStagger)%socialPeriod == 0 {

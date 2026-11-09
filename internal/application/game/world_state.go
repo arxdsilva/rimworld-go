@@ -154,24 +154,20 @@ func (g *Game) colonyTile() int {
 	return g.ng.setup.Tile
 }
 
-// phaseWorld runs after phaseIncidents: visitors every tick (a handful of
-// pawns), caravans and allowed areas every worldStep ticks.
+// phaseWorld runs with a world after phaseIncidents and the colony's
+// visitors (phaseSystems): each map's forming caravans and travel.
 func (g *Game) phaseWorld() {
-	w := g.worldSt
-	if w == nil {
-		return
-	}
-	now, first := uint64(g.clock.Now()), primary(g) // MAP-01: colony-wide upkeep on the first map's pass
-	if len(w.visitors) > 0 && first {
-		visitsOf(g).Tick(aidOf(g), now) // game/visit (visitors.go)
-	}
+	w, now, first := g.worldSt, uint64(g.clock.Now()), primary(g) // MAP-01: the colony's flights and sites on the first map's pass
 	if len(w.caravans) > 0 && now%maps.FormCheck == 0 {
 		fleetOf(g).CheckForming(now) // each map's own forming caravans
 	}
 	travelOf(g).TickPass(now, first) // game/travel (AX-9): each map's caskets and boarders, the colony's flights and sites
-	if !first || now%worldStep != 0 {
-		return
-	}
+}
+
+// worldUpkeep is the colony's allowed areas, caravans and ship every
+// worldStep ticks, after the first map's world pass (phaseSystems).
+func worldUpkeep(g *Game, now uint64) {
+	w := g.worldSt
 	if len(w.areaOf) > 0 {
 		g.areasTick(now) // areas.go
 	}

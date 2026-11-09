@@ -1,6 +1,13 @@
 package game
 
-import "time"
+import (
+	"time"
+
+	"rimworld-go/internal/application/game/cadence"
+	"rimworld-go/internal/application/game/sched"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/temperature"
+)
 
 // Phase names, in Step order (PhaseObserver).
 const (
@@ -33,30 +40,38 @@ func Phases() []string {
 // from cmd/* (the benchmark runner) and benchmarks.
 type PhaseObserver func(phase string, elapsed time.Duration)
 
-// SetPhaseObserver installs o (nil removes it).
-func (g *Game) SetPhaseObserver(o PhaseObserver) { g.phaseObs = o }
+// SetPhaseObserver installs o (nil removes it): the scheduler times its systems for it.
+func (g *Game) SetPhaseObserver(o PhaseObserver) { g.systems.Observe(sched.Observer(o)) }
 
-// runPhases runs the current map's 15 phases in Step order, timing each
-// for the observer when one is set.
-func (g *Game) runPhases() {
-	phases := [...]struct {
-		name string
-		run  func(*Game)
-	}{
-		{PhaseCommands, (*Game).phaseCommands}, {PhasePlants, (*Game).phasePlants}, {PhasePower, (*Game).phasePower},
-		{PhaseClimate, (*Game).phaseClimate},
-		{PhaseMedical, (*Game).phaseMedical}, {PhaseNeeds, (*Game).phaseNeeds}, {PhaseAI, (*Game).phaseAI},
-		{PhaseJobs, (*Game).phaseJobs}, {PhaseSocial, (*Game).phaseSocial}, {PhaseAnimals, (*Game).phaseAnimals},
-		{PhaseThreats, (*Game).phaseThreats}, {PhaseIncidents, (*Game).phaseIncidents}, {PhaseWorld, (*Game).phaseWorld},
-		{PhaseWeather, (*Game).phaseWeather}, {PhaseMovement, (*Game).phaseMovement},
-	}
-	for _, p := range phases {
-		if g.phaseObs == nil {
-			p.run(g)
-			continue
-		}
-		t0 := time.Now()
-		p.run(g)
-		g.phaseObs(p.name, time.Since(t0))
-	}
+// runPhases runs the current map's pass of the phase systems (game/sched).
+func (g *Game) runPhases() { g.systems.Pass(primary(g), uint64(g.clock.Now())) }
+
+// phaseSystems are the 15 phases in Step order, wrapped, and the colony's
+// work (primary) and whole-pass cadence gates lifted out of them in place.
+func phaseSystems(g *Game) *sched.Schedule {
+	w, now, hour := sched.Wrap, func() uint64 { return uint64(g.clock.Now()) }, uint64(clock.TicksPerHour)
+	talk := func() bool { return len(g.pawnIDs) > 0 || len(g.maps) > 1 } // the colony's social upkeep: anyone home, or a second map
+	world := func() bool { return g.worldSt != nil }
+	return sched.Must(Phases(), []sched.System{
+		w(PhaseCommands, PhaseCommands, g.phaseCommands), w(PhasePlants, PhasePlants, g.phasePlants), w(PhasePower, PhasePower, g.phasePower),
+		w("heat", PhaseClimate, g.heatRooms).At(temperature.EqualiseInterval, 0).Then("rot"), // game/thermo (TEMP-1): the wiki's 120-tick room equalisation
+		w("rot", PhaseClimate, func() { g.craft.Condition.Rot(climateInterval) }).At(climateInterval, cadence.OffRot).Then("wear"),
+		w("wear", PhaseClimate, func() { g.craft.Condition.Weather(now() + cadence.OffWear) }).At(hour, cadence.OffWear).Then(PhaseClimate), // PRD-2, the hour it closes
+		w(PhaseClimate, PhaseClimate, g.phaseClimate).At(climateInterval, 0),
+		w(PhaseMedical, PhaseMedical, g.phaseMedical).At(hour, cadence.OffMedical),
+		w(PhaseNeeds, PhaseNeeds, g.phaseNeeds), w(PhaseAI, PhaseAI, g.phaseAI), w(PhaseJobs, PhaseJobs, g.phaseJobs),
+		w("social-day", PhaseSocial, func() { g.socialDay(now()) }).ForColony().At(clock.TicksPerDay, cadence.OffSocialDay).When(talk).Then("gather"),
+		w("gather", PhaseSocial, func() { g.gatherTick(now()) }).ForColony().When(talk).Then(PhaseSocial), // gathering.go: weddings and parties (M5)
+		w(PhaseSocial, PhaseSocial, g.phaseSocial), w(PhaseAnimals, PhaseAnimals, g.phaseAnimals),
+		w("arrival", PhaseThreats, func() { g.arrivalTick(now()) }).ForColony().When(g.hasSetup).Then("losses"), // arrival.go (NG-1)
+		w("losses", PhaseThreats, func() { g.checkLosses(now()) }).At(hour, cadence.OffStory).When(g.hasSetup).Then("raids-over"),
+		w("raids-over", PhaseThreats, func() { g.checkRaidsOver(now()) }).At(hour, cadence.OffStory).When(g.hasSetup).Then("story"), // factions.go
+		w("story", PhaseThreats, func() { storyHour(g, now()) }).ForColony().At(hour, cadence.OffStory).When(g.hasSetup).Then("storyteller"),
+		w("storyteller", PhaseThreats, func() { fireStoryteller(g, now()) }).ForColony().When(func() bool { return g.threatsOn && now() >= g.nextThreat }).Then(PhaseThreats),
+		w(PhaseThreats, PhaseThreats, g.phaseThreats), w(PhaseIncidents, PhaseIncidents, g.phaseIncidents),
+		w("visitors", PhaseWorld, func() { visitsOf(g).Tick(aidOf(g), now()) }).ForColony().When(func() bool { return world() && len(g.worldSt.visitors) > 0 }).Then(PhaseWorld), // game/visit
+		w(PhaseWorld, PhaseWorld, g.phaseWorld).When(world).Then("world-upkeep"),
+		w("world-upkeep", PhaseWorld, func() { worldUpkeep(g, now()) }).ForColony().At(worldStep, 0).When(world),
+		w(PhaseWeather, PhaseWeather, g.phaseWeather), w(PhaseMovement, PhaseMovement, g.phaseMovement),
+	})
 }

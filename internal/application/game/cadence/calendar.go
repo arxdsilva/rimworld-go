@@ -29,7 +29,7 @@ const (
 	OffWear      = 1190      // craft.Condition.Weather, hourly at 1310 past the hour
 	OffPot       = 625       // furnish.Pots, hourly at 1875 past the hour
 	OffMedical   = day - 125 // phaseMedical, hourly; the aging rolls at 00:00+125
-	OffStory     = day - 375 // setupTick, hourly; the day rollover at 00:00+375
+	OffStory     = day - 375 // the setup story (losses, storyHour), hourly; the day rollover at 00:00+375
 	OffCensus    = day - 625 // game/maps' temporary-map census, hourly
 	OffSocialDay = day - 875 // the social day at 00:00+875
 )

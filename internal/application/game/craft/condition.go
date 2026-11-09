@@ -3,7 +3,6 @@ package craft
 import (
 	"fmt"
 
-	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -26,19 +25,6 @@ type loss struct {
 	kind item.Kind
 	qty  int
 	x, y int
-}
-
-// Tick runs the passes due at tick now, each a whole pass on its own
-// slot (cadence.OffRot, OffWear), off the climate block and the hour, so
-// each moves the item views once a period: rot every interval, and the
-// hourly condition pass, handed the hour it closes.
-func (c *Condition) Tick(now uint64, interval int) {
-	if cadence.Due(now, uint64(interval), cadence.OffRot, 0) {
-		c.Rot(interval)
-	}
-	if cadence.Due(now, clock.TicksPerHour, cadence.OffWear, 0) {
-		c.Weather(now + cadence.OffWear)
-	}
 }
 
 // Rot advances spoilage by the local temperature over interval ticks.

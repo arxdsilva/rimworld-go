@@ -303,7 +303,7 @@ func TestCaravanEtaMatchesTravel(t *testing.T) {
 		t.Fatalf("estimate %d ticks beats the wiki floor %d", est, floor)
 	}
 	for i := 0; i < 400000; i += 10 {
-		g.phaseWorld()
+		runPhase(g, PhaseWorld)
 		if c := fleetOf(g).At(cid); c == nil || c.C.State == caravan.Arrived {
 			break
 		}

@@ -135,7 +135,7 @@ func TestDeteriorationOutdoorsVsRoofed(t *testing.T) {
 		for range clock.HoursPerDay { // to each hour's condition pass (cadence.OffWear)
 			now := uint64(g.clock.Now())
 			g.clock.Advance(int(cadence.Next(now+1, clock.TicksPerHour, cadence.OffWear, 0) - now))
-			g.phaseClimate()
+			runPhase(g, PhaseClimate)
 		}
 	}
 	day()

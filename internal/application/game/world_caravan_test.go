@@ -111,12 +111,12 @@ func formCaravan(t *testing.T, g *Game, dest int, ids ...entity.EntityID) *maps.
 func worldForward(g *Game, ticks int) {
 	for uint64(g.clock.Now())%10 != 0 {
 		g.clock.Advance(1)
-		g.phaseWorld()
+		runPhase(g, PhaseWorld)
 		ticks--
 	}
 	for ; ticks > 0; ticks -= 10 {
 		g.clock.Advance(10)
-		g.phaseWorld()
+		runPhase(g, PhaseWorld)
 	}
 }
 

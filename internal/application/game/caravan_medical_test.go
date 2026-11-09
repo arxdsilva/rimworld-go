@@ -20,7 +20,7 @@ func roadHours(g *Game, hours int) {
 		medHour(g) // the medical phase's hourly slot (cadence.OffMedical)
 		now := uint64(g.clock.Now())
 		g.clock.Advance(int(clock.TicksPerHour - now%clock.TicksPerHour))
-		g.phaseWorld() // the road's hour
+		runPhase(g, PhaseWorld) // the road's hour
 	}
 }
 

@@ -54,18 +54,19 @@ func (g *Game) standingRaider(id entity.EntityID) bool {
 	return ok && v.Status == health.Alive && (g.isRaider(id) && !g.prison.Is(id) || mind.Hostile(g.breaks[id].kind))
 }
 
-// phaseThreats runs the storyteller and every raider.
+// fireStoryteller fires the due threat at the colony it strikes (MAP-12).
+// MAP-0: one storyteller clock for the colony, on the first map's pass.
+func fireStoryteller(g *Game, now uint64) {
+	cur := g.mapState
+	g.mapState = threatTarget(g) // world_state.go
+	g.fireThreat(now)
+	g.mapState = cur
+}
+
+// phaseThreats runs every raider, after the setup's story and the
+// storyteller (phaseSystems).
 func (g *Game) phaseThreats() {
 	now := uint64(g.clock.Now())
-	if g.hasSetup() {
-		g.setupTick(now) // story.go: arrival, losses, day rollover (NG-1)
-	}
-	if g.threatsOn && now >= g.nextThreat && primary(g) { // MAP-0: one storyteller clock for the colony, fired on the first map
-		cur := g.mapState
-		g.mapState = threatTarget(g) // world_state.go: the colony it strikes (MAP-12)
-		g.fireThreat(now)
-		g.mapState = cur
-	}
 	g.raid.Pods.Step(now)                          // raid/pods.go (DEF-4): drop pods land
 	ids := append(g.raiderBuf[:0], g.raiderIDs...) // the list changes as raiders die or leave
 	for _, id := range ids {

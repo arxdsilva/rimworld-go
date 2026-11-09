@@ -260,24 +260,11 @@ func (g *Game) raidMessage(ex, ey, n int, plan raid.Plan, f *faction.Faction) {
 
 // --- the colony's hourly and daily upkeep -----------------------------------
 
-// setupTick runs every tick for a setup colony (phaseThreats): the
-// arrival, then in its hourly slot (cadence.OffStory) losses and raid
-// outcomes, the day rollover in the day's first slot and the scenario's
-// scheduled incidents. MAP-0: losses and repelled raids are each map's (its pawns, its raid
-// groups); the landing, the day's rollover and the scenario's incidents
-// are the colony's, on the first map's pass.
-func (g *Game) setupTick(now uint64) {
-	if primary(g) {
-		g.arrivalTick(now) // arrival.go
-	}
-	if !cadence.Due(now, clock.TicksPerHour, cadence.OffStory, 0) {
-		return
-	}
-	g.checkLosses(now)
-	g.checkRaidsOver(now) // factions.go
-	if !primary(g) {
-		return
-	}
+// storyHour is a setup colony's hourly story work in its slot, after each
+// map's losses and repelled raids (phaseSystems: cadence.OffStory, on the
+// first map's pass): quest timers, the day rollover in the day's first
+// slot and the scenario's scheduled incidents.
+func storyHour(g *Game, now uint64) {
 	questTick(g, now, false) // quest_host.go (QST-1): due timers and offers
 	switch (now + cadence.OffStory) % clock.TicksPerDay {
 	case 0:

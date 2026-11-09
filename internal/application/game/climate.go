@@ -178,17 +178,10 @@ func (g *Game) importLetters(list []letters.Letter, next uint64) {
 	}
 }
 
-// phaseClimate rots perishable stacks, moves room temperatures and
-// exposure on (frostbitten crops die with the plant pass: plant_growth.go).
+// phaseClimate is the climate block every climate interval, after the
+// room heat, rot and wear (phaseSystems): roofs, fuel, pumps, exposure
+// (frostbitten crops die with the plant pass: plant_growth.go).
 func (g *Game) phaseClimate() {
-	now := uint64(g.clock.Now())
-	if now%temperature.EqualiseInterval == 0 {
-		g.heatRooms() // game/thermo (TEMP-1): the wiki's 120-tick room equalisation
-	}
-	g.craft.Condition.Tick(now, climateInterval) // craft/condition.go: rot and PRD-2 wear, each on its own slot
-	if now%climateInterval != 0 {
-		return
-	}
 	g.checkRoofSupport() // roof.go: unsupported roofs fall first
 	g.burnFuel()         // fuel.go: the burners use their fuel
 	g.br.ind.Pumps(industryHost{g}).Advance(climateInterval)
