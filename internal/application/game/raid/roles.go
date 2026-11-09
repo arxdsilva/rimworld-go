@@ -59,3 +59,15 @@ type SiegeWorks interface {
 type Chronicle interface {
 	Log(text string)
 }
+
+// Senses is what raiders perceive (EAI-0 skeleton: nothing asks yet).
+type Senses interface {
+	// Visible: raider id has a clear line of sight to (x, y).
+	Visible(id entity.EntityID, x, y int) bool
+	// Foes appends to buf the standing colonists within r tiles of (x, y)
+	// in clear sight of it, ascending id.
+	Foes(x, y, r int, buf []entity.EntityID) []entity.EntityID
+	// Home is roughly where the colony lives (a colonist's bed, else the
+	// landing spot), what a raid makes for.
+	Home() (x, y int)
+}

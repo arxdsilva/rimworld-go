@@ -36,7 +36,24 @@ var _ raid.Host = raidHost{}
 func newRaid(g *Game) *raid.Raid {
 	h := raidHost{raidRoster{g}, raidCaptives{g}, raidBodies{g}, combatJobs{g}, raidFight{g}, raidGround{g}, raidEvents{g}, combatDice{g}}
 	return raid.New(h, raid.Roles{Wild: raidWild{g}, Story: raidStory{g}, Mech: raidMech{g}, Arrive: raidArrive{g},
-		Mischief: raidMischief{g}, Siege: raidSiege{g}, Chronicle: raidChronicle{g}, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}})
+		Mischief: raidMischief{g}, Siege: raidSiege{g}, Chronicle: raidChronicle{g}, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}, Senses: raidSenses{g}})
+}
+
+// raidSenses is raid.Senses (EAI-0): sight lines are combat's.
+type raidSenses struct{ g *Game }
+
+func (h raidSenses) Home() (x, y int) { return h.g.home() }
+func (h raidSenses) Visible(id entity.EntityID, x, y int) bool {
+	p, ok := h.g.positions.Get(id)
+	return ok && h.g.combat.Sight.Line(p.X, p.Y, x, y)
+}
+func (h raidSenses) Foes(x, y, r int, buf []entity.EntityID) []entity.EntityID {
+	h.g.within(x, y, r, ckPawn, func(o entity.EntityID, p Position) {
+		if h.g.standingPawn(o) && h.g.combat.Sight.Line(x, y, p.X, p.Y) {
+			buf = append(buf, o)
+		}
+	})
+	return buf
 }
 
 type raidRoster struct{ g *Game }
@@ -140,7 +157,7 @@ func (h raidWild) EdgeTile() (int, int, bool)                   { return h.g.edg
 
 type raidStory struct{ g *Game }
 
-func (h raidStory) ManhunterPack(n int)       { rageOf(h.g).ManhunterPack(n) } // handling.go
+func (h raidStory) ManhunterPack(points int)  { rageOf(h.g).ManhunterPack(points) } // handling.go
 func (h raidStory) MadAnimal(now uint64) bool { return h.g.madAnimal(now, false) }
 func (h raidStory) ScaledRaid(day int)        { h.g.scaledRaid(day) }
 func (h raidStory) Enclosed() bool            { return h.g.enclosed() }

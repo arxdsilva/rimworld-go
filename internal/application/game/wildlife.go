@@ -51,6 +51,9 @@ type wildlifeState struct {
 	// herd the component over it (handling.go herdOf: built on first
 	// use, never saved).
 	Herd herd.Settings
+	// Rage is the rage brain's memory (EAI-0, game/rage: doors bashed, foes
+	// locked, herd calls); saved.
+	Rage rage.Memory
 	herd *herd.Herd
 	rage *rage.Rage // the fight-or-flight brain (handling.go rageOf: built on first use, never saved)
 

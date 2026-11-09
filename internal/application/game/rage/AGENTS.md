@@ -4,7 +4,7 @@
 The animals' fight-or-flight brain: manhunter rage, tame guards, hunts, charges, fighting back, fleeing and the chase warnings. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created as a pure, hash-neutral extraction of the game's `handling.go` (rage, guards, manhunter packs), `animals.go` (flee, fight and charge checks, prey), `animal_flee.go` and `chase.go`, to free room in the game for the enemy-AI gaps (EAI-001..007).
 
 ## Owns
-- `Rage` (rage.go): built by `New(Host)`; no state of its own. `Enrage`, `Provoked`, `ThinkManhunter`, `Chase` (close in, bite on cooldown), `ManhunterPack` (and the pure `ManhunterSpecies`), the legendaries' rally, `BadlyHurt` (T10).
+- `Rage` (rage.go): built by `New(Host)`; no state of its own. `Enrage`, `Provoked`, `ThinkManhunter`, `Chase` (close in, bite on cooldown), `ManhunterPack(points)` (sized by `PackSize`, EAI-0), `Pack(n)`, the pure `ManhunterSpecies`, the legendaries' rally, `BadlyHurt` (T10).
 - guard.go: `GuardCheck`, `GuardBreaksHunt` (PLAY-017), `CombatAlive`.
 - fight.go: `FightCheck` (hunt, revenge, territorial chase; T5 give-up, T10 break-off for `BreakOffTicks`), `ChargeCheck` (PLAY-010 2.3 C), `FindPrey`, `Huntable`, `HuntRadius`, pack calls, `EndFight`.
 - flee.go: `FleeCheck`, `NearestPredator`, `HurtBlind`, `CanFightBack`, `FightBack`, `ValidFoe`, `FleeHit`, `FleeSpot`, `ReachesFoe`, `DistSq` (PLAY-010 2.3 A, B).
@@ -21,6 +21,7 @@ The animals' fight-or-flight brain: manhunter rage, tame guards, hunts, charges,
 - Allocation-free on the hot path: the animal under thought crosses the host by value (`GoTo` and `FireThreat` take and return `animal.State`), never as a pointer (a pointer handed to an interface escapes, and every animal would move to the heap every tick: `TestWorldViewQuietTickAllocs`); sight filters are `Sight` values whose `Keep` is a plain function, never a closure.
 - On the game, behind roles: the animal store and positions, `animalGoTo`, `animalPathQuery`, `layerReach` and `penQuery` (fences.go), `tameHuntOn`, `sleeping`, difficulty (`revengePct`, `predatorsHuntColonists`), species picks and the map edge, strikes (`combat.Strikes`).
 - Per-animal state stays in `animal.State` (at its 60-field ceiling): add no fields for this package.
+- `Memory` (memory.go, EAI-0 skeleton, nothing writes it yet) is the brain's saved memory: per-animal `Bash` and `Lock` maps and the herds' `Call` map, exported for gob and the state hash, kept as `wildlifeState.Rage`. Read it by key; never range over it on a path that rolls or orders work (sort the keys first). Drop an animal's entries with `Forget`.
 
 ## Invariants
 - Hash-neutral: every roll comes from `World.Roll` (the main stream) in the order the game rolled before the extraction; the benchmark state hashes did not move.

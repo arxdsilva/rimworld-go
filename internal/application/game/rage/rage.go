@@ -143,9 +143,16 @@ func (r *Rage) Chase(id entity.EntityID, a *animal.State, now uint64) {
 	}
 }
 
-// ManhunterPack sends n enraged animals of one season-fitting grazer or
+// PackSize is a manhunter pack's size for threat points: about one animal
+// per 100 points, 3..12 (today's mapping; EAI tunes it).
+func PackSize(points int) int { return min(max(points/100, 3), 12) }
+
+// ManhunterPack sends a pack sized for points (PackSize).
+func (r *Rage) ManhunterPack(points int) { r.Pack(PackSize(points)) }
+
+// Pack sends n enraged animals of one season-fitting grazer or
 // territorial species in from a map edge (half as many of a large one).
-func (r *Rage) ManhunterPack(n int) {
+func (r *Rage) Pack(n int) {
 	s, ok := r.h.PickSpecies(ManhunterSpecies)
 	if !ok {
 		return

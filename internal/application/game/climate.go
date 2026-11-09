@@ -35,6 +35,9 @@ type MessageView struct {
 	// Kind (PLAY-018) colours a letter in the right-side stack: "threat",
 	// "caution", "info" or "good" ("" reads as info, or threat if Danger).
 	Kind string
+	// Repeat is how many times more the same notice came in a row (EAI-0
+	// skeleton: always 0 yet); the UI shows "x(Repeat+1)".
+	Repeat int
 }
 
 // temperatureAt is the air temperature on a tile: enclosed rooms hold the
@@ -156,7 +159,7 @@ func (g *Game) letterViews() []LetterView {
 	out := make([]LetterView, len(list))
 	for i, l := range list {
 		out[i] = LetterView{ID: l.ID, Tick: l.Tick, Kind: l.Kind, Title: l.Title, Text: l.Text, Msg: l.Msg,
-			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0 || l.Wanderer != 0, Demand: l.Demand, Quest: l.Quest, Until: l.Until}
+			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0 || l.Wanderer != 0, Demand: l.Demand, Quest: l.Quest, Until: l.Until, Choices: l.Choices}
 	}
 	return out
 }

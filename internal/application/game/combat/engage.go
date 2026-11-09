@@ -77,11 +77,11 @@ func (s *Strikes) foeID(id entity.EntityID, now uint64) bool {
 	return s.h.StandingRaider(id)
 }
 
-// foe reports animal a hostile to the colony (CBT-2): alive, wild and
-// awake, and attacking the colony, enraged (manhunter), a mechanoid or a
-// hive insect.
+// foe reports animal a hostile to the colony (CBT-2): alive, wild (or a
+// tame manhunter, EAI-0) and awake, and attacking the colony, enraged
+// (manhunter), a mechanoid or a hive insect.
 func (s *Strikes) foe(a animal.State, now uint64) bool {
-	if a.Dead() || a.Tame || a.Dormant {
+	if a.Dead() || a.Tame && a.Manhunter <= now || a.Dormant { // a tame manhunter is a foe (EAI-0)
 		return false
 	}
 	return s.h.Hostile(a) || a.Manhunter > now || animal.IsMech(a.Species) || animal.DefOf(a.Species).Hive

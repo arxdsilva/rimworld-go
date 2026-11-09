@@ -157,9 +157,15 @@ func (g *Game) heal(id entity.EntityID, v *health.Record, now uint64) {
 	}
 }
 
-// hostile: an animal currently attacking a colonist.
+// hostile: an animal attacking the colony (EAI-0, the shared rule): a
+// wild one, or a tame one gone manhunter, in Attack mode on a colonist, a
+// guest or visitor, or a tame animal.
 func (g *Game) hostile(a animal.State) bool {
-	return !a.Tame && a.Mode == animal.Attack && a.Target != 0 && g.isPawn(a.Target) && !g.isRaider(a.Target)
+	if a.Mode != animal.Attack || a.Target == 0 || a.Tame && a.Manhunter <= uint64(g.clock.Now()) {
+		return false
+	}
+	t := a.Target
+	return g.isPawn(t) && !g.isRaider(t) || g.visitor(t) || g.animals.Has(t) && g.animals.Ref(t).Tame
 }
 
 // doEquip takes one weapon (CBT-3: its make kept, combat.Gear) or garment

@@ -42,6 +42,9 @@ type Roles struct {
 	Nest    Nest
 	// Kidnap (kidnap.go, moved from the game by CBT-4).
 	Kidnap Kidnap
+	// Senses (roles.go, EAI-0): what raiders see; held in Roles until
+	// the raider AI asks.
+	Senses Senses
 }
 
 // Roster is the raider records and raid groups, which stay on the game.
@@ -156,7 +159,8 @@ type Wild interface {
 
 // Story is the threats the storyteller sends through the game.
 type Story interface {
-	ManhunterPack(n int)
+	// ManhunterPack sends a manhunter pack sized for threat points.
+	ManhunterPack(points int)
 	// MadAnimal: one wild animal near home goes manhunter (false: none could).
 	MadAnimal(now uint64) bool
 	ScaledRaid(day int)

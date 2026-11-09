@@ -255,9 +255,10 @@ func questTileTaken(g *Game, t int, self qd.ID) bool {
 		slices.ContainsFunc(questViews(g), func(v QuestView) bool { return v.ID != self && !v.State.Terminal() && v.Tile == t })
 }
 
-// Manhunters sends a pack of about one animal per 100 points (3..12, ours).
+// Manhunters sends a pack of about one animal per 100 points (3..12, ours:
+// rage.PackSize).
 func (h questHost) Manhunters(points int, _ uint64) bool {
-	rageOf(h.g).ManhunterPack(min(max(points/100, 3), 12)) // handling.go
+	rageOf(h.g).ManhunterPack(points) // game/rage
 	return true
 }
 

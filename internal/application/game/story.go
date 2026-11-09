@@ -8,10 +8,12 @@ import (
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/ship"
+	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -95,9 +97,9 @@ func (g *Game) storyThreat(roll, day int, winter bool, pct int, now uint64) {
 	}
 	switch k {
 	case raid.ThreatPack:
-		g.raid.Threats.WolfPack(2 + g.rng.IntN(2))
+		g.raid.Threats.WolfPack((2 + g.rng.IntN(2)) * 100)
 	case raid.ThreatManhunters:
-		rageOf(g).ManhunterPack(3 + g.rng.IntN(3))
+		rageOf(g).ManhunterPack((3 + g.rng.IntN(3)) * 100)
 	case raid.ThreatHive:
 		g.raid.Hives.Swarm()
 	case raid.ThreatMad:
@@ -318,9 +320,9 @@ func (g *Game) fireScheduled(key string, now uint64) {
 	case "raid":
 		g.storyRaid(g.relDay(now), 100)
 	case "predator_pack":
-		g.raid.Threats.WolfPack(2 + g.rng.IntN(2))
+		g.raid.Threats.WolfPack((2 + g.rng.IntN(2)) * 100)
 	case "manhunter_pack":
-		rageOf(g).ManhunterPack(3 + g.rng.IntN(3))
+		rageOf(g).ManhunterPack((3 + g.rng.IntN(3)) * 100)
 	case "hive_swarm":
 		g.raid.Hives.Swarm()
 	default:
@@ -466,4 +468,24 @@ func (h travelHost) ShipCasketFree(id entity.EntityID) bool {
 }
 func (h travelHost) LayInShip(p, c entity.EntityID) bool {
 	return shipOf(h.g).LayIn(shipHost{h.g}, p, c)
+}
+
+// WealthHistory is the current map's wealth samples, oldest first (EAI-0:
+// none are taken yet).
+func (g *Game) WealthHistory() []wealth.Sample { return slices.Clone(g.wealth.History()) }
+
+// StoryDebugView is the storyteller's state for the developer overlay
+// (EAI-0): the current map's queued events, the tick the next threat is
+// due, today's threat points and the wealth.
+type StoryDebugView struct {
+	Queue      []incident.Queued
+	NextThreat uint64
+	Points     int
+	Wealth     int
+}
+
+// StoryDebug is the storyteller's state now (read only).
+func (g *Game) StoryDebug() StoryDebugView {
+	return StoryDebugView{Queue: slices.Clone(g.incidents.Queue), NextThreat: g.nextThreat,
+		Points: g.raidPoints(int(uint64(g.clock.Now()) / clock.TicksPerDay)), Wealth: g.wealth.Value()}
 }

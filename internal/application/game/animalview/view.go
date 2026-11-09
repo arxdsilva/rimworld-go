@@ -133,6 +133,11 @@ type View struct {
 	// body).
 	Parts     []Part
 	MovingPct int
+	// EAI-0 contract (false until the animal AI lands): Bashing, it is
+	// battering a door or wall to reach a foe (game/rage Memory.Bash);
+	// Grief, it mourns a lost herd mate, young or master; Defending, it
+	// fights for its herd or its master.
+	Bashing, Grief, Defending bool
 }
 
 // Training is one training skill of a tame animal: Allowed if

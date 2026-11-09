@@ -10,9 +10,10 @@
 // end of game/handling.go (rageOf builds one *Rage on first use and keeps
 // it in the wildlife state).
 //
-// It keeps no state of its own: every animal's lives in its animal.State,
-// which the game saves. It is deterministic: every roll comes from the
-// host's main stream in the order the game rolled before the extraction,
-// time only from the host's tick, and sight queries visit creatures in the
-// host's index order (ties to the lower id).
+// Its state lives in the animals' animal.State and in Memory (memory.go),
+// which the game keeps in its wildlife state and saves. It is
+// deterministic: every roll comes from the host's main stream in the order
+// the game rolled before the extraction, time only from the host's tick,
+// and sight queries visit creatures in the host's index order (ties to the
+// lower id).
 package rage

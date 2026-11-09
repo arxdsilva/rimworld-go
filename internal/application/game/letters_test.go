@@ -50,7 +50,7 @@ func TestLetterPostBecomesLetter(t *testing.T) {
 	x, y := g.home()
 	want := LetterView{ID: 1, Tick: uint64(g.clock.Now()), Kind: "good", Title: "Wanderer joins",
 		Text: "Bo has asked to join the colony.", Msg: msgfmt.Of("Bo has asked to join the colony."), X: x, Y: y, Focus: 7}
-	if ls[0] != want {
+	if !reflect.DeepEqual(ls[0], want) {
 		t.Fatalf("letter %+v, want %+v", ls[0], want)
 	}
 	// the message is still posted: pause-on-threat and the ticker read it

@@ -449,6 +449,9 @@ const (
 	// DevOfferQuest offers a quest of kind Index (a quest.KindID) now, if
 	// that kind can be offered (developer mode, journeys and captures).
 	DevOfferQuest
+	// AnswerLetter (EAI-0 contract; ignored until it lands) picks answer
+	// Mode (an index into the letter's Choices) of letter Target.
+	AnswerLetter
 )
 
 // EditApparelPolicy modes (Command.Mode), GEAR-3 contract.

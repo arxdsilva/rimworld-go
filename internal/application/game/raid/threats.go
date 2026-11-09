@@ -80,9 +80,9 @@ func (t *Threats) Fire(now uint64) uint64 {
 	winter := temperature.Season(clock.Tick(now)) == "Winter"
 	switch PickThreat(t.h.Roll(ThreatRolls), day, winter) {
 	case ThreatPack:
-		t.WolfPack(2 + t.h.Roll(2))
+		t.WolfPack((2 + t.h.Roll(2)) * 100)
 	case ThreatManhunters:
-		t.s.ManhunterPack(3 + t.h.Roll(3))
+		t.s.ManhunterPack((3 + t.h.Roll(3)) * 100)
 	case ThreatHive:
 		t.hives.Swarm()
 	case ThreatMad:
@@ -181,9 +181,14 @@ func (t *Threats) Settle(grp *Group, tech faction.Tech, points int) {
 	}
 }
 
-// WolfPack sends n hungry pack predators of one season-fitting species
-// in from an edge.
-func (t *Threats) WolfPack(n int) {
+// WolfPackSize is a predator pack's size for threat points: about one
+// predator per 100 points, 2..12 (today's mapping; EAI tunes it).
+func WolfPackSize(points int) int { return min(max(points/100, 2), 12) }
+
+// WolfPack sends a pack of hungry predators of one season-fitting species,
+// sized for points (WolfPackSize), in from an edge.
+func (t *Threats) WolfPack(points int) {
+	n := WolfPackSize(points)
 	s, ok := t.w.PickSpecies(func(s animal.Species) bool { return animal.DefOf(s).Pack })
 	if !ok {
 		return

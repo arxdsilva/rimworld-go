@@ -22,6 +22,7 @@ import (
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/application/game/sched"
 	"rimworld-go/internal/application/game/thermo"
+	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
@@ -368,6 +369,9 @@ type LetterView struct {
 	Demand bool
 	Quest  uint32 // the quest it is about (0: none): it opens the Quests window there (QST-131)
 	Until  uint64 // the offer lapses then (0: never; a wanderer's, QST-170)
+	// Choices: the answers it offers (AnswerLetter, Target this letter,
+	// Mode the index; EAI-0: none yet). Shared with the stack: read only.
+	Choices []letters.Choice
 }
 
 // StoredResourceView is one row of the resource list (PLAY-018).
@@ -874,6 +878,7 @@ type mapState struct {
 	biome      biome.ID            // the map's setting (SIM-023)
 	climate    temperature.Climate // its outdoor temperature curve
 	incidents  incident.State      // the storyteller's nature events (SIM-025)
+	wealth     *wealth.Tracker     // game/wealth (EAI-0, initMapHosts); saved
 	postponed  postState           // work put off, orders followed (postpone.go, SIM-027)
 	clothes    apparelIndex        // free apparel stacks (apparel.go), never saved
 	raiderIDs  []entity.EntityID
@@ -1056,6 +1061,7 @@ func initMapHosts(g *Game) {
 	g.combat = newCombat(g)
 	g.raid = newRaid(g)                     // raid_host.go
 	g.thermo = thermo.New(newThermoHost(g)) // thermo_host.go
+	g.wealth = wealth.New(g)                // game/wealth (EAI-0)
 }
 
 // MapID names an open map (MAP-0); the first map is 0.

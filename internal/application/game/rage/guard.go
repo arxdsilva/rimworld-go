@@ -23,7 +23,7 @@ func guardThreat(s Sight, o entity.EntityID) bool {
 		return h.StandingRaider(o)
 	}
 	a, ok := h.Animal(o)
-	return o != s.Self && ok && !a.Tame && !a.Dead() && (h.Hostile(a) || a.Enraged(s.Now))
+	return o != s.Self && ok && (!a.Tame || a.Manhunter > s.Now) && !a.Dead() && (h.Hostile(a) || a.Enraged(s.Now)) // a tame manhunter too (EAI-0)
 }
 
 // GuardCheck: a tame guard (a predator) fights off threats near it,

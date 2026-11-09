@@ -292,10 +292,11 @@ func scanBeds(g *Game, into []entity.EntityID) []entity.EntityID {
 	return into
 }
 
-// ManhunterPack is the dev hook for a manhunter pack.
-func (g *Game) ManhunterPack(n int) {
+// ManhunterPack is the dev hook for a manhunter pack sized for threat
+// points (rage.PackSize).
+func (g *Game) ManhunterPack(points int) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	rageOf(g).ManhunterPack(n)
+	rageOf(g).ManhunterPack(points)
 }
 
 // releaseAnimal turns a tame animal loose.

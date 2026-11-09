@@ -196,6 +196,7 @@ func (g *Game) applyOne(c command.Command) {
 		g.dismissLetter(c.Target) // letters.go: an unknown id is ignored
 	case command.AcceptLetter:
 		g.acceptLetter(c.Target) // letters.go (SIM-063): a rescued stranger joins
+	case command.AnswerLetter: // EAI-0 contract: routed, it does nothing yet
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:

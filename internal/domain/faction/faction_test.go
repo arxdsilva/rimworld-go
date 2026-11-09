@@ -484,3 +484,10 @@ func TestBesiegedGoodwillCannotRise(t *testing.T) {
 		t.Fatalf("goodwill %d, want the drift to resume at -59", f.Goodwill)
 	}
 }
+
+func TestEnemyBonusAt(t *testing.T) {
+	f := Faction{ID: 1, Enemies: []int{3, 5}}
+	if f.EnemyBonusAt(5) != EnemyBonus || f.EnemyBonusAt(4) != 0 || (Faction{}).EnemyBonusAt(3) != 0 {
+		t.Fatal("EnemyBonusAt: only an enemy's people earn the bonus")
+	}
+}

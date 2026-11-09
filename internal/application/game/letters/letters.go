@@ -66,6 +66,29 @@ type Letter struct {
 	// person is made from on AcceptLetter (quest.PawnOf); dismissing turns
 	// them away. Until: the offer lapses and the letter goes (0: never).
 	Wanderer, Until uint64
+	// Choices are the answers the letter offers (EAI-0 skeleton: none
+	// yet); command.AnswerLetter picks one by its index.
+	Choices []Choice
+}
+
+// Choice is one answer a letter offers: Key names what it does (the game
+// decides), Label is the button's text as a catalog key and args.
+type Choice struct {
+	Key   string
+	Label msgfmt.Text
+}
+
+// Choice keys the game answers.
+const (
+	Accept = "accept"
+	Refuse = "refuse"
+)
+
+// ShelterChoices are the answers to a plea for shelter (EAI-0: the
+// refugee-chased letter's, not offered yet): take them in, or send them
+// away.
+func ShelterChoices() []Choice {
+	return []Choice{{Key: Accept, Label: msgfmt.Of("Take them in")}, {Key: Refuse, Label: msgfmt.Of("Send them away")}}
 }
 
 // State is the stack, oldest first, and how many letters were ever issued:

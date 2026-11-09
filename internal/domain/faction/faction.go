@@ -4,6 +4,8 @@
 package faction
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/pkg/randx"
 )
@@ -78,6 +80,23 @@ type Faction struct {
 	Defeated        bool
 	History         []int16 // daily goodwill, last 60 days
 	Events          []string
+	// Enemies are the ids of the factions this one is at war with,
+	// ascending (EAI-0 skeleton: always empty yet; saves before v17 get an
+	// empty list).
+	Enemies []int
+}
+
+// EnemyBonus is the goodwill a faction gives the colony for downing one of
+// its enemies' people (ours; EAI-0 placeholder, nothing awards it yet).
+const EnemyBonus = 2
+
+// EnemyBonusAt is the goodwill f gives the colony for downing a member of
+// faction id: EnemyBonus when f is at war with id, else 0.
+func (f Faction) EnemyBonusAt(id int) int {
+	if _, ok := slices.BinarySearch(f.Enemies, id); ok {
+		return EnemyBonus
+	}
+	return 0
 }
 
 // Slot is one configured faction type on the Create World screen.

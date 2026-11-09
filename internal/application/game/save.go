@@ -29,6 +29,7 @@ import (
 	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/thermo"
+	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -105,11 +106,14 @@ import (
 // Anything. v15 (QST-1) adds the quest difficulty settings (an older save
 // gets rewards at 100 % and quest threats as its big threats) and the
 // quests. v16 (SAV-003) names the save's colony in the header
-// (savefmt.Info); an older header gets one from its name on reading.
+// (savefmt.Info); an older header gets one from its name on reading. v17
+// (EAI-0) adds each map's wealth tracker (game/wealth) and the factions'
+// wars (Faction.Enemies): an older save's first map is counted once, and
+// no faction is at war with another yet.
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 16
+const SaveVersion = 17
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -327,6 +331,7 @@ type saveState struct {
 	Biome       biome.ID
 	GrassRegrow []grassRegrow
 	Incidents   incident.State
+	Wealth      *wealth.Save // EAI-0 (game/wealth): nil while it keeps nothing
 	Troughs     map[entity.EntityID]troughState
 	// ZoneMap (ZONE-001): the per-tile zones; absent in older saves, whose
 	// stockpile, grow zone and pen rectangles are painted into it on load.
@@ -604,7 +609,7 @@ func exportMapFields(g *Game, s *saveState) {
 	s.DoorsOriented = true // PLAY-011: door facings are stored
 	s.Grass, s.GrassCut = g.exportGrass()
 	s.GrassGrowth = g.exportGrassGrowth() // grass.go
-	s.Biome, s.GrassRegrow, s.Incidents = g.biome, g.grass.regrow, g.incidents
+	s.Biome, s.GrassRegrow, s.Incidents, s.Wealth = g.biome, g.grass.regrow, g.incidents, g.wealth.Export()
 	s.Stains, s.StainDrip = g.exportStains(), g.stains.dripN
 	s.Dirt, s.Carried = g.exportDirt()
 	s.Home, s.CleanWired = g.exportHome(), true
@@ -828,6 +833,7 @@ func importMapFields(g *Game, s *saveState) {
 	g.importGrass(s.Grass, s.GrassCut)
 	g.importGrassGrowth(s.GrassGrowth) // grass.go: older saves load full
 	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
+	g.wealth.Import(s.Wealth) // game/wealth (EAI-0)
 	g.grass.regrow = s.GrassRegrow
 	g.importStains(s.Stains)
 	setMap(&g.stains.dripN, s.StainDrip)
@@ -931,6 +937,9 @@ func (g *Game) migrateSave(v int) {
 		}
 		fallthrough
 	case v < 16: // SAV-003: the header names its colony; Load's savefmt.Info.Upgrade fills an older one, the state is unchanged
+		fallthrough
+	case v < 17: // EAI-0: the first map's wealth counted once (derived, not saved; extra maps load after and count on first use); Faction.Enemies stays empty
+		g.wealth.Step(uint64(g.clock.Now()))
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

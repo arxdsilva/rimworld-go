@@ -67,6 +67,9 @@ const (
 	HeatWave
 	ColdSnap
 	VolcanicWinter
+	// RefugeeChased (EAI-0 skeleton, Threat category, weight 0: in no pool
+	// yet): a refugee asks for shelter from the enemies chasing them.
+	RefugeeChased
 	NumIDs
 )
 
@@ -148,6 +151,7 @@ var defs = [NumIDs]Def{
 	HeatWave:       {Key: "heat_wave", Name: "Heat wave", Category: Nature, Weight: 5, Cooldown: 30},
 	ColdSnap:       {Key: "cold_snap", Name: "Cold snap", Category: Nature, Weight: 5, Cooldown: 30},
 	VolcanicWinter: {Key: "volcanic_winter", Name: "Volcanic winter", Category: Nature, Weight: 1, Cooldown: 140, MinDay: 60},
+	RefugeeChased:  {Key: "refugee_chased", Name: "Refugee chased", Category: Threat},
 }
 
 func init() {
@@ -178,6 +182,17 @@ type State struct {
 	// the absolute tick ClimateFrom to ClimateUntil (0: none).
 	Climate                   ID
 	ClimateFrom, ClimateUntil uint64
+	// Queue (EAI-0 skeleton: nothing queues yet) holds the events the
+	// storyteller has decided on and will fire later, soonest first.
+	Queue []Queued
+}
+
+// Queued is an event the storyteller fires at the absolute tick At, with
+// the threat points it was given (0: not a threat).
+type Queued struct {
+	ID     ID
+	At     uint64
+	Points int
 }
 
 // Allowed reports whether d may fire at tick now in biome b, ignoring any

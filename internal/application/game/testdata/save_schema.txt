@@ -554,6 +554,11 @@ saveState.Incidents.Last map[rimworld-go/internal/domain/incident.ID]uint64
 saveState.Incidents.Last{key} rimworld-go/internal/domain/incident.ID = uint8
 saveState.Incidents.Last{} uint64
 saveState.Incidents.NextNature uint64
+saveState.Incidents.Queue []rimworld-go/internal/domain/incident.Queued
+saveState.Incidents.Queue[] rimworld-go/internal/domain/incident.Queued
+saveState.Incidents.Queue[].At uint64
+saveState.Incidents.Queue[].ID rimworld-go/internal/domain/incident.ID = uint8
+saveState.Incidents.Queue[].Points int
 saveState.Incoming map[rimworld-go/internal/domain/sim/entity.EntityID]int
 saveState.Incoming{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Incoming{} int
@@ -605,6 +610,12 @@ saveState.LastMeal{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.LastMeal{} rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Letters []rimworld-go/internal/application/game/letters.Letter
 saveState.Letters[] rimworld-go/internal/application/game/letters.Letter
+saveState.Letters[].Choices []rimworld-go/internal/application/game/letters.Choice
+saveState.Letters[].Choices[] rimworld-go/internal/application/game/letters.Choice
+saveState.Letters[].Choices[].Key string
+saveState.Letters[].Choices[].Label rimworld-go/pkg/msgfmt.Text
+saveState.Letters[].Choices[].Label.Format string
+saveState.Letters[].Choices[].Label.Packed string
 saveState.Letters[].Demand bool
 saveState.Letters[].Focus rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Letters[].ID uint64
@@ -691,6 +702,7 @@ saveState.Messages[].Map rimworld-go/internal/application/game.MapID = uint32
 saveState.Messages[].Msg rimworld-go/pkg/msgfmt.Text
 saveState.Messages[].Msg.Format string
 saveState.Messages[].Msg.Packed string
+saveState.Messages[].Repeat int
 saveState.Messages[].Text string
 saveState.Messages[].Tick uint64
 saveState.Messages[].Title string
@@ -750,6 +762,8 @@ saveState.NG1.Factions []rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Factions[] rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Factions[].Besieged bool
 saveState.NG1.Factions[].Defeated bool
+saveState.NG1.Factions[].Enemies []int
+saveState.NG1.Factions[].Enemies[] int
 saveState.NG1.Factions[].Events []string
 saveState.NG1.Factions[].Events[] string
 saveState.NG1.Factions[].Goodwill int
@@ -848,6 +862,8 @@ saveState.NG1.Setup.Factions []rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Setup.Factions[] rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Setup.Factions[].Besieged bool
 saveState.NG1.Setup.Factions[].Defeated bool
+saveState.NG1.Setup.Factions[].Enemies []int
+saveState.NG1.Setup.Factions[].Enemies[] int
 saveState.NG1.Setup.Factions[].Events []string
 saveState.NG1.Setup.Factions[].Events[] string
 saveState.NG1.Setup.Factions[].Goodwill int
@@ -1994,6 +2010,12 @@ saveState.Vital[].V.DownedTick uint64
 saveState.Vital[].V.Injury int
 saveState.Vital[].V.Status rimworld-go/internal/domain/pawn/health.Status = uint8
 saveState.W int
+saveState.Wealth rimworld-go/internal/application/game/wealth.Save
+saveState.Wealth.History []rimworld-go/internal/application/game/wealth.Sample
+saveState.Wealth.History[] rimworld-go/internal/application/game/wealth.Sample
+saveState.Wealth.History[].Tick uint64
+saveState.Wealth.History[].Value int
+saveState.Wealth.Next uint64
 saveState.Weather rimworld-go/internal/domain/world/weather.State
 saveState.Weather.Goal float64
 saveState.Weather.Intensity float64
@@ -2065,6 +2087,25 @@ saveState.Wildlife.LastHerd uint32
 saveState.Wildlife.LegendaryYear int
 saveState.Wildlife.PopSettle uint64
 saveState.Wildlife.Preds int
+saveState.Wildlife.Rage rimworld-go/internal/application/game/rage.Memory
+saveState.Wildlife.Rage.Bash map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/rage.Bash
+saveState.Wildlife.Rage.Bash{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Wildlife.Rage.Bash{} rimworld-go/internal/application/game/rage.Bash
+saveState.Wildlife.Rage.Bash{}.Since uint64
+saveState.Wildlife.Rage.Bash{}.X int
+saveState.Wildlife.Rage.Bash{}.Y int
+saveState.Wildlife.Rage.Call map[uint32]rimworld-go/internal/application/game/rage.Call
+saveState.Wildlife.Rage.Call{key} uint32
+saveState.Wildlife.Rage.Call{} rimworld-go/internal/application/game/rage.Call
+saveState.Wildlife.Rage.Call{}.At uint64
+saveState.Wildlife.Rage.Call{}.Foe rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Wildlife.Rage.Call{}.X int
+saveState.Wildlife.Rage.Call{}.Y int
+saveState.Wildlife.Rage.Lock map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/rage.Lock
+saveState.Wildlife.Rage.Lock{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Wildlife.Rage.Lock{} rimworld-go/internal/application/game/rage.Lock
+saveState.Wildlife.Rage.Lock{}.Foe rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Wildlife.Rage.Lock{}.Until uint64
 saveState.WorkCarry map[rimworld-go/internal/domain/sim/entity.EntityID]int32
 saveState.WorkCarry{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.WorkCarry{} int32

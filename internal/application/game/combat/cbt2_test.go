@@ -205,7 +205,9 @@ func TestAutoEngageAnyHostile(t *testing.T) {
 	}{
 		{"calm", animal.State{Species: animal.Deer}, false},
 		{"manhunter", animal.State{Species: animal.Deer, Manhunter: 5000}, true},
-		{"tame", animal.State{Species: animal.Deer, Manhunter: 5000, Tame: true}, false},
+		{"tame", animal.State{Species: animal.Deer, Tame: true}, false},
+		// EAI-0, the shared hostility rule: a tame animal gone manhunter is a foe.
+		{"tame manhunter", animal.State{Species: animal.Deer, Manhunter: 5000, Tame: true}, true},
 		{"mechanoid", animal.State{Species: animal.Harrow}, true},
 		{"insect", animal.State{Species: animal.HiveCrawler}, true},
 		{"dormant", animal.State{Species: animal.Harrow, Dormant: true}, false},
