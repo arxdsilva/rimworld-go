@@ -106,6 +106,9 @@ type SnowCache struct {
 	corner []float64 // (snowRing+1)² corner veil alphas
 	open   []bool    // snowRing² open tiles
 	wb     WetBake   // the bake's wet inputs (puddle_veil.go)
+	// wetReady and snowReady: PrepareCover baked this frame's pass, the next
+	// walk of that pass only stamps.
+	wetReady, snowReady bool
 	// WantPx is the wet detail this pass bakes at (0: SnowPx).
 	WantPx int
 	// pass counts chunk walks; cropVer memoises each read-model chunk's
@@ -429,12 +432,20 @@ func (e *Layer) eachSnowChunk(v *render.View, w game.WorldView, tile float64, cr
 	if x1 < x0 || y1 < y0 {
 		return
 	}
-	sc.pass++
-	if sc.pass%256 == 0 {
-		sc.evict()
+	ready := &sc.snowReady
+	if crops {
+		ready = &sc.wetReady
 	}
-	sc.budget = PuddleBakeBudget
-	sc.WantPx = WetPxFor(render.LODTile(tile, v.Dev))
+	baked := *ready // PrepareCover baked this pass's chunks already
+	*ready = false
+	if !baked {
+		sc.pass++
+		if sc.pass%256 == 0 {
+			sc.evict()
+		}
+		sc.budget = PuddleBakeBudget
+		sc.WantPx = WetPxFor(render.LODTile(tile, v.Dev))
+	}
 	cost := bakeCost(sc.WantPx)
 	depth, wet := legacySnowByte(e.Snow), WetBucket(w.Wetness)
 	ncx := (mw + SnowChunkTiles - 1) / SnowChunkTiles
@@ -443,23 +454,51 @@ func (e *Layer) eachSnowChunk(v *render.View, w game.WorldView, tile float64, cr
 		for cx := x0 / span; cx <= x1/span; cx++ {
 			id := cy*ncx + cx
 			c := sc.Chunks[id]
+			if baked && c == nil {
+				continue
+			}
 			if c == nil {
 				c = &SnowChunk{}
 				sc.Chunks[id] = c
 			}
 			c.seen = sc.pass
-			plants := func() uint64 { return c.Plants }
-			if crops {
-				plants = func() uint64 { return e.SnowC.puddleCropKey(cx, cy, mw, mh, ch) }
-			}
-			if (!c.built || sc.budget >= cost) && sc.stale(c, w, depth, wet, mw, mh, cx, cy, plants) {
-				if c.built {
-					sc.budget -= cost
+			if !baked {
+				plants := func() uint64 { return c.Plants }
+				if crops {
+					plants = func() uint64 { return e.SnowC.puddleCropKey(cx, cy, mw, mh, ch) }
 				}
-				e.BakeSnowChunk(c, w, mw, mh, cx, cy, ch)
+				if (!c.built || sc.budget >= cost) && sc.stale(c, w, depth, wet, mw, mh, cx, cy, plants) {
+					if c.built {
+						sc.budget -= cost
+					}
+					e.BakeSnowChunk(c, w, mw, mh, cx, cy, ch)
+				}
 			}
-			fn(c, cx, cy, max(cx*span, x0), max(cy*span, y0), min(cx*span+span-1, x1), min(cy*span+span-1, y1))
+			if fn != nil {
+				fn(c, cx, cy, max(cx*span, x0), max(cy*span, y0), min(cx*span+span-1, x1), min(cy*span+span-1, y1))
+			}
 		}
+	}
+}
+
+// PrepareCover bakes the frame's wet and snow chunks (the passes
+// DrawPuddleVeil and DrawGroundCover would make, in their order, within
+// their budgets) before the frame's first draw, so no bake and no pixel
+// write comes between draws to the screen. The draws that follow stamp
+// what was baked and bake nothing.
+func (e *Layer) PrepareCover(v *render.View, w game.WorldView, sw, sh int, tile float64, c Chunks) {
+	sc := e.SnowC
+	sc.wetReady, sc.snowReady = false, false
+	e.SetView(v, sw, sh, tile)
+	if WetBucket(w.Wetness) != 0 {
+		e.SetWeather(w)
+		e.eachSnowChunk(v, w, tile, true, c, nil)
+		sc.wetReady = true
+	}
+	if gfx.Clamp01(w.SnowDepth) > 0 || len(w.Snow) > 0 {
+		e.SetWeather(w)
+		e.eachSnowChunk(v, w, tile, false, c, nil)
+		sc.snowReady = true
 	}
 }
 

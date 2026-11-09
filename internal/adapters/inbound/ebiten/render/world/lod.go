@@ -118,6 +118,17 @@ type LOD struct {
 	Crops                env.CropBatch  // render/env: crop unit atlas, batches, furrows
 	// budget is how many chunk bakes this frame may still do.
 	budget int
+	// plan is the frame's ground, chunk by chunk, as prepareGround left it.
+	plan []groundDraw
+}
+
+// groundDraw is one chunk of the frame's ground: its tiles in view and the
+// bake to stamp them from, or no image to draw them live.
+type groundDraw struct {
+	img                *ebiten.Image
+	x0, y0             int     // the chunk's first tile
+	px, py, bpx        float64 // tile (x0, y0)'s pixel in img, and pixels a tile
+	tx0, ty0, tx1, ty1 int
 }
 
 // VisPad is how far past the visible tiles the per-frame chunk lists
@@ -463,11 +474,14 @@ func (k *Bakes) DrawChunkFlat(screen, src *ebiten.Image, srcX, srcY, dstX, dstY,
 	k.Env.DrawLitBatch(screen, l.Verts, l.idx, src)
 }
 
-// drawGroundLOD draws the visible ground from the bakes (chunk or map
-// tier). Chunks without a fresh bake this frame are drawn live.
-func (k *Bakes) drawGroundLOD(screen *ebiten.Image, w *game.WorldView, sw, sh int, tile float64) {
+// prepareGround makes the frame's chunk bakes (chunk or map tier), within
+// BakeBudget, and plans the ground: what drawGroundLOD stamps. All the
+// bakes come first, so the draws to the screen that follow are one
+// contiguous run.
+func (k *Bakes) prepareGround(w *game.WorldView) {
 	l := k.LOD
 	l.budget = BakeBudget
+	l.plan = l.plan[:0]
 	x0, y0, x1, y1 := l.VX0, l.VY0, l.VX1, l.VY1
 	if x1 < x0 || y1 < y0 {
 		return
@@ -475,21 +489,31 @@ func (k *Bakes) drawGroundLOD(screen *ebiten.Image, w *game.WorldView, sw, sh in
 	cs := game.ChunkSize
 	for cy := y0 / cs; cy <= y1/cs; cy++ {
 		for cx := x0 / cs; cx <= x1/cs; cx++ {
+			g := groundDraw{x0: cx * cs, y0: cy * cs,
+				tx0: max(cx*cs, x0), ty0: max(cy*cs, y0), tx1: min(cx*cs+cs-1, x1), ty1: min(cy*cs+cs-1, y1)}
 			cv := k.ChunkView(cx, cy)
-			tx0, ty0 := max(cx*cs, x0), max(cy*cs, y0)
-			tx1, ty1 := min(cx*cs+cs-1, x1), min(cy*cs+cs-1, y1)
-			var ok bool
 			if l.Tier == Map {
-				ok = k.drawMapChunk(screen, w, cx, cy, cv, tx0, ty0, tx1, ty1)
-			} else {
-				ok = k.drawChunkBake(screen, w, cx, cy, cv, tx0, ty0, tx1, ty1)
+				g.img, g.px, g.py = k.bakeMapChunk(w, cx, cy, cv)
+				g.bpx = mapBakePx
+			} else if b := k.bakeChunk(w, cx, cy, cv); b != nil {
+				g.img, g.px, g.py, g.bpx = b.img, bakePad, bakePad, chunkBakePx
 			}
-			if !ok { // not baked yet: live this frame
-				for y := ty0; y <= ty1; y++ {
-					for x := tx0; x <= tx1; x++ {
-						k.drawGroundTile(screen, w, x, y, tile, sw, sh)
-					}
-				}
+			l.plan = append(l.plan, g)
+		}
+	}
+}
+
+// drawGroundLOD draws the visible ground from the bakes (chunk or map
+// tier). Chunks without a bake are drawn live.
+func (k *Bakes) drawGroundLOD(screen *ebiten.Image, w *game.WorldView, sw, sh int, tile float64) {
+	for _, g := range k.LOD.plan {
+		if g.img != nil {
+			k.DrawBaked(screen, g.img, g.x0, g.y0, g.px, g.py, g.bpx, g.tx0, g.ty0, g.tx1, g.ty1)
+			continue
+		}
+		for y := g.ty0; y <= g.ty1; y++ {
+			for x := g.tx0; x <= g.tx1; x++ {
+				k.drawGroundTile(screen, w, x, y, tile, sw, sh)
 			}
 		}
 	}
@@ -535,10 +559,10 @@ func (m *MapBake) page(x, y int) (img *ebiten.Image, px, py float64) {
 	return m.Pages[pi], float64((x%mapPageTiles)*mapBakePx + bakePad), float64((y%mapPageTiles)*mapBakePx + bakePad)
 }
 
-// drawMapChunk draws tiles tx0..tx1 × ty0..ty1 of chunk (cx, cy) from the
-// map bake, baking the chunk first when it is missing or stale (within
-// the frame's budget). False: nothing drawn.
-func (k *Bakes) drawMapChunk(screen *ebiten.Image, w *game.WorldView, cx, cy int, cv game.ChunkView, tx0, ty0, tx1, ty1 int) bool {
+// bakeMapChunk bakes chunk (cx, cy) into the map bake when it is missing or
+// stale (within the frame's budget) and returns the page holding it and
+// the pixel of its first tile; a nil page: nothing to draw from.
+func (k *Bakes) bakeMapChunk(w *game.WorldView, cx, cy int, cv game.ChunkView) (img *ebiten.Image, px, py float64) {
 	m := &k.LOD.Pages
 	mw, mh := k.v.MapW, k.v.MapH
 	if m.w != mw || m.h != mh || m.Pages == nil {
@@ -547,15 +571,15 @@ func (k *Bakes) drawMapChunk(screen *ebiten.Image, w *game.WorldView, cx, cy int
 	cs := game.ChunkSize
 	c := cy*((mw+cs-1)/cs) + cx
 	if c < 0 || c >= len(m.Baked) {
-		return false
+		return nil, 0, 0
 	}
 	x0, y0 := cx*cs, cy*cs
-	img, px, py := m.page(x0, y0)
+	img, px, py = m.page(x0, y0)
 	want := [2]uint64{env.GrassBakeKey(cv.Ver, k.Env.GrassMapSig(k.v, w, cx, cy, cv.Ver, k.LOD.Chunks.Frame)), cv.PlantVer}
 	if !m.Baked[c] || m.ver[c] != want {
 		if k.LOD.budget <= 0 {
 			if !m.Baked[c] {
-				return false
+				return nil, 0, 0
 			}
 		} else {
 			k.LOD.budget--
@@ -581,8 +605,7 @@ func (k *Bakes) drawMapChunk(screen *ebiten.Image, w *game.WorldView, cx, cy int
 			m.Baked[c], m.ver[c] = true, want
 		}
 	}
-	k.DrawBaked(screen, img, x0, y0, px, py, mapBakePx, tx0, ty0, tx1, ty1)
-	return true
+	return img, px, py
 }
 
 // LodTile is the tile size creatures are drawn at: the camera's, or the

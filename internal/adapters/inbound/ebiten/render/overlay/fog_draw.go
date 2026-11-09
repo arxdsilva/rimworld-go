@@ -111,10 +111,10 @@ func (fc *FogCache) Bake(c *FogChunk, fog []uint8, mw, mh, cx, cy int) {
 	fc.Bakes++
 }
 
-// DrawFogLayer stamps the fog over the map for a fog slice mw x mh tiles
-// at FogVer ver, tile physical pixels per tile, into a sw x sh screen.
-func (o *Set) DrawFogLayer(v *render.View, screen *ebiten.Image, fog []uint8, ver uint64, mw, mh int, tile float64, sw, sh int) {
-	fc := &o.Fog
+// bakeFog syncs the fog cache with this map and bakes the chunks over the
+// screen that are missing or stale; it returns the chunk range in view.
+// ok is false when there is no fog to draw.
+func (fc *FogCache) bakeFog(v *render.View, fog []uint8, ver uint64, mw, mh int, tile float64, sw, sh int) (ncx, cx0, cy0, cx1, cy1 int, ok bool) {
 	if len(fog) == 0 || mw <= 0 {
 		if fc.Chunks != nil { // fog gone (another map): drop the bakes
 			for _, c := range fc.Chunks {
@@ -124,7 +124,7 @@ func (o *Set) DrawFogLayer(v *render.View, screen *ebiten.Image, fog []uint8, ve
 			}
 			fc.Chunks, fc.n = nil, 0
 		}
-		return
+		return 0, 0, 0, 0, 0, false
 	}
 	if fc.Chunks == nil || fc.n != len(fog) {
 		for _, c := range fc.Chunks {
@@ -134,13 +134,12 @@ func (o *Set) DrawFogLayer(v *render.View, screen *ebiten.Image, fog []uint8, ve
 		}
 		fc.Chunks, fc.n = map[int]*FogChunk{}, len(fog)
 	}
-	ncx := (mw + fogChunkTiles - 1) / fogChunkTiles
+	ncx = (mw + fogChunkTiles - 1) / fogChunkTiles
 	span := tile * fogChunkTiles
-	cx0 := max(int(math.Floor(v.Cam.OffsetX/span)), 0)
-	cy0 := max(int(math.Floor(v.Cam.OffsetY/span)), 0)
-	cx1 := min(int(math.Floor((v.Cam.OffsetX+float64(sw))/span)), ncx-1)
-	cy1 := min(int(math.Floor((v.Cam.OffsetY+float64(sh))/span)), (mh+fogChunkTiles-1)/fogChunkTiles-1)
-	k := tile / FogPx
+	cx0 = max(int(math.Floor(v.Cam.OffsetX/span)), 0)
+	cy0 = max(int(math.Floor(v.Cam.OffsetY/span)), 0)
+	cx1 = min(int(math.Floor((v.Cam.OffsetX+float64(sw))/span)), ncx-1)
+	cy1 = min(int(math.Floor((v.Cam.OffsetY+float64(sh))/span)), (mh+fogChunkTiles-1)/fogChunkTiles-1)
 	for cy := cy0; cy <= cy1; cy++ {
 		for cx := cx0; cx <= cx1; cx++ {
 			id := cy*ncx + cx
@@ -153,14 +152,40 @@ func (o *Set) DrawFogLayer(v *render.View, screen *ebiten.Image, fog []uint8, ve
 				fc.Bake(c, fog, mw, mh, cx, cy)
 				c.built, c.ver = true, ver
 			}
+		}
+	}
+	return ncx, cx0, cy0, cx1, cy1, true
+}
+
+// DrawFogLayer stamps the fog over the map for a fog slice mw x mh tiles
+// at FogVer ver, tile physical pixels per tile, into a sw x sh screen. It
+// bakes what PrepareFog has not.
+func (o *Set) DrawFogLayer(v *render.View, screen *ebiten.Image, fog []uint8, ver uint64, mw, mh int, tile float64, sw, sh int) {
+	fc := &o.Fog
+	ncx, cx0, cy0, cx1, cy1, ok := fc.bakeFog(v, fog, ver, mw, mh, tile, sw, sh)
+	if !ok {
+		return
+	}
+	k := tile / FogPx
+	for cy := cy0; cy <= cy1; cy++ {
+		for cx := cx0; cx <= cx1; cx++ {
 			var op ebiten.DrawImageOptions
 			op.Filter = ebiten.FilterLinear
 			op.GeoM.Scale(k, k)
 			sx, sy := v.WorldToScreenF(float64(cx*fogChunkTiles), float64(cy*fogChunkTiles))
 			op.GeoM.Translate(float64(sx), float64(sy))
-			screen.DrawImage(c.img, &op)
+			screen.DrawImage(fc.Chunks[cy*ncx+cx].img, &op)
 		}
 	}
+}
+
+// PrepareFog bakes the fog chunks DrawFog will stamp, ahead of the frame's
+// draws (no pixel write between draws to the screen).
+func (o *Set) PrepareFog(v *render.View, w game.WorldView, sw, sh int, tile float64) {
+	if len(w.Fog) == 0 && o.Fog.Chunks == nil {
+		return
+	}
+	o.Fog.bakeFog(v, w.Fog, w.FogVer, w.TerrainW, v.MapH, tile, sw, sh)
 }
 
 // DrawFog is the map pass's fog layer (physical pixels, v.Cam).

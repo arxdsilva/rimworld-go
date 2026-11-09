@@ -72,6 +72,18 @@ func (p *Pipeline) Draw(screen *ebiten.Image) {
 	p.DrawArt(screen, p.v.SW, p.v.SH, p.v.Tile)
 }
 
+// prepare makes everything the frame's draws would otherwise make between
+// them: the chunk bakes, the snow and wet masks, the fog chunks. The draws
+// to the screen that follow only stamp (PERF-009, GAR-145).
+func (p *Pipeline) prepare(w *game.WorldView, sw, sh int, tile float64) {
+	v := p.v
+	if p.LOD.Tier != Live {
+		p.Bk.prepareGround(w)
+	}
+	p.Env.PrepareCover(v, *w, sw, sh, tile, p.Index)
+	p.Overlays.PrepareFog(v, *w, sw, sh, tile)
+}
+
 // DrawArt draws the world in its fixed order: the ground (live, or the
 // chunk or map bakes), foundations, floors, conduits, zones and plans,
 // blueprints, floor markings, colonist shadows, the objects of the view
@@ -95,10 +107,11 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	views := l.Views
 	lt := l.Tier
 
+	p.prepare(&w, sw, sh, tile) // every bake and pixel write of the frame, before the first draw
 	if lt == Live {
 		p.drawTerrainArt(screen, w, sw, sh, tile)
 	} else {
-		p.Bk.drawGroundLOD(screen, &w, sw, sh, tile)                       // lod.go: chunk or map bakes
+		p.Bk.drawGroundLOD(screen, &w, sw, sh, tile)                       // lod.go: the planned chunk bakes
 		p.Env.DrawPuddleVeil(v, screen, w, sw, sh, tile, p.Stamp, p.Index) // render/env (PLAY-022): under the tufts
 		if lt == Chunk {
 			p.Env.DrawFurrows(v, screen, w, tile, p.frameViews(&w)) // render/env: tilled ground under crops

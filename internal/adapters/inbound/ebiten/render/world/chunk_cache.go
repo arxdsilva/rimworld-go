@@ -81,10 +81,9 @@ func (cc *ChunkCache) take() *chunkBake {
 	return old
 }
 
-// drawChunkBake draws tiles tx0..tx1 × ty0..ty1 of chunk (cx, cy) from
-// its bake, baking it first when missing or stale (within the frame's
-// budget). False: nothing drawn.
-func (k *Bakes) drawChunkBake(screen *ebiten.Image, w *game.WorldView, cx, cy int, cv game.ChunkView, tx0, ty0, tx1, ty1 int) bool {
+// bakeChunk is chunk (cx, cy)'s chunk-tier bake, made first when missing or
+// stale (within the frame's budget); nil: not baked yet.
+func (k *Bakes) bakeChunk(w *game.WorldView, cx, cy int, cv game.ChunkView) *chunkBake {
 	cs := game.ChunkSize
 	mw, mh := k.v.MapW, k.v.MapH
 	c := cy*((mw+cs-1)/cs) + cx
@@ -94,10 +93,7 @@ func (k *Bakes) drawChunkBake(screen *ebiten.Image, w *game.WorldView, cx, cy in
 		ver = env.GrassBakeKey(ver, k.Env.GrassChunkSig(k.v, w, cx, cy, k.Index))
 	}
 	b, bake := k.LOD.Chunks.get(c, ver, k.LOD.budget > 0)
-	if b == nil {
-		return false
-	}
-	if bake {
+	if b != nil && bake {
 		k.LOD.budget--
 		x1, y1 := min(x0+cs, mw), min(y0+cs, mh)
 		k.bakeGround(b.img, w, x0, y0, x1, y1, chunkBakePx, bakePad, bakePad, false)
@@ -106,8 +102,7 @@ func (k *Bakes) drawChunkBake(screen *ebiten.Image, w *game.WorldView, cx, cy in
 		}
 		k.LOD.Chunks.done(b, ver)
 	}
-	k.DrawBaked(screen, b.img, x0, y0, bakePad, bakePad, chunkBakePx, tx0, ty0, tx1, ty1)
-	return true
+	return b
 }
 
 // bakeTufts bakes the grass tufts of tiles x0..x1-1 × y0..y1-1 into dst
