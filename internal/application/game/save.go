@@ -1,7 +1,6 @@
 package game
 
 import (
-	"compress/gzip"
 	"encoding/binary"
 	"encoding/gob"
 	"errors"
@@ -26,6 +25,7 @@ import (
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/resize"
 	"rimworld-go/internal/application/game/rest"
+	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/thermo"
@@ -494,6 +494,15 @@ func (g *Game) Info(name string) SaveInfo {
 // is the top level, whatever map is viewed; every other open map is an
 // ExtraMaps entry (MAP-0).
 func (g *Game) Save(w io.Writer, name string) error {
+	zw := savefmt.NewWriter(w)
+	if err := encodeSave(g, zw, name); err != nil {
+		return err
+	}
+	return zw.Close()
+}
+
+// encodeSave writes Save's raw gob stream, uncompressed.
+func encodeSave(g *Game, w io.Writer, name string) error {
 	cur := g.mapState
 	defer func() { g.mapState = cur }()
 	g.mapState = g.maps[0]
@@ -573,20 +582,14 @@ func (g *Game) Save(w io.Writer, name string) error {
 	if g.view != nil {
 		s.View = g.view.id
 	}
-	// BestSpeed: a fifth of the default level's time for a file about a
-	// sixth larger (NG-1 §6.8: a 500² save in ≤ 300 ms, ≤ 4 MB).
-	zw, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
-	if err != nil {
-		return fmt.Errorf("save: %w", err)
-	}
-	enc := gob.NewEncoder(zw)
+	enc := gob.NewEncoder(w)
 	if err := enc.Encode(g.Info(name)); err != nil {
 		return fmt.Errorf("save header: %w", err)
 	}
 	if err := enc.Encode(&s); err != nil {
 		return fmt.Errorf("save state: %w", err)
 	}
-	return zw.Close()
+	return nil
 }
 
 // exportMapFields writes the current map's fields of s (MAP-0): the first
@@ -648,7 +651,7 @@ var ErrSaveVersion = errors.New("save from an incompatible version")
 
 // ReadSaveInfo reads just the header of a save.
 func ReadSaveInfo(r io.Reader) (SaveInfo, error) {
-	zr, err := gzip.NewReader(r)
+	zr, err := savefmt.NewReader(r)
 	if err != nil {
 		return SaveInfo{}, fmt.Errorf("not a save file: %w", err)
 	}
@@ -661,7 +664,7 @@ func ReadSaveInfo(r io.Reader) (SaveInfo, error) {
 
 // Load restores a game written by Save.
 func Load(r io.Reader) (*Game, SaveInfo, error) {
-	zr, err := gzip.NewReader(r)
+	zr, err := savefmt.NewReader(r)
 	if err != nil {
 		return nil, SaveInfo{}, fmt.Errorf("not a save file: %w", err)
 	}

@@ -2,7 +2,6 @@ package game
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/gob"
 	"fmt"
 	"maps"
@@ -23,14 +22,10 @@ import (
 // behaviour does. It reads the state only.
 func (g *Game) StateHash() uint64 {
 	var buf bytes.Buffer
-	if err := g.Save(&buf, "statehash"); err != nil {
+	if err := encodeSave(g, &buf, "statehash"); err != nil { // raw gob: no compression to undo
 		panic(fmt.Errorf("state hash: %w", err))
 	}
-	zr, err := gzip.NewReader(&buf)
-	if err != nil {
-		panic(fmt.Errorf("state hash: %w", err))
-	}
-	dec := gob.NewDecoder(zr)
+	dec := gob.NewDecoder(&buf)
 	var info SaveInfo
 	var s saveState
 	if err := dec.Decode(&info); err != nil {
