@@ -109,3 +109,24 @@ func noFuelAlert(tr lang.Tr, w game.WorldView) (Alert, bool) {
 	}
 	return Alert{Key: "nofuel", Label: lang.Tf(tr, "%d %ss out of wood", len(at), kinds[0]), Targets: at}, true
 }
+
+// sparkingAlert raises "Turret about to explode" (danger) for turrets whose
+// fuse is lit, targeting each; it goes with the fuse. One turret is named,
+// several are counted.
+func sparkingAlert(tr lang.Tr, w game.WorldView) (Alert, bool) {
+	var at [][2]int
+	kind := ""
+	for i := range w.Buildings {
+		if b := &w.Buildings[i]; b.Sparking {
+			at = append(at, [2]int{b.X, b.Y})
+			kind = b.Kind
+		}
+	}
+	switch len(at) {
+	case 0:
+		return Alert{}, false
+	case 1:
+		return Alert{Key: "sparking", Label: lang.Tf(tr, "%s about to explode", titleCase(kind)), Danger: true, Targets: at}, true
+	}
+	return Alert{Key: "sparking", Label: lang.Tf(tr, "%d turrets about to explode", len(at)), Danger: true, Targets: at}, true
+}

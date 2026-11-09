@@ -65,3 +65,30 @@ func TestMessageShowsRepeat(t *testing.T) {
 		t.Fatalf("merged: %q", got)
 	}
 }
+
+// TestSparkingTurretAlert (MAP-21): a danger alert names a turret with a lit
+// fuse and is gone once the fuse ends.
+func TestSparkingTurretAlert(t *testing.T) {
+	t.Parallel()
+	find := func(w game.WorldView) *Alert {
+		for _, a := range BuildAlerts(nil, w) {
+			if a.Key == "sparking" {
+				return &a
+			}
+		}
+		return nil
+	}
+	w := game.WorldView{Buildings: []game.BuildingView{{Kind: "turret", X: 4, Y: 5, Sparking: true}}}
+	a := find(w)
+	if a == nil || !a.Danger || a.Label != "Turret about to explode" || len(a.Targets) != 1 || a.Targets[0] != [2]int{4, 5} {
+		t.Fatalf("alert %+v", a)
+	}
+	w.Buildings = append(w.Buildings, game.BuildingView{Kind: "turret", X: 9, Y: 9, Sparking: true})
+	if a := find(w); a == nil || a.Label != "2 turrets about to explode" || len(a.Targets) != 2 {
+		t.Fatalf("two: %+v", a)
+	}
+	w.Buildings[0].Sparking, w.Buildings[1].Sparking = false, false
+	if find(w) != nil {
+		t.Fatal("the alert stays after the fuse ends")
+	}
+}

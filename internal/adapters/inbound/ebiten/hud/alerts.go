@@ -255,6 +255,9 @@ func raiseAlertsIn(tr lang.Tr, pawns []game.PawnView, w game.WorldView) []Alert 
 	if al, ok := FishDyingAlertIn(tr, w); ok {  // alerts_tank.go (FISH)
 		out = append(out, al)
 	}
+	if al, ok := sparkingAlert(tr, w); ok { // alerts_power.go (MAP-21): a turret's fuse is lit
+		out = append(out, al)
+	}
 	if al, ok := notConnectedAlert(tr, w); ok {
 		out = append(out, al)
 	}
@@ -780,6 +783,7 @@ var alertExplanations = map[string]string{
 	"rescue":        "A wounded colonist is lying where they fell. Send a healthy colonist to carry them to a bed so they can heal.",
 	"starving":      "A colonist has collapsed from hunger. Get food within reach and carry them to a bed to recover.",
 	"collapsed":     "A colonist dropped from exhaustion with nowhere to sleep. Build enough beds so everyone can rest.",
+	"sparking":      "A turret is sparking and will explode when the fuse runs out. Keep colonists away from it until it stops, and put out any fire it starts.",
 	"food":          "There is little food for the number of colonists. Plant and harvest crops, hunt, or stop food going to waste before anyone starves.",
 	"raid":          "Armed raiders are on the map. Draft your fighters, take cover near your defences and hold a line.",
 	"break":         "A colonist is having a mental break and may act on their own. Keep others out of the way, then work on lifting their mood.",

@@ -54,6 +54,8 @@ func ActivityLine(tr lang.Tr, p game.PawnView, c dossierview.Card) Line {
 	switch {
 	case p.Fleeing:
 		l.Text, l.Tone = tr.T("Fleeing"), ToneWarning
+	case p.Advancing && p.Hostile:
+		l.Text, l.Tone = tr.T("Advancing on the colony"), ToneWarning
 	case p.RaidPlan != "":
 		l.Text = lang.Tf(tr, "Raiding (%s)", planWord(tr, p.RaidPlan))
 	case c.AttackTarget != "":

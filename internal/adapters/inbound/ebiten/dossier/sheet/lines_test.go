@@ -350,6 +350,7 @@ func TestActivityLine(t *testing.T) {
 	}{
 		{"fleeing first", game.PawnView{Fleeing: true, RaidPlan: "assault", Job: "x"}, card, "Fleeing", ToneWarning},
 		{"raid", game.PawnView{RaidPlan: "siege", Job: "x"}, card, "Raiding (siege)", ToneText},
+		{"advancing", game.PawnView{Hostile: true, Advancing: true, RaidPlan: "siege", Job: "x"}, card, "Advancing on the colony", ToneWarning},
 		{"raid steal", game.PawnView{RaidPlan: "steal", Job: "x"}, card, "Raiding (steal)", ToneText},
 		{"raid stage", game.PawnView{RaidPlan: "staged assault", Job: "x"}, card, "Raiding (staged assault)", ToneText},
 		{"attack", game.PawnView{Job: "x"}, dossierview.Card{AttackTarget: "Bo"}, "Attacking Bo", ToneText},
