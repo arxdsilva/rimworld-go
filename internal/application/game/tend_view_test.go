@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -97,6 +98,7 @@ func TestOldSaveInfectionMigrates(t *testing.T) {
 func TestHealthViewConditions(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	advance(g, cadence.Next(uint64(g.clock.Now()), clock.TicksPerHour, cadence.OffMedical, 0)) // hurt on a medical slot: medHour steps whole hours
 	id, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	b := addWound(t, g, id, body.LegL, 6, body.Bruise)
 	g.Infect(id, 20)

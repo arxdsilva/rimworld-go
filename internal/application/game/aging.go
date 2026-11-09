@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/body"
@@ -38,11 +39,11 @@ const (
 	dementiaWanderTicks = 4 * clock.TicksPerHour
 )
 
-// stepAging is the medical phase's aging work at tick now (on the hour):
-// the hourly step, and at 00:00 the daily rolls.
+// stepAging is the medical phase's aging work at tick now (its hourly
+// slot): the hourly step, and in the day's first slot the daily rolls.
 func (g *Game) stepAging(now uint64) {
 	g.stepAgingConds(now)
-	if now > 0 && now%clock.TicksPerDay == 0 {
+	if cadence.Due(now, clock.TicksPerDay, cadence.OffMedical, 0) {
 		g.rollAging(now)
 	}
 }

@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/stat"
@@ -25,7 +26,7 @@ import (
 // the patients index is exactly what a scan of the bodies would give.
 func (g *Game) phaseMedical() {
 	now := uint64(g.clock.Now())
-	if now%clock.TicksPerHour != 0 {
+	if !cadence.Due(now, clock.TicksPerHour, cadence.OffMedical, 0) {
 		return
 	}
 	g.stepOrganFailure() // organs.go (MED-05)

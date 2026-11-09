@@ -181,18 +181,18 @@ func (g *Game) importLetters(list []letters.Letter, next uint64) {
 // phaseClimate rots perishable stacks, moves room temperatures and
 // exposure on (frostbitten crops die with the plant pass: plant_growth.go).
 func (g *Game) phaseClimate() {
-	if uint64(g.clock.Now())%temperature.EqualiseInterval == 0 {
+	now := uint64(g.clock.Now())
+	if now%temperature.EqualiseInterval == 0 {
 		g.heatRooms() // game/thermo (TEMP-1): the wiki's 120-tick room equalisation
 	}
-	if uint64(g.clock.Now())%climateInterval != 0 {
+	g.craft.Condition.Tick(now, climateInterval) // craft/condition.go: rot and PRD-2 wear, each on its own slot
+	if now%climateInterval != 0 {
 		return
 	}
 	g.checkRoofSupport() // roof.go: unsupported roofs fall first
 	g.burnFuel()         // fuel.go: the burners use their fuel
 	g.br.ind.Pumps(industryHost{g}).Advance(climateInterval)
 	g.expose()
-	g.craft.Condition.Rot(climateInterval)           // craft/condition.go
-	senseOf(g).Gear.Rot(climateInterval)             // game/sense (CSE-036)
-	g.craft.Condition.Weather(uint64(g.clock.Now())) // PRD-2: deterioration and worn wear, hourly
-	g.craft.Drying.Advance(climateInterval)          // craft/drying.go; frost: per chunk with the plants (plant_growth.go)
+	senseOf(g).Gear.Rot(climateInterval)    // game/sense (CSE-036)
+	g.craft.Drying.Advance(climateInterval) // craft/drying.go; frost: per chunk with the plants (plant_growth.go)
 }

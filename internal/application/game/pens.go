@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
@@ -340,12 +341,12 @@ func (g *Game) setPenSettings(marker entity.EntityID, enc string) {
 // leaving, the open-pen message, auto-cut. It runs on fixed ticks only,
 // so a loaded game runs it exactly when the original would have.
 func (g *Game) penTick(now uint64) {
+	g.penUnpenned(now)
 	if now%penThinkEvery != 0 {
 		return
 	}
 	ms := g.penMarkers()
 	g.penOpenAlerts(ms)
-	g.penUnpenned(now)
 	if now%penAutoCutEvery == 0 {
 		g.penAutoCut(ms)
 	}
@@ -372,24 +373,23 @@ func (g *Game) penOpenAlerts(ms []entity.EntityID) {
 	}
 }
 
-// penUnpenned keeps the unpenned-since ticks: an animal in an accepting
+// penUnpenned keeps the unpenned-since ticks, each animal once every
+// penThinkEvery on its own tick (cadence): an animal in an accepting
 // pen, on a rope or with a pen to be roped to is penned (the count
 // resets); any other penned animal counts from the first pass that saw
 // it so. Once a day, an animal unpenned for penLeaveDays and far from
-// Home may wander off.
+// Home may wander off. An id no longer a penned animal leaves the counts.
 func (g *Game) penUnpenned(now uint64) {
 	ps := &g.pen
-	for id := range ps.since {
-		if a := g.animals.Ref(id); a == nil || !penned(a) {
-			delete(ps.since, id)
-		}
-	}
-	day := now%clock.TicksPerDay == 0
-	for _, id := range g.animalIDs {
+	for id := range cadence.Each(now, penThinkEvery, cadence.OffPen, g.entities.Peek()) {
 		a := g.animals.Ref(id)
-		if a == nil || !penned(a) || a.Dead() {
+		if a == nil || !penned(a) {
+			delete(ps.since, id)
+			continue
+		} else if a.Dead() {
 			continue
 		}
+		day := cadence.Due(now, clock.TicksPerDay, cadence.OffPen, id)
 		pos, _ := g.positions.Get(id)
 		if g.ropeHandler(id) != 0 || g.penTarget(id, a, pos) != 0 {
 			delete(ps.since, id)

@@ -29,9 +29,7 @@ func setCooking(g *Game, id entity.EntityID, lvl int) {
 // stands still).
 func medicalHours(g *Game, hours int) {
 	for h := 0; h < hours; h++ {
-		now := uint64(g.clock.Now())
-		g.clock.Advance(int(clock.TicksPerHour - now%clock.TicksPerHour))
-		g.phaseMedical()
+		medHour(g) // bleed_test.go: the medical phase's next hourly slot
 	}
 }
 

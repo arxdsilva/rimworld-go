@@ -40,8 +40,12 @@ type RewardView struct {
 	Value    int
 }
 
-// View is every quest, ids ascending. The game memoizes it by Version.
+// View is every quest, ids ascending (nil for none, as after a load of
+// an idle book). The game memoizes it by Version.
 func (q *Quests) View() []View {
+	if len(q.list) == 0 {
+		return nil
+	}
 	out := make([]View, 0, len(q.list))
 	for _, n := range q.list {
 		v := View{ID: n.ID, Kind: n.Kind, State: n.State, Reason: n.Reason, Stars: n.Stars,

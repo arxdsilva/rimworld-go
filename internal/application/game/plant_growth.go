@@ -38,9 +38,9 @@ func (g *Game) growChunks() {
 	var lamps []farm.Lamp
 	gp := g.growthPct() // setup.go: a scenario's permanent conditions (Ashfall)
 	if ph == 0 {
-		g.sunLampTick(now)                                     // plant_light.go: the lamps' hours, short circuits
-		furnish.NewPots(furnishHost{restBedding{g}}).Tick(now) // game/furnish (A2): pot plants, hourly
+		g.sunLampTick(now) // plant_light.go: the lamps' hours, short circuits
 	}
+	furnish.NewPots(furnishHost{restBedding{g}}).Tick(now) // game/furnish (A2): pot plants, hourly on their slot
 	for c := (ph*n + climateInterval - 1) / climateInterval; c < n && c*climateInterval/n == ph; c++ {
 		if lamps == nil {
 			lamps = append(g.sunLamps(now), farm.Lamp{X: -1 << 20}) // the sentinel is never in reach

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/application/game/mind"
@@ -131,8 +132,9 @@ func TestDeteriorationOutdoorsVsRoofed(t *testing.T) {
 	}
 	g.roofs[8*12+8] = roof.Natural | roof.NaturalThick // overhead rock: needs no support
 	day := func() {
-		for range clock.HoursPerDay {
-			g.clock.Advance(int(clock.TicksPerHour - uint64(g.clock.Now())%clock.TicksPerHour))
+		for range clock.HoursPerDay { // to each hour's condition pass (cadence.OffWear)
+			now := uint64(g.clock.Now())
+			g.clock.Advance(int(cadence.Next(now+1, clock.TicksPerHour, cadence.OffWear, 0) - now))
 			g.phaseClimate()
 		}
 	}

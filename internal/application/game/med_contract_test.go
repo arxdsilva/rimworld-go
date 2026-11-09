@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/drug"
@@ -168,7 +169,7 @@ func TestPatientsIndexMatchesScan(t *testing.T) {
 			}
 			return
 		}
-		if p != PhaseMedical || uint64(g.clock.Now())%clock.TicksPerHour != 0 {
+		if p != PhaseMedical || !cadence.Due(uint64(g.clock.Now()), clock.TicksPerHour, cadence.OffMedical, 0) { // the sweep's slot
 			return
 		}
 		checks++

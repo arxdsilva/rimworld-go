@@ -3,6 +3,7 @@ package game
 import (
 	"sort"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -127,8 +128,8 @@ func (g *Game) absorbInto(id, sid entity.EntityID) {
 
 // troughDeliveries runs once a tick (phaseAnimals): a hauler bound for a
 // trough carries no more than it takes, and the load it put down goes
-// into the trough. Every troughSweepEvery ticks each trough also adopts
-// its default filter and takes in any feed lying on it.
+// into the trough. Each trough, on its own tick of every troughSweepEvery
+// (cadence), adopts its default filter and takes in feed lying on it.
 func (g *Game) troughDeliveries(now uint64) {
 	for _, pid := range g.pawnIDs {
 		j, _ := g.jobs.Get(pid)
@@ -148,10 +149,7 @@ func (g *Game) troughDeliveries(now uint64) {
 			g.trimTroughLoad(pid, j)
 		}
 	}
-	if now%troughSweepEvery != 0 {
-		return
-	}
-	for _, bid := range g.bldgIDs {
+	for bid := range cadence.Each(now, troughSweepEvery, cadence.OffTrough, g.entities.Peek()) {
 		b, ok := g.isTrough(bid)
 		if !ok {
 			continue

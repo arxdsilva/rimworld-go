@@ -17,10 +17,10 @@ import (
 // map stands still; the caravan's members are off it).
 func roadHours(g *Game, hours int) {
 	for h := 0; h < hours; h++ {
+		medHour(g) // the medical phase's hourly slot (cadence.OffMedical)
 		now := uint64(g.clock.Now())
 		g.clock.Advance(int(clock.TicksPerHour - now%clock.TicksPerHour))
-		g.phaseMedical()
-		g.phaseWorld()
+		g.phaseWorld() // the road's hour
 	}
 }
 

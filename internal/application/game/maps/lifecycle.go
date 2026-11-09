@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -62,7 +63,7 @@ func (l Lifecycle) Apply(c command.Command) {
 	}
 }
 
-// Flush applies the queued requests, then on the hour takes each
+// Flush applies the queued requests, then hourly (cadence.OffCensus) takes each
 // temporary map's census: the day-10 raid on a mineral site, a quest
 // site's reinforcements 60 hours after its job is done, the pack-up
 // countdown once its job is done, the reform when it runs out, and the
@@ -75,7 +76,7 @@ func (l Lifecycle) Flush(now uint64) {
 		a.Queue = slices.Delete(a.Queue, 0, 1)
 		l.apply(r, now)
 	}
-	if now%clock.TicksPerHour == 0 {
+	if cadence.Due(now, clock.TicksPerHour, cadence.OffCensus, 0) {
 		for _, id := range l.ids() {
 			l.hourly(id, now)
 		}

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/postpone"
 	"strings"
 	"testing"
@@ -353,6 +354,12 @@ func TestPenAutoCut(t *testing.T) {
 	}
 }
 
+// penTurn is the first tick at or after now that is animal id's turn of
+// a pen pass every ticks (cadence: each animal has its own tick).
+func penTurn(now, every uint64, id entity.EntityID) uint64 {
+	return cadence.Next(now, every, cadence.OffPen, id)
+}
+
 func TestUnpennedLivestockRoamAndLeave(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 3, Width: 120, Height: 30})
@@ -360,10 +367,11 @@ func TestUnpennedLivestockRoamAndLeave(t *testing.T) {
 	cow := tameAt(t, g, "cow", "Bess", 100, 15)
 	pet := tameAt(t, g, "husky", "Ash", 100, 16)
 	g.paintHome(5, 5, 8, 8, true) // Home far west
-	g.penTick(penThinkEvery)
-	if s := g.pen.since[cow]; s != penThinkEvery {
+	g.penTick(penTurn(penThinkEvery, penThinkEvery, cow))
+	if s := g.pen.since[cow]; s != penTurn(penThinkEvery, penThinkEvery, cow) {
 		t.Fatalf("an unpenned cow's clock starts: %d", s)
 	}
+	g.penTick(penTurn(penThinkEvery, penThinkEvery, pet))
 	if _, ok := g.pen.since[pet]; ok {
 		t.Fatal("pets have no pen clock")
 	}
@@ -377,14 +385,14 @@ func TestUnpennedLivestockRoamAndLeave(t *testing.T) {
 	}
 	// days 1 and 2: no leaving, whatever the dice
 	for d := uint64(1); d < penLeaveDays; d++ {
-		g.penTick(d * clock.TicksPerDay)
+		g.penTick(penTurn(d*clock.TicksPerDay, clock.TicksPerDay, cow))
 		if animalOf(g, cow).Leaving {
 			t.Fatalf("day %d: too early to leave", d)
 		}
 	}
 	left := 0
 	for d := uint64(penLeaveDays + 1); d < 80 && left == 0; d++ {
-		g.penTick(d * clock.TicksPerDay)
+		g.penTick(penTurn(d*clock.TicksPerDay, clock.TicksPerDay, cow))
 		if animalOf(g, cow).Leaving {
 			left = int(d)
 		}
@@ -400,9 +408,9 @@ func TestUnpennedLivestockRoamAndLeave(t *testing.T) {
 	h := New(Config{Seed: 3, Width: 120, Height: 30})
 	near := tameAt(t, h, "cow", "Moo", 10, 10)
 	h.paintHome(5, 5, 8, 8, true)
-	h.penTick(penThinkEvery)
+	h.penTick(penTurn(penThinkEvery, penThinkEvery, near))
 	for d := uint64(1); d < 60; d++ {
-		h.penTick(d * clock.TicksPerDay)
+		h.penTick(penTurn(d*clock.TicksPerDay, clock.TicksPerDay, near))
 	}
 	if animalOf(h, near).Leaving {
 		t.Fatal("livestock near Home stay")
@@ -414,14 +422,14 @@ func TestUnpennedClockResetNoFlap(t *testing.T) {
 	g := New(Config{Seed: 3, Width: 40, Height: 24})
 	bareGround(g)
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
-	g.penTick(penThinkEvery)
+	g.penTick(penTurn(penThinkEvery, penThinkEvery, cow))
 	if _, ok := g.pen.since[cow]; !ok {
 		t.Fatal("clock running")
 	}
 	// a pen appears: the cow has somewhere to go, the clock resets
 	fenceRing(t, g, 20, 4, 28, 12, [2]int{24, 12})
 	m := buildMarker(t, g, 24, 8)
-	g.penTick(4 * clock.TicksPerDay)
+	g.penTick(penTurn(4*clock.TicksPerDay, clock.TicksPerDay, cow))
 	if _, ok := g.pen.since[cow]; ok {
 		t.Fatal("with a pen to go to the clock resets")
 	}
@@ -431,12 +439,12 @@ func TestUnpennedClockResetNoFlap(t *testing.T) {
 	if g.penRegion(m).enclosed {
 		t.Fatal("open")
 	}
-	g.penTick(5 * clock.TicksPerDay)
-	if s := g.pen.since[cow]; s != 5*clock.TicksPerDay {
+	g.penTick(penTurn(5*clock.TicksPerDay, clock.TicksPerDay, cow))
+	if s := g.pen.since[cow]; s != penTurn(5*clock.TicksPerDay, clock.TicksPerDay, cow) {
 		t.Fatalf("the clock restarts: %d", s)
 	}
 	for d := uint64(6); d < 5+penLeaveDays; d++ {
-		g.penTick(d * clock.TicksPerDay)
+		g.penTick(penTurn(d*clock.TicksPerDay, clock.TicksPerDay, cow))
 		if animalOf(g, cow).Leaving {
 			t.Fatal("no leaving within three days of losing the pen")
 		}

@@ -11,6 +11,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/quest"
@@ -52,7 +53,8 @@ func clearedCamp(t *testing.T) (*Game, *maps.Meta, int) {
 	for i := 0; i < 8 && meta.Reinforce == 0; i++ {
 		nextHours(g, 1)
 	}
-	start := uint64(g.clock.Now()) - 1 // the hour mark nextHours stepped over
+	now := uint64(g.clock.Now())
+	start := cadence.Next(now-clock.TicksPerHour, clock.TicksPerHour, cadence.OffCensus, 0) // the census slot nextHours stepped over
 	if questView(t, g, id).State != qd.Succeeded || meta.Reinforce != start+60*clock.TicksPerHour || meta.PackBy != 0 {
 		t.Fatalf("cleared at %d: quest %v, reinforce at %d, pack-up by %d", start, questView(t, g, id).State, meta.Reinforce, meta.PackBy)
 	}
@@ -67,12 +69,13 @@ func reinforcements(m *mapState, fac int) bool {
 	return slices.ContainsFunc(m.raidGroups, func(gr raid.Group) bool { return gr.Plan != raid.Defend && gr.Faction == fac })
 }
 
-// soon brings site id's reinforcements to the hour mark after next: the
-// 60-hour wait itself is checked by clearedCamp and the maps unit tests;
-// stepping it here would cost a minute under -race.
+// soon brings site id's reinforcements to the hourly census slot after
+// next (cadence.OffCensus): the 60-hour wait itself is checked by
+// clearedCamp and the maps unit tests; stepping it here would cost a
+// minute under -race.
 func soon(g *Game, id uint32) {
 	now := uint64(g.clock.Now())
-	g.worldS().atlas.Meta(id).Reinforce = now - now%clock.TicksPerHour + 2*clock.TicksPerHour
+	g.worldS().atlas.Meta(id).Reinforce = cadence.Next(now+1, clock.TicksPerHour, cadence.OffCensus, 0) + clock.TicksPerHour
 }
 
 // TestCampReinforcementsComeWhileWeStay: when the clock runs out the camp's

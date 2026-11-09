@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/ship"
@@ -260,15 +261,16 @@ func (g *Game) raidMessage(ex, ey, n int, plan raid.Plan, f *faction.Faction) {
 // --- the colony's hourly and daily upkeep -----------------------------------
 
 // setupTick runs every tick for a setup colony (phaseThreats): the
-// arrival, then hourly losses and raid outcomes, the day rollover at
-// midnight and the scenario's scheduled incidents. MAP-0: losses and repelled raids are each map's (its pawns, its raid
+// arrival, then in its hourly slot (cadence.OffStory) losses and raid
+// outcomes, the day rollover in the day's first slot and the scenario's
+// scheduled incidents. MAP-0: losses and repelled raids are each map's (its pawns, its raid
 // groups); the landing, the day's rollover and the scenario's incidents
 // are the colony's, on the first map's pass.
 func (g *Game) setupTick(now uint64) {
 	if primary(g) {
 		g.arrivalTick(now) // arrival.go
 	}
-	if now%clock.TicksPerHour != 0 {
+	if !cadence.Due(now, clock.TicksPerHour, cadence.OffStory, 0) {
 		return
 	}
 	g.checkLosses(now)
@@ -277,7 +279,7 @@ func (g *Game) setupTick(now uint64) {
 		return
 	}
 	questTick(g, now, false) // quest_host.go (QST-1): due timers and offers
-	switch now % clock.TicksPerDay {
+	switch (now + cadence.OffStory) % clock.TicksPerDay {
 	case 0:
 		g.dayRollover(now)
 	case scheduledHour * clock.TicksPerHour:

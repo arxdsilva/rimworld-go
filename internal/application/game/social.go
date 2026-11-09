@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/sociallog"
@@ -44,7 +45,7 @@ func (g *Game) phaseSocial() {
 		return
 	}
 	now := uint64(g.clock.Now())
-	if colony && g.soc != nil && now%clock.TicksPerDay == 0 {
+	if colony && g.soc != nil && cadence.Due(now, clock.TicksPerDay, cadence.OffSocialDay, 0) {
 		g.socialDay(now)
 	}
 	if colony {

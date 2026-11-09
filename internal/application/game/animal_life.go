@@ -3,6 +3,7 @@ package game
 import (
 	"strings"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -73,12 +74,10 @@ func rateSpan(now uint64, per, period, span int) int {
 }
 
 // lifePhase is the phase-level part of life (phaseAnimals, once a tick):
-// fertile eggs incubate every climate interval; the auto-slaughter check
-// runs once a day.
+// each fertile egg incubates once a climate interval, on its own tick
+// (cadence); the auto-slaughter check runs once a day.
 func (g *Game) lifePhase(now uint64) {
-	if now%climateInterval == 0 {
-		g.incubate()
-	}
+	g.incubate(now)
 	if herd.CheckTick(now) {
 		g.herdOf().Auto.Check() // game/herd (FOOD-3): auto-slaughter, once a day
 	}
@@ -414,12 +413,13 @@ func eggBoxNear(g *Game, x, y int) (bx, by int, ok bool) {
 	return bx, by, best <= eggBoxReach
 }
 
-// incubate advances every fertile egg stack on the ground by a climate
-// interval: warm eggs incubate, frozen ones die, ripe ones hatch.
-func (g *Game) incubate() {
+// incubate advances each fertile egg stack on the ground whose turn is
+// now by a climate interval: warm eggs incubate, frozen ones die, ripe
+// ones hatch.
+func (g *Game) incubate(now uint64) {
 	var eggs []entity.EntityID
-	for _, id := range g.itemIDs {
-		if st, ok := g.stacks.Get(id); ok && st.Kind == item.FertileEgg && st.Carrier == 0 {
+	for id := range cadence.Each(now, climateInterval, cadence.OffEgg, g.entities.Peek()) {
+		if st := g.stacks.Ref(id); st != nil && st.Kind == item.FertileEgg && st.Carrier == 0 {
 			eggs = append(eggs, id)
 		}
 	}

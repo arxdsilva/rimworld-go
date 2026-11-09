@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -193,6 +195,7 @@ func TestNewHospitalBedStartsMedical(t *testing.T) {
 func TestRescueToMedicalBedKeepsOwnBed(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
+	advance(g, cadence.Next(uint64(g.clock.Now()), clock.TicksPerHour, cadence.OffMedical, 0)) // the hourly pass runs first, as on the hour
 	pat, _ := g.SpawnNamedPawn(5, 6, "Patient")
 	g.SpawnNamedPawn(3, 9, "Doc")
 	own := buildNow(t, g, construction.Bed, item.Wood, construction.South, 8, 2)

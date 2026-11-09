@@ -209,34 +209,26 @@ func (g *Game) igniteBurst(x, y int) {
 
 var neighbours8 = [8][2]int{{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}}
 
-// fireItems indexes the loose flammable stacks for a step: fuel is the
-// best item flammability per cell on or beside a fire, burning the
-// stacks on burning cells (in item order).
+// fireItems indexes the loose flammable stacks for a step, read from the
+// ground index around each fire (never the item list): fuel is the best
+// item flammability per cell on or beside a fire, burning the stacks on
+// burning cells (in item order; one fire a cell, so each is listed once).
 func (g *Game) fireItems() (fuel map[int]int, burning map[int][]entity.EntityID) {
 	w := g.grid.Width()
 	fuel, burning = map[int]int{}, map[int][]entity.EntityID{} // non-nil: cellFuel reads, never scans
-	for _, id := range g.itemIDs {
-		st := g.stacks.Ref(id)
-		if st == nil || st.Carrier != 0 {
-			continue
-		}
-		fl := fire.ItemFlammability(st.Kind)
-		if fl == 0 || !g.firesAround(st.X, st.Y, 1) {
-			continue
-		}
-		near := false
-		for dy := -1; dy <= 1 && !near; dy++ {
-			for dx := -1; dx <= 1 && !near; dx++ {
-				near = g.fireIndex(st.X+dx, st.Y+dy) >= 0
+	for _, f := range g.fire.fires {
+		for dy := -1; dy <= 1; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				x, y := f.X+dx, f.Y+dy
+				for _, id := range g.idx.ground.Loose(haulHost{g}, x, y) {
+					if fl := fire.ItemFlammability(g.stacks.Ref(id).Kind); fl != 0 {
+						fuel[y*w+x] = max(fuel[y*w+x], fl)
+						if dx == 0 && dy == 0 {
+							burning[y*w+x] = append(burning[y*w+x], id)
+						}
+					}
+				}
 			}
-		}
-		if !near {
-			continue
-		}
-		c := st.Y*w + st.X
-		fuel[c] = max(fuel[c], fl)
-		if g.fireIndex(st.X, st.Y) >= 0 {
-			burning[c] = append(burning[c], id)
 		}
 	}
 	return fuel, burning

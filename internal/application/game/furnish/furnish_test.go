@@ -3,6 +3,7 @@ package furnish
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -31,8 +32,12 @@ func newHost() *fakeHost {
 		1: {Kind: construction.PlantPot}, 2: {Kind: construction.Chair}}}
 }
 
-// noon is a growing hour on the hour (Tick runs then only).
+// noon is a growing hour, on the hour.
 func noon(day uint64) uint64 { return day*clock.TicksPerDay + 12*clock.TicksPerHour }
+
+// at is the pots' slot (cadence) in the hour starting at t: Tick runs
+// then only.
+func at(t uint64) uint64 { return cadence.Next(t, PotEvery, cadence.OffPot, 0) }
 
 // TestPotSowsAndGrows (AX-2): SetPlant picks a pot's plant only (not a
 // chair, not an unknown plant); a grower sows it once (ToSow, Sow); the
@@ -49,7 +54,7 @@ func TestPotSowsAndGrows(t *testing.T) {
 	if !p.SetPlant(1, construction.PotDaylily) || h.b[1].Plant != uint8(construction.PotDaylily) || h.recount != 1 {
 		t.Fatalf("sow: %+v recounts %d", h.b[1], h.recount)
 	}
-	if p.Tick(noon(0)); h.b[1].Growth != 0 {
+	if p.Tick(at(noon(0))); h.b[1].Growth != 0 {
 		t.Fatal("an unsown pot grew")
 	}
 	if id, x, y, work, ok := p.ToSow(5, 5); !ok || id != 1 || x != 0 || y != 0 || work != 540 {
@@ -61,17 +66,17 @@ func TestPotSowsAndGrows(t *testing.T) {
 	if _, _, _, _, ok := p.ToSow(5, 5); ok {
 		t.Fatal("a sown pot still waits")
 	}
-	p.Tick(noon(0) + 1)            // not on the hour
-	p.Tick(6 * clock.TicksPerHour) // 06:00: growing
+	p.Tick(at(noon(0)) + 1)            // not the pots' slot
+	p.Tick(at(6 * clock.TicksPerHour)) // 06:00: growing
 	g0 := h.b[1].Growth
-	p.Tick(noon(0) + 10*clock.TicksPerHour) // 22:00: resting
+	p.Tick(at(noon(0) + 10*clock.TicksPerHour)) // 22:00: resting
 	if h.b[1].Growth != g0 {
 		t.Fatal("grew at night")
 	}
 	hours := 0
 	for d := uint64(0); h.b[1].Growth < 1000 && d < 30; d++ {
 		for hr := uint64(plant6); hr < plant19; hr++ {
-			p.Tick(d*clock.TicksPerDay + hr*clock.TicksPerHour)
+			p.Tick(at(d*clock.TicksPerDay + hr*clock.TicksPerHour))
 			hours++
 		}
 	}
@@ -84,7 +89,7 @@ func TestPotSowsAndGrows(t *testing.T) {
 	}
 	h.b[1] = construction.Building{Kind: construction.PlantPot, Plant: uint8(construction.PotRose), Growth: Sprout}
 	h.rate = 0
-	p.Tick(noon(5))
+	p.Tick(at(noon(5)))
 	if h.b[1].Growth != Sprout {
 		t.Fatal("grew without light")
 	}
@@ -111,12 +116,12 @@ func TestPotFrostDoesNotFlap(t *testing.T) {
 	p := NewPots(h)
 	h.b[1] = construction.Building{Kind: construction.PlantPot, Plant: uint8(construction.PotRose), Growth: 500}
 	h.air = PotFrost + 1
-	p.Tick(noon(0))
+	p.Tick(at(noon(0)))
 	if h.b[1].Growth == 0 {
 		t.Fatal("died above the frost line")
 	}
 	h.air = PotFrost - 1
-	p.Tick(noon(0) + clock.TicksPerHour*12) // at night too
+	p.Tick(at(noon(0) + clock.TicksPerHour*12)) // at night too
 	if h.b[1].Growth != 0 {
 		t.Fatal("survived the frost")
 	}
@@ -126,7 +131,7 @@ func TestPotFrostDoesNotFlap(t *testing.T) {
 		if _, _, _, _, ok := p.ToSow(0, 0); ok {
 			sows++
 		}
-		p.Tick(noon(uint64(1 + i)))
+		p.Tick(at(noon(uint64(1 + i))))
 	}
 	if sows != 0 {
 		t.Fatalf("sown %d times in the cold band", sows)

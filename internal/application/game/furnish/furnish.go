@@ -12,6 +12,7 @@
 package furnish
 
 import (
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -78,13 +79,14 @@ func (s Pots) SetPlant(id entity.EntityID, p construction.PotPlant) bool {
 	return true
 }
 
-// Tick runs hourly: a sown pot's plant dies in air below PotFrost (a
-// grower replants it), and in the growing hours (plant.GrowingHour) it
+// Tick runs hourly, on its own slot of the hour (cadence.OffPot): a sown
+// pot's plant dies in air below PotFrost (a grower replants it), and in
+// the growing hours (plant.GrowingHour) it
 // grows, taking its grow days at full speed in growing time, as a crop
 // does (wiki: Plants). Rooms are recounted when a pot's beauty moves a
 // tenth (every 10 % of growth) or a plant dies.
 func (s Pots) Tick(now uint64) {
-	if now%PotEvery != 0 {
+	if !cadence.Due(now, PotEvery, cadence.OffPot, 0) {
 		return
 	}
 	growing := plant.GrowingHour(int(clock.HourOfDay(clock.Tick(now))))

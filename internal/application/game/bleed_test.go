@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -35,11 +36,12 @@ func addWound(t *testing.T, g *Game, id entity.EntityID, p body.Part, dmg int, k
 	return b
 }
 
-// medHour moves the clock to the next hour and runs only the medical
-// phase (no doctors, no healing: the bleeding on its own).
+// medHour moves the clock to the medical phase's next hourly slot
+// (cadence.OffMedical) and runs only the medical phase (no doctors, no
+// healing: the bleeding on its own).
 func medHour(g *Game) {
-	r := uint64(g.clock.Now()) % clock.TicksPerHour
-	g.clock.Advance(int(clock.TicksPerHour - r))
+	now := uint64(g.clock.Now())
+	g.clock.Advance(int(cadence.Next(now+1, clock.TicksPerHour, cadence.OffMedical, 0) - now))
 	g.phaseMedical()
 }
 
