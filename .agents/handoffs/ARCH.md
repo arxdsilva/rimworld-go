@@ -82,3 +82,13 @@ GAR gap analysis, ADRs 0001-0004 and the architecture diagrams (GAR Parts B and 
 - Decisions: Archify is docs tooling only (THIRD_PARTY_NOTICES "Docs tooling"); CI never runs it.
 - Limits: the arch guards `TestSystemsDeclareStores`, `TestQueryPortsDoNotMutate` and `TestNoGoStatementsInSim` land with the code they guard (GAR E2, E3, E4), not here.
 - Open: GAR E1-E11 and the Part F gate. `TestSkillLinksMatch` still fails pending the user's `.claude/skills` decision (ARCH-007).
+
+## ARCH-009-phase-scheduler
+The tick's phases are declared systems in a schedule (GAR-001..005, 012) · 2026-11-08 · 1083574b8
+- Changed: new `game/sched`. `System{Name, Phase, Scope, Every, Offset, RunIf, Reads, Writes, After, Before, Ambiguous, Run}`, ordered once with Kahn's algorithm over a heap keyed on (phase rank, name). Construction fails on a cycle (naming the chain), an unknown name or phase, a duplicate, or two same-phase systems sharing a store with no path and no `Ambiguous` entry. `Pass(primary, tick)` runs 27 systems from `phaseSystems(g)` (phases.go); `PassPhase` drives one phase for tests.
+- Changed: the colony-wide work that checked `primary(g)` by hand (social day, gather, arrival, story, storyteller, visitors, world upkeep) is Colony systems in the same slots. The cadence rows that re-express exactly (heat, rot, wear, climate, medical, losses, raids-over, story) are `Every`/`Offset`, checked against `cadence.Calendar`.
+- Determinism: every golden, `TestPhaseObserverDoesNotChangeState` and `TestStepIsDeterministicForSameSeed` are unchanged; six extra state hashes match on HEAD and with the change. `sched/testdata/order.golden` pins the order (`-update`).
+- Numbers: `Pass` costs about 58 ns for 24 systems with 0 allocations, observed or not; `TickGrown/500` is unchanged (0.25 ms).
+- Decisions: the Game field is `systems` (`sched` is the work-schedule grid) and replaces `phaseObs`, so there are still 64 fields. The observer still hears phase names, once per phase per pass, so the benchmark CLI is unchanged. Root −24 lines; `craft.Condition.Tick` removed (the table gates rot and wear).
+- Limits: every system still declares `Legacy` access, so the ambiguity check orders them only by the table. Real read and write sets come system by system, before any of them runs in parallel.
+- Open: `incidents.go`'s `climateTick`/`tradeTick` and the visitors' talk keep their `primary(g)` gates; pots, eggs, troughs, pens, aging and census are not `Every` rows (mid-function or per entity); the per-system timing HUD (GAR-012).
