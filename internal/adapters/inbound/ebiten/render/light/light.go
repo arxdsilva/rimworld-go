@@ -306,6 +306,9 @@ type Lit struct {
 	Verts    [4]ebiten.Vertex
 	Opts     ebiten.DrawTrianglesShaderOptions
 	Uniforms [8][]float32
+	// key is the light the uniforms hold (keyOK: they hold one at all).
+	key   uniformKey
+	keyOK bool
 	// radArt is the catalog the grid's lamp radius was read from (radOK:
 	// read at all), so a new catalog re-reads light_radius.
 	radArt *art.Catalog
@@ -963,6 +966,12 @@ func GroundPlane(c *art.Catalog, img *ebiten.Image) bool {
 	return false
 }
 
+// uniformKey is the part of State that reaches the shader's uniforms.
+type uniformKey struct {
+	sunL, moonL, sunColor, moonColor, skyAmbient, indoorAmbient, lampColor [3]float32
+	lampSky                                                                float32
+}
+
 // SyncUniforms copies this frame's light into the reused uniform map.
 func (l *Lit) SyncUniforms() {
 	if l.Opts.Uniforms == nil {
@@ -976,6 +985,11 @@ func (l *Lit) SyncUniforms() {
 		}
 	}
 	ls := &l.Light
+	key := uniformKey{ls.SunL, ls.MoonL, ls.SunColor, ls.MoonColor, ls.SkyAmbient, ls.IndoorAmbient, ls.LampColor, ls.LampSky}
+	if l.keyOK && key == l.key { // the light is the frame's constant: copied once per change (GAR-154)
+		return
+	}
+	l.key, l.keyOK = key, true
 	for i, v := range [...]*[3]float32{&ls.SunL, &ls.MoonL, &ls.SunColor, &ls.MoonColor, &ls.SkyAmbient, &ls.IndoorAmbient, &ls.LampColor} {
 		copy(l.Uniforms[i], v[:])
 	}

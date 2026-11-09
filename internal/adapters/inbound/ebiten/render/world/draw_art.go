@@ -167,15 +167,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		p.Shadows.Draw(p.lightView(), p.Lit.Light, screen, p.Shadows.Feet, w.DayOfYear) // under every object
 	}
 
-	l.occupied = resetCells(l.occupied)
-	l.Creatures = resetCells(l.Creatures)
-	for _, pw := range v.Pawns {
-		l.occupied[[2]int{pw.X, pw.Y}] = true
-		l.Creatures[[2]int{pw.X, pw.Y}] = true
-	}
-	for i := range w.Animals {
-		l.Creatures[[2]int{w.Animals[i].X, w.Animals[i].Y}] = true
-	}
+	l.refreshCreatureCells(v.Pawns, w.Animals)
 	p.Env.Trees.SweepTreeFades(v)
 	p.Overlays.DrawPaths(v, screen, sw, sh, tile, p.interpWorld)
 	draws := p.draws[:0]
@@ -380,6 +372,32 @@ func (b *base) frameViews(w *game.WorldView) []game.ChunkView {
 }
 
 // resetCells empties a reused per-frame tile set.
+// refreshCreatureCells keeps the occupied and creature cell sets for the
+// pawns and animals of this frame, rebuilding them only when a creature
+// moved, appeared or left since the last frame (GAR-153).
+func (l *LOD) refreshCreatureCells(pawns []game.PawnView, animals []game.AnimalView) {
+	cells := l.cells[:0]
+	for _, pw := range pawns {
+		cells = append(cells, [2]int{pw.X, pw.Y})
+	}
+	for i := range animals {
+		cells = append(cells, [2]int{animals[i].X, animals[i].Y})
+	}
+	same := l.occupied != nil && l.cellPawns == len(pawns) && slices.Equal(cells, l.prevCells)
+	l.cells, l.prevCells, l.cellPawns = l.prevCells, cells, len(pawns)
+	if same {
+		return
+	}
+	l.occupied = resetCells(l.occupied)
+	l.Creatures = resetCells(l.Creatures)
+	for i, c := range cells {
+		if i < len(pawns) {
+			l.occupied[c] = true
+		}
+		l.Creatures[c] = true
+	}
+}
+
 func resetCells(m map[[2]int]bool) map[[2]int]bool {
 	if m == nil {
 		return map[[2]int]bool{}

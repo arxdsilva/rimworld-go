@@ -103,7 +103,11 @@ type LOD struct {
 	Chunks             ChunkCache
 	Pages              MapBake
 	// reused per-frame buffers (draw_art.go)
-	occupied, Creatures  map[[2]int]bool
+	occupied, Creatures map[[2]int]bool
+	// cells, prevCells are the creature cells (pawns, then animals) of this
+	// and the last frame; the two sets above are rebuilt only when they differ.
+	cells, prevCells     [][2]int
+	cellPawns            int
 	planned              map[[2]int]sprite.LinkFlag
 	cloth                []string // ColonyCloths, once a frame
 	bakeDraws            []ArtDraw

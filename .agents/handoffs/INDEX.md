@@ -225,6 +225,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PERF-006-frame-pacing | Walkers move the same distance every frame: a paced animation clock (GAR-091) | 2026-11-08 | [PERF.md](PERF.md#perf-006-frame-pacing) |
 | PERF-007-draw-measured | Draw CPU measured before building E7; the pixel-diff harness | 2026-11-08 | [PERF.md](PERF.md#perf-007-draw-measured) |
 | PERF-008-aa-shapes | Anti-aliased shapes are feathered triangles, not Ebitengine vector paths | 2026-11-08 | [PERF.md](PERF.md#perf-008-aa-shapes) |
+| PERF-009-render-pass-order | Render draw order, prepare pass and frame constants (render-b) | 2026-11-08 | [PERF.md](PERF.md#perf-009-render-pass-order) |
 | PERF-010-async-autosave | Autosaves write on a worker goroutine (GAR-190) | 2026-11-08 | [PERF.md](PERF.md#perf-010-async-autosave) |
 | PERF-011-periodic-spread | The day, hour and 250-tick work no longer fires all at once (GAR-006..009) | 2026-11-08 | [PERF.md](PERF.md#perf-011-periodic-spread) |
 | PLAY010_PLAN | PLAY-010 play-feedback batch (14 items, up to 15 agents) | 2026-10-23 | [PLAY.md](PLAY.md#play010_plan) |
