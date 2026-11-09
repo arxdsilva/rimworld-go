@@ -43,9 +43,13 @@ More clips and stills are in the [gallery](https://github.com/arxdsilva/rimworld
 
 ## Start playing
 
-1. Download the archive for your system from [Releases](https://github.com/arxdsilva/rimworld-go/releases/latest).
-2. Unpack it and keep the `assets` folder next to the `rimworld-go` binary.
-3. Run `rimworld-go`. The macOS build is unsigned, so open it the first time with right-click → Open.
+Download the installer for your system from [Releases](https://github.com/arxdsilva/rimworld-go/releases/latest):
+
+- **macOS 13 or later:** open `rimworld-go-<version>-macos.dmg` and drag rimworld-go to Applications. The build is unsigned: if macOS won't open it, go to System Settings → Privacy & Security and click **Open Anyway**.
+- **Windows 10 or 11:** run `rimworld-go-<version>-windows-setup.exe`. It installs for your user only, without administrator rights. If SmartScreen warns about an unknown publisher, click **More info** → **Run anyway**.
+- **Linux:** run the AppImage after `chmod +x rimworld-go-*.AppImage`, or install the `.deb` (`sudo apt install ./rimworld-go-*.deb`) or the `.rpm` (`sudo dnf install ./rimworld-go-*.rpm`).
+
+Each release also has a portable archive per system: unpack it and run `rimworld-go`, keeping the `assets` folder next to it. If the game can't find its files, `rimworld-go -selfcheck` prints where it looked.
 
 You need 64-bit Windows, macOS or Linux, 6 GB of RAM or more (8 GB recommended), and a GPU with Metal, DirectX 11 or OpenGL drivers.
 To build from source, install Go 1.26.10 or later (see `go.mod`) and run `go run ./cmd/game`.
