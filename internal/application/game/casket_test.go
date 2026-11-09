@@ -46,7 +46,7 @@ func TestCasketOpensItsWholeGroup(t *testing.T) {
 	n := 0
 	for _, m := range g.messages {
 		if m.Text == casketEmptyText {
-			n++
+			n += 1 + m.Repeat // EAI-032 merges the identical notices into one xN
 		}
 	}
 	if n != 4 {
