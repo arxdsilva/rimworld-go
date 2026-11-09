@@ -13,7 +13,7 @@
 `internal/compose` (only `cmd/` imports it, `TestOnlyCmdImportsCompose`) or the Ebitengine adapter.
 
 ## Contracts
-- `bin/game -h` is byte-equal to the pre-move help (GAR proof); `-h` exits 0 and a bad flag 2, as `flag.ExitOnError` does (`TestBadFlagsAndHelpExitAsTheFlagPackageDoes`).
+- `bin/game -h` lists every flag; it matched the pre-move help byte for byte until REL-003 added `-version` and `-selfcheck`; `-h` exits 0 and a bad flag 2, as `flag.ExitOnError` does (`TestBadFlagsAndHelpExitAsTheFlagPackageDoes`).
 - `HiDPI` and `VSync` are nil unless the flag was given; `SeedSet` says whether `-seed` was (`TestOnlyGivenGraphicsFlagsOverride`).
 - Every scenario the `-scenario` help names is one `internal/application/devscene` builds (`TestHelpedScenariosExist`).
 

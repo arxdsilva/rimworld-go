@@ -5,6 +5,7 @@ The client's composition root, moved out of `cmd/game` (2026-11, GAR; SOLID_GO.m
 
 ## Owns
 - `Run(opts, version, Display)` (`run.go`): log file, profiles, the fps probe, the capture, seed and biome, then the `AppConfig` and the window.
+- `Report(opts, version, out)` (`selfcheck.go`): `-version` and `-selfcheck` answer before any log, config dir or window; `-selfcheck` lists every asset lookup (translations, art, splash, sounds, window icon) and the settings folder and returns 1 when one is missing (REL-003). `ConsoleOut` (`console_{windows,other}.go`) gives a `-H=windowsgui` build a stdout: a redirected one is kept, else the parent terminal's console.
 - `Display` (`display.go`, 6 methods): the window and monitor, filled by `ebiten/display.Screen`; the helpers take the narrow `scaler` and `sizer`.
 - Hooks: settings and the dev graphics overrides (`settings.go`), saves, colonist card presets and custom scenarios (`files.go`), sound and hardware (`sound.go`), usage data (`usage.go`), the update check (`update.go`), the wizard's colony builder and the dev scenes (`colony.go`).
 

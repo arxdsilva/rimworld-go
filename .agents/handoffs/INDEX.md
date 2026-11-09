@@ -279,6 +279,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | REF-1-prioritize-refuel-auto-toggle | Ordered refuels and the auto refuel switch | 2026-11-06 | [BASE.md](BASE.md#ref-1-prioritize-refuel-auto-toggle) |
 | REL-001-release-workflow | Release builds on tags | 2026-10-21 | [OPS.md](OPS.md#rel-001-release-workflow) |
 | REL-002-goreleaser | GoReleaser publishes the release | 2026-11-02 | [OPS.md](OPS.md#rel-002-goreleaser) |
+| REL-003-installers | Installers as the main release files, an app icon, `-version` and `-selfcheck` | 2026-11-09 | [OPS.md](OPS.md#rel-003-installers) |
 | RES-1-reservations | Reservations, RimWorld-style | 2026-10-30 | [BASE.md](BASE.md#res-1-reservations) |
 | REVIEW-001-playable-survival | Quality pass on PLAY-001 through SURV-001 | 2026-09-16 | [OPS.md](OPS.md#review-001-playable-survival) |
 | RSCH-0-gap-analysis-and-contract | Research gap analysis and contract | 2026-11-01 | [BASE.md](BASE.md#rsch-0-gap-analysis-and-contract) |
