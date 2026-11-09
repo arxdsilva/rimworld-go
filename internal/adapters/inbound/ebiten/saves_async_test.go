@@ -24,8 +24,13 @@ import (
 // of the synchronous save tests (saves_test.go, saves_commit_test.go,
 // options_test.go, journey_options_test.go), which keep a nil Queue.
 
-// realQueue is a filesave.Queue as internal/compose/game wires it.
-type realQueue struct{ *filesave.Queue }
+// realQueue is a filesave.Queue as internal/compose/game wires it. It
+// also records every result it hands the options screen (reported), so a
+// test can see a save was reported whichever Update polled it.
+type realQueue struct {
+	*filesave.Queue
+	reported *[]SaveResult
+}
 
 func (q realQueue) Done() []SaveResult {
 	var out []SaveResult
@@ -34,6 +39,7 @@ func (q realQueue) Done() []SaveResult {
 			out = append(out, SaveResult{Slot: r.Slot, Err: r.Err})
 		}
 	}
+	*q.reported = append(*q.reported, out...)
 	return out
 }
 
@@ -44,7 +50,7 @@ func realSaves(t *testing.T, dir string) SaveHooks {
 	q := filesave.NewQueue(store)
 	t.Cleanup(q.Close)
 	return SaveHooks{
-		Queue: realQueue{q},
+		Queue: realQueue{q, new([]SaveResult)},
 		Save:  func(sim Simulation, slot string) error { return q.Save(sim.(*game.Game), slot) },
 		List: func() ([]SaveSlot, error) {
 			slots, err := store.List()
@@ -158,19 +164,35 @@ func TestJourneySaveAsyncAutosaveRotation(t *testing.T) {
 // TestJourneySaveAsyncLoadsTheSavedTick: the twin of
 // TestSaveFromPauseThenLoad. The colony steps on after Pause › Save (with
 // -race: while the worker writes); the Load list waits for the file and
-// reports it, and it loads to the state of the save's tick.
+// lists it, the save is reported exactly once, and it loads to the state
+// of the save's tick. The report comes from whichever call finds the save
+// written: an Update's PollSaves (the hint then shows until the Load click
+// clears it, as any click does) or the Load list's own wait (the hint then
+// shows on the list).
 func TestJourneySaveAsyncLoadsTheSavedTick(t *testing.T) {
 	t.Parallel()
 	j, _ := savesJourney(t)
 	j.a.cfg.Saves = realSaves(t, t.TempDir())
+	reported := j.a.cfg.Saves.Queue.(realQueue).reported
 	j.key("Escape", 0)
 	tick, hash := j.g.Tick(), j.g.StateHash() // the pause menu holds the clock
 	j.clickID("pause.save")
 	j.g.Step(600) // while the worker may still be writing
 	j.key("Escape", 0)
+	j.update(1)
+	early := len(*reported) // reported by an Update before the Load click
+	if early > 0 && j.a.hint != "saved col" {
+		t.Fatalf("save reported by an Update, hint %q, want %q", j.a.hint, "saved col")
+	}
 	j.clickID("pause.load")
-	if j.a.nav.screen() != ports.ScreenLoad || len(j.a.opt.Slots) != 1 || j.a.hint != "saved col" {
-		t.Fatalf("load list %s with %+v, hint %q", j.a.nav.screen(), j.a.opt.Slots, j.a.hint)
+	if j.a.nav.screen() != ports.ScreenLoad || len(j.a.opt.Slots) != 1 {
+		t.Fatalf("load list %s with %+v", j.a.nav.screen(), j.a.opt.Slots)
+	}
+	if want := []SaveResult{{Slot: "col"}}; fmt.Sprint(*reported) != fmt.Sprint(want) {
+		t.Fatalf("reported %+v, want %+v once", *reported, want)
+	}
+	if early == 0 && j.a.hint != "saved col" {
+		t.Fatalf("the Load list reported the save, hint %q, want %q", j.a.hint, "saved col")
 	}
 	sim, _, err := j.a.cfg.Saves.Load(j.a.opt.Slots[0].Path) // the file as written, before a loaded colony steps
 	if g, ok := sim.(*game.Game); err != nil || !ok || g.Tick() != tick || g.StateHash() != hash {
