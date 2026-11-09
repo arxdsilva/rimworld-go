@@ -139,38 +139,41 @@ func TestGrievingPetCalmsNoFlap(t *testing.T) {
 		t.Fatalf("calm once ManhunterTicks have passed: %+v", a)
 	}
 
-	g, ada, _, rook := eaiGriefYard(t, uint64(g.clock.Now())+20, false)
-	guard := eaiGuardDog(g, ada)
-	engaged := func() bool {
-		j, _ := g.jobs.Get(ada)
-		now := uint64(g.clock.Now())
-		ga := animalOf(g, guard)
-		return j.Kind == job.Attack && j.Target == rook || ga.Mode == animal.Attack && ga.Target == rook ||
-			g.guardFoe(0, rook, now) || g.hostile(animalOf(g, rook))
-	}
-	for i := 0; i < 20; i++ {
-		g.Step(1)
-		fullNeeds(g, ada)
-	}
-	changes, last := 0, engaged()
-	for i := 0; i < 600; i++ {
-		g.Step(1)
-		fullNeeds(g, ada)
-		a := animalOf(g, rook)
-		if a.Manhunter != 0 || !a.Tame || eaiView(g, rook).Grief {
-			t.Fatalf("tick %d: the grief came back: %+v", i, a)
+	// an armed colonist too: its attack ends with the grief (combat Strikes.Do)
+	for _, armed := range []bool{false, true} {
+		g, ada, _, rook := eaiGriefYard(t, uint64(g.clock.Now())+20, armed)
+		guard := eaiGuardDog(g, ada)
+		engaged := func() bool {
+			j, _ := g.jobs.Get(ada)
+			now := uint64(g.clock.Now())
+			ga := animalOf(g, guard)
+			return j.Kind == job.Attack && j.Target == rook || ga.Mode == animal.Attack && ga.Target == rook ||
+				g.guardFoe(0, rook, now) || g.hostile(animalOf(g, rook))
 		}
-		on := engaged()
-		if on && !last {
-			t.Fatalf("tick %d: a calm pet was taken up again", i)
+		for i := 0; i < 20; i++ {
+			g.Step(1)
+			fullNeeds(g, ada)
 		}
-		if on != last {
-			changes++
+		changes, last := 0, engaged()
+		for i := 0; i < 600; i++ {
+			g.Step(1)
+			fullNeeds(g, ada)
+			a := animalOf(g, rook)
+			if a.Manhunter != 0 || !a.Tame || eaiView(g, rook).Grief {
+				t.Fatalf("armed %v, tick %d: the grief came back: %+v", armed, i, a)
+			}
+			on := engaged()
+			if on && !last {
+				t.Fatalf("armed %v, tick %d: a calm pet was taken up again", armed, i)
+			}
+			if on != last {
+				changes++
+			}
+			last = on
 		}
-		last = on
-	}
-	if last || changes > 1 {
-		t.Fatalf("the colony lets the calm pet be (engaged %v, %d changes)", last, changes)
+		if last || changes > 1 {
+			t.Fatalf("armed %v: the colony lets the calm pet be (engaged %v, %d changes)", armed, last, changes)
+		}
 	}
 }
 

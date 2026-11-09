@@ -60,7 +60,7 @@ type Chronicle interface {
 	Log(text string)
 }
 
-// Senses is what raiders perceive (EAI-0 skeleton: nothing asks yet).
+// Senses is what raiders perceive (EAI-010: sight.go).
 type Senses interface {
 	// Visible: raider id has a clear line of sight to (x, y).
 	Visible(id entity.EntityID, x, y int) bool
@@ -70,4 +70,7 @@ type Senses interface {
 	// Home is roughly where the colony lives (a colonist's bed, else the
 	// landing spot), what a raid makes for.
 	Home() (x, y int)
+	// Shooter is the colonist or ally whose blow just wounded raider id
+	// (0: none, or something else hurt it).
+	Shooter(id entity.EntityID) entity.EntityID
 }

@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -86,30 +87,45 @@ const (
 	resupplyMeals = 12
 )
 
-// target is the threat-weighted target of a raider at (x, y) armed with
-// d: a colonist in sight or reach, a powered turret in sight, or the
-// nearest colonist or ally anywhere (ok false: none).
-func (rs *Raiders) target(x, y int, d weapon.Def) (entity.EntityID, int, int, bool) {
-	h := rs.h
-	id, tx, ty, ok := h.RaidTarget(x, y)
+// target is the threat-weighted target of raider id (record r) at (x, y)
+// armed with d: of the colonists and allies it knows of (sight.go: in
+// sight, remembered, or any at the colony), the one in sight or reach,
+// the nearest, or one it remembers; else a powered turret in sight (ok
+// false: none). anyone: a colonist or ally stands somewhere (with none
+// known, the raider walks on the colony). Seen, the target is remembered.
+func (rs *Raiders) target(id entity.EntityID, r *Raider, x, y int, d weapon.Def, now uint64) (t entity.EntityID, tx, ty int, ok, anyone bool) {
+	h, e := rs.h, &rs.eye
+	nid, nx, ny, anyone := h.RaidTarget(x, y)
+	known := anyone && e.knows(id, r, nid, x, y, nx, ny, now)
 	if rs.t == nil {
-		if !ok {
-			return h.TurretFor(x, y, 1<<20, 2*SightRange)
+		if !known {
+			t, tx, ty, ok = h.TurretFor(x, y, 1<<20, 2*SightRange)
+			return t, tx, ty, ok, anyone
 		}
-		if tid, bx, by, tok := h.TurretFor(x, y, weapon.Distance(x, y, tx, ty), SightRange); tok {
-			return tid, bx, by, true
+		if tid, bx, by, tok := h.TurretFor(x, y, weapon.Distance(x, y, nx, ny), SightRange); tok {
+			return tid, bx, by, true, anyone
 		}
-		return id, tx, ty, ok
+		return nid, nx, ny, true, anyone
 	}
 	best := 1 << 30
-	if ok {
-		best = weapon.Distance(x, y, tx, ty) - rs.danger(id)
+	if known {
+		t, tx, ty, ok, best = nid, nx, ny, true, weapon.Distance(x, y, nx, ny)-rs.danger(nid)
 	}
 	rs.spots = rs.t.Colonists(x, y, max(SightRange, d.Range), rs.spots[:0])
 	for _, s := range rs.spots {
 		sc := weapon.Distance(x, y, s.X, s.Y) - rs.danger(s.ID)
-		if sc < best || sc == best && s.ID < id {
-			id, tx, ty, best, ok = s.ID, s.X, s.Y, sc, true
+		if (sc < best || sc == best && s.ID < t) && e.knows(id, r, s.ID, x, y, s.X, s.Y, now) {
+			t, tx, ty, best, ok = s.ID, s.X, s.Y, sc, true
+		}
+	}
+	for _, m := range e.recall(r, now) { // remembered, wherever it is now
+		if m == 0 || m == t || h.Vital(m).Status != health.Alive {
+			continue
+		}
+		if mx, my, mok := h.Pos(m); mok {
+			if sc := weapon.Distance(x, y, mx, my) - rs.danger(m); sc < best || sc == best && m < t {
+				t, tx, ty, best, ok = m, mx, my, sc, true
+			}
 		}
 	}
 	sight := SightRange
@@ -117,9 +133,12 @@ func (rs *Raiders) target(x, y int, d weapon.Def) (entity.EntityID, int, int, bo
 		sight = 2 * SightRange // wiki: Raid, a reachable powered turret is a target too
 	}
 	if tid, bx, by, tok := h.TurretFor(x, y, 1<<20, sight); tok && weapon.Distance(x, y, bx, by)-threatTurret < best {
-		return tid, bx, by, true
+		return tid, bx, by, true, anyone
 	}
-	return id, tx, ty, ok
+	if ok && e.sees(id, x, y, tx, ty) {
+		e.saw(r, t, now)
+	}
+	return t, tx, ty, ok, anyone
 }
 
 // danger is colonist id's danger bonus by what it wields.

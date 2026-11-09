@@ -331,6 +331,10 @@ func (g *Gear) Count(by, target entity.EntityID, dmg int, killed bool) {
 	}
 }
 
+// LastBy is who last wounded fighter id and left it alive (0: no one);
+// a raider being shot turns on it (raid/sight.go, EAI-010).
+func (g *Gear) LastBy(id entity.EntityID) entity.EntityID { return g.set[id].LastBy }
+
 // Died: id died, killer dealing the last blow (0: of its wounds, a
 // turret or no one). With no killer the kill is its last attacker's; a
 // killing blow was counted by Count.

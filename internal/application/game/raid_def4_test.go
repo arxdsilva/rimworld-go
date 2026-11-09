@@ -468,7 +468,7 @@ func TestRivalFactionsFight(t *testing.T) {
 	if j, _ := g.jobs.Get(a); j.Kind != job.Attack || j.Target != b {
 		t.Fatalf("raiders of rival factions fight: %+v", j)
 	}
-	if (raidMischief{g}).Rival(1, 1) || !(raidMischief{g}).Rival(1, 2) {
+	if (raidMischief{g: g}).Rival(1, 1) || !(raidMischief{g: g}).Rival(1, 2) {
 		t.Fatal("rivalry")
 	}
 }

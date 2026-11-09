@@ -32,6 +32,8 @@ type Tactics struct {
 	danger   []projectile.Shot
 	dangerAt uint64
 	dangerOK bool
+	// turrets: the sparking fuses are a danger too (EAI-012).
+	turrets *Turrets
 }
 
 const (
@@ -119,7 +121,11 @@ func (t *Tactics) Covering(id entity.EntityID, j job.Record) bool {
 
 // Danger is the landing tile and reach of an explosive in flight (a
 // grenade or a shell) whose blast would catch (x, y) (ok false: none).
-// wiki: Raider, raiders run from grenades.
+// wiki: Raider, raiders run from grenades. EAI-012: a turret whose fuse
+// burns is one too, its reach told one tile long, so a step out of its
+// blast (to reach+1 from the centre) ends reach+2 tiles off; the band
+// between the blast and that is no danger, so a fighter standing in it
+// is not sent off again.
 func (t *Tactics) Danger(x, y int) (lx, ly, reach int, ok bool) {
 	if now := t.h.Now(); !t.dangerOK || t.dangerAt != now {
 		t.danger, t.dangerAt, t.dangerOK = t.danger[:0], now, true
@@ -133,6 +139,11 @@ func (t *Tactics) Danger(x, y int) (lx, ly, reach int, ok bool) {
 		b := weapon.DefOf(sh.Weapon).Blast
 		if b.Within(x-sh.ToX, y-sh.ToY) {
 			return sh.ToX, sh.ToY, b.Reach(), true
+		}
+	}
+	if t.turrets != nil {
+		if lx, ly, reach, ok := t.turrets.sparkAt(x, y); ok {
+			return lx, ly, reach + 1, true
 		}
 	}
 	return 0, 0, 0, false

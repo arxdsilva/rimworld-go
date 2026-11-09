@@ -36,11 +36,27 @@ var _ raid.Host = raidHost{}
 func newRaid(g *Game) *raid.Raid {
 	h := raidHost{raidRoster{g}, raidCaptives{g}, raidBodies{g}, combatJobs{g}, raidFight{g}, raidGround{g}, raidEvents{g}, combatDice{g}}
 	return raid.New(h, raid.Roles{Wild: raidWild{g}, Story: raidStory{g}, Mech: raidMech{g}, Arrive: raidArrive{g},
-		Mischief: raidMischief{g}, Siege: raidSiege{g}, Chronicle: raidChronicle{g}, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}, Senses: raidSenses{g}})
+		Mischief: raidMischief{g: g, wood: &woodIndex{}}, Siege: raidSiege{g}, Chronicle: raidChronicle{g}, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}, Senses: raidSenses{g}})
 }
 
-// raidSenses is raid.Senses (EAI-0): sight lines are combat's.
+// raidSenses is raid.Senses (EAI-010, raid/sight.go): sight lines are
+// combat's.
 type raidSenses struct{ g *Game }
+
+// Shooter is the colonist or ally whose blow wounded raider id this tick
+// or the last (combat's Gear.LastBy, the hit stamp's tick); 0 for an
+// animal, a turret, another raider or an older wound.
+func (h raidSenses) Shooter(id entity.EntityID) entity.EntityID {
+	g := h.g
+	by := g.combat.Gear.LastBy(id)
+	if hr, ok := g.lastHit[id]; by == 0 || !ok || uint64(g.clock.Now()) > hr.Tick+1 {
+		return 0
+	}
+	if _, animal := g.animals.Get(by); animal || !g.standingPawn(by) || g.isRaider(by) && !g.isAlly(by) {
+		return 0
+	}
+	return by
+}
 
 func (h raidSenses) Home() (x, y int) { return h.g.home() }
 func (h raidSenses) Visible(id entity.EntityID, x, y int) bool {

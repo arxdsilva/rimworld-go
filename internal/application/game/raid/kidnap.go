@@ -57,6 +57,10 @@ type Kidnap interface {
 type Kidnaps struct {
 	h Host
 	k Kidnap
+	// t finds the colonists guarding a downed one (nil: scan them all);
+	// near is its answer, reused.
+	t    Tactics
+	near []Spot
 }
 
 // Try lets standing raider id at (x, y) look for a colonist to carry
@@ -107,8 +111,18 @@ func (kn *Kidnaps) target(id entity.EntityID, x, y int) (entity.EntityID, int, i
 	return best, bx, by, best != 0
 }
 
-// guarded reports a standing colonist beside downed colonist c at (x, y).
+// guarded reports a standing colonist beside downed colonist c at (x, y)
+// (EAI-023: the creature index, one tile round, with Tactics).
 func (kn *Kidnaps) guarded(c entity.EntityID, x, y int) bool {
+	if kn.t != nil {
+		kn.near = kn.t.Colonists(x, y, 1, kn.near[:0])
+		for _, s := range kn.near {
+			if s.ID != c {
+				return true
+			}
+		}
+		return false
+	}
 	for _, o := range kn.k.Colonists() {
 		if o == c || kn.h.Vital(o).Status != health.Alive {
 			continue

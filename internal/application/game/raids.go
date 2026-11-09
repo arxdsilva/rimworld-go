@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/spatial"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -221,23 +222,6 @@ func podRaid(g *Game, grp raid.Group, kit []item.Kind, f *faction.Faction) {
 }
 
 func nearestEdge(p Position, w, h int) (int, int) { return raid.NearestEdge(p.X, p.Y, w, h) }
-
-// nearestColonist is the closest standing colonist a raider can reach.
-func (g *Game) nearestColonist(p Position) (entity.EntityID, Position, bool) {
-	var best entity.EntityID
-	var bp Position
-	bestD := 1 << 30
-	for _, id := range g.pawnIDs {
-		if !g.standingPawn(id) {
-			continue
-		}
-		cp, _ := g.positions.Get(id)
-		if d := weapon.Distance(p.X, p.Y, cp.X, cp.Y); d < bestD {
-			best, bp, bestD = id, cp, d
-		}
-	}
-	return best, bp, best != 0
-}
 
 // dropRaiderGear leaves a dead pawn's (raider's, visitor's or colonist's)
 // weapon where it fell: a stranger's is found, not the colony's
@@ -526,24 +510,17 @@ func (h raidArrive) Crash(px, py int) (int, int, bool) {
 	return g.freeLandNear(px, py, 3, nil) // arrival.go
 }
 
-type raidMischief struct{ g *Game }
+// raidMischief is the raiders' thieving and burning; wood is the burner's
+// building grid, kept across ticks.
+type raidMischief struct {
+	g    *Game
+	wood *woodIndex
+}
 
 const stealMin = 50 // silver; original tuning (wiki: rises with raid points)
 
-func (h raidMischief) Loot(x, y, r int) (entity.EntityID, int, int, bool) {
-	var best entity.EntityID
-	bx, by, bestD := 0, 0, r+1
-	for _, id := range h.g.itemIDs {
-		st, ok := h.g.stacks.Get(id)
-		if !ok || st.Carrier != 0 || st.Qty <= 0 || st.Kind.Value()*st.Qty < stealMin {
-			continue
-		}
-		if d := weapon.Distance(x, y, st.X, st.Y); d < bestD {
-			best, bx, by, bestD = id, st.X, st.Y, d
-		}
-	}
-	return best, bx, by, best != 0
-}
+// Loot is the nearest stack worth stealing (below, EAI-023).
+func (h raidMischief) Loot(x, y, r int) (entity.EntityID, int, int, bool) { return loot(h.g, x, y, r) }
 func (h raidMischief) Steal(id, stack entity.EntityID) (item.Kind, int, bool) {
 	st, ok := h.g.stacks.Get(stack)
 	if !ok || st.Carrier != 0 {
@@ -552,21 +529,11 @@ func (h raidMischief) Steal(id, stack entity.EntityID) (item.Kind, int, bool) {
 	h.g.deleteItem(stack)
 	return st.Kind, st.Qty, true
 }
-func (h raidMischief) Flammable(x, y, r int) (int, int, bool) {
-	g := h.g
-	bx, by, bestD := 0, 0, r+1
-	for _, id := range g.bldgIDs {
-		b, ok := g.bldgs.Get(id)
-		if !ok || b.Stuff != item.Wood || notColonyPiece(b) || g.fireAt(b.X, b.Y) > 0 {
-			continue
-		}
-		if d := weapon.Distance(x, y, b.X, b.Y); d < bestD {
-			bx, by, bestD = b.X, b.Y, d
-		}
-	}
-	return bx, by, bestD <= r
-}
-func (h raidMischief) Ignite(x, y int) bool { return h.g.ignite(x, y, burstFireSize) } // fire.go
+
+// Flammable is the nearest unburning wooden colony building
+// (below, EAI-023).
+func (h raidMischief) Flammable(x, y, r int) (int, int, bool) { return flammable(h.g, h.wood, x, y, r) }
+func (h raidMischief) Ignite(x, y int) bool                   { return h.g.ignite(x, y, burstFireSize) } // fire.go
 func (h raidMischief) Rival(fa, fb int) bool {
 	a, b := h.g.factionOf(fa), h.g.factionOf(fb)
 	return fa != fb && a != nil && b != nil && a.Relation == faction.Hostile && b.Relation == faction.Hostile
@@ -712,4 +679,129 @@ func clearSite(g *Game, x, y int) {
 	if i := y*g.grid.Width() + x; len(g.roofs) > 0 {
 		g.setRoof(i, g.roofs[i]&roof.Supported) // derived: the room rebuild keeps it (a load derives it again)
 	}
+}
+
+// Raider look-ups through bucket grids instead of whole-map scans
+// (EAI-021, EAI-023): the nearest standing colonist through the creature
+// index, a thief's loot through the food index's item grid, a burner's
+// mark through the wooden-building grid below. Each search goes ring by
+// ring, a bucket wide and doubling, so a near hit looks at a few buckets;
+// ties go to the lower id, as the creature index's nearestWhere.
+
+// ringPawns: with more colonists than this the nearest one is found ring
+// by ring; with fewer the list is shorter than the rings (original
+// tuning). ringFar: past this radius the list is walked.
+const (
+	ringPawns = 32
+	ringFar   = 64
+)
+
+// nearestColonist is the closest standing colonist to p (ties: the lower
+// id).
+func (g *Game) nearestColonist(p Position) (entity.EntityID, Position, bool) {
+	if len(g.pawnIDs) > ringPawns {
+		return nearestColonistRings(g, p)
+	}
+	return nearestColonistScan(g, p)
+}
+
+// nearestColonistRings is nearestColonist through the creature index.
+func nearestColonistRings(g *Game, p Position) (entity.EntityID, Position, bool) {
+	for r := spatial.BucketSize; r <= ringFar; r *= 2 {
+		if id, cp, ok := g.nearestWhere(p.X, p.Y, r, ckPawn, func(o entity.EntityID, _ Position) bool { return g.standingPawn(o) }); ok {
+			return id, cp, true
+		}
+	}
+	return nearestColonistScan(g, p)
+}
+
+// nearestColonistScan is nearestColonist over the colonist list.
+func nearestColonistScan(g *Game, p Position) (entity.EntityID, Position, bool) {
+	var best entity.EntityID
+	var bp Position
+	bestD := 1 << 30
+	for _, id := range g.pawnIDs {
+		if !g.standingPawn(id) {
+			continue
+		}
+		cp, _ := g.positions.Get(id)
+		if d := weapon.Distance(p.X, p.Y, cp.X, cp.Y); d < bestD || d == bestD && id < best {
+			best, bp, bestD = id, cp, d
+		}
+	}
+	return best, bp, best != 0
+}
+
+// loot is the nearest stack worth stealing within r of (x, y), through
+// the food index's item grid (food: rebuilt once a tick).
+func loot(g *Game, x, y, r int) (entity.EntityID, int, int, bool) {
+	return spatial.Nearest(&g.food().items, x, y, r, func(id entity.EntityID) (int, int, bool) {
+		st, ok := g.stacks.Get(id)
+		return st.X, st.Y, ok && worthStealing(st)
+	})
+}
+
+// worthStealing: a loose stack a thief takes (stealMin silver or more).
+func worthStealing(st item.Stack) bool {
+	return st.Carrier == 0 && st.Qty > 0 && st.Kind.Value()*st.Qty >= stealMin
+}
+
+// woodIndex is the grid of the wooden buildings (what a burner sets
+// alight; whether one is the colony's is asked live), rebuilt when the
+// structure version, the building store, the map size or the building
+// count moved; builds counts rebuilds (tests). Not saved.
+type woodIndex struct {
+	grid        spatial.Grid[entity.EntityID]
+	ok          bool
+	ver, builds uint64
+	src         any
+	w, h, n     int
+}
+
+// woods is wi's grid for the map now.
+func woods(g *Game, wi *woodIndex) *spatial.Grid[entity.EntityID] {
+	w, h := g.grid.Width(), g.grid.Height()
+	if !wi.ok || wi.ver != g.structVer || wi.src != any(g.bldgs) || wi.w != w || wi.h != h || wi.n != len(g.bldgIDs) {
+		fillWoods(g, &wi.grid, w, h)
+		wi.ok, wi.ver, wi.src, wi.w, wi.h, wi.n = true, g.structVer, g.bldgs, w, h, len(g.bldgIDs)
+		wi.builds++
+	} else if checkIndex(g) {
+		var fresh spatial.Grid[entity.EntityID]
+		fillWoods(g, &fresh, w, h)
+		if !spatial.Same(&fresh, &wi.grid) {
+			panic("wood index: a building changed without structVer")
+		}
+	}
+	return &wi.grid
+}
+
+// fillWoods buckets every wooden building by its anchor tile, in building
+// order.
+func fillWoods(g *Game, b *spatial.Grid[entity.EntityID], w, h int) {
+	b.Reset(w, h)
+	b.Begin(len(g.bldgIDs))
+	for i, id := range g.bldgIDs {
+		bi := -1
+		if bd, ok := g.bldgs.Get(id); ok && bd.Stuff == item.Wood {
+			bi = b.Bucket(bd.X, bd.Y)
+		}
+		b.Add(i, bi)
+	}
+	b.Seal()
+	for i, id := range g.bldgIDs {
+		b.Put(i, id)
+	}
+}
+
+// flammable is the nearest unburning wooden colony building within r of
+// (x, y), its anchor tile, through wi.
+func flammable(g *Game, wi *woodIndex, x, y, r int) (int, int, bool) {
+	if wi == nil {
+		wi = &woodIndex{} // a bare adapter (tests)
+	}
+	_, bx, by, ok := spatial.Nearest(woods(g, wi), x, y, r, func(id entity.EntityID) (int, int, bool) {
+		b, ok := g.bldgs.Get(id)
+		return b.X, b.Y, ok && !notColonyPiece(b) && g.fireAt(b.X, b.Y) == 0
+	})
+	return bx, by, ok
 }

@@ -450,11 +450,12 @@ func (t *Turrets) holds(b construction.Building, a *Aim, now uint64, release, mi
 }
 
 // Targetable: a standing raider (never a prisoner, visitor or trader) or a
-// hostile animal — one attacking a colonist, or a manhunter. Colonists
-// and tame animals never are.
+// hostile animal — one attacking a colonist, or a manhunter (a tame one
+// gone manhunter too, EAI-006). Colonists and calm tame animals never
+// are.
 func (t *Turrets) Targetable(id entity.EntityID, now uint64) bool {
 	if a, ok := t.h.Animal(id); ok {
-		return !a.Dead() && !a.Tame && (t.h.Hostile(a) || a.Enraged(now))
+		return !a.Dead() && (!a.Tame || a.Enraged(now)) && (t.h.Hostile(a) || a.Enraged(now)) // a tame manhunter too (EAI-006)
 	}
 	return t.h.StandingRaider(id)
 }

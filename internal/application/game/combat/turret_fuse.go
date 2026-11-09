@@ -94,14 +94,44 @@ func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 		return
 	}
 	t.sparks = slices.Delete(t.sparks, i, i+1)
+	h.Message(b.X, b.Y, "The %s blew up!", construction.DefOf(b.Kind).Name)
+	t.blasts.Explode(0, gunOf(b.Kind), b.X, b.Y, turretBlast(b.Kind))
+}
+
+// turretBlast is the bomb a turret of kind k goes off with.
+func turretBlast(k construction.Kind) explosion.Def {
 	r := turretBlastRadius
-	switch b.Kind {
+	switch k {
 	case construction.RocketBattery:
 		r = RocketBlastRadius
 	case construction.Autocannon, construction.UraniumSlugTurret:
 		r = heavyBlastRadius
 	}
-	h.Message(b.X, b.Y, "The %s blew up!", construction.DefOf(b.Kind).Name)
-	t.blasts.Explode(0, gunOf(b.Kind), b.X, b.Y, explosion.Def{Kind: explosion.Bomb, Radius: r, Damage: TurretBlastDamage,
-		Pen: turretBlastPen})
+	return explosion.Def{Kind: explosion.Bomb, Radius: r, Damage: TurretBlastDamage, Pen: turretBlastPen}
+}
+
+// sparkAt is the sparking turret whose blast would catch (x, y), its tile
+// and its blast's reach in whole tiles (ok false: none; EAI-012).
+func (t *Turrets) sparkAt(x, y int) (lx, ly, reach int, ok bool) {
+	for _, f := range t.sparks {
+		if b := turretBlast(f.Kind); b.Within(x-f.X, y-f.Y) {
+			return f.X, f.Y, b.Reach(), true
+		}
+	}
+	return 0, 0, 0, false
+}
+
+// sparkNear is the sparking turret within its blast's reach+2 of (x, y)
+// (Chebyshev; the step-out band), its tile and reach, and whether (x, y)
+// is in the blast itself (ok false: none).
+func (t *Turrets) sparkNear(x, y int) (lx, ly, reach int, in, ok bool) {
+	if lx, ly, reach, in = t.sparkAt(x, y); in {
+		return lx, ly, reach, true, true
+	}
+	for _, f := range t.sparks {
+		if r := turretBlast(f.Kind).Reach(); weapon.Distance(x, y, f.X, f.Y) <= r+2 {
+			return f.X, f.Y, r, false, true
+		}
+	}
+	return 0, 0, 0, false, false
 }

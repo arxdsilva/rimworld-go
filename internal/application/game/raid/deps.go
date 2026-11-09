@@ -42,8 +42,7 @@ type Roles struct {
 	Nest    Nest
 	// Kidnap (kidnap.go, moved from the game by CBT-4).
 	Kidnap Kidnap
-	// Senses (roles.go, EAI-0): what raiders see; held in Roles until
-	// the raider AI asks.
+	// Senses (roles.go, EAI-010): what raiders see (sight.go).
 	Senses Senses
 }
 

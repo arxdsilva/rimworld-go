@@ -53,7 +53,9 @@ type Raid struct {
 func New(h Host, r Roles) *Raid {
 	hv := &Hives{h: h, w: r.Wild, n: r.Nest, m: r.Mech}
 	kid := &Kidnaps{h: h, k: r.Kidnap}
-	rs := &Raiders{h: h, m: r.Mischief, sg: r.Siege, ch: r.Chronicle, t: r.Tactics, a: r.Arrive, kid: kid}
+	kid.t = r.Tactics
+	rs := &Raiders{h: h, m: r.Mischief, sg: r.Siege, ch: r.Chronicle, t: r.Tactics, a: r.Arrive, kid: kid,
+		eye: eyes{h: h, s: r.Senses}}
 	ms, ships := newMechs(h, r) // mech.go
 	pods := &Pods{h: h, a: r.Arrive, ch: r.Chronicle, mechs: ms}
 	ms.hives, ms.drops = hv, pods // nest.go: saved with the mechanoids; their drop pods
@@ -112,6 +114,14 @@ type Raider struct {
 	// Engaged (MAP-17, absent in older saves) is the tick a settlement's
 	// defender last turned out (defend.go: it stays out defendHold).
 	Engaged uint64
+	// EAI-010 (absent in older saves; sight.go): Foe is the foe the raider
+	// last saw (or that shot it) at FoeAt, remembered raiderMemory ticks;
+	// Felt the injury it last felt (more is a wound: being shot); Advancing
+	// that it knows of no foe and walks on the colony (the read model).
+	Foe       entity.EntityID
+	FoeAt     uint64
+	Felt      int
+	Advancing bool
 }
 
 // Group is one raid (the game's saved RaidGroups).
@@ -148,6 +158,11 @@ type Group struct {
 	// Alarm (MAP-17, absent in older saves) is the tick a piece of a Defend
 	// group's compound was last hit (defend.go).
 	Alarm uint64
+	// Foe and FoeAt (EAI-010, absent in older saves; sight.go): the foe a
+	// raider of the group last saw, shared with the group for
+	// groupMemory ticks.
+	Foe   entity.EntityID
+	FoeAt uint64
 }
 
 // Plan is how a raid comes at the colony: the domain's strategy (DEF-4;

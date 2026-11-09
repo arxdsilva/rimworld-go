@@ -28,10 +28,10 @@ type Raiders struct {
 	a     Arrive
 	spots []Spot
 	kid   *Kidnaps // kidnap.go
-	// rivalAt, rivalOK, rivals: whether rival factions' raiders stand on
-	// the map together, refreshed once a tick (mischief.go).
-	rivalAt         uint64
-	rivalOK, rivals bool
+	// tl: the raiders standing, per group and faction, counted once a
+	// tick (tally.go, EAI-020); eye: sight and memory (sight.go, EAI-010).
+	tl  tally
+	eye eyes
 }
 
 // Think runs raider id for one tick (the game's threat phase).
@@ -89,11 +89,18 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 		j = job.Record{}
 	}
 	x, y, _ := h.Pos(id)
-	if rs.dodge(id, j, x, y) { // tactics.go: out of a grenade's blast
+	var shot entity.EntityID
+	if r.Mode != Fleeing { // sight.go (EAI-010): a wound turns it on the shooter
+		var changed bool
+		if shot, changed = rs.eye.shot(id, &r, v.Injury, now); changed {
+			h.SetRaider(id, r)
+		}
+	}
+	if rs.dodge(id, j, x, y) { // tactics.go: out of a grenade's (or a sparking turret's) blast
 		return
 	}
 	if r.Mode != Fleeing {
-		rs.fight(id, r, j, v.Injury, x, y, now)
+		rs.fight(id, r, j, v.Injury, x, y, shot, now)
 		return
 	}
 	if r.Escaping && rs.escape(id, j, x, y, now) { // tactics.go: a prisoner breaking out
@@ -119,8 +126,8 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 }
 
 // fight runs a raider that is arriving or assaulting, standing on (x, y)
-// with injury hurt.
-func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y int, now uint64) {
+// with injury hurt, just wounded by shot (0: not).
+func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y int, shot entity.EntityID, now uint64) {
 	h := rs.h
 	if rs.defend(id, &r, j, hurt, x, y, now) || rs.siege(id, r, hurt, now) || rs.stage(id, r, j, x, y, now) { // defend.go (MAP-05)
 		return
@@ -129,10 +136,13 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 		return
 	}
 	if j.Kind == job.Attack && j.Active() {
-		if tx, ty, ok := rs.targetAt(j, x, y); !ok || !rs.cover(id, &r, hurt, j.Target, x, y, tx, ty, now) {
-			h.Strike(id, j, now)
+		if !rs.turn(id, &r, j, shot, x, y, now) { // sight.go: kept while it knows of it
+			if tx, ty, ok := rs.targetAt(j, x, y); !ok || !rs.cover(id, &r, hurt, j.Target, x, y, tx, ty, now) {
+				h.Strike(id, j, now)
+			}
+			return
 		}
-		return
+		j = job.Record{}
 	}
 	if covering(r, j, now) {
 		return // tactics.go: walking into cover
@@ -149,9 +159,12 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 	if now < r.RetryAt && !j.Active() {
 		return // no way in last time: wait before planning again
 	}
+	if j.Active() && j.Kind != job.Breach && shot == 0 && (now+uint64(id))%targetEvery != 0 {
+		return // EAI-021: on the move, it looks again every targetEvery ticks
+	}
 	// tactics.go: threat-weighted, colonists and allies (PLAY-024) and
-	// powered turrets (wiki: Raid)
-	target, tx, ty, ok := rs.target(x, y, h.Weapon(id))
+	// powered turrets (wiki: Raid), the ones it knows of (sight.go)
+	target, tx, ty, ok, anyone := rs.target(id, &r, x, y, h.Weapon(id), now)
 	best := 1 << 20
 	if ok {
 		best = weapon.Distance(x, y, tx, ty)
@@ -160,14 +173,19 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 		target, tx, ty, ok = rid, rx, ry, true
 	}
 	if !ok {
-		if r.Idle == 0 {
-			r.Idle = now
+		if anyone { // sight.go (EAI-010): no foe in sight or in mind
+			rs.advanceHome(id, &r, j, x, y, now)
+			return
+		}
+		if r.Idle == 0 || r.Advancing {
+			r.Idle, r.Advancing = now, false
 			h.SetRaider(id, r)
 		}
 		rs.kid.Try(id, x, y, now) // kidnap.go: no one left standing
 		return
 	}
-	r.Idle = 0
+	advanced := r.Advancing // sight.go: a walk on home is replanned for the foe
+	r.Idle, r.Advancing = 0, false
 	if r.Mode == Arriving && weapon.Distance(x, y, tx, ty) > SightRange {
 		if rs.underFire(id, hurt, target, x, y, tx, ty) && rs.cover(id, &r, hurt, target, x, y, tx, ty, now) {
 			r.Mode = Assaulting // tactics.go: shot at, it fights from the cover it found
@@ -175,7 +193,7 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 			return
 		}
 		// walk in towards the colony
-		if !j.Active() || (now+uint64(id))%180 == 0 {
+		if !j.Active() || advanced || (now+uint64(id))%180 == 0 {
 			if wx, wy, ok := h.WalkableNear(tx, ty, 4); ok &&
 				!h.StartJob(id, job.Record{Kind: job.Move, TX: wx, TY: wy}) && rs.unreachable(id) && !h.StartBreach(id, tx, ty) {
 				r.RetryAt = now + RaiderRetry
@@ -222,15 +240,14 @@ func (rs *Raiders) unreachable(id entity.EntityID) bool {
 }
 
 // broken: the group has lost its flee share (wiki: Raid, 40 % to 70 %,
-// rolled per group; pods still falling count as standing). The first
-// raider to see it logs the retreat; fleeing is one way.
+// rolled per group; pods still falling count as standing), its standing
+// raiders counted once a tick (tally.go). The first raider to see it logs
+// the retreat; fleeing is one way.
 func (rs *Raiders) broken(group int, now uint64) bool {
 	h := rs.h
 	standing := 0
-	for _, id := range h.RaiderIDs() {
-		if h.Raider(id).Group == group && h.StandingRaider(id) {
-			standing++
-		}
+	if tl := rs.count(now); group >= 0 && group < len(tl.stand) { // tally.go (EAI-020)
+		standing = tl.stand[group]
 	}
 	grp := &h.Groups()[group]
 	if !raiddef.Broken(standing+podsLeft(grp.Pods), grp.Size, grp.FleeLoss) {

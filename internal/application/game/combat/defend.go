@@ -39,6 +39,7 @@ type Guard struct {
 	tac    *Tactics
 	tiles  *Tiles // free ground for a flight's goal
 	foes   []Seen // hostile candidates, reused
+	rbuf   []Seen // raiders near, reused (EAI-022)
 }
 
 // Reach is how close an attacking animal or raider must be for Defend to
@@ -92,9 +93,17 @@ func (gd *Guard) NearestThreat(id entity.EntityID, x, y, animalR, raiderR int) (
 		}
 	}
 	gd.fl.CheckThreats(id, x, y, animalR, raiderR, threat, best)
-	for _, rid := range h.RaiderIDs() {
-		if px, py, d, ok := gd.ThreatTo(id, rid, x, y, animalR, raiderR); ok && (threat == 0 || d < best) {
-			threat, tx, ty, best = rid, px, py, d
+	if raiderR <= 0 {
+		return threat, tx, ty, best
+	}
+	// EAI-022: raiders from the creature index, within raiderR; an animal
+	// keeps a tie, between raiders the lower id wins
+	raider := false
+	gd.rbuf = h.Near(x, y, raiderR-1, Raiders, gd.rbuf[:0])
+	for _, s := range gd.rbuf {
+		px, py, d, ok := gd.ThreatTo(id, s.ID, x, y, animalR, raiderR)
+		if ok && (threat == 0 || d < best || d == best && raider && s.ID < threat) {
+			threat, tx, ty, best, raider = s.ID, px, py, d, true
 		}
 	}
 	return threat, tx, ty, best
@@ -113,6 +122,9 @@ func (gd *Guard) Defend(id entity.EntityID, j job.Record) bool {
 		if calm = now < until && !armed && !gd.ignores(id); !calm {
 			fl.ForgetCalm(id)
 		}
+	}
+	if gd.StepOut(id, j, px, py) {
+		return true // turret_step.go (EAI-012): clear of a sparking turret
 	}
 	if gd.ignores(id) {
 		return false // CBT-4: set to ignore threats, it carries on

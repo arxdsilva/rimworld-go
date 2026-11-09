@@ -120,60 +120,30 @@ func (rs *Raiders) burn(id entity.EntityID, r Raider, j job.Record, x, y int, no
 	return true
 }
 
-// rivalry refreshes, once a tick, whether raid groups of rival factions
-// stand on the map together (one pass over the raiders).
-func (rs *Raiders) rivalry(now uint64) bool {
-	if rs.rivalAt == now && rs.rivalOK {
-		return rs.rivals
-	}
-	rs.rivalAt, rs.rivalOK, rs.rivals = now, true, false
-	if rs.m == nil {
-		return false
-	}
-	h := rs.h
-	groups := h.Groups()
-	first := 0
-	for _, id := range h.RaiderIDs() {
-		r := h.Raider(id)
-		if r.Group >= len(groups) || !h.StandingRaider(id) {
-			continue
-		}
-		f := groups[r.Group].Faction
-		switch {
-		case f == 0 || f == first:
-		case first == 0:
-			first = f
-		case rs.m.Rival(first, f):
-			rs.rivals = true
-			return true
-		}
-	}
-	return false
-}
-
 // rival is the nearest standing raider of a rival faction within sight of
-// (x, y) and closer than best tiles (ok false: none).
+// (x, y) and closer than best tiles (ok false: none), from the tick's
+// faction list (tally.go, EAI-020).
 func (rs *Raiders) rival(r Raider, x, y, best int, now uint64) (entity.EntityID, int, int, bool) {
-	if !rs.rivalry(now) {
+	tl := rs.count(now)
+	if rs.m == nil || !tl.rivals {
 		return 0, 0, 0, false
 	}
 	h := rs.h
 	groups := h.Groups()
-	mine := groups[r.Group].Faction
-	if mine == 0 {
+	if r.Group < 0 || r.Group >= len(groups) || groups[r.Group].Faction == 0 {
 		return 0, 0, 0, false
 	}
+	mine := groups[r.Group].Faction
 	var tid entity.EntityID
 	var tx, ty int
 	best = min(best, SightRange+1)
-	for _, id := range h.RaiderIDs() {
-		o := h.Raider(id)
-		if o.Group >= len(groups) || groups[o.Group].Faction == mine || groups[o.Group].Faction == 0 || !h.StandingRaider(id) {
+	for _, o := range tl.fac {
+		if o.faction == mine || !h.StandingRaider(o.id) {
 			continue
 		}
-		ox, oy, _ := h.Pos(id)
-		if d := weapon.Distance(x, y, ox, oy); d < best && rs.m.Rival(mine, groups[o.Group].Faction) {
-			tid, tx, ty, best = id, ox, oy, d
+		ox, oy, _ := h.Pos(o.id)
+		if d := weapon.Distance(x, y, ox, oy); d < best && rs.m.Rival(mine, o.faction) {
+			tid, tx, ty, best = o.id, ox, oy, d
 		}
 	}
 	return tid, tx, ty, tid != 0

@@ -312,6 +312,11 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 	if ok && !h.CanViolence(id) {
 		ok = false // incapable of violence: never attacks or hunts
 	}
+	if ok && !j.Forced && j.Kind == job.Attack {
+		if a, beast := h.Animal(j.Target); beast && a.Tame && !s.foe(a, now) {
+			ok = false // a pet over its grief is no foe (EAI-006): only an ordered attack goes on
+		}
+	}
 	if ok && j.Kind == job.Hunt {
 		a, _ := h.Animal(j.Target)
 		ok = a.Designated
