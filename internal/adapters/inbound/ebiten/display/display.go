@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+	"image"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
@@ -16,6 +17,8 @@ type Window struct {
 	Title         string
 	// Probe opens a floating window the size of the display (PERF-002).
 	Probe bool
+	// Icons are the window icons (LoadIcons); empty leaves the OS default.
+	Icons []image.Image
 }
 
 // Screen is the Ebitengine window and monitor. Its zero value is ready.
@@ -70,6 +73,7 @@ func (Screen) MonitorSize() (w, h int) { return ebiten.Monitor().Size() }
 
 // Run sets up the window and runs g until it ends.
 func (Screen) Run(g Game, win Window) error {
+	setIcons(win.Icons)
 	ebiten.SetTPS(win.TPS)
 	ebiten.SetWindowSize(win.Width, win.Height)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -83,4 +87,15 @@ func (Screen) Run(g Game, win Window) error {
 		ebiten.SetWindowFloating(true)
 	}
 	return ebiten.RunGame(g)
+}
+
+// iconSetter is ebiten.SetWindowIcon, replaceable by tests (no window opens).
+type iconSetter func([]image.Image)
+
+func setIcons(icons []image.Image) { applyIcons(icons, ebiten.SetWindowIcon) }
+
+func applyIcons(icons []image.Image, set iconSetter) {
+	if len(icons) > 0 {
+		set(icons)
+	}
 }

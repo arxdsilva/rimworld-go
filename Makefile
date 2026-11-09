@@ -220,3 +220,8 @@ clean:
 .PHONY: run
 run:  ## Run the game
 	go run ./cmd/game
+
+.PHONY: app-icon
+app-icon:  ## regenerate the app icon (cmd/iconpack: packaging/icons + assets/generated/ui/app_icon; iconutil makes the .icns)
+	go run ./cmd/iconpack
+	iconutil -c icns packaging/icons/rimworld-go.iconset -o packaging/icons/rimworld-go.icns

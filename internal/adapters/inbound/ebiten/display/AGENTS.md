@@ -14,3 +14,4 @@ The `ebiten` root (`internal/arch` `TestSOLID`); `Run` takes the App as a `Game`
 
 ## Contracts
 `Apply("WxH", false)` sets that size, `""` leaves it free (`TestParseSize`). `Run` sets the window title, TPS and size before `RunGame`, and with `Probe` covers the display with a floating window.
+`Window.Icons` (from `LoadIcons`, `assets/generated/ui/app_icon/icon_{16,32,48,256}.png` found via `assetroot`) are passed to `ebiten.SetWindowIcon` by `Run` when non-empty. The files come from `make app-icon` (`pkg/appicon`, `cmd/iconpack`), never hand-edited.
