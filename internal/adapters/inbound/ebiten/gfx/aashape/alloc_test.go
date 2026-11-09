@@ -43,15 +43,21 @@ func TestMeshAllocatesNothing(t *testing.T) { // not parallel: AllocsPerRun
 }
 
 // The painter adds nothing over Ebitengine's own DrawTriangles32 (which
-// queues the draw outside a game loop).
+// queues the draw outside a game loop). That queue is never drained here,
+// so its buffers grow now and then and one sample of either side can carry
+// a growth; the fewest of several interleaved samples is each side's cost
+// per call. An allocation of the painter's own is in every sample.
 func TestPainterAllocatesOnlyEbitengine(t *testing.T) { // not parallel: AllocsPerRun
 	dst := ebiten.NewImage(64, 64)
 	var clr color.Color = color.RGBA{200, 100, 50, 255}
 	var p Painter
 	p.Disc(dst, 30, 30, 12, clr) // warm: the white source, the mesh
 	verts, idx := append([]ebiten.Vertex(nil), p.mesh.Verts...), append([]uint32(nil), p.mesh.Idx...)
-	ebitenOnly := testing.AllocsPerRun(20, func() { dst.DrawTriangles32(verts, idx, p.white, &p.op) })
-	got := testing.AllocsPerRun(20, func() { p.Disc(dst, 30, 30, 12, clr) })
+	ebitenOnly, got := math.Inf(1), math.Inf(1)
+	for range 5 {
+		ebitenOnly = min(ebitenOnly, testing.AllocsPerRun(20, func() { dst.DrawTriangles32(verts, idx, p.white, &p.op) }))
+		got = min(got, testing.AllocsPerRun(20, func() { p.Disc(dst, 30, 30, 12, clr) }))
+	}
 	if got > ebitenOnly {
 		t.Fatalf("Painter.Disc allocates %v, DrawTriangles32 alone %v", got, ebitenOnly)
 	}
