@@ -155,7 +155,7 @@ func (h windowsHost) Factions() []windows.Faction {
 		out[i] = windows.Faction{
 			Name: r.Name, TypeLabel: r.TypeLabel, Tech: r.Tech, Goodwill: r.Goodwill, Relation: r.Relation,
 			Standing: wizardpkg.RelationLabelIn(tr, r.Relation), Color: wizardpkg.RelationColor(r.Relation), Tip: wizardpkg.GoodwillTipIn(tr, r.FacRow),
-			History: r.History, Events: r.Events, Leader: r.Leader, Settlements: r.Settlements,
+			History: r.History, Events: r.Events, Enemies: r.Enemies, Leader: r.Leader, Settlements: r.Settlements,
 		}
 	}
 	return out
@@ -191,6 +191,7 @@ type colFacRow struct {
 	wizardpkg.FacRow
 	History []int
 	Events  []string
+	Enemies []string // EAI-015
 }
 
 // relationOfView maps the read model's relation word to the domain value.
@@ -237,7 +238,7 @@ func colonyFactionRows(views []game.FactionView) []colFacRow {
 		for i, h := range v.History {
 			hist[i] = int(h)
 		}
-		rows = append(rows, colFacRow{FacRow: r, History: hist, Events: v.Events})
+		rows = append(rows, colFacRow{FacRow: r, History: hist, Events: v.Events, Enemies: v.Enemies})
 	}
 	for _, s := range wizardpkg.FactionRows(nil) { // the Swarm
 		rows = append(rows, colFacRow{FacRow: s})

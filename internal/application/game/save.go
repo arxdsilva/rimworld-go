@@ -31,6 +31,7 @@ import (
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/world/fire"
@@ -938,8 +939,8 @@ func (g *Game) migrateSave(v int) {
 		fallthrough
 	case v < 16: // SAV-003: the header names its colony; Load's savefmt.Info.Upgrade fills an older one, the state is unchanged
 		fallthrough
-	case v < 17: // EAI-0: the first map's wealth counted once (derived, not saved; extra maps load after and count on first use); Faction.Enemies stays empty
-		g.wealth.Step(uint64(g.clock.Now()))
+	case v < 17: // EAI-015: an older world gets its factions' wars from the same seeded rule a new one does (the wealth tracker counts on its own)
+		faction.SetEnemies(g.ng.factions)
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }
