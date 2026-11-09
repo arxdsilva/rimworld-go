@@ -607,7 +607,7 @@ func (g *Game) treeNearGnaws() bool {
 			continue
 		}
 		found := false
-		fx.plants.each(pos.X, pos.Y, gnawReach, func(pid entity.EntityID) bool {
+		fx.plants.Each(pos.X, pos.Y, gnawReach, func(pid entity.EntityID) bool {
 			if p, ok := g.plants.Get(pid); ok && gnawTree(p) && weapon.Distance(pos.X, pos.Y, p.X, p.Y) <= gnawReach {
 				found = true
 				return false

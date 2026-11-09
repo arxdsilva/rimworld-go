@@ -111,7 +111,7 @@ func (h senseGear) Lay(id, stack entity.EntityID) {
 func (h senseGear) NearestMeal(id entity.EntityID) (best entity.EntityID, bx, by int, ok bool) {
 	g, pos := h.g, h.g.positions.Ref(id)
 	pick, bestD := g.sk.diet.Picker(id, false, cannibal(g, id)), 1<<30
-	g.food().items.each(pos.X, pos.Y, mealReach, func(iid entity.EntityID) bool {
+	g.food().items.Each(pos.X, pos.Y, mealReach, func(iid entity.EntityID) bool {
 		st := g.stacks.Ref(iid)
 		if st == nil || !sense.IsMeal(st.Kind) || st.Qty <= 0 || st.Forbidden || !pick.Allows(st.Kind) || g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {
 			return true

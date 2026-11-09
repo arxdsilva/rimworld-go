@@ -459,7 +459,7 @@ func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow f
 	fx := g.food()
 	if diet.Meat() || diet.Plants() && !a.Tame {
 		var carcass, raw feedBest
-		fx.items.each(pos.X, pos.Y, r, func(iid entity.EntityID) bool {
+		fx.items.Each(pos.X, pos.Y, r, func(iid entity.EntityID) bool {
 			st, have := g.stacks.Get(iid)
 			if !have || st.Carrier != 0 || st.Qty <= 0 || !ok(st.X, st.Y) {
 				return true
@@ -495,7 +495,7 @@ func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow f
 		return animal.FeedTarget{}, false
 	}
 	var browse, crop, tree feedBest
-	fx.plants.each(pos.X, pos.Y, r, func(pid entity.EntityID) bool {
+	fx.plants.Each(pos.X, pos.Y, r, func(pid entity.EntityID) bool {
 		p, have := g.plants.Get(pid)
 		if !have || !ok(p.X, p.Y) {
 			return true
@@ -564,7 +564,7 @@ func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, d
 	var b forage.Pick
 	fx, menu := g.food(), g.sk.diet.Menu(id, true) // FOOD-4: the animal's food policy
 	if diet != animal.NoDiet {
-		fx.items.each(pos.X, pos.Y, r, func(iid entity.EntityID) bool {
+		fx.items.Each(pos.X, pos.Y, r, func(iid entity.EntityID) bool {
 			st, have := g.stacks.Get(iid)
 			if !have || st.Carrier != 0 || st.Qty <= 0 || st.Forbidden || !menu.Has(st.Kind) || weapon.Distance(pos.X, pos.Y, st.X, st.Y) > r || !ok(st.X, st.Y) {
 				return true
@@ -593,7 +593,7 @@ func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, d
 	}
 	if diet.Plants() || diet == animal.Dendrovore {
 		pr := b.Within(r)
-		fx.plants.each(pos.X, pos.Y, pr, func(pid entity.EntityID) bool {
+		fx.plants.Each(pos.X, pos.Y, pr, func(pid entity.EntityID) bool {
 			p, have := g.plants.Get(pid)
 			if !have || p.Zone || p.Designated || weapon.Distance(pos.X, pos.Y, p.X, p.Y) > pr || !ok(p.X, p.Y) {
 				return true

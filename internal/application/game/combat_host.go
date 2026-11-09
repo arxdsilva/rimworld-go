@@ -89,7 +89,7 @@ func (h combatRosters) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 // within do; combat.Who has the index's kind bits.
 func (h combatRosters) Near(x, y, r int, who combat.Who, buf []combat.Seen) []combat.Seen {
 	g := h.g
-	g.creatures().grid.each(x, y, r+1, func(e idxEntry) bool {
+	g.creatures().grid.Each(x, y, r+1, func(e idxEntry) bool {
 		if p, ok := g.positions.Get(e.id); ok && e.kind&uint8(who) != 0 && weapon.Distance(x, y, p.X, p.Y) <= r {
 			buf = append(buf, combat.Seen{ID: e.id, X: p.X, Y: p.Y})
 		}
