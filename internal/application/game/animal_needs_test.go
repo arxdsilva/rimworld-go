@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -301,7 +302,7 @@ func TestHurtPredatorBreaksOff(t *testing.T) {
 	if a := animalOf(g, wolf); a.Mode != animal.Flee || a.Target != 0 {
 		t.Fatalf("a badly hurt wolf breaks off: %+v", a)
 	}
-	for i := 0; i < 3*breakOffTicks; i++ { // hungry, but too hurt to hunt (no flee/hunt flapping)
+	for i := 0; i < 3*rage.BreakOffTicks; i++ { // hungry, but too hurt to hunt (no flee/hunt flapping)
 		g.Step(1)
 		if a := animalOf(g, wolf); a.Mode == animal.Attack {
 			t.Fatalf("tick %d: back in the fight while badly hurt: %+v", i, a)
@@ -312,9 +313,9 @@ func TestHurtPredatorBreaksOff(t *testing.T) {
 	bo := draftedPawn(t, h, 10, 10)
 	mad, _ := h.SpawnAnimal("timber_wolf", 11, 10)
 	a := animalOf(h, mad)
-	h.enrage(mad, &a, bo, uint64(h.clock.Now()))
+	rageOf(h).Enrage(mad, &a, bo, uint64(h.clock.Now()))
 	a.Injury = (maxHP*animal.DownInjuryPct - 1) / 100 // badly hurt, still standing
-	if !badlyHurt(a) || a.DownsNow() {
+	if !rage.BadlyHurt(a) || a.DownsNow() {
 		t.Fatalf("injury %d of %d: badly hurt and standing", a.Injury, maxHP)
 	}
 	h.animals.Set(mad, a)

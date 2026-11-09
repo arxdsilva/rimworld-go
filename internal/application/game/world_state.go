@@ -997,7 +997,7 @@ func (h mapsWaylay) Ambush(seed uint64, fac int) {
 func (h mapsWaylay) Hunt(seed uint64, n int) {
 	g, rng := h.g, h.g.rng
 	g.rng = randx.New(seed)
-	g.manhunterPack(n)
+	rageOf(g).ManhunterPack(n)
 	g.rng = rng
 }
 func (h mapsWaylay) DemandLetter(title, format string, args ...any) uint64 {

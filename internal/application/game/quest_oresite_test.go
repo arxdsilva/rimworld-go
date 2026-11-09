@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/maps"
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -86,7 +87,7 @@ func TestOreSiteOpensWithItsThreat(t *testing.T) {
 func huntable(g *Game, m *mapState) bool {
 	prev, rng := g.mapState, g.rng
 	g.mapState = m
-	_, ok := g.pickSpecies(manhunterSpecies)
+	_, ok := g.pickSpecies(rage.ManhunterSpecies)
 	g.mapState, g.rng = prev, rng
 	return ok
 }

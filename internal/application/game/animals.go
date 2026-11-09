@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
@@ -116,7 +117,7 @@ func (g *Game) phaseAnimals() {
 		if !g.animals.Has(id) {
 			continue
 		}
-		keepChaseWarned(&a, now) // chase.go
+		rage.KeepChaseWarned(&a, now) // rage/chase.go
 		if a.Tame || a.FeedClaim != 0 || a.Mode == animal.Feed && a.Feed.Kind == animal.FeedCarcass {
 			g.syncFeedClaim(id, &a) // animal_needs.go: an eater's reservation
 		}
@@ -140,7 +141,7 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	}
 	def := animal.DefOf(a.Species)
 	pos, _ := g.positions.Get(id)
-	if g.thinkManhunter(id, a, now) {
+	if rageOf(g).ThinkManhunter(id, a, now) {
 		return
 	}
 	if g.ropedStep(id, a, pos, now) { // rope.go: roped, or led to its pen
@@ -152,21 +153,21 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 		a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
 		return
 	}
-	if g.fleeCheck(id, a, pos, def, now) {
+	if rageOf(g).FleeCheck(id, a, rage.Pos(pos), def, now) {
 		return
 	}
-	g.chargeCheck(id, a, pos, now)          // a wild predator may rush someone close
-	if a.Tame && g.masterDuty(id, a, now) { // train_animals.go: guard and release
+	rageOf(g).ChargeCheck(id, a, rage.Pos(pos), now) // a wild predator may rush someone close
+	if a.Tame && g.masterDuty(id, a, now) {          // train_animals.go: guard and release
 		return
 	}
 	if a.Tame && def.Predator && a.HuntSince != 0 {
-		g.guardBreaksHunt(id, a, pos, now) // handling.go: a threat comes before a meal
+		rageOf(g).GuardBreaksHunt(id, a, rage.Pos(pos), now) // rage/guard.go: a threat comes before a meal
 	}
 	if a.Tame && def.Predator && a.HuntSince == 0 {
-		if g.guardCheck(id, a, pos, now) {
+		if rageOf(g).GuardCheck(id, a, rage.Pos(pos), now) {
 			return
 		}
-	} else if g.fightCheck(id, a, pos, def, now) { // a tame predator's hunt runs as a wild one's (PLAY-017)
+	} else if rageOf(g).FightCheck(id, a, rage.Pos(pos), def, now) { // a tame predator's hunt runs as a wild one's (PLAY-017)
 		return
 	}
 	if a.Leaving {
@@ -176,7 +177,7 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	if now >= a.NextDecide {
 		g.decideAnimal(id, a, pos, now)
 		if a.Mode == animal.Attack && a.Target != 0 { // T3: off hunting
-			g.chase(id, a, now)
+			rageOf(g).Chase(id, a, now)
 			return
 		}
 	}
@@ -213,269 +214,10 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	}
 }
 
-// fleeCheck runs a skittish animal away from threats (a tame one from
-// wild predators only), and any animal, wild or tame, still in its
-// FleeUntil window from whoever hurt it. Threats are looked for every
-// animal.ThreatEvery ticks (staggered by id) and every tick while
-// fleeing; the goal (fleeFrom) is picked again when the run ends or
-// every 40 ticks, and kept while it is at least as far from the threat.
-// It reports true while the animal is fleeing.
-func (g *Game) fleeCheck(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) bool {
-	var tp Position
-	threat := false
-	scan := a.Mode == animal.Flee || (now+uint64(id))%animal.ThreatEvery == 0
-	r := def.FleeRadius
-	if a.Mode == animal.Flee {
-		r += animal.FleeRelease // run well clear before grazing again
-	}
-	dist := 8
-	switch {
-	case a.Tame && def.Predator: // guards don't run from predators
-	case a.Tame:
-		dist = 6
-		if scan {
-			tp, threat = g.nearestPredator(id, pos, r)
-		}
-	case def.Skittish && r > 0 && scan: // tame-natured animals only run once hurt
-		tp, threat = g.nearestThreat(id, pos, r)
-	}
-	// a predator seen across a fence or water can't get at it: no reason
-	// to run (running would take it out through a gate, into the threat)
-	if threat && !g.reachesFoe(false, tp, pos) {
-		threat = false
-	}
-	if !threat && scan {
-		tp, threat = g.animalFireThreat(a, pos) // fire_danger.go: every animal runs from fire
-	}
-	if now < a.FleeUntil && a.Attacker != 0 {
-		if p, ok := g.positions.Get(a.Attacker); ok {
-			tp, threat = p, true
-		}
-	}
-	if threat {
-		lost := a.PathI >= len(a.Path) && now >= a.RetryAt
-		if a.Mode != animal.Flee || lost || (now+uint64(id))%40 == 0 {
-			if a.Mode != animal.Flee {
-				a.Feed, a.FeedLeft, a.Target = animal.FeedTarget{}, 0, 0 // a sleeper wakes, a grazer drops its meal
-				a.Path, a.PathI = nil, 0
-			}
-			a.Mode = animal.Flee
-			g.fleeFrom(id, a, pos, tp, dist, false) // animal_flee.go
-		}
-		return true
-	}
-	if a.Mode == animal.Flee {
-		if a.PathI < len(a.Path) {
-			return true // finish the run
-		}
-		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
-		a.NextDecide = now // the run is over: think again at once
-	}
-	return false
-}
-
-// fightCheck runs a wild animal's fight: a predator's hunt or revenge, a
-// woken territorial animal's (animal_needs.go). A badly hurt fighter
-// breaks off (T10) and a hunt that fails gives up (T5). It reports true
-// while the animal fights.
-func (g *Game) fightCheck(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) bool {
-	// prey, or whoever hurt it (its own kind too: animalHurt)
-	if a.Target != 0 && !g.validPrey(id, a.Target) && !(a.Target == a.Attacker && g.validFoe(id, a.Target)) {
-		g.endFight(a)
-	}
-	calm := !badlyHurt(*a) && now >= a.FleeUntil
-	if a.Target == 0 && def.Predator && !a.Tame && calm && a.Attacker != 0 && g.validPrey(id, a.Attacker) &&
-		g.reachesFoe(a.Tame, pos, g.posOf(a.Attacker)) { // never one it can't get at (no flee/attack flapping)
-		a.Target = a.Attacker // revenge; on a colonist the player is warned (chase.go)
-		g.warnChase(id, a, a.Target, false)
-	}
-	if a.Target == 0 {
-		a.HuntSince = 0 // its prey died under another's teeth, or was never set
-		if def.Predator {
-			a.Attacker = 0
-		}
-		return false
-	}
-	if badlyHurt(*a) && !a.Enraged(now) && !def.Legendary {
-		g.breakOff(id, a, pos, now)
-		return true
-	}
-	tp, _ := g.positions.Get(a.Target)
-	d := weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)
-	switch {
-	case a.HuntSince != 0 && (now-a.HuntSince > animal.HuntGiveUp || d > huntRadius(def)+animal.HuntLeash ||
-		a.Tame && !g.tameHuntOn(id, a.Target, tp)): // a tame hunter's prey is wild and in its area (PLAY-017)
-		g.endFight(a) // the prey got away: try again later
-		a.NextFeed, a.NextDecide = now+animal.HuntRetry, now
-		return false
-	case a.HuntSince == 0 && !def.Predator && d > territorialLeash:
-		g.endFight(a) // chased it off
-		return false
-	}
-	g.chase(id, a, now)
-	return true
-}
-
-// chargeCheck is a wild predator's charge (PLAY-010 2.3 C). An awake,
-// unhurt, calm predator with no target looks every animal.DecideEvery
-// ticks (staggered by id) for a standing colonist or raider within
-// animal.ChargeRadius and, when it finds one, rolls animal.ChargePct;
-// any roll waits animal.ChargeCooldown for the next. A charge is an
-// Attack on that person (fightCheck chases it) that ends beyond
-// animal.ChargeLeash, after animal.ChargeTicks, or once the target is
-// down or the animal turned to something else; the cooldown starts then.
-// Off where predators leave colonists alone (Wanderer, Gentle).
-func (g *Game) chargeCheck(id entity.EntityID, a *animal.State, pos Position, now uint64) {
-	if a.ChargeSince != 0 {
-		tp, ok := g.positions.Get(a.Target)
-		if a.Tame || a.Mode != animal.Attack || !ok || !g.standingPawn(a.Target) ||
-			now-a.ChargeSince > animal.ChargeTicks || weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) > animal.ChargeLeash {
-			if a.Mode == animal.Attack && a.Target != 0 {
-				if a.Attacker == a.Target {
-					a.Attacker = 0 // it let them go: no revenge straight after
-				}
-				g.endFight(a)
-			}
-			a.ChargeSince, a.NextCharge = 0, now+animal.ChargeCooldown
-		}
-		return
-	}
-	if a.Tame || !animal.Charger(a.Species) || now < a.NextCharge || (now+uint64(id))%animal.DecideEvery != 0 ||
-		a.Target != 0 || a.Mode == animal.Flee || sleeping(*a) || badlyHurt(*a) || a.Enraged(now) || now < a.FleeUntil ||
-		!g.predatorsHuntColonists() { // story.go: difficulty (NG-1)
-		return
-	}
-	who, _, ok := g.nearestWhere(pos.X, pos.Y, animal.ChargeRadius, ckPawn|ckRaider, func(o entity.EntityID, _ Position) bool {
-		return g.standingPawn(o)
-	})
-	if !ok {
-		return
-	}
-	a.NextCharge = now + animal.ChargeCooldown
-	if g.rng.IntN(100) >= animal.ChargePct {
-		return
-	}
-	a.Mode, a.Target, a.HuntSince, a.ChargeSince = animal.Attack, who, 0, now
-	a.Path, a.PathI, a.Feed, a.FeedLeft = nil, 0, animal.FeedTarget{}, 0
-	g.logEvent(who, logEntry{Kind: evlog.ChargedBy, Other: id, Name: g.killerName(id)})
-	g.logEvent(id, logEntry{Kind: evlog.Charged, Other: who, Name: g.creatureName(who)})
-	g.warnChase(id, a, who, true) // chase.go: "A cougar charges Ada!" (raiders are skipped)
-}
-
 // posOf is id's position (the zero cell when it has none).
 func (g *Game) posOf(id entity.EntityID) Position {
 	p, _ := g.positions.Get(id)
 	return p
-}
-
-// nearestThreat: the closest standing colonist or predator within r.
-func (g *Game) nearestThreat(id entity.EntityID, pos Position, r int) (Position, bool) {
-	_, p, ok := g.nearestWhere(pos.X, pos.Y, r, ckPawn|ckAnimal, func(o entity.EntityID, _ Position) bool {
-		if o == id {
-			return false
-		}
-		if a := g.animals.Ref(o); a != nil {
-			return animal.DefOf(a.Species).Predator
-		}
-		return g.standingPawn(o)
-	})
-	return p, ok
-}
-
-// validPrey: a living animal of another species, or a standing colonist.
-func (g *Game) validPrey(self, t entity.EntityID) bool {
-	if t == self {
-		return false
-	}
-	if o := g.animals.Ref(t); o != nil {
-		me := g.animals.Ref(self)
-		if me == nil {
-			me = &animal.State{}
-		}
-		return !o.Dead() && (o.Species != me.Species || o.Tame != me.Tame)
-	}
-	return g.standingPawn(t)
-}
-
-// findPrey: the nearest downed animal the predator can take within its
-// hunt radius (huntable), else the nearest it can take at all, else a standing colonist within AggroRadius. A pack
-// predator's mates nearby join the hunt.
-func (g *Game) findPrey(id entity.EntityID, pos Position, def animal.Def) entity.EntityID {
-	best, _, ok := g.nearestWhere(pos.X, pos.Y, huntRadius(def), ckAnimal, func(o entity.EntityID, _ Position) bool {
-		a := g.animals.Ref(o)
-		return a != nil && a.Downed && g.huntable(id, o) // easy prey first (animal_health.go)
-	})
-	if !ok {
-		best, _, ok = g.nearestWhere(pos.X, pos.Y, huntRadius(def), ckAnimal, func(o entity.EntityID, _ Position) bool {
-			return g.huntable(id, o)
-		})
-	}
-	if ok {
-		if def.Pack {
-			g.callPack(id, pos, best)
-		}
-		return best
-	}
-	if !g.predatorsHuntColonists() { // story.go: difficulty (NG-1)
-		return 0
-	}
-	best, _, _ = g.nearestWhere(pos.X, pos.Y, def.AggroRadius, ckPawn, func(o entity.EntityID, _ Position) bool {
-		return g.standingPawn(o)
-	})
-	return best
-}
-
-// huntRadius is how far an animal looks for prey: its species' hunt
-// radius, or smallPreyRadius for a meat eater that is no predator.
-func huntRadius(def animal.Def) int {
-	if def.HuntRadius > 0 {
-		return def.HuntRadius
-	}
-	return smallPreyRadius
-}
-
-// huntable: prey a predator can take: a living non-predator no bigger
-// than itself (XS or S only for a small-prey hunter, or a meat eater that
-// is no predator), never a hive insect or a legendary. A downed animal
-// (animal_health.go) is easy prey: a predator takes it whatever its size,
-// a downed predator too.
-func (g *Game) huntable(self, t entity.EntityID) bool {
-	if !g.validPrey(self, t) {
-		return false
-	}
-	o, ok := g.animals.Get(t)
-	if !ok {
-		return false
-	}
-	me, _ := g.animals.Get(self)
-	od, md := animal.DefOf(o.Species), animal.DefOf(me.Species)
-	if od.Hive || od.Legendary || od.Predator && !o.Downed {
-		return false
-	}
-	size := animal.RosterOf(o.Species).Size
-	if md.SmallPrey || !md.Predator {
-		return size <= animal.SizeS
-	}
-	return o.Downed || size <= animal.RosterOf(me.Species).Size // a downed animal of any size is easy prey
-}
-
-// callPack sets idle wild pack mates of id's species within packRadius on
-// the same prey.
-func (g *Game) callPack(id entity.EntityID, pos Position, prey entity.EntityID) {
-	me, _ := g.animals.Get(id)
-	now := uint64(g.clock.Now())
-	g.within(pos.X, pos.Y, packRadius, ckAnimal, func(aid entity.EntityID, _ Position) {
-		if aid == id {
-			return
-		}
-		o, ok := g.animals.Get(aid)
-		if !ok || o.Species != me.Species || o.Tame != me.Tame || o.Target != 0 || o.Manhunter != 0 || badlyHurt(o) || !g.grown(o, now) {
-			return
-		}
-		o.Target, o.HuntSince = prey, now
-		o.Feed, o.FeedLeft = animal.FeedTarget{}, 0
-		g.animals.Set(aid, o)
-	})
 }
 
 // animalGoTo paths towards (gx, gy), clamped to the map and nudged to a
@@ -661,7 +403,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	k, ok := g.animals.Get(by)
 	if ok && !animal.IsMech(a.Species) && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) { // a wreck is no meal
 		if k.Tame && k.HuntSince != 0 { // a quiet line: the colony's hunter fed itself
-			g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of("%s hunted %s.", animalLabel(k), withArticle(a.Species.Label())),
+			g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of("%s hunted %s.", animalLabel(k), rage.WithArticle(a.Species.Label())),
 				X: pos.X, Y: pos.Y, Focus: by})
 		}
 		g.feedOnKill(by, &k, corpse, pos) // animal_needs.go
@@ -751,7 +493,7 @@ func (g *Game) animalViews() []AnimalView {
 			Mode:       a.Mode.String(),
 			Designated: a.Designated,
 			Hostile:    g.hostile(a) || a.Enraged(uint64(g.clock.Now())),
-			TargetID:   g.chaseTarget(a),
+			TargetID:   rageOf(g).ChaseTarget(a),
 			Tame:       a.Tame,
 			Name:       a.Name,
 			TameMark:   a.TameMark,

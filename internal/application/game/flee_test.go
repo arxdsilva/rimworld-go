@@ -74,7 +74,7 @@ func TestUnarmedColonistFleesManhunterElevenTilesAway(t *testing.T) {
 	fullNeeds(g, ada)
 	wolf, _ := g.SpawnAnimal("ridgewolf", 14, 10)
 	a, _ := g.animals.Get(wolf)
-	g.enrage(wolf, &a, ada, uint64(g.clock.Now()))
+	rageOf(g).Enrage(wolf, &a, ada, uint64(g.clock.Now()))
 	g.animals.Set(wolf, a)
 	holdAttacker(g, wolf, ada, 14, 10) // 11 tiles west
 	g.Step(2)

@@ -257,7 +257,7 @@ func questTileTaken(g *Game, t int, self qd.ID) bool {
 
 // Manhunters sends a pack of about one animal per 100 points (3..12, ours).
 func (h questHost) Manhunters(points int, _ uint64) bool {
-	h.g.manhunterPack(min(max(points/100, 3), 12)) // handling.go
+	rageOf(h.g).ManhunterPack(min(max(points/100, 3), 12)) // handling.go
 	return true
 }
 

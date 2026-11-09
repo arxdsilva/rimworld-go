@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/forage"
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -42,10 +43,6 @@ import (
 const (
 	// territorialLeash: a woken territorial animal chases its attacker this
 	// far before letting it go.
-	territorialLeash = 12
-	// smallPreyRadius: how far a meat eater that is no predator looks for
-	// small prey.
-	smallPreyRadius = 12
 	// herdBedRadius: a resting animal looks this far for a herd mate to
 	// bed down beside, and lies within herdBedNear of it.
 	herdBedRadius = 16
@@ -53,8 +50,6 @@ const (
 	// feedWalkLimit: an animal that has not reached its meal this long
 	// after picking it gives it up.
 	feedWalkLimit = 1500
-	// breakOffTicks: a badly hurt fighter runs this long.
-	breakOffTicks = 900
 	// cropRaidKeep: crops eaten this recently feed the alert.
 	cropRaidKeep = clock.TicksPerHour
 )
@@ -215,10 +210,10 @@ func (g *Game) nothingToEat(id entity.EntityID, a *animal.State, pos Position, n
 	def := animal.DefOf(a.Species)
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
 	hunter := def.Predator || animal.EcologyOf(a.Species).Diet.MeatOnly()
-	if !a.Tame && hunter && a.Food < animal.FeedStart && !badlyHurt(*a) && now >= a.FleeUntil && g.grown(*a, now) { // T3 (never while hurt: T10; the young don't hunt)
-		if prey := g.findPrey(id, pos, def); prey != 0 {
+	if !a.Tame && hunter && a.Food < animal.FeedStart && !rage.BadlyHurt(*a) && now >= a.FleeUntil && g.grown(*a, now) { // T3 (never while hurt: T10; the young don't hunt)
+		if prey := rageOf(g).FindPrey(id, rage.Pos(pos), def); prey != 0 {
 			a.Mode, a.Target, a.HuntSince = animal.Attack, prey, now
-			g.warnChase(id, a, prey, false) // chase.go: a colonist as prey warns the player
+			rageOf(g).WarnChase(id, a, prey, false) // chase.go: a colonist as prey warns the player
 			return
 		}
 	}
@@ -285,34 +280,6 @@ func (g *Game) leaveMap(id entity.EntityID) {
 	g.removeAnimal(id)
 }
 
-// badlyHurt: below animal.BadlyHurt percent of its hit points.
-func badlyHurt(a animal.State) bool {
-	return a.HP()*100 < animal.DefOf(a.Species).MaxHP*animal.BadlyHurt
-}
-
-// breakOff: a badly hurt fighter runs from its foe (T10).
-func (g *Game) breakOff(id entity.EntityID, a *animal.State, pos Position, now uint64) {
-	foe := a.Target
-	if a.Attacker != 0 {
-		foe = a.Attacker
-	}
-	g.endFight(a)
-	a.Attacker, a.FleeUntil, a.Mode = foe, now+breakOffTicks, animal.Flee
-	if fp, ok := g.positions.Get(foe); ok {
-		fx, fy := animal.FleeGoal(pos.X, pos.Y, fp.X, fp.Y, 8)
-		g.animalGoTo(id, a, fx, fy)
-	}
-	g.logEvent(id, logEntry{Kind: evlog.Fled, Other: foe, Name: g.creatureName(foe)})
-}
-
-// endFight drops an animal's target and hunt.
-func (g *Game) endFight(a *animal.State) {
-	a.Target, a.HuntSince = 0, 0
-	if a.Mode == animal.Attack {
-		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
-	}
-}
-
 // animalHurt is the reaction side of an animal being hurt (combat.go
 // hurt; PLAY-010): it thinks again at once, and a sleeper wakes. With an
 // attacker it always fights or runs: a fighter (canFightBack) goes for its
@@ -329,17 +296,17 @@ func (g *Game) animalHurt(id entity.EntityID, a *animal.State, by entity.EntityI
 		return // lying where it fell: it neither fights back nor runs
 	}
 	if by == 0 || by == id {
-		g.hurtBlind(a, now)
+		rage.HurtBlind(a, now)
 		return
 	}
 	if a.Enraged(now) {
 		return // an enraged animal fights on instead of bolting (no flee/attack flapping)
 	}
-	if g.canFightBack(id, *a, by) {
-		fightBack(a, by, g.validFoe(id, a.Target))
+	if rageOf(g).CanFightBack(id, *a, by) {
+		rage.FightBack(a, by, rageOf(g).ValidFoe(id, a.Target))
 		return
 	}
-	g.fleeHit(id, a, by, now)
+	rageOf(g).FleeHit(id, a, by, now)
 }
 
 // feedOnKill: the killer of an animal feeds on its carcass (T4) when it
@@ -615,11 +582,11 @@ func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, d
 		})
 	}
 	def := animal.DefOf(a.Species)
-	if def.Predator && a.Food < animal.FeedStart && !badlyHurt(*a) && now >= a.FleeUntil && g.grown(*a, now) &&
+	if def.Predator && a.Food < animal.FeedStart && !rage.BadlyHurt(*a) && now >= a.FleeUntil && g.grown(*a, now) &&
 		(a.Master == 0 || !g.drafted(entity.EntityID(a.Master))) { // not while its master is drafted
-		hr := b.Within(min(r, huntRadius(def)))
+		hr := b.Within(min(r, rage.HuntRadius(def)))
 		prey, pp, found := g.nearestWhere(pos.X, pos.Y, hr, ckAnimal, func(o entity.EntityID, p Position) bool {
-			return ok(p.X, p.Y) && g.tamePrey(id, o, now) && g.reachesFoe(true, pos, p)
+			return ok(p.X, p.Y) && g.tamePrey(id, o, now) && rageOf(g).ReachesFoe(true, rage.Pos(pos), rage.Pos(p))
 		})
 		if found {
 			ps := g.animals.Ref(prey).Species
@@ -639,7 +606,7 @@ func (g *Game) tamePrey(self, o entity.EntityID, now uint64) bool {
 	if p == nil || p.Tame || p.Dormant || p.TameMark || p.Enraged(now) {
 		return false
 	}
-	return g.huntable(self, o)
+	return rageOf(g).Huntable(self, o)
 }
 
 // tameHuntOn reports a tame hunter may keep after target at tp: still
@@ -974,7 +941,7 @@ func (g *Game) fillAnimalNeeds(av *AnimalView, a animal.State) {
 	case a.Mode == animal.Attack && a.HuntSince != 0:
 		av.State = "hunting"
 		if p := g.animals.Ref(a.Target); p != nil {
-			av.State = "hunting " + withArticle(p.Species.Label()) // "hunting a hare" (chase.go)
+			av.State = "hunting " + rage.WithArticle(p.Species.Label()) // "hunting a hare" (chase.go)
 		}
 	case a.Tame && a.Mode == animal.Feed:
 		av.State = g.tameFeedState(av.ID, a) // "eating kibble", "eating from the stockpile"

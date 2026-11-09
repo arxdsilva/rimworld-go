@@ -55,7 +55,7 @@ func TestManhunterHuntsColonistsAndPausesAsThreat(t *testing.T) {
 	ada, _ := g.SpawnNamedPawn(3, 7, "Ada")
 	wolf, _ := g.SpawnAnimal("ridgewolf", 26, 7)
 	a, _ := g.animals.Get(wolf)
-	g.enrage(wolf, &a, 0, uint64(g.clock.Now()))
+	rageOf(g).Enrage(wolf, &a, 0, uint64(g.clock.Now()))
 	g.animals.Set(wolf, a)
 	msgs := g.World().Messages
 	if len(msgs) == 0 || !msgs[len(msgs)-1].Danger || !strings.Contains(msgs[len(msgs)-1].Text, "manhunter") {

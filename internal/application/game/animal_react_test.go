@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -203,7 +204,7 @@ func TestTerritorialReactionDoesNotFlap(t *testing.T) {
 		}
 		if a.Mode == animal.Flee {
 			broke = true
-			if !badlyHurt(a) {
+			if !rage.BadlyHurt(a) {
 				t.Fatalf("tick %d: a healthy boar ran: %+v", i, a)
 			}
 		}
@@ -254,7 +255,7 @@ func TestFleeSpotStaysReachable(t *testing.T) {
 	sheep, _ := g.SpawnAnimal("sheep", 11, 8)
 	g.TameAnimal(sheep, "Burr")
 	a := animalOf(g, sheep)
-	p, ok := g.fleeSpot(&a, Position{X: 11, Y: 8}, Position{X: 9, Y: 8}, 8, true)
+	p, ok := rageOf(g).FleeSpot(&a, rage.Pos{X: 11, Y: 8}, rage.Pos{X: 9, Y: 8}, 8, true)
 	if !ok || p.X != 15 {
 		t.Fatalf("the far side of the pen (x 15), got %v %v", p, ok)
 	}
@@ -263,7 +264,7 @@ func TestFleeSpotStaysReachable(t *testing.T) {
 	bareGround(h)
 	deer, _ := h.SpawnAnimal("deer", 20, 10)
 	d := animalOf(h, deer)
-	if p, ok := h.fleeSpot(&d, Position{X: 20, Y: 10}, Position{X: 18, Y: 10}, 8, true); !ok || p != (Position{X: 28, Y: 10}) {
+	if p, ok := rageOf(h).FleeSpot(&d, rage.Pos{X: 20, Y: 10}, rage.Pos{X: 18, Y: 10}, 8, true); !ok || p != (rage.Pos{X: 28, Y: 10}) {
 		t.Fatalf("straight away 8 tiles, got %v %v", p, ok)
 	}
 	// boxed in on three sides by a fence and the attacker beside it: any
@@ -274,7 +275,7 @@ func TestFleeSpotStaysReachable(t *testing.T) {
 	hen, _ := k.SpawnAnimal("chicken", 5, 5)
 	k.TameAnimal(hen, "Wren")
 	c := animalOf(k, hen)
-	if _, ok := k.fleeSpot(&c, Position{X: 5, Y: 5}, Position{X: 3, Y: 5}, 8, true); ok {
+	if _, ok := rageOf(k).FleeSpot(&c, rage.Pos{X: 5, Y: 5}, rage.Pos{X: 3, Y: 5}, 8, true); ok {
 		t.Fatal("a one-cell pen has nowhere to run")
 	}
 }
@@ -318,14 +319,14 @@ func TestReachesFoeOnAFence(t *testing.T) {
 	bareGround(g)
 	fenceRing(t, g, 2, 2, 7, 7)
 	fenceRing(t, g, 12, 2, 17, 7)
-	boar := Position{X: 4, Y: 4}
-	if !g.reachesFoe(false, boar, Position{X: 7, Y: 4}) {
+	boar := rage.Pos{X: 4, Y: 4}
+	if !rageOf(g).ReachesFoe(false, boar, rage.Pos{X: 7, Y: 4}) {
 		t.Fatal("a foe on its own pen's fence is reached from inside")
 	}
-	if g.reachesFoe(false, boar, Position{X: 12, Y: 4}) {
+	if rageOf(g).ReachesFoe(false, boar, rage.Pos{X: 12, Y: 4}) {
 		t.Fatal("a foe on another closed pen's fence is out of reach")
 	}
-	if !g.reachesFoe(false, boar, Position{X: 5, Y: 5}) {
+	if !rageOf(g).ReachesFoe(false, boar, rage.Pos{X: 5, Y: 5}) {
 		t.Fatal("a foe beside it is reached")
 	}
 }

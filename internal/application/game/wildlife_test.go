@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/pawn/skill"
 
 	"rimworld-go/internal/domain/animal"
@@ -208,7 +209,7 @@ func TestPackPredatorsHunt(t *testing.T) {
 	_, _ = g2.SpawnAnimal("elephant", 12, 10)
 	_, _ = g2.SpawnAnimal("cougar", 11, 11)
 	pos, _ := g2.positions.Get(wolf)
-	if got := g2.findPrey(wolf, pos, animal.DefOf(animal.TimberWolf)); got != 0 {
+	if got := rageOf(g2).FindPrey(wolf, rage.Pos(pos), animal.DefOf(animal.TimberWolf)); got != 0 {
 		t.Fatalf("wolf picked %d", got)
 	}
 }
@@ -221,11 +222,11 @@ func TestSmallPreyOnly(t *testing.T) {
 	hare, _ := g.SpawnAnimal("hare", 16, 10)
 	pos, _ := g.positions.Get(fox)
 	def := animal.DefOf(animal.RedFox)
-	if got := g.findPrey(fox, pos, def); got != hare {
+	if got := rageOf(g).FindPrey(fox, rage.Pos(pos), def); got != hare {
 		t.Fatalf("a fox takes the hare, not the nearer deer: got %d", got)
 	}
 	g.removeAnimal(hare)
-	if got := g.findPrey(fox, pos, def); got != 0 {
+	if got := rageOf(g).FindPrey(fox, rage.Pos(pos), def); got != 0 {
 		t.Fatalf("no small prey left: got %d", got)
 	}
 }

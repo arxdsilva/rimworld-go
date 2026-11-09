@@ -69,13 +69,13 @@ func (g *Game) harm(target entity.EntityID, bl hit.Blow, by entity.EntityID, cau
 		a.Injury += dmg
 		g.woundAnimal(target, &a, dmg, kind, by, now) // animal_health.go (MED-09): a wound on its body
 		a.Attacker = by
-		was := g.chaseTarget(a)
+		was := rageOf(g).ChaseTarget(a)
 		g.wakeDormant(&a) // vault.go: a hurt vault sleeper wakes
-		g.provoked(target, &a, by)
+		rageOf(g).Provoked(target, &a, by)
 		g.animalHurt(target, &a, by, now) // animal_needs.go: wakes it, then it fights back or runs
 		g.animals.Set(target, a)
-		if t := g.chaseTarget(a); t != 0 && t != was && !a.Dead() {
-			g.noteChase(target, t) // chase.go: it turned on a colonist
+		if t := rageOf(g).ChaseTarget(a); t != 0 && t != was && !a.Dead() {
+			rageOf(g).NoteChase(target, t) // rage/chase.go: it turned on a colonist
 		}
 		if a.Dead() {
 			g.killAnimal(target, by)

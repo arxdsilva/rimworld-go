@@ -140,7 +140,7 @@ func (h raidWild) EdgeTile() (int, int, bool)                   { return h.g.edg
 
 type raidStory struct{ g *Game }
 
-func (h raidStory) ManhunterPack(n int)       { h.g.manhunterPack(n) } // handling.go
+func (h raidStory) ManhunterPack(n int)       { rageOf(h.g).ManhunterPack(n) } // handling.go
 func (h raidStory) MadAnimal(now uint64) bool { return h.g.madAnimal(now, false) }
 func (h raidStory) ScaledRaid(day int)        { h.g.scaledRaid(day) }
 func (h raidStory) Enclosed() bool            { return h.g.enclosed() }

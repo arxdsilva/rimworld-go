@@ -251,3 +251,29 @@ func colonistGrid(g *Game) pathing.Query {
 	}
 	return flapQuery{g}
 }
+
+// layerReach reports whether a walk over q from pos may reach (x, y):
+// the region labels when q has them (a different label for its layer
+// means a fence, a wall or water between), else yes.
+func (g *Game) layerReach(q pathing.Query, pos Position, x, y int) bool {
+	if _, pen := q.(penQuery); pen || g.noRegions() {
+		// without regions (or inside a pen, which regions don't know)
+		// Reach is optimistic: search for the truth, so a colony with
+		// regions off flees exactly as one with them
+		_, ok := pathing.Find(plainQuery{q}, pos.X, pos.Y, x, y)
+		return ok
+	}
+	if r, ok := q.(pathing.Reacher); ok {
+		return r.Reach(pos.X, pos.Y, x, y)
+	}
+	return true
+}
+
+// penQuery is an animal's walk query cut down to its pen's cells.
+type penQuery struct {
+	pathing.Query
+	in func(x, y int) bool
+}
+
+// Walkable is the pen-restricted walkability.
+func (p penQuery) Walkable(x, y int) bool { return p.in(x, y) && p.Query.Walkable(x, y) }

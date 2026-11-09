@@ -215,7 +215,7 @@ func (g *Game) masterDuty(id entity.EntityID, a *animal.State, now uint64) bool 
 		return false
 	}
 	if a.Target != 0 && a.Mode == animal.Attack && g.dutyKeeps(m, mp, a.Target, guard, release) {
-		g.chase(id, a, now)
+		rageOf(g).Chase(id, a, now)
 		return true
 	}
 	if (now+uint64(id))%animal.DecideEvery != 0 {
@@ -227,7 +227,7 @@ func (g *Game) masterDuty(id entity.EntityID, a *animal.State, now uint64) bool 
 	}
 	a.Target, a.HuntSince = t, 0
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0 // a resting guard gets up
-	g.chase(id, a, now)
+	rageOf(g).Chase(id, a, now)
 	return true
 }
 
@@ -237,7 +237,7 @@ func (g *Game) masterAttack(m entity.EntityID) entity.EntityID {
 	if !g.drafted(m) {
 		return 0
 	}
-	if j, ok := g.jobs.Get(m); ok && j.Kind == job.Attack && j.Active() && g.combatAlive(j.Target) {
+	if j, ok := g.jobs.Get(m); ok && j.Kind == job.Attack && j.Active() && rageOf(g).CombatAlive(j.Target) {
 		return j.Target
 	}
 	return 0
@@ -257,7 +257,7 @@ func (g *Game) guardFoe(id, o entity.EntityID, now uint64) bool {
 // master's attack target (release), or a threat still near the master
 // (guard, with the wider keep radius).
 func (g *Game) dutyKeeps(m entity.EntityID, mp Position, t entity.EntityID, guard, release bool) bool {
-	if !g.combatAlive(t) {
+	if !rageOf(g).CombatAlive(t) {
 		return false
 	}
 	if release && g.masterAttack(m) == t {

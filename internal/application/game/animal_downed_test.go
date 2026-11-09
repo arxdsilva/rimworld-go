@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/herd"
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
@@ -121,7 +122,7 @@ func TestDownedAnimalDoesNotFlee(t *testing.T) {
 	bo := draftedPawn(t, h, 10, 8)
 	wolf, _ := h.SpawnAnimal("timber_wolf", 14, 8)
 	a := animalOf(h, wolf)
-	h.enrage(wolf, &a, bo, uint64(h.clock.Now()))
+	rageOf(h).Enrage(wolf, &a, bo, uint64(h.clock.Now()))
 	h.animals.Set(wolf, a)
 	bruiseDown(t, h, wolf)
 	at = pos(h, wolf)
@@ -193,11 +194,11 @@ func TestPredatorPrefersDownedPrey(t *testing.T) {
 	wolf, _ := g.SpawnAnimal("timber_wolf", 10, 8)
 	hare, _ := g.SpawnAnimal("hare", 12, 8)
 	cougar, _ := g.SpawnAnimal("cougar", 16, 8)
-	if g.huntable(wolf, cougar) {
+	if rageOf(g).Huntable(wolf, cougar) {
 		t.Fatal("a standing cougar is no prey")
 	}
 	bruiseDown(t, g, cougar)
-	if got := g.findPrey(wolf, pos(g, wolf), animal.DefOf(animal.TimberWolf)); got != cougar {
+	if got := rageOf(g).FindPrey(wolf, rage.Pos(pos(g, wolf)), animal.DefOf(animal.TimberWolf)); got != cougar {
 		t.Fatalf("the downed cougar is easy prey: got %d, hare %d, cougar %d", got, hare, cougar)
 	}
 }

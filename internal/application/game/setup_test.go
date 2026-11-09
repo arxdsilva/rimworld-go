@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/setupview"
 	"rimworld-go/internal/domain/animal"
@@ -879,7 +880,7 @@ func TestDifficultyHooks(t *testing.T) {
 			t.Fatal(err)
 		}
 		g.invalidateCreatures()
-		prey := g.findPrey(wid, Position{22, 20}, animal.DefOf(animal.TimberWolf))
+		prey := rageOf(g).FindPrey(wid, rage.Pos{X: 22, Y: 20}, animal.DefOf(animal.TimberWolf))
 		if (prey == pid) != c.huntColonists {
 			t.Fatalf("%s: wolf picked %d (colonist %d)", c.preset, prey, pid)
 		}

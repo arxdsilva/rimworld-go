@@ -97,7 +97,7 @@ func (g *Game) storyThreat(roll, day int, winter bool, pct int, now uint64) {
 	case raid.ThreatPack:
 		g.raid.Threats.WolfPack(2 + g.rng.IntN(2))
 	case raid.ThreatManhunters:
-		g.manhunterPack(3 + g.rng.IntN(3))
+		rageOf(g).ManhunterPack(3 + g.rng.IntN(3))
 	case raid.ThreatHive:
 		g.raid.Hives.Swarm()
 	case raid.ThreatMad:
@@ -320,7 +320,7 @@ func (g *Game) fireScheduled(key string, now uint64) {
 	case "predator_pack":
 		g.raid.Threats.WolfPack(2 + g.rng.IntN(2))
 	case "manhunter_pack":
-		g.manhunterPack(3 + g.rng.IntN(3))
+		rageOf(g).ManhunterPack(3 + g.rng.IntN(3))
 	case "hive_swarm":
 		g.raid.Hives.Swarm()
 	default:

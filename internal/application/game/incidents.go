@@ -683,7 +683,7 @@ func (g *Game) madAnimal(now uint64, force bool) bool {
 	a, _ := g.animals.Get(id)
 	pos, _ := g.positions.Get(id)
 	who, _, _ := g.nearestColonist(pos)
-	g.enrage(id, &a, who, now) // the existing manhunter threat message
+	rageOf(g).Enrage(id, &a, who, now) // the existing manhunter threat message
 	g.animals.Set(id, a)
 	g.incidents.Fired(incident.MadAnimal, g.rel(now))
 	return true

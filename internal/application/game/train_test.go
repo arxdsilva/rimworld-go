@@ -331,7 +331,7 @@ func TestGuardAnimalClosesOnThreatStepped(t *testing.T) {
 	wolf, _ := g.SpawnAnimal("ridgewolf", 24, 10)
 	w, _ := g.animals.Get(wolf)
 	now := uint64(g.clock.Now())
-	g.enrage(wolf, &w, ada, now)
+	rageOf(g).Enrage(wolf, &w, ada, now)
 	g.animals.Set(wolf, w)
 	engaged := false
 	for i := 0; i < animal.DecideEvery+1 && !engaged; i++ { // the dog's first duty slot
@@ -367,7 +367,7 @@ func TestGuardAnimalClosesOnThreatStepped(t *testing.T) {
 	g2.animals.Set(dog2, b)
 	wolf2, _ := g2.SpawnAnimal("ridgewolf", 24, 10)
 	w2, _ := g2.animals.Get(wolf2)
-	g2.enrage(wolf2, &w2, ada2, uint64(g2.clock.Now()))
+	rageOf(g2).Enrage(wolf2, &w2, ada2, uint64(g2.clock.Now()))
 	g2.animals.Set(wolf2, w2)
 	for i := 0; i < 120; i++ {
 		g2.Step(1)

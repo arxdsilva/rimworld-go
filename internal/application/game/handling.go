@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/herd"
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -24,10 +25,10 @@ import (
 // never spring its traps; tame ridgewolves guard the colony against
 // raiders and hostile animals. Wild animals hurt by colonists may go
 // manhunter, hunting every colonist for a day; the storyteller also sends
-// whole manhunter packs.
+// whole manhunter packs. Rage, guards, hunts, charges, flight and chase
+// warnings live in game/rage, reached through rageOf (end of this file).
 
 const (
-	guardRadius = 10
 	// pathRetry: after a failed path search an animal waits this long
 	// before searching again.
 	pathRetry = 90
@@ -193,140 +194,11 @@ func (h herdHost) TameFailed(id, aid entity.EntityID) {
 	g.logEvent(aid, logEntry{Kind: evlog.ResistedTaming, Other: id, Name: g.name(id)})
 	g.logEvent(id, logEntry{Kind: evlog.FailedTame, Other: aid, Name: a.Species.Label()})
 	if g.rng.IntN(100) < g.revengePct(animal.DefOf(a.Species).TameRevenge) {
-		g.enrage(aid, &a, id, now)
+		rageOf(g).Enrage(aid, &a, id, now)
 	} else {
 		g.message(ap.X, ap.Y, "%s failed to tame the %s.", g.name(id), a.Species.Label())
 	}
 	g.animals.Set(aid, a)
-}
-
-// enrage turns a wild animal manhunter for a day, going for who; a
-// legendary's rage calls every legendary nearby (wildlife.go).
-func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, now uint64) {
-	if a.Tame || a.Enraged(now) {
-		return
-	}
-	a.Manhunter = now + animal.ManhunterTicks
-	a.Mode, a.Target, a.TameMark, a.FleeUntil = animal.Attack, who, false, 0
-	a.Path, a.PathI = nil, 0
-	if a.Downed { // animal_health.go: enraged, but it cannot hunt until it stands
-		a.Mode, a.Target = animal.Wander, 0
-	}
-	g.logEvent(id, logEntry{Kind: evlog.Manhunter, Other: who})
-	p, _ := g.positions.Get(id)
-	g.post(MessageView{Tick: now, Msg: msgfmt.Of("A %s has gone manhunter!", a.Species.Label()),
-		X: p.X, Y: p.Y, Danger: true, Focus: id})
-	if animal.DefOf(a.Species).Legendary {
-		g.rallyLegendaries(id, who, now)
-	}
-}
-
-// provoked: a wild animal hurt by a colonist may go manhunter.
-func (g *Game) provoked(id entity.EntityID, a *animal.State, by entity.EntityID) {
-	if a.Tame || a.Dead() || by == 0 || !g.isPawn(by) || g.isRaider(by) {
-		return
-	}
-	now := uint64(g.clock.Now())
-	if !a.Enraged(now) && g.rng.IntN(100) < g.revengePct(animal.DefOf(a.Species).Revenge) { // story.go: difficulty (NG-1)
-		g.enrage(id, a, by, now)
-	}
-}
-
-// thinkManhunter hunts the nearest standing colonist anywhere on the map.
-// It reports false once the rage has passed.
-func (g *Game) thinkManhunter(id entity.EntityID, a *animal.State, now uint64) bool {
-	if !a.Enraged(now) {
-		if a.Manhunter != 0 {
-			a.Manhunter, a.Target, a.Mode = 0, 0, animal.Wander
-		}
-		return false
-	}
-	if a.Target == 0 || !g.standingPawn(a.Target) || g.isRaider(a.Target) {
-		pos, _ := g.positions.Get(id)
-		a.Target, _, _ = g.nearestColonist(pos)
-	}
-	if a.Target == 0 {
-		return false // nobody left standing: calm down for now
-	}
-	g.chase(id, a, now)
-	return true
-}
-
-// chase closes on a.Target and bites on cooldown.
-func (g *Game) chase(id entity.EntityID, a *animal.State, now uint64) {
-	def := animal.DefOf(a.Species)
-	pos, _ := g.positions.Get(id)
-	a.Mode = animal.Attack
-	tp, _ := g.positions.Get(a.Target)
-	if weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) <= 1 {
-		a.Path, a.PathI = nil, 0
-		if a.Cooldown == 0 {
-			a.Cooldown = def.Cooldown
-			if a.HuntSince != 0 {
-				a.HuntSince = now // a strike: the hunt is still on (T5)
-			}
-			g.animals.Set(id, *a)
-			g.combat.Strikes.Strike(id, a.Target, def.Attack)
-			if cur, ok := g.animals.Get(id); ok {
-				*a = cur // a kill updates this animal (hunger, target)
-			}
-		}
-		return
-	}
-	if now < a.RetryAt && a.PathI >= len(a.Path) {
-		return // backing off after a failed path search
-	}
-	if a.PathI >= len(a.Path) || weapon.Distance(a.GoalX, a.GoalY, tp.X, tp.Y) > 1 || (now+uint64(id))%30 == 0 {
-		g.animalGoTo(id, a, tp.X, tp.Y)
-	}
-}
-
-// guardTarget is the nearest threat a tame guard animal should fight: a
-// standing raider, or a wild animal attacking the colony.
-func (g *Game) guardTarget(id entity.EntityID, pos Position) entity.EntityID {
-	now := uint64(g.clock.Now())
-	best, _, _ := g.nearestWhere(pos.X, pos.Y, guardRadius, ckRaider|ckAnimal, func(o entity.EntityID, _ Position) bool {
-		if g.isRaider(o) {
-			return g.standingRaider(o)
-		}
-		a, ok := g.animals.Get(o)
-		return o != id && ok && !a.Tame && !a.Dead() && (g.hostile(a) || a.Enraged(now))
-	})
-	return best
-}
-
-// guardCheck: a tame guard (a predator) fights off threats near it,
-// looking for one every animal.ThreatEvery ticks. It reports true while it
-// fights.
-func (g *Game) guardCheck(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
-	if a.Target != 0 && !g.combatAlive(a.Target) {
-		a.Target = 0
-	}
-	if a.Target == 0 && (now+uint64(id))%animal.ThreatEvery == 0 {
-		a.Target = g.guardTarget(id, pos)
-	}
-	if a.Target == 0 {
-		if a.Mode == animal.Attack {
-			a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
-		}
-		return false
-	}
-	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0 // a sleeping guard wakes
-	g.chase(id, a, now)
-	return true
-}
-
-// guardBreaksHunt: a tame predator out hunting (PLAY-017) drops the hunt
-// for a threat its guard duty would fight, looked for on guardCheck's
-// cadence; guardCheck then takes the threat on.
-func (g *Game) guardBreaksHunt(id entity.EntityID, a *animal.State, pos Position, now uint64) {
-	if (now+uint64(id))%animal.ThreatEvery != 0 {
-		return
-	}
-	if t := g.guardTarget(id, pos); t != 0 {
-		g.endFight(a) // animal_needs.go
-		a.Target = t
-	}
 }
 
 // wanderTame: livestock keep to their pen, or roam when they have none
@@ -352,8 +224,8 @@ func (g *Game) wanderTame(id entity.EntityID, a *animal.State, pos Position, def
 		if c == nil {
 			// roaming: never towards a wild predator in sight (it would
 			// only run again: no flee/roam flapping)
-			if pp, near := g.nearestPredator(id, pos, r+def.FleeRadius+animal.FleeRelease); near &&
-				cellDistSq(Position{X: x, Y: y}, pp) < cellDistSq(pos, pp) {
+			if pp, near := rageOf(g).NearestPredator(id, rage.Pos(pos), r+def.FleeRadius+animal.FleeRelease); near &&
+				rage.DistSq(rage.Pos{X: x, Y: y}, pp) < rage.DistSq(rage.Pos(pos), pp) {
 				return
 			}
 		}
@@ -372,24 +244,6 @@ func (g *Game) wanderTame(id entity.EntityID, a *animal.State, pos Position, def
 	if g.inArea(id, x, y) {
 		g.animalGoTo(id, a, x, y)
 	}
-}
-
-// combatAlive: a raider still standing or a living animal.
-func (g *Game) combatAlive(id entity.EntityID) bool {
-	if o, ok := g.animals.Get(id); ok {
-		return !o.Dead()
-	}
-	return g.standingRaider(id)
-}
-
-// nearestPredator: the closest wild predator within r (tame grazers do
-// not fear people or the colony's own wolves).
-func (g *Game) nearestPredator(id entity.EntityID, pos Position, r int) (Position, bool) {
-	_, p, ok := g.nearestWhere(pos.X, pos.Y, r, ckAnimal, func(o entity.EntityID, _ Position) bool {
-		a, ok := g.animals.Get(o)
-		return o != id && ok && !a.Tame && animal.DefOf(a.Species).Predator
-	})
-	return p, ok
 }
 
 // home is roughly where the colony lives: its first standing colonist's
@@ -438,58 +292,10 @@ func scanBeds(g *Game, into []entity.EntityID) []entity.EntityID {
 	return into
 }
 
-// manhunterPack sends n enraged animals of one season-fitting grazer or
-// territorial species in from a map edge (half as many of a large one).
-func (g *Game) manhunterPack(n int) {
-	s, ok := g.pickSpecies(manhunterSpecies)
-	if !ok {
-		return
-	}
-	ex, ey, ok := g.edgeTile()
-	if !ok {
-		return
-	}
-	if animal.RosterOf(s).Size >= animal.SizeL {
-		n = (n + 1) / 2
-	}
-	now := uint64(g.clock.Now())
-	spawned := 0
-	for i := 0; i < n; i++ {
-		for try := 0; try < 10; try++ {
-			x, y := ex+g.rng.IntN(5)-2, ey+g.rng.IntN(5)-2
-			if !g.grid.InBounds(x, y) {
-				continue
-			}
-			if id, err := g.spawnAnimal(s, x, y); err == nil {
-				a, _ := g.animals.Get(id)
-				a.Manhunter, a.Mode = now+animal.ManhunterTicks, animal.Attack
-				g.animals.Set(id, a)
-				spawned++
-				break
-			}
-		}
-	}
-	if spawned == 0 {
-		return
-	}
-	name := animal.Plural(s)
-	if spawned == 1 {
-		name = s.Label()
-	}
-	g.threat("Manhunter pack", ex, ey, "A manhunter pack of %d %s is charging the colony!", spawned, name)
-}
-
-// manhunterSpecies: who forms manhunter packs (grazers and territorial
-// animals).
-func manhunterSpecies(s animal.Species) bool {
-	b := animal.RosterOf(s).Behaviour
-	return b == animal.Grazer || b == animal.Territorial
-}
-
 // ManhunterPack is the dev hook for a manhunter pack.
 func (g *Game) ManhunterPack(n int) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	g.manhunterPack(n)
+	rageOf(g).ManhunterPack(n)
 }
 
 // releaseAnimal turns a tame animal loose.
@@ -512,4 +318,120 @@ func (g *Game) TameAnimal(id entity.EntityID, name string) {
 		a.Tame, a.Name, a.TameMark, a.Manhunter = true, name, false, 0
 		g.animals.Set(id, a)
 	}
+}
+
+// rageOf is the animals' fight-or-flight brain (game/rage: rage, guards,
+// hunts, charges, flight and chase warnings), built on first use; it
+// keeps no state of its own (a load replaces the wildlife state, and the
+// next call builds it again).
+func rageOf(g *Game) *rage.Rage {
+	if g.wl.rage == nil {
+		g.wl.rage = rage.New(rageHost{rageLook{g}, rageAct{g}})
+	}
+	return g.wl.rage
+}
+
+// rageHost implements rage.Host over the game: rageLook the reads, names
+// and messages (World, Beasts, People), rageAct the walk, the story and
+// the fight (Ground, Story, Fight).
+type rageHost struct {
+	rageLook
+	rageAct
+}
+
+type (
+	rageLook struct{ g *Game }
+	rageAct  struct{ g *Game }
+)
+
+func (h rageLook) Now() uint64                                    { return uint64(h.g.clock.Now()) }
+func (h rageLook) Roll(n int) int                                 { return h.g.rng.IntN(n) }
+func (h rageLook) Name(id entity.EntityID) string                 { return h.g.name(id) }
+func (h rageLook) CreatureName(id entity.EntityID) string         { return h.g.creatureName(id) }
+func (h rageLook) KillerName(id entity.EntityID) string           { return h.g.killerName(id) }
+func (h rageLook) Animal(id entity.EntityID) (animal.State, bool) { return h.g.animals.Get(id) }
+func (h rageLook) Ref(id entity.EntityID) *animal.State           { return h.g.animals.Ref(id) }
+func (h rageLook) SetAnimal(id entity.EntityID, a animal.State)   { h.g.animals.Set(id, a) }
+func (h rageLook) Grown(a animal.State, now uint64) bool          { return h.g.grown(a, now) }
+func (h rageLook) Asleep(a animal.State) bool                     { return sleeping(a) }
+func (h rageLook) Hostile(a animal.State) bool                    { return h.g.hostile(a) }
+func (h rageLook) IsPawn(id entity.EntityID) bool                 { return h.g.isPawn(id) }
+func (h rageLook) IsRaider(id entity.EntityID) bool               { return h.g.isRaider(id) }
+func (h rageLook) StandingPawn(id entity.EntityID) bool           { return h.g.standingPawn(id) }
+func (h rageLook) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
+func (h rageLook) Colonist(id entity.EntityID) bool               { return slices.Contains(h.g.pawnIDs, id) }
+
+func (h rageLook) Log(subject entity.EntityID, kind uint8, other entity.EntityID, name string) {
+	h.g.logEvent(subject, logEntry{Kind: kind, Other: other, Name: name})
+}
+
+func (h rageLook) Alarm(tick uint64, x, y int, focus entity.EntityID, text string, msg msgfmt.Text) {
+	h.g.post(MessageView{Tick: tick, Text: text, Msg: msg, X: x, Y: y, Danger: true, Focus: focus})
+}
+
+func (h rageLook) Threat(title string, x, y int, format string, args ...any) {
+	h.g.threat(title, x, y, format, args...)
+}
+
+func (h rageLook) Pos(id entity.EntityID) (rage.Pos, bool) {
+	p, ok := h.g.positions.Get(id)
+	return rage.Pos(p), ok
+}
+
+func (h rageLook) Spawn(s animal.Species, x, y int) (entity.EntityID, error) {
+	return h.g.spawnAnimal(s, x, y)
+}
+
+func (h rageLook) NearestColonist(p rage.Pos) entity.EntityID {
+	id, _, _ := h.g.nearestColonist(Position(p))
+	return id
+}
+
+// Nearest and Within: rage's kinds are the creature index's bits
+// (TestRageKindsAreIndexKinds).
+func (h rageAct) Nearest(x, y, r int, k rage.Kind, s rage.Sight) (entity.EntityID, rage.Pos, bool) {
+	id, p, ok := h.g.nearestWhere(x, y, r, uint8(k), func(o entity.EntityID, _ Position) bool { return s.Keep(s, o) })
+	return id, rage.Pos(p), ok
+}
+
+func (h rageAct) Within(x, y, r int, k rage.Kind) []entity.EntityID {
+	var ids []entity.EntityID
+	h.g.within(x, y, r, uint8(k), func(o entity.EntityID, _ Position) { ids = append(ids, o) })
+	return ids
+}
+
+func (h rageAct) GoTo(id entity.EntityID, a animal.State, x, y int) animal.State {
+	h.g.animalGoTo(id, &a, x, y)
+	return a
+}
+
+func (h rageAct) PathQuery(tame bool) pathing.Query { return h.g.animalPathQuery(tame, false) }
+func (h rageAct) InBounds(x, y int) bool            { return h.g.grid.InBounds(x, y) }
+func (h rageAct) RevengePct(base int) int           { return h.g.revengePct(base) }
+func (h rageAct) PredatorsHuntColonists() bool      { return h.g.predatorsHuntColonists() }
+func (h rageAct) EdgeTile() (int, int, bool)        { return h.g.edgeTile() }
+
+func (h rageAct) LayerReach(q pathing.Query, p rage.Pos, x, y int) bool {
+	return h.g.layerReach(q, Position(p), x, y)
+}
+
+func (h rageAct) WalkableNear(x, y, r int) (int, int, bool) {
+	return h.g.combat.Tiles.WalkableNear(x, y, r)
+}
+
+func (h rageAct) FireThreat(a animal.State, p rage.Pos) (rage.Pos, bool) {
+	tp, ok := h.g.animalFireThreat(&a, Position(p))
+	return rage.Pos(tp), ok
+}
+
+func (h rageAct) PickSpecies(keep func(animal.Species) bool) (animal.Species, bool) {
+	return h.g.pickSpecies(keep)
+}
+
+func (h rageAct) Strike(attacker, target entity.EntityID, wk weapon.Kind) {
+	h.g.combat.Strikes.Strike(attacker, target, wk)
+}
+
+func (h rageAct) TameHuntOn(id, target entity.EntityID, tp rage.Pos) bool {
+	return h.g.tameHuntOn(id, target, Position(tp))
 }

@@ -4,9 +4,9 @@ import (
 	"slices"
 	"sort"
 
-	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/application/game/herd"
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -52,6 +52,7 @@ type wildlifeState struct {
 	// use, never saved).
 	Herd herd.Settings
 	herd *herd.Herd
+	rage *rage.Rage // the fight-or-flight brain (handling.go rageOf: built on first use, never saved)
 
 	// idx and food are the per-tick creature and food indexes
 	// (animal_index.go): derived, never saved.
@@ -73,10 +74,6 @@ const (
 	// startPredatorMax caps a starting predator herd so a new colony
 	// meets a pair, not a whole pack.
 	startPredatorMax = 2
-	// packRadius: pack mates this close join a hunt.
-	packRadius = 10
-	// legendaryRadius: legendaries this close answer one's rage.
-	legendaryRadius = 30
 	// burstDamage is a burst's damage at an adjacent tile; diagonal
 	// neighbours take burstFalloff less (Euclidean 1.41 of 1.5 tiles).
 	burstDamage  = 15
@@ -329,25 +326,6 @@ func (g *Game) legendaryVisit(now uint64, roll int) {
 	}
 	g.wl.LegendaryYear = int(now/clock.TicksPerDay)/clock.DaysPerYear + 1
 	g.message(x, y, "A glimmerstag wanders in.")
-}
-
-// rallyLegendaries: a legendary's rage calls every wild legendary within
-// legendaryRadius to the same fight.
-func (g *Game) rallyLegendaries(id entity.EntityID, who entity.EntityID, now uint64) {
-	pos, _ := g.positions.Get(id)
-	g.within(pos.X, pos.Y, legendaryRadius, ckAnimal, func(aid entity.EntityID, _ Position) {
-		if aid == id {
-			return
-		}
-		o, ok := g.animals.Get(aid)
-		if !ok || o.Tame || o.Enraged(now) || !animal.DefOf(o.Species).Legendary {
-			return
-		}
-		o.Manhunter = now + animal.ManhunterTicks
-		o.Mode, o.Target, o.TameMark, o.FleeUntil, o.Path, o.PathI = animal.Attack, who, false, 0, nil, 0
-		g.animals.Set(aid, o)
-		g.logEvent(aid, logEntry{Kind: evlog.Manhunter, Other: who})
-	})
 }
 
 // chebyshev is the king-move distance between a and b.

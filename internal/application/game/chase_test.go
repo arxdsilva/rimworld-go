@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
@@ -143,10 +144,10 @@ func TestNewTargetRewarns(t *testing.T) {
 	g.names.Set(bo, "Bo")
 	a := animalOf(g, wolf)
 	a.Mode, a.Target = animal.Attack, ada
-	g.warnChase(wolf, &a, ada, false)
-	g.warnChase(wolf, &a, ada, false) // the same chase: once
+	rageOf(g).WarnChase(wolf, &a, ada, false)
+	rageOf(g).WarnChase(wolf, &a, ada, false) // the same chase: once
 	a.Target = bo
-	g.warnChase(wolf, &a, bo, false)
+	rageOf(g).WarnChase(wolf, &a, bo, false)
 	g.animals.Set(wolf, a)
 	ms := dangerAbout(g, wolf)
 	if len(ms) != 2 || ms[1].Text != "A timber wolf is chasing Bo!" {
@@ -159,7 +160,7 @@ func TestNewTargetRewarns(t *testing.T) {
 	g.clock.Advance(clock.TicksPerHour - 10)
 	a = animalOf(g, wolf)
 	a.Mode, a.Target = animal.Attack, bo
-	g.warnChase(wolf, &a, bo, false)
+	rageOf(g).WarnChase(wolf, &a, bo, false)
 	if n := len(dangerAbout(g, wolf)); n != 2 {
 		t.Fatalf("under an hour after the chase: no warning (%d)", n)
 	}
@@ -167,7 +168,7 @@ func TestNewTargetRewarns(t *testing.T) {
 	a.Mode, a.Target = animal.Wander, 0
 	g.clock.Advance(clock.TicksPerHour)
 	a.Mode, a.Target = animal.Attack, bo
-	g.warnChase(wolf, &a, bo, false)
+	rageOf(g).WarnChase(wolf, &a, bo, false)
 	if n := len(dangerAbout(g, wolf)); n != 3 {
 		t.Fatalf("an hour after the chase ended: warned again (%d)", n)
 	}
@@ -216,7 +217,7 @@ func TestFightBackWarnsOnceAndManhuntersNotTwice(t *testing.T) {
 	// an enraged animal's own chase is never warned again
 	g, wolf, ada := chaseFixture(t, "timber_wolf")
 	a := animalOf(g, wolf)
-	g.enrage(wolf, &a, ada, uint64(g.clock.Now()))
+	rageOf(g).Enrage(wolf, &a, ada, uint64(g.clock.Now()))
 	g.animals.Set(wolf, a)
 	for i := 0; i < 100; i++ {
 		healPawn(g, ada)
@@ -249,7 +250,7 @@ func TestChaseWarnStateSurvivesSave(t *testing.T) {
 	}
 	h.messages = nil
 	a := animalOf(h, wolf)
-	h.warnChase(wolf, &a, ada, false)
+	rageOf(h).WarnChase(wolf, &a, ada, false)
 	if n := chaseWarnings(h, wolf); n != 0 {
 		t.Fatalf("a loaded chase is not warned again: %d", n)
 	}
@@ -260,29 +261,32 @@ func TestNoteChaseUsesTheStore(t *testing.T) {
 	t.Parallel()
 	g, wolf, ada := chaseFixture(t, "timber_wolf")
 	setAnimal(g, wolf, func(a *animal.State) { a.Mode, a.Target = animal.Attack, ada })
-	g.noteChase(wolf, ada)
-	g.noteChase(wolf, ada)
+	rageOf(g).NoteChase(wolf, ada)
+	rageOf(g).NoteChase(wolf, ada)
 	if n := chaseWarnings(g, wolf); n != 1 {
 		t.Fatalf("warnings %d", n)
 	}
 	if a := animalOf(g, wolf); a.ChaseWarnedTarget != ada {
 		t.Fatalf("stored %+v", a)
 	}
-	g.noteChase(9999, ada) // gone: nothing
+	rageOf(g).NoteChase(9999, ada) // gone: nothing
 	// raiders (and visitors, kept with them) are no colonists
 	raider := spawnRaiderAt(t, g, 30, 15, 1)
 	setAnimal(g, wolf, func(a *animal.State) { a.Target = raider })
-	g.noteChase(wolf, raider)
+	rageOf(g).NoteChase(wolf, raider)
 	if n := chaseWarnings(g, wolf); n != 1 {
 		t.Fatalf("a raider chased is no warning: %d", n)
 	}
-	if a := animalOf(g, wolf); chaseLabel(a.Species) != "timber wolf" {
+	if a := animalOf(g, wolf); rage.ChaseText(a.Species, "Ada", false) != "A timber wolf is chasing Ada!" {
 		t.Fatal("label")
 	}
-	if got := chaseText(animal.ArcticFox, "Ada", false); got != "An arctic fox is chasing Ada!" {
-		t.Fatalf("article: %q", got)
-	}
-	if got := chaseText(animal.WildBoar, "Ada", true); !strings.HasSuffix(got, " charges Ada!") || strings.Contains(got, "_") {
-		t.Fatalf("charge text: %q", got)
+}
+
+// rage's sight kinds are the creature index's bits (handling.go passes
+// them straight through).
+func TestRageKindsAreIndexKinds(t *testing.T) {
+	t.Parallel()
+	if uint8(rage.Pawns) != ckPawn || uint8(rage.Raiders) != ckRaider || uint8(rage.Animals) != ckAnimal {
+		t.Fatalf("rage kinds %d %d %d, index %d %d %d", rage.Pawns, rage.Raiders, rage.Animals, ckPawn, ckRaider, ckAnimal)
 	}
 }
