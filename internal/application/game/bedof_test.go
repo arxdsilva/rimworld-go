@@ -61,9 +61,7 @@ func TestBedOfMatchesScan(t *testing.T) {
 				}
 			}
 			beds = beds[:0]
-			for _, bid := range g.bldgIDs {
-				beds = append(beds, bid)
-			}
+			beds = append(beds, g.bldgIDs...)
 		case op == 1 && len(beds) > 0:
 			what = "claim"
 			bid := beds[rng.IntN(len(beds))]
@@ -88,9 +86,7 @@ func TestBedOfMatchesScan(t *testing.T) {
 			}
 			g = g2
 			pawns = pawns[:0]
-			for _, id := range g.pawnIDs {
-				pawns = append(pawns, id)
-			}
+			pawns = append(pawns, g.pawnIDs...)
 		}
 		check(step, what)
 	}
