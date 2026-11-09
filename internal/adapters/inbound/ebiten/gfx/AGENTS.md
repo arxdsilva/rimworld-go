@@ -6,6 +6,7 @@ The client's drawing primitives, shared by the HUD and the renderer: the UI canv
 ## Owns
 - Canvas primitives: `FillRect`, `StrokeRect`, `Line`, `FillCircle`, `StrokeCircle`, `FillPoly`, `Image`, `DrawImage`, `Icon`, `ImageOp`, `ScaledVerts`, `ClipTo`.
 - Text: `Text`, `Measure`, `LineH`, `LineStep`, `TextW`, `MaxTextW`, `Ellipsize`, `FaceSize`; styles `Small` through `Huge`, `TextColor`; embedded Noto fonts under `gfx/fontdata/` (no runtime file access).
+- `Runs` (`textrun.go`, GAR-160): a caller-owned cache (cap `RunCap`, least recently drawn evicted) of rendered integer labels, one `DrawImage` per stack count instead of a shaping pass and a draw per glyph; keyed by number, face, scales and style size, tinted at draw time; a world pass or a draw trace goes through `Text`.
 - `Rect` (16 methods) and `WinRect`.
 - `Scale`, `UnitScale`, `UIScale`, `HUDScale`, `MapUIScale`, `SetScale`.
 - `WorldPass`, `BeginWorldPass`, `EndWorldPass`, `CompositeWorld`, `FitLayer`; `TriBatch` (`Vert`, `Tri`, `Rect`, `Line`, `Flush`).
@@ -35,5 +36,6 @@ The client's drawing primitives, shared by the HUD and the renderer: the UI canv
 
 ## Tests
 - `aashape` tests coverage against an exact supersampled reference (|Δ| ≤ 0.1 per pixel, area ≤ 0.5 %), 0 allocations, and the guard; `BenchmarkAAShapes`.
+- `textrun_test.go` covers `Runs` (metrics, count change, scale and font invalidation, the cap, 0 allocations on a hit).
 - No other test files in the package. The root's source-scanning guards (`TestUIDrawsThroughCanvas`, `TestMapPixelsComeFromMapCursor`, `TestLightsComeOnlyFromLightSources`) walk `gfx/*.go` through `packageFiles`, and the feature packages' tests exercise it.
 - Coverage: not measured.

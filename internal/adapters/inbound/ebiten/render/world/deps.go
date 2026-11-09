@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
@@ -87,6 +88,7 @@ type base struct {
 	Cast       *light.Cast
 	steamHeard map[[2]int]uint64 // each vent's last burst already cued
 	neat       neatIndex         // neat_keys.go: the storage piece on a tile
+	tags       gfx.Runs          // labels.go: the rendered stack counts
 
 	// LOD is the zoom tier, the chunk and whole-map bakes and the frame's
 	// chunk lists; Links the cached wall/rock/fence connectivity; Stone the

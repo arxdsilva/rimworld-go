@@ -3,7 +3,6 @@ package world
 import (
 	"image/color"
 	"math"
-	"strconv"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -52,21 +51,20 @@ func (lb *Labels) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile f
 // countTagGap logical px below the cell's bottom edge, its size following
 // the UI scale, never the zoom (UIS-090).
 func (lb *Labels) tileCount(screen *ebiten.Image, x, y, n int, tile float64) {
-	s := strconv.Itoa(n)
 	sx, sy := lb.worldToScreen(x, y)
 	// the tag is UI chrome anchored to a world tile: place it in
 	// logical pixels (world position / ui scale), text and rect via the canvas
 	k := float32(1 / gfx.UIScale())
-	tw := gfx.TextW(s, gfx.Small) + 6
-	th := gfx.LineStep(gfx.Small) - 2
+	run := lb.tags.Int(n, gfx.Small)
+	tw, th := run.W+6, run.Step-2
 	t := float32(tile) * k
-	drawCountTag(screen, s, sx*k+t/2-tw/2, sy*k+t+countTagGap, tw, th)
+	drawCountTag(screen, run, sx*k+t/2-tw/2, sy*k+t+countTagGap, tw, th)
 }
 
-// drawCountTag is the small dark tag with s at logical (x, y), tw x th.
-func drawCountTag(screen *ebiten.Image, s string, x, y, tw, th float32) {
+// drawCountTag is the small dark tag with run's number at logical (x, y), tw x th.
+func drawCountTag(screen *ebiten.Image, run *gfx.Run, x, y, tw, th float32) {
 	gfx.FillRect(screen, x, y, tw, th, uikit.Shade(190), false)
-	gfx.Text(screen, s, float64(x)+3, float64(y)-1, gfx.Small)
+	run.Draw(screen, float64(x)+3, float64(y)-1, gfx.Small)
 }
 
 // storedCount is a stack's count in storage piece p (NST): none in a closed
@@ -92,12 +90,11 @@ func (lb *Labels) storedCount(screen *ebiten.Image, p *neatPiece, it *game.ItemV
 		lb.tileCount(screen, it.X, it.Y, it.Qty, tile)
 		return
 	}
-	s := strconv.Itoa(it.Qty)
 	sx, sy := lb.worldToScreenF(ax, ay+scale/2) // the stack's bottom edge
 	k := float32(1 / gfx.UIScale())
-	tw := gfx.TextW(s, gfx.Small) + 6
-	th := gfx.LineStep(gfx.Small) - 2
-	drawCountTag(screen, s, sx*k-tw/2, sy*k-th, tw, th)
+	run := lb.tags.Int(it.Qty, gfx.Small)
+	tw, th := run.W+6, run.Step-2
+	drawCountTag(screen, run, sx*k-tw/2, sy*k-th, tw, th)
 }
 
 // heapCounts prints each heap's one tag: everything lying on the tile, drawn
