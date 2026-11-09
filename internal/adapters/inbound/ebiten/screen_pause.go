@@ -11,9 +11,9 @@ import (
 )
 
 // pauseEntries is how many buttons the in-game menu holds (the reference
-// shows five; ours has seven and the panel grows by a pitch for each more).
+// shows five; ours has nine and the panel grows by a pitch for each more).
 const (
-	pauseEntries = 7
+	pauseEntries = 9
 	pauseBaseN   = 5
 	pauseTitleH  = 40 // the "Paused" title row above the first button
 )
@@ -32,8 +32,8 @@ func (a *App) pauseButtons(sw, sh int) []uikit.Button {
 	y := p.Y + hudlayout.PauseInset + pauseTitleH
 	save := uikit.ButtonSpec{ID: "pause.save", Label: a.shell.T("Save"), Disabled: !a.canSave(), Reason: a.shell.T("saving unavailable")}
 	load := uikit.ButtonSpec{ID: "pause.load", Label: a.shell.T("Load"), Disabled: !a.canLoad(), Reason: a.shell.T("loading unavailable")}
-	if a.commitment() { // saves.go: one timeline, saved by the game itself
-		save = uikit.ButtonSpec{ID: "pause.savequit", Label: a.shell.T("Save & Quit to Menu"), Disabled: !a.canSave(), Reason: a.shell.T("saving unavailable")}
+	if a.commitment() { // options/saves: one timeline, saved by the game itself
+		save = uikit.ButtonSpec{ID: "pause.save", Label: a.shell.T("Save"), Disabled: true, Reason: a.shell.T("the game saves itself")}
 		load = uikit.ButtonSpec{ID: "pause.load", Label: a.shell.T("Load"), Disabled: true, Reason: saves.CommitLoadReason}
 	}
 	return uikit.StackButtons(cx, y, hudlayout.PauseBtnW, hudlayout.PauseBtnH, hudlayout.PauseBtnPitch-hudlayout.PauseBtnH, []uikit.ButtonSpec{
@@ -42,6 +42,8 @@ func (a *App) pauseButtons(sw, sh int) []uikit.Button {
 		load,
 		{ID: "pause.options", Label: a.shell.T("Options")},
 		{ID: "pause.help", Label: a.shell.T("Help"), Disabled: true, Reason: a.shell.T("not implemented")},
+		{ID: "pause.savequit", Label: a.shell.T("Save & Quit to Menu"), Disabled: !a.canSave(), Reason: a.shell.T("saving unavailable")},
+		{ID: "pause.savequitos", Label: a.shell.T("Save & Quit to Desktop"), Disabled: !a.canSave(), Reason: a.shell.T("saving unavailable")},
 		{ID: "pause.menu", Label: a.shell.T("Return to Main Menu")},
 		{ID: "pause.quit", Label: a.shell.T("Quit")},
 	})
@@ -59,4 +61,5 @@ func (a *App) drawPause(screen *ebiten.Image, sw, sh int) {
 	gfx.Text(screen, mainmenu.VersionLineIn(&a.shell.shellTexts, a.cfg.Version, newer), float64(p.Right()-hudlayout.PauseInset), float64(p.Y+hudlayout.PauseInset)+4, ver)
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.pauseButtons(sw, sh), mx, my)
+	a.opt.Saves.DrawPauseStatus(screen, p.X+hudlayout.PauseInset, p.Bottom()-hudlayout.PauseInset-float32(gfx.LineH(gfx.Small))) // SAV-013
 }

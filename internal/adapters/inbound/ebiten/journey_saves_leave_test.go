@@ -47,7 +47,6 @@ func clickToQuit(j *journey, id string) bool {
 // Quit to Menu writes the colony's slot and returns to the main menu, with
 // no unsaved-progress question.
 func TestJourneySavesSaveAndQuitToMenuReloadAnytime(t *testing.T) {
-	t.Skip("needs lead_edits_A2") // the pause row for a reload-anytime colony
 	t.Parallel()
 	j, f := savesJourney(t)
 	j.tick(30)
@@ -69,7 +68,6 @@ func TestJourneySavesSaveAndQuitToMenuReloadAnytime(t *testing.T) {
 // TestJourneySavesSaveAndQuitToDesktopReloadAnytime: Save & Quit to
 // Desktop writes the slot and quits.
 func TestJourneySavesSaveAndQuitToDesktopReloadAnytime(t *testing.T) {
-	t.Skip("needs lead_edits_A2") // the pause row for a reload-anytime colony
 	t.Parallel()
 	j, f := savesJourney(t)
 	j.tick(30)

@@ -128,8 +128,8 @@ func TestCommitmentPauseButtons(t *testing.T) {
 	fakeWin(a)
 	a.apply(intent{kind: intentPause})
 	bs := a.pauseButtons(a.size())
-	if !lacksButton(bs, "pause.save") {
-		t.Fatal("commitment has no plain Save")
+	if b := buttonByID(t, bs, "pause.save"); !b.Disabled || b.Reason != "the game saves itself" { // SAV-005: nine rows in both modes
+		t.Fatalf("commitment Save %+v, want it off: the game saves itself", b)
 	}
 	if b := buttonByID(t, bs, "pause.savequit"); b.Label != "Save & Quit to Menu" || b.Disabled {
 		t.Fatalf("save & quit button %+v", b)
@@ -256,8 +256,10 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 	if b := buttonByID(t, bs, "pause.load"); b.Disabled {
 		t.Fatalf("load button %+v", b)
 	}
-	if !lacksButton(bs, "pause.savequit") {
-		t.Fatal("reload anytime has no Save & Quit")
+	for _, id := range []string{"pause.savequit", "pause.savequitos"} { // SAV-005: Save & Quit in both modes
+		if b := buttonByID(t, bs, id); b.Disabled {
+			t.Fatalf("reload anytime %s %+v", id, b)
+		}
 	}
 	click(t, a, "pause.save")
 	click(t, a, "modal.save.ok") // the Save dialog, under the colony's slot
