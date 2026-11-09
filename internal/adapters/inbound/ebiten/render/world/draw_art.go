@@ -55,15 +55,56 @@ const (
 	objPawn                     // v.Pawns[i] at (wx, wy)
 )
 
-// sortDraws orders draws north to south, then west to east, keeping the
-// queue order of ties.
-func sortDraws(draws []ArtDraw) {
-	slices.SortStableFunc(draws, func(a, b ArtDraw) int {
-		if c := cmp.Compare(a.Row, b.Row); c != 0 {
-			return c
+// drawKey is a queued draw's sort key: its row, column and queue place.
+type drawKey struct {
+	row, col float64
+	seq      int32
+}
+
+// drawSorter orders the object queue through small keys instead of moving
+// the queue's records around (GAR-161): the keys sort, then the records
+// move once. Its buffers are reused frame to frame.
+type drawSorter struct {
+	keys []drawKey
+	tmp  []ArtDraw
+}
+
+// sort orders draws north to south, then west to east, keeping the queue
+// order of ties: the order slices.SortStableFunc gives on (Row, Col).
+func (s *drawSorter) sort(draws []ArtDraw) {
+	if len(draws) < 2 {
+		return
+	}
+	keys, sorted := s.keys[:0], true
+	for i := range draws {
+		d := &draws[i]
+		keys = append(keys, drawKey{d.Row, d.Col, int32(i)})
+		if i > 0 && sorted && cmpKey(keys[i-1], keys[i]) > 0 {
+			sorted = false
 		}
-		return cmp.Compare(a.Col, b.Col)
-	})
+	}
+	s.keys = keys[:0]
+	if sorted {
+		return
+	}
+	slices.SortFunc(keys, cmpKey)
+	tmp := append(s.tmp[:0], draws...)
+	for i, k := range keys {
+		draws[i] = tmp[k.seq]
+	}
+	clear(tmp) // drop the closures until the next frame
+	s.tmp = tmp[:0]
+}
+
+// cmpKey orders keys by row, column, then queue place.
+func cmpKey(a, b drawKey) int {
+	if c := cmp.Compare(a.row, b.row); c != 0 {
+		return c
+	}
+	if c := cmp.Compare(a.col, b.col); c != 0 {
+		return c
+	}
+	return cmp.Compare(a.seq, b.seq)
 }
 
 // Draw draws the world of this frame onto screen at the view's size and
@@ -252,7 +293,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		wx, wy = CreatureAt(wx, wy, tile, ct)
 		draws = append(draws, ArtDraw{Row: row, Col: wx, Kind: objPawn, I: int32(i), wx: wx, wy: wy})
 	}
-	sortDraws(draws)
+	p.sorter.sort(draws)
 	chW := p.Bk.CordChunks()
 	if lt != Map { // buildings are baked there
 		p.Overlays.Wiring.DrawCordStubs(v, &chW, screen, &w, sw, sh, tile) // overlay/power_cords.go: under the objects

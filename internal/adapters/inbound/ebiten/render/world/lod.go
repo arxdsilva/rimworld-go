@@ -312,7 +312,7 @@ func (k *Bakes) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 
 				}
 			}
 		}
-		sortDraws(draws)
+		k.sorter.sort(draws)
 		for i := range draws {
 			k.Ob.runDraw(dst, w, &draws[i], tile, sw, sh)
 		}

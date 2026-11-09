@@ -82,7 +82,8 @@ type base struct {
 	v     *render.View
 	src   Source
 
-	draws []ArtDraw // the object queue, reused every frame
+	draws  []ArtDraw  // the object queue, reused every frame
+	sorter drawSorter // its sort buffers (GAR-161)
 	// Cast is set while a bake draws (WithBake): the sprite pass's marker
 	// (sprite.Pass.Cast) that the overlays skip a figure's stains on.
 	Cast       *light.Cast
