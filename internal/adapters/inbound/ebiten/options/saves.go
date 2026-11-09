@@ -35,17 +35,65 @@ const (
 func NewSlotName() string { return "colony-" + time.Now().Format("2006-01-02-1504") }
 
 // SaveNow writes the current colony to slot and reports success (the hint
-// says what happened).
+// says what happened). With background saves (Env.AsyncSaves) it reports
+// that the save started: PollSaves says how the write went.
 func (s *Screen) SaveNow(slot string) bool {
-	if !s.sh.Env().CanSave {
+	env := s.sh.Env()
+	if !env.CanSave {
 		return false
 	}
 	if err := s.sh.Save(slot); err != nil {
 		s.sh.Hint(s.sh.Tf("save failed: %s", err.Error()))
 		return false
 	}
-	s.sh.Hint(s.sh.Tf("saved %s", slot))
+	if !env.AsyncSaves {
+		s.sh.Hint(s.sh.Tf("saved %s", slot))
+	}
 	return true
+}
+
+// PollSaves reports the background saves written since the last call: the
+// hint for each, and a Danger toast for a failure. The App calls it at
+// the start of every Update.
+func (s *Screen) PollSaves() { background{s.sh}.poll() }
+
+// background is the screen's side of the background saves (Env.AsyncSaves;
+// a type of its own, so Screen stays within its method limit).
+type background struct{ sh Shell }
+
+func (b background) poll() {
+	if b.sh.Env().AsyncSaves {
+		b.report(b.sh.Finished(), "")
+	}
+}
+
+// wait blocks until the background saves are written and reports them;
+// false when the last save of slot failed (any slot: "").
+func (b background) wait(slot string) bool {
+	if !b.sh.Env().AsyncSaves {
+		return true
+	}
+	b.sh.Wait()
+	return b.report(b.sh.Finished(), slot)
+}
+
+// report hints each finished save and raises a failure; false when the
+// last one of slot ("": any) failed.
+func (b background) report(done []SaveResult, slot string) bool {
+	ok := true
+	for _, r := range done {
+		if r.Err == nil {
+			b.sh.Hint(b.sh.Tf("saved %s", r.Slot))
+		} else {
+			msg := b.sh.Tf("save failed: %s", r.Err.Error())
+			b.sh.Hint(msg)
+			b.sh.SaveFailed(msg)
+		}
+		if slot == "" || r.Slot == slot {
+			ok = r.Err == nil
+		}
+	}
+	return ok
 }
 
 // TickAutosave saves at AutosaveHour every Options-chosen number of
@@ -133,7 +181,7 @@ func (s *Screen) SaveBeforeLeaving() bool {
 	if !env.Commitment || env.Capture {
 		return true
 	}
-	return s.SaveNow(s.SaveSlot)
+	return s.SaveNow(s.SaveSlot) && background{s.sh}.wait(s.SaveSlot) // a background save is checked before leaving
 }
 
 // optionLock is why an Options row cannot change now ("" when it can): a
@@ -151,6 +199,7 @@ func (s *Screen) RefreshSlots() {
 	if !s.sh.Env().CanLoad {
 		return
 	}
+	background{s.sh}.wait("") // the list shows a save still being written
 	slots, err := s.sh.List()
 	if err != nil {
 		s.sh.Hint(s.sh.Tf("cannot read saves: %s", err.Error()))
@@ -169,6 +218,7 @@ func (s *Screen) LoadSlot(i int) {
 	if i < 0 || i >= len(s.Slots) || !s.sh.Env().CanLoad {
 		return
 	}
+	background{s.sh}.wait("") // never read a file the queue is replacing
 	sl := s.Slots[i]
 	if sl.Err != "" {
 		s.sh.Hint(s.sh.Tf("cannot load: %s", sl.Err))

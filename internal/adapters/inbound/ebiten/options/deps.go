@@ -26,6 +26,7 @@ type Env struct {
 	Capture    bool                // a scripted capture or the fps probe runs
 	CanSave    bool                // a colony runs and a save hook is wired
 	CanLoad    bool                // the save list and loading are wired
+	AsyncSaves bool                // Save only starts a save; Finished and Wait report it (CI-002)
 	Hardware   func() sysinfo.Info // nil: the machine cannot be read
 	// DeviceScale is the display's pixel density (read lazily: it asks the
 	// window).
@@ -84,6 +85,20 @@ type Saver interface {
 	// Load replaces the session with the save at path and returns its slot
 	// name and tick.
 	Load(path string) (slot string, tick clock.Tick, err error)
+	// Finished returns the background saves written since the last call
+	// (Env.AsyncSaves), oldest first.
+	Finished() []SaveResult
+	// Wait blocks until every background save is written.
+	Wait()
+	// SaveFailed tells the player a background save failed: a Danger
+	// toast.
+	SaveFailed(text string)
+}
+
+// SaveResult is one background save that finished.
+type SaveResult struct {
+	Slot string
+	Err  error // nil: written
 }
 
 // Story is what the Story and Habits tabs borrow from the New Colony wizard

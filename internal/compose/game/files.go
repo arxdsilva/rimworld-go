@@ -28,7 +28,9 @@ func cardFiles(capturing bool) uiadapter.CardFiles {
 }
 
 // saveHooks wires the UI's save/load to the per-user saves folder, or to
-// dir when one is given (-save-dir).
+// dir when one is given (-save-dir). Saves and camera sidecars go through
+// a filesave.Queue: the hook encodes on the simulation's goroutine and the
+// queue's worker compresses and writes (CI-002); closeSaves drains it.
 func saveHooks(dir string) uiadapter.SaveHooks {
 	store, err := filesave.Default()
 	if dir != "" {
@@ -38,14 +40,15 @@ func saveHooks(dir string) uiadapter.SaveHooks {
 		log.Printf("saving disabled: %v", err)
 		return uiadapter.SaveHooks{}
 	}
+	queue := filesave.NewQueue(store)
 	return uiadapter.SaveHooks{
+		Queue: saveQueue{queue},
 		Save: func(sim uiadapter.Simulation, slot string) error {
 			g, ok := sim.(*appgame.Game)
 			if !ok {
 				return fmt.Errorf("this simulation can't be saved")
 			}
-			_, err := store.Save(g, slot)
-			return err
+			return queue.Save(g, slot)
 		},
 		List: func() ([]uiadapter.SaveSlot, error) {
 			slots, err := store.List()
@@ -65,7 +68,7 @@ func saveHooks(dir string) uiadapter.SaveHooks {
 			for id, v := range views {
 				files[id] = filesave.ViewFile{CX: v.CX, CY: v.CY, Zoom: v.Zoom}
 			}
-			return store.SaveView(slot, filesave.ViewsOf(files))
+			return queue.SaveView(slot, filesave.ViewsOf(files))
 		},
 		LoadView: func(path string) (map[appgame.MapID]camerapkg.View, bool) {
 			f, ok := store.LoadView(path)
@@ -85,6 +88,30 @@ func saveHooks(dir string) uiadapter.SaveHooks {
 			}
 			return g, info.Name, nil
 		},
+	}
+}
+
+// saveQueue is the background save writer as the UI sees it: the saves'
+// results; a camera sidecar that failed is only logged, as before.
+type saveQueue struct{ *filesave.Queue }
+
+func (q saveQueue) Done() []uiadapter.SaveResult {
+	var out []uiadapter.SaveResult
+	for _, r := range q.Queue.Done() {
+		if !r.View {
+			out = append(out, uiadapter.SaveResult{Slot: r.Slot, Err: r.Err})
+		} else if r.Err != nil {
+			log.Printf("save camera view: %v", r.Err)
+		}
+	}
+	return out
+}
+
+// closeSaves writes what the save queue still holds and stops its worker,
+// once the window has closed.
+func closeSaves(h uiadapter.SaveHooks) {
+	if q, ok := h.Queue.(saveQueue); ok {
+		q.Close()
 	}
 }
 

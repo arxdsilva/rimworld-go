@@ -39,6 +39,8 @@ type (
 	SettingsHooks = options.Hooks
 	// SaveSlot is one save as the load screen lists it (ports.SaveSlot).
 	SaveSlot = ports.SaveSlot
+	// SaveResult is one background save that finished (options.SaveResult).
+	SaveResult = options.SaveResult
 )
 
 // ---- the feature's shell
@@ -81,7 +83,7 @@ func (h optionsHost) Env() options.Env {
 	a := h.a
 	return options.Env{
 		Running: a.renderer != nil, Commitment: a.commitment(), Capture: a.cfg.Capture != nil,
-		CanSave: a.canSave(), CanLoad: a.canLoad(), Hardware: a.cfg.Hardware,
+		CanSave: a.canSave(), CanLoad: a.canLoad(), AsyncSaves: a.cfg.Saves.Queue != nil, Hardware: a.cfg.Hardware,
 		DeviceScale: a.deviceScale, RenderLimit: h.renderLimit, UIScale: stepInUse(a.scale, a.devRaw), Bindings: a.bindings(),
 		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods, LangDir: a.shell.shellTexts.dir,
 	}
@@ -141,6 +143,12 @@ func (s optionsSaver) Save(slot string) error {
 
 // List reads the save list.
 func (s optionsSaver) List() ([]ports.SaveSlot, error) { return s.a.cfg.Saves.List() }
+
+// Finished, Wait and SaveFailed are the background saves (Env.AsyncSaves
+// is set only with a Queue).
+func (s optionsSaver) Finished() []SaveResult { return s.a.cfg.Saves.Queue.Done() }
+func (s optionsSaver) Wait()                  { s.a.cfg.Saves.Queue.Wait() }
+func (s optionsSaver) SaveFailed(text string) { s.a.chrome.Alarm(text) }
 
 // Load replaces the session with the save at path.
 func (s optionsSaver) Load(path string) (string, clock.Tick, error) {
@@ -311,6 +319,16 @@ type SaveHooks struct {
 	// (VIEW-001, MAP-1); nil leaves the cameras to centre as before.
 	SaveView func(slot string, v map[game.MapID]camerapkg.View) error
 	LoadView func(path string) (map[game.MapID]camerapkg.View, bool)
+	// Queue writes Save's and SaveView's files in the background, so those
+	// hooks only start a save (CI-002); nil: they write before returning.
+	Queue SaveQueue
+}
+
+// SaveQueue is the background save writer (filesave.Queue).
+type SaveQueue interface {
+	Busy() bool         // a save waits or is being written
+	Done() []SaveResult // the saves finished since the last call
+	Wait()              // blocks until every queued save is written
 }
 
 // commitment reports a commitment colony is running (read through the

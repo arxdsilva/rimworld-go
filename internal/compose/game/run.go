@@ -82,6 +82,7 @@ func Run(opts cligame.Options, version string, d Display) {
 
 	runErr := d.Run(app, display.Window{TPS: clock.TicksPerSecond, Width: uiadapter.DefaultWindowWidth,
 		Height: uiadapter.DefaultWindowHeight, Title: "rimworld-go", Probe: probe != nil})
+	closeSaves(cfg.Saves) // the last background save reaches the disk
 	if usage != nil {
 		usage.Close() // before a log.Fatal would skip it
 	}

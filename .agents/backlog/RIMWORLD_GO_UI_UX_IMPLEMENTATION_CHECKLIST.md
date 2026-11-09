@@ -1661,8 +1661,8 @@ the player what just happened and what requires attention.
 
 ## 33.4 Autosave feedback
 
--   [ ] **Small non-blocking autosave indicator**
--   [ ] **Autosave failure alert**
+-   [x] **Small non-blocking autosave indicator** (CI-002: saves are written by `filesave.Queue` off the frame; a pinned "Saving..." row at the toast anchor while the queue is busy, at least 45 Updates once shown; `hud.Env.Saving`, `hud/toast.go`)
+-   [x] **Autosave failure alert** (CI-002: a save the queue could not write sets the hint and posts a danger toast that stays about 6 s; a failed commitment Save & Quit keeps the player in the colony)
 -   [x] **Rotating autosave configuration** (OPT-006: Options › General "Autosaves kept" 1–25; `<slot>-autosave-1…N`, oldest overwritten; Load lists them all, paged)
 
 ------------------------------------------------------------------------

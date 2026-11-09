@@ -53,7 +53,7 @@ func (h hudHost) Env() hud.Env {
 	a := h.a
 	e := hud.Env{
 		Wall: a.now(), Icons: a.art, Units: units.FromUnit(a.settings.Gameplay.TempUnit), Updates: a.updates, Session: a.simsStarted, Hint: a.hint != "", Alt: a.in.Alt(),
-		PanelOpen: a.arch.Open || a.win.Open,
+		PanelOpen: a.arch.Open || a.win.Open, Saving: a.cfg.Saves.Queue != nil && a.cfg.Saves.Queue.Busy(),
 	}
 	if r := a.renderer; r != nil {
 		e.Game, e.Art = r.game, r.art

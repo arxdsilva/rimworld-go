@@ -46,6 +46,8 @@ type Env struct {
 
 	Wall time.Time // the wall clock (OPT-008); zero when the host gives none
 
+	Saving bool // a background save waits or is being written (the Saving row, CI-002)
+
 	Updates uint64 // the Update counter (toasts, double clicks)
 	Session int    // colonies started this run (letter ids restart with each)
 
@@ -148,6 +150,7 @@ type Chrome struct {
 	alertCycle map[string]int // alert key -> one more than the target on show
 	alerts     alertsMemo
 	toasts     []Toast
+	saving     savingState // when the Saving row appeared (toast.go)
 }
 
 // New builds the feature over its shell.

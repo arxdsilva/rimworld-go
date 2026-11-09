@@ -386,6 +386,7 @@ func (a *App) size() (int, int) {
 }
 
 func (a *App) tick() {
+	a.opt.PollSaves() // background saves: the hint, a failure's toast (CI-002)
 	switch a.nav.screen() {
 	case portspkg.ScreenBoot:
 		a.tickBoot()
