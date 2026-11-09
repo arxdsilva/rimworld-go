@@ -3,8 +3,10 @@ package lang
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"testing"
+	"time"
 )
 
 func writeCatalog(t *testing.T, dir, code, body string) {
@@ -130,5 +132,37 @@ func TestShippedCatalogsLoad(t *testing.T) {
 				t.Errorf("%s.json %q: verbs %q differ from %q", code, k, verbs(v), verbs(k))
 			}
 		}
+	}
+}
+
+// TestLoadParsesAFileOnce: every App loads the catalog and the Language row
+// lists them each frame, so an unchanged file is parsed once and shared; a
+// rewritten one parses again.
+func TestLoadParsesAFileOnce(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeCatalog(t, dir, "fr", `{"Drop": "Lâcher"}`)
+	a, errA := Load(dir, "fr")
+	b, errB := Load(dir, "fr")
+	if errA != nil || errB != nil {
+		t.Fatal(errA, errB)
+	}
+	if reflect.ValueOf(a.m).Pointer() != reflect.ValueOf(b.m).Pointer() {
+		t.Fatal("two loads of an unchanged catalog parsed it twice")
+	}
+	if cs := Codes(dir); len(cs) != 2 || cs[1].Name != "fr" {
+		t.Fatalf("Codes = %v", cs)
+	}
+	writeCatalog(t, dir, "fr", `{"Drop": "Laisser tomber", "_meta": {"name": "Français"}}`)
+	later := time.Now().Add(time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, "fr.json"), later, later); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(dir, "fr")
+	if err != nil || c.T("Drop") != "Laisser tomber" || c.Name() != "Français" {
+		t.Fatalf("rewritten catalog: %v %q %q", err, c.T("Drop"), c.Name())
+	}
+	if cs := Codes(dir); cs[1].Name != "Français" {
+		t.Fatalf("Codes after a rewrite = %v", cs)
 	}
 }

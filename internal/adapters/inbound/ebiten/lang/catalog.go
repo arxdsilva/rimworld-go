@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // EnglishCode is the source language's code; it needs no file.
@@ -75,14 +76,10 @@ func Load(dir, code string) (Catalog, error) {
 	if !codeRE.MatchString(code) {
 		return Catalog{}, fmt.Errorf("lang: bad catalog code %q", code)
 	}
-	b, err := os.ReadFile(filepath.Join(dir, code+".json"))
+	c, err := parseFile(filepath.Join(dir, code+".json"), code)
 	if errors.Is(err, fs.ErrNotExist) && code == EnglishCode {
 		return Catalog{}, nil
 	}
-	if err != nil {
-		return Catalog{}, fmt.Errorf("lang: %w", err)
-	}
-	c, err := parse(code, b)
 	if err != nil {
 		return Catalog{}, err
 	}
@@ -90,6 +87,42 @@ func Load(dir, code string) (Catalog, error) {
 		c.m = nil
 	}
 	return c, nil
+}
+
+// parsed holds each catalog file's last parse by path, stamped with the
+// file's size and mtime. A catalog is read on every App and every draw of
+// the Language row, and a rewritten file parses again. A parsed Catalog is
+// never written after parse, so callers share its map.
+var parsed sync.Map // path -> parsedFile
+
+type parsedFile struct {
+	size, mod int64
+	c         Catalog
+	err       error
+}
+
+// parseFile parses the catalog at path, from parsed when the file is
+// unchanged. Read errors are wrapped like parse errors ("lang: …").
+func parseFile(path, code string) (Catalog, error) {
+	st, err := os.Stat(path)
+	if err != nil {
+		return Catalog{}, fmt.Errorf("lang: %w", err)
+	}
+	size, mod := st.Size(), st.ModTime().UnixNano()
+	if v, ok := parsed.Load(path); ok {
+		if p := v.(parsedFile); p.size == size && p.mod == mod {
+			return p.c, p.err
+		}
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return Catalog{}, fmt.Errorf("lang: %w", err)
+	}
+	c, err := parse(code, b)
+	if int64(len(b)) == size { // a file rewritten between Stat and read is not cached
+		parsed.Store(path, parsedFile{size: size, mod: mod, c: c, err: err})
+	}
+	return c, err
 }
 
 // parse decodes one catalog file.
@@ -132,11 +165,7 @@ func Codes(dir string) []Choice {
 		if e.IsDir() || !ok || !codeRE.MatchString(code) {
 			continue
 		}
-		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
-		if err != nil {
-			continue
-		}
-		c, err := parse(code, b)
+		c, err := parseFile(filepath.Join(dir, e.Name()), code)
 		if err != nil {
 			continue
 		}
