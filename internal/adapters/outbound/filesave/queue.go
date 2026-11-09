@@ -78,6 +78,12 @@ func (q *Queue) Save(g *game.Game, slot string) error {
 	return q.put(slot, func(w io.Writer, name string) error { return game.EncodeSave(g, w, name) })
 }
 
+// SaveAs is Save with the client's stamp in the header (SAV-003): the slot
+// is stamp.Name, and the header keeps it as given.
+func (q *Queue) SaveAs(g *game.Game, stamp savefmt.Stamp) error {
+	return q.put(stamp.Name, func(w io.Writer, _ string) error { return game.EncodeSaveAs(g, w, stamp) })
+}
+
 // SaveView queues the camera sidecar for slot, written after any save for
 // slot queued before it.
 func (q *Queue) SaveView(slot string, v ViewFile) error {

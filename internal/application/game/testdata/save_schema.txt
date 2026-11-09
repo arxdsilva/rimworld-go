@@ -2,16 +2,26 @@
 # Read a line as: path type [= underlying]. "[]" is a slice or array element,
 # "{key}" and "{}" a map's key and element. Pointers are left out, as gob
 # flattens them. Refresh: RIMWORLD_UPDATE_SAVE_SCHEMA=1 go test -race -run SaveSchema ./internal/application/game/
-SaveInfo rimworld-go/internal/application/game.SaveInfo
+SaveInfo rimworld-go/internal/application/game/savefmt.Info
+SaveInfo.Autosave bool
+SaveInfo.Base string
 SaveInfo.Biome string
+SaveInfo.Build string
 SaveInfo.Colonists int
+SaveInfo.Colony string
+SaveInfo.ColonyName string
 SaveInfo.Commitment bool
+SaveInfo.Content rimworld-go/internal/application/game/savefmt.Content
+SaveInfo.Content.Hash uint64
+SaveInfo.Content.Plugins []string
+SaveInfo.Content.Plugins[] string
 SaveInfo.Date string
 SaveInfo.Day int
 SaveInfo.Difficulty string
 SaveInfo.Ending string
 SaveInfo.MapSize int
 SaveInfo.Name string
+SaveInfo.Season string
 SaveInfo.Storyteller string
 SaveInfo.Version int
 saveState rimworld-go/internal/application/game.saveState

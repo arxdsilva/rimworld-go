@@ -67,12 +67,13 @@ func (s Stamp) Apply(info *Info) {
 	info.Autosave, info.Season, info.Build, info.Content = s.Autosave, s.Season, s.Build, s.Content
 }
 
-// Upgrade fills the v16 colony fields of an older header from its name:
-// an autosave <slot>-autosave[-N] belongs to <slot>'s colony, whose id is
-// "slot:"+<slot>. A v16 header, or one that already names its colony, is
-// left alone; Version is never changed (Load still migrates by it).
+// Upgrade fills the colony fields of a header that names no colony (one
+// older than v16, or one written without a Stamp) from its name: an
+// autosave <slot>-autosave[-N] belongs to <slot>'s colony, whose id is
+// "slot:"+<slot>. A header that names its colony is left alone; Version is
+// never changed (Load still migrates by it).
 func (i *Info) Upgrade() {
-	if i.Version >= InfoVersion || i.Colony != "" {
+	if i.Colony != "" {
 		return
 	}
 	i.Base = BaseSlot(i.Name)

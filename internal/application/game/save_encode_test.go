@@ -3,6 +3,7 @@ package game_test
 import (
 	"bytes"
 	"io"
+	"reflect"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -38,7 +39,7 @@ func TestCompressedEncodeLoadsAsSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ia != ib {
+	if !reflect.DeepEqual(ia, ib) {
 		t.Fatalf("save info %+v, split %+v", ia, ib)
 	}
 	if a.StateHash() != b.StateHash() || b.StateHash() != g.StateHash() {

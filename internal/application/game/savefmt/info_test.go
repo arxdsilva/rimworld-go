@@ -26,9 +26,15 @@ func TestUpgradeNamesTheColonyOfAnOldHeader(t *testing.T) {
 			t.Errorf("%q upgraded to %+v, want %+v", c.name, i, want)
 		}
 	}
-	// A v16 header, or an old one that already names its colony, is kept.
+	// A v16 header written without a Stamp names no colony: it gets one the
+	// same way.
+	i := Info{Version: InfoVersion, Name: "a-autosave"}
+	if i.Upgrade(); i.Colony != "slot:a" || i.Base != "a" || !i.Autosave || i.ColonyName != "a" {
+		t.Errorf("an unstamped v16 header upgraded to %+v", i)
+	}
+	// A header that names its colony, old or new, is kept.
 	for _, i := range []Info{
-		{Version: InfoVersion, Name: "a-autosave", Colony: "", Base: "x"},
+		{Version: InfoVersion, Name: "a-autosave", Colony: "c2", Base: "x"},
 		{Version: 3, Name: "a-autosave", Colony: "c1", Base: "a", ColonyName: "Ada"},
 	} {
 		before := i

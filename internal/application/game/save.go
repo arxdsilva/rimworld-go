@@ -104,11 +104,12 @@ import (
 // apparel policies (Outfits): an older save gets the defaults, everyone on
 // Anything. v15 (QST-1) adds the quest difficulty settings (an older save
 // gets rewards at 100 % and quest threats as its big threats) and the
-// quests.
+// quests. v16 (SAV-003) names the save's colony in the header
+// (savefmt.Info); an older header gets one from its name on reading.
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 15
+const SaveVersion = 16
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -116,26 +117,9 @@ const minSaveVersion = 1
 // SupportedSaveVersion reports whether Load can read a save of version v.
 func SupportedSaveVersion(v int) bool { return v >= minSaveVersion && v <= SaveVersion }
 
-// SaveInfo is the header of a save: enough to list it without loading.
-// The fields after Colonists are v2 (zero in a v1 header).
-type SaveInfo struct {
-	Version   int
-	Name      string // colony / save name
-	Date      string // in-game date
-	Day       int    // days since landing
-	Colonists int    // alive
-	// Commitment: one save per colony, written by the game itself
-	// (NG-1 §2.13); Storyteller and Difficulty name the colony's ("" for a
-	// legacy colony); MapSize is the map side; Biome the biome's name.
-	Commitment  bool
-	Storyteller string
-	Difficulty  string
-	MapSize     int
-	Biome       string
-	// Ending (AX-8) is "ship" once the colony's ship has left: the
-	// save's story is complete ("" while it goes on).
-	Ending string
-}
+// SaveInfo is the header of a save: enough to list it without loading
+// (savefmt.Info, which the save store and the client share).
+type SaveInfo = savefmt.Info
 
 type entry[T any] struct {
 	ID entity.EntityID
@@ -501,8 +485,16 @@ func (g *Game) Save(w io.Writer, name string) error {
 	return zw.Close()
 }
 
-// EncodeSave writes Save's raw gob stream, uncompressed (savefmt.Compress makes it a file).
+// EncodeSave writes Save's raw gob stream, uncompressed (savefmt.Compress
+// makes it a file), with a header naming only the save: reading it gives
+// the colony from the name (savefmt.Info.Upgrade).
 func EncodeSave(g *Game, w io.Writer, name string) error {
+	return EncodeSaveAs(g, w, savefmt.Stamp{Name: name})
+}
+
+// EncodeSaveAs is EncodeSave with the client's stamp in the header: the
+// slot, the colony and the build (SAV-003).
+func EncodeSaveAs(g *Game, w io.Writer, stamp savefmt.Stamp) error {
 	cur := g.mapState
 	defer func() { g.mapState = cur }()
 	g.mapState = g.maps[0]
@@ -582,8 +574,10 @@ func EncodeSave(g *Game, w io.Writer, name string) error {
 	if g.view != nil {
 		s.View = g.view.id
 	}
+	info := g.Info(stamp.Name)
+	stamp.Apply(&info)
 	enc := gob.NewEncoder(w)
-	if err := enc.Encode(g.Info(name)); err != nil {
+	if err := enc.Encode(info); err != nil {
 		return fmt.Errorf("save header: %w", err)
 	}
 	if err := enc.Encode(&s); err != nil {
@@ -659,6 +653,7 @@ func ReadSaveInfo(r io.Reader) (SaveInfo, error) {
 	if err := gob.NewDecoder(zr).Decode(&info); err != nil {
 		return SaveInfo{}, fmt.Errorf("read save header: %w", err)
 	}
+	info.Upgrade()
 	return info, nil
 }
 
@@ -673,6 +668,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	if err := dec.Decode(&info); err != nil {
 		return nil, info, fmt.Errorf("read save header: %w", err)
 	}
+	info.Upgrade()
 	if !SupportedSaveVersion(info.Version) {
 		return nil, info, fmt.Errorf("%w (file v%d, game v%d)", ErrSaveVersion, info.Version, SaveVersion)
 	}
@@ -933,6 +929,8 @@ func (g *Game) migrateSave(v int) {
 			d := &g.ng.setup.Difficulty
 			d.QuestRewardPct, d.QuestThreats = 100, d.BigThreats
 		}
+		fallthrough
+	case v < 16: // SAV-003: the header names its colony; Load's savefmt.Info.Upgrade fills an older one, the state is unchanged
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

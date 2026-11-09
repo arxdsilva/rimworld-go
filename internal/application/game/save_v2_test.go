@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/statehash"
@@ -168,15 +169,36 @@ func TestSaveInfoFields(t *testing.T) {
 	want := SaveInfo{Version: SaveVersion, Name: "c", Date: g.Date().String(), Day: int(g.Tick()) / 60000,
 		Colonists: 3, Commitment: true, Storyteller: g.Story().Storyteller, Difficulty: "Seasoned",
 		MapSize: 60, Biome: "Temperate forest"}
-	if got := g.Info("c"); got != want {
+	if got := g.Info("c"); !reflect.DeepEqual(got, want) {
 		t.Fatalf("info\n got %+v\nwant %+v", got, want)
 	}
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "c"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := ReadSaveInfo(bytes.NewReader(buf.Bytes())); err != nil || got != want {
+	// Save stamps only the name; reading names the colony from it (v16).
+	named := want
+	named.Colony, named.ColonyName, named.Base = "slot:c", "c", "c"
+	if got, err := ReadSaveInfo(bytes.NewReader(buf.Bytes())); err != nil || !reflect.DeepEqual(got, named) {
 		t.Fatalf("header %+v, %v", got, err)
+	}
+	// EncodeSaveAs writes the client's stamp into the header as given.
+	stamp := savefmt.Stamp{Name: "c-autosave-2", Colony: "col-7", ColonyName: "New Hope", Base: "c", Autosave: true,
+		Season: "Aprimay", Build: "v9.9.9", Content: savefmt.Content{Hash: 42, Plugins: []string{"core"}}}
+	var raw, file bytes.Buffer
+	if err := EncodeSaveAs(g, &raw, stamp); err != nil {
+		t.Fatal(err)
+	}
+	if err := savefmt.Compress(&file, raw.Bytes()); err != nil {
+		t.Fatal(err)
+	}
+	stamped := want
+	stamp.Apply(&stamped)
+	if got, err := ReadSaveInfo(bytes.NewReader(file.Bytes())); err != nil || !reflect.DeepEqual(got, stamped) {
+		t.Fatalf("stamped header\n got %+v, %v\nwant %+v", got, err, stamped)
+	}
+	if h, info, err := Load(bytes.NewReader(file.Bytes())); err != nil || !reflect.DeepEqual(info, stamped) || h.StateHash() != g.StateHash() {
+		t.Fatalf("a stamped save loads with header %+v, %v", info, err)
 	}
 	r := buildSetup(t, setupFor(t, "broken_hull", func(s *Setup) { s.MapSize = 60 }))
 	if r.Info("r").Commitment {
@@ -186,7 +208,7 @@ func TestSaveInfoFields(t *testing.T) {
 
 func TestSupportedSaveVersions(t *testing.T) {
 	t.Parallel()
-	for v, ok := range map[int]bool{0: false, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true, 10: true, 11: true, 12: true, 13: true, 14: true, 15: true, 16: false} { // v5: PLAY-021, v6: MED-02, v7: FOOD-1, v8: TEMP-*, v9: RSCH-1, v10: STK-BN, v11: AX-0, v12: MAP-0, v13: NST, CSE, v14: GEAR-3, v15: QST-1
+	for v, ok := range map[int]bool{0: false, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true, 10: true, 11: true, 12: true, 13: true, 14: true, 15: true, 16: true, 17: false} { // v5: PLAY-021, v6: MED-02, v7: FOOD-1, v8: TEMP-*, v9: RSCH-1, v10: STK-BN, v11: AX-0, v12: MAP-0, v13: NST, CSE, v14: GEAR-3, v15: QST-1, v16: SAV-003
 		if SupportedSaveVersion(v) != ok {
 			t.Errorf("version %d supported = %v", v, !ok)
 		}

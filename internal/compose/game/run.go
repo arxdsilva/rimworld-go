@@ -55,7 +55,7 @@ func Run(opts cligame.Options, version string, d Display) {
 		DefaultBiome:  biomeID,
 		Version:       version,
 		Capture:       shot,
-		Saves:         saveHooks(opts.SaveDir),
+		Saves:         saveHooks(opts.SaveDir, version),
 		Settings:      settingsHooks(shot != nil, gfx, d),
 		CardFiles:     cardFiles(shot != nil),
 		Scenarios:     scenarioStore(shot != nil),

@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/adapters/outbound/scenariofile"
 	appgame "rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/platform/openfolder"
 )
 
@@ -33,8 +34,9 @@ func cardFiles(capturing bool) uiadapter.CardFiles {
 // dir when one is given (-save-dir). Saves and camera sidecars go through
 // a filesave.Queue: the hook encodes on the simulation's goroutine and the
 // queue's worker compresses and writes (CI-002); closeSaves drains it. Dir
-// is the folder used, for the Options "Saves folder" row (SAV-023).
-func saveHooks(dir string) uiadapter.SaveHooks {
+// is the folder used, for the Options "Saves folder" row (SAV-023). build
+// is the game's version, written into every save's header (SAV-003).
+func saveHooks(dir, build string) uiadapter.SaveHooks {
 	store, err := filesave.Default()
 	if dir != "" {
 		store, err = filesave.Store{Dir: dir}, nil
@@ -47,22 +49,27 @@ func saveHooks(dir string) uiadapter.SaveHooks {
 	return uiadapter.SaveHooks{
 		Queue: saveQueue{queue},
 		Dir:   store.Dir,
-		// Save writes the slot meta names (the store sanitises it; SAV-003
-		// writes the rest of meta into the header).
+		// Save writes the slot meta names (the store sanitises it) with meta
+		// and the build in the header (SAV-003).
 		Save: func(sim uiadapter.Simulation, meta ports.SaveMeta) error {
 			g, ok := sim.(*appgame.Game)
 			if !ok {
 				return fmt.Errorf("this simulation can't be saved")
 			}
-			return queue.Save(g, meta.Name)
+			return queue.SaveAs(g, savefmt.Stamp{Name: meta.Name, Colony: meta.Colony, ColonyName: meta.ColonyName,
+				Base: meta.Base, Autosave: meta.Autosave, Season: meta.Season, Build: build})
 		},
 		Delete: func(string) error { return errors.New("not yet") }, // the load list's delete fills it
 		List: func() ([]uiadapter.SaveSlot, error) {
 			slots, err := store.List()
 			out := make([]uiadapter.SaveSlot, 0, len(slots))
 			for _, sl := range slots {
-				s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Date: sl.Info.Date,
-					Colonists: sl.Info.Colonists, Modified: sl.Modified, Commitment: sl.Info.Commitment, Ending: sl.Info.Ending}
+				i := sl.Info // upgraded: an older header names its colony from its name
+				s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Date: i.Date,
+					Colonists: i.Colonists, Modified: sl.Modified, Commitment: i.Commitment, Ending: i.Ending,
+					Colony: i.Colony, ColonyName: i.ColonyName, Base: i.Base, Autosave: i.Autosave, Day: i.Day, Season: i.Season,
+					Storyteller: i.Storyteller, Difficulty: i.Difficulty, Biome: i.Biome, MapSize: i.MapSize,
+					Build: i.Build, Version: i.Version}
 				if sl.Err != nil {
 					s.Err = sl.Err.Error()
 				}
@@ -93,7 +100,8 @@ func saveHooks(dir string) uiadapter.SaveHooks {
 			if err != nil {
 				return nil, ports.SaveMeta{}, err
 			}
-			return g, ports.SaveMeta{Name: info.Name}, nil
+			return g, ports.SaveMeta{Name: info.Name, Colony: info.Colony, ColonyName: info.ColonyName,
+				Base: info.Base, Autosave: info.Autosave, Season: info.Season}, nil
 		},
 	}
 }
