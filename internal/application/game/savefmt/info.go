@@ -113,16 +113,6 @@ func SlotKey(name string) string {
 	return b.String()
 }
 
-// CheckName is why name cannot name a save ("" when it can). SAV-001
-// adds its rules (length, reserved names, the autosave suffix); today only
-// a blank name is refused.
-func CheckName(name string) (reason string) {
-	if strings.TrimSpace(name) == "" {
-		return "Name the save"
-	}
-	return ""
-}
-
 // Compat is how this build reads a save (ports.SaveSlot.Compat; 0 fine).
 type Compat int
 
