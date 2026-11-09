@@ -222,6 +222,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 	ct := LodTile(tile)               // creatures keep a minimum size (lod.go)
 	apad, apadS := p.AnimalPads(tile) // lod.go: the largest animal canvas (PLAY-022)
+	l.apad, l.apadS, l.csize, l.padSet = apad, apadS, max(ct/max(tile, 1e-9), 1), true
 	for i := range w.Animals {
 		an := &w.Animals[i]
 		if !l.Near(an.X, an.Y, apad, apadS) {

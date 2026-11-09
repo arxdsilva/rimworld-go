@@ -91,6 +91,12 @@ type LOD struct {
 	// the chunk views over it padded by VisPad tiles (cx0..cx1 × cy0..cy1).
 	VX0, VY0, VX1, VY1 int
 	ViewSet            bool // a frame has set VX0..VY1 (InView)
+	// the creature reach of this frame's object pass (flushCropsFor): the
+	// animal pads, and the factor creatures are drawn larger by below the
+	// minimum size
+	apad, apadS        int
+	csize              float64
+	padSet             bool
 	cx0, cy0, cx1, cy1 int
 	Views              []game.ChunkView
 	cordViews          []game.ChunkView // CordChunks' list, reused

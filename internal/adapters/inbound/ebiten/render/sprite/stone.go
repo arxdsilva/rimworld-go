@@ -202,6 +202,9 @@ type LinkedDraw struct {
 	cs   ColorScale
 }
 
+// At is the cell the draw is anchored to.
+func (d LinkedDraw) At() (int, int) { return d.x, d.y }
+
 // LinkedSprite prepares a linked draw of prefix at (x, y): the stone tint
 // goes through the sprite's tint mask when it has one (ore), else it
 // multiplies cs. ok is false when the catalog has no art for it.

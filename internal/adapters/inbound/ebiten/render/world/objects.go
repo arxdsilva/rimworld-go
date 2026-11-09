@@ -16,10 +16,70 @@ import (
 	"rimworld-go/pkg/randx"
 )
 
+// Reach of an object's art past its cells, in tiles (west and east, north,
+// south): the culls of DrawArt, a tile wider. A crop unit whose box misses
+// the reach keeps waiting in its batch (flushCropsPad).
+type reach struct{ side, up, down float64 }
+
+var (
+	plantPad    = reach{3, 5, 3}
+	buildingPad = reach{4, 5, 5}
+	itemPad     = reach{3, 3, 3}
+	pawnPad     = reach{4, 5, 5}
+)
+
+// flushCropsPad draws the queued crop units if the screen box of the w x h
+// cells at (x, y), grown by r, touches one; otherwise the object and the
+// units commute and the batch stays open (PERF-009).
+func (o *Objects) flushCropsPad(dst *ebiten.Image, x, y, w, h float64, r reach) {
+	x0, y0 := o.v.WorldToScreenF(x-r.side, y-r.up)
+	x1, y1 := o.v.WorldToScreenF(x+w+r.side, y+h+r.down)
+	o.Env.FlushCropsOver(dst, x0, y0, x1, y1)
+}
+
+// flushCropsFor flushes the queued crop units before d draws, unless d
+// cannot reach them.
+func (o *Objects) flushCropsFor(dst *ebiten.Image, w *game.WorldView, d *ArtDraw, tile float64) {
+	l := o.LOD
+	switch {
+	case d.Fn != nil: // a closure: no bounds
+	case d.Kind == objLinked:
+		x, y := d.Ld.At()
+		o.flushCropsPad(dst, float64(x), float64(y), 1, 1, buildingPad)
+		return
+	case d.Kind == objBuilding:
+		b := &w.Buildings[d.I]
+		o.flushCropsPad(dst, float64(b.X), float64(b.Y), float64(max(b.W, 1)), float64(max(b.H, 1)), buildingPad)
+		return
+	case d.Kind == objFrame:
+		f := &w.Frames[d.I]
+		o.flushCropsPad(dst, float64(f.X), float64(f.Y), float64(max(f.W, 1)), float64(max(f.H, 1)), buildingPad)
+		return
+	case d.Kind == objPlant || d.Kind == objPlantMark:
+		pl := &w.Plants[d.I]
+		o.flushCropsPad(dst, float64(pl.X), float64(pl.Y), 1, 1, plantPad)
+		return
+	case d.Kind == objItem || d.Kind == objForbidden:
+		it := &w.Items[d.I]
+		o.flushCropsPad(dst, float64(it.X), float64(it.Y), 1, 1, itemPad)
+		return
+	case d.Kind == objAnimal && l.padSet:
+		r := reach{float64(l.apad + 1), float64(l.apadS + 1), float64(l.apad + 1)}
+		o.flushCropsPad(dst, d.wx, d.wy, 1, 1, r)
+		return
+	case d.Kind == objPawn && l.padSet:
+		r := pawnPad
+		r.side, r.up, r.down = r.side*l.csize, r.up*l.csize, r.down*l.csize
+		o.flushCropsPad(dst, d.wx, d.wy, 1, 1, r)
+		return
+	}
+	o.Env.FlushCrops(dst)
+}
+
 // runDraw draws one queued object.
 func (o *Objects) runDraw(dst *ebiten.Image, w *game.WorldView, d *ArtDraw, tile float64, sw, sh int) {
 	if d.Fn != nil || d.Kind != objPlant {
-		o.Env.FlushCrops(dst) // queued crop units draw before whatever comes next
+		o.flushCropsFor(dst, w, d, tile) // queued crop units draw before what they overlap
 	}
 	if d.Fn != nil {
 		d.Fn()
@@ -190,7 +250,7 @@ func (o *Objects) DrawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 		o.Env.DrawCropObj(v, dst, w, p, tile)
 		return
 	}
-	o.Env.FlushCrops(dst)
+	o.flushCropsPad(dst, float64(p.X), float64(p.Y), 1, 1, plantPad)
 	key, scale := PlantSprite(*p)
 	key = o.Env.SeasonKey(v, key, *w)
 	amount, kind := 0.035, env.KindBush

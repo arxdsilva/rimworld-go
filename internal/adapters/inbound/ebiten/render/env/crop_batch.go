@@ -609,6 +609,8 @@ type CropBatch struct {
 	Verts []ebiten.Vertex
 	Idx   []uint32
 	units []CropUnit
+	// the screen box of the pending quads (valid while Idx is not empty)
+	bx0, by0, bx1, by1 float32
 	// the last furrow pass (kept after it is drawn)
 	Fverts []ebiten.Vertex
 	fidx   []uint32
@@ -622,6 +624,17 @@ type CropBatch struct {
 func (cb *CropBatch) Begin() {
 	cb.Quads, cb.Flushes, cb.Furrows = 0, 0, 0
 	cb.Verts, cb.Idx = cb.Verts[:0], cb.Idx[:0]
+}
+
+// grow widens the pending box to the quad n0..n0+3 was just appended as.
+func (cb *CropBatch) grow(n0 int) {
+	if len(cb.Idx) == 0 {
+		cb.bx0, cb.by0, cb.bx1, cb.by1 = math.MaxFloat32, math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32
+	}
+	for _, v := range cb.Verts[n0 : n0+4] {
+		cb.bx0, cb.bx1 = min(cb.bx0, v.DstX), max(cb.bx1, v.DstX)
+		cb.by0, cb.by1 = min(cb.by0, v.DstY), max(cb.by1, v.DstY)
+	}
 }
 
 // cropAxes memoises which cells lie in a north-south grow zone (taller
@@ -802,6 +815,7 @@ func (e *Layer) DrawCropObj(v *render.View, dst *ebiten.Image, w *game.WorldView
 			ebiten.Vertex{DstX: left + shT + wq, DstY: top, SrcX: u1, SrcY: sp.Sy, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
 			ebiten.Vertex{DstX: left + shB, DstY: bot, SrcX: u0, SrcY: sp.Sy + sp.H, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
 			ebiten.Vertex{DstX: left + shB + wq, DstY: bot, SrcX: u1, SrcY: sp.Sy + sp.H, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp})
+		cb.grow(int(n0)) // before Idx grows: the first quad resets the box
 		cb.Idx = append(cb.Idx, n0, n0+1, n0+2, n0+1, n0+3, n0+2)
 		cb.Quads++
 	}
@@ -820,6 +834,22 @@ func (e *Layer) FlushCrops(dst *ebiten.Image) {
 	}
 	cb.Flushes++
 	e.DrawLitBatch(dst, cb.Verts, cb.Idx, cb.Atlas.img)
+}
+
+// FlushCropsOver flushes the pending units only when the screen box
+// x0,y0..x1,y1 touches them. A draw that misses every queued quad commutes
+// with the batch, so the pixels are those of flushing first and the batch
+// keeps growing (and merging) across it. The box is widened a pixel for the
+// linear filter.
+func (e *Layer) FlushCropsOver(dst *ebiten.Image, x0, y0, x1, y1 float32) {
+	cb := e.Crops
+	if len(cb.Idx) == 0 {
+		return
+	}
+	if x1 < cb.bx0-1 || x0 > cb.bx1+1 || y1 < cb.by0-1 || y0 > cb.by1+1 {
+		return
+	}
+	e.FlushCrops(dst)
 }
 
 // DrawLitBatch draws a triangle batch of vertices carrying per-vertex sky
