@@ -60,7 +60,7 @@ func Run(opts cligame.Options, version string, d Display) {
 		CardFiles:     cardFiles(shot != nil),
 		Scenarios:     scenarioStore(shot != nil),
 		FPSProbe:      probe,
-		NewSimBuilder: newSimBuilder,
+		NewSimBuilder: newSimBuilder(simPool(shot != nil)),
 		DeviceScale:   d.DeviceScale, // the App never reads the monitor itself
 		Window:        d.Window,
 		Display:       d.Apply,               // OPT-029

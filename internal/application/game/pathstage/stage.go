@@ -102,6 +102,9 @@ type Stage struct {
 // SetPool makes Compute run its searches on p (nil: serial).
 func (s *Stage) SetPool(p Pool) { s.pool = p }
 
+// Pool is what Compute runs on (nil: serial).
+func (s *Stage) Pool() Pool { return s.pool }
+
 // Open starts a movement phase's queue; Queue is refused until then.
 func (s *Stage) Open() {
 	s.open = true

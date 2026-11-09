@@ -122,6 +122,7 @@ func (b *ColonyBuilder) Game() *Game {
 	if !b.done {
 		return nil
 	}
+	b.g.regs.paths.SetPool(b.cfg.Pool) // map 0's; maps opened later share it (runRepaths)
 	return b.g
 }
 

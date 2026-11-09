@@ -156,6 +156,7 @@ func runRepaths(g *Game) {
 		k, allow := planSearch(g, r.ID, q, r.From.X, r.From.Y, r.Goal.X, r.Goal.Y)
 		s.SetPlan(i, q, k, allow)
 	}
+	s.SetPool(g.maps[0].regs.paths.Pool()) // an opened map runs on the colony's lanes
 	s.Compute(g.searcher())
 	for i, r := range s.Requests() {
 		res := s.Result(i)

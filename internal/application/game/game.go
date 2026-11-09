@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/application/game/gearview"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
+	"rimworld-go/internal/application/game/pathstage"
 	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/application/game/raid"
 	rlab "rimworld-go/internal/application/game/research"
@@ -80,6 +81,7 @@ type Config struct {
 	Width, Height int
 	// Biome is the map's setting (SIM-023); zero is temperate forest.
 	Biome biome.ID
+	Pool  pathstage.Pool // the path stage's lanes (GAR-035): a built colony and the maps it opens; nil serial
 }
 
 // PawnView is a read-only snapshot of a single pawn.

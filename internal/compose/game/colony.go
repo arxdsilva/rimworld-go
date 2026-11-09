@@ -7,11 +7,24 @@ import (
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	"rimworld-go/internal/application/devscene"
 	appgame "rimworld-go/internal/application/game"
+	"rimworld-go/internal/platform/pool"
 )
 
-// newSimBuilder starts a wizard colony for the loading screen.
-func newSimBuilder(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
-	return &colonyBuilder{b: appgame.NewColonyBuilder(appgame.Config{Seed: ng.Seed, Biome: ng.Biome, Setup: ng.Setup})}, nil
+// newSimBuilder starts wizard colonies for the loading screen, their path
+// stages on p (GAR-035).
+func newSimBuilder(p *pool.Pool) func(uiadapter.NewGame) (uiadapter.SimBuilder, error) {
+	return func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
+		return &colonyBuilder{b: appgame.NewColonyBuilder(appgame.Config{Seed: ng.Seed, Biome: ng.Biome, Setup: ng.Setup, Pool: p})}, nil
+	}
+}
+
+// simPool is the process's simulation lanes: one in a capture, so a
+// capture never starts a worker (the answers are the same either way).
+func simPool(capture bool) *pool.Pool {
+	if capture {
+		return pool.New(pool.Options{Lanes: 1})
+	}
+	return pool.New(pool.Options{})
 }
 
 // colonyBuilder steps a wizard colony for the loading screen (NG-1 §2.10).
