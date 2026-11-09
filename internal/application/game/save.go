@@ -673,7 +673,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 		return nil, info, fmt.Errorf("%w (file v%d, game v%d)", ErrSaveVersion, info.Version, SaveVersion)
 	}
 	var s saveState
-	if err := dec.Decode(&s); err != nil {
+	if err := savefmt.Finish(dec.Decode(&s), zr); err != nil { // the body decodes and the CRC holds (SAV-022)
 		return nil, info, fmt.Errorf("read save state: %w", err)
 	}
 	g := New(Config{Width: s.W, Height: s.H})

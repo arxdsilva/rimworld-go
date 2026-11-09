@@ -113,36 +113,6 @@ func SlotKey(name string) string {
 	return b.String()
 }
 
-// Compat is how this build reads a save (ports.SaveSlot.Compat; 0 fine).
-type Compat int
-
-const (
-	CompatOK      Compat = iota // same version and content
-	CompatOlder                 // an older version: Load migrates it
-	CompatNewer                 // written by a newer build: Load refuses it
-	CompatContent               // other content or plugins: loads with a notice
-)
-
-// Runtime is what this build is, for CompatOf.
-type Runtime struct {
-	Version int
-	Build   string
-	Content Content
-}
-
-// CompatOf is how a build at rt reads a save with header info. Today it
-// compares versions only; the content check (CompatContent) comes with
-// the plugins' hashes.
-func CompatOf(info Info, rt Runtime) Compat {
-	switch {
-	case info.Version > rt.Version:
-		return CompatNewer
-	case info.Version < rt.Version:
-		return CompatOlder
-	}
-	return CompatOK
-}
-
 // ErrCorrupt means the save file is damaged: cut short or failing its
 // checksum.
 var ErrCorrupt = errors.New("save file is damaged")
@@ -155,6 +125,16 @@ func Drain(r io.Reader) error {
 		return fmt.Errorf("%w: %v", ErrCorrupt, err)
 	}
 	return nil
+}
+
+// Finish ends reading a save's body: decoded is the body's decode error,
+// itself ErrCorrupt, and after a clean decode the rest of the stream is
+// drained (Drain) so the checksum is checked.
+func Finish(decoded error, rest io.Reader) error {
+	if decoded != nil {
+		return fmt.Errorf("%w: %w", ErrCorrupt, decoded)
+	}
+	return Drain(rest)
 }
 
 // Clamp cuts s to at most n runes: header text from a file is shown in the

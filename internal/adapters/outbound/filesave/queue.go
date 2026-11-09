@@ -23,11 +23,14 @@ import (
 // so the worker never reads live state. One job is written at a time; a job
 // still waiting for the same slot and kind (save or view) is replaced in
 // place, so a slow disk holds at most one save and one view per slot. A
-// view whose save failed is skipped. Build it only in the composition root.
+// view whose save failed is skipped. Delete jumps the queue: it drops the
+// slot's waiting jobs and runs right after the job in flight (SAV-010).
+// Build it only in the composition root.
 type Queue struct {
 	store  Store
 	saveTo func(path string, raw []byte) error // the save sink (tests gate it)
 	viewTo func(slot string, v ViewFile) error // the sidecar sink
+	delTo  func(slot string) error             // the delete sink
 
 	mu      sync.Mutex
 	cond    *sync.Cond // wakes the worker for a job and Wait when it goes idle
@@ -61,11 +64,12 @@ type job struct {
 	view       bool
 	raw        []byte // a save's raw gob
 	camera     ViewFile
+	deleted    chan error // a delete: its result goes here, not to Done
 }
 
 // NewQueue starts the worker that writes into s.
 func NewQueue(s Store) *Queue {
-	q := &Queue{store: s, saveTo: writeSave, viewTo: s.SaveView, failed: map[string]bool{}, done: make(chan struct{})}
+	q := &Queue{store: s, saveTo: writeSave, viewTo: s.SaveView, delTo: s.Delete, failed: map[string]bool{}, done: make(chan struct{})}
 	q.cond = sync.NewCond(&q.mu)
 	go q.run()
 	return q
@@ -94,6 +98,33 @@ func (q *Queue) SaveView(slot string, v ViewFile) error {
 	}
 	q.push(job{slot: sanitize(slot), name: slot, view: true, camera: v})
 	return nil
+}
+
+// Delete removes slot's save and sidecar (Store.Delete) and returns how
+// it went. The slot's waiting save and view jobs are dropped, and the
+// delete runs next, after the job in flight: it waits for one write at
+// most. A save queued after Delete writes the slot again.
+func (q *Queue) Delete(slot string) error {
+	j := job{slot: sanitize(slot), name: slot, deleted: make(chan error, 1)}
+	q.mu.Lock()
+	if q.closed {
+		q.mu.Unlock()
+		return ErrClosed
+	}
+	rest := make([]job, 0, len(q.jobs)+1)
+	rest = append(rest, j)
+	for _, w := range q.jobs {
+		if w.slot == j.slot {
+			q.keep(w.raw)
+			continue
+		}
+		rest = append(rest, w)
+	}
+	q.jobs = rest
+	q.busy.Store(true)
+	q.cond.Broadcast()
+	q.mu.Unlock()
+	return <-j.deleted
 }
 
 // Busy reports a job waits or is being written.
@@ -191,6 +222,10 @@ func (q *Queue) run() {
 		}
 		j := q.jobs[0]
 		q.jobs = append(q.jobs[:0], q.jobs[1:]...)
+		if j.deleted != nil {
+			q.remove(j)
+			continue
+		}
 		skip := j.view && q.failed[j.slot]
 		q.running = true
 		q.mu.Unlock()
@@ -213,6 +248,21 @@ func (q *Queue) run() {
 		q.busy.Store(len(q.jobs) > 0)
 		q.cond.Broadcast()
 	}
+}
+
+// remove runs a delete job: the slot's earlier failure is forgotten, so a
+// view after a new save is written again. q.mu is held, and released while
+// the files go.
+func (q *Queue) remove(j job) {
+	q.running = true
+	q.mu.Unlock()
+	err := q.delTo(j.name)
+	q.mu.Lock()
+	q.running = false
+	delete(q.failed, j.slot)
+	j.deleted <- err
+	q.busy.Store(len(q.jobs) > 0)
+	q.cond.Broadcast()
 }
 
 // write writes one job and returns the file's path.

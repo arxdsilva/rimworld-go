@@ -52,6 +52,16 @@ func WriteBytes(path string, perm fs.FileMode, data []byte) error {
 	})
 }
 
+// Remove deletes path and flushes its folder, so the removal survives a
+// crash. A missing path is os.Remove's error (errors.Is fs.ErrNotExist).
+func Remove(path string) error {
+	if err := os.Remove(path); err != nil {
+		return err
+	}
+	syncDir(filepath.Dir(path))
+	return nil
+}
+
 func fill(f *os.File, write func(io.Writer) error) error {
 	if err := write(f); err != nil {
 		return err

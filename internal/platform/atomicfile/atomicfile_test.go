@@ -108,3 +108,21 @@ func TestWriteSetsTheMode(t *testing.T) {
 		}
 	}
 }
+
+func TestRemoveDeletesTheFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.sav")
+	if err := WriteBytes(path, 0o600, []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	if err := Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if got := names(t, dir); len(got) != 0 {
+		t.Fatalf("left %v", got)
+	}
+	if err := Remove(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("removing a missing file: %v, want ErrNotExist", err)
+	}
+}

@@ -42,8 +42,11 @@ type Slot struct {
 	Name     string // slot name (file name without extension)
 	Path     string
 	Modified time.Time
-	Info     game.SaveInfo
-	Err      error // unreadable / incompatible: listed but not loadable
+	Size     int64 // bytes on disk (Verifier's memo key, with Path and Modified)
+	// Info is the header, kept for a save of another version too: the
+	// list says which (savefmt.CompatOf).
+	Info game.SaveInfo
+	Err  error // unreadable / incompatible (game.ErrSaveVersion): listed but not loadable
 }
 
 // sanitize makes a slot name safe as a file name (savefmt.SlotKey, which
@@ -70,7 +73,9 @@ func (s Store) write(slot string, encode func(io.Writer) error) (string, error) 
 }
 
 // List returns every save, newest first. Unreadable files are listed with
-// Err set.
+// Err set; a save of a version Load does not read keeps its header, with
+// Err game.ErrSaveVersion. List reads headers only: Verifier checks the
+// bodies.
 func (s Store) List() ([]Slot, error) {
 	ents, err := os.ReadDir(s.Dir)
 	if errors.Is(err, os.ErrNotExist) {
@@ -86,7 +91,7 @@ func (s Store) List() ([]Slot, error) {
 		}
 		sl := Slot{Name: strings.TrimSuffix(e.Name(), Ext), Path: filepath.Join(s.Dir, e.Name())}
 		if fi, err := e.Info(); err == nil {
-			sl.Modified = fi.ModTime()
+			sl.Modified, sl.Size = fi.ModTime(), fi.Size()
 		}
 		f, err := os.Open(sl.Path)
 		if err != nil {
@@ -95,7 +100,7 @@ func (s Store) List() ([]Slot, error) {
 			sl.Info, sl.Err = game.ReadSaveInfo(f)
 			f.Close()
 			if sl.Err == nil && !game.SupportedSaveVersion(sl.Info.Version) {
-				sl.Err = game.ErrSaveVersion
+				sl.Err = fmt.Errorf("%w (file v%d, game v%d)", game.ErrSaveVersion, sl.Info.Version, game.SaveVersion)
 			}
 		}
 		out = append(out, sl)

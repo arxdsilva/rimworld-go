@@ -6,6 +6,7 @@ Writes a file so that a crash or a failed write leaves the old contents or the n
 ## Contracts
 - Use it for every file the game or its tools must not leave half-written.
 - `perm` is the final mode, set exactly. The process umask does not change it.
+- `Remove` deletes a file and syncs its folder; a missing file is `fs.ErrNotExist` for the caller to ignore or report.
 
 ## Notes
 Why this isn't a library (`.agents/specs/GO_BEST_PRACTICES.md` §86, step 3): `github.com/google/renameio` is the well-known one, but its README says it exports no functions on Windows, and we release for Windows.

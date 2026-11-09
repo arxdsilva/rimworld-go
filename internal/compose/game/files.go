@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
@@ -12,6 +13,7 @@ import (
 	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/adapters/outbound/scenariofile"
 	appgame "rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/contentid"
 	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/platform/openfolder"
 )
@@ -35,7 +37,9 @@ func cardFiles(capturing bool) uiadapter.CardFiles {
 // a filesave.Queue: the hook encodes on the simulation's goroutine and the
 // queue's worker compresses and writes (CI-002); closeSaves drains it. Dir
 // is the folder used, for the Options "Saves folder" row (SAV-023). build
-// is the game's version, written into every save's header (SAV-003).
+// is the game's version, written into every save's header with the
+// content fingerprint (SAV-003, SAV-025). List checks each new file's body
+// (filesave.Verifier, SAV-022) and says how this build reads it (SAV-021).
 func saveHooks(dir, build string) uiadapter.SaveHooks {
 	store, err := filesave.Default()
 	if dir != "" {
@@ -45,7 +49,8 @@ func saveHooks(dir, build string) uiadapter.SaveHooks {
 		log.Printf("saving disabled: %v", err)
 		return uiadapter.SaveHooks{}
 	}
-	queue := filesave.NewQueue(store)
+	queue, verifier := filesave.NewQueue(store), filesave.NewVerifier()
+	rt := saveRuntime(build, contentid.Current())
 	return uiadapter.SaveHooks{
 		Queue: saveQueue{queue},
 		Dir:   store.Dir,
@@ -57,23 +62,15 @@ func saveHooks(dir, build string) uiadapter.SaveHooks {
 				return fmt.Errorf("this simulation can't be saved")
 			}
 			return queue.SaveAs(g, savefmt.Stamp{Name: meta.Name, Colony: meta.Colony, ColonyName: meta.ColonyName,
-				Base: meta.Base, Autosave: meta.Autosave, Season: meta.Season, Build: build})
+				Base: meta.Base, Autosave: meta.Autosave, Season: meta.Season, Build: build, Content: rt.Content})
 		},
-		Delete: func(string) error { return errors.New("not yet") }, // the load list's delete fills it
+		Delete: queue.Delete, // after the write in flight; the slot's waiting jobs are dropped (SAV-010)
 		List: func() ([]uiadapter.SaveSlot, error) {
 			slots, err := store.List()
+			verifier.Verify(slots)
 			out := make([]uiadapter.SaveSlot, 0, len(slots))
 			for _, sl := range slots {
-				i := sl.Info // upgraded: an older header names its colony from its name
-				s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Date: i.Date,
-					Colonists: i.Colonists, Modified: sl.Modified, Commitment: i.Commitment, Ending: i.Ending,
-					Colony: i.Colony, ColonyName: i.ColonyName, Base: i.Base, Autosave: i.Autosave, Day: i.Day, Season: i.Season,
-					Storyteller: i.Storyteller, Difficulty: i.Difficulty, Biome: i.Biome, MapSize: i.MapSize,
-					Build: i.Build, Version: i.Version}
-				if sl.Err != nil {
-					s.Err = sl.Err.Error()
-				}
-				out = append(out, s)
+				out = append(out, slotOf(sl, rt))
 			}
 			return out, err
 		},
@@ -104,6 +101,60 @@ func saveHooks(dir, build string) uiadapter.SaveHooks {
 				Base: info.Base, Autosave: info.Autosave, Season: info.Season}, nil
 		},
 	}
+}
+
+// saveRuntime is this build as savefmt.CompatOf sees it: the format it
+// writes, the oldest it reads, its build and its content.
+func saveRuntime(build string, content savefmt.Content) savefmt.Runtime {
+	low := appgame.SaveVersion
+	for appgame.SupportedSaveVersion(low - 1) {
+		low--
+	}
+	return savefmt.Runtime{Version: appgame.SaveVersion, Min: low, Build: build, Content: content}
+}
+
+// slotOf is one save as the load list shows it. Name and Path are the
+// file; Title is the name the player typed (the header's). A save of
+// another version keeps its header and says which; a damaged body is
+// "damaged file".
+func slotOf(sl filesave.Slot, rt savefmt.Runtime) uiadapter.SaveSlot {
+	i := sl.Info // upgraded: an older header names its colony from its name
+	s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Title: i.Name, Date: i.Date,
+		Colonists: i.Colonists, Modified: sl.Modified, Commitment: i.Commitment, Ending: i.Ending,
+		Colony: i.Colony, ColonyName: i.ColonyName, Base: i.Base, Autosave: i.Autosave, Day: i.Day, Season: i.Season,
+		Storyteller: i.Storyteller, Difficulty: i.Difficulty, Biome: i.Biome, MapSize: i.MapSize,
+		Build: i.Build, Version: i.Version}
+	switch {
+	case sl.Err == nil || errors.Is(sl.Err, appgame.ErrSaveVersion):
+		c := savefmt.CompatOf(i, rt)
+		s.Compat = int(c)
+		switch c {
+		case savefmt.CompatNewer:
+			s.Err = "Saved by a newer version of the game"
+		case savefmt.CompatTooOld:
+			s.Err = "Saved by a version too old to load"
+		default:
+			s.Notice = slotNotice(i, rt, c)
+		}
+	case errors.Is(sl.Err, savefmt.ErrCorrupt):
+		s.Err = "damaged file"
+	default:
+		s.Err = sl.Err.Error()
+	}
+	return s
+}
+
+// slotNotice is the warning a loadable save shows ("": none): plugins it
+// was played with that this build lacks (SAV-025), or content that differs
+// from this build's.
+func slotNotice(i savefmt.Info, rt savefmt.Runtime, c savefmt.Compat) string {
+	if missing := savefmt.MissingPlugins(i, rt); len(missing) > 0 {
+		return "Played with plugins this game does not have: " + strings.Join(missing, ", ")
+	}
+	if c == savefmt.CompatContent {
+		return "Played with other game content: it may not load as it was"
+	}
+	return ""
 }
 
 // saveQueue is the background save writer as the UI sees it: the saves'

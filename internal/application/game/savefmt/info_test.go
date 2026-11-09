@@ -2,6 +2,7 @@ package savefmt
 
 import (
 	"bytes"
+	"slices"
 	"errors"
 	"io"
 	"testing"
@@ -83,12 +84,6 @@ func TestCheckNameAndCompat(t *testing.T) {
 	if CheckName("  ") == "" || CheckName("Base camp") != "" {
 		t.Fatal("a blank name is refused, a plain one taken")
 	}
-	rt := Runtime{Version: InfoVersion}
-	for v, want := range map[int]Compat{InfoVersion: CompatOK, 3: CompatOlder, InfoVersion + 1: CompatNewer} {
-		if got := CompatOf(Info{Version: v}, rt); got != want {
-			t.Errorf("v%d: %d, want %d", v, got, want)
-		}
-	}
 	if CompatOK != 0 {
 		t.Fatal("CompatOK is the zero value (ports.SaveSlot.Compat: 0 fine)")
 	}
@@ -128,5 +123,82 @@ func TestClampCutsRunes(t *testing.T) {
 		if got := Clamp(c.in, c.n); got != c.want {
 			t.Errorf("Clamp(%q, %d) = %q, want %q", c.in, c.n, got, c.want)
 		}
+	}
+}
+
+func TestCompatOf(t *testing.T) {
+	t.Parallel()
+	rt := Runtime{Version: 16, Min: 2, Build: "v1.2", Content: Content{Hash: 7, Plugins: []string{"core"}}}
+	same := Content{Hash: 7, Plugins: []string{"core"}}
+	for _, c := range []struct {
+		name string
+		info Info
+		want Compat
+	}{
+		{"this build", Info{Version: 16, Build: "v1.2", Content: same}, CompatOK},
+		{"another build's content", Info{Version: 16, Build: "v1.1", Content: Content{Hash: 9}}, CompatOK},
+		{"this build, other content", Info{Version: 16, Build: "v1.2", Content: Content{Hash: 9}}, CompatContent},
+		{"older format", Info{Version: 15, Build: "v1.2", Content: Content{Hash: 9}}, CompatOlder},
+		{"oldest read", Info{Version: 2}, CompatOlder},
+		{"too old", Info{Version: 1}, CompatTooOld},
+		{"no version", Info{}, CompatTooOld},
+		{"newer format", Info{Version: 17, Build: "v1.2", Content: same}, CompatNewer},
+	} {
+		got := CompatOf(c.info, rt)
+		if got != c.want {
+			t.Errorf("%s: %d, want %d", c.name, got, c.want)
+		}
+		if got.Loads() != (c.want != CompatNewer && c.want != CompatTooOld) {
+			t.Errorf("%s: Loads %v", c.name, got.Loads())
+		}
+	}
+}
+
+func TestMissingPlugins(t *testing.T) {
+	t.Parallel()
+	rt := Runtime{Content: Content{Plugins: []string{"core"}}}
+	if got := MissingPlugins(Info{Content: Content{Plugins: []string{"core", "moreFauna", "x"}}}, rt); !slices.Equal(got, []string{"moreFauna", "x"}) {
+		t.Fatalf("missing %v", got)
+	}
+	if got := MissingPlugins(Info{}, rt); got != nil {
+		t.Fatalf("a header with no plugins misses %v", got)
+	}
+}
+
+// A byte flipped in the middle of the compressed stream is caught by the
+// time the stream ends: as bad deflate data or by the CRC.
+func TestDrainDetectsFlippedByte(t *testing.T) {
+	t.Parallel()
+	raw := make([]byte, 1<<16)
+	x := uint32(1)
+	for i := range raw {
+		x = x*1664525 + 1013904223
+		raw[i] = "colony pawns build walls "[x>>27%25]
+	}
+	var buf bytes.Buffer
+	if err := Compress(&buf, raw); err != nil {
+		t.Fatal(err)
+	}
+	for _, at := range []int{buf.Len() / 3, buf.Len() / 2, 2 * buf.Len() / 3} {
+		bad := bytes.Clone(buf.Bytes())
+		bad[at] ^= 0x10
+		zr, err := NewReader(bytes.NewReader(bad))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := Drain(zr); !errors.Is(err, ErrCorrupt) {
+			t.Errorf("byte %d of %d flipped: drained with %v, want ErrCorrupt", at, buf.Len(), err)
+		}
+	}
+}
+
+func TestFinishWrapsDecodeErrors(t *testing.T) {
+	t.Parallel()
+	boom := errors.New("gob: bad data")
+	if err := Finish(boom, bytes.NewReader(nil)); !errors.Is(err, ErrCorrupt) || !errors.Is(err, boom) {
+		t.Fatalf("decode error became %v", err)
+	}
+	if err := Finish(nil, bytes.NewReader([]byte("rest"))); err != nil {
+		t.Fatalf("a clean body: %v", err)
 	}
 }
