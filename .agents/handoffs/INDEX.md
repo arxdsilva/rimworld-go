@@ -105,6 +105,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | CI-002-tint-shader-race | The tint shader's first draw raced | 2026-11-04 | [OPS.md](OPS.md#ci-002-tint-shader-race) |
 | CI-003-game-test-time | `application/game` test time under `-race` | 2026-11-06 | [OPS.md](OPS.md#ci-003-game-test-time) |
 | CI-004-ebiten-test-time | The ebiten root's `-race` test time | 2026-11-06 | [OPS.md](OPS.md#ci-004-ebiten-test-time) |
+| CI-005-heavy-binaries-serial | CI headroom: heavy test binaries alone, catalog parsed once, journeys skip wasted world work | 2026-11-08 | [OPS.md](OPS.md#ci-005-heavy-binaries-serial) |
 | CSE-W1-habits | Options Habits tab (CSE-049, CSE-023) | 2026-11-03 | [MOD.md](MOD.md#cse-w1-habits) |
 | CSE-W2-pack | The pack (CSE-036) | 2026-11-03 | [MOD.md](MOD.md#cse-w2-pack) |
 | CSE-W3-tidy | Tidying a room around a job (CSE-017…027) | 2026-11-04 | [MOD.md](MOD.md#cse-w3-tidy) |
