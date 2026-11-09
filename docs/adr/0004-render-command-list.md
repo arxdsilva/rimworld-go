@@ -1,6 +1,6 @@
 # ADR 0004: a render-command list
 
-Status: accepted (2026-11-08). Gap rows: GAR-140 to GAR-169.
+Status: accepted (2026-11-08); narrowed by the 2026-11-08 revision below (PERF-007). Gap rows: GAR-140 to GAR-169.
 
 ## Context
 
@@ -58,6 +58,18 @@ Ebitengine v2.10.6 merges a draw only into the command queued immediately before
     - a no-flap test.
 11. **Proof.** The old path stays behind a flag until every layer has moved. Fixed scenes render through both paths in one process and must match byte for byte with zero tolerance. Draw calls are counted from an `ebitenginedebug` run. Reduced-resolution paths get their own golden images.
 12. **Observable.** A per-frame stats snapshot feeds the debug HUD: commands, batches, sheets, targets, target switches, whether the sort ran, and the resolution step.
+
+## Revision (2026-11-08, PERF-007): measured before building
+
+An `ebitenginedebug` probe of the grown 500×500 colony at zoom 1 (`scripts/ebdebug.sh`) executes about **152 draw commands a frame** after Ebitengine's own merging, with 17 target switches and almost no pixel writes. The lit world is about 7 of those. Ebitengine already moves source-only images onto shared atlas pages, so lit draws from different pair images do merge, and lit.kage's uniforms are frame constants (§5's Custom slots are already used). The UI makes most commands: canvas images, text, and fills.
+
+The CPU went elsewhere. In `BenchmarkDrawArt500/z1`, 0.82 s of 1.62 s of Draw CPU is Ebitengine's anti-aliased `vector` path. Each AA fill or stroke is deferred per destination and drawn through a stencil-buffer atlas when the destination is next used.
+
+So the order changes:
+1. AA shapes become feathered triangles drawn in place (`gfx/aashape`). This is the largest Draw win.
+2. Byte-exact fixes inside layers: crops flush only on overlap; water needs no per-tile region uniforms; a prepare pass for bakes and pixel writes.
+3. §1–§4 (the list, sort keys, radix sort) are **not built**. The go/no-go gate (≥ 1 µs of Ebitengine CPU per call × ≥ 1,500 calls a frame, or more than 350 commands) is not met. A strict-order coalescing emitter is the most that would follow, and only if a later in-game profile asks for it.
+4. §11's proof is the pixel-diff capture (`-capture-diff`): old path, new path and old path again in one process, byte-equal for moves and batching, and a stated tolerance for the AA swap.
 
 ## Adoption
 
