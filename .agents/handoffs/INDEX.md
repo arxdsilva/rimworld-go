@@ -222,6 +222,8 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PERF-004-gar-baseline | The VSync-on probe matrix baseline (GAR C3) | 2026-11-08 | [PERF.md](PERF.md#perf-004-gar-baseline) |
 | PERF-005-lod-by-cells | The LOD tiers follow the cells in view (GAR-155) | 2026-11-08 | [PERF.md](PERF.md#perf-005-lod-by-cells) |
 | PERF-006-frame-pacing | Walkers move the same distance every frame: a paced animation clock (GAR-091) | 2026-11-08 | [PERF.md](PERF.md#perf-006-frame-pacing) |
+| PERF-007-draw-measured | Draw CPU measured before building E7; the pixel-diff harness | 2026-11-08 | [PERF.md](PERF.md#perf-007-draw-measured) |
+| PERF-010-async-autosave | Autosaves write on a worker goroutine (GAR-190) | 2026-11-08 | [PERF.md](PERF.md#perf-010-async-autosave) |
 | PLAY010_PLAN | PLAY-010 play-feedback batch (14 items, up to 15 agents) | 2026-10-23 | [PLAY.md](PLAY.md#play010_plan) |
 | PLAY011_PLAN | PLAY-011 auto-oriented doors and gates, in-place material swaps, unmovable fences | 2026-10-24 | [PLAY.md](PLAY.md#play011_plan) |
 | PLAY012_PLAN | PLAY-012 Plan tool and crisp UI scaling (Auto + presets, HiDPI) | 2026-10-24 | [PLAY.md](PLAY.md#play012_plan) |

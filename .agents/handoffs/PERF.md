@@ -157,3 +157,22 @@ Walkers move the same distance every frame: a paced animation clock (GAR-091) ·
 - Decisions: captures never pace, so their frames stay deterministic. The sim, saves and the state hash are untouched; this is presentation only.
 - HUD: none. Smoothness is what the player sees; the root test `TestWalkSmoothWithZeroOrTwoUpdates` states it.
 - Open: GAR-081 and GAR-082, the budget at 1x and a cap on ticks per frame, are separate.
+
+## PERF-007-draw-measured
+Draw CPU measured before building E7; the pixel-diff harness · 2026-11-08 · 40c9e8b25
+- Changed: `scripts/ebdebug.sh` summarises a `-tags ebitenginedebug` run: commands per frame after Ebitengine merges them, target switches, pixel writes, and the source lines that start the most commands. `-capture-diff <dir>` renders a capture scene old, new, then old again in one process. It requires A == A′, then compares A with B under `exact` or `aa` (non-edge Δ ≤ 1, edge max ≤ 32 and mean ≤ 6 /255). It writes A, B, heat.png and report.json. `scripts/pixeldiff.sh` runs 8 scenes. A `render.Paths` bit selects each migration's new path while it is checked.
+- Numbers (grown 500, z1, debug build, counts only): 152 draw commands a frame, 17 target switches, 0.1 pixel writes. The lit world is about 7 of them; the UI (canvas images 56, text 39, AA rects 27) makes the rest. In `BenchmarkDrawArt500/z1`, 0.82 s of 1.62 s of Draw CPU is the anti-aliased `vector` path (stencil atlas, deferred per target).
+- Decisions: the render-command list (ADR 0004 §1–4) is not built: it would only merge commands Ebitengine already merges. The order is AA shapes as feathered triangles, then byte-exact fixes inside layers. ADR 0004 carries the revision.
+- Decisions: each diff pass draws into one reused offscreen image, cleared per pass. A fresh `NewImage` per pass made A differ from A′ by 1/255 on about 510 pixels.
+- Limits: `capture.go` grew by 44 lines; the ebiten root is at 11,878 of 12,000. `Paths` sits on `mapScene` because `Renderer` is at 25 fields.
+- Open: the in-game CPU profile and xctrace GPU time, on a quiet machine (GAR-140/141/152/156). The `snow` diff scene is tundra plus the weather UI; nobody has checked that it shows snow.
+
+## PERF-010-async-autosave
+Autosaves write on a worker goroutine (GAR-190) · 2026-11-08 · 236eaf427
+- Changed: a save encodes raw gob into memory on the sim goroutine (`game.EncodeSave`, 7.6 ms on the grown 500 colony). The worker runs gzip (`savefmt.Compress`, 6.9 ms), the atomic write and the camera sidecar. Before, all of it ran on the frame (14.5 ms plus two F_FULLFSYNCs). `StateHash` hashes the raw gob, with no gzip round trip.
+- HUD: a dim "Saving..." row at the toast anchor while the queue is busy, shown for at least 45 Updates. A failed save shows the hint and a danger toast (`Chrome.Alarm`, 360 Updates). UI checklist §33.4 rows ticked.
+- Decisions: the encoded bytes are owned outright, so the sim never shares memory with the writer, with no deep copy. One save is in flight; a waiting job for the same slot and kind is replaced. A view is skipped when its save failed. Slot load, refresh, leaving and Save & Quit wait first. A commitment-mode failure keeps the player in the colony; window close still quits.
+- Decisions: a nil `SaveHooks.Queue` keeps the synchronous path, so every older save test runs unchanged; each has an async twin on a real Queue. `Env.AsyncSaves` gates the async path because older fakes embed a nil Shell.
+- Limits: `options.Host` is at 8 methods, so the toast goes through `Saver.SaveFailed`. `Screen` gained only `PollSaves` (40 methods). The ebiten root grew 20 lines.
+- Save impact: none: same file bytes, same format, same version.
+- Open: the autosave matrix cell (0 frames over 33 ms) on a quiet machine. The 15.9 MB encode garbage is mostly the save struct build (GAR-191).
