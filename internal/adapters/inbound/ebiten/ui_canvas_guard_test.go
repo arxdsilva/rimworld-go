@@ -60,6 +60,9 @@ var canvasExempt = map[string]string{
 	"gfx/canvas.go:Triangles":    "the canvas: logical in, physical out",
 	"gfx/canvas.go:Triangles32":  "the canvas: logical in, physical out",
 	"gfx/text.go:Text":           "the canvas's text path: scaled faces at physical positions",
+	// the canvas's cached text runs (GAR-160): rendered once at physical scale, drawn as one quad
+	"gfx/textrun.go:render": "the canvas's text path: a cached run rendered once at physical scale",
+	"gfx/textrun.go:Draw":   "the canvas's text path: a cached run drawn as one quad at the Text position",
 
 	// the anti-aliased shapes (gfx.FillCircle & co. with aa, gfx.PxDisc & co.)
 	"gfx/aashape/painter.go:flush": "the canvas's anti-aliased shapes: one triangle batch each",
