@@ -208,17 +208,17 @@ type flowSaves struct {
 
 func (s *flowSaves) hooks() SaveHooks {
 	return SaveHooks{
-		Save: func(_ Simulation, slot string) error { s.saves = append(s.saves, slot); return nil },
+		Save: func(_ Simulation, m ports.SaveMeta) error { s.saves = append(s.saves, m.Name); return nil },
 		List: func() ([]ports.SaveSlot, error) { return s.slots, nil },
-		Load: func(path string) (Simulation, string, error) {
+		Load: func(path string) (Simulation, ports.SaveMeta, error) {
 			if path != "saves/kept.sav" {
-				return nil, "", errors.New("no such save " + path)
+				return nil, ports.SaveMeta{}, errors.New("no such save " + path)
 			}
 			g := game.New(game.Config{Seed: 3, Width: 24, Height: 24})
 			if _, err := g.SpawnPawn(8, 4); err != nil {
-				return nil, "", err
+				return nil, ports.SaveMeta{}, err
 			}
-			return g, "kept", nil
+			return g, ports.SaveMeta{Name: "kept"}, nil
 		},
 	}
 }
@@ -419,8 +419,8 @@ func TestJourneyFlowContinueLoads(t *testing.T) {
 		t.Fatal("Continue is disabled with a save listed")
 	}
 	flowAttach(j)
-	if j.a.opt.SaveSlot != "kept" || !strings.HasPrefix(j.a.hint, "loaded") {
-		t.Fatalf("slot %q hint %q after Continue, want the kept save loaded", j.a.opt.SaveSlot, j.a.hint)
+	if j.a.opt.Saves.SaveSlot != "kept" || !strings.HasPrefix(j.a.hint, "loaded") {
+		t.Fatalf("slot %q hint %q after Continue, want the kept save loaded", j.a.opt.Saves.SaveSlot, j.a.hint)
 	}
 	if len(j.g.Snapshot()) != 1 {
 		t.Fatalf("the loaded colony has %d colonists, want 1", len(j.g.Snapshot()))

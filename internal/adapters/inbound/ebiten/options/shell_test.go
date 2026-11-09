@@ -1,7 +1,6 @@
 package options
 
 import (
-	"errors"
 	"fmt"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
@@ -21,12 +20,6 @@ type fakeShell struct {
 	set      []config.Settings
 	hints    []string
 	cues     []string
-	saved    []string
-	saveErr  error
-	slots    []ports.SaveSlot
-	listErr  error
-	loadErr  error
-	loaded   []string
 	intents  []ports.Intent
 }
 
@@ -49,18 +42,6 @@ func (f *fakeShell) Size() (int, int)     { return 1280, 720 }
 func (f *fakeShell) Rebind() *RebindState { return &f.rb }
 func (f *fakeShell) Date() clock.Date     { return f.date }
 func (f *fakeShell) Tick() clock.Tick     { return f.tick }
-func (f *fakeShell) Save(slot string) error {
-	f.saved = append(f.saved, slot)
-	return f.saveErr
-}
-
-var errDisk = errors.New("disk full")
-
-func (f *fakeShell) List() ([]ports.SaveSlot, error) { return f.slots, f.listErr }
-func (f *fakeShell) Load(path string) (string, clock.Tick, error) {
-	f.loaded = append(f.loaded, path)
-	return "colony-autosave", clock.Tick(3 * clock.TicksPerDay), f.loadErr
-}
 
 // T and Tf are the English catalog: the tests read the source text.
 func (f *fakeShell) T(src string) string { return src }

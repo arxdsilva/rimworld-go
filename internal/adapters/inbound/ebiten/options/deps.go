@@ -4,12 +4,12 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/options/saves"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/gameplay"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/storyteller"
 	"rimworld-go/internal/platform/config"
@@ -23,10 +23,6 @@ import (
 type Env struct {
 	Running    bool                // a colony is running (the Story tab exists)
 	Commitment bool                // that colony is in commitment mode
-	Capture    bool                // a scripted capture or the fps probe runs
-	CanSave    bool                // a colony runs and a save hook is wired
-	CanLoad    bool                // the save list and loading are wired
-	AsyncSaves bool                // Save only starts a save; Finished and Wait report it (CI-002)
 	Hardware   func() sysinfo.Info // nil: the machine cannot be read
 	// DeviceScale is the display's pixel density (read lazily: it asks the
 	// window).
@@ -75,32 +71,6 @@ type Host interface {
 	Rebind() *RebindState
 }
 
-// Saver is the saved-game storage as the screen uses it.
-type Saver interface {
-	// Save writes the running colony to slot (its commitment slot or the
-	// manual one).
-	Save(slot string) error
-	// List reads the save list.
-	List() ([]ports.SaveSlot, error)
-	// Load replaces the session with the save at path and returns its slot
-	// name and tick.
-	Load(path string) (slot string, tick clock.Tick, err error)
-	// Finished returns the background saves written since the last call
-	// (Env.AsyncSaves), oldest first.
-	Finished() []SaveResult
-	// Wait blocks until every background save is written.
-	Wait()
-	// SaveFailed tells the player a background save failed: a Danger
-	// toast.
-	SaveFailed(text string)
-}
-
-// SaveResult is one background save that finished.
-type SaveResult struct {
-	Slot string
-	Err  error // nil: written
-}
-
 // Story is what the Story and Habits tabs borrow from the New Colony wizard
 // and the running colony.
 type Story interface {
@@ -129,7 +99,8 @@ type Nav interface {
 	ports.Dispatcher
 }
 
-// Shell composes the roles the screen calls with its Host.
+// Shell composes the roles the screen calls with its Host. The save slots
+// are the Saves book's (options/saves), with a shell of its own.
 type Shell interface {
 	Nav
 	ports.Sizer
@@ -137,7 +108,6 @@ type Shell interface {
 	ports.Widgets
 	ports.World
 	Host
-	Saver
 	Story
 }
 
@@ -158,20 +128,18 @@ type PendingBind struct {
 	others []input.Action
 }
 
-// Screen is the Options screen, the settings store's UI and the save
-// slots (ARCH-005).
+// Screen is the Options screen and the settings store's UI (ARCH-005); it
+// holds the save slots' book (Saves) for the root.
 type Screen struct {
 	sh Shell
 
 	// The state other root files read until the sweep repoints them to
 	// methods (ARCH-005 wave 5.3; the lead moved these from App).
-	Tab         string           // the open Options tab ("" the first)
-	Slots       []ports.SaveSlot // the Load screen's list
-	SlotsRead   bool             // the main menu read the list once
-	SaveSlot    string           // the current colony's save slot
-	AutosaveDay int              // in-game day of the last autosave
-	SlotPage    int              // the Load screen's page of saves
-	namesDraft  string           // the preferred names dialog's text
+	Tab        string // the open Options tab ("" the first)
+	namesDraft string // the preferred names dialog's text
+	// Saves is the running colony's saves and the Load screen (SAV-001…025);
+	// the root builds it over its own shell.
+	Saves *saves.Book
 	// Scale is the UI scale row's list, refusal and keep-or-revert question.
 	Scale  ScaleControl
 	rowOff int // the first row shown when a tab has more rows than fit

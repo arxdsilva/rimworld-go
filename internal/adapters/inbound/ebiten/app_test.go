@@ -553,7 +553,7 @@ func TestBodyOriginClearsLeftRail(t *testing.T) {
 	click(t, a, "wizard.back")
 	click(t, a, "wizard.back")
 	click(t, a, "menu.load")
-	x, _ := bodyOrigin(a.opt.LoadButtons(a.sw, a.sh), a.sh)
+	x, _ := bodyOrigin(a.opt.Saves.LoadButtons(a.sw, a.sh), a.sh)
 	if x != bodyDefaultX {
 		t.Fatalf("load body x=%d, want %d (footer only)", x, bodyDefaultX)
 	}

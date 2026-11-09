@@ -28,7 +28,9 @@ const (
 	PrefixArchColour   = "arch.colour." // AX-3: a carpet floor colour swatch
 	PrefixArchTool     = "arch.tool."
 	PrefixFloat        = "float."
+	PrefixLoad         = "load." // every Load screen id: the saves book (options/saves)
 	PrefixLoadSlot     = "load.slot."
+	PrefixLoadDelete   = "load.delete." // + slot index: delete that save
 	PrefixAnimal       = "animal."
 	PrefixPlant        = "plant."
 	PrefixItem         = "item."
@@ -89,6 +91,11 @@ const (
 	PauseOptions  = "pause.options"
 	PauseMenu     = "pause.menu"
 	PauseQuit     = "pause.quit"
+	// PauseSaveQuitOS is Save & Quit to the desktop.
+	PauseSaveQuitOS = "pause.savequitos"
+
+	LoadSort   = "load.sort"   // the Load screen's sort order
+	LoadColony = "load.colony" // the Load screen's colony filter
 
 	OptionsBack = "options.back"
 

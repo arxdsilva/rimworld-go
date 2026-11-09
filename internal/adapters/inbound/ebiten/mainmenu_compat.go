@@ -17,7 +17,7 @@ import (
 // one package at a time; the last mover deletes this file (SOLID_GO.md §11).
 
 // newestSlot is the index of the loadable save written last (-1 when none).
-func (a *App) newestSlot() int { return mainmenu.NewestSlot(a.opt.Slots) }
+func (a *App) newestSlot() int { return mainmenu.NewestSlot(a.opt.Saves.Slots) }
 
 // creditsButtons is the Credits screen's Back button.
 func (a *App) creditsButtons(sw, sh int) []uikit.Button {
@@ -33,11 +33,11 @@ func (a *App) hasSaves() bool {
 	if !a.canLoad() {
 		return false
 	}
-	if !a.opt.SlotsRead {
-		a.opt.SlotsRead = true
-		a.opt.RefreshSlots()
+	if !a.opt.Saves.SlotsRead {
+		a.opt.Saves.SlotsRead = true
+		a.opt.Saves.RefreshSlots()
 	}
-	for _, sl := range a.opt.Slots {
+	for _, sl := range a.opt.Saves.Slots {
 		if sl.Err == "" {
 			return true
 		}

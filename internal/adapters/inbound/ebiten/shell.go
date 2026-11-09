@@ -348,9 +348,9 @@ func (s shellWidgets) Kit() *uikit.Kit { return s.a.uiSt() }
 type shellSaves struct{ a *App }
 
 // Slots is the load screen's list (RefreshSlots reads it from disk).
-func (s shellSaves) Slots() []ports.SaveSlot { return s.a.opt.Slots }
-func (s shellSaves) RefreshSlots()           { s.a.opt.RefreshSlots() }
-func (s shellSaves) LoadSlot(i int)          { s.a.opt.LoadSlot(i) }
+func (s shellSaves) Slots() []ports.SaveSlot { return s.a.opt.Saves.Slots }
+func (s shellSaves) RefreshSlots()           { s.a.opt.Saves.RefreshSlots() }
+func (s shellSaves) LoadSlot(i int)          { s.a.opt.Saves.LoadSlot(i) }
 func (s shellSaves) NewestSlot() int         { return s.a.newestSlot() }
 
 // ---- Texts
@@ -439,6 +439,9 @@ func (s shellDispatch) Do(it ports.Intent) {
 	case ports.OpenInfoCard:
 		infocard.New(a.shell).Open(it) // GEAR-006: a kit modal over the map, no state of its own
 	case ports.Push:
+		if it.Screen == ports.ScreenLoad { // the ending's Load game: a fresh list, never the main menu's
+			a.opt.Saves.RefreshSlots()
+		}
 		a.apply(intent{kind: intentPush, screen: it.Screen})
 	case ports.Back:
 		a.apply(intent{kind: intentBack})
@@ -556,22 +559,20 @@ func clickRoutes() []clickRoute {
 		on(ids.PrefixArchColour, func(a *App, id string) { a.arch.Colour = strings.TrimPrefix(id, ids.PrefixArchColour) }), // AX-3
 		on(ids.PrefixArchTool, func(a *App, id string) { a.arch.SelectTool(strings.TrimPrefix(id, ids.PrefixArchTool)) }),
 		on(ids.PrefixFloat, (*App).chooseFloat), // orders.go
-		on(ids.PrefixLoadSlot, func(a *App, id string) {
-			if i, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixLoadSlot)); err == nil {
-				a.opt.LoadSlot(i)
-			}
+		{id: ids.PrefixLoad, prefix: true, run: func(a *App, id string) bool { return a.opt.Saves.Click(id) }}, // options/saves; load.back falls through
+		exact(ids.PauseSaveQuit, func(a *App, _ string) {
+			a.opt.Saves.SaveAndLeave(func() { a.apply(intent{kind: intentReturnToMenu}) })
 		}),
-		exact(ids.PauseSaveQuit, func(a *App, _ string) { a.apply(intent{kind: intentReturnToMenu}) }), // commitment: Save & Quit to Menu (saves.go)
+		exact(ids.PauseSaveQuitOS, func(a *App, _ string) { a.opt.Saves.SaveAndLeave(func() { a.apply(intent{kind: intentQuit}) }) }),
 		exact(ids.PauseSave, func(a *App, _ string) {
-			a.opt.SaveNow(a.opt.SaveSlot)
-			a.apply(intent{kind: intentResume})
+			a.opt.Saves.OpenSaveDialog(func() { a.apply(intent{kind: intentResume}) })
 		}),
 		exact(ids.PauseLoad, openLoadScreen),
 		exact(ids.MenuLoad, openLoadScreen),
 		exact(ids.MenuContinue, func(a *App, _ string) {
-			a.opt.RefreshSlots()
+			a.opt.Saves.RefreshSlots()
 			if i := a.newestSlot(); i >= 0 { // the most recent save, commitment ones too
-				a.opt.LoadSlot(i)
+				a.opt.Saves.LoadSlot(i)
 			}
 		}),
 		exact(ids.PawnDraft, func(a *App, _ string) { a.ord.ToggleDraft() }),
@@ -650,7 +651,7 @@ func clickMainTab(a *App, id string) bool {
 
 // openLoadScreen refreshes the slot list and pushes the Load screen.
 func openLoadScreen(a *App, _ string) {
-	a.opt.RefreshSlots()
+	a.opt.Saves.RefreshSlots()
 	a.apply(intent{kind: intentPush, screen: ports.ScreenLoad})
 }
 

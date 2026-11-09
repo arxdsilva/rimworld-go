@@ -65,6 +65,20 @@ func paneShare(h int) string {
 	return fmt.Sprintf("%d%%", ((h+24)*100+360)/720)
 }
 
+// commitDevReason is why developer mode is locked while a commitment colony
+// runs (NG-1 §2.13; its saves are options/saves).
+const commitDevReason = "Commitment mode"
+
+// optionLock is why an Options row cannot change now ("" when it can): a
+// running commitment colony locks developer mode; card rows follow their
+// settings.
+func (o *Screen) optionLock(key string) string {
+	if key == "devmode" && o.sh.Env().Commitment {
+		return commitDevReason
+	}
+	return cardLock(key, o.sh.Settings().HUD)
+}
+
 // cardLock is why a card row cannot change with these settings ("" when it
 // can).
 func cardLock(key string, h config.HUD) string {

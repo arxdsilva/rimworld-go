@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
 )
@@ -108,7 +107,6 @@ func (l colonyLoader) Finish() error {
 func (a *App) finishStart(sim Simulation) {
 	a.startSession(sim)
 	reportColony(a.cfg.Usage, "new", sim)
-	a.opt.SaveSlot = options.NewSlotName()
-	a.opt.AutosaveDay = 0
-	a.wiz.Drop() // the setup is done: the wizard's draft goes with it
+	a.opt.Saves.NewColony(int64(sim.Tick())) // a new slot and colony id (SAV-003)
+	a.wiz.Drop()                             // the setup is done: the wizard's draft goes with it
 }

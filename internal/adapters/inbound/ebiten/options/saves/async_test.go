@@ -1,4 +1,4 @@
-package options
+package saves
 
 import (
 	"errors"
@@ -16,8 +16,8 @@ type asyncShell struct {
 	alarms []string
 }
 
-func (a *asyncShell) Env() Env {
-	e := a.fakeShell.Env()
+func (a *asyncShell) SaveEnv() Env {
+	e := a.fakeShell.SaveEnv()
 	e.AsyncSaves = true
 	return e
 }
@@ -29,7 +29,7 @@ func (a *asyncShell) Finished() []SaveResult {
 func (a *asyncShell) Wait()                  { a.waits++ }
 func (a *asyncShell) SaveFailed(text string) { a.alarms = append(a.alarms, text) }
 
-func newAsync() (*asyncShell, *Screen) {
+func newAsync() (*asyncShell, *Book) {
 	f, _ := newFake()
 	a := &asyncShell{fakeShell: f}
 	a.env = Env{CanSave: true, CanLoad: true}

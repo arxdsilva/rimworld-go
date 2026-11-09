@@ -1,11 +1,13 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/outbound/cardpresetfile"
 	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/adapters/outbound/scenariofile"
@@ -30,7 +32,8 @@ func cardFiles(capturing bool) uiadapter.CardFiles {
 // saveHooks wires the UI's save/load to the per-user saves folder, or to
 // dir when one is given (-save-dir). Saves and camera sidecars go through
 // a filesave.Queue: the hook encodes on the simulation's goroutine and the
-// queue's worker compresses and writes (CI-002); closeSaves drains it.
+// queue's worker compresses and writes (CI-002); closeSaves drains it. Dir
+// is the folder used, for the Options "Saves folder" row (SAV-023).
 func saveHooks(dir string) uiadapter.SaveHooks {
 	store, err := filesave.Default()
 	if dir != "" {
@@ -43,13 +46,17 @@ func saveHooks(dir string) uiadapter.SaveHooks {
 	queue := filesave.NewQueue(store)
 	return uiadapter.SaveHooks{
 		Queue: saveQueue{queue},
-		Save: func(sim uiadapter.Simulation, slot string) error {
+		Dir:   store.Dir,
+		// Save writes the slot meta names (the store sanitises it; SAV-003
+		// writes the rest of meta into the header).
+		Save: func(sim uiadapter.Simulation, meta ports.SaveMeta) error {
 			g, ok := sim.(*appgame.Game)
 			if !ok {
 				return fmt.Errorf("this simulation can't be saved")
 			}
-			return queue.Save(g, slot)
+			return queue.Save(g, meta.Name)
 		},
+		Delete: func(string) error { return errors.New("not yet") }, // the load list's delete fills it
 		List: func() ([]uiadapter.SaveSlot, error) {
 			slots, err := store.List()
 			out := make([]uiadapter.SaveSlot, 0, len(slots))
@@ -81,12 +88,12 @@ func saveHooks(dir string) uiadapter.SaveHooks {
 			}
 			return views, true
 		},
-		Load: func(path string) (uiadapter.Simulation, string, error) {
+		Load: func(path string) (uiadapter.Simulation, ports.SaveMeta, error) {
 			g, info, err := store.Load(path)
 			if err != nil {
-				return nil, "", err
+				return nil, ports.SaveMeta{}, err
 			}
-			return g, info.Name, nil
+			return g, ports.SaveMeta{Name: info.Name}, nil
 		},
 	}
 }

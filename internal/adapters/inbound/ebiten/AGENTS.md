@@ -16,7 +16,7 @@ Since ARCH-001…006 (`.agents/specs/SOLID_GO.md`, `.agents/handoffs/ARCH.md`) t
 | `render/{motion,light,sprite,env,creature,overlay,cue,minimap,world}` | the draw layers: movement tracks, lighting and shadows, sprite painting and linked art, ground cover and weather, creatures, map overlays, sound cues, the minimap, the world draw order with its zoom tiers | each dir |
 | `selection/` | what is selected (`Model`) | `selection/AGENTS.md` |
 | `dossier/`, `dossier/sheet/` | the colonist card and its setup modal; `sheet` is its pure logic | `dossier/AGENTS.md` |
-| `mainmenu/`, `wizard/`, `options/` | the main menu, the New Colony flow, the Options screen with the settings store and save slots | each dir |
+| `mainmenu/`, `wizard/`, `options/`, `options/saves/` | the main menu, the New Colony flow, the Options screen with the settings store; the saves book (saving, autosave, leaving, the Load screen) | each dir |
 | `windows/`, `architect/`, `orders/`, `dialogs/`, `learn/`, `devtools/`, `perf/`, `inspector/`, `hud/` | the colony's features: the main-tab windows, the Architect, the order flow, trade/comms/caravan, the learning helper, developer mode, the frame-timing instruments, the selection's inspector, the HUD regions | each dir |
 
 In this package:
@@ -46,14 +46,14 @@ In this package:
 - Input (UI-016): only `inputframe` reads Ebitengine's keyboard and mouse; `App.Update` polls once into the frame and resolves actions against the context stack (text > modal > tool > panel > map > global > dev). A pressed key fires at most one action; a used mouse press is taken so later handlers skip it. Bindings live in `config.Settings.Controls`; labels use `ports.Settings.KeyHint`, so they always show the live key.
 - UI scale (PLAY-012, UI-024): the UI lays out in logical pixels and draws through `gfx`; anything the camera places stays in map pixels (`mapCursor()`, `mapViewport()`, `mapScale()`), never `pw`/`uiScale()` outside the world pass. `TestUIDrawsThroughCanvas` rejects raw drawing outside its exemption list (each entry has a reason) and `TestMapPixelsComeFromMapCursor` checks every `TileAt`/`screenToWorld` caller, in the sub-packages too.
 - Settings are presentation-only and never reach the simulation, except Max colonies, sent as `command.SetColonyCap` (a rule the player sets); `-capture` runs get no `SettingsHooks` and no `Sound`, so captures are deterministic.
-- Commitment colonies: one save slot written by the game itself; pause shows Save & Quit, Load and developer mode are disabled (`options`).
+- Commitment colonies: one save slot written by the game itself through `SaveHooks.Save`; pause shows Save & Quit, Load and developer mode are disabled (`options/saves`, `options`). Leaving goes through `Book.Leave`, the Load screen's ids (`load.`) through `Book.Click`.
 
 ## Invariants
 - Screen ids and widget bounds never enter domain or save state.
 - Sprite animation uses the presentation frame counter (`View.Present`), never sim ticks, to pick frames; tile lerp uses sim ticks vs the step tick.
 - Menu chrome colours match `assets/palettes/ui.yaml` (`TestUIPaletteMatchesYAML` in `uikit`).
 - The main-menu splash and the diorama are optional; without them the gradient backdrop is drawn. Their motion runs on `menuTick`, never the sim.
-- Size limits (`.agents/specs/SOLID_GO.md` §8) hold for every type here; `App` (57 fields, 244 methods) and `Renderer` (48, 153) are the remaining budgeted debt in `internal/arch/solid_budget.txt` — only lower it.
+- Size limits (`.agents/specs/SOLID_GO.md` §8) hold for every type here; `App` (57 fields, 242 methods) and `Renderer` (48, 153) are the remaining budgeted debt in `internal/arch/solid_budget.txt` — only lower it.
 
 ## Hot paths
 Colony `Draw`: `render/world.Pipeline` over the layers, culled to the visible tiles with the chunk tiers; no full-map loop per frame; no new allocation per frame; no interface value in a per-tile or per-object loop; no pointer to a frame local through an interface method (SOLID_GO §7). `Renderer.advanceTicks` runs once per Update on the same read models: only creatures near the view keep a motion track (`render/motion`); memos keyed on read-model identity apply only to a simulation with the view cache.

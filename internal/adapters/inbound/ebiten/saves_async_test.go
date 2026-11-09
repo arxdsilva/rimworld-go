@@ -12,7 +12,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
-	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/options/saves"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/application/game"
@@ -51,7 +51,7 @@ func realSaves(t *testing.T, dir string) SaveHooks {
 	t.Cleanup(q.Close)
 	return SaveHooks{
 		Queue: realQueue{q, new([]SaveResult)},
-		Save:  func(sim Simulation, slot string) error { return q.Save(sim.(*game.Game), slot) },
+		Save:  func(sim Simulation, m ports.SaveMeta) error { return q.Save(sim.(*game.Game), m.Name) },
 		List: func() ([]SaveSlot, error) {
 			slots, err := store.List()
 			out := make([]SaveSlot, 0, len(slots))
@@ -60,12 +60,12 @@ func realSaves(t *testing.T, dir string) SaveHooks {
 			}
 			return out, err
 		},
-		Load: func(path string) (Simulation, string, error) {
+		Load: func(path string) (Simulation, ports.SaveMeta, error) {
 			g, info, err := store.Load(path)
 			if err != nil {
-				return nil, "", err
+				return nil, ports.SaveMeta{}, err
 			}
-			return g, info.Name, nil
+			return g, ports.SaveMeta{Name: info.Name}, nil
 		},
 		SaveView: func(slot string, v map[game.MapID]camera.View) error {
 			files := map[game.MapID]filesave.ViewFile{}
@@ -83,7 +83,7 @@ func flushSaves(a *App) {
 	if q := a.cfg.Saves.Queue; q != nil {
 		q.Wait()
 	}
-	a.opt.PollSaves()
+	a.opt.Saves.PollSaves()
 }
 
 // fakeQueue is a background writer the test finishes by hand.
@@ -110,11 +110,7 @@ func queued(a *App, log *saveLog) *fakeQueue {
 		return nil
 	}
 	a.cfg.Saves.Queue = q
-	a.cfg.Saves.Save = func(_ Simulation, slot string) error { log.saves = append(log.saves, slot); return start(slot) }
-	a.cfg.Saves.SaveCommit = func(_ Simulation, slot string) error {
-		log.commits = append(log.commits, slot)
-		return start(slot)
-	}
+	a.cfg.Saves.Save = func(_ Simulation, m ports.SaveMeta) error { log.saves = append(log.saves, m.Name); return start(m.Name) }
 	return q
 }
 
@@ -138,7 +134,7 @@ func TestJourneySaveAsyncAutosaveRotation(t *testing.T) {
 	j.a.settings.Gameplay.AutosaveDays = 1
 	var wrote []string
 	for day := 1; day <= 4; day++ {
-		morning := uint64(day)*clock.TicksPerDay + options.AutosaveHour*clock.TicksPerHour
+		morning := uint64(day)*clock.TicksPerDay + saves.AutosaveHour*clock.TicksPerHour
 		if d := morning - 5 - uint64(j.g.Tick()); d > 0 {
 			j.g.Step(int(d))
 		}
@@ -185,8 +181,8 @@ func TestJourneySaveAsyncLoadsTheSavedTick(t *testing.T) {
 		t.Fatalf("save reported by an Update, hint %q, want %q", j.a.hint, "saved col")
 	}
 	j.clickID("pause.load")
-	if j.a.nav.screen() != ports.ScreenLoad || len(j.a.opt.Slots) != 1 {
-		t.Fatalf("load list %s with %+v", j.a.nav.screen(), j.a.opt.Slots)
+	if j.a.nav.screen() != ports.ScreenLoad || len(j.a.opt.Saves.Slots) != 1 {
+		t.Fatalf("load list %s with %+v", j.a.nav.screen(), j.a.opt.Saves.Slots)
 	}
 	if want := []SaveResult{{Slot: "col"}}; fmt.Sprint(*reported) != fmt.Sprint(want) {
 		t.Fatalf("reported %+v, want %+v once", *reported, want)
@@ -194,7 +190,7 @@ func TestJourneySaveAsyncLoadsTheSavedTick(t *testing.T) {
 	if early == 0 && j.a.hint != "saved col" {
 		t.Fatalf("the Load list reported the save, hint %q, want %q", j.a.hint, "saved col")
 	}
-	sim, _, err := j.a.cfg.Saves.Load(j.a.opt.Slots[0].Path) // the file as written, before a loaded colony steps
+	sim, _, err := j.a.cfg.Saves.Load(j.a.opt.Saves.Slots[0].Path) // the file as written, before a loaded colony steps
 	if g, ok := sim.(*game.Game); err != nil || !ok || g.Tick() != tick || g.StateHash() != hash {
 		t.Fatalf("file: %v (%T); want the save's tick %d and state hash %x", err, sim, tick, hash)
 	}
@@ -258,8 +254,8 @@ func TestCommitmentAsyncSaveAndQuit(t *testing.T) {
 		fakeWin(a)
 		a.apply(intent{kind: intentPause})
 		click(t, a, id)
-		if a.nav.screen() != ports.ScreenMainMenu || q.waits == 0 || len(log.commits) != 1 {
-			t.Fatalf("%s: on %s after %d waits, saves %v", id, a.nav.screen(), q.waits, log.commits)
+		if a.nav.screen() != ports.ScreenMainMenu || q.waits == 0 || len(log.saves) != 1 {
+			t.Fatalf("%s: on %s after %d waits, saves %v", id, a.nav.screen(), q.waits, log.saves)
 		}
 	}
 	log := &saveLog{fail: errors.New("disk full")}
@@ -275,8 +271,8 @@ func TestCommitmentAsyncSaveAndQuit(t *testing.T) {
 	q := queued(a, log)
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.quit")
-	if !a.shouldQuit || len(log.commits) != 1 || q.waits == 0 {
-		t.Fatalf("quit: shouldQuit %v, saves %v, waits %d", a.shouldQuit, log.commits, q.waits)
+	if !a.shouldQuit || len(log.saves) != 1 || q.waits == 0 {
+		t.Fatalf("quit: shouldQuit %v, saves %v, waits %d", a.shouldQuit, log.saves, q.waits)
 	}
 }
 
@@ -289,8 +285,8 @@ func TestCommitmentAsyncSavesOnClose(t *testing.T) {
 		q := queued(a, log)
 		w := fakeWin(a)
 		w.closing = true
-		if err := a.Update(); !errors.Is(err, ebiten.Termination) || len(log.commits) != 1 || q.waits == 0 {
-			t.Fatalf("close (fail %v): %v, saves %v, waits %d", fail, err, log.commits, q.waits)
+		if err := a.Update(); !errors.Is(err, ebiten.Termination) || len(log.saves) != 1 || q.waits == 0 {
+			t.Fatalf("close (fail %v): %v, saves %v, waits %d", fail, err, log.saves, q.waits)
 		}
 	}
 }
@@ -303,11 +299,11 @@ func TestReloadAnytimeAsyncSaves(t *testing.T) {
 	s := &stubSim{w: 4, h: 4}
 	a := startColony(t, s, log)
 	q := queued(a, log)
-	slot := a.opt.SaveSlot
+	slot := a.opt.Saves.SaveSlot
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.save")
-	if len(log.saves) != 1 || log.saves[0] != slot || len(log.commits) != 0 {
-		t.Fatalf("manual save %v (commit %v)", log.saves, log.commits)
+	if len(log.saves) != 1 || log.saves[0] != slot {
+		t.Fatalf("manual save %v", log.saves)
 	}
 	flushSaves(a)
 	if a.hint != "saved "+slot {
@@ -316,7 +312,7 @@ func TestReloadAnytimeAsyncSaves(t *testing.T) {
 	a.settings.Gameplay.AutosaveDays = 2
 	for day := 1; day <= 5; day++ {
 		s.tick = morning(day)
-		a.opt.TickAutosave()
+		a.opt.Saves.TickAutosave()
 	}
 	if fmt.Sprint(log.saves[1:]) != fmt.Sprint([]string{slot + "-autosave", slot + "-autosave"}) {
 		t.Fatalf("autosaves %v, want days 2 and 4", log.saves[1:])

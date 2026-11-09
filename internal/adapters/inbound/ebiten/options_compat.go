@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"errors"
 	"log"
 
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
@@ -14,6 +15,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/options/saves"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
@@ -39,8 +41,8 @@ type (
 	SettingsHooks = options.Hooks
 	// SaveSlot is one save as the load screen lists it (ports.SaveSlot).
 	SaveSlot = ports.SaveSlot
-	// SaveResult is one background save that finished (options.SaveResult).
-	SaveResult = options.SaveResult
+	// SaveResult is one background save that finished (saves.SaveResult).
+	SaveResult = saves.SaveResult
 )
 
 // ---- the feature's shell
@@ -64,7 +66,10 @@ type optionsShell struct {
 }
 
 func newOptions(a *App) *options.Screen {
-	return options.New(optionsShell{a.shell, optionsHost{a}, optionsSaver{a}, optionsStory{a}})
+	sh := optionsShell{a.shell, optionsHost{a}, optionsSaver{a}, optionsStory{a}}
+	o := options.New(sh)
+	o.Saves = saves.New(sh) // the same shell: optionsHost.SaveEnv, optionsSaver
+	return o
 }
 
 // renderLimit is the physical size the render cap (ui_scale.go, PERF-003)
@@ -82,11 +87,17 @@ func (h optionsHost) renderLimit() (w, ht int, capped bool) {
 func (h optionsHost) Env() options.Env {
 	a := h.a
 	return options.Env{
-		Running: a.renderer != nil, Commitment: a.commitment(), Capture: a.cfg.Capture != nil,
-		CanSave: a.canSave(), CanLoad: a.canLoad(), AsyncSaves: a.cfg.Saves.Queue != nil, Hardware: a.cfg.Hardware,
+		Running: a.renderer != nil, Commitment: a.commitment(), Hardware: a.cfg.Hardware,
 		DeviceScale: a.deviceScale, RenderLimit: h.renderLimit, UIScale: stepInUse(a.scale, a.devRaw), Bindings: a.bindings(),
-		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods, LangDir: a.shell.shellTexts.dir,
+		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods, LangDir: a.shell.shellTexts.dir, SavesDir: a.cfg.Saves.Dir,
 	}
+}
+
+// SaveEnv is the program as the saves book reads it.
+func (h optionsHost) SaveEnv() saves.Env {
+	a := h.a
+	return saves.Env{CanSave: a.canSave(), CanLoad: a.canLoad(), AsyncSaves: a.cfg.Saves.Queue != nil,
+		Commitment: a.commitment(), Capture: a.cfg.Capture != nil}
 }
 
 // SetSettings applies changed settings everywhere and stores them.
@@ -119,22 +130,22 @@ func (h optionsHost) PaintMenu(dst *ebiten.Image, sw, sh int, title string, body
 // other root files read it).
 func (h optionsHost) Rebind() *options.RebindState { return &h.a.rebind }
 
-// optionsSaver is the saved-game storage as the screen uses it.
+// optionsSaver is the saved-game storage as the saves book uses it.
 type optionsSaver struct{ a *App }
 
-var _ options.Saver = optionsSaver{}
+var _ saves.Saver = optionsSaver{}
 
-// Save writes the running colony to slot.
-func (s optionsSaver) Save(slot string) error {
+// Save writes the running colony to the slot meta names.
+func (s optionsSaver) Save(meta ports.SaveMeta) error {
 	if s.a.renderer == nil {
 		return nil
 	}
-	if err := s.a.saveHook()(s.a.renderer.game, slot); err != nil {
+	if err := s.a.cfg.Saves.Save(s.a.renderer.game, meta); err != nil {
 		return err
 	}
 	if h := s.a.cfg.Saves.SaveView; h != nil { // VIEW-001: every map's camera rides beside the save
 		v := s.a.renderer.scenes.views(s.a.mapViewport())
-		if err := h(slot, v); err != nil {
+		if err := h(meta.Name, v); err != nil {
 			log.Printf("save camera view: %v", err)
 		}
 	}
@@ -144,6 +155,14 @@ func (s optionsSaver) Save(slot string) error {
 // List reads the save list.
 func (s optionsSaver) List() ([]ports.SaveSlot, error) { return s.a.cfg.Saves.List() }
 
+// Delete removes a save (the hook is nil until compose wires one).
+func (s optionsSaver) Delete(name string) error {
+	if s.a.cfg.Saves.Delete == nil {
+		return errNoDelete
+	}
+	return s.a.cfg.Saves.Delete(name)
+}
+
 // Finished, Wait and SaveFailed are the background saves (Env.AsyncSaves
 // is set only with a Queue).
 func (s optionsSaver) Finished() []SaveResult { return s.a.cfg.Saves.Queue.Done() }
@@ -151,10 +170,10 @@ func (s optionsSaver) Wait()                  { s.a.cfg.Saves.Queue.Wait() }
 func (s optionsSaver) SaveFailed(text string) { s.a.chrome.Alarm(text) }
 
 // Load replaces the session with the save at path.
-func (s optionsSaver) Load(path string) (string, clock.Tick, error) {
-	sim, slot, err := s.a.cfg.Saves.Load(path)
+func (s optionsSaver) Load(path string) (ports.SaveMeta, clock.Tick, error) {
+	sim, meta, err := s.a.cfg.Saves.Load(path)
 	if err != nil {
-		return "", 0, err
+		return ports.SaveMeta{}, 0, err
 	}
 	s.a.dropSession()
 	s.a.startSession(sim)
@@ -164,7 +183,7 @@ func (s optionsSaver) Load(path string) (string, clock.Tick, error) {
 			s.a.renderer.scenes.resumeViews(v)
 		}
 	}
-	return slot, sim.Tick(), nil
+	return meta, sim.Tick(), nil
 }
 
 // optionsStory is what the Story and Habits tabs borrow from the wizard and
@@ -309,12 +328,16 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 // SaveHooks connects the UI to saved-game storage. Any nil hook disables
 // that feature.
 type SaveHooks struct {
-	Save func(sim Simulation, slot string) error
+	// Save writes sim to the slot meta names, a commitment colony's one
+	// slot included (NG-1 §2.13).
+	Save func(sim Simulation, meta ports.SaveMeta) error
 	List func() ([]ports.SaveSlot, error)
-	Load func(path string) (Simulation, string, error) // sim, slot name
-	// SaveCommit saves a commitment-mode colony to its one slot (NG-1 §2.13);
-	// nil falls back to Save.
-	SaveCommit func(sim Simulation, slot string) error
+	Load func(path string) (Simulation, ports.SaveMeta, error) // sim, its header
+	// Delete removes the save in slot name.
+	Delete func(name string) error
+	// Dir is the saves folder (-save-dir or the per-user one) the Options
+	// "Saves folder" row opens ("": the per-user default).
+	Dir string
 	// SaveView and LoadView keep each map's camera beside a save
 	// (VIEW-001, MAP-1); nil leaves the cameras to centre as before.
 	SaveView func(slot string, v map[game.MapID]camerapkg.View) error
@@ -335,16 +358,10 @@ type SaveQueue interface {
 // simulation's story read model).
 func (a *App) commitment() bool { return a.renderer != nil && a.renderer.game.Story().Commitment }
 
-// saveHook is how the running colony saves: SaveCommit for a commitment
-// colony when wired, else Save.
-func (a *App) saveHook() func(Simulation, string) error {
-	if a.cfg.Saves.SaveCommit != nil && a.commitment() {
-		return a.cfg.Saves.SaveCommit
-	}
-	return a.cfg.Saves.Save
-}
+// errNoDelete is Delete with no hook wired.
+var errNoDelete = errors.New("deleting saves is unavailable")
 
-func (a *App) canSave() bool { return a.renderer != nil && a.saveHook() != nil }
+func (a *App) canSave() bool { return a.renderer != nil && a.cfg.Saves.Save != nil }
 func (a *App) canLoad() bool { return a.cfg.Saves.List != nil && a.cfg.Saves.Load != nil }
 
 // windowHooks is the OS window's close handling (faked in tests).
@@ -371,7 +388,7 @@ func (a *App) handleWindowClose() bool {
 	if !a.closeHandled || !a.cfg.WindowHooks.BeingClosed() {
 		return false
 	}
-	a.opt.SaveBeforeLeaving()
+	a.opt.Saves.SaveBeforeLeaving()
 	return true
 }
 

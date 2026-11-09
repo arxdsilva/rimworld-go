@@ -6,7 +6,8 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/options/saves"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -40,21 +41,18 @@ func fakeWin(a *App) *fakeWindow {
 	return w
 }
 
-// saveLog records the save hooks' calls.
+// saveLog records the slots the Save hook wrote: a commitment colony's
+// one slot goes through Save like any other (SAV-024 removed SaveCommit).
 type saveLog struct {
-	saves, commits []string
-	fail           error
+	saves []string
+	fail  error
 }
 
 func (l *saveLog) hooks() SaveHooks {
 	return SaveHooks{
-		Save: func(_ Simulation, slot string) error { l.saves = append(l.saves, slot); return l.fail },
-		SaveCommit: func(_ Simulation, slot string) error {
-			l.commits = append(l.commits, slot)
-			return l.fail
-		},
+		Save: func(_ Simulation, m ports.SaveMeta) error { l.saves = append(l.saves, m.Name); return l.fail },
 		List: func() ([]ports.SaveSlot, error) { return nil, nil },
-		Load: func(path string) (Simulation, string, error) { return nil, "", errors.New("unused") },
+		Load: func(path string) (Simulation, ports.SaveMeta, error) { return nil, ports.SaveMeta{}, errors.New("unused") },
 	}
 }
 
@@ -65,7 +63,7 @@ func startColony(t *testing.T, sim Simulation, log *saveLog) *App {
 	a.cfg.Saves = log.hooks()
 	a.finishBoot()
 	quickStart(t, a)
-	if a.opt.SaveSlot == "" {
+	if a.opt.Saves.SaveSlot == "" {
 		t.Fatal("a new colony has no save slot")
 	}
 	return a
@@ -79,7 +77,7 @@ func newCommitColony(t *testing.T, log *saveLog) (*App, *stubSim) {
 
 // morning is tick of day's autosave hour.
 func morning(day int) clock.Tick {
-	return clock.Tick(day*clock.TicksPerDay + options.AutosaveHour*clock.TicksPerHour)
+	return clock.Tick(day*clock.TicksPerDay + saves.AutosaveHour*clock.TicksPerHour)
 }
 
 func buttonByID(t *testing.T, bs []uikit.Button, id string) uikit.Button {
@@ -103,34 +101,25 @@ func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 	a.settings.Gameplay.AutosaveDays = 7 // commitment still saves daily
 	for day := 1; day <= 3; day++ {
 		s.tick = morning(day)
-		a.opt.TickAutosave()
-		a.opt.TickAutosave() // once per morning
+		a.opt.Saves.TickAutosave()
+		a.opt.Saves.TickAutosave() // once per morning
 	}
 	s.tick = morning(3) + clock.TicksPerHour // not the autosave hour
-	a.opt.TickAutosave()
-	if len(log.commits) != 3 || len(log.saves) != 0 {
-		t.Fatalf("commit saves %v, plain saves %v: want one SaveCommit a day", log.commits, log.saves)
+	a.opt.Saves.TickAutosave()
+	if len(log.saves) != 3 {
+		t.Fatalf("commitment saves %v: want one save a day", log.saves)
 	}
-	for _, slot := range log.commits {
-		if slot != a.opt.SaveSlot {
-			t.Fatalf("commitment saved to %q, want its one slot %q (no -autosave copy)", slot, a.opt.SaveSlot)
+	for _, slot := range log.saves {
+		if slot != a.opt.Saves.SaveSlot {
+			t.Fatalf("commitment saved to %q, want its one slot %q (no -autosave copy)", slot, a.opt.Saves.SaveSlot)
 		}
 	}
 	// Options' "Off" does not turn a commitment colony's saving off.
 	a.settings.Gameplay.AutosaveDays = 0
 	s.tick = morning(4)
-	a.opt.TickAutosave()
-	if len(log.commits) != 4 {
-		t.Fatalf("autosave off must not stop commitment saves: %v", log.commits)
-	}
-	// Without SaveCommit wired, Save writes the same single slot.
-	log2 := &saveLog{}
-	b, s2 := newCommitColony(t, log2)
-	b.cfg.Saves.SaveCommit = nil
-	s2.tick = morning(1)
-	b.opt.TickAutosave()
-	if len(log2.saves) != 1 || log2.saves[0] != b.opt.SaveSlot {
-		t.Fatalf("fallback saves %v, want [%s]", log2.saves, b.opt.SaveSlot)
+	a.opt.Saves.TickAutosave()
+	if len(log.saves) != 4 || log.saves[3] != a.opt.Saves.SaveSlot {
+		t.Fatalf("autosave off must not stop commitment saves: %v", log.saves)
 	}
 }
 
@@ -174,14 +163,14 @@ func TestCommitmentSavesOnReturnToMenu(t *testing.T) {
 		log := &saveLog{}
 		a, _ := newCommitColony(t, log)
 		fakeWin(a)
-		slot := a.opt.SaveSlot
+		slot := a.opt.Saves.SaveSlot
 		a.apply(intent{kind: intentPause})
 		click(t, a, id)
 		if a.nav.screen() != ports.ScreenMainMenu || a.renderer != nil {
 			t.Fatalf("%s: on %s, want the main menu", id, a.nav.screen())
 		}
-		if len(log.commits) != 1 || log.commits[0] != slot {
-			t.Fatalf("%s: saves %v, want [%s]", id, log.commits, slot)
+		if len(log.saves) != 1 || log.saves[0] != slot {
+			t.Fatalf("%s: saves %v, want [%s]", id, log.saves, slot)
 		}
 	}
 	// A failed save keeps the player in the colony, with the reason.
@@ -197,8 +186,20 @@ func TestCommitmentSavesOnReturnToMenu(t *testing.T) {
 	a, _ = newCommitColony(t, log)
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.quit")
-	if !a.shouldQuit || len(log.commits) != 1 {
-		t.Fatalf("quit: shouldQuit %v, saves %v", a.shouldQuit, log.commits)
+	if !a.shouldQuit || len(log.saves) != 1 {
+		t.Fatalf("quit: shouldQuit %v, saves %v", a.shouldQuit, log.saves)
+	}
+}
+
+// Save & Quit to the desktop (SAV-005's row) leaves like Quit: a
+// commitment colony's one slot is saved first.
+func TestCommitmentSaveAndQuitToDesktop(t *testing.T) {
+	log := &saveLog{}
+	a, _ := newCommitColony(t, log)
+	fakeWin(a)
+	a.applyClick(ids.PauseSaveQuitOS)
+	if !a.shouldQuit || len(log.saves) != 1 || log.saves[0] != a.opt.Saves.SaveSlot {
+		t.Fatalf("shouldQuit %v, saves %v", a.shouldQuit, log.saves)
 	}
 }
 
@@ -219,16 +220,16 @@ func TestCommitmentSavesOnClose(t *testing.T) {
 	if err := a.Update(); !errors.Is(err, ebiten.Termination) {
 		t.Fatalf("closing the window: Update = %v, want Termination", err)
 	}
-	if len(log.commits) != 1 || log.commits[0] != a.opt.SaveSlot {
-		t.Fatalf("saves on close %v", log.commits)
+	if len(log.saves) != 1 || log.saves[0] != a.opt.Saves.SaveSlot {
+		t.Fatalf("saves on close %v", log.saves)
 	}
 	// Even when that save fails the window closes.
 	log2 := &saveLog{fail: errors.New("read-only")}
 	b, _ := newCommitColony(t, log2)
 	w2 := fakeWin(b)
 	w2.closing = true
-	if err := b.Update(); !errors.Is(err, ebiten.Termination) || len(log2.commits) != 1 {
-		t.Fatalf("failed save on close: %v, saves %v", err, log2.commits)
+	if err := b.Update(); !errors.Is(err, ebiten.Termination) || len(log2.saves) != 1 {
+		t.Fatalf("failed save on close: %v, saves %v", err, log2.saves)
 	}
 	// Back on the main menu the window closes normally again.
 	c, _ := newCommitColony(t, &saveLog{})
@@ -246,7 +247,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 	s := &stubSim{w: 4, h: 4}
 	a := startColony(t, s, log)
 	w := fakeWin(a)
-	slot := a.opt.SaveSlot
+	slot := a.opt.Saves.SaveSlot
 	a.apply(intent{kind: intentPause})
 	bs := a.pauseButtons(a.size())
 	if b := buttonByID(t, bs, "pause.save"); b.Label != "Save" || b.Disabled {
@@ -259,21 +260,21 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 		t.Fatal("reload anytime has no Save & Quit")
 	}
 	click(t, a, "pause.save")
-	if len(log.saves) != 1 || log.saves[0] != slot || len(log.commits) != 0 {
-		t.Fatalf("manual save %v (commit %v)", log.saves, log.commits)
+	if len(log.saves) != 1 || log.saves[0] != slot {
+		t.Fatalf("manual save %v", log.saves)
 	}
 	// Autosave follows Options, to the -autosave copy.
 	a.settings.Gameplay.AutosaveDays = 2
 	s.tick = morning(1)
-	a.opt.TickAutosave()
+	a.opt.Saves.TickAutosave()
 	s.tick = morning(2)
-	a.opt.TickAutosave()
+	a.opt.Saves.TickAutosave()
 	if len(log.saves) != 2 || log.saves[1] != slot+"-autosave" {
 		t.Fatalf("autosaves %v", log.saves)
 	}
 	a.settings.Gameplay.AutosaveDays = 0
 	s.tick = morning(5)
-	a.opt.TickAutosave()
+	a.opt.Saves.TickAutosave()
 	if len(log.saves) != 2 {
 		t.Fatal("autosave Off must not save")
 	}
@@ -298,8 +299,8 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 func TestLoadListTagsCommitment(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
-	a.opt.Slots = []ports.SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
-	if bs := a.opt.LoadButtons(1280, 720); len(bs) != 3 || bs[1].Disabled {
+	a.opt.Saves.Slots = []ports.SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
+	if bs := a.opt.Saves.LoadButtons(1280, 720); len(bs) != 3 || bs[1].Disabled {
 		t.Fatalf("a commitment save is listed and loadable: %+v", bs)
 	}
 }

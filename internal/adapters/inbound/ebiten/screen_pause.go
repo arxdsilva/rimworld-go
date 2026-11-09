@@ -4,7 +4,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
-	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/options/saves"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -34,7 +34,7 @@ func (a *App) pauseButtons(sw, sh int) []uikit.Button {
 	load := uikit.ButtonSpec{ID: "pause.load", Label: a.shell.T("Load"), Disabled: !a.canLoad(), Reason: a.shell.T("loading unavailable")}
 	if a.commitment() { // saves.go: one timeline, saved by the game itself
 		save = uikit.ButtonSpec{ID: "pause.savequit", Label: a.shell.T("Save & Quit to Menu"), Disabled: !a.canSave(), Reason: a.shell.T("saving unavailable")}
-		load = uikit.ButtonSpec{ID: "pause.load", Label: a.shell.T("Load"), Disabled: true, Reason: options.CommitLoadReason}
+		load = uikit.ButtonSpec{ID: "pause.load", Label: a.shell.T("Load"), Disabled: true, Reason: saves.CommitLoadReason}
 	}
 	return uikit.StackButtons(cx, y, hudlayout.PauseBtnW, hudlayout.PauseBtnH, hudlayout.PauseBtnPitch-hudlayout.PauseBtnH, []uikit.ButtonSpec{
 		{ID: "pause.resume", Label: a.shell.T("Resume")},

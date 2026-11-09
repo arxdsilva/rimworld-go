@@ -200,7 +200,7 @@ var worldPixelHelpers = map[string]bool{
 var hudFiles = []string{
 	"hud/*.go", "inspector/*.go",
 	"threat_ui.go", "uikit/*.go",
-	"orders/search.go", "windows/*.go", "worldview/*.go", "architect/*.go", "options/*.go", "dialogs/*.go", "learn/*.go", "devtools/*.go", "perf/*.go",
+	"orders/search.go", "windows/*.go", "worldview/*.go", "architect/*.go", "options/*.go", "options/saves/*.go", "dialogs/*.go", "learn/*.go", "devtools/*.go", "perf/*.go",
 	"screen_*.go", "ui_*.go", "*_ui.go", "portrait.go",
 	"hud_*.go", "cmds_*.go", // PLAY-018 HUD regions
 }

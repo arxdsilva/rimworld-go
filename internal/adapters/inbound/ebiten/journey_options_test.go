@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/options/saves"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
@@ -245,7 +245,7 @@ func (f *fakeSaves) put(name string) {
 
 func (f *fakeSaves) hooks() SaveHooks {
 	return SaveHooks{
-		Save: func(_ Simulation, slot string) error { f.put(slot); return nil },
+		Save: func(_ Simulation, m ports.SaveMeta) error { f.put(m.Name); return nil },
 		List: func() ([]ports.SaveSlot, error) {
 			var out []ports.SaveSlot
 			for n, at := range f.at {
@@ -253,7 +253,7 @@ func (f *fakeSaves) hooks() SaveHooks {
 			}
 			return out, nil
 		},
-		Load: func(string) (Simulation, string, error) { return nil, "", errors.New("not in this journey") },
+		Load: func(string) (Simulation, ports.SaveMeta, error) { return nil, ports.SaveMeta{}, errors.New("not in this journey") },
 	}
 }
 
@@ -263,7 +263,7 @@ func savesJourney(t *testing.T) (*journey, *fakeSaves) {
 	j := newJourney(t)
 	f := newFakeSaves()
 	j.a.cfg.Saves = f.hooks()
-	j.a.opt.SaveSlot = "col"
+	j.a.opt.Saves.SaveSlot = "col"
 	j.a.settings.General.AutoPause = config.AutoPauseNever // a long step brings no letter that pauses the clock
 	return j, f
 }
@@ -284,7 +284,7 @@ func TestJourneyOptionsAutosaveRotation(t *testing.T) {
 	j.a.settings.Gameplay.AutosaveDays = 1
 	var wrote []string
 	for day := 1; day <= 4; day++ {
-		morning := uint64(day)*clock.TicksPerDay + options.AutosaveHour*clock.TicksPerHour
+		morning := uint64(day)*clock.TicksPerDay + saves.AutosaveHour*clock.TicksPerHour
 		if d := morning - 5 - uint64(j.g.Tick()); d > 0 {
 			j.g.Step(int(d))
 		}
@@ -431,7 +431,7 @@ func TestJourneyOptionsPauseOnLoad(t *testing.T) {
 			}
 			saved.Step(120)
 			hooks := j.a.cfg.Saves
-			hooks.Load = func(string) (Simulation, string, error) { return saved, "old", nil }
+			hooks.Load = func(string) (Simulation, ports.SaveMeta, error) { return saved, ports.SaveMeta{Name: "old"}, nil }
 			j.a.cfg.Saves = hooks
 			j.a.settings.General.PauseOnLoad = on
 			j.key("Escape", 0)

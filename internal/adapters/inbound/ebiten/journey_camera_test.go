@@ -7,6 +7,7 @@ import (
 
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/platform/input"
 )
@@ -275,9 +276,9 @@ func TestJourneyCameraRestoredOnLoad(t *testing.T) {
 	j := newJourney(t, jSize(60, 60))
 	views := map[string]map[game.MapID]camerapkg.View{}
 	j.a.cfg.Saves = SaveHooks{
-		Save: func(Simulation, string) error { return nil },
-		Load: func(string) (Simulation, string, error) {
-			return game.New(game.Config{Seed: 1, Width: 60, Height: 60}), "s", nil
+		Save: func(Simulation, ports.SaveMeta) error { return nil },
+		Load: func(string) (Simulation, ports.SaveMeta, error) {
+			return game.New(game.Config{Seed: 1, Width: 60, Height: 60}), ports.SaveMeta{Name: "s"}, nil
 		},
 		SaveView: func(slot string, v map[game.MapID]camerapkg.View) error { views[slot] = v; return nil },
 		LoadView: func(path string) (map[game.MapID]camerapkg.View, bool) { v, ok := views[path]; return v, ok },
@@ -289,7 +290,7 @@ func TestJourneyCameraRestoredOnLoad(t *testing.T) {
 	r.cam.OffsetY += 150
 	j.draw(1)
 	want := r.cam.View(j.a.mapViewport())
-	if err := (optionsSaver{j.a}).Save("s"); err != nil {
+	if err := (optionsSaver{j.a}).Save(ports.SaveMeta{Name: "s"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := (optionsSaver{j.a}).Load("s"); err != nil {

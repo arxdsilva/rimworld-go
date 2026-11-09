@@ -239,9 +239,9 @@ func TestContinueLoadsNewestIncludingCommitment(t *testing.T) {
 	a, _, _ := ngTest(t, func(c *AppConfig) {
 		c.Saves = SaveHooks{
 			List: func() ([]ports.SaveSlot, error) { return slots, nil },
-			Load: func(path string) (Simulation, string, error) {
+			Load: func(path string) (Simulation, ports.SaveMeta, error) {
 				loaded = append(loaded, path)
-				return &stubSim{w: 8, h: 8}, "colony-commitment", nil
+				return &stubSim{w: 8, h: 8}, ports.SaveMeta{Name: "colony-commitment"}, nil
 			},
 		}
 	})

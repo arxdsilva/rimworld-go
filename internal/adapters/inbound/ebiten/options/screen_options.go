@@ -539,7 +539,7 @@ func (o *Screen) Buttons(sw, sh int) []uikit.Button {
 	cx := win.X + OptCtrlX
 	for _, sl := range slots {
 		r, y := rows[sl.i], sl.y
-		lock := o.optionLock(r.Key) // saves.go: developer mode is locked in commitment mode; card rows by their settings
+		lock := o.optionLock(r.Key) // card_rows.go: developer mode is locked in commitment mode; card rows by their settings
 		if r.kind == rowStep {
 			out = append(out,
 				uikit.Button{ID: ids.PrefixOptions + r.Key + ".dec", Label: "-", X: cx, Y: y, W: OptBtnH, H: OptBtnH, Disabled: lock != "", Reason: o.sh.T(lock)},

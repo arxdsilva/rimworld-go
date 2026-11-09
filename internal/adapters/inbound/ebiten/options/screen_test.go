@@ -3,67 +3,9 @@ package options
 import (
 	"testing"
 
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
 )
-
-func morning(day int) (clock.Date, clock.Tick) {
-	return clock.Date{Hour: AutosaveHour}, clock.Tick(day * clock.TicksPerDay)
-}
-
-func TestAutosaveRunsOncePerIntervalToTheAutosaveSlot(t *testing.T) {
-	t.Parallel()
-	f, s := newFake()
-	f.env.CanSave = true
-	f.settings.Gameplay.AutosaveDays = 2
-	s.SaveSlot = "colony"
-	f.date, f.tick = morning(1)
-	s.TickAutosave()
-	if len(f.saved) != 0 {
-		t.Fatalf("day 1 saved %v, want nothing before the interval", f.saved)
-	}
-	f.date, f.tick = morning(2)
-	s.TickAutosave()
-	s.TickAutosave() // the same morning again
-	if len(f.saved) != 1 || f.saved[0] != "colony-autosave" {
-		t.Fatalf("saved %v, want one colony-autosave", f.saved)
-	}
-}
-
-func TestCommitmentAutosavesItsOwnSlotDaily(t *testing.T) {
-	t.Parallel()
-	f, s := newFake()
-	f.env.CanSave, f.env.Commitment = true, true
-	f.settings.Gameplay.AutosaveDays = 0 // Options say never; commitment saves anyway
-	s.SaveSlot = "colony"
-	for d := 1; d <= 3; d++ {
-		f.date, f.tick = morning(d)
-		s.TickAutosave()
-	}
-	if len(f.saved) != 3 || f.saved[2] != "colony" {
-		t.Fatalf("saved %v, want the colony slot each day", f.saved)
-	}
-}
-
-func TestLeavingStaysWhenTheCommitmentSaveFails(t *testing.T) {
-	t.Parallel()
-	f, s := newFake()
-	f.env.CanSave, f.env.Commitment = true, true
-	f.saveErr = errDisk
-	if s.SaveBeforeLeaving() || len(f.hints) == 0 {
-		t.Fatalf("a failed save must keep the player in (hints %v)", f.hints)
-	}
-	f.saveErr = nil
-	if !s.SaveBeforeLeaving() {
-		t.Fatal("a saved colony may leave")
-	}
-	f.env.Commitment = false
-	f.saved = nil
-	if !s.SaveBeforeLeaving() || len(f.saved) != 0 {
-		t.Fatal("a reload-anytime colony leaves without saving")
-	}
-}
 
 func TestVolumeStepGoesThroughSetSettings(t *testing.T) {
 	t.Parallel()

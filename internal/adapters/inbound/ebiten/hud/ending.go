@@ -33,8 +33,8 @@ const (
 	GoneWanderersID    = "ending.gone.wanderers" // New wanderers (MAP-19)
 	endingW            = 560
 	// goneLoadReason is why Load stays off in a commitment colony: the same
-	// words as the pause menu's (options.CommitLoadReason; hud may not
-	// import options).
+	// words as the pause menu's (saves.CommitLoadReason; hud may not
+	// import options/saves).
 	goneLoadReason = "Commitment: one timeline"
 )
 

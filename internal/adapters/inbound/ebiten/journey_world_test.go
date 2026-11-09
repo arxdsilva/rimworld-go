@@ -693,7 +693,7 @@ func continueWithCap(t *testing.T, cap int) []command.Command {
 	saves := &flowSaves{slots: []ports.SaveSlot{{Name: "kept", Path: "saves/kept.sav", Colonists: 1, Modified: time.Unix(500, 0)}}}
 	hooks := saves.hooks()
 	load := hooks.Load
-	hooks.Load = func(path string) (Simulation, string, error) {
+	hooks.Load = func(path string) (Simulation, ports.SaveMeta, error) {
 		s, name, err := load(path)
 		if err == nil {
 			rec.Game = s.(*game.Game)

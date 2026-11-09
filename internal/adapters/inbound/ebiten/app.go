@@ -386,7 +386,7 @@ func (a *App) size() (int, int) {
 }
 
 func (a *App) tick() {
-	a.opt.PollSaves() // background saves: the hint, a failure's toast (CI-002)
+	a.opt.Saves.PollSaves() // background saves: the hint, a failure's toast (CI-002)
 	switch a.nav.screen() {
 	case portspkg.ScreenBoot:
 		a.tickBoot()
@@ -394,7 +394,7 @@ func (a *App) tick() {
 		if a.nav.overlay() == overlayNone && a.renderer != nil && !a.bg.paused { // background.go
 			a.renderer.cueBus().Voice.View = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
 			a.advanceColony()                                // update_budget.go: steps under the Update budget, stamps the Update
-			a.opt.TickAutosave()
+			a.opt.Saves.TickAutosave()
 		} else {
 			a.clearTickDebt() // a paused colony owes nothing on resume
 		}
@@ -490,16 +490,12 @@ func (a *App) apply(in intent) {
 	case intentStartGame:
 		a.startGame()
 	case intentQuit:
-		if !a.opt.SaveBeforeLeaving() {
-			return
-		}
-		a.shouldQuit = true
+		a.opt.Saves.Leave(func() { a.shouldQuit = true })
 	case intentReturnToMenu:
-		if !a.opt.SaveBeforeLeaving() {
-			return
-		}
-		a.dropSession()
-		a.nav.reset(frame{screen: portspkg.ScreenMainMenu})
+		a.opt.Saves.Leave(func() {
+			a.dropSession()
+			a.nav.reset(frame{screen: portspkg.ScreenMainMenu})
+		})
 	case intentResume:
 		a.nav.setOverlay(overlayNone)
 	case intentPause:
@@ -679,7 +675,7 @@ func (a *App) layoutButtons(sw, sh int) []uikit.Button {
 	case portspkg.ScreenOptions:
 		return a.opt.Buttons(sw, sh)
 	case portspkg.ScreenLoad:
-		return a.opt.LoadButtons(sw, sh)
+		return a.opt.Saves.LoadButtons(sw, sh)
 	case portspkg.ScreenCredits:
 		return a.creditsButtons(sw, sh)
 	case portspkg.ScreenColony:
@@ -1051,7 +1047,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.stamp.draw = time.Time{}
 		a.opt.DrawOptions(screen, sw, sh)
 	case portspkg.ScreenLoad:
-		a.opt.DrawLoad(screen, sw, sh)
+		a.opt.Saves.DrawLoad(screen, sw, sh)
 	case portspkg.ScreenCredits:
 		a.drawCredits(screen, sw, sh)
 	default:

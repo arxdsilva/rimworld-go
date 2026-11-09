@@ -339,13 +339,45 @@ type SaveSlot struct {
 	Date      string // in-game date
 	Colonists int
 	Modified  time.Time
-	Err       string // not loadable, and why
+	// Err is why the save cannot be loaded ("": it can); the list shows the
+	// row disabled with this reason, and NewestSlot and Continue skip it.
+	Err string
 	// Commitment marks a commitment colony's one save (tagged in the list;
 	// it loads like any other).
 	Commitment bool
 	// Ending is the colony's ending ("ship": its ship has left, AX-8): the
 	// save's story is complete (tagged in the list).
 	Ending string
+
+	// The save header's own fields (SAV-003 fills them; zero until then).
+	Title      string // the name the player gave the save ("": Name)
+	Colony     string // the colony's stable id, shared by all its saves
+	ColonyName string // the colony's name as the player sees it
+	Base       string // the colony's slot, which its autosaves are named after
+	Autosave   bool   // written by the game, not the player
+	Day        int    // in-game days since landing
+	Season     string
+	// Storyteller, Difficulty, Biome and MapSize describe the colony's
+	// start (the List mapping in internal/compose/game).
+	Storyteller string
+	Difficulty  string
+	Biome       string
+	MapSize     int
+	Build       string // the game build that wrote the save
+	Version     int    // the save format version
+	Compat      int    // how this build reads the save (savefmt.Compat; 0 fine)
+	Notice      string // a warning shown with a loadable save ("": none)
+}
+
+// SaveMeta is what the client sends with a save: the slot it goes to and
+// the colony it belongs to (SAV-003 writes it into the header).
+type SaveMeta struct {
+	Name       string // the slot written (the file name before SlotKey)
+	Colony     string // the colony's stable id
+	ColonyName string // the colony's name as the player sees it
+	Base       string // the colony's slot, which its autosaves are named after
+	Autosave   bool   // written by the game, not the player
+	Season     string // the in-game season when written
 }
 
 // Saves is the load screen's view of the save slots and the two actions

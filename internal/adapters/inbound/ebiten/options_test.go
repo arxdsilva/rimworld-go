@@ -6,6 +6,7 @@ import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/platform/config"
 )
@@ -171,13 +172,13 @@ func TestAutosaveInterval(t *testing.T) {
 	sim := &stubSim{w: 4, h: 4}
 	a := testApp(sim)
 	saves := 0
-	a.cfg.Saves = SaveHooks{Save: func(Simulation, string) error { saves++; return nil }}
+	a.cfg.Saves = SaveHooks{Save: func(Simulation, ports.SaveMeta) error { saves++; return nil }}
 	a.finishBoot()
 	a.startGame()
 	a.settings.Gameplay.AutosaveDays = 3
 	for t0 := clock.Tick(0); t0 < 10*60000; t0 += 100 {
 		sim.tick = t0
-		a.opt.TickAutosave()
+		a.opt.Saves.TickAutosave()
 	}
 	if saves != 3 { // days 3, 6 and 9
 		t.Fatalf("autosaves in 10 days every 3 = %d, want 3", saves)
