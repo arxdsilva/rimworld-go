@@ -495,14 +495,14 @@ func (g *Game) Info(name string) SaveInfo {
 // ExtraMaps entry (MAP-0).
 func (g *Game) Save(w io.Writer, name string) error {
 	zw := savefmt.NewWriter(w)
-	if err := encodeSave(g, zw, name); err != nil {
+	if err := EncodeSave(g, zw, name); err != nil {
 		return err
 	}
 	return zw.Close()
 }
 
-// encodeSave writes Save's raw gob stream, uncompressed.
-func encodeSave(g *Game, w io.Writer, name string) error {
+// EncodeSave writes Save's raw gob stream, uncompressed (savefmt.Compress makes it a file).
+func EncodeSave(g *Game, w io.Writer, name string) error {
 	cur := g.mapState
 	defer func() { g.mapState = cur }()
 	g.mapState = g.maps[0]

@@ -24,3 +24,15 @@ func NewWriter(w io.Writer) *gzip.Writer {
 
 // NewReader decompresses a save file.
 func NewReader(r io.Reader) (*gzip.Reader, error) { return gzip.NewReader(r) }
+
+// Compress writes raw, a save's gob stream (game.EncodeSave), to dst as a
+// save file: what (*game.Game).Save writes, byte for byte. The autosave
+// queue encodes on the simulation's goroutine and compresses here, on its
+// own (MASTER §46).
+func Compress(dst io.Writer, raw []byte) error {
+	zw := NewWriter(dst)
+	if _, err := zw.Write(raw); err != nil {
+		return err
+	}
+	return zw.Close()
+}

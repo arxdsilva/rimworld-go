@@ -22,7 +22,7 @@ import (
 // behaviour does. It reads the state only.
 func (g *Game) StateHash() uint64 {
 	var buf bytes.Buffer
-	if err := encodeSave(g, &buf, "statehash"); err != nil { // raw gob: no compression to undo
+	if err := EncodeSave(g, &buf, "statehash"); err != nil { // raw gob: no compression to undo
 		panic(fmt.Errorf("state hash: %w", err))
 	}
 	dec := gob.NewDecoder(&buf)
