@@ -47,6 +47,7 @@ Each file holds the decisions, wiki constants and phase rows for one area. Load 
 | CBT-* | `COMBAT_GAP_ANALYSIS.md` | Fighting: damage model, armor, weapons, turrets, traps, explosions, AI, combat UI |
 | CSE-* | `COMMON_SENSE_GAP_ANALYSIS.md` | Common Sense habit rules (tidying, bills, packs, joy, wandering) |
 | DEF-* | `DEFENCE_GAP_ANALYSIS.md` | Ranged/melee, armor, cover, traps, turrets, mortars, doors, raids, mechanoids |
+| EAI-* | `ENEMY_AI_GAP_ANALYSIS.md` | Enemy AI: animal bashing, targets, herd defence and packs; raider sight, visitors, factions at war, threat points and wealth; the incident queue, letter choices and storyteller bias |
 | FOOD-* | `FOOD_GAP_ANALYSIS.md` | Growing, animals and butchering, cooking, preservation, eating, hunger |
 | GAR-* | `GAME_ARCHITECTURE_GAP_ANALYSIS.md` | Game architecture vs the chosen target (scheduler, parallel stages, events, render-command list), the "always 60" frame budget and probe baseline; ADRs in `/docs/adr/`, diagrams in `/docs/architecture/` |
 | GEAR-*, OUT-* | `GEAR_GAP_ANALYSIS.md` | The Gear tab and apparel policies (outfits) |
