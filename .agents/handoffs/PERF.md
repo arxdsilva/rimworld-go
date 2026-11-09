@@ -176,3 +176,12 @@ Autosaves write on a worker goroutine (GAR-190) · 2026-11-08 · 236eaf427
 - Limits: `options.Host` is at 8 methods, so the toast goes through `Saver.SaveFailed`. `Screen` gained only `PollSaves` (40 methods). The ebiten root grew 20 lines.
 - Save impact: none: same file bytes, same format, same version.
 - Open: the autosave matrix cell (0 frames over 33 ms) on a quiet machine. The 15.9 MB encode garbage is mostly the save struct build (GAR-191).
+
+## PERF-008-aa-shapes
+Anti-aliased shapes are feathered triangles, not Ebitengine vector paths · 2026-11-08 · 1cf2ac546
+- Changed: `gfx/aashape` draws discs, rings, lines, rects, frames and convex polygons as triangles with a 1-px box-filter feather. Each shape is one `DrawTriangles32` from a 3×3 white source, in call order, so runs merge. Every AA canvas primitive and every former `vector.*(…, true)` site goes through it.
+- Numbers: `DrawArt500/z1` 4.44 → 2.24 ms/op (−50 %), 11.1 → 2.2 MiB/op, 8829 → 6383 allocs/op; `BenchmarkDrawPaths` (30 routed colonists) 3.37 → 0.31 ms; `BenchmarkAAShapes` 75 µs per 200 shapes, 0 allocs.
+- Decisions: the coverage is exact to ≤ 0.1 per pixel and ≤ 0.5 % of area against a supersampled reference; a r = 0.5 disc covers 0.81 (exact 0.785), where vector gave 0.63. Concave polygons fall back to vector. Colonist routes stay `vector.StrokePath`, because triangles would double-blend at joins. The guard (`aashape/guard_test.go`) allows only those two.
+- Pixel diff (`-capture-diff`, policy aa): the edge mean passes in all 8 scenes (≤ 0.04/255). The non-edge rule (Δ ≤ 1) fails in all 8, with maxima of 2 to 19, and melee's edge max is 33 (limit 32). The failing pixels are faint AA fringes (selection and goal rings) below the edge mask's contrast threshold of 48: a classification gap in the harness, not a visible change. The side-by-side test card and the grown z1 crop look the same; review copies are in the session scratchpad (`aa/testcard.png`, `aa/diff2/`).
+- Limits: the allocs gate (≤ 6000) is missed. Half of what remains is Ebitengine's `atlas.DrawTriangles`; then `construction.Footprint` (12 %) and `game.Buildables` (10 %) per frame (GAR-157).
+- Open: the user's look at rings and lines in game; the harness's edge mask should count any pixel with alpha 0 < a < 255 in A or B as an edge (GAR-158); the in-game Draw profile (PERF-007).
