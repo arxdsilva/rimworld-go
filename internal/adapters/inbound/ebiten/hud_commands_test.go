@@ -496,12 +496,14 @@ func TestCommandTextStaysInItsCell(t *testing.T) {
 		}})
 	}
 	drawn := map[string]bool{}
-	for _, larger := range []bool{false, true} {
-		for _, sc := range []float64{1, 1.25, 1.5, 2, 4} {
-			for _, win := range [][2]int{{1280, 720}, {1920, 1080}} {
-				for _, sn := range scenes {
+	// each scene is built once per window size and laid out again for every
+	// UI scale and text size, as the player's scale option does on a live App
+	for _, win := range [][2]int{{1280, 720}, {1920, 1080}} {
+		for _, sn := range scenes {
+			a := sn.build(t)
+			for _, larger := range []bool{false, true} {
+				for _, sc := range []float64{1, 1.25, 1.5, 2, 4} {
 					old := gfx.LargerSmall()
-					a := sn.build(t)
 					a.settings.Interface.LargerSmall = larger
 					layoutScreen(t, a, win[0], win[1], sc)
 					fakeOn(a).Frame(t, a)

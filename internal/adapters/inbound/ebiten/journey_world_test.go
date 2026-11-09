@@ -27,12 +27,16 @@ import (
 // mouse.
 
 // worldColony is a paused wizard colony on the tiny world, with its planet.
+// The wizard walk (journey_fixture_test.go) is played once per process; each
+// call loads its save into a fresh App.
 func worldColony(t *testing.T) (*journey, *planet.Planet) {
 	t.Helper()
-	j := newMenuJourney(t)
-	wizardToColony(t, j)
-	if j.a.renderer.speed != speedPaused {
-		j.key("Space", 0)
+	g := worldFixtureGame(t)
+	j := newJourney(t, jGame(g))
+	j.update(2) // the intro letter opens by itself, as after the wizard's pods land
+	j.key("Escape", 0)
+	if j.a.uiSt().ModalOpen() {
+		t.Fatalf("Escape left the modal %q open", j.a.uiModalTop())
 	}
 	params, ok := j.g.WorldParams()
 	if !ok {
@@ -121,16 +125,16 @@ func nearestSite(j *journey, p *planet.Planet, hostile bool) (game.WorldSiteView
 }
 
 // sendCaravan forms a caravan of pawn to tile with the game's own command
-// (setup) and runs the world until it is standing there.
+// (setup), sets it down there with game.DevArrive (the long walk is
+// TestJourneyWorldTravelAndReturn's) and returns it standing on tile.
 func sendCaravan(j *journey, pawn entity.EntityID, tile int) game.CaravanView {
 	j.t.Helper()
-	j.g.Enqueue(command.Command{Kind: command.FormCaravan, Name: strconv.FormatUint(uint64(pawn), 10), Count: tile})
-	for i := 0; i < 2500; i++ {
-		j.g.Step(60)
-		for _, c := range j.g.WorldMap().Caravans {
-			if c.Tile == tile && c.State != caravan.Travelling.Label() && c.State != caravan.Forming.Label() {
-				return c
-			}
+	c := formCaravan(j, pawn, tile)
+	game.DevArrive(j.g, entity.EntityID(c.ID), tile)
+	j.g.Step(2)
+	for _, v := range j.g.WorldMap().Caravans {
+		if v.ID == c.ID && v.Tile == tile && v.State != caravan.Travelling.Label() && v.State != caravan.Forming.Label() {
+			return v
 		}
 	}
 	j.t.Fatalf("the caravan never reached tile %d: %+v", tile, j.g.WorldMap().Caravans)
