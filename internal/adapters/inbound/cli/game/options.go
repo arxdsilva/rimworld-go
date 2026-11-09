@@ -9,9 +9,14 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 )
 
-// Options are cmd/game's parsed command line. Every flag but -seed, -hidpi
-// and -vsync is a developer one (dev:).
+// Options are cmd/game's parsed command line. Every flag but -seed, -hidpi,
+// -vsync, -version and -selfcheck is a developer one (dev:).
 type Options struct {
+	// Version and SelfCheck answer and exit without opening a window:
+	// the build's version, or where the game finds its files (installers'
+	// smoke tests, a player's bug report).
+	Version, SelfCheck bool
+
 	Seed    uint64
 	SeedSet bool // -seed was given (the wizard rolls a random seed otherwise)
 	Width   int
@@ -92,6 +97,8 @@ func parse(args []string, out io.Writer) (Options, error) {
 	fs.BoolVar(&hidpi, "hidpi", true, "dev: render at the screen's true resolution; overrides the Graphics setting for this run without saving it")
 	fs.StringVar(&o.Graphics, "graphics", "", "dev: apply this graphics tier (high, medium, low) for this run without saving it, captures and -fpsprobe included")
 	fs.BoolVar(&vsync, "vsync", true, "dev: wait for the display's refresh; -vsync=false uncaps the frame rate for -fpsprobe (overrides the Graphics setting for this run without saving it)")
+	fs.BoolVar(&o.Version, "version", false, "print the version and exit")
+	fs.BoolVar(&o.SelfCheck, "selfcheck", false, "print where the game finds its files and settings folder, then exit (status 1 when one is missing); opens no window")
 	fs.Float64Var(&o.RenderScale, "render-scale", 0, "dev: draw the map at this share of the physical pixels (1, 0.75 or 0.5; PERF-002) for this run without saving it; 0 = the Graphics setting")
 	if err := fs.Parse(args[1:]); err != nil {
 		return o, err

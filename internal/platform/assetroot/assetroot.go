@@ -1,7 +1,11 @@
 // Package assetroot finds files the game ships next to it (the assets
 // folder). It looks up from the working directory first (running from the
-// repository) and then from the executable's directory (a release archive
+// repository), then from the executable's directory (a release archive
 // started by double-clicking, where the working directory is elsewhere).
+// A macOS app bundle keeps the executable in X.app/Contents/MacOS and the
+// assets in X.app/Contents/Resources, so that folder is tried before the
+// executable's own. The executable's path is resolved through symlinks
+// first (/usr/bin/rimworld-go → /opt/rimworld-go/rimworld-go).
 package assetroot
 
 import (
@@ -36,17 +40,30 @@ func FindParent(root, marker string, dir bool) (string, error) {
 }
 
 func starts() []string {
+	wd, _ := os.Getwd()       // "" on error
+	exe, _ := os.Executable() // "" on error
+	return startsFrom(wd, exe)
+}
+
+// startsFrom is the search order for working directory wd and executable
+// exe ("" when unknown): wd, then a bundle's Resources folder when the
+// real executable sits in a MacOS folder, then the executable's folder.
+func startsFrom(wd, exe string) []string {
 	var out []string
-	if wd, err := os.Getwd(); err == nil {
+	if wd != "" {
 		out = append(out, wd)
 	}
-	if exe, err := os.Executable(); err == nil {
-		if real, err := filepath.EvalSymlinks(exe); err == nil {
-			exe = real
-		}
-		out = append(out, filepath.Dir(exe))
+	if exe == "" {
+		return out
 	}
-	return out
+	if real, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = real
+	}
+	dir := filepath.Dir(exe)
+	if filepath.Base(dir) == "MacOS" {
+		out = append(out, filepath.Join(filepath.Dir(dir), "Resources"))
+	}
+	return append(out, dir)
 }
 
 func findUp(start, rel string, dir bool) (string, bool) {

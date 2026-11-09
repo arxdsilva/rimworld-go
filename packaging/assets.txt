@@ -1,0 +1,15 @@
+# The files the game loads at run time, one repository path per line (a
+# folder ships whole). Every packager reads this list: the portable
+# archives (scripts/package_release.sh), the macOS app, the Windows
+# installer and the Linux AppImage, .deb and .rpm. A path the code finds
+# through internal/platform/assetroot must start with one of these lines
+# (internal/arch TestPackagedAssetsCoverRuntime). The vendor sprite pack
+# (a fallback for missing art) and review images stay out.
+assets/generated/world
+assets/generated/ui
+assets/generated/audio
+assets/generated/atlas
+assets/metadata
+assets/palettes
+assets/lang
+assets/source/raster/ui/main_menu_colonist.png

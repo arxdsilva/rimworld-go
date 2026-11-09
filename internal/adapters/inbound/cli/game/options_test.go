@@ -14,7 +14,7 @@ import (
 func TestOnlyGivenGraphicsFlagsOverride(t *testing.T) {
 	t.Parallel()
 	o, err := Parse([]string{"game"})
-	if err != nil || o.HiDPI != nil || o.VSync != nil || o.SeedSet || o.Seed != 1 || o.Hour != -1 || o.Day != 0 || o.SaveDir != "" {
+	if err != nil || o.HiDPI != nil || o.VSync != nil || o.SeedSet || o.Seed != 1 || o.Hour != -1 || o.Day != 0 || o.SaveDir != "" || o.Version || o.SelfCheck {
 		t.Fatalf("defaults: %+v %v", o, err)
 	}
 	o, err = Parse([]string{"game", "-hidpi=false", "-vsync", "-seed", "7", "-scenario", "zoo", "-save-dir", "bin/saves", "-day", "2"})
@@ -33,6 +33,18 @@ func TestBadFlagsAndHelpExitAsTheFlagPackageDoes(t *testing.T) {
 	out.Reset()
 	if _, err := parse([]string{"bin/game", "-nope"}, &out); err == nil || ExitCode(err) != 2 || !strings.Contains(out.String(), "-nope") {
 		t.Errorf("-nope: %v, %q", err, out.String())
+	}
+}
+
+func TestVersionAndSelfCheckFlags(t *testing.T) {
+	t.Parallel()
+	o, err := Parse([]string{"game", "-version"})
+	if err != nil || !o.Version || o.SelfCheck {
+		t.Fatalf("-version: %+v %v", o, err)
+	}
+	o, err = Parse([]string{"game", "-selfcheck"})
+	if err != nil || o.Version || !o.SelfCheck {
+		t.Fatalf("-selfcheck: %+v %v", o, err)
 	}
 }
 

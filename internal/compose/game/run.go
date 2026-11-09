@@ -80,8 +80,12 @@ func Run(opts cligame.Options, version string, d Display) {
 	}
 	app := uiadapter.NewApp(cfg)
 
+	icons, iconErr := display.LoadIcons() // assets/generated/ui/app_icon via assetroot
+	if iconErr != nil {
+		log.Printf("window icon: %v (continuing without one)", iconErr)
+	}
 	runErr := d.Run(app, display.Window{TPS: clock.TicksPerSecond, Width: uiadapter.DefaultWindowWidth,
-		Height: uiadapter.DefaultWindowHeight, Title: "rimworld-go", Probe: probe != nil})
+		Height: uiadapter.DefaultWindowHeight, Title: "rimworld-go", Probe: probe != nil, Icons: icons})
 	closeSaves(cfg.Saves) // the last background save reaches the disk
 	if usage != nil {
 		usage.Close() // before a log.Fatal would skip it
