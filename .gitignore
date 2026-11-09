@@ -2,6 +2,8 @@
 /dist/
 /release-artifacts/
 *.exe
+# go-winres output the release workflow makes for the Windows build
+cmd/game/rsrc_windows_*.syso
 *.test
 *.out
 .DS_Store

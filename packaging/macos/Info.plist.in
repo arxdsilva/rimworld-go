@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- rimworld-go.app's Info.plist; scripts/package_macos.sh fills @VERSION@
+     (the tag without its v and pre-release, e.g. 0.3.0) and @TAG@.
+     LSMinimumSystemVersion is Go 1.27's floor (the linker writes minos 13.0). -->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>rimworld-go</string>
+	<key>CFBundleExecutable</key>
+	<string>rimworld-go</string>
+	<key>CFBundleIconFile</key>
+	<string>rimworld-go</string>
+	<key>CFBundleIdentifier</key>
+	<string>io.github.arxdsilva.rimworld-go</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>rimworld-go</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@VERSION@</string>
+	<key>CFBundleVersion</key>
+	<string>@VERSION@</string>
+	<key>CFBundleGetInfoString</key>
+	<string>rimworld-go @TAG@</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.strategy-games</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+</dict>
+</plist>

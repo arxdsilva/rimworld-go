@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=rimworld-go
+GenericName=Colony simulation
+Comment=Keep a small colony alive through one bad season after another
+Exec=rimworld-go
+Icon=rimworld-go
+Terminal=false
+Categories=Game;StrategyGame;
+Keywords=colony;survival;simulation;
+StartupWMClass=rimworld-go

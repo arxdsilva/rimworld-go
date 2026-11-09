@@ -1,0 +1,5 @@
+#!/bin/sh
+# The AppImage's entry point: run the game from inside the mounted image,
+# where its assets sit next to it (usr/lib/rimworld-go/assets).
+here=$(dirname "$(readlink -f "$0")")
+exec "$here/usr/lib/rimworld-go/rimworld-go" "$@"

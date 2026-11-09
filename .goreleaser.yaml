@@ -1,7 +1,8 @@
 # Publishes the GitHub release when a v* tag is pushed (.github/workflows/release.yml).
 # The workflow's matrix builds the binaries, because they need cgo on each OS and
-# a universal macOS binary, and scripts/package_release.sh packs them with the
-# assets. GoReleaser adds the checksums and the notes, and publishes.
+# a universal macOS binary, then the installers (scripts/package_{macos,linux}.sh,
+# scripts/package_windows.ps1) and the portable archives (scripts/package_release.sh),
+# and smoke-tests them. GoReleaser adds the checksums and the notes, and publishes.
 version: 2
 
 project_name: rimworld-go
@@ -37,11 +38,31 @@ changelog:
 release:
   name_template: "rimworld-go {{ .Tag }}"
   prerelease: auto
+  # installers first: they are the main downloads; the portable archives follow
   extra_files:
-    - glob: ./release-artifacts/*
+    - glob: ./release-artifacts/*.dmg
+    - glob: ./release-artifacts/*-windows-setup.exe
+    - glob: ./release-artifacts/*.AppImage
+    - glob: ./release-artifacts/*.deb
+    - glob: ./release-artifacts/*.rpm
+    - glob: ./release-artifacts/*.tar.gz
+    - glob: ./release-artifacts/*.zip
   header: |
-    Unpack the archive for your system and run `rimworld-go` (`rimworld-go.exe` on Windows); keep the `assets` folder next to it.
+    ## Download
 
-    - **macOS:** the build is unsigned. The first time, right-click `rimworld-go` → Open, or run `xattr -dr com.apple.quarantine <folder>`.
-    - **Windows:** SmartScreen may warn about an unknown publisher → More info → Run anyway.
-    - **Linux:** needs OpenGL and ALSA (most desktops have them).
+    | System | Installer (recommended) | Portable archive |
+    | --- | --- | --- |
+    | macOS 13 or later (Apple silicon and Intel) | [rimworld-go-{{ .Tag }}-macos.dmg](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-macos.dmg) | [rimworld-go-{{ .Tag }}-macos-universal.tar.gz](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-macos-universal.tar.gz) |
+    | Windows 10 or 11 (64-bit) | [rimworld-go-{{ .Tag }}-windows-setup.exe](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-windows-setup.exe) | [rimworld-go-{{ .Tag }}-windows-amd64.zip](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-windows-amd64.zip) |
+    | Linux (x86-64), any distribution | [rimworld-go-{{ .Tag }}-x86_64.AppImage](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-x86_64.AppImage) | [rimworld-go-{{ .Tag }}-linux-amd64.tar.gz](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-linux-amd64.tar.gz) |
+    | Debian, Ubuntu | [rimworld-go-{{ .Tag }}-linux-amd64.deb](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-linux-amd64.deb) | |
+    | Fedora, openSUSE | [rimworld-go-{{ .Tag }}-linux-x86_64.rpm](https://github.com/arxdsilva/rimworld-go/releases/download/{{ .Tag }}/rimworld-go-{{ .Tag }}-linux-x86_64.rpm) | |
+
+    The builds are not signed yet, so your system asks once before the first start:
+
+    - **macOS:** open the `.dmg` and drag rimworld-go to Applications. If macOS says it can't check the app, open System Settings → Privacy & Security, scroll down and click **Open Anyway**.
+    - **Windows:** run the setup. If SmartScreen warns about an unknown publisher, click **More info** → **Run anyway**. It installs for your user only (no administrator needed) and adds a Start menu entry; uninstall it from Settings → Apps.
+    - **Linux:** make the AppImage executable (`chmod +x rimworld-go-*.AppImage`) and run it, or install the package (`sudo apt install ./rimworld-go-*.deb`, `sudo dnf install ./rimworld-go-*.rpm`) and start rimworld-go from your menu. Needs OpenGL and ALSA (most desktops have them).
+    - **Portable archive:** unpack it and run `rimworld-go` (`rimworld-go.exe` on Windows); keep the `assets` folder next to it.
+
+    `rimworld-go -selfcheck` prints where the game finds its files, which helps with a bug report.

@@ -1,0 +1,70 @@
+# The .deb and .rpm (scripts/package_linux.sh runs nfpm with this file).
+# nfpm expands ${VERSION} (the tag without its v, e.g. 0.3.0-rc1) from the
+# environment; the files come from dist/rimworld-go-linux-pkg-stage, which
+# scripts/package_release.sh staged. The game lives in /opt/rimworld-go
+# with its assets beside it; /usr/bin/rimworld-go links to it
+# (internal/platform/assetroot follows the link).
+name: rimworld-go
+arch: amd64
+platform: linux
+version: ${VERSION}
+version_schema: semver
+release: "1"
+section: games
+priority: optional
+maintainer: Arthur Silva <arxdsilva@gmail.com>
+vendor: rimworld-go
+homepage: https://github.com/arxdsilva/rimworld-go
+description: |-
+  A colony survival game.
+  Keep a small colony alive through one bad season after another: build,
+  farm, cook, hunt, tend the wounded and hold off raids.
+
+contents:
+  - src: dist/rimworld-go-linux-pkg-stage/rimworld-go
+    dst: /opt/rimworld-go/rimworld-go
+    file_info:
+      mode: 0755
+  - src: dist/rimworld-go-linux-pkg-stage/assets
+    dst: /opt/rimworld-go/assets
+    type: tree
+  - src: dist/rimworld-go-linux-pkg-stage/third_party
+    dst: /opt/rimworld-go/third_party
+    type: tree
+  - src: dist/rimworld-go-linux-pkg-stage/README.md
+    dst: /opt/rimworld-go/README.md
+  - src: dist/rimworld-go-linux-pkg-stage/THIRD_PARTY_NOTICES.md
+    dst: /opt/rimworld-go/THIRD_PARTY_NOTICES.md
+  - src: /opt/rimworld-go/rimworld-go
+    dst: /usr/bin/rimworld-go
+    type: symlink
+  - src: packaging/linux/rimworld-go.desktop
+    dst: /usr/share/applications/rimworld-go.desktop
+  - src: packaging/icons/rimworld-go-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/rimworld-go.png
+  - src: packaging/icons/rimworld-go-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/rimworld-go.png
+  - src: packaging/icons/rimworld-go-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/rimworld-go.png
+  - src: packaging/icons/rimworld-go-512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/rimworld-go.png
+
+overrides:
+  deb:
+    depends:
+      - libgl1
+      - libx11-6
+      - libxcursor1
+      - libxrandr2
+      - libxinerama1
+      - libxi6
+      - libasound2 | libasound2t64
+  rpm:
+    depends:
+      - mesa-libGL
+      - libX11
+      - libXcursor
+      - libXrandr
+      - libXinerama
+      - libXi
+      - alsa-lib

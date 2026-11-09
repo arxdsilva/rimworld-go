@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		os.Exit(cligame.ExitCode(err))
 	}
-	if code, done := composegame.Report(opts, buildinfo.Version, os.Stdout); done {
+	if code, done := composegame.Report(opts, buildinfo.Version, composegame.ConsoleOut(os.Stdout)); done {
 		os.Exit(code)
 	}
 	composegame.Run(opts, buildinfo.Version, display.Screen{})

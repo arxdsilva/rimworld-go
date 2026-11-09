@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,18 @@ func TestVersionPrintsAndExitsZero(t *testing.T) {
 	out.Reset()
 	if _, done := Report(cligame.Options{}, "v1.2.3", &out); done || out.Len() != 0 {
 		t.Fatalf("no flag must run the game: done %v out %q", done, out.String())
+	}
+}
+
+func TestConsoleOutKeepsARedirectedStdout(t *testing.T) {
+	t.Parallel()
+	f, err := os.Create(filepath.Join(t.TempDir(), "out.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if w := ConsoleOut(f); w != io.Writer(f) {
+		t.Fatalf("a file as stdout must be kept, got %T", w)
 	}
 }
 

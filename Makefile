@@ -225,3 +225,31 @@ run:  ## Run the game
 app-icon:  ## regenerate the app icon (cmd/iconpack: packaging/icons + assets/generated/ui/app_icon; iconutil makes the .icns)
 	go run ./cmd/iconpack
 	iconutil -c icns packaging/icons/rimworld-go.iconset -o packaging/icons/rimworld-go.icns
+
+# Installers as the release workflow builds them (.agents/specs/RELEASES.md).
+# DIST_TAG names and versions them; dist/ is gitignored.
+DIST_TAG     ?= $(shell git describe --tags --match 'v*' --always 2>/dev/null || echo v0.0.0-dev)
+DIST_LDFLAGS := -s -w -X $(MODULE)/internal/platform/buildinfo.Version=$(DIST_TAG)
+
+.PHONY: dist-macos
+dist-macos:  ## universal macOS binary, rimworld-go.app in dist/rimworld-go-$(DIST_TAG)-macos.dmg, then its smoke test (macOS only)
+	@mkdir -p dist/macos-bin
+	for arch in arm64 amd64; do \
+		MACOSX_DEPLOYMENT_TARGET=13.0 CGO_ENABLED=1 GOOS=darwin GOARCH=$$arch \
+			go build -trimpath -ldflags "$(DIST_LDFLAGS)" -o dist/macos-bin/rimworld-go-$$arch ./cmd/game || exit 1; \
+	done
+	lipo -create -output dist/macos-bin/rimworld-go dist/macos-bin/rimworld-go-arm64 dist/macos-bin/rimworld-go-amd64
+	scripts/package_macos.sh dist/macos-bin/rimworld-go $(DIST_TAG)
+	scripts/package_macos.sh smoke dist/rimworld-go-$(DIST_TAG)-macos.dmg $(DIST_TAG)
+
+# A Linux binary needs cgo against X11, GL and ALSA, which a cross build
+# from another OS lacks: the CGO_ENABLED=0 binary here does not run as the
+# game. This target only checks the packaging layout (the .deb and .rpm
+# file lists, the AppDir); the release workflow builds the real ones on
+# Ubuntu 22.04 and smoke-tests them.
+.PHONY: dist-linux-pkgs
+dist-linux-pkgs:  ## .deb, .rpm and AppDir layout from a cross-built (non-runnable) linux binary; layout check only
+	@mkdir -p dist/linux-bin
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$(DIST_LDFLAGS)" -o dist/linux-bin/rimworld-go ./cmd/game
+	scripts/package_linux.sh pkgs dist/linux-bin/rimworld-go $(DIST_TAG)
+	scripts/package_linux.sh appimage dist/linux-bin/rimworld-go $(DIST_TAG)
