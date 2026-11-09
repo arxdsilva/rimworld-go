@@ -242,7 +242,10 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (GAR-006): the periodic work is spread (game/cadence): each
 	// entity keeps its rate, on a different tick. The midnight worst tick
 	// drops from about 1.6 to 1.0 ms (BenchmarkTickDayRollover500).
-	const want uint64 = 0xdb1146b479e0e9c4
+	//
+	// Re-pinned (PERF-012): a blocked animal backs off its repath search
+	// (45 doubling to 720 ticks) and a wild wanderer re-picks its goal.
+	const want uint64 = 0xb1280be67518c082
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

@@ -162,12 +162,17 @@ import (
 // slots off the hour. Each entity keeps exactly its rate
 // (TestStaggeredSitesKeepTheirRate); the tick it fires on moves. Three of
 // the six runs move; same-seed runs identical (-count=2).
+// Re-pinned (PERF-012): animal repath back-off. An animal whose search
+// around a blocker fails doubles its wait (45 to 720) until it steps, and a
+// wild wanderer re-picks its goal; colonists and raiders keep the eager
+// rule (TestAnimalRepathBackoff). Two of the six runs move; same-seed runs
+// identical (-count=2).
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0x3e5acab81c2a989d,
-	"48x40/seed7":    0xe2bcce531fcd19c2,
+	"48x40/seed7":    0xbcace3601ecc2b00,
 	"48x40/seed42":   0xd7d1da8681635747,
 	"120x120/seed1":  0x64cf7b5f24124fa2,
-	"120x120/seed7":  0x8954fb673149b61d,
+	"120x120/seed7":  0xb730bd268c1cdf58,
 	"120x120/seed42": 0xada3ad9b78b85a63,
 }
 
