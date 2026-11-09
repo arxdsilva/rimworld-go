@@ -15,7 +15,8 @@ import (
 // dustbuck standing at x=blockX and tame dustbucks at the given cells
 // walking east to the far end (each one cell short of the one ahead). It
 // counts every search around a creature each walker runs: a stepRepath
-// verdict, or a failed one (rpMiss).
+// verdict, a failed inline one (rpMiss), or one queued on the path stage
+// (an animal's: paths.go runRepaths).
 func repathJam(t *testing.T, w, blockX int, xs ...int) (g *Game, blocker entity.EntityID, walkers []entity.EntityID, searches map[entity.EntityID]int) {
 	t.Helper()
 	g = corridor(w)
@@ -30,8 +31,9 @@ func repathJam(t *testing.T, w, blockX int, xs ...int) (g *Game, blocker entity.
 	}
 	g.enterHook = func(id entity.EntityID, from, to Position) (stepVerdict, Position) {
 		g.occ.rpMiss = 0 // a colonist's is never read
+		queued := len(g.regs.paths.Requests())
 		v, alt := g.enter(id, from, to)
-		if v == stepRepath || g.occ.rpMiss == id {
+		if v == stepRepath || g.occ.rpMiss == id || len(g.regs.paths.Requests()) > queued {
 			searches[id]++
 		}
 		return v, alt

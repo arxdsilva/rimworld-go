@@ -576,13 +576,7 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 	}
 	// stepWait or stepRepath: stay put and try again next tick
 	m.BlockedTicks++
-	m.BlockedBy, _ = g.occupantAt(to.X, to.Y)
-	if g.occ.rpMiss == id { // no way around (occupancy.go repathEvery): back off; a wild wanderer goes elsewhere at its next think
-		g.occ.rpMiss, m.RepathWait = 0, min(2*max(m.RepathWait, repathAfter), repathCap)
-		if !a.Tame && a.Mode == animal.Wander && !a.Errand {
-			a.Path, a.PathI = nil, 0
-		}
-	}
+	m.BlockedBy, _ = g.occupantAt(to.X, to.Y) // a search around it is queued (paths.go runRepaths applies it)
 	if v == stepRepath {
 		if path, ok := g.pathAround(id, a.GoalX, a.GoalY); ok {
 			a.Path, a.PathI = path, 0

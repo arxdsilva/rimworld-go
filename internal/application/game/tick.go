@@ -1567,6 +1567,7 @@ func (g *Game) phaseMovement() {
 	movers := g.movers()
 	g.pruneMotion(movers)
 	g.buildOccupancy()
+	g.regs.paths.Open() // animal repaths queue, then run after the loop (paths.go runRepaths)
 	var raiders []entity.EntityID
 	for _, mv := range movers {
 		m := g.motionOf(mv.id)
@@ -1579,6 +1580,7 @@ func (g *Game) phaseMovement() {
 			raiders = append(raiders, mv.id)
 		}
 	}
+	runRepaths(g)
 	g.care.FollowCarriers()
 	g.combat.Traps.Underfoot(raiders)
 }
@@ -1719,7 +1721,7 @@ func (g *Game) deleteItem(id entity.EntityID) {
 	g.reserve.ReleaseTarget(id) // RES-1: its claimants' jobs find it gone
 	g.idx.ground.Moved()
 	g.stacks.Delete(id)
-	g.itemIDs = dropIDs(g.itemIDs, func(iid entity.EntityID) bool { return iid == id })
+	g.itemIDs = slices.DeleteFunc(g.itemIDs, func(iid entity.EntityID) bool { return iid == id })
 }
 
 // mergeOrSet puts stack id down at st's tile, merging into a same-kind

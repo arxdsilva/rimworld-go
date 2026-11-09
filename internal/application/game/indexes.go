@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/application/game/idindex"
+	"rimworld-go/internal/application/game/memo"
 	"rimworld-go/internal/application/game/postpone"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
@@ -38,10 +39,14 @@ var indexSelfCheck bool
 // selfCheckEvery: check one indexed answer in this many (fewer under -race, for time).
 var selfCheckEvery uint64 = 1
 
-// checkIndex: is this lookup of g checked against the scan? Counted per game (one owner, no atomic).
+// checkIndex: is this lookup of g checked against the scan? Counted per game (one owner, no atomic),
+// only while the check is on and never during a parallel path stage: a search writes nothing shared.
 func checkIndex(g *Game) bool {
+	if !indexSelfCheck || g.regs.paths.Frozen() {
+		return false
+	}
 	g.idx.checkN++
-	return indexSelfCheck && (selfCheckEvery <= 1 || g.idx.checkN%selfCheckEvery == 0)
+	return selfCheckEvery <= 1 || g.idx.checkN%selfCheckEvery == 0
 }
 
 // cellSlots is one id per cell, for a fixed number of layers.
@@ -415,56 +420,21 @@ type viewCache struct {
 	bldgs    bldgMemo
 	items    itemMemo
 	frames   frameMemo
-	messages listMemo[MessageView]
-	sched    listMemo[schedule.Activity]
+	messages memo.List[MessageView]
+	sched    memo.List[schedule.Activity]
 	letters  letterMemo
 	// feet memoises footprint shapes per kind and facing (building_view.go).
 	feet map[[2]int]footShape
 }
 
-// listMemo is a small World() list handed out again while it reads the
-// same (shared, read only: never written once handed out).
-type listMemo[T comparable] struct {
-	views []T
-	ok    bool
-}
-
-// share is the list of n elements at(i): the last one while every element
-// is equal (view cache on), else a fresh copy; nil when n is 0.
-func (m *listMemo[T]) share(on bool, n int, at func(int) T) []T {
-	if n == 0 {
-		return nil
-	}
-	if on && m.ok && len(m.views) == n {
-		same := true
-		for i := range n {
-			if m.views[i] != at(i) {
-				same = false
-				break
-			}
-		}
-		if same {
-			return m.views
-		}
-	}
-	out := make([]T, n)
-	for i := range n {
-		out[i] = at(i)
-	}
-	if on {
-		m.views, m.ok = out, true
-	}
-	return out
-}
-
 // messageViews is World().Messages (a copy of the recent notices).
 func (g *Game) messageViews() []MessageView {
-	return g.views.messages.share(g.views.on, len(g.messages), func(i int) MessageView { return g.messages[i] })
+	return g.views.messages.Share(g.views.on, len(g.messages), func(i int) MessageView { return g.messages[i] })
 }
 
 // scheduleView is World().Schedule (a copy of the colony default).
 func (g *Game) scheduleView() []schedule.Activity {
-	return g.views.sched.share(g.views.on, len(g.sched), func(i int) schedule.Activity { return g.sched[i] })
+	return g.views.sched.Share(g.views.on, len(g.sched), func(i int) schedule.Activity { return g.sched[i] })
 }
 
 // letterMemo is the last letter stack view and the stack version it was
@@ -549,19 +519,6 @@ func (g *Game) terrainView() []uint8 {
 }
 
 // ---- lists ----
-
-// dropIDs removes every id matching drop from ids in place, keeping the
-// order of the rest (the in-order compaction removePlant, deleteItem and
-// the batched rot and frost passes share).
-func dropIDs(ids []entity.EntityID, drop func(entity.EntityID) bool) []entity.EntityID {
-	kept := ids[:0]
-	for _, id := range ids {
-		if !drop(id) {
-			kept = append(kept, id)
-		}
-	}
-	return kept
-}
 
 // mineCache is mineList's sorted designations, per minesVer.
 type mineCache struct {

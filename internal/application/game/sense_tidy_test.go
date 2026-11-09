@@ -647,8 +647,8 @@ func TestDetourOnTheWayTidies(t *testing.T) {
 func TestDetourDeferredSkips(t *testing.T) {
 	t.Parallel()
 	g, id := detourGame(t, 130)
-	b := &g.regs.budget
-	b.tick, b.used = uint64(g.clock.Now()), longSearchBudget
+	for b := &g.regs.budget; b.Take(uint64(g.clock.Now()), longSearchBudget); { // spend the tick's long searches
+	}
 	if _, ok := senseOf(g).Tidy.Before(id, job.Record{Kind: job.Bill, DestX: 5, DestY: 6, TX: 125, TY: 8}); ok {
 		t.Fatal("a tidy on a deferred search")
 	}

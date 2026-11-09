@@ -263,15 +263,6 @@ func TestTileSetBounds(t *testing.T) {
 	}
 }
 
-func TestDropIDsKeepsOrder(t *testing.T) {
-	t.Parallel()
-	ids := []entity.EntityID{5, 1, 4, 1, 3}
-	got := dropIDs(ids, func(id entity.EntityID) bool { return id == 1 })
-	if !slices.Equal(got, []entity.EntityID{5, 4, 3}) {
-		t.Fatalf("dropIDs = %v", got)
-	}
-}
-
 // TestSpillPingPongEnds: two unmergeable same-kind stacks side by side
 // (corpses of different species) used to bounce a third between them
 // until the stack overflowed; it now comes to rest.

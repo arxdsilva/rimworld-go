@@ -1,9 +1,10 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/furnish"
-
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -221,7 +222,7 @@ func (g *Game) endFrostPass(fp *farm.Pass) {
 	if fp.Gone == nil {
 		return
 	}
-	g.plantIDs = dropIDs(g.plantIDs, func(id entity.EntityID) bool { return fp.Gone[id] })
+	g.plantIDs = slices.DeleteFunc(g.plantIDs, func(id entity.EntityID) bool { return fp.Gone[id] })
 	from := now - now%climateInterval
 	for _, k := range fp.Kills {
 		g.frostNotice(k, from)

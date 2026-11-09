@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"slices"
 
+	"rimworld-go/internal/application/game/pathstage"
 	"rimworld-go/internal/application/game/spatial"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -90,7 +91,7 @@ type occupancy struct {
 	rpID   entity.EntityID
 	rpAt   uint64
 	rpPath []pathing.Point
-	rpMiss entity.EntityID // repathEvery's search for it failed; moveAnimal reads and clears it
+	rpMiss entity.EntityID // repathEvery's inline search for it failed (a pawn's: tests count searches)
 	// dirty: the movement phase started and the index is not rebuilt yet
 	// (it is rebuilt on first use, or by the periodic stack sweep); builds
 	// counts the rebuilds (at most one a map a tick: occupancy_builds_test.go).
@@ -603,11 +604,16 @@ func (g *Game) occIndex() *occupancy {
 // once per repathAfter blocked ticks, the first time after repathAfter
 // ticks. A colonist held up by a creature standing still replans at once
 // (players notice a colonist idling behind a worker; raiders and animals
-// keep the cheaper rule). An animal backs off: each failed search doubles
-// its wait (motionRec.RepathWait, set by moveAnimal from rpMiss).
+// keep the cheaper rule). An animal's search is queued on the path stage
+// (paths.go runRepaths: it waits this tick either way); each failed one
+// doubles its wait (motionRec.RepathWait).
 func (g *Game) repathEvery(id entity.EntityID, from, to Position, m motionRec, behindWalker bool) (stepVerdict, Position) {
 	eager := !behindWalker && g.isPawn(id) && !g.isRaider(id)
 	if blocked := m.BlockedTicks; blocked%max(m.RepathWait, repathAfter) != 0 || blocked == 0 && !eager {
+		return stepWait, from
+	}
+	if a := g.animals.Ref(id); a != nil && a.PathI < len(a.Path) && g.regs.paths.Queue(pathstage.Request{ID: id,
+		From: pathing.Point(from), To: pathing.Point(to), Goal: a.Path[len(a.Path)-1], Token: pathstage.TokenOf(a.Path, a.PathI, pathing.Point(from))}) {
 		return stepWait, from
 	}
 	if g.planAround(id, from, to) {

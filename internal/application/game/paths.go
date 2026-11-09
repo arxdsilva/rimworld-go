@@ -3,7 +3,9 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/pathstage"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/region"
 )
@@ -64,35 +66,31 @@ const (
 	longSearchBudget = 6
 )
 
-// searchBudget counts the tick's long job searches (not saved: it starts
-// afresh every tick).
-type searchBudget struct {
-	tick     uint64
-	used     int
-	deferred bool // the last pathToJob was deferred
-}
-
 // findPath is the tile search behind pathTo: exact below longPath, through
 // the region corridor above it (falling back to a full search should the
 // corridor hold no path).
 func (g *Game) findPath(id entity.EntityID, q pathing.Query, sx, sy, tx, ty int) ([]pathing.Point, bool) {
-	if pathing.Octile(sx, sy, tx, ty) <= longPath || g.noRegions() || g.regs.exactLong {
-		return g.searcher().Find(q, sx, sy, tx, ty)
-	}
-	if !q.Walkable(tx, ty) || !g.grid.InBounds(sx, sy) {
-		return nil, false
-	}
-	if sx == tx && sy == ty {
-		return nil, true
+	k, allow := planSearch(g, id, q, sx, sy, tx, ty)
+	return pathstage.Search(g.searcher(), k, q, allow, sx, sy, tx, ty)
+}
+
+// planSearch is how findPath searches; allow, a corridor's cells, is valid
+// until the region map's next corridor.
+func planSearch(g *Game, id entity.EntityID, q pathing.Query, sx, sy, tx, ty int) (pathstage.Kind, []uint64) {
+	switch {
+	case pathing.Octile(sx, sy, tx, ty) <= longPath || g.noRegions() || g.regs.exactLong:
+		return pathstage.Exact, nil
+	case !q.Walkable(tx, ty) || !g.grid.InBounds(sx, sy):
+		return pathstage.Failed, nil
+	case sx == tx && sy == ty:
+		return pathstage.Here, nil
 	}
 	allow, ok := g.regionsNow().Corridor(g.moverLayer(id), sx, sy, tx, ty)
 	if !ok {
-		return checkReachPath(g, q, sx, sy, tx, ty)
+		checkReach(g, q, sx, sy, tx, ty, false) // under the test self-check, proven with a full search
+		return pathstage.Failed, nil
 	}
-	if p, ok := g.searcher().FindIn(q, allow, sx, sy, tx, ty); ok {
-		return p, true
-	}
-	return g.searcher().Find(q, sx, sy, tx, ty)
+	return pathstage.Corridor, allow
 }
 
 // findPathVia is findPath, or a plain exact search without regions.
@@ -103,34 +101,20 @@ func (g *Game) findPathVia(id entity.EntityID, q pathing.Query, regions bool, sx
 	return g.findPath(id, q, sx, sy, tx, ty)
 }
 
-// checkReachPath is a corridor's "no route": under the test self-check it
-// is proven with a full search.
-func checkReachPath(g *Game, q pathing.Query, sx, sy, tx, ty int) ([]pathing.Point, bool) {
-	checkReach(g, q, sx, sy, tx, ty, false)
-	return nil, false
-}
-
 // pathToJob is pathTo for startJob, under the long-search budget: a long
-// search past the tick's budget is deferred (g.regs.budget.deferred).
+// search past the tick's budget is deferred (pathDeferred).
 func (g *Game) pathToJob(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 	b := &g.regs.budget
-	b.deferred = false
+	b.Clear()
 	pos, _ := g.positions.Get(id)
-	if !g.noRegions() && !g.regs.exactLong && pathing.Octile(pos.X, pos.Y, tx, ty) > longPath {
-		if now := uint64(g.clock.Now()); b.tick != now {
-			b.tick, b.used = now, 0
-		}
-		if b.used >= longSearchBudget {
-			b.deferred = true
-			return nil, false
-		}
-		b.used++
+	if !g.noRegions() && !g.regs.exactLong && pathing.Octile(pos.X, pos.Y, tx, ty) > longPath && !b.Take(uint64(g.clock.Now()), longSearchBudget) {
+		return nil, false
 	}
 	return g.pathTo(id, tx, ty)
 }
 
 // pathDeferred reports that the last pathToJob was put off by the budget.
-func (g *Game) pathDeferred() bool { return g.regs.budget.deferred }
+func (g *Game) pathDeferred() bool { return g.regs.budget.Deferred() }
 
 // checkThreatScan, under the test self-check, proves nearestThreatTo's
 // indexed animal answer against the scan of every animal it replaced.
@@ -144,5 +128,54 @@ func (g *Game) checkThreatScan(id entity.EntityID, pos Position, animalR, raider
 	}
 	if want != got || wantD != gotD {
 		panic(fmt.Sprintf("nearestThreatTo: index found %d at %d, scan %d at %d", got, gotD, want, wantD))
+	}
+}
+
+// runRepaths is the movement phase's path stage (pathstage, GAR-035): the
+// animal searches repathEvery queued are planned (every lazy cache their
+// queries read is built here), searched against the occupancy the whole
+// loop left, and applied in ID order. An answer is used only while the
+// walk it was asked for stands (makeWay or a give-up may rewrite it) and
+// its first step is free; a failed search doubles the wait, and a wild
+// wanderer drops its path (it picks again at its next think).
+func runRepaths(g *Game) {
+	s := &g.regs.paths
+	s.Close()
+	if len(s.Requests()) == 0 {
+		return
+	}
+	if g.plantIndex(); !g.noRegions() {
+		g.regionsNow().Regions()
+	}
+	for i, r := range s.Requests() {
+		q := g.costedQuery(r.ID)
+		q.(pathing.Coster).ExtraCost(r.From.X, r.From.Y) // the ground layer and the region bitsets
+		if b, ok := q.(pathing.Bitset); ok {
+			b.BlockedBits()
+		}
+		k, allow := planSearch(g, r.ID, q, r.From.X, r.From.Y, r.Goal.X, r.Goal.Y)
+		s.SetPlan(i, q, k, allow)
+	}
+	s.Compute(g.searcher())
+	for i, r := range s.Requests() {
+		res := s.Result(i)
+		a, ok := g.animals.Get(r.ID)
+		if !ok {
+			continue
+		}
+		pos, _ := g.positions.Get(r.ID)
+		same := pathstage.TokenOf(a.Path, a.PathI, pathing.Point(pos)) == r.Token
+		if res.OK && len(res.Path) > 0 && res.Path[0] != r.To && g.holderFor(r.ID, g.partner(r.ID), Position(res.Path[0])) == 0 {
+			a.Path, a.PathI = res.Path, 0
+		} else {
+			m := g.motionOf(r.ID)
+			m.RepathWait = min(2*max(m.RepathWait, repathAfter), repathCap)
+			g.motion.Set(r.ID, m)
+			same = same && !a.Tame && a.Mode == animal.Wander && !a.Errand
+			a.Path, a.PathI = nil, 0
+		}
+		if same {
+			g.animals.Set(r.ID, a)
+		}
 	}
 }

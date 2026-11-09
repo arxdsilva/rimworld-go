@@ -4,6 +4,7 @@ import (
 	"math/bits"
 	"slices"
 
+	"rimworld-go/internal/application/game/pathstage"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
@@ -35,8 +36,9 @@ type regionState struct {
 	special   []specialCell // flagged cells, ascending
 	bits      [region.Layers][]uint64
 	bitsOK    [region.Layers]bool
-	rooms     roomIndex    // rooms_index.go
-	budget    searchBudget // paths.go
+	rooms     roomIndex        // rooms_index.go
+	budget    pathstage.Budget // paths.go pathToJob
+	paths     pathstage.Stage  // the movement phase's queued searches (paths.go runRepaths)
 }
 
 type specialCell struct {

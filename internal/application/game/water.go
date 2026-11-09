@@ -65,8 +65,9 @@ func (g *Game) groundExtra(x, y int) int {
 	l.Sync(g.grid.Width()*g.grid.Height(), [2]uint64{g.structVer, g.idx.jobs.plantGen}, g.plants)
 	extra := int(l.Get(i))
 	if extra == spatial.Unset {
-		extra = g.groundExtraRaw(x, y)
-		l.Put(i, extra)
+		if extra = g.groundExtraRaw(x, y); !g.regs.paths.Frozen() { // lanes only read the layer
+			l.Put(i, extra)
+		}
 	} else if checkIndex(g) && extra != g.groundExtraRaw(x, y) {
 		panic("groundExtra: stale cell cost (structVer or plantGen not bumped?)")
 	}
