@@ -92,7 +92,8 @@ func (r *Rage) ChargeCheck(id entity.EntityID, a *animal.State, pos Pos, now uin
 	r.WarnChase(id, a, who, true) // chase.go: "A cougar charges Ada!" (raiders are skipped)
 }
 
-// validPrey: a living animal of another species, or a standing colonist.
+// validPrey: a living animal of another species, or a standing colonist
+// (a downed one too where predators hunt people: EAI-004).
 func (r *Rage) validPrey(self, t entity.EntityID) bool {
 	if t == self {
 		return false
@@ -104,15 +105,21 @@ func (r *Rage) validPrey(self, t entity.EntityID) bool {
 		}
 		return !o.Dead() && (o.Species != me.Species || o.Tame != me.Tame)
 	}
-	return r.h.StandingPawn(t)
+	return r.h.StandingPawn(t) || r.h.DownedPawn(t) && r.h.PredatorsHuntColonists()
 }
 
 // FindPrey: the nearest downed animal the predator can take within its
-// hunt radius (Huntable), else the nearest it can take at all, else a
-// standing colonist within AggroRadius. A pack predator's mates nearby
-// join the hunt.
+// hunt radius (Huntable), else (a predator, where the difficulty lets them
+// hunt people: EAI-004) the nearest downed colonist there, else the
+// nearest animal it can take at all, else a standing colonist within
+// AggroRadius. A pack predator's mates nearby join the hunt.
 func (r *Rage) FindPrey(id entity.EntityID, pos Pos, def animal.Def) entity.EntityID {
 	best, _, ok := r.h.Nearest(pos.X, pos.Y, HuntRadius(def), Animals, Sight{R: r, Self: id, Keep: downedPrey}) // easy prey first
+	if !ok && def.Predator && r.h.PredatorsHuntColonists() {
+		if best, _, ok = r.h.Nearest(pos.X, pos.Y, HuntRadius(def), Pawns, Sight{R: r, Keep: downedPerson}); ok {
+			return best
+		}
+	}
 	if !ok {
 		best, _, ok = r.h.Nearest(pos.X, pos.Y, HuntRadius(def), Animals, Sight{R: r, Self: id, Keep: prey})
 	}
@@ -129,8 +136,10 @@ func (r *Rage) FindPrey(id entity.EntityID, pos Pos, def animal.Def) entity.Enti
 	return best
 }
 
-// standing keeps a standing pawn.
+// standing keeps a standing pawn; downedPerson a downed one.
 func standing(s Sight, o entity.EntityID) bool { return s.R.h.StandingPawn(o) }
+
+func downedPerson(s Sight, o entity.EntityID) bool { return s.R.h.DownedPawn(o) }
 
 // prey keeps an animal s.Self can hunt; downedPrey a downed one.
 func prey(s Sight, o entity.EntityID) bool { return s.R.Huntable(s.Self, o) }

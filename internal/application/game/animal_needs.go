@@ -292,6 +292,7 @@ func (g *Game) animalHurt(id entity.EntityID, a *animal.State, by entity.EntityI
 	if a.DownsNow() {
 		g.downAnimal(id, a, now) // animal_health.go: too hurt to stand
 	}
+	rageOf(g).HerdCall(id, *a, by, now) // rage/herd.go (EAI-003): its herd's fighters join, the rest run
 	if a.Downed {
 		return // lying where it fell: it neither fights back nor runs
 	}

@@ -9,9 +9,11 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/mathx"
@@ -322,12 +324,12 @@ func (g *Game) TameAnimal(id entity.EntityID, name string) {
 }
 
 // rageOf is the animals' fight-or-flight brain (game/rage: rage, guards,
-// hunts, charges, flight and chase warnings), built on first use; it
-// keeps no state of its own (a load replaces the wildlife state, and the
-// next call builds it again).
+// hunts, charges, flight, chase warnings, bashing, herd calls), built on
+// first use over the memory saved in the wildlife state (a load replaces
+// both, and the next call builds it again).
 func rageOf(g *Game) *rage.Rage {
 	if g.wl.rage == nil {
-		g.wl.rage = rage.New(rageHost{rageLook{g}, rageAct{g}})
+		g.wl.rage = rage.New(rageHost{rageLook{g}, rageAct{g}}, &g.wl.Rage)
 	}
 	return g.wl.rage
 }
@@ -361,6 +363,11 @@ func (h rageLook) IsRaider(id entity.EntityID) bool               { return h.g.i
 func (h rageLook) StandingPawn(id entity.EntityID) bool           { return h.g.standingPawn(id) }
 func (h rageLook) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h rageLook) Colonist(id entity.EntityID) bool               { return slices.Contains(h.g.pawnIDs, id) }
+
+func (h rageLook) DownedPawn(id entity.EntityID) bool {
+	v, ok := h.g.vital.Get(id)
+	return ok && v.Status == health.Downed && h.g.isPawn(id)
+}
 
 func (h rageLook) Log(subject entity.EntityID, kind uint8, other entity.EntityID, name string) {
 	h.g.logEvent(subject, logEntry{Kind: kind, Other: other, Name: name})
@@ -435,4 +442,25 @@ func (h rageAct) Strike(attacker, target entity.EntityID, wk weapon.Kind) {
 
 func (h rageAct) TameHuntOn(id, target entity.EntityID, tp rage.Pos) bool {
 	return h.g.tameHuntOn(id, target, Position(tp))
+}
+
+// BlockAt (EAI-001): a door no one holds open, or a forbidden one (shut
+// even when held), never a settlement's (a fence to animals); with walls
+// a wall.
+func (h rageAct) BlockAt(x, y int, walls bool) (entity.EntityID, bool) {
+	g := h.g
+	if !g.grid.InBounds(x, y) {
+		return 0, false
+	}
+	bid := g.layerBldgAt(x, y, construction.LayerObject)
+	b := g.bldgs.Ref(bid)
+	ok := b != nil && (b.Kind.IsDoor() && !b.Hostile && (b.Forbidden || !g.combat.Doors.Held(bid)) || walls && b.Kind == construction.Wall)
+	return bid, ok
+}
+
+// Bash is a mechanoid's blow (combat.Tactics.Bash) with the animal's own.
+func (h rageAct) Bash(id, b entity.EntityID, wk weapon.Kind, dmg int) bool {
+	d := weapon.DefOf(wk)
+	d.Damage, d.Ranged = dmg, false
+	return h.g.combat.Tactics.Bash(id, b, d)
 }

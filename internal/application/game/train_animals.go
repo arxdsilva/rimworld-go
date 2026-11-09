@@ -244,13 +244,14 @@ func (g *Game) masterAttack(m entity.EntityID) entity.EntityID {
 }
 
 // guardFoe reports o is a threat a guard animal fights: a standing raider,
-// or a wild animal attacking the colony.
+// or a wild animal attacking the colony, or a tame one gone manhunter
+// (EAI-006: a grieving pet).
 func (g *Game) guardFoe(id, o entity.EntityID, now uint64) bool {
 	if g.isRaider(o) {
 		return g.standingRaider(o)
 	}
 	a, ok := g.animals.Get(o)
-	return o != id && ok && !a.Tame && !a.Dead() && (g.hostile(a) || a.Enraged(now))
+	return o != id && ok && (!a.Tame || a.Enraged(now)) && !a.Dead() && (g.hostile(a) || a.Enraged(now))
 }
 
 // dutyKeeps reports engaged foe t is still the animal's business: its

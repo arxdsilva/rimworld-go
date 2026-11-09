@@ -181,18 +181,20 @@ func (t *Threats) Settle(grp *Group, tech faction.Tech, points int) {
 	}
 }
 
-// WolfPackSize is a predator pack's size for threat points: about one
-// predator per 100 points, 2..12 (today's mapping; EAI tunes it).
-func WolfPackSize(points int) int { return min(max(points/100, 2), 12) }
-
-// WolfPack sends a pack of hungry predators of one season-fitting species,
-// sized for points (WolfPackSize), in from an edge.
+// WolfPack sends a pack of starving predators of one species of the
+// map's biome and season, as many as threat points buy (animal.PackSize,
+// EAI-005; two at least), in from an edge: pack hunters where the biome
+// has them, else any predator it has (a lone hunter's kind forms a pack
+// too).
 func (t *Threats) WolfPack(points int) {
-	n := WolfPackSize(points)
 	s, ok := t.w.PickSpecies(func(s animal.Species) bool { return animal.DefOf(s).Pack })
+	if !ok {
+		s, ok = t.w.PickSpecies(packHunter)
+	}
 	if !ok {
 		return
 	}
+	n := max(animal.PackSize(points, s), 2) // a pack: two at least
 	ex, ey, ok := t.w.EdgeTile()
 	if !ok {
 		return
@@ -216,4 +218,11 @@ func (t *Threats) WolfPack(points int) {
 	if spawned > 0 {
 		t.h.Threat("Starving predators", ex, ey, "A pack of %d starving %s is prowling near the colony.", spawned, t.w.Plural(s))
 	}
+}
+
+// packHunter: a predator that may come as a starving pack (never a
+// legendary, a hive insect or a machine).
+func packHunter(s animal.Species) bool {
+	d := animal.DefOf(s)
+	return d.Predator && !d.Legendary && !d.Hive && !d.Mech
 }

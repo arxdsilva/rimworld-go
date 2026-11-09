@@ -34,6 +34,7 @@ type Host interface {
 	Ground
 	Story
 	Fight
+	Siege
 }
 
 // World is the clock, the dice, names, the log and the messages.
@@ -84,6 +85,8 @@ type People interface {
 	Colonist(id entity.EntityID) bool
 	// NearestColonist is the standing colonist nearest p (0: none).
 	NearestColonist(p Pos) entity.EntityID
+	// DownedPawn: id is a person lying downed (alive).
+	DownedPawn(id entity.EntityID) bool
 }
 
 // Sight is a sight query's filter, passed by value so a query allocates
@@ -140,4 +143,15 @@ type Fight interface {
 	Strike(attacker, target entity.EntityID, wk weapon.Kind)
 	// TameHuntOn: tame hunter id may still hunt target at tp (PLAY-017).
 	TameHuntOn(id, target entity.EntityID, tp Pos) bool
+}
+
+// Siege is breaking through (EAI-001): the doors and walls between a
+// shut-out animal and its foe.
+type Siege interface {
+	// BlockAt is the building on (x, y) that still shuts a wild animal out:
+	// a door not held open, or with walls a wall (0, false: none).
+	BlockAt(x, y int, walls bool) (entity.EntityID, bool)
+	// Bash is one blow of animal id's natural weapon wk, for dmg, on
+	// building b beside it; false when b is gone or out of touch.
+	Bash(id, b entity.EntityID, wk weapon.Kind, dmg int) bool
 }

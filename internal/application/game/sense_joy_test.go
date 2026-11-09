@@ -657,12 +657,16 @@ func joyOffHash(seed uint64, ticks int) (uint64, *Game) {
 //
 // Re-pinned (GAR-006): the periodic work is spread (game/cadence), the
 // same per-entity rate on different ticks.
+//
+// Re-pinned (EAI-001..007): a hurt wild animal's herd answers (seed 1: a
+// herd called against its attacker at tick 46605, saved in Wildlife.Rage),
+// manhunters lock a foe, predators may take a downed colonist.
 func TestHabitsOffKeepTheHash(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
 		seed uint64
 		want uint64
-	}{{1, 0x9c2e52f815983456}, {2, 0x97a10392747c10f4}} {
+	}{{1, 0x85c9da48971007fa}, {2, 0x498c3a38a23c557b}} {
 		h, g := joyOffHash(c.seed, 30000)
 		if h != c.want {
 			t.Errorf("seed %d: hash %#x, want %#x", c.seed, h, c.want)

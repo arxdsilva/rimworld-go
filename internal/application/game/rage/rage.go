@@ -2,6 +2,7 @@ package rage
 
 import (
 	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
@@ -9,13 +10,22 @@ import (
 )
 
 // Rage is the animals' fight-or-flight brain over the host's animals.
-// It keeps no state of its own: every animal's lives in its animal.State.
+// Every animal's state lives in its animal.State, and what the brain
+// remembers across ticks (doors bashed, foes locked, herd calls) in the
+// saved Memory m; probes and srch are scratch (target.go, bash.go).
 type Rage struct {
-	h Host
+	h      Host
+	m      *Memory
+	probes int
+	srch   pathing.Searcher // bash.go's breach search, reused
 }
 
-// New is the rage over host h.
-func New(h Host) *Rage { return &Rage{h: h} }
+// New is the rage over host h, remembering in m (the game's saved
+// wildlife state).
+func New(h Host, m *Memory) *Rage { return &Rage{h: h, m: m} }
+
+// Forget drops animal id from the memory (it died or left the map).
+func (r *Rage) Forget(id entity.EntityID) { r.m.Forget(id) }
 
 const (
 	// legendaryRadius: legendaries this close answer one's rage.
@@ -95,25 +105,6 @@ func (r *Rage) Provoked(id entity.EntityID, a *animal.State, by entity.EntityID)
 	}
 }
 
-// ThinkManhunter hunts the nearest standing colonist anywhere on the map.
-// It reports false once the rage has passed.
-func (r *Rage) ThinkManhunter(id entity.EntityID, a *animal.State, now uint64) bool {
-	if !a.Enraged(now) {
-		if a.Manhunter != 0 {
-			a.Manhunter, a.Target, a.Mode = 0, 0, animal.Wander
-		}
-		return false
-	}
-	if a.Target == 0 || !r.h.StandingPawn(a.Target) || r.h.IsRaider(a.Target) {
-		a.Target = r.h.NearestColonist(r.pos(id))
-	}
-	if a.Target == 0 {
-		return false // nobody left standing: calm down for now
-	}
-	r.Chase(id, a, now)
-	return true
-}
-
 // Chase closes on a.Target and bites on cooldown.
 func (r *Rage) Chase(id entity.EntityID, a *animal.State, now uint64) {
 	def := animal.DefOf(a.Species)
@@ -135,20 +126,28 @@ func (r *Rage) Chase(id entity.EntityID, a *animal.State, now uint64) {
 		}
 		return
 	}
+	if r.bashing(id, a, pos, now) {
+		return // bash.go: breaking through to it (EAI-001)
+	}
 	if now < a.RetryAt && a.PathI >= len(a.Path) {
 		return // backing off after a failed path search
 	}
 	if a.PathI >= len(a.Path) || weapon.Distance(a.GoalX, a.GoalY, tp.X, tp.Y) > 1 || (now+uint64(id))%30 == 0 {
 		*a = r.h.GoTo(id, *a, tp.X, tp.Y)
+		if a.PathI >= len(a.Path) && now < a.RetryAt {
+			r.shutOut(id, a, tp, now) // no way there: bash one (bash.go)
+		}
 	}
 }
 
-// PackSize is a manhunter pack's size for threat points: about one animal
-// per 100 points, 3..12 (today's mapping; EAI tunes it).
-func PackSize(points int) int { return min(max(points/100, 3), 12) }
-
-// ManhunterPack sends a pack sized for points (PackSize).
-func (r *Rage) ManhunterPack(points int) { r.Pack(PackSize(points)) }
+// ManhunterPack sends a manhunter pack worth threat points: one
+// grazer or territorial species of the map's biome and season, as many as
+// the points buy (animal.PackSize, EAI-005).
+func (r *Rage) ManhunterPack(points int) {
+	if s, ok := r.h.PickSpecies(ManhunterSpecies); ok {
+		r.packOf(s, animal.PackSize(points, s))
+	}
+}
 
 // Pack sends n enraged animals of one season-fitting grazer or
 // territorial species in from a map edge (half as many of a large one).
@@ -157,12 +156,17 @@ func (r *Rage) Pack(n int) {
 	if !ok {
 		return
 	}
+	if animal.RosterOf(s).Size >= animal.SizeL {
+		n = (n + 1) / 2
+	}
+	r.packOf(s, n)
+}
+
+// packOf sends n enraged animals of species s in from a map edge.
+func (r *Rage) packOf(s animal.Species, n int) {
 	ex, ey, ok := r.h.EdgeTile()
 	if !ok {
 		return
-	}
-	if animal.RosterOf(s).Size >= animal.SizeL {
-		n = (n + 1) / 2
 	}
 	now := r.h.Now()
 	spawned := 0

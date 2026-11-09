@@ -41,12 +41,25 @@ func (r *Rage) NoteChase(aid, target entity.EntityID) {
 
 // WarnChase posts the danger message for animal id (state a) starting to
 // chase colonist target: "A timber wolf is chasing Ada!", or "A cougar
-// charges Ada!" for a charge. Anyone but a colonist, an enraged animal
-// (its rage has its own message) and a chase already warned are skipped.
-// It reports whether a changed.
+// charges Ada!" for a charge; on one of the colony's animals "A timber
+// wolf is attacking Bessie!" (EAI-004). Anyone else (raiders, visitors,
+// wild prey), an enraged animal (its rage has its own message) and a
+// chase already warned are skipped. It reports whether a changed.
 func (r *Rage) WarnChase(id entity.EntityID, a *animal.State, target entity.EntityID, charge bool) bool {
 	now := r.h.Now()
-	if target == 0 || a.Enraged(now) || !r.h.Colonist(target) { // colonists only: never raiders, visitors or prey
+	if target == 0 || a.Enraged(now) {
+		return false
+	}
+	var who string
+	switch t := r.h.Ref(target); {
+	case r.h.Colonist(target):
+		who = r.h.Name(target)
+	case t != nil && t.Tame:
+		who = "the " + t.Species.Label()
+		if t.Name != "" {
+			who = t.Name
+		}
+	default:
 		return false
 	}
 	if target == a.ChaseWarnedTarget && a.ChaseWarnedAt != 0 && now-a.ChaseWarnedAt < chaseRewarn {
@@ -55,7 +68,11 @@ func (r *Rage) WarnChase(id entity.EntityID, a *animal.State, target entity.Enti
 	}
 	a.ChaseWarnedTarget, a.ChaseWarnedAt = target, now
 	p, _ := r.h.Pos(id)
-	r.h.Alarm(now, p.X, p.Y, id, ChaseText(a.Species, r.h.Name(target), charge), msgfmt.Text{})
+	text := ChaseText(a.Species, who, charge)
+	if !r.h.Colonist(target) {
+		text = AttackText(a.Species, who)
+	}
+	r.h.Alarm(now, p.X, p.Y, id, text, msgfmt.Text{})
 	return true
 }
 
@@ -79,6 +96,13 @@ func ChaseText(s animal.Species, who string, charge bool) string {
 		return l + " charges " + who + "!"
 	}
 	return l + " is chasing " + who + "!"
+}
+
+// AttackText is the warning for a colony animal under attack: "A timber
+// wolf is attacking Bessie!" (EAI-004).
+func AttackText(s animal.Species, who string) string {
+	l := WithArticle(chaseLabel(s))
+	return strings.ToUpper(l[:1]) + l[1:] + " is attacking " + who + "!"
 }
 
 // WithArticle is label with "a" or "an" ("a hare", "an ibex").

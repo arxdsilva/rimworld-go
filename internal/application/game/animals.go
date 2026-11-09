@@ -422,6 +422,7 @@ func (g *Game) removeAnimal(id entity.EntityID) {
 	delete(g.logs, id)
 	g.care.Doctor.Forget(id) // vet_animals.go
 	g.raid.Mechs.Forget(id)  // raid/mech.go (DEF-4)
+	rageOf(g).Forget(id)     // rage/memory.go (EAI): its bash and foe
 	g.animals.Delete(id)
 	g.positions.Delete(id)
 	kept := g.animalIDs[:0]
@@ -524,6 +525,8 @@ func (g *Game) animalViews() []AnimalView {
 		g.fillAnimalHealth(av, id, a, now)       // animal_health.go (MED-09)
 		// raid/mech.go (DEF-4): a machine, perhaps stunned by an EMP
 		av.Mech, av.Stunned, av.Staggered = animal.IsMech(a.Species), g.raid.Mechs.Stunned(id, now), staggered(g, id)
+		// EAI: "Breaking through the door", "Defending its herd", "Manhunter (grief)"
+		av.Bashing, av.Defending, av.Grief = rageOf(g).Bashing(id, a, now), rageOf(g).Defending(a), a.Tame && a.Enraged(now)
 	}
 	return out
 }
