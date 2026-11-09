@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/spatial"
 	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -59,15 +60,31 @@ func (g *Game) groundExtra(x, y int) int {
 	if !g.grid.InBounds(x, y) {
 		return 0
 	}
+	i := y*g.grid.Width() + x
+	l := &g.occ.ground // cached on structVer (terrain, buildings), plantGen and the plant store
+	l.Sync(g.grid.Width()*g.grid.Height(), [2]uint64{g.structVer, g.idx.jobs.plantGen}, g.plants)
+	extra := int(l.Get(i))
+	if extra == spatial.Unset {
+		extra = g.groundExtraRaw(x, y)
+		l.Put(i, extra)
+	} else if checkIndex(g) && extra != g.groundExtraRaw(x, y) {
+		panic("groundExtra: stale cell cost (structVer or plantGen not bumped?)")
+	}
+	if extra == 0 || g.treadAt(i)&treadFloor != 0 {
+		return 0
+	}
+	return extra
+}
+
+// groundExtraRaw is the terrain and plant cost of (x, y) before the floor
+// test (a tread flag follows the rooms, so groundExtra reads it live).
+func (g *Game) groundExtraRaw(x, y int) int {
 	extra := 0
 	if c := g.terr.At(x, y).WalkCost(); c > 100 {
 		extra += (c - 100) / 10
 	}
 	if c := g.plantWalkCost(x, y); c > 100 {
 		extra += (c - 100) / 10
-	}
-	if extra == 0 || g.treadAt(y*g.grid.Width()+x)&treadFloor != 0 {
-		return 0
 	}
 	return extra
 }

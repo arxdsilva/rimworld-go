@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"slices"
 
+	"rimworld-go/internal/application/game/spatial"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -91,6 +92,7 @@ type occupancy struct {
 	dirty bool
 	// hostile caches the wild-animal / raider walkability for the phase
 	// (boxed once: handing it out allocates nothing).
+	ground     spatial.Layer // groundExtra's cached terrain and plant cost (water.go)
 	hostile    pathing.Query
 	hostileOK  bool
 	hostileGen uint64 // bumped whenever hostile is rebuilt
