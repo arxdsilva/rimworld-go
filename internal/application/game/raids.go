@@ -10,7 +10,6 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/spatial"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -350,31 +349,11 @@ const (
 	clubCost, knifeCost, spearCost, rifleCost = 60, kit.Cheapest, 70, 90
 )
 
-// Wealth is the colony's worth: goods on the map, buildings and tame
-// animals.
+// Wealth is the colony's worth: goods on the map, buildings, tame animals
+// and its colonists' gear, as the map's tracker last counted it (an hourly
+// sweep, game/wealth; the parts are story.go's WealthOf).
 func (g *Game) Wealth() int {
-	w := 0
-	for _, id := range g.itemIDs {
-		if st, ok := g.stacks.Get(id); ok {
-			w += st.Kind.Value() * st.Qty
-		}
-	}
-	for _, id := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(id); ok && !notColonyPiece(b) { // ruins and vents are no one's wealth
-			v := construction.WoodCost(b.Kind)*2 + construction.WorkTicks(b.Kind)/20
-			if item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone {
-				v = v * 3 / 2
-			}
-			w += v
-		}
-	}
-	for _, id := range g.animalIDs {
-		if a, ok := g.animals.Get(id); ok && a.Tame {
-			w += animal.DefOf(a.Species).MaxHP * 2
-		}
-	}
-	w += senseOf(g).Gear.Wealth() // game/sense (CSE-036): what its colonists carry
-	return w
+	return g.wealth.Value() // game/wealth (EAI-014)
 }
 
 // raidPoints is what the storyteller may spend on a raid on this day.

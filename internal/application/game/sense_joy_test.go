@@ -661,12 +661,15 @@ func joyOffHash(seed uint64, ticks int) (uint64, *Game) {
 // Re-pinned (EAI-001..007): a hurt wild animal's herd answers (seed 1: a
 // herd called against its attacker at tick 46605, saved in Wildlife.Rage),
 // manhunters lock a foe, predators may take a downed colonist.
+//
+// Re-pinned (EAI-014): the wealth tracker sweeps a slice every 25 ticks and
+// its cursor, hour and partial sum are saved state.
 func TestHabitsOffKeepTheHash(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
 		seed uint64
 		want uint64
-	}{{1, 0x85c9da48971007fa}, {2, 0x498c3a38a23c557b}} {
+	}{{1, 0xe086929139a977ff}, {2, 0xaf29a560ac26f664}} {
 		h, g := joyOffHash(c.seed, 30000)
 		if h != c.want {
 			t.Errorf("seed %d: hash %#x, want %#x", c.seed, h, c.want)

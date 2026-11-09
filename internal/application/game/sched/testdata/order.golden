@@ -13,6 +13,7 @@ social    social-day   colony every 60000 offset 59125
 social    gather       colony every 0     offset 0
 social    social       map    every 0     offset 0
 animals   animals      map    every 0     offset 0
+threats   wealth       map    every 25    offset 0
 threats   arrival      colony every 0     offset 0
 threats   losses       map    every 2500  offset 59625
 threats   raids-over   map    every 2500  offset 59625

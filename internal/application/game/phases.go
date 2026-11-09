@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/sched"
+	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/temperature"
 )
@@ -63,6 +64,7 @@ func phaseSystems(g *Game) *sched.Schedule {
 		w("social-day", PhaseSocial, func() { g.socialDay(now()) }).ForColony().At(clock.TicksPerDay, cadence.OffSocialDay).When(talk).Then("gather"),
 		w("gather", PhaseSocial, func() { g.gatherTick(now()) }).ForColony().When(talk).Then(PhaseSocial), // gathering.go: weddings and parties (M5)
 		w(PhaseSocial, PhaseSocial, g.phaseSocial), w(PhaseAnimals, PhaseAnimals, g.phaseAnimals),
+		w("wealth", PhaseThreats, func() { g.wealth.Step(now()) }).At(wealth.Stride, 0).Then("arrival"), // game/wealth (EAI-014): each map's sweep, a slice a step
 		w("arrival", PhaseThreats, func() { g.arrivalTick(now()) }).ForColony().When(g.hasSetup).Then("losses"), // arrival.go (NG-1)
 		w("losses", PhaseThreats, func() { g.checkLosses(now()) }).At(hour, cadence.OffStory).When(g.hasSetup).Then("raids-over"),
 		w("raids-over", PhaseThreats, func() { g.checkRaidsOver(now()) }).At(hour, cadence.OffStory).When(g.hasSetup).Then("story"), // factions.go
