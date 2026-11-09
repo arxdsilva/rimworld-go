@@ -6,6 +6,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/sim/clock"
@@ -100,7 +101,7 @@ func (w History) drawWealth(dst *ebiten.Image, plot gfx.Rect, hist []wealth.Samp
 	gfx.FillCircle(dst, last[0], last[1], 3, line, true)
 	es := gfx.Small
 	es.Color = uikit.TextDim
-	gfx.Text(dst, fmt.Sprintf("day %d", hist[0].Tick/clock.TicksPerDay), float64(plot.X), float64(plot.Bottom())+3, es)
+	gfx.Text(dst, lang.Tf(w.sh, "Day %d", hist[0].Tick/clock.TicksPerDay), float64(plot.X), float64(plot.Bottom())+3, es)
 	es.Align = gfx.AlignRight
-	gfx.Text(dst, fmt.Sprintf("day %d", hist[len(hist)-1].Tick/clock.TicksPerDay), float64(plot.Right()), float64(plot.Bottom())+3, es)
+	gfx.Text(dst, lang.Tf(w.sh, "Day %d", hist[len(hist)-1].Tick/clock.TicksPerDay), float64(plot.Right()), float64(plot.Bottom())+3, es)
 }
