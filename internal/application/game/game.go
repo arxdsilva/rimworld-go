@@ -200,6 +200,9 @@ type PawnView struct {
 	// Hostile marks a raider (not a colonist); Fleeing a raider running off
 	// or an unarmed colonist running from a threat (PLAY-010).
 	Hostile, Fleeing bool
+	// Advancing: a raider walking on the colony knowing of no foe yet (the
+	// sheet's "Advancing on the colony"; raid/sight.go, EAI-010).
+	Advancing bool
 	// Temperament is the colonist's free-time leaning
 	// (wanderer, social, homebody).
 	Temperament string

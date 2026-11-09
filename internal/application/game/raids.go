@@ -315,7 +315,7 @@ func (g *Game) raiderViews() []PawnView {
 		out = append(out, PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(), RaidPlan: plan,
 			Status: v.Status.String(), Reason: v.Cause.String(), Health: v.HP() * 100 / health.MaxHP,
 			Weapon: weaponDefOf(g, id).Name, Lying: v.Status != health.Alive, Hostile: true, Apparel: g.Wearing(id), Worn: g.apparel[id].Views(), ApparelArmor: g.apparel[id].Armor(),
-			Fleeing: g.raiders[id].Mode == raid.Fleeing})
+			Fleeing: g.raiders[id].Mode == raid.Fleeing, Advancing: g.raid.Raiders.Advancing(id)})
 		g.fillPawnAction(&out[len(out)-1], id, j)
 	}
 	return out

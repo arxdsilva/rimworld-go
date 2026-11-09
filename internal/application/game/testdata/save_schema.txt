@@ -1320,6 +1320,8 @@ saveState.RaidGroups[].Camped bool
 saveState.RaidGroups[].Faction int
 saveState.RaidGroups[].Fled bool
 saveState.RaidGroups[].FleeLoss int
+saveState.RaidGroups[].Foe rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.RaidGroups[].FoeAt uint64
 saveState.RaidGroups[].Mortars []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.RaidGroups[].Mortars[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.RaidGroups[].Over bool
@@ -1343,6 +1345,7 @@ saveState.RaiderIDs[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Raiders map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/raid.Raider
 saveState.Raiders{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Raiders{} rimworld-go/internal/application/game/raid.Raider
+saveState.Raiders{}.Advancing bool
 saveState.Raiders{}.Arrived uint64
 saveState.Raiders{}.CoverAt uint64
 saveState.Raiders{}.CoverX int
@@ -1352,6 +1355,9 @@ saveState.Raiders{}.Deeds int
 saveState.Raiders{}.Downed uint64
 saveState.Raiders{}.Engaged uint64
 saveState.Raiders{}.Escaping bool
+saveState.Raiders{}.Felt int
+saveState.Raiders{}.Foe rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Raiders{}.FoeAt uint64
 saveState.Raiders{}.FoodRetry uint64
 saveState.Raiders{}.Group int
 saveState.Raiders{}.Hungry bool
@@ -2964,6 +2970,7 @@ saveState.World.Stashed[].ID rimworld-go/internal/domain/sim/entity.EntityID = u
 saveState.World.Stashed[].Map uint32
 saveState.World.Stashed[].Prisoner bool
 saveState.World.Stashed[].Raider rimworld-go/internal/application/game/raid.Raider
+saveState.World.Stashed[].Raider.Advancing bool
 saveState.World.Stashed[].Raider.Arrived uint64
 saveState.World.Stashed[].Raider.CoverAt uint64
 saveState.World.Stashed[].Raider.CoverX int
@@ -2973,6 +2980,9 @@ saveState.World.Stashed[].Raider.Deeds int
 saveState.World.Stashed[].Raider.Downed uint64
 saveState.World.Stashed[].Raider.Engaged uint64
 saveState.World.Stashed[].Raider.Escaping bool
+saveState.World.Stashed[].Raider.Felt int
+saveState.World.Stashed[].Raider.Foe rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.Stashed[].Raider.FoeAt uint64
 saveState.World.Stashed[].Raider.FoodRetry uint64
 saveState.World.Stashed[].Raider.Group int
 saveState.World.Stashed[].Raider.Hungry bool
