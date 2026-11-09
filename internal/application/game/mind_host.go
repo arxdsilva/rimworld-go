@@ -136,11 +136,10 @@ func (h mindActs) StandUp(id entity.EntityID) {
 // hideSpot is where a colonist would shut itself away: its own bed if it
 // has one, else the nearest cell of any room.
 func hideSpot(g *Game, id entity.EntityID) (Position, bool) {
-	for _, bid := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(bid); ok && b.Kind.Sleeps() && b.SlotOf(uint64(id)) >= 0 {
-			x, y := g.sleepCellFor(id, b)
-			return Position{x, y}, true
-		}
+	if bid := g.bedOf(id); bid != 0 {
+		b, _ := g.bldgs.Get(bid)
+		x, y := g.sleepCellFor(id, b)
+		return Position{x, y}, true
 	}
 	g.ensureRooms()
 	pos, _ := g.positions.Get(id)

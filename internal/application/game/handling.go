@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/job"
@@ -402,14 +404,38 @@ func (g *Game) home() (int, int) {
 	return g.landingSpot() // setup.go
 }
 
-// bedOf is the bed a colonist has claimed (0: none).
+// bedOf is the bed a colonist has claimed (0: none): the first sleeper in
+// building order, read from the cached bed list (the claimant is live).
 func (g *Game) bedOf(id entity.EntityID) entity.EntityID {
-	for _, bid := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(bid); ok && b.Kind.Sleeps() && b.SlotOf(uint64(id)) >= 0 {
+	for _, bid := range bedsOf(g) {
+		if b := g.bldgs.Ref(bid); b != nil && b.SlotOf(uint64(id)) >= 0 {
 			return bid
 		}
 	}
 	return 0
+}
+
+// bedsOf is every sleeping building in building order, rebuilt when the
+// structure or the building count moves (the index self-check compares it
+// with a fresh scan). Callers must not keep it across a building change.
+func bedsOf(g *Game) []entity.EntityID {
+	c := &g.vents.beds
+	if list, ok := c.Get(g.structVer, len(g.bldgIDs), g.bldgs); ok {
+		if checkIndex(g) && !slices.Equal(scanBeds(g, nil), list) {
+			panic("bedsOf: stale bed list (structVer not bumped?)")
+		}
+		return list
+	}
+	return c.Seal(g.structVer, len(g.bldgIDs), g.bldgs, scanBeds(g, c.Reuse()))
+}
+
+func scanBeds(g *Game, into []entity.EntityID) []entity.EntityID {
+	for _, id := range g.bldgIDs {
+		if b := g.bldgs.Ref(id); b != nil && b.Kind.Sleeps() {
+			into = append(into, id)
+		}
+	}
+	return into
 }
 
 // manhunterPack sends n enraged animals of one season-fitting grazer or

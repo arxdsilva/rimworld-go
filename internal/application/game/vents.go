@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
@@ -37,6 +38,7 @@ type ventCache struct {
 	list  [][2]int
 
 	fuel fuelList
+	beds rest.BedList // the sleeping buildings (handling.go bedsOf)
 }
 
 // ventList is every steam vent's top-left cell, in building order.

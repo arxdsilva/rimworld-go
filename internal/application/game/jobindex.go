@@ -230,9 +230,9 @@ func (g *Game) bedCoveringIndexed(x, y int) bool {
 }
 
 func (g *Game) bedUnderScan(id entity.EntityID, pos Position) entity.EntityID {
-	for _, bid := range g.bldgIDs {
+	for _, bid := range bedsOf(g) {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || b.SlotOf(uint64(id)) < 0 {
+		if !ok || b.SlotOf(uint64(id)) < 0 {
 			continue
 		}
 		if construction.Covers(b.Kind, b.Facing, b.X, b.Y, pos.X, pos.Y) {
