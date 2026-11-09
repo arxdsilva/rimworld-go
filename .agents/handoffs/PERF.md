@@ -214,3 +214,12 @@ Serial index fixes before any parallel stage (sim S1–S6, S4b) · 2026-11-08 ·
 - Determinism: S1–S4, S4b hash-equal on clean exports. S5 re-pinned once (797e8a282): `TestGrownGolden`, `TestScaleGolden` 48x40/seed7 and 120x120/seed7. Save: new `motionRec.RepathWait`, zero reads as 45, no SaveVersion bump.
 - HUD: none new; a backed-off animal waits, which `AnimalView.BlockedBy` already shows.
 - Open: the raid worst-tick gate (≤ 3 ms) is not met; it goes to the path stage (ARCH-010, GAR-035) and a quiet-machine rerun. GAR-109 (enraged animals' `nearestColonist`) is still per tick.
+
+## PERF-013-round2-acceptance
+In-game acceptance of GAR Part E round 2 (fps matrix, VSync on, quiet machine) · 2026-11-09 · 9ef7e155e (measured at)
+- Numbers (`scripts/fpsmatrix.sh round2`, second pass, grown 500, 5K window): every cell averages 58.1–60.0 fps. Draw avg z1 11.6 → 8.3 ms, z0.8 15.5 → 11.3 ms, z0.4 3.2 ms; z0.8 fps 41.6 → 59.9. Autosave cell max frame 63.3 → 26.7 ms, 0 frames over 33 ms. Day-cross 1x max 23.4 ms, 0 over 33 ms; 6x one frame at 38.6 ms.
+- Gates met: z1 fps ≥ 59.5 at 1x/3x/6x; z0.8 and z0.4 improve; autosave 0 frames over 33 ms; day-cross 1x.
+- Gates missed: 1% low ≥ 60 (49.5–50.2; frame p99 is about 20 ms while work p99 is 16 ms, so part is display pacing); Draw avg ≤ 6 ms at z1 (8.3); work p99 ≤ 13 ms (16.2–17.7); day-cross 6x by one frame. GPU time (xctrace) not measured.
+- Finding (in-game CPU profile, z1, 40 s): Draw is 78% of CPU. Ground tiles, one lit call each, take 37% (about 4 ms a frame, GAR-159); the object pass 12%; stack-count text 9% (about 1 ms, GAR-160); creature overlays 3%. Ebitengine's per-call CPU, not its command count, is what is left, so ADR 0004's no-go is re-judged on CPU per call for the ground pass.
+- HUD: none; no player-visible change beyond smoother frames.
+- Open: GAR-159, GAR-160; xctrace GPU time; a quiet rerun of day-cross 6x.
