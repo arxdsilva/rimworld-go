@@ -1,231 +1,384 @@
 {
- "schema_version": 1,
- "diagram_type": "dataflow",
- "meta": {
-  "title": "Target render-command list (ADR 0004)",
-  "output": "docs/architecture/render-cmdlist.html",
-  "quality_profile": "showcase",
-  "locale": "en"
- },
- "stages": [
-  {
-   "label": "layers emit"
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "World frame draw: a prepare pass, then direct draws (no command list)",
+    "output": "docs/architecture/render-cmdlist.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "git@github.com:arxdsilva/rimworld-go.git",
+      "link_mode": "local-only",
+      "revision": "fe0f8604c6419d0ae0a8e91971ad0bad4b6b7e9f"
+    }
   },
-  {
-   "label": "per-frame arena"
-  },
-  {
-   "label": "order"
-  },
-  {
-   "label": "merge"
-  },
-  {
-   "label": "submit"
-  }
- ],
- "nodes": [
-  {
-   "id": "ground",
-   "type": "backend",
-   "label": "terrain layer",
-   "sublabel": "binned by state",
-   "stage": 0,
-   "row": 0
-  },
-  {
-   "id": "objects",
-   "type": "backend",
-   "label": "object layers",
-   "sublabel": "y-sorted",
-   "stage": 0,
-   "row": 1
-  },
-  {
-   "id": "ui",
-   "type": "frontend",
-   "label": "text and UI",
-   "sublabel": "emit too, no closures",
-   "stage": 0,
-   "row": 2
-  },
-  {
-   "id": "verts",
-   "type": "database",
-   "label": "vertex arena",
-   "sublabel": "grow-only, reset per frame",
-   "stage": 1,
-   "row": 0
-  },
-  {
-   "id": "cmds",
-   "type": "database",
-   "label": "cmd entries",
-   "sublabel": "key, vtx, nvtx, state",
-   "stage": 1,
-   "row": 1
-  },
-  {
-   "id": "states",
-   "type": "database",
-   "label": "state table",
-   "sublabel": "shader, 4 images, blend",
-   "stage": 1,
-   "row": 2
-  },
-  {
-   "id": "check",
-   "type": "security",
-   "label": "already sorted?",
-   "sublabel": "one O(n) pass",
-   "stage": 2,
-   "row": 0
-  },
-  {
-   "id": "radix",
-   "type": "backend",
-   "label": "radix sort",
-   "sublabel": "LSD over (key, index)",
-   "stage": 2,
-   "row": 1
-  },
-  {
-   "id": "merge",
-   "type": "backend",
-   "label": "merge",
-   "sublabel": "same target, shader, sheets",
-   "stage": 3,
-   "row": 0
-  },
-  {
-   "id": "submit",
-   "type": "frontend",
-   "label": "Submit",
-   "sublabel": "one draw per batch",
-   "stage": 4,
-   "row": 0
-  },
-  {
-   "id": "stats",
-   "type": "external",
-   "label": "stats snapshot",
-   "sublabel": "debug HUD",
-   "stage": 4,
-   "row": 1
-  }
- ],
- "flows": [
-  {
-   "id": "f0",
-   "from": "ground",
-   "to": "cmds",
-   "label": "keyed cmds",
-   "variant": "emphasis"
-  },
-  {
-   "id": "f1",
-   "from": "objects",
-   "to": "cmds",
-   "label": "keyed cmds",
-   "variant": "emphasis"
-  },
-  {
-   "id": "f2",
-   "from": "ui",
-   "to": "cmds",
-   "label": "keyed cmds"
-  },
-  {
-   "id": "f3",
-   "from": "ground",
-   "to": "verts",
-   "label": "quads"
-  },
-  {
-   "id": "f4",
-   "from": "objects",
-   "to": "states",
-   "label": "interned state"
-  },
-  {
-   "id": "f5",
-   "from": "cmds",
-   "to": "check",
-   "label": "keys",
-   "variant": "emphasis"
-  },
-  {
-   "id": "f6",
-   "from": "check",
-   "to": "merge",
-   "label": "sorted: skip",
-   "variant": "emphasis"
-  },
-  {
-   "id": "f7",
-   "from": "check",
-   "to": "radix",
-   "label": "unsorted"
-  },
-  {
-   "id": "f8",
-   "from": "radix",
-   "to": "merge",
-   "label": "sorted order"
-  },
-  {
-   "id": "f9",
-   "from": "verts",
-   "to": "merge",
-   "label": "vertex runs"
-  },
-  {
-   "id": "f10",
-   "from": "states",
-   "to": "merge",
-   "label": "state IDs"
-  },
-  {
-   "id": "f11",
-   "from": "merge",
-   "to": "submit",
-   "label": "batches",
-   "variant": "emphasis"
-  },
-  {
-   "id": "f12",
-   "from": "merge",
-   "to": "stats",
-   "label": "counts",
-   "variant": "dashed"
-  }
- ],
- "cards": [
-  {
-   "dot": "violet",
-   "title": "The key",
-   "items": [
-    "64 bits: pass 4 | layer 8 | sub 32 | seq 20",
-    "pass orders render targets; layer is today's layer; seq makes every key unique",
-    "sub is 0 when strict, the screen y when y-sorted, the state ID when binned"
-   ]
-  },
-  {
-   "dot": "cyan",
-   "title": "Merge rules",
-   "items": [
-    "Adjacent commands merge when target, shader, four source sheets, blend and uniforms match",
-    "A batch holds at most about 16k quads and never crosses a command entry",
-    "Light rides in the vertices, so lit sprites from one sheet merge"
-   ]
-  },
-  {
-   "dot": "slate",
-   "title": "Evidence",
-   "items": [
-    "Target design from docs/adr/0004-render-command-list.md (uncommitted), not repository-backed",
-    "Gate: DrawArt500 draw calls drop by 70% or more at zoom 0.25"
-   ]
-  }
- ]
+  "stages": [
+    {
+      "label": "frame inputs"
+    },
+    {
+      "label": "prepare, before any draw"
+    },
+    {
+      "label": "draws, fixed order"
+    },
+    {
+      "label": "draw paths"
+    },
+    {
+      "label": "Ebitengine"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "world",
+      "type": "backend",
+      "label": "World(), Snapshot()",
+      "sublabel": "the frame's read model",
+      "stage": 0,
+      "row": 1,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 94,
+          "end_line": 110,
+          "label": "DrawArt: inputs, prepare"
+        }
+      ]
+    },
+    {
+      "id": "bakes",
+      "type": "database",
+      "label": "ground bakes",
+      "sublabel": "chunk or map tier",
+      "stage": 1,
+      "row": 0,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 75,
+          "end_line": 85,
+          "label": "Pipeline.prepare"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/lod.go",
+          "line": 481,
+          "end_line": 500,
+          "label": "prepareGround"
+        }
+      ]
+    },
+    {
+      "id": "cover",
+      "type": "database",
+      "label": "wet, snow masks",
+      "sublabel": "PrepareCover",
+      "stage": 1,
+      "row": 2,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/env/snow_cache.go",
+          "line": 484,
+          "end_line": 500,
+          "label": "PrepareCover"
+        }
+      ]
+    },
+    {
+      "id": "fog",
+      "type": "database",
+      "label": "fog chunks",
+      "sublabel": "PrepareFog",
+      "stage": 1,
+      "row": 3,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/overlay/fog_draw.go",
+          "line": 182,
+          "end_line": 189,
+          "label": "PrepareFog"
+        }
+      ]
+    },
+    {
+      "id": "ground",
+      "type": "backend",
+      "label": "ground",
+      "sublabel": "stamps bakes, or live",
+      "stage": 2,
+      "row": 0,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 111,
+          "end_line": 122,
+          "label": "ground layers"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/lod.go",
+          "line": 510,
+          "end_line": 524,
+          "label": "drawGroundLOD"
+        }
+      ]
+    },
+    {
+      "id": "objects",
+      "type": "backend",
+      "label": "objects by row",
+      "sublabel": "sortDraws, runDraw",
+      "stage": 2,
+      "row": 1,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 255,
+          "end_line": 264,
+          "label": "sort, run, last flush"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 374,
+          "end_line": 399,
+          "label": "creature cells on change"
+        }
+      ]
+    },
+    {
+      "id": "crops",
+      "type": "backend",
+      "label": "crop batch",
+      "sublabel": "flushed only on overlap",
+      "stage": 2,
+      "row": 2,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/env/crop_batch.go",
+          "line": 824,
+          "end_line": 860,
+          "label": "FlushCrops, DrawLitBatch"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/objects.go",
+          "line": 31,
+          "end_line": 83,
+          "label": "flushCropsFor"
+        }
+      ]
+    },
+    {
+      "id": "overlays",
+      "type": "backend",
+      "label": "marks, weather, fog",
+      "sublabel": "labels, rings, overlays",
+      "stage": 2,
+      "row": 3,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 270,
+          "end_line": 347,
+          "label": "after the objects"
+        }
+      ]
+    },
+    {
+      "id": "lit",
+      "type": "backend",
+      "label": "lit shader draws",
+      "sublabel": "frame light, set on change",
+      "stage": 3,
+      "row": 1,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 99,
+          "label": "LightAt once a frame"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/render/light/light.go",
+          "line": 969,
+          "end_line": 997,
+          "label": "SyncUniforms"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/render/light/light.go",
+          "line": 1061,
+          "end_line": 1078,
+          "label": "lit sprite draw"
+        }
+      ]
+    },
+    {
+      "id": "aa",
+      "type": "backend",
+      "label": "aashape Painter",
+      "sublabel": "feathered triangles",
+      "stage": 3,
+      "row": 3,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/gfx/aashape/painter.go",
+          "line": 10,
+          "end_line": 89,
+          "label": "one DrawTriangles32 a shape"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/gfx/canvas.go",
+          "line": 180,
+          "end_line": 245,
+          "label": "AA canvas primitives"
+        },
+        {
+          "path": "internal/adapters/inbound/ebiten/gfx/aashape/aashape.go",
+          "line": 1,
+          "end_line": 14,
+          "label": "1-px feather"
+        }
+      ]
+    },
+    {
+      "id": "screen",
+      "type": "frontend",
+      "label": "screen image",
+      "sublabel": "Ebitengine merges",
+      "stage": 4,
+      "row": 2,
+      "sources": [
+        {
+          "path": "internal/adapters/inbound/ebiten/render/world/draw_art.go",
+          "line": 69,
+          "end_line": 73,
+          "label": "Pipeline.Draw"
+        }
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "id": "f1",
+      "from": "world",
+      "to": "bakes",
+      "label": "chunk views"
+    },
+    {
+      "id": "f2",
+      "from": "world",
+      "to": "cover",
+      "label": "wetness, snow"
+    },
+    {
+      "id": "f3",
+      "from": "world",
+      "to": "fog",
+      "label": "fog cells"
+    },
+    {
+      "id": "f4",
+      "from": "bakes",
+      "to": "ground",
+      "label": "baked chunks",
+      "variant": "emphasis"
+    },
+    {
+      "id": "f5",
+      "from": "cover",
+      "to": "ground",
+      "label": "masks"
+    },
+    {
+      "id": "f6",
+      "from": "world",
+      "to": "objects",
+      "label": "objects in view"
+    },
+    {
+      "id": "f7",
+      "from": "fog",
+      "to": "overlays",
+      "label": "fog stamps"
+    },
+    {
+      "id": "f8",
+      "from": "objects",
+      "to": "crops",
+      "label": "crop units"
+    },
+    {
+      "id": "f9",
+      "from": "ground",
+      "to": "lit",
+      "label": "lit ground",
+      "variant": "emphasis"
+    },
+    {
+      "id": "f10",
+      "from": "objects",
+      "to": "lit",
+      "label": "lit sprites",
+      "variant": "emphasis"
+    },
+    {
+      "id": "f11",
+      "from": "crops",
+      "to": "lit",
+      "label": "one lit batch"
+    },
+    {
+      "id": "f13",
+      "from": "overlays",
+      "to": "aa",
+      "label": "discs, lines"
+    },
+    {
+      "id": "f14",
+      "from": "lit",
+      "to": "screen",
+      "label": "shader triangles",
+      "variant": "emphasis"
+    },
+    {
+      "id": "f15",
+      "from": "aa",
+      "to": "screen",
+      "label": "DrawTriangles32"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Not built: the command list",
+      "items": [
+        "ADR 0004's list, sort keys and radix sort (sections 1-4) were measured first and dropped (PERF-007)",
+        "About 152 draw commands a frame after Ebitengine's own merging, 17 target switches; the lit world is about 7, the UI most of the rest",
+        "Its gate (1,500 calls a frame or more than 350 commands) is not met"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "The prepare pass",
+      "items": [
+        "Pipeline.prepare makes the chunk or map bakes, the wet and snow masks and the fog chunks before the first world draw",
+        "The draws that follow only stamp, so no bake or pixel write falls between draws to the screen",
+        "PERF-009: zoom 0.5 bake frames 148 to 102 target switches"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Batching inside layers",
+      "items": [
+        "AA discs, rings, lines, rects and convex polygons are one DrawTriangles32 each from a 3x3 white texel, so runs merge; concave polygons and colonist routes stay vector",
+        "Queued crop units flush only when a later object's padded box touches them",
+        "The light is a frame constant: SyncUniforms copies it only when it changes; creature cell sets rebuild only when a creature cell changed"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Evidence",
+      "items": [
+        "Sources pinned to commit fe0f8604c (local-only); the full layer order is in render-pipeline",
+        "Command counts and timings are from the PERF-007 to PERF-009 ledgers; the HUD draws after the world and is not shown"
+      ]
+    }
+  ]
 }

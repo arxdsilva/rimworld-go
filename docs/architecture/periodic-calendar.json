@@ -1,160 +1,217 @@
 {
- "schema_version": 1,
- "diagram_type": "timeline",
- "meta": {
-  "title": "Periodic gates around the day tick: today against the staggered target",
-  "output": "docs/architecture/periodic-calendar.html",
-  "quality_profile": "showcase",
-  "locale": "en",
-  "evidence": "illustrative",
-  "timezone": "UTC"
- },
- "lanes": [
-  {
-   "id": "g250",
-   "label": "every 250 ticks"
+  "schema_version": 1,
+  "diagram_type": "timeline",
+  "meta": {
+    "title": "Periodic work around the day tick: each site on its own cadence slot",
+    "output": "docs/architecture/periodic-calendar.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "evidence": "illustrative",
+    "timezone": "UTC",
+    "repository": {
+      "url": "git@github.com:arxdsilva/rimworld-go.git",
+      "link_mode": "local-only",
+      "revision": "fe0f8604c6419d0ae0a8e91971ad0bad4b6b7e9f"
+    }
   },
-  {
-   "id": "hour",
-   "label": "every hour (2,500)"
-  },
-  {
-   "id": "day",
-   "label": "every day (60,000)"
-  },
-  {
-   "id": "target",
-   "label": "target: staggered (ADR 0001)"
-  }
- ],
- "events": [
-  {
-   "id": "h57500",
-   "at": "2026-01-01T15:58:20Z",
-   "title": "tick 57,500: hourly gates",
-   "detail": "rows 7, 15, 18, 21, 23, 29, 30, 35, 36; the 250-tick rows fire too",
-   "lane": "hour",
-   "kind": "default"
-  },
-  {
-   "id": "g57500",
-   "at": "2026-01-01T15:58:20Z",
-   "title": "tick 57,500: 250-tick gates",
-   "detail": "rows 3, 5, 6, 8, 10, 13, 28, 32, 34, 41 together",
-   "lane": "g250",
-   "kind": "default"
-  },
-  {
-   "id": "g59750",
-   "at": "2026-01-01T16:35:50Z",
-   "title": "tick 59,750: 250-tick gates",
-   "detail": "climate, weather, pens, troughs, eggs, rearm",
-   "lane": "g250",
-   "kind": "default"
-  },
-  {
-   "id": "d60000",
-   "at": "2026-01-01T16:40:00Z",
-   "title": "tick 60,000: 41 of 46 gates at once",
-   "detail": "every item walked 3-4 times, every building and animal twice, every patient",
-   "lane": "day",
-   "kind": "alert"
-  },
-  {
-   "id": "h60000",
-   "at": "2026-01-01T16:40:00Z",
-   "title": "tick 60,000: hourly gates",
-   "detail": "the medical hour and the hourly item passes, on the day tick",
-   "lane": "hour",
-   "kind": "alert"
-  },
-  {
-   "id": "g60000",
-   "at": "2026-01-01T16:40:00Z",
-   "title": "tick 60,000: 250-tick gates",
-   "detail": "the same ten rows, also on the day tick",
-   "lane": "g250",
-   "kind": "alert"
-  },
-  {
-   "id": "g60250",
-   "at": "2026-01-01T16:44:10Z",
-   "title": "tick 60,250: 250-tick gates",
-   "detail": "back to ten rows",
-   "lane": "g250",
-   "kind": "default"
-  },
-  {
-   "id": "t59750",
-   "at": "2026-01-01T16:35:50Z",
-   "title": "slot (now + mix(id)) % 250",
-   "detail": "each item, building or animal on its own tick of the period",
-   "lane": "target",
-   "kind": "recovery"
-  },
-  {
-   "id": "t60000",
-   "at": "2026-01-01T16:40:00Z",
-   "title": "day tick: only O(1) gates left",
-   "detail": "rows 3, 7, 8, 10, 13, 21, 24, 35 spread by entity",
-   "lane": "target",
-   "kind": "recovery"
-  },
-  {
-   "id": "t60250",
-   "at": "2026-01-01T16:44:10Z",
-   "title": "slot (now + mix(id)) % 250",
-   "detail": "about 1/250 of the walk on any one tick",
-   "lane": "target",
-   "kind": "recovery"
-  },
-  {
-   "id": "t62500",
-   "at": "2026-01-01T17:21:40Z",
-   "title": "daily-only jobs at fixed hour offsets",
-   "detail": "rows 12, 16, 17, 19, for example hour 1",
-   "lane": "target",
-   "kind": "change"
-  },
-  {
-   "id": "h62500",
-   "at": "2026-01-01T17:21:40Z",
-   "title": "tick 62,500: hourly gates",
-   "detail": "the hour after the day tick",
-   "lane": "hour",
-   "kind": "default"
-  }
- ],
- "layout": {
-  "breaks": "auto"
- },
- "cards": [
-  {
-   "dot": "amber",
-   "title": "A synthetic clock",
-   "items": [
-    "Illustrative: one tick is drawn as one second from 2026-01-01T00:00Z, so tick 60,000 shows as 16:40",
-    "The clock is TicksPerHour 2,500 and a 24-hour day of 60,000 ticks (domain/sim/clock)",
-    "Times are tick numbers, not wall-clock records"
-   ]
-  },
-  {
-   "dot": "rose",
-   "title": "Today",
-   "items": [
-    "Each gate tests now % P on the global clock, so every entity runs on the same tick",
-    "At now % 60000 == 0, 41 of the 46 global gates fire together (GAR-007)",
-    "Every 250th tick bunches 10 rows; every hour adds 9 more"
-   ]
-  },
-  {
-   "dot": "emerald",
-   "title": "Target",
-   "items": [
-    "ADR 0001 (docs/adr, uncommitted): due when t mod Every == Offset, with a per-entity Stagger slot",
-    "TestDayTickUnderBudget: the worst tick is 1.5 ms or less",
-    "Row numbers refer to the O-sched gate inventory of the GAR analysis"
-   ]
-  }
- ]
+  "lanes": [
+    {"id": "g250", "label": "every 250 ticks (whole map)"},
+    {"id": "hour", "label": "hourly, 2,500 ticks (whole map)"},
+    {"id": "day", "label": "daily, 60,000 ticks"},
+    {"id": "spread", "label": "per entity (cadence.Each)"}
+  ],
+  "events": [
+    {
+      "id": "pot59375",
+      "at": "2026-01-01T16:29:35Z",
+      "title": "tick 59,375: pots",
+      "detail": "furnish.Pots, 1,875 past the hour (OffPot)",
+      "lane": "hour",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/furnish/furnish.go", "line": 82, "end_line": 90, "label": "Pots.Tick slot"},
+        {"path": "internal/application/game/cadence/calendar.go", "line": 30, "label": "OffPot = 625"}
+      ]
+    },
+    {
+      "id": "clim59750",
+      "at": "2026-01-01T16:35:50Z",
+      "title": "tick 59,750: climate",
+      "detail": "phaseClimate on multiples of 250",
+      "lane": "g250",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 60, "label": "climate At(250, 0)"}
+      ]
+    },
+    {
+      "id": "rot59940",
+      "at": "2026-01-01T16:39:00Z",
+      "title": "tick 59,940: rot",
+      "detail": "craft.Condition.Rot, 190 past each 250",
+      "lane": "g250",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 58, "label": "rot At(250, OffRot)"},
+        {"path": "internal/application/game/cadence/calendar.go", "line": 28, "label": "OffRot = 60"}
+      ]
+    },
+    {
+      "id": "day60000",
+      "at": "2026-01-01T16:40:00Z",
+      "title": "tick 60,000: day tick",
+      "detail": "only the 250-tick rows (climate, world-upkeep) and the 120-tick heat pass are due",
+      "lane": "day",
+      "kind": "change",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 57, "end_line": 60, "label": "heat 120, climate 250"},
+        {"path": "internal/application/game/cadence/calendar.go", "line": 63, "end_line": 81, "label": "Calendar"}
+      ]
+    },
+    {
+      "id": "spread60000",
+      "at": "2026-01-01T16:40:00Z",
+      "title": "eggs, troughs, pens",
+      "detail": "each tick visits ids where (now + off + id) % 250 == 0",
+      "lane": "spread",
+      "kind": "recovery",
+      "sources": [
+        {"path": "internal/application/game/cadence/cadence.go", "line": 20, "end_line": 41, "label": "Due, Each"},
+        {"path": "internal/application/game/cadence/calendar.go", "line": 13, "end_line": 17, "label": "OffEgg, OffTrough, OffPen"}
+      ]
+    },
+    {
+      "id": "med60125",
+      "at": "2026-01-01T16:42:05Z",
+      "title": "tick 60,125: medical, aging",
+      "detail": "hourly medical pass; the daily aging rolls ride in it",
+      "lane": "hour",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 61, "label": "medical At(hour, OffMedical)"},
+        {"path": "internal/application/game/aging.go", "line": 42, "end_line": 48, "label": "daily rolls at 00:00+125"}
+      ]
+    },
+    {
+      "id": "rot60190",
+      "at": "2026-01-01T16:43:10Z",
+      "title": "tick 60,190: rot",
+      "detail": "the next rot slot",
+      "lane": "g250",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 58, "label": "rot At(250, OffRot)"}
+      ]
+    },
+    {
+      "id": "clim60250",
+      "at": "2026-01-01T16:44:10Z",
+      "title": "tick 60,250: climate",
+      "detail": "climate, and world-upkeep (Colony) on the same 250 rows",
+      "lane": "g250",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 74, "label": "world-upkeep At(250, 0)"}
+      ]
+    },
+    {
+      "id": "spread60250",
+      "at": "2026-01-01T16:44:10Z",
+      "title": "spread sites keep their rate",
+      "detail": "egg at offset 83, trough 167, pen 41 (pen's daily leave roll on each animal's own day tick)",
+      "lane": "spread",
+      "kind": "recovery",
+      "sources": [
+        {"path": "internal/application/game/animal_life.go", "line": 419, "end_line": 421, "label": "incubate"},
+        {"path": "internal/application/game/trough_feed.go", "line": 152, "label": "trough sweep"},
+        {"path": "internal/application/game/pens.go", "line": 382, "end_line": 392, "label": "penUnpenned"}
+      ]
+    },
+    {
+      "id": "story60375",
+      "at": "2026-01-01T16:46:15Z",
+      "title": "tick 60,375: story hour",
+      "detail": "losses, raids-over, story; the day rollover rides in it",
+      "lane": "hour",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 67, "end_line": 69, "label": "At(hour, OffStory)"},
+        {"path": "internal/application/game/story.go", "line": 263, "end_line": 271, "label": "storyHour rollover"}
+      ]
+    },
+    {
+      "id": "census60625",
+      "at": "2026-01-01T16:50:25Z",
+      "title": "tick 60,625: census",
+      "detail": "game/maps' temporary-map census",
+      "lane": "hour",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/maps/lifecycle.go", "line": 66, "end_line": 79, "label": "Flush: census slot"},
+        {"path": "internal/application/game/cadence/calendar.go", "line": 33, "label": "OffCensus"}
+      ]
+    },
+    {
+      "id": "social60875",
+      "at": "2026-01-01T16:54:35Z",
+      "title": "tick 60,875: social day",
+      "detail": "Colony system, 00:00 + 875",
+      "lane": "day",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 63, "label": "social-day At(day, OffSocialDay)"},
+        {"path": "internal/application/game/cadence/calendar.go", "line": 34, "label": "OffSocialDay"}
+      ]
+    },
+    {
+      "id": "wear61310",
+      "at": "2026-01-01T17:01:50Z",
+      "title": "tick 61,310: wear",
+      "detail": "craft.Condition.Weather, 1,310 past the hour",
+      "lane": "hour",
+      "kind": "default",
+      "sources": [
+        {"path": "internal/application/game/phases.go", "line": 59, "label": "wear At(hour, OffWear)"},
+        {"path": "internal/application/game/cadence/calendar.go", "line": 29, "label": "OffWear = 1190"}
+      ]
+    }
+  ],
+  "layout": {"breaks": "auto"},
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "A synthetic clock",
+      "items": [
+        "Illustrative: one tick is drawn as one second from 2026-01-01T00:00Z, so tick 60,000 shows as 16:40",
+        "The ticks are computed from the offsets in cadence/calendar.go: a site is due where (now + Offset) % Every == 0",
+        "TicksPerHour 2,500 and a 60,000-tick day (domain/sim/clock)"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "game/cadence",
+      "items": [
+        "Due(now, every, off, id) and Each(...) read only the tick and the id: no saved state, so a load fires on the same ticks",
+        "Each costs end/every steps a tick, never a scan of the entities",
+        "Calendar() lists every site; no two Heavy whole-map passes share a tick (TestCalendarSlots)"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Measured (PERF-011 ledger)",
+      "items": [
+        "BenchmarkTickDayRollover500 worst tick 1.6-1.7 ms down to 1.0 ms",
+        "Rot, wear and pots stay whole passes on a slot: spreading them per item rebuilt the item view every tick",
+        "The scheduler's Every/Offset rows (phases.go) carry the climate, rot, wear, medical, story and social-day slots"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Not on the calendar",
+      "items": [
+        "The hand-staggered per-pawn checks (social, mind, drugs, escape, combat, skills) keep their own staggers",
+        "The 120-tick heat pass also lands on the day tick; it is Light"
+      ]
+    }
+  ]
 }

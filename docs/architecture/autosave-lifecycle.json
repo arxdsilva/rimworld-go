@@ -1,246 +1,170 @@
 {
- "schema_version": 3,
- "diagram_type": "lifecycle",
- "meta": {
-  "title": "Autosave: the synchronous save today, the async save job in the target",
-  "output": "docs/architecture/autosave-lifecycle.html",
-  "quality_profile": "showcase",
-  "locale": "en",
-  "repository": {
-   "url": "git@github.com:arxdsilva/rimworld-go.git",
-   "link_mode": "local-only",
-   "revision": "c27bd1512a8174a57df3a7c5cc479ec195901298"
-  }
- },
- "mainPath": [
-  "playing",
-  "due",
-  "snapshot",
-  "encode",
-  "write",
-  "done"
- ],
- "states": [
-  {
-   "id": "playing",
-   "type": "start",
-   "label": "playing",
-   "sublabel": "checks each Update",
-   "step": "1",
-   "sources": [
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Autosave: encode on the sim goroutine, write on the save queue's worker",
+    "output": "docs/architecture/autosave-lifecycle.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "git@github.com:arxdsilva/rimworld-go.git",
+      "link_mode": "local-only",
+      "revision": "fe0f8604c6419d0ae0a8e91971ad0bad4b6b7e9f"
+    }
+  },
+  "mainPath": ["playing", "due", "encode", "queued", "write", "saved"],
+  "states": [
     {
-     "path": "internal/adapters/inbound/ebiten/options/saves.go",
-     "line": 55,
-     "end_line": 66,
-     "label": "TickAutosave gates"
+      "id": "playing",
+      "type": "start",
+      "label": "playing",
+      "sublabel": "PollSaves first",
+      "step": "1",
+      "sources": [
+        {"path": "internal/adapters/inbound/ebiten/app.go", "line": 388, "end_line": 401, "label": "tick: PollSaves first"},
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 55, "end_line": 68, "label": "PollSaves"}
+      ]
     },
     {
-     "path": "internal/adapters/inbound/ebiten/app.go",
-     "line": 388,
-     "end_line": 401,
-     "label": "tick calls TickAutosave"
-    }
-   ]
-  },
-  {
-   "id": "due",
-   "type": "decision",
-   "label": "autosave due",
-   "sublabel": "hour 6, day gap",
-   "step": "2",
-   "sources": [
-    {
-     "path": "internal/adapters/inbound/ebiten/options/saves.go",
-     "line": 67,
-     "end_line": 76,
-     "label": "hour and day check"
+      "id": "due",
+      "type": "decision",
+      "label": "autosave due",
+      "sublabel": "hour 6, day gap",
+      "step": "2",
+      "sources": [
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 99, "end_line": 125, "label": "TickAutosave"},
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 20, "end_line": 21, "label": "AutosaveHour = 6"}
+      ]
     },
     {
-     "path": "internal/adapters/inbound/ebiten/options/saves.go",
-     "line": 21,
-     "label": "AutosaveHour = 6"
-    }
-   ]
-  },
-  {
-   "id": "snapshot",
-   "type": "active",
-   "label": "snapshot",
-   "sublabel": "copy at tick end",
-   "tag": "target",
-   "step": "3"
-  },
-  {
-   "id": "encode",
-   "type": "active",
-   "label": "encode",
-   "sublabel": "worker: gob, gzip",
-   "tag": "target",
-   "step": "4"
-  },
-  {
-   "id": "write",
-   "type": "active",
-   "label": "write",
-   "sublabel": "temp, fsync, rename",
-   "tag": "target",
-   "step": "5"
-  },
-  {
-   "id": "done",
-   "type": "success",
-   "label": "saved",
-   "sublabel": "HUD clears",
-   "tag": "target",
-   "step": "6"
-  },
-  {
-   "id": "sync",
-   "type": "active",
-   "label": "sync save (today)",
-   "sublabel": "gob, gzip and write inside Update",
-   "tag": "today",
-   "sources": [
-    {
-     "path": "internal/adapters/inbound/ebiten/options/saves.go",
-     "line": 39,
-     "end_line": 49,
-     "label": "SaveNow"
+      "id": "encode",
+      "type": "active",
+      "label": "encode gob",
+      "sublabel": "on the sim goroutine",
+      "step": "3",
+      "sources": [
+        {"path": "internal/adapters/outbound/filesave/queue.go", "line": 74, "end_line": 79, "label": "Queue.Save"},
+        {"path": "internal/adapters/outbound/filesave/queue.go", "line": 124, "end_line": 150, "label": "put: encode into a buffer"},
+        {"path": "internal/application/game/save.go", "line": 504, "end_line": 512, "label": "EncodeSave: raw gob"}
+      ]
     },
     {
-     "path": "internal/application/game/save.go",
-     "line": 496,
-     "end_line": 590,
-     "label": "Game.Save: gob and gzip"
+      "id": "queued",
+      "type": "waiting",
+      "label": "queued",
+      "sublabel": "one per slot",
+      "step": "4",
+      "sources": [
+        {"path": "internal/adapters/outbound/filesave/queue.go", "line": 152, "end_line": 165, "label": "push: coalesce by slot"},
+        {"path": "internal/adapters/outbound/filesave/queue.go", "line": 18, "end_line": 43, "label": "Queue: one job at a time"}
+      ]
     },
     {
-     "path": "internal/platform/atomicfile/atomicfile.go",
-     "line": 13,
-     "end_line": 45,
-     "label": "temp, fsync, rename"
-    }
-   ]
-  },
-  {
-   "id": "failed",
-   "type": "failure",
-   "label": "save failed",
-   "sublabel": "reported to the player",
-   "sources": [
+      "id": "write",
+      "type": "active",
+      "label": "write file",
+      "sublabel": "gzip, fsync, rename",
+      "step": "5",
+      "sources": [
+        {"path": "internal/adapters/outbound/filesave/queue.go", "line": 174, "end_line": 210, "label": "run: the worker"},
+        {"path": "internal/adapters/outbound/filesave/queue.go", "line": 224, "end_line": 233, "label": "writeSave: atomic write"},
+        {"path": "internal/application/game/savefmt/savefmt.go", "line": 11, "end_line": 38, "label": "Compress at BestSpeed"}
+      ]
+    },
     {
-     "path": "internal/adapters/inbound/ebiten/options/saves.go",
-     "line": 43,
-     "end_line": 45,
-     "label": "save failed hint"
+      "id": "saved",
+      "type": "success",
+      "label": "saved",
+      "sublabel": "Saving... clears",
+      "step": "6",
+      "sources": [
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 80, "end_line": 97, "label": "report"},
+        {"path": "internal/adapters/inbound/ebiten/hud/toast.go", "line": 80, "end_line": 95, "label": "SavingShown"},
+        {"path": "internal/adapters/inbound/ebiten/hud_compat.go", "line": 56, "label": "Env.Saving = Queue.Busy()"}
+      ]
+    },
+    {
+      "id": "drain",
+      "type": "waiting",
+      "label": "Wait() drains",
+      "sublabel": "leave, load, close",
+      "sources": [
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 179, "end_line": 185, "label": "SaveBeforeLeaving"},
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 196, "end_line": 221, "label": "RefreshSlots, LoadSlot"},
+        {"path": "internal/compose/game/files.go", "line": 110, "end_line": 116, "label": "closeSaves at window close"}
+      ]
+    },
+    {
+      "id": "sync",
+      "type": "active",
+      "label": "synchronous save",
+      "sublabel": "nil Queue: Save writes",
+      "sources": [
+        {"path": "internal/adapters/inbound/ebiten/options_compat.go", "line": 309, "end_line": 332, "label": "SaveHooks.Queue port"},
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 37, "end_line": 53, "label": "save"}
+      ]
+    },
+    {
+      "id": "failed",
+      "type": "failure",
+      "label": "save failed",
+      "sublabel": "hint and danger toast",
+      "sources": [
+        {"path": "internal/adapters/inbound/ebiten/options/saves.go", "line": 80, "end_line": 97, "label": "report: SaveFailed"},
+        {"path": "internal/adapters/inbound/ebiten/options_compat.go", "line": 147, "end_line": 151, "label": "SaveFailed: Chrome.Alarm"}
+      ]
     }
-   ]
-  }
- ],
- "transitions": [
-  {
-   "id": "t1",
-   "from": "playing",
-   "to": "due",
-   "label": "06:00"
-  },
-  {
-   "id": "t2",
-   "from": "due",
-   "to": "snapshot",
-   "label": "async"
-  },
-  {
-   "id": "t3",
-   "from": "snapshot",
-   "to": "encode",
-   "label": "copied"
-  },
-  {
-   "id": "t4",
-   "from": "encode",
-   "to": "write",
-   "label": "bytes"
-  },
-  {
-   "id": "t5",
-   "from": "write",
-   "to": "done",
-   "label": "done",
-   "variant": "emphasis"
-  },
-  {
-   "id": "t6",
-   "from": "done",
-   "to": "playing",
-   "label": "next day"
-  },
-  {
-   "id": "t7",
-   "from": "due",
-   "to": "sync",
-   "label": "SaveNow(slot)",
-   "variant": "dashed",
-   "note": "today: blocks Update"
-  },
-  {
-   "id": "t8",
-   "from": "sync",
-   "to": "playing",
-   "label": "Update returns",
-   "variant": "dashed"
-  },
-  {
-   "id": "t9",
-   "from": "sync",
-   "to": "failed",
-   "label": "error",
-   "variant": "dashed"
-  },
-  {
-   "id": "t10",
-   "from": "write",
-   "to": "failed",
-   "label": "error"
-  },
-  {
-   "id": "t11",
-   "from": "encode",
-   "to": "failed",
-   "label": "error"
-  },
-  {
-   "id": "t12",
-   "from": "failed",
-   "to": "playing",
-   "label": "next autosave"
-  }
- ],
- "cards": [
-  {
-   "dot": "rose",
-   "title": "Today",
-   "items": [
-    "At hour 6 TickAutosave calls SaveNow on the Update goroutine",
-    "Game.Save encodes gob, gzips at BestSpeed, then the file store writes through atomicfile",
-    "Measured in the autosave probe cell: one 42.7 ms Update and frames up to 63 ms (bin/fpsmatrix-timejump.csv, 2026-11-08)"
-   ]
-  },
-  {
-   "dot": "emerald",
-   "title": "Target (GAR-190, game/savejob)",
-   "items": [
-    "A deep-copy snapshot of at most 2 ms at the tick boundary",
-    "One worker does gob, gzip, a temp file, fsync and rename; one save in flight",
-    "Saving... shows in the HUD; failures are reported"
-   ]
-  },
-  {
-   "dot": "slate",
-   "title": "Evidence",
-   "items": [
-    "States tagged today cite commit c27bd1512 (local-only)",
-    "States tagged target come from the GAR gap analysis (uncommitted) and have no source yet"
-   ]
-  }
- ]
+  ],
+  "transitions": [
+    {"id": "t1", "from": "playing", "to": "due", "label": "06:00"},
+    {"id": "t2", "from": "due", "to": "encode", "label": "save"},
+    {"id": "t3", "from": "encode", "to": "queued", "label": "push"},
+    {"id": "t4", "from": "queued", "to": "write", "label": "picked"},
+    {"id": "t5", "from": "write", "to": "saved", "label": "Done", "variant": "emphasis"},
+    {"id": "t6", "from": "saved", "to": "playing", "label": "next PollSaves"},
+    {"id": "t7", "from": "queued", "to": "drain", "label": "leave or load", "variant": "dashed", "note": "the sim blocks in Wait"},
+    {"id": "t8", "from": "drain", "to": "saved", "label": "queue empty", "variant": "dashed"},
+    {"id": "t9", "from": "due", "to": "sync", "label": "nil Queue", "variant": "dashed", "note": "tests only"},
+    {"id": "t10", "from": "sync", "to": "playing", "label": "written", "variant": "dashed"},
+    {"id": "t11", "from": "encode", "to": "failed", "label": "error"},
+    {"id": "t12", "from": "write", "to": "failed", "label": "error"},
+    {"id": "t13", "from": "failed", "to": "playing", "label": "next autosave"}
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Who does what",
+      "items": [
+        "Sim goroutine: game.EncodeSave writes raw gob into a buffer the job then owns, so the worker never reads live state (7.6 ms on the grown 500 colony, PERF-010)",
+        "Worker goroutine: savefmt.Compress at gzip BestSpeed, atomicfile's temp, fsync and rename, then the camera sidecar (6.9 ms of gzip, PERF-010)",
+        "compose/game wires filesave.NewQueue into SaveHooks.Queue; closeSaves runs after the window closes"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Queue rules",
+      "items": [
+        "One job is written at a time; a waiting job for the same slot and kind (save or view) is replaced in place",
+        "A view whose save failed is skipped; Busy is an atomic flag read every frame",
+        "Done returns the finished jobs; Wait blocks until none waits or runs; Save after Close is ErrClosed"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "What the player sees",
+      "items": [
+        "A dim Saving... row at the toast anchor while the queue is busy, held for at least 45 Updates",
+        "A failure: the hint plus a danger toast (Chrome.Alarm, 360 Updates)",
+        "A commitment colony whose save before leaving fails stays in the colony"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Evidence",
+      "items": [
+        "Sources pinned to commit fe0f8604c (local-only)",
+        "Timings are the PERF-010 ledger's measurements, not taken for this diagram"
+      ]
+    }
+  ]
 }

@@ -1,201 +1,134 @@
 {
- "schema_version": 1,
- "diagram_type": "sequence",
- "meta": {
-  "title": "Target parallel stage: Plan, Compute, Apply (ADR 0002)",
-  "output": "docs/architecture/parallel-stage.html",
-  "quality_profile": "showcase",
-  "locale": "en"
- },
- "participants": [
-  {
-   "id": "owner",
-   "type": "backend",
-   "label": "Scheduler (owner)",
-   "sublabel": "the only writer"
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Path stage: animal repaths queued, searched on pool lanes, applied in ID order",
+    "output": "docs/architecture/parallel-stage.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "git@github.com:arxdsilva/rimworld-go.git",
+      "link_mode": "local-only",
+      "revision": "fe0f8604c6419d0ae0a8e91971ad0bad4b6b7e9f"
+    }
   },
-  {
-   "id": "view",
-   "type": "database",
-   "label": "Frozen view",
-   "sublabel": "world, frozen epoch"
-  },
-  {
-   "id": "pool",
-   "type": "cloud",
-   "label": "Pool port",
-   "sublabel": "platform/pool, 8 lanes"
-  },
-  {
-   "id": "lane1",
-   "type": "cloud",
-   "label": "Worker lane 1",
-   "sublabel": "pure Compute"
-  },
-  {
-   "id": "lane7",
-   "type": "cloud",
-   "label": "Worker lane 7",
-   "sublabel": "pure Compute"
-  },
-  {
-   "id": "out",
-   "type": "messagebus",
-   "label": "Results out[i]",
-   "sublabel": "index-addressed buffer"
-  },
-  {
-   "id": "stores",
-   "type": "database",
-   "label": "Stores",
-   "sublabel": "component.Store[T]"
-  }
- ],
- "segments": [
-  {
-   "from": 148,
-   "to": 200,
-   "label": "Plan"
-  },
-  {
-   "from": 204,
-   "to": 508,
-   "label": "Compute"
-  },
-  {
-   "from": 512,
-   "to": 648,
-   "label": "Apply"
-  }
- ],
- "messages": [
-  {
-   "id": "warm",
-   "from": "owner",
-   "to": "view",
-   "y": 160,
-   "label": "warm caches, freeze",
-   "note": "Plan: tasks sorted by entity ID"
-  },
-  {
-   "id": "run",
-   "from": "owner",
-   "to": "pool",
-   "y": 216,
-   "label": "Run(stage, tasks)",
-   "variant": "emphasis",
-   "note": "chunk size from the task count"
-  },
-  {
-   "id": "claim1",
-   "from": "pool",
-   "to": "lane1",
-   "y": 272,
-   "label": "claim chunk (atomic)"
-  },
-  {
-   "id": "claim7",
-   "from": "pool",
-   "to": "lane7",
-   "y": 300,
-   "label": "claim chunk (atomic)"
-  },
-  {
-   "id": "read1",
-   "from": "lane1",
-   "to": "view",
-   "y": 328,
-   "label": "read only"
-  },
-  {
-   "id": "res1",
-   "from": "lane1",
-   "to": "out",
-   "y": 356,
-   "label": "out[i] = result",
-   "note": "RNG keyed on seed, tick, stage, entity"
-  },
-  {
-   "id": "read7",
-   "from": "lane7",
-   "to": "view",
-   "y": 412,
-   "label": "read only"
-  },
-  {
-   "id": "res7",
-   "from": "lane7",
-   "to": "out",
-   "y": 440,
-   "label": "out[j] = result"
-  },
-  {
-   "id": "wait",
-   "from": "pool",
-   "to": "owner",
-   "y": 468,
-   "label": "Wait returns",
-   "variant": "return",
-   "note": "owner ran chunks while it waited"
-  },
-  {
-   "id": "walk",
-   "from": "owner",
-   "to": "out",
-   "y": 524,
-   "label": "walk in index order"
-  },
-  {
-   "id": "vals",
-   "from": "out",
-   "to": "owner",
-   "y": 552,
-   "label": "values, not pointers",
-   "variant": "return"
-  },
-  {
-   "id": "apply",
-   "from": "owner",
-   "to": "stores",
-   "y": 580,
-   "label": "typed mutations",
-   "variant": "emphasis",
-   "note": "Apply: lower ID wins, loser re-plans"
-  },
-  {
-   "id": "thaw",
-   "from": "owner",
-   "to": "view",
-   "y": 636,
-   "label": "end of stage"
-  }
- ],
- "cards": [
-  {
-   "dot": "cyan",
-   "title": "One writer",
-   "items": [
-    "Compute never sees a mutator; it writes only its own out[task index]",
-    "No writes happen during a stage: the owner is inside it, and a frozen epoch panics on mutation in test and race builds",
-    "Lazy caches are warmed in Plan, never filled in Compute"
-   ]
-  },
-  {
-   "dot": "violet",
-   "title": "Deterministic merge",
-   "items": [
-    "Merge in task-index (entity-ID) order, never completion order",
-    "A lane's panic is recorded; after Wait the owner re-panics with the lowest failing index",
-    "TestParallelEqualsSerial: 1 lane, 8 lanes and a shuffled claim order give one state hash"
-   ]
-  },
-  {
-   "dot": "slate",
-   "title": "Evidence",
-   "items": [
-    "Target design from docs/adr/0002-parallel-pure-stages.md (uncommitted), not repository-backed",
-    "Two of the seven worker lanes are drawn"
-   ]
-  }
- ]
+  "participants": [
+    {
+      "id": "owner",
+      "type": "backend",
+      "label": "phaseMovement",
+      "sublabel": "sim goroutine, runRepaths",
+      "sources": [
+        {"path": "internal/application/game/tick.go", "line": 1562, "end_line": 1586, "label": "phaseMovement"},
+        {"path": "internal/application/game/paths.go", "line": 134, "end_line": 182, "label": "runRepaths"}
+      ]
+    },
+    {
+      "id": "mover",
+      "type": "backend",
+      "label": "moveAnimal",
+      "sublabel": "repathEvery",
+      "sources": [
+        {"path": "internal/application/game/occupancy.go", "line": 603, "end_line": 624, "label": "repathEvery queues"},
+        {"path": "internal/application/game/animals.go", "line": 577, "end_line": 579, "label": "waits this tick"}
+      ]
+    },
+    {
+      "id": "stage",
+      "type": "messagebus",
+      "label": "pathstage.Stage",
+      "sublabel": "requests, arena, results",
+      "sources": [
+        {"path": "internal/application/game/pathstage/stage.go", "line": 86, "end_line": 141, "label": "Stage, Queue, SetPlan"},
+        {"path": "internal/application/game/pathstage/stage.go", "line": 143, "end_line": 193, "label": "Compute, search"}
+      ]
+    },
+    {
+      "id": "pool",
+      "type": "cloud",
+      "label": "platform/pool",
+      "sublabel": "8 lanes, lane 0 the owner",
+      "sources": [
+        {"path": "internal/platform/pool/pool.go", "line": 102, "end_line": 132, "label": "Run"},
+        {"path": "internal/platform/pool/pool.go", "line": 196, "end_line": 213, "label": "raise lowest panic"},
+        {"path": "internal/compose/game/colony.go", "line": 13, "end_line": 28, "label": "Config.Pool, simPool"}
+      ]
+    },
+    {
+      "id": "lanes",
+      "type": "cloud",
+      "label": "worker lanes 1-7",
+      "sublabel": "parked goroutines",
+      "sources": [
+        {"path": "internal/platform/pool/pool.go", "line": 147, "end_line": 194, "label": "start, worker, work"}
+      ]
+    },
+    {
+      "id": "animals",
+      "type": "database",
+      "label": "animal, motion stores",
+      "sublabel": "written by Apply only",
+      "sources": [
+        {"path": "internal/application/game/paths.go", "line": 161, "end_line": 181, "label": "apply in ID order"}
+      ]
+    }
+  ],
+  "segments": [
+    {"from": 150, "to": 330, "label": "Queue"},
+    {"from": 340, "to": 470, "label": "Plan"},
+    {"from": 480, "to": 785, "label": "Compute"},
+    {"from": 790, "to": 960, "label": "Apply"}
+  ],
+  "messages": [
+    {"id": "open", "from": "owner", "to": "stage", "y": 160, "label": "Open()", "note": "start of the movement phase"},
+    {"id": "move", "from": "owner", "to": "mover", "y": 210, "label": "moveAnimal, ID order", "note": "every decision stays serial"},
+    {"id": "queue", "from": "mover", "to": "stage", "y": 270, "label": "Queue(Request)", "note": "blocked on a repath tick: id, from, to, goal, token; it waits"},
+    {"id": "close", "from": "owner", "to": "stage", "y": 350, "label": "Close()", "note": "runRepaths, after the loop"},
+    {"id": "plan", "from": "owner", "to": "stage", "y": 410, "label": "SetPlan(i, query, kind)", "note": "caches warmed first: plants, regions, ground layer, bitsets"},
+    {"id": "compute", "from": "owner", "to": "stage", "y": 490, "label": "Compute(own searcher)", "variant": "emphasis", "note": "one lane: searches inline"},
+    {"id": "run", "from": "stage", "to": "pool", "y": 550, "label": "Run(n, search)", "note": "under 8 tasks: inline on lane 0"},
+    {"id": "claim", "from": "pool", "to": "lanes", "y": 610, "label": "wake, claim chunks", "note": "atomic counter; owner works too"},
+    {"id": "result", "from": "lanes", "to": "stage", "y": 670, "label": "res[i] = Search(...)", "note": "pure: frozen state in, own slot out"},
+    {"id": "back", "from": "pool", "to": "stage", "y": 740, "label": "Run returns", "variant": "return", "note": "lowest-index panic re-raised"},
+    {"id": "read", "from": "owner", "to": "stage", "y": 800, "label": "Result(i), ID order"},
+    {"id": "apply", "from": "owner", "to": "animals", "y": 840, "label": "set Path", "variant": "emphasis", "note": "token same, first cell free, not To"},
+    {"id": "fail", "from": "owner", "to": "animals", "y": 910, "label": "else RepathWait x2", "note": "cap 720; a wild wanderer drops its path"}
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "What runs in parallel",
+      "items": [
+        "Only the animal repath searches: moveAnimal's decisions, colonists' and raiders' searches stay serial and in place",
+        "Compute marks the stage Frozen while lanes search, so lazy caches and the index self-check skip their writes",
+        "Each lane has its own pathing.Searcher; a search writes only res[i]"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Rarely engaged",
+      "items": [
+        "0 requests in 1,500 raid ticks and 1-3 in a 20,000-tick golden run (ARCH-010 ledger)",
+        "Under 8 requests the pool runs them inline, so its workers rarely start",
+        "BenchmarkAnimalRepath500: serial 1.554 ms, pool 0.980 ms"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Wiring and determinism",
+      "items": [
+        "compose/game builds one pool per process (1 lane in captures) and passes it as Config.Pool; loads and dev scenes stay serial",
+        "TestParallelEqualsSerial hashes 1, 2, 8 and shuffled lanes equal to serial every tick",
+        "TestNoGoStatementsInSim bans go statements in application, domain and pkg; the pool starts the only sim goroutines"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Evidence",
+      "items": [
+        "Sources pinned to commit fe0f8604c (local-only)",
+        "Counts and timings are from the ARCH-010 ledger"
+      ]
+    }
+  ]
 }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 3.2.0">
   <meta name="archify-reader-contract" content="declared-wide-v1">
-  <title>Periodic gates around the day tick: today against the staggered target Diagram</title>
+  <title>Periodic work around the day tick: each site on its own cadence slot Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -5194,17 +5194,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
            data-preset-badge-blueprint="BLUEPRINT / REV 01"
            data-preset-badge-editorial="EDITORIAL / FIELD NOTE">
         <div class="pulse-dot"></div>
-        <h1>Periodic gates around the day tick: today against the staggered target</h1>
+        <h1>Periodic work around the day tick: each site on its own cadence slot</h1>
       </div>
     </div>
 
-
+    <script id="archify-source-evidence-data" type="application/json">{"schemaVersion":1,"verified":true,"repository":{"url":"git@github.com:arxdsilva/rimworld-go","revision":"fe0f8604c6419d0ae0a8e91971ad0bad4b6b7e9f","shortRevision":"fe0f860","label":"arxdsilva/rimworld-go","linkMode":"local-only"},"referenceCount":24,"nodes":{"pot59375":[{"path":"internal/application/game/furnish/furnish.go","line":82,"endLine":90,"label":"Pots.Tick slot"},{"path":"internal/application/game/cadence/calendar.go","line":30,"label":"OffPot = 625"}],"clim59750":[{"path":"internal/application/game/phases.go","line":60,"label":"climate At(250, 0)"}],"rot59940":[{"path":"internal/application/game/phases.go","line":58,"label":"rot At(250, OffRot)"},{"path":"internal/application/game/cadence/calendar.go","line":28,"label":"OffRot = 60"}],"day60000":[{"path":"internal/application/game/phases.go","line":57,"endLine":60,"label":"heat 120, climate 250"},{"path":"internal/application/game/cadence/calendar.go","line":63,"endLine":81,"label":"Calendar"}],"spread60000":[{"path":"internal/application/game/cadence/cadence.go","line":20,"endLine":41,"label":"Due, Each"},{"path":"internal/application/game/cadence/calendar.go","line":13,"endLine":17,"label":"OffEgg, OffTrough, OffPen"}],"med60125":[{"path":"internal/application/game/phases.go","line":61,"label":"medical At(hour, OffMedical)"},{"path":"internal/application/game/aging.go","line":42,"endLine":48,"label":"daily rolls at 00:00+125"}],"rot60190":[{"path":"internal/application/game/phases.go","line":58,"label":"rot At(250, OffRot)"}],"clim60250":[{"path":"internal/application/game/phases.go","line":74,"label":"world-upkeep At(250, 0)"}],"spread60250":[{"path":"internal/application/game/animal_life.go","line":419,"endLine":421,"label":"incubate"},{"path":"internal/application/game/trough_feed.go","line":152,"label":"trough sweep"},{"path":"internal/application/game/pens.go","line":382,"endLine":392,"label":"penUnpenned"}],"story60375":[{"path":"internal/application/game/phases.go","line":67,"endLine":69,"label":"At(hour, OffStory)"},{"path":"internal/application/game/story.go","line":263,"endLine":271,"label":"storyHour rollover"}],"census60625":[{"path":"internal/application/game/maps/lifecycle.go","line":66,"endLine":79,"label":"Flush: census slot"},{"path":"internal/application/game/cadence/calendar.go","line":33,"label":"OffCensus"}],"social60875":[{"path":"internal/application/game/phases.go","line":63,"label":"social-day At(day, OffSocialDay)"},{"path":"internal/application/game/cadence/calendar.go","line":34,"label":"OffSocialDay"}],"wear61310":[{"path":"internal/application/game/phases.go","line":59,"label":"wear At(hour, OffWear)"},{"path":"internal/application/game/cadence/calendar.go","line":29,"label":"OffWear = 1190"}]}}</script>
     <script id="archify-i18n-data" type="application/json">{"locale":"en","messages":{"viewer.kind.frontend":"Frontend","viewer.kind.backend":"Backend","viewer.kind.database":"Database","viewer.kind.cloud":"Cloud","viewer.kind.security":"Security","viewer.kind.messagebus":"Message bus","viewer.kind.external":"External","viewer.kind.neutral":"Neutral","viewer.kind.node":"Node","viewer.kind.start":"Start","viewer.kind.active":"Active","viewer.kind.waiting":"Waiting","viewer.kind.decision":"Decision","viewer.kind.success":"Success","viewer.kind.failure":"Failure","viewer.toolbar.actions":"Diagram actions","viewer.theme.toggle.title":"Toggle theme (T)","viewer.theme.toggle":"Toggle color theme","viewer.theme.dark":"Dark","viewer.theme.light":"Light","viewer.preset.choose.title":"Choose visual style (S cycles)","viewer.preset.choose":"Choose visual style","viewer.preset.style":"Style","viewer.preset.menu":"Visual style","viewer.preset.identity":"Visual identity","viewer.preset.cycles":"to cycle","viewer.preset.classic":"Classic","viewer.preset.classic.short":"Classic","viewer.preset.classic.hint":"Stable technical default","viewer.preset.flow":"Signal Flow","viewer.preset.flow.short":"Flow","viewer.preset.flow.hint":"Motion-forward presentation","viewer.preset.blueprint":"Blueprint","viewer.preset.blueprint.hint":"Engineering review","viewer.preset.editorial":"Editorial","viewer.preset.editorial.hint":"Publication and launch notes","viewer.preset.badge.signalFlow":"SIGNAL FLOW","viewer.preset.badge.blueprint":"BLUEPRINT / REV 01","viewer.preset.badge.editorial":"EDITORIAL / FIELD NOTE","viewer.preset.badge.editorialPlate":"ARCHIFY / PLATE 04","viewer.preset.current":"Visual style: {style}. Choose visual style","viewer.motion.live":"Live","viewer.motion.still":"Still","viewer.motion.pause":"Pause motion","viewer.motion.resume":"Resume motion","viewer.motion.reduced":"Motion paused by reduced-motion preference","viewer.motion.hidden":"Motion paused while this page is hidden","viewer.motion.yielding":"Pause motion; currently yielding to {owner}","viewer.motion.yielding.title":"Live preview enabled · yielding to {owner}","viewer.owner.route":"Route Probe","viewer.owner.lens":"Semantic Lens","viewer.owner.relationship":"Relationship Preview","viewer.owner.intent":"Intent Trace","viewer.owner.focus":"semantic focus","viewer.owner.legend":"legend preview","viewer.owner.reader":"reader interaction","viewer.present.enter":"Enter presentation stage","viewer.present.enter.title":"Presentation stage (F)","viewer.present.exit":"Exit presentation stage","viewer.present.exit.title":"Exit presentation stage (F or Escape)","viewer.present.present":"Present","viewer.present.exit.label":"Exit","viewer.export.button":"Export","viewer.export.button.title":"Export diagram (E)","viewer.export.diagram":"Export diagram","viewer.export.menu":"Export","viewer.export.subtitle":"Portable, clean outputs","viewer.export.share":"Share","viewer.export.shareCard":"Share Card","viewer.export.routeShareCard":"Route Share Card","viewer.export.reachShareCard":"Reach Share Card","viewer.export.copyDiagram":"Copy diagram","viewer.export.clipboardPng":"PNG to clipboard","viewer.export.raster":"Raster images","viewer.export.image":"Image","viewer.export.lossless":"Lossless image","viewer.export.compact":"Compact image","viewer.export.modern":"Modern image","viewer.export.vectorMotion":"Vector and motion","viewer.export.vectorMotion.heading":"Vector \u0026 motion","viewer.export.editable":"Editable vector","viewer.export.svg.auto":"SVG · Auto","viewer.export.svg.auto.hint":"Matches host theme","viewer.export.svg.light":"SVG · Light","viewer.export.svg.light.hint":"Always light","viewer.export.svg.dark":"SVG · Dark","viewer.export.svg.dark.hint":"Always dark","viewer.export.motion6s":"6s motion","viewer.export.unsupported":"Not supported by this browser","viewer.export.clipboardUnsupported":"Clipboard image write not supported by this browser","viewer.export.clipboardUnsupported.short":"Clipboard image write not supported in this browser.","viewer.export.motionUnavailable":"Motion capture unavailable in this browser","viewer.export.webmUnavailable":"WebM unavailable in this browser","viewer.export.failed":"Export failed: {message}","viewer.export.unknownVariant":"Unknown Share Card variant: {variant}","viewer.export.routeRequired":"Trace a route before exporting a Route Share Card","viewer.export.reachRequired":"Trace authored reach before exporting a Reach Share Card","viewer.export.unknown":"unknown","viewer.export.routeFailed":"Route Share Card export failed: {message}","viewer.export.reachFailed":"Reach Share Card export failed: {message}","viewer.export.copyFailed":"Copy failed: {message}","viewer.export.copiedPng":"Copied PNG to clipboard","viewer.export.downloadedRoute":"Downloaded Route Share Card","viewer.export.downloadedReach":"Downloaded Reach Share Card","viewer.export.downloadedWebm":"Downloaded WebM","viewer.export.recording":"Recording 6 seconds of motion…","viewer.export.card.routeSummary.one":"Path: {source} → {target} · {count} step","viewer.export.card.routeSummary.other":"Path: {source} → {target} · {count} steps","viewer.export.card.reachSummary":"Authored {direction} from {origin} · {nodes} · {links} · max {hops}","viewer.export.card.node.one":"{count} node","viewer.export.card.node.other":"{count} nodes","viewer.export.card.link.one":"{count} link","viewer.export.card.link.other":"{count} links","viewer.export.card.hop.one":"{count} hop","viewer.export.card.hop.other":"{count} hops","viewer.export.card.routeBadge":"ARCHIFY · ROUTE · {hops}","viewer.export.card.reachBadge":"ARCHIFY · {direction} REACH","viewer.export.direction.upstream":"Upstream","viewer.export.direction.downstream":"Downstream","viewer.export.error.canvasUnavailable":"Canvas unavailable for {label}","viewer.export.error.contextUnavailable":"2D canvas context unavailable for {label}","viewer.export.error.toBlobUnavailable":"canvas.toBlob unavailable for {label}","viewer.export.error.toBlobNull":"canvas.toBlob returned no data for {label}","viewer.export.error.variantsCombined":"Share Card variants cannot be combined","viewer.export.error.viewerState":"Share Card export could not remove temporary viewer state","viewer.export.error.routeState":"Route Card export could not preserve the resolved route safely","viewer.export.error.reachState":"Reach Card export could not preserve authored reach safely","viewer.export.error.webmRequirements":"WebM motion export requires a trace animation and browser MediaRecorder support","viewer.export.error.mediaRecorder":"MediaRecorder failed","viewer.export.error.emptyWebm":"MediaRecorder produced an empty WebM","viewer.export.error.webmBackground":"SVG background could not be loaded for WebM export","viewer.guide.title":"Explore this system","viewer.focus.selectedNodes":"{count} selected nodes","viewer.guide.eyebrow":"Diagram guide","viewer.guide.close":"Close diagram guide","viewer.guide.inspecting":"Inspecting compiled semantics","viewer.guide.actions":"Diagram exploration actions","viewer.guide.find":"Find any node","viewer.guide.find.hint":"Search labels, responsibilities, kinds, and stable IDs.","viewer.guide.route":"Trace a route","viewer.guide.route.aria":"Trace a directed route","viewer.guide.route.hint":"Ask how two semantic nodes connect in authored direction.","viewer.guide.map":"See the whole system","viewer.guide.map.hint":"Open Semantic Radar with a live viewport and stable nodes.","viewer.guide.lens":"Compare semantic kinds","viewer.guide.lens.hint":"Count roles, reveal their traffic, and compare direct authored links.","viewer.guide.present":"Enter Presentation Stage","viewer.guide.present.hint":"Give the live diagram the viewport without changing export.","viewer.guide.shortcuts":"Additional keyboard shortcuts","viewer.guide.shortcut.export":"Export","viewer.guide.shortcut.theme":"Theme","viewer.guide.shortcut.style":"Style","viewer.guide.shortcut.reset":"Reset","viewer.guide.shortcut.zoomIn":"Zoom in","viewer.guide.shortcut.zoomOut":"Zoom out","viewer.guide.shortcut.close":"Close","viewer.guide.credit":"Find Archify useful? A star on GitHub helps","viewer.guide.star":"Star","viewer.guide.facts":"{nodes} · {relationships}","viewer.guide.fact.node.one":"{count} semantic node","viewer.guide.fact.node.other":"{count} semantic nodes","viewer.guide.fact.relationship.one":"{count} relationship","viewer.guide.fact.relationship.other":"{count} relationships","viewer.guide.open":"Open diagram guide","viewer.finder.title":"Find a node","viewer.finder.close":"Close node finder","viewer.finder.placeholder":"Search labels or IDs","viewer.finder.search":"Search diagram nodes","viewer.finder.results":"Diagram nodes","viewer.finder.empty":"No matching nodes","viewer.finder.result.focus":"Focus {label}","viewer.finder.result.routeStart":"Choose {label} as route start","viewer.finder.result.routeTarget":"Choose {label} as route destination, {links}","viewer.finder.status.empty":"No matching nodes","viewer.finder.status.count.one":"{count} matching node","viewer.finder.status.count.other":"{count} matching nodes","viewer.finder.noun.nodes":"nodes","viewer.finder.link.one":"{count} link","viewer.finder.link.other":"{count} links","viewer.finder.result.focus.one":"Focus {label}, {count} related connection","viewer.finder.result.focus.other":"Focus {label}, {count} related connections","viewer.finder.status.filtered":"{visible} of {available} {noun}","viewer.finder.status.all":"{available} {noun}","viewer.passport.eyebrow":"Semantic passport","viewer.passport.metadata":"Node metadata","viewer.passport.evidence":"Verified source evidence","viewer.passport.verified":"Verified source","viewer.passport.verificationScope":"Verified against local Git at the pinned revision. Remote access has not been checked.","viewer.passport.reach":"Authored reach","viewer.passport.reach.trace":"Trace authored reachability","viewer.passport.upstream":"Upstream","viewer.passport.downstream":"Downstream","viewer.passport.upstream.trace":"Trace upstream authored reachability","viewer.passport.downstream.trace":"Trace downstream authored reachability","viewer.passport.close":"Close semantic passport","viewer.passport.move":"Move semantic passport. Drag, use arrow keys, or press Home to reset.","viewer.passport.copy":"Copy link","viewer.passport.copy.focus":"Copy link to focused node","viewer.passport.relations":"Relations","viewer.passport.relations.show":"Show connected relationships","viewer.passport.relations.hide":"Hide connected relationships","viewer.passport.relations.list":"Connected relationships","viewer.passport.copyRelation":"Copy relation","viewer.passport.copyNode":"Copy node","viewer.passport.copyPinned":"Copy link to pinned relationship","viewer.passport.copySource":"Copy link to source node","viewer.passport.copy.focused.success":"Focused node link copied","viewer.passport.copy.pinned.success":"Pinned relationship link copied","viewer.passport.copy.focused.failed":"Could not copy focused node link","viewer.passport.copy.pinned.failed":"Could not copy pinned relationship link","viewer.passport.relationship.none":"No connected relationships","viewer.passport.relationship.count.one":"{count} relation","viewer.passport.relationship.count.other":"{count} relations","viewer.passport.relationship.show.one":"Show {count} connected relationship","viewer.passport.relationship.show.other":"Show {count} connected relationships","viewer.passport.relationship.summary":"{out} outgoing · {in} incoming{loops}","viewer.passport.relationship.loops":" · {count} loop","viewer.passport.relationship.explorer":"Direct relationship explorer","viewer.passport.relationship.help":"Use arrow keys to explore relationships. Press Enter or Space to pin details; Escape clears.","viewer.passport.relationship.loopsBack":"loops back","viewer.passport.relationship.connectsTo":"connects to","viewer.passport.relationship.connectsFrom":"connects from","viewer.passport.relationship.pinned":"Pinned relationship · {from} → {to} · {label}","viewer.passport.relationship.inspect":"Inspect relationship {index} of {total}: {from} to {to}, {label}. Press Enter for details.","viewer.passport.relationship.group.out":"Outgoing","viewer.passport.relationship.group.in":"Incoming","viewer.passport.relationship.group.loop":"Self loops","viewer.passport.relationship.row":"{group}: {relationship}, {neighbor}","viewer.passport.relationship.direction.out":"OUT →","viewer.passport.relationship.direction.in":"← IN","viewer.passport.relationship.direction.loop":"LOOP","viewer.passport.sourceCount.one":"{count} verified source reference","viewer.passport.sourceCount.other":"{count} verified source references","viewer.passport.repository.open":"Open verified repository revision {revision}","viewer.passport.source.open":"Open verified source {path} at revision {revision}","viewer.passport.source.openLink":"Open ↗","viewer.passport.reach.upstream.one":"Trace {count} upstream authored node","viewer.passport.reach.upstream.other":"Trace {count} upstream authored nodes","viewer.passport.reach.downstream.one":"Trace {count} downstream authored node","viewer.passport.reach.downstream.other":"Trace {count} downstream authored nodes","viewer.passport.reach.noUpstream":"No upstream authored nodes","viewer.passport.reach.noDownstream":"No downstream authored nodes","viewer.passport.reach.status":"{direction} · {nodes} nodes · {links} links · max {hops} hops","viewer.route.eyebrow":"Path","viewer.route.start":"Click where the path starts","viewer.route.start.find":"Find start","viewer.route.start.find.aria":"Find a route start","viewer.route.copy":"Copy link","viewer.route.copy.aria":"Copy link to traced route","viewer.route.clear":"Clear","viewer.route.clear.aria":"Clear route probe","viewer.route.traced":"Path","viewer.route.pickTwo":"Click two nodes on the diagram","viewer.route.pickOne":"Click a node on the diagram","viewer.route.controls":"Route journey controls","viewer.route.previous":"Previous route position","viewer.route.play":"Play route journey","viewer.route.pause":"Pause route journey","viewer.route.replay":"Replay route journey","viewer.route.next":"Next route position","viewer.route.journey":"Journey","viewer.route.pause.label":"Pause","viewer.route.replay.label":"Replay","viewer.route.overview":"Overview","viewer.route.overview.aria":"Show complete route overview","viewer.route.instructions":"Click a start, then an end. Paths follow the arrows.","viewer.route.destination":"Where does the path from {label} end?","viewer.route.destination.find":"Find target","viewer.route.destination.find.aria":"Find a reachable route destination","viewer.route.differentDestination":"Choose a different destination","viewer.route.distinct":"Pick two different nodes.","viewer.route.unreachable":"Cannot reach {label} from here","viewer.route.unreachable.detail":"{target} cannot be reached from {source} along the arrows. Pick a highlighted node.","viewer.route.start.instructions":"Next, pick the end. Only nodes you can reach will light up.","viewer.route.copy.success":"Traced route link copied","viewer.route.copy.failed":"Could not copy traced route link","viewer.route.position":"Route position {index} of {total}: {label}","viewer.route.step":"Step {index} of {total} · {phase} · {label}","viewer.route.motionRequired":"Automatic journey requires Live motion","viewer.route.trigger.clear":"Clear traced route","viewer.route.overview.status":"{nodes} · {hops} · shortest path","viewer.route.overview.node.one":"{count} node","viewer.route.overview.node.other":"{count} nodes","viewer.route.overview.hop.one":"{count} step","viewer.route.overview.hop.other":"{count} steps","viewer.route.phase.playing":"Playing","viewer.route.phase.complete":"Complete","viewer.route.phase.inspecting":"Inspecting","viewer.route.destination.count.one":"{count} reachable node is highlighted. Click it.","viewer.route.destination.count.other":"{count} reachable nodes are highlighted. Click one.","viewer.route.noOutgoing":"No arrows lead out of this node. Clear it and pick another start.","viewer.route.result.title":"{source} to {target}","viewer.route.finder.source.title":"Choose route start","viewer.route.finder.source.placeholder":"Search route sources","viewer.route.finder.source.empty":"No matching route sources","viewer.route.finder.source.results":"Nodes that can start a route","viewer.route.finder.source.noun":"route sources","viewer.route.finder.source.badge":"start","viewer.route.finder.target.title":"Destination from {label}","viewer.route.finder.target.placeholder":"Search reachable destinations","viewer.route.finder.target.empty":"No matching reachable destinations","viewer.route.finder.target.results":"Reachable route destinations","viewer.route.finder.target.noun":"reachable destinations","viewer.route.hop.one":"{count} hop","viewer.route.hop.other":"{count} hops","viewer.lens.eyebrow":"Semantic lens","viewer.lens.title":"Compare system roles","viewer.lens.close":"Close semantic lens","viewer.lens.instruction":"Choose up to two semantic kinds. One reveals its real traffic; two compare only direct authored relationships.","viewer.lens.kinds":"Semantic kinds","viewer.lens.choose":"Choose a kind to inspect its nodes and touching relationships.","viewer.lens.copy":"Copy link to semantic lens","viewer.lens.clear":"Clear semantic lens","viewer.lens.open":"Open semantic lens","viewer.lens.openActive":"Open active semantic lens","viewer.lens.legend":"Semantic legend","viewer.lens.legend.inspect.one":"Inspect {label}, {count} node","viewer.lens.legend.inspect.other":"Inspect {label}, {count} nodes","viewer.lens.kind.count.one":"{label}, {count} node","viewer.lens.kind.count.other":"{label}, {count} nodes","viewer.lens.compare.one":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationship","viewer.lens.compare.other":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationships","viewer.lens.single":"{nodes} · {relationships} · connected peers remain visible","viewer.lens.node.one":"{count} {label} node","viewer.lens.node.other":"{count} {label} nodes","viewer.lens.relationship.one":"{count} touching relationship","viewer.lens.relationship.other":"{count} touching relationships","viewer.radar.title":"Semantic radar","viewer.radar.building":"Building overview","viewer.radar.openFull":"Open full semantic radar","viewer.radar.open":"Open radar","viewer.radar.close":"Close semantic radar","viewer.radar.surface":"Diagram overview. Click a node to focus it, or use arrow keys to pan.","viewer.radar.click":"Click node","viewer.radar.drag":"Drag to pan","viewer.radar.space":"Semantic radar needs more MAP space.","viewer.radar.nodes":"Semantic diagram radar nodes","viewer.radar.focus":"Focus {label} from Semantic Radar","viewer.radar.status":"{count} nodes · {viewport}","viewer.radar.fullMap":"{count} nodes · full map","viewer.radar.compacted":"Radar compacted to avoid covering the Semantic Passport or MAP controls.","viewer.radar.cancelWaiting":"Cancel semantic radar waiting for more MAP space","viewer.radar.needsSpace":"Semantic radar needs more visible MAP space","viewer.radar.viewport.full":"full map","viewer.radar.viewport.width":"{percent}% width","viewer.radar.viewport.scale":"{percent}% viewport","viewer.nav.controls":"Diagram view controls","viewer.nav.route":"Trace a directed route","viewer.nav.route.title":"Trace route (R)","viewer.nav.route.short":"ROUTE","viewer.nav.radar":"Open semantic radar","viewer.nav.radar.title":"Semantic radar (M)","viewer.nav.radar.short":"MAP","viewer.nav.lens":"Open semantic lens","viewer.nav.lens.title":"Semantic lens (L)","viewer.nav.lens.short":"LENS","viewer.nav.find":"Find a node","viewer.nav.find.title":"Find a node (/)","viewer.outline.title":"Node index","viewer.rail.show":"Notes \u0026 index","viewer.rail.controls":"Side panel","viewer.rail.collapse":"Collapse side panel","viewer.rail.bottom":"Move panel below the diagram","viewer.rail.right":"Move panel beside the diagram","viewer.nav.guide":"Open diagram guide","viewer.nav.guide.title":"Diagram guide (?)","viewer.nav.zoomOut":"Zoom out","viewer.nav.zoomOut.title":"Zoom out (-)","viewer.nav.reset":"Reset diagram view","viewer.nav.reset.title":"Reset view (0)","viewer.nav.read":"READ","viewer.nav.zoomIn":"Zoom in","viewer.nav.zoomIn.title":"Zoom in (+)","viewer.nav.camera":"{hint}. Reset diagram view","viewer.nav.camera.title":"{semantic}{hint} · reset view (0)","viewer.nav.camera.semantic":"Semantic camera active · ","viewer.nav.level.map":"MAP","viewer.nav.level.read":"READ","viewer.nav.level.full":"FULL","viewer.nav.level.auto":"AUTO","viewer.nav.detail.map":"Zoom in to reveal relationship labels and node context","viewer.nav.detail.read":"Zoom in again to reveal tags and annotations","viewer.nav.detail.full":"Full diagram detail","viewer.intent.summary":"{label}. {out} outgoing, {in} incoming{loops}. {total} connections. Press Enter for details.","viewer.intent.loops":", {count} self loop","viewer.common.copied":"Copied","viewer.common.copyFailed":"Copy failed","viewer.common.copyLink":"Copy link","viewer.common.clear":"Clear","viewer.common.close":"Close"}}</script>
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / PLATE 04">
-      <svg viewBox="0 0 1272 780" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase" data-motion-choreography="sweep" data-timeline-ui="" data-reader-fit="intrinsic-height" data-reader-min-text="7.5">
-        <title id="archify-diagram-title">Periodic gates around the day tick: today against the staggered target</title>
+      <svg viewBox="0 0 1297 850" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase" data-motion-choreography="sweep" data-timeline-ui="" data-reader-fit="intrinsic-height" data-reader-min-text="7.5">
+        <title id="archify-diagram-title">Periodic work around the day tick: each site on its own cadence slot</title>
         <desc id="archify-diagram-description">An event timeline generated by Archify.</desc>
         <!-- Definitions -->
         <defs>
@@ -5223,7 +5223,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" class="c-grid" stroke-width="0.5"/>
           </pattern>
-          <pattern id="tl-break-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" class="tl-hatch" stroke-width="1"/></pattern>
         </defs>
         <style>
           svg[data-timeline-ui] .tl-grid { stroke: var(--lane-stroke); stroke-dasharray: 2 4; opacity: .7; }
@@ -5266,238 +5265,233 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <circle cx="39" cy="25" r="3" class="t-messagebus"/>
           <text x="99" y="29" class="t-messagebus" font-size="10.5" font-weight="700" text-anchor="middle">Illustrative data</text>
         </g>
-        <text data-timeline-axis-caption="" x="174" y="29.5" class="t-muted" font-size="11.5">Time: UTC · 2026-01-01 · 2 quiet period(s) compressed (≈)</text>
+        <text data-timeline-axis-caption="" x="174" y="29.5" class="t-muted" font-size="11.5">Time: UTC · 2026-01-01</text>
 
         <!-- Lanes -->
         <g data-timeline-lane="g250">
-          <rect x="20" y="112" width="1224" height="176" rx="10" class="tl-lane"/>
-          <line x1="292" y1="200" x2="1236" y2="200" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
-          <text x="28" y="204.5" class="t-primary" font-size="13" font-weight="700">every 250 ticks</text>
+          <rect x="20" y="112" width="1249" height="197" rx="10" class="tl-lane"/>
+          <line x1="317" y1="185" x2="1261" y2="185" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
+          <text x="28" y="189.5" class="t-primary" font-size="13" font-weight="700">every 250 ticks (whole map)</text>
         </g>
         <g data-timeline-lane="hour">
-          <rect x="20" y="298" width="1224" height="112" rx="10" class="tl-lane tl-lane-alt"/>
-          <line x1="292" y1="322" x2="1236" y2="322" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
-          <text x="28" y="326.5" class="t-primary" font-size="13" font-weight="700">every hour (2,500)</text>
+          <rect x="20" y="319" width="1249" height="176" rx="10" class="tl-lane tl-lane-alt"/>
+          <line x1="317" y1="407" x2="1261" y2="407" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
+          <text x="28" y="411.5" class="t-primary" font-size="13" font-weight="700">hourly, 2,500 ticks (whole map)</text>
         </g>
         <g data-timeline-lane="day">
-          <rect x="20" y="420" width="1224" height="112" rx="10" class="tl-lane"/>
-          <line x1="292" y1="444" x2="1236" y2="444" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
-          <text x="28" y="448.5" class="t-primary" font-size="13" font-weight="700">every day (60,000)</text>
+          <rect x="20" y="505" width="1249" height="112" rx="10" class="tl-lane"/>
+          <line x1="317" y1="529" x2="1261" y2="529" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
+          <text x="28" y="533.5" class="t-primary" font-size="13" font-weight="700">daily, 60,000 ticks</text>
         </g>
-        <g data-timeline-lane="target">
-          <rect x="20" y="542" width="1224" height="176" rx="10" class="tl-lane tl-lane-alt"/>
-          <line x1="292" y1="630" x2="1236" y2="630" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
-          <text x="28" y="634.5" class="t-primary" font-size="13" font-weight="700">target: staggered (ADR 0001)</text>
+        <g data-timeline-lane="spread">
+          <rect x="20" y="627" width="1249" height="161" rx="10" class="tl-lane tl-lane-alt"/>
+          <line x1="317" y1="715" x2="1261" y2="715" class="tl-lane-line" stroke-width="1.5" stroke-linecap="round"/>
+          <text x="28" y="719.5" class="t-primary" font-size="13" font-weight="700">per entity (cadence.Each)</text>
         </g>
 
         <!-- Time axis (proportional within each segment; breaks are disclosed) -->
-          <line x1="370" y1="102" x2="370" y2="718" class="tl-grid" stroke-width="1"/>
-          <line x1="370" y1="98" x2="370" y2="102" class="tl-axis" stroke-width="1"/>
-          <text x="370" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">15:58</text>
-          <line x1="508.64" y1="102" x2="508.64" y2="718" class="tl-grid" stroke-width="1"/>
-          <line x1="508.64" y1="98" x2="508.64" y2="102" class="tl-axis" stroke-width="1"/>
-          <text x="508.64" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:36</text>
-          <line x1="636.32" y1="102" x2="636.32" y2="718" class="tl-grid" stroke-width="1"/>
-          <line x1="636.32" y1="98" x2="636.32" y2="102" class="tl-axis" stroke-width="1"/>
-          <text x="636.32" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:38</text>
-          <line x1="764" y1="102" x2="764" y2="718" class="tl-grid" stroke-width="1"/>
-          <line x1="764" y1="98" x2="764" y2="102" class="tl-axis" stroke-width="1"/>
-          <text x="764" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:40</text>
-          <line x1="891.68" y1="102" x2="891.68" y2="718" class="tl-grid" stroke-width="1"/>
-          <line x1="891.68" y1="98" x2="891.68" y2="102" class="tl-axis" stroke-width="1"/>
-          <text x="891.68" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:42</text>
-          <line x1="1019.36" y1="102" x2="1019.36" y2="718" class="tl-grid" stroke-width="1"/>
-          <line x1="1019.36" y1="98" x2="1019.36" y2="102" class="tl-axis" stroke-width="1"/>
-          <text x="1019.36" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:44</text>
-          <line x1="1158" y1="102" x2="1158" y2="718" class="tl-grid" stroke-width="1"/>
-          <line x1="1158" y1="98" x2="1158" y2="102" class="tl-axis" stroke-width="1"/>
-          <text x="1158" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">17:21</text>
-          <line x1="292" y1="102" x2="384" y2="102" class="tl-axis" stroke-width="1"/>
-          <line x1="484" y1="102" x2="1044" y2="102" class="tl-axis" stroke-width="1"/>
-          <line x1="1144" y1="102" x2="1236" y2="102" class="tl-axis" stroke-width="1"/>
-          <g data-timeline-break="" data-break-ms="2250000" aria-label="Axis break: 37 min 30 s without events omitted" role="img">
-            <rect x="390" y="102" width="88" height="616" fill="url(#tl-break-hatch)" class="tl-break-band"/>
-            <path d="M 387.5 96 L 392.5 108 M 391.5 96 L 396.5 108 M 471.5 96 L 476.5 108 M 475.5 96 L 480.5 108" class="tl-break-zig" stroke-width="1.3" stroke-linecap="round" fill="none"/>
-            <rect x="388" y="61" width="92" height="17" rx="8.5" class="tl-break-chip"/>
-            <text x="434" y="73" class="t-muted" font-size="10" font-weight="700" text-anchor="middle">≈ 37 min 30 s</text>
-          </g>
-          <g data-timeline-break="" data-break-ms="2250000" aria-label="Axis break: 37 min 30 s without events omitted" role="img">
-            <rect x="1050" y="102" width="88" height="616" fill="url(#tl-break-hatch)" class="tl-break-band"/>
-            <path d="M 1047.5 96 L 1052.5 108 M 1051.5 96 L 1056.5 108 M 1131.5 96 L 1136.5 108 M 1135.5 96 L 1140.5 108" class="tl-break-zig" stroke-width="1.3" stroke-linecap="round" fill="none"/>
-            <rect x="1048" y="61" width="92" height="17" rx="8.5" class="tl-break-chip"/>
-            <text x="1094" y="73" class="t-muted" font-size="10" font-weight="700" text-anchor="middle">≈ 37 min 30 s</text>
-          </g>
+          <line x1="405.18" y1="102" x2="405.18" y2="788" class="tl-grid" stroke-width="1"/>
+          <line x1="405.18" y1="98" x2="405.18" y2="102" class="tl-axis" stroke-width="1"/>
+          <text x="405.18" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:30</text>
+          <line x1="527.35" y1="102" x2="527.35" y2="788" class="tl-grid" stroke-width="1"/>
+          <line x1="527.35" y1="98" x2="527.35" y2="102" class="tl-axis" stroke-width="1"/>
+          <text x="527.35" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:35</text>
+          <line x1="649.52" y1="102" x2="649.52" y2="788" class="tl-grid" stroke-width="1"/>
+          <line x1="649.52" y1="98" x2="649.52" y2="102" class="tl-axis" stroke-width="1"/>
+          <text x="649.52" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:40</text>
+          <line x1="771.69" y1="102" x2="771.69" y2="788" class="tl-grid" stroke-width="1"/>
+          <line x1="771.69" y1="98" x2="771.69" y2="102" class="tl-axis" stroke-width="1"/>
+          <text x="771.69" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:45</text>
+          <line x1="893.86" y1="102" x2="893.86" y2="788" class="tl-grid" stroke-width="1"/>
+          <line x1="893.86" y1="98" x2="893.86" y2="102" class="tl-axis" stroke-width="1"/>
+          <text x="893.86" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:50</text>
+          <line x1="1016.03" y1="102" x2="1016.03" y2="788" class="tl-grid" stroke-width="1"/>
+          <line x1="1016.03" y1="98" x2="1016.03" y2="102" class="tl-axis" stroke-width="1"/>
+          <text x="1016.03" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">16:55</text>
+          <line x1="1138.2" y1="102" x2="1138.2" y2="788" class="tl-grid" stroke-width="1"/>
+          <line x1="1138.2" y1="98" x2="1138.2" y2="102" class="tl-axis" stroke-width="1"/>
+          <text x="1138.2" y="92" class="t-muted tl-tick" font-size="10.5" text-anchor="middle">17:00</text>
+          <line x1="317" y1="102" x2="1261" y2="102" class="tl-axis" stroke-width="1"/>
+
 
         <!-- Stems sit behind every card, so a stacked card is never crossed by
              another event's connector -->
-        <line data-detail="context" data-timeline-stem="h57500" x1="370" y1="322" x2="370" y2="338" class="tl-stem tl-stem-external" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="g57500" x1="370" y1="200" x2="370" y2="216" class="tl-stem tl-stem-external" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="g59750" x1="498" y1="200" x2="498" y2="184" class="tl-stem tl-stem-external" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="t59750" x1="498" y1="630" x2="498" y2="646" class="tl-stem tl-stem-backend" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="d60000" x1="764" y1="444" x2="764" y2="460" class="tl-stem tl-stem-security" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="h60000" x1="764" y1="322" x2="764" y2="338" class="tl-stem tl-stem-security" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="g60000" x1="764" y1="200" x2="764" y2="216" class="tl-stem tl-stem-security" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="t60000" x1="764" y1="630" x2="764" y2="646" class="tl-stem tl-stem-backend" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="g60250" x1="1030" y1="200" x2="1030" y2="216" class="tl-stem tl-stem-external" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="t60250" x1="1030" y1="630" x2="1030" y2="646" class="tl-stem tl-stem-backend" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="t62500" x1="1158" y1="630" x2="1158" y2="614" class="tl-stem tl-stem-frontend" stroke-width="1"/>
-        <line data-detail="context" data-timeline-stem="h62500" x1="1158" y1="322" x2="1158" y2="338" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="pot59375" x1="395" y1="407" x2="395" y2="423" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="clim59750" x1="547.71" y1="185" x2="547.71" y2="201" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="rot59940" x1="625.09" y1="185" x2="625.09" y2="169" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="day60000" x1="649.52" y1="529" x2="649.52" y2="545" class="tl-stem tl-stem-frontend" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="spread60000" x1="649.52" y1="715" x2="649.52" y2="731" class="tl-stem tl-stem-backend" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="med60125" x1="700.43" y1="407" x2="700.43" y2="423" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="rot60190" x1="726.9" y1="185" x2="726.9" y2="201" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="clim60250" x1="751.33" y1="185" x2="751.33" y2="252" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="spread60250" x1="751.33" y1="715" x2="751.33" y2="699" class="tl-stem tl-stem-backend" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="story60375" x1="802.24" y1="407" x2="802.24" y2="391" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="census60625" x1="904.04" y1="407" x2="904.04" y2="423" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="social60875" x1="1005.85" y1="529" x2="1005.85" y2="545" class="tl-stem tl-stem-external" stroke-width="1"/>
+        <line data-detail="context" data-timeline-stem="wear61310" x1="1183" y1="407" x2="1183" y2="423" class="tl-stem tl-stem-external" stroke-width="1"/>
 
         <!-- One halo layer under every dot, so events seconds apart merge into
              one outlined capsule instead of cutting crescents into each other -->
-        <circle data-detail="context" cx="370" cy="322" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="370" cy="200" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="498" cy="200" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="498" cy="630" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="764" cy="444" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="764" cy="322" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="764" cy="200" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="764" cy="630" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="1030" cy="200" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="1030" cy="630" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="1158" cy="630" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="1158" cy="322" r="7.5" class="tl-halo"/>
-        <circle data-detail="context" cx="370" cy="322" r="6.5" class="tl-pin tl-pin-external"/>
-        <circle data-detail="context" cx="370" cy="200" r="6.5" class="tl-pin tl-pin-external"/>
-        <circle data-detail="context" cx="498" cy="200" r="6.5" class="tl-pin tl-pin-external"/>
-        <circle data-detail="context" cx="498" cy="630" r="6.5" class="tl-pin tl-pin-backend"/>
-        <circle data-detail="context" cx="764" cy="444" r="6.5" class="tl-pin tl-pin-security"/>
-        <circle data-detail="context" cx="764" cy="322" r="6.5" class="tl-pin tl-pin-security"/>
-        <circle data-detail="context" cx="764" cy="200" r="6.5" class="tl-pin tl-pin-security"/>
-        <circle data-detail="context" cx="764" cy="630" r="6.5" class="tl-pin tl-pin-backend"/>
-        <circle data-detail="context" cx="1030" cy="200" r="6.5" class="tl-pin tl-pin-external"/>
-        <circle data-detail="context" cx="1030" cy="630" r="6.5" class="tl-pin tl-pin-backend"/>
-        <circle data-detail="context" cx="1158" cy="630" r="6.5" class="tl-pin tl-pin-frontend"/>
-        <circle data-detail="context" cx="1158" cy="322" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="395" cy="407" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="547.71" cy="185" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="625.09" cy="185" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="649.52" cy="529" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="649.52" cy="715" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="700.43" cy="407" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="726.9" cy="185" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="751.33" cy="185" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="751.33" cy="715" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="802.24" cy="407" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="904.04" cy="407" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="1005.85" cy="529" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="1183" cy="407" r="7.5" class="tl-halo"/>
+        <circle data-detail="context" cx="395" cy="407" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="547.71" cy="185" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="625.09" cy="185" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="649.52" cy="529" r="6.5" class="tl-pin tl-pin-frontend"/>
+        <circle data-detail="context" cx="649.52" cy="715" r="6.5" class="tl-pin tl-pin-backend"/>
+        <circle data-detail="context" cx="700.43" cy="407" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="726.9" cy="185" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="751.33" cy="185" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="751.33" cy="715" r="6.5" class="tl-pin tl-pin-backend"/>
+        <circle data-detail="context" cx="802.24" cy="407" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="904.04" cy="407" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="1005.85" cy="529" r="6.5" class="tl-pin tl-pin-external"/>
+        <circle data-detail="context" cx="1183" cy="407" r="6.5" class="tl-pin tl-pin-external"/>
 
         <!-- Events in time order -->
-        <g id="node-h57500" data-node-id="h57500" data-node-label="tick 57,500: hourly gates" tabindex="0" role="button" aria-label="Focus tick 57,500: hourly gates, rows 7, 15, 18, 21, 23, 29, 30, 35, 36; the 250-tick rows fire too, every hour (2,500) › 01-01 15:58:20 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="rows 7, 15, 18, 21, 23, 29, 30, 35, 36; the 250-tick rows fire too" data-node-context="every hour (2,500) › 01-01 15:58:20 UTC+00:00" data-timeline-at="2026-01-01T15:58:20Z" data-timeline-ms="1767283100000" data-timeline-x="370">
-          <title>tick 57,500: hourly gates · rows 7, 15, 18, 21, 23, 29, 30, 35, 36; the 250-tick rows fire too · every hour (2,500) › 01-01 15:58:20 UTC+00:00</title>
-          <rect x="288" y="338" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="288" y="338" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:0" stroke-width="1"/>
-          <line x1="294" y1="345" x2="294" y2="389" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
-          <text x="302" y="357" class="t-external tl-time" font-size="10.5" font-weight="600">15:58:20</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="302" y="374">tick 57,500: hourly</tspan><tspan x="302" y="389">gates</tspan></text>
-          <circle cx="370" cy="322" r="4.75" class="t-external"/>
+        <g id="node-pot59375" data-node-id="pot59375" data-node-label="tick 59,375: pots" tabindex="0" role="button" aria-label="Focus tick 59,375: pots, furnish.Pots, 1,875 past the hour (OffPot), hourly, 2,500 ticks (whole map) › 01-01 16:29:35 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="furnish.Pots, 1,875 past the hour (OffPot)" data-node-context="hourly, 2,500 ticks (whole map) › 01-01 16:29:35 UTC+00:00" data-timeline-at="2026-01-01T16:29:35Z" data-timeline-ms="1767284975000" data-timeline-x="395">
+          <title>tick 59,375: pots · furnish.Pots, 1,875 past the hour (OffPot) · hourly, 2,500 ticks (whole map) › 01-01 16:29:35 UTC+00:00</title>
+          <rect x="316" y="423" width="158" height="43" rx="7" class="c-mask"/>
+          <rect x="316" y="423" width="158" height="43" rx="7" class="c-external tl-card" data-animate="node" style="--step:0" stroke-width="1"/>
+          <line x1="322" y1="430" x2="322" y2="459" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="330" y="442" class="t-external tl-time" font-size="10.5" font-weight="600">16:29:35</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="330" y="459">tick 59,375: pots</tspan></text>
+          <circle cx="395" cy="407" r="4.75" class="t-external"/>
         </g>
-        <g id="node-g57500" data-node-id="g57500" data-node-label="tick 57,500: 250-tick gates" tabindex="0" role="button" aria-label="Focus tick 57,500: 250-tick gates, rows 3, 5, 6, 8, 10, 13, 28, 32, 34, 41 together, every 250 ticks › 01-01 15:58:20 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="rows 3, 5, 6, 8, 10, 13, 28, 32, 34, 41 together" data-node-context="every 250 ticks › 01-01 15:58:20 UTC+00:00" data-timeline-at="2026-01-01T15:58:20Z" data-timeline-ms="1767283100000" data-timeline-x="370">
-          <title>tick 57,500: 250-tick gates · rows 3, 5, 6, 8, 10, 13, 28, 32, 34, 41 together · every 250 ticks › 01-01 15:58:20 UTC+00:00</title>
-          <rect x="288" y="216" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="288" y="216" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:1" stroke-width="1"/>
-          <line x1="294" y1="223" x2="294" y2="267" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
-          <text x="302" y="235" class="t-external tl-time" font-size="10.5" font-weight="600">15:58:20</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="302" y="252">tick 57,500: 250-tick</tspan><tspan x="302" y="267">gates</tspan></text>
-          <circle cx="370" cy="200" r="4.75" class="t-external"/>
+        <g id="node-clim59750" data-node-id="clim59750" data-node-label="tick 59,750: climate" tabindex="0" role="button" aria-label="Focus tick 59,750: climate, phaseClimate on multiples of 250, every 250 ticks (whole map) › 01-01 16:35:50 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="phaseClimate on multiples of 250" data-node-context="every 250 ticks (whole map) › 01-01 16:35:50 UTC+00:00" data-timeline-at="2026-01-01T16:35:50Z" data-timeline-ms="1767285350000" data-timeline-x="547.71">
+          <title>tick 59,750: climate · phaseClimate on multiples of 250 · every 250 ticks (whole map) › 01-01 16:35:50 UTC+00:00</title>
+          <rect x="456.71000000000004" y="201" width="182" height="43" rx="7" class="c-mask"/>
+          <rect x="456.71000000000004" y="201" width="182" height="43" rx="7" class="c-external tl-card" data-animate="node" style="--step:1" stroke-width="1"/>
+          <line x1="462.71000000000004" y1="208" x2="462.71000000000004" y2="237" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="470.71000000000004" y="220" class="t-external tl-time" font-size="10.5" font-weight="600">16:35:50</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="470.71000000000004" y="237">tick 59,750: climate</tspan></text>
+          <circle cx="547.71" cy="185" r="4.75" class="t-external"/>
         </g>
-        <g id="node-g59750" data-node-id="g59750" data-node-label="tick 59,750: 250-tick gates" tabindex="0" role="button" aria-label="Focus tick 59,750: 250-tick gates, climate, weather, pens, troughs, eggs, rearm, every 250 ticks › 01-01 16:35:50 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="climate, weather, pens, troughs, eggs, rearm" data-node-context="every 250 ticks › 01-01 16:35:50 UTC+00:00" data-timeline-at="2026-01-01T16:35:50Z" data-timeline-ms="1767285350000" data-timeline-x="498">
-          <title>tick 59,750: 250-tick gates · climate, weather, pens, troughs, eggs, rearm · every 250 ticks › 01-01 16:35:50 UTC+00:00</title>
-          <rect x="398" y="126" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="398" y="126" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:2" stroke-width="1"/>
-          <line x1="404" y1="133" x2="404" y2="177" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
-          <text x="412" y="145" class="t-external tl-time" font-size="10.5" font-weight="600">16:35:50</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="412" y="162">tick 59,750: 250-tick</tspan><tspan x="412" y="177">gates</tspan></text>
-          <circle cx="498" cy="200" r="4.75" class="t-external"/>
+        <g id="node-rot59940" data-node-id="rot59940" data-node-label="tick 59,940: rot" tabindex="0" role="button" aria-label="Focus tick 59,940: rot, craft.Condition.Rot, 190 past each 250, every 250 ticks (whole map) › 01-01 16:39:00 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="craft.Condition.Rot, 190 past each 250" data-node-context="every 250 ticks (whole map) › 01-01 16:39:00 UTC+00:00" data-timeline-at="2026-01-01T16:39:00Z" data-timeline-ms="1767285540000" data-timeline-x="625.09">
+          <title>tick 59,940: rot · craft.Condition.Rot, 190 past each 250 · every 250 ticks (whole map) › 01-01 16:39:00 UTC+00:00</title>
+          <rect x="550.09" y="126" width="150" height="43" rx="7" class="c-mask"/>
+          <rect x="550.09" y="126" width="150" height="43" rx="7" class="c-external tl-card" data-animate="node" style="--step:2" stroke-width="1"/>
+          <line x1="556.09" y1="133" x2="556.09" y2="162" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="564.09" y="145" class="t-external tl-time" font-size="10.5" font-weight="600">16:39:00</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="564.09" y="162">tick 59,940: rot</tspan></text>
+          <circle cx="625.09" cy="185" r="4.75" class="t-external"/>
         </g>
-        <g id="node-t59750" data-node-id="t59750" data-node-label="slot (now + mix(id)) % 250" tabindex="0" role="button" aria-label="Focus slot (now + mix(id)) % 250, each item, building or animal on its own tick of the period, target: staggered (ADR 0001) › 01-01 16:35:50 UTC+00:00" aria-pressed="false" data-node-kind="backend" data-node-sublabel="each item, building or animal on its own tick of the period" data-node-context="target: staggered (ADR 0001) › 01-01 16:35:50 UTC+00:00" data-timeline-at="2026-01-01T16:35:50Z" data-timeline-ms="1767285350000" data-timeline-x="498">
-          <title>slot (now + mix(id)) % 250 · each item, building or animal on its own tick of the period · target: staggered (ADR 0001) › 01-01 16:35:50 UTC+00:00</title>
-          <rect x="398" y="646" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="398" y="646" width="200" height="58" rx="7" class="c-backend tl-card" data-animate="node" style="--step:3" stroke-width="1"/>
-          <line x1="404" y1="653" x2="404" y2="697" class="tl-accent tl-accent-backend" stroke-width="3" stroke-linecap="round"/>
-          <text x="412" y="665" class="t-backend tl-time" font-size="10.5" font-weight="600">16:35:50</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="412" y="682">slot (now + mix(id)) %</tspan><tspan x="412" y="697">250</tspan></text>
-          <circle cx="498" cy="630" r="4.75" class="t-backend"/>
+        <g id="node-day60000" data-node-id="day60000" data-node-label="tick 60,000: day tick" tabindex="0" role="button" aria-label="Focus tick 60,000: day tick, only the 250-tick rows (climate, world-upkeep) and the 120-tick heat pass are due, daily, 60,000 ticks › 01-01 16:40:00 UTC+00:00" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="only the 250-tick rows (climate, world-upkeep) and the 120-tick heat pass are due" data-node-context="daily, 60,000 ticks › 01-01 16:40:00 UTC+00:00" data-timeline-at="2026-01-01T16:40:00Z" data-timeline-ms="1767285600000" data-timeline-x="649.52">
+          <title>tick 60,000: day tick · only the 250-tick rows (climate, world-upkeep) and the 120-tick heat pass are due · daily, 60,000 ticks › 01-01 16:40:00 UTC+00:00</title>
+          <rect x="554.52" y="545" width="190" height="43" rx="7" class="c-mask"/>
+          <rect x="554.52" y="545" width="190" height="43" rx="7" class="c-frontend tl-card" data-animate="node" style="--step:3" stroke-width="1"/>
+          <line x1="560.52" y1="552" x2="560.52" y2="581" class="tl-accent tl-accent-frontend" stroke-width="3" stroke-linecap="round"/>
+          <text x="568.52" y="564" class="t-frontend tl-time" font-size="10.5" font-weight="600">16:40:00</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="568.52" y="581">tick 60,000: day tick</tspan></text>
+          <circle cx="649.52" cy="529" r="4.75" class="t-frontend"/>
         </g>
-        <g id="node-d60000" data-node-id="d60000" data-node-label="tick 60,000: 41 of 46 gates at once" tabindex="0" role="button" aria-label="Focus tick 60,000: 41 of 46 gates at once, every item walked 3-4 times, every building and animal twice, every patient, every day (60,000) › 01-01 16:40:00 UTC+00:00" aria-pressed="false" data-node-kind="security" data-node-sublabel="every item walked 3-4 times, every building and animal twice, every patient" data-node-context="every day (60,000) › 01-01 16:40:00 UTC+00:00" data-timeline-at="2026-01-01T16:40:00Z" data-timeline-ms="1767285600000" data-timeline-x="764">
-          <title>tick 60,000: 41 of 46 gates at once · every item walked 3-4 times, every building and animal twice, every patient · every day (60,000) › 01-01 16:40:00 UTC+00:00</title>
-          <rect x="664" y="460" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="664" y="460" width="200" height="58" rx="7" class="c-security tl-card" data-animate="node" style="--step:4" stroke-width="1"/>
-          <line x1="670" y1="467" x2="670" y2="511" class="tl-accent tl-accent-security" stroke-width="3" stroke-linecap="round"/>
-          <text x="678" y="479" class="t-security tl-time" font-size="10.5" font-weight="600">16:40:00</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="678" y="496">tick 60,000: 41 of 46</tspan><tspan x="678" y="511">gates at once</tspan></text>
-          <circle cx="764" cy="444" r="4.75" class="t-security"/>
+        <g id="node-spread60000" data-node-id="spread60000" data-node-label="eggs, troughs, pens" tabindex="0" role="button" aria-label="Focus eggs, troughs, pens, each tick visits ids where (now + off + id) % 250 == 0, per entity (cadence.Each) › 01-01 16:40:00 UTC+00:00" aria-pressed="false" data-node-kind="backend" data-node-sublabel="each tick visits ids where (now + off + id) % 250 == 0" data-node-context="per entity (cadence.Each) › 01-01 16:40:00 UTC+00:00" data-timeline-at="2026-01-01T16:40:00Z" data-timeline-ms="1767285600000" data-timeline-x="649.52">
+          <title>eggs, troughs, pens · each tick visits ids where (now + off + id) % 250 == 0 · per entity (cadence.Each) › 01-01 16:40:00 UTC+00:00</title>
+          <rect x="562.52" y="731" width="174" height="43" rx="7" class="c-mask"/>
+          <rect x="562.52" y="731" width="174" height="43" rx="7" class="c-backend tl-card" data-animate="node" style="--step:4" stroke-width="1"/>
+          <line x1="568.52" y1="738" x2="568.52" y2="767" class="tl-accent tl-accent-backend" stroke-width="3" stroke-linecap="round"/>
+          <text x="576.52" y="750" class="t-backend tl-time" font-size="10.5" font-weight="600">16:40:00</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="576.52" y="767">eggs, troughs, pens</tspan></text>
+          <circle cx="649.52" cy="715" r="4.75" class="t-backend"/>
         </g>
-        <g id="node-h60000" data-node-id="h60000" data-node-label="tick 60,000: hourly gates" tabindex="0" role="button" aria-label="Focus tick 60,000: hourly gates, the medical hour and the hourly item passes, on the day tick, every hour (2,500) › 01-01 16:40:00 UTC+00:00" aria-pressed="false" data-node-kind="security" data-node-sublabel="the medical hour and the hourly item passes, on the day tick" data-node-context="every hour (2,500) › 01-01 16:40:00 UTC+00:00" data-timeline-at="2026-01-01T16:40:00Z" data-timeline-ms="1767285600000" data-timeline-x="764">
-          <title>tick 60,000: hourly gates · the medical hour and the hourly item passes, on the day tick · every hour (2,500) › 01-01 16:40:00 UTC+00:00</title>
-          <rect x="664" y="338" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="664" y="338" width="200" height="58" rx="7" class="c-security tl-card" data-animate="node" style="--step:5" stroke-width="1"/>
-          <line x1="670" y1="345" x2="670" y2="389" class="tl-accent tl-accent-security" stroke-width="3" stroke-linecap="round"/>
-          <text x="678" y="357" class="t-security tl-time" font-size="10.5" font-weight="600">16:40:00</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="678" y="374">tick 60,000: hourly</tspan><tspan x="678" y="389">gates</tspan></text>
-          <circle cx="764" cy="322" r="4.75" class="t-security"/>
+        <g id="node-med60125" data-node-id="med60125" data-node-label="tick 60,125: medical, aging" tabindex="0" role="button" aria-label="Focus tick 60,125: medical, aging, hourly medical pass; the daily aging rolls ride in it, hourly, 2,500 ticks (whole map) › 01-01 16:42:05 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="hourly medical pass; the daily aging rolls ride in it" data-node-context="hourly, 2,500 ticks (whole map) › 01-01 16:42:05 UTC+00:00" data-timeline-at="2026-01-01T16:42:05Z" data-timeline-ms="1767285725000" data-timeline-x="700.43">
+          <title>tick 60,125: medical, aging · hourly medical pass; the daily aging rolls ride in it · hourly, 2,500 ticks (whole map) › 01-01 16:42:05 UTC+00:00</title>
+          <rect x="600.43" y="423" width="200" height="58" rx="7" class="c-mask"/>
+          <rect x="600.43" y="423" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:5" stroke-width="1"/>
+          <line x1="606.43" y1="430" x2="606.43" y2="474" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="614.43" y="442" class="t-external tl-time" font-size="10.5" font-weight="600">16:42:05</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="614.43" y="459">tick 60,125: medical,</tspan><tspan x="614.43" y="474">aging</tspan></text>
+          <circle cx="700.43" cy="407" r="4.75" class="t-external"/>
         </g>
-        <g id="node-g60000" data-node-id="g60000" data-node-label="tick 60,000: 250-tick gates" tabindex="0" role="button" aria-label="Focus tick 60,000: 250-tick gates, the same ten rows, also on the day tick, every 250 ticks › 01-01 16:40:00 UTC+00:00" aria-pressed="false" data-node-kind="security" data-node-sublabel="the same ten rows, also on the day tick" data-node-context="every 250 ticks › 01-01 16:40:00 UTC+00:00" data-timeline-at="2026-01-01T16:40:00Z" data-timeline-ms="1767285600000" data-timeline-x="764">
-          <title>tick 60,000: 250-tick gates · the same ten rows, also on the day tick · every 250 ticks › 01-01 16:40:00 UTC+00:00</title>
-          <rect x="664" y="216" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="664" y="216" width="200" height="58" rx="7" class="c-security tl-card" data-animate="node" style="--step:6" stroke-width="1"/>
-          <line x1="670" y1="223" x2="670" y2="267" class="tl-accent tl-accent-security" stroke-width="3" stroke-linecap="round"/>
-          <text x="678" y="235" class="t-security tl-time" font-size="10.5" font-weight="600">16:40:00</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="678" y="252">tick 60,000: 250-tick</tspan><tspan x="678" y="267">gates</tspan></text>
-          <circle cx="764" cy="200" r="4.75" class="t-security"/>
+        <g id="node-rot60190" data-node-id="rot60190" data-node-label="tick 60,190: rot" tabindex="0" role="button" aria-label="Focus tick 60,190: rot, the next rot slot, every 250 ticks (whole map) › 01-01 16:43:10 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="the next rot slot" data-node-context="every 250 ticks (whole map) › 01-01 16:43:10 UTC+00:00" data-timeline-at="2026-01-01T16:43:10Z" data-timeline-ms="1767285790000" data-timeline-x="726.9">
+          <title>tick 60,190: rot · the next rot slot · every 250 ticks (whole map) › 01-01 16:43:10 UTC+00:00</title>
+          <rect x="651.9" y="201" width="150" height="43" rx="7" class="c-mask"/>
+          <rect x="651.9" y="201" width="150" height="43" rx="7" class="c-external tl-card" data-animate="node" style="--step:6" stroke-width="1"/>
+          <line x1="657.9" y1="208" x2="657.9" y2="237" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="665.9" y="220" class="t-external tl-time" font-size="10.5" font-weight="600">16:43:10</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="665.9" y="237">tick 60,190: rot</tspan></text>
+          <circle cx="726.9" cy="185" r="4.75" class="t-external"/>
         </g>
-        <g id="node-t60000" data-node-id="t60000" data-node-label="day tick: only O(1) gates left" tabindex="0" role="button" aria-label="Focus day tick: only O(1) gates left, rows 3, 7, 8, 10, 13, 21, 24, 35 spread by entity, target: staggered (ADR 0001) › 01-01 16:40:00 UTC+00:00" aria-pressed="false" data-node-kind="backend" data-node-sublabel="rows 3, 7, 8, 10, 13, 21, 24, 35 spread by entity" data-node-context="target: staggered (ADR 0001) › 01-01 16:40:00 UTC+00:00" data-timeline-at="2026-01-01T16:40:00Z" data-timeline-ms="1767285600000" data-timeline-x="764">
-          <title>day tick: only O(1) gates left · rows 3, 7, 8, 10, 13, 21, 24, 35 spread by entity · target: staggered (ADR 0001) › 01-01 16:40:00 UTC+00:00</title>
-          <rect x="664" y="646" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="664" y="646" width="200" height="58" rx="7" class="c-backend tl-card" data-animate="node" style="--step:7" stroke-width="1"/>
-          <line x1="670" y1="653" x2="670" y2="697" class="tl-accent tl-accent-backend" stroke-width="3" stroke-linecap="round"/>
-          <text x="678" y="665" class="t-backend tl-time" font-size="10.5" font-weight="600">16:40:00</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="678" y="682">day tick: only O(1)</tspan><tspan x="678" y="697">gates left</tspan></text>
-          <circle cx="764" cy="630" r="4.75" class="t-backend"/>
+        <g id="node-clim60250" data-node-id="clim60250" data-node-label="tick 60,250: climate" tabindex="0" role="button" aria-label="Focus tick 60,250: climate, climate, and world-upkeep (Colony) on the same 250 rows, every 250 ticks (whole map) › 01-01 16:44:10 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="climate, and world-upkeep (Colony) on the same 250 rows" data-node-context="every 250 ticks (whole map) › 01-01 16:44:10 UTC+00:00" data-timeline-at="2026-01-01T16:44:10Z" data-timeline-ms="1767285850000" data-timeline-x="751.33">
+          <title>tick 60,250: climate · climate, and world-upkeep (Colony) on the same 250 rows · every 250 ticks (whole map) › 01-01 16:44:10 UTC+00:00</title>
+          <rect x="660.33" y="252" width="182" height="43" rx="7" class="c-mask"/>
+          <rect x="660.33" y="252" width="182" height="43" rx="7" class="c-external tl-card" data-animate="node" style="--step:7" stroke-width="1"/>
+          <line x1="666.33" y1="259" x2="666.33" y2="288" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="674.33" y="271" class="t-external tl-time" font-size="10.5" font-weight="600">16:44:10</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="674.33" y="288">tick 60,250: climate</tspan></text>
+          <circle cx="751.33" cy="185" r="4.75" class="t-external"/>
         </g>
-        <g id="node-g60250" data-node-id="g60250" data-node-label="tick 60,250: 250-tick gates" tabindex="0" role="button" aria-label="Focus tick 60,250: 250-tick gates, back to ten rows, every 250 ticks › 01-01 16:44:10 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="back to ten rows" data-node-context="every 250 ticks › 01-01 16:44:10 UTC+00:00" data-timeline-at="2026-01-01T16:44:10Z" data-timeline-ms="1767285850000" data-timeline-x="1030">
-          <title>tick 60,250: 250-tick gates · back to ten rows · every 250 ticks › 01-01 16:44:10 UTC+00:00</title>
-          <rect x="930" y="216" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="930" y="216" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:8" stroke-width="1"/>
-          <line x1="936" y1="223" x2="936" y2="267" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
-          <text x="944" y="235" class="t-external tl-time" font-size="10.5" font-weight="600">16:44:10</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="944" y="252">tick 60,250: 250-tick</tspan><tspan x="944" y="267">gates</tspan></text>
-          <circle cx="1030" cy="200" r="4.75" class="t-external"/>
+        <g id="node-spread60250" data-node-id="spread60250" data-node-label="spread sites keep their rate" tabindex="0" role="button" aria-label="Focus spread sites keep their rate, egg at offset 83, trough 167, pen 41 (pen&#39;s daily leave roll on each animal&#39;s own day tick), per entity (cadence.Each) › 01-01 16:44:10 UTC+00:00" aria-pressed="false" data-node-kind="backend" data-node-sublabel="egg at offset 83, trough 167, pen 41 (pen&#39;s daily leave roll on each animal&#39;s own day tick)" data-node-context="per entity (cadence.Each) › 01-01 16:44:10 UTC+00:00" data-timeline-at="2026-01-01T16:44:10Z" data-timeline-ms="1767285850000" data-timeline-x="751.33">
+          <title>spread sites keep their rate · egg at offset 83, trough 167, pen 41 (pen&#39;s daily leave roll on each animal&#39;s own day tick) · per entity (cadence.Each) › 01-01 16:44:10 UTC+00:00</title>
+          <rect x="651.33" y="641" width="200" height="58" rx="7" class="c-mask"/>
+          <rect x="651.33" y="641" width="200" height="58" rx="7" class="c-backend tl-card" data-animate="node" style="--step:8" stroke-width="1"/>
+          <line x1="657.33" y1="648" x2="657.33" y2="692" class="tl-accent tl-accent-backend" stroke-width="3" stroke-linecap="round"/>
+          <text x="665.33" y="660" class="t-backend tl-time" font-size="10.5" font-weight="600">16:44:10</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="665.33" y="677">spread sites keep</tspan><tspan x="665.33" y="692">their rate</tspan></text>
+          <circle cx="751.33" cy="715" r="4.75" class="t-backend"/>
         </g>
-        <g id="node-t60250" data-node-id="t60250" data-node-label="slot (now + mix(id)) % 250" tabindex="0" role="button" aria-label="Focus slot (now + mix(id)) % 250, about 1/250 of the walk on any one tick, target: staggered (ADR 0001) › 01-01 16:44:10 UTC+00:00" aria-pressed="false" data-node-kind="backend" data-node-sublabel="about 1/250 of the walk on any one tick" data-node-context="target: staggered (ADR 0001) › 01-01 16:44:10 UTC+00:00" data-timeline-at="2026-01-01T16:44:10Z" data-timeline-ms="1767285850000" data-timeline-x="1030">
-          <title>slot (now + mix(id)) % 250 · about 1/250 of the walk on any one tick · target: staggered (ADR 0001) › 01-01 16:44:10 UTC+00:00</title>
-          <rect x="930" y="646" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="930" y="646" width="200" height="58" rx="7" class="c-backend tl-card" data-animate="node" style="--step:9" stroke-width="1"/>
-          <line x1="936" y1="653" x2="936" y2="697" class="tl-accent tl-accent-backend" stroke-width="3" stroke-linecap="round"/>
-          <text x="944" y="665" class="t-backend tl-time" font-size="10.5" font-weight="600">16:44:10</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="944" y="682">slot (now + mix(id)) %</tspan><tspan x="944" y="697">250</tspan></text>
-          <circle cx="1030" cy="630" r="4.75" class="t-backend"/>
+        <g id="node-story60375" data-node-id="story60375" data-node-label="tick 60,375: story hour" tabindex="0" role="button" aria-label="Focus tick 60,375: story hour, losses, raids-over, story; the day rollover rides in it, hourly, 2,500 ticks (whole map) › 01-01 16:46:15 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="losses, raids-over, story; the day rollover rides in it" data-node-context="hourly, 2,500 ticks (whole map) › 01-01 16:46:15 UTC+00:00" data-timeline-at="2026-01-01T16:46:15Z" data-timeline-ms="1767285975000" data-timeline-x="802.24">
+          <title>tick 60,375: story hour · losses, raids-over, story; the day rollover rides in it · hourly, 2,500 ticks (whole map) › 01-01 16:46:15 UTC+00:00</title>
+          <rect x="702.24" y="333" width="200" height="58" rx="7" class="c-mask"/>
+          <rect x="702.24" y="333" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:9" stroke-width="1"/>
+          <line x1="708.24" y1="340" x2="708.24" y2="384" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="716.24" y="352" class="t-external tl-time" font-size="10.5" font-weight="600">16:46:15</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="716.24" y="369">tick 60,375: story</tspan><tspan x="716.24" y="384">hour</tspan></text>
+          <circle cx="802.24" cy="407" r="4.75" class="t-external"/>
         </g>
-        <g id="node-t62500" data-node-id="t62500" data-node-label="daily-only jobs at fixed hour offsets" tabindex="0" role="button" aria-label="Focus daily-only jobs at fixed hour offsets, rows 12, 16, 17, 19, for example hour 1, target: staggered (ADR 0001) › 01-01 17:21:40 UTC+00:00" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="rows 12, 16, 17, 19, for example hour 1" data-node-context="target: staggered (ADR 0001) › 01-01 17:21:40 UTC+00:00" data-timeline-at="2026-01-01T17:21:40Z" data-timeline-ms="1767288100000" data-timeline-x="1158">
-          <title>daily-only jobs at fixed hour offsets · rows 12, 16, 17, 19, for example hour 1 · target: staggered (ADR 0001) › 01-01 17:21:40 UTC+00:00</title>
-          <rect x="1040" y="556" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="1040" y="556" width="200" height="58" rx="7" class="c-frontend tl-card" data-animate="node" style="--step:10" stroke-width="1"/>
-          <line x1="1046" y1="563" x2="1046" y2="607" class="tl-accent tl-accent-frontend" stroke-width="3" stroke-linecap="round"/>
-          <text x="1054" y="575" class="t-frontend tl-time" font-size="10.5" font-weight="600">17:21:40</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="1054" y="592">daily-only jobs at</tspan><tspan x="1054" y="607">fixed hour offsets</tspan></text>
-          <circle cx="1158" cy="630" r="4.75" class="t-frontend"/>
+        <g id="node-census60625" data-node-id="census60625" data-node-label="tick 60,625: census" tabindex="0" role="button" aria-label="Focus tick 60,625: census, game/maps&#39; temporary-map census, hourly, 2,500 ticks (whole map) › 01-01 16:50:25 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="game/maps&#39; temporary-map census" data-node-context="hourly, 2,500 ticks (whole map) › 01-01 16:50:25 UTC+00:00" data-timeline-at="2026-01-01T16:50:25Z" data-timeline-ms="1767286225000" data-timeline-x="904.04">
+          <title>tick 60,625: census · game/maps&#39; temporary-map census · hourly, 2,500 ticks (whole map) › 01-01 16:50:25 UTC+00:00</title>
+          <rect x="817.04" y="423" width="174" height="43" rx="7" class="c-mask"/>
+          <rect x="817.04" y="423" width="174" height="43" rx="7" class="c-external tl-card" data-animate="node" style="--step:10" stroke-width="1"/>
+          <line x1="823.04" y1="430" x2="823.04" y2="459" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="831.04" y="442" class="t-external tl-time" font-size="10.5" font-weight="600">16:50:25</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="831.04" y="459">tick 60,625: census</tspan></text>
+          <circle cx="904.04" cy="407" r="4.75" class="t-external"/>
         </g>
-        <g id="node-h62500" data-node-id="h62500" data-node-label="tick 62,500: hourly gates" tabindex="0" role="button" aria-label="Focus tick 62,500: hourly gates, the hour after the day tick, every hour (2,500) › 01-01 17:21:40 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="the hour after the day tick" data-node-context="every hour (2,500) › 01-01 17:21:40 UTC+00:00" data-timeline-at="2026-01-01T17:21:40Z" data-timeline-ms="1767288100000" data-timeline-x="1158">
-          <title>tick 62,500: hourly gates · the hour after the day tick · every hour (2,500) › 01-01 17:21:40 UTC+00:00</title>
-          <rect x="1040" y="338" width="200" height="58" rx="7" class="c-mask"/>
-          <rect x="1040" y="338" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:11" stroke-width="1"/>
-          <line x1="1046" y1="345" x2="1046" y2="389" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
-          <text x="1054" y="357" class="t-external tl-time" font-size="10.5" font-weight="600">17:21:40</text>
-          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="1054" y="374">tick 62,500: hourly</tspan><tspan x="1054" y="389">gates</tspan></text>
-          <circle cx="1158" cy="322" r="4.75" class="t-external"/>
+        <g id="node-social60875" data-node-id="social60875" data-node-label="tick 60,875: social day" tabindex="0" role="button" aria-label="Focus tick 60,875: social day, Colony system, 00:00 + 875, daily, 60,000 ticks › 01-01 16:54:35 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="Colony system, 00:00 + 875" data-node-context="daily, 60,000 ticks › 01-01 16:54:35 UTC+00:00" data-timeline-at="2026-01-01T16:54:35Z" data-timeline-ms="1767286475000" data-timeline-x="1005.85">
+          <title>tick 60,875: social day · Colony system, 00:00 + 875 · daily, 60,000 ticks › 01-01 16:54:35 UTC+00:00</title>
+          <rect x="905.85" y="545" width="200" height="58" rx="7" class="c-mask"/>
+          <rect x="905.85" y="545" width="200" height="58" rx="7" class="c-external tl-card" data-animate="node" style="--step:11" stroke-width="1"/>
+          <line x1="911.85" y1="552" x2="911.85" y2="596" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="919.85" y="564" class="t-external tl-time" font-size="10.5" font-weight="600">16:54:35</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="919.85" y="581">tick 60,875: social</tspan><tspan x="919.85" y="596">day</tspan></text>
+          <circle cx="1005.85" cy="529" r="4.75" class="t-external"/>
+        </g>
+        <g id="node-wear61310" data-node-id="wear61310" data-node-label="tick 61,310: wear" tabindex="0" role="button" aria-label="Focus tick 61,310: wear, craft.Condition.Weather, 1,310 past the hour, hourly, 2,500 ticks (whole map) › 01-01 17:01:50 UTC+00:00" aria-pressed="false" data-node-kind="external" data-node-sublabel="craft.Condition.Weather, 1,310 past the hour" data-node-context="hourly, 2,500 ticks (whole map) › 01-01 17:01:50 UTC+00:00" data-timeline-at="2026-01-01T17:01:50Z" data-timeline-ms="1767286910000" data-timeline-x="1183">
+          <title>tick 61,310: wear · craft.Condition.Weather, 1,310 past the hour · hourly, 2,500 ticks (whole map) › 01-01 17:01:50 UTC+00:00</title>
+          <rect x="1104" y="423" width="158" height="43" rx="7" class="c-mask"/>
+          <rect x="1104" y="423" width="158" height="43" rx="7" class="c-external tl-card" data-animate="node" style="--step:12" stroke-width="1"/>
+          <line x1="1110" y1="430" x2="1110" y2="459" class="tl-accent tl-accent-external" stroke-width="3" stroke-linecap="round"/>
+          <text x="1118" y="442" class="t-external tl-time" font-size="10.5" font-weight="600">17:01:50</text>
+          <text data-node-label="" class="t-primary" font-size="12.5" font-weight="650"><tspan x="1118" y="459">tick 61,310: wear</tspan></text>
+          <circle cx="1183" cy="407" r="4.75" class="t-external"/>
         </g>
 
         <!-- Legend -->
         <g data-legend="">
-          <text x="28" y="744" class="t-primary" font-size="12" font-weight="650">Legend</text>
-          <g data-legend-semantic-kind="default" data-legend-x="28" data-legend-baseline="764" data-legend-width="63">
-            <circle cx="34" cy="760" r="4.5" class="t-external tl-dot" stroke-width="2"/>
-            <text x="50" y="764" class="t-muted" font-size="13" font-weight="500">Event</text>
+          <text x="28" y="814" class="t-primary" font-size="12" font-weight="650">Legend</text>
+          <g data-legend-semantic-kind="default" data-legend-x="28" data-legend-baseline="834" data-legend-width="63">
+            <circle cx="34" cy="830" r="4.5" class="t-external tl-dot" stroke-width="2"/>
+            <text x="50" y="834" class="t-muted" font-size="13" font-weight="500">Event</text>
           </g>
-          <g data-legend-semantic-kind="change" data-legend-x="113" data-legend-baseline="764" data-legend-width="71">
-            <circle cx="119" cy="760" r="4.5" class="t-frontend tl-dot" stroke-width="2"/>
-            <text x="135" y="764" class="t-muted" font-size="13" font-weight="500">Change</text>
+          <g data-legend-semantic-kind="change" data-legend-x="113" data-legend-baseline="834" data-legend-width="71">
+            <circle cx="119" cy="830" r="4.5" class="t-frontend tl-dot" stroke-width="2"/>
+            <text x="135" y="834" class="t-muted" font-size="13" font-weight="500">Change</text>
           </g>
-          <g data-legend-semantic-kind="alert" data-legend-x="206" data-legend-baseline="764" data-legend-width="63">
-            <circle cx="212" cy="760" r="4.5" class="t-security tl-dot" stroke-width="2"/>
-            <text x="228" y="764" class="t-muted" font-size="13" font-weight="500">Alert</text>
-          </g>
-          <g data-legend-semantic-kind="recovery" data-legend-x="291" data-legend-baseline="764" data-legend-width="87">
-            <circle cx="297" cy="760" r="4.5" class="t-backend tl-dot" stroke-width="2"/>
-            <text x="313" y="764" class="t-muted" font-size="13" font-weight="500">Recovery</text>
+          <g data-legend-semantic-kind="recovery" data-legend-x="206" data-legend-baseline="834" data-legend-width="87">
+            <circle cx="212" cy="830" r="4.5" class="t-backend tl-dot" stroke-width="2"/>
+            <text x="228" y="834" class="t-muted" font-size="13" font-weight="500">Recovery</text>
           </g>
         </g>
       </svg>
@@ -5684,32 +5678,43 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>Illustrative: one tick is drawn as one second from 2026-01-01T00:00Z, so tick 60,000 shows as 16:40</li>
-          <li>The clock is TicksPerHour 2,500 and a 24-hour day of 60,000 ticks (domain/sim/clock)</li>
-          <li>Times are tick numbers, not wall-clock records</li>
+          <li>The ticks are computed from the offsets in cadence/calendar.go: a site is due where (now + Offset) % Every == 0</li>
+          <li>TicksPerHour 2,500 and a 60,000-tick day (domain/sim/clock)</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-dot rose"></div>
-          <h3>Today</h3>
+          <div class="card-dot cyan"></div>
+          <h3>game/cadence</h3>
         </div>
         <ul>
-          <li>Each gate tests now % P on the global clock, so every entity runs on the same tick</li>
-          <li>At now % 60000 == 0, 41 of the 46 global gates fire together (GAR-007)</li>
-          <li>Every 250th tick bunches 10 rows; every hour adds 9 more</li>
+          <li>Due(now, every, off, id) and Each(...) read only the tick and the id: no saved state, so a load fires on the same ticks</li>
+          <li>Each costs end/every steps a tick, never a scan of the entities</li>
+          <li>Calendar() lists every site; no two Heavy whole-map passes share a tick (TestCalendarSlots)</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Target</h3>
+          <h3>Measured (PERF-011 ledger)</h3>
         </div>
         <ul>
-          <li>ADR 0001 (docs/adr, uncommitted): due when t mod Every == Offset, with a per-entity Stagger slot</li>
-          <li>TestDayTickUnderBudget: the worst tick is 1.5 ms or less</li>
-          <li>Row numbers refer to the O-sched gate inventory of the GAR analysis</li>
+          <li>BenchmarkTickDayRollover500 worst tick 1.6-1.7 ms down to 1.0 ms</li>
+          <li>Rot, wear and pots stay whole passes on a slot: spreading them per item rebuilt the item view every tick</li>
+          <li>The scheduler&#39;s Every/Offset rows (phases.go) carry the climate, rot, wear, medical, story and social-day slots</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot slate"></div>
+          <h3>Not on the calendar</h3>
+        </div>
+        <ul>
+          <li>The hand-staggered per-pawn checks (social, mind, drugs, escape, combat, skills) keep their own staggers</li>
+          <li>The 120-tick heat pass also lands on the day tick; it is Light</li>
         </ul>
       </div>
     </div>
