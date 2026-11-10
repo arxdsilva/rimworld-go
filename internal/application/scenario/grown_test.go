@@ -245,7 +245,12 @@ func TestGrownGolden(t *testing.T) {
 	//
 	// Re-pinned (PERF-012): a blocked animal backs off its repath search
 	// (45 doubling to 720 ticks) and a wild wanderer re-picks its goal.
-	const want uint64 = 0xb1280be67518c082
+	//
+	// Re-pinned (EAI): 5c8c4ca07's animal rules (herd calls, foes,
+	// bashing) moved it to 0xaec676f00f802a1c, then cc8ba7a0d's wealth
+	// tracker (its cursor, hour and partial sum are saved state); the
+	// manhunter search bounds (25bfd0d6e, 4db4d03c4) keep it.
+	const want uint64 = 0x7cda45764f4a449f
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)
