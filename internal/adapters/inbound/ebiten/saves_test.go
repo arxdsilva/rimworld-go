@@ -22,7 +22,9 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 			}
 			return out, nil
 		},
-		Load: func(path string) (Simulation, ports.SaveMeta, error) { return &stubSim{w: 4, h: 4}, ports.SaveMeta{Name: path}, nil },
+		Load: func(path string) (Simulation, ports.SaveMeta, error) {
+			return &stubSim{w: 4, h: 4}, ports.SaveMeta{Name: path}, nil
+		},
 	}
 	a.finishBoot()
 	quickStart(t, a)
@@ -54,7 +56,9 @@ func TestSaveWritesViewAndLoadResumesIt(t *testing.T) {
 		List: func() ([]ports.SaveSlot, error) {
 			return []ports.SaveSlot{{Name: "s", Path: "s", Date: "Year 1", Colonists: 3}}, nil
 		},
-		Load:     func(path string) (Simulation, ports.SaveMeta, error) { return &stubSim{w: 160, h: 160}, ports.SaveMeta{Name: path}, nil },
+		Load: func(path string) (Simulation, ports.SaveMeta, error) {
+			return &stubSim{w: 160, h: 160}, ports.SaveMeta{Name: path}, nil
+		},
 		SaveView: func(slot string, v map[game.MapID]camera.View) error { views[slot] = v; return nil },
 		LoadView: func(path string) (map[game.MapID]camera.View, bool) { v, ok := views[path]; return v, ok },
 	}
@@ -96,7 +100,9 @@ func TestPushedLoadScreenListsTheSavesNow(t *testing.T) {
 	a.cfg.Saves = SaveHooks{
 		Save: func(Simulation, ports.SaveMeta) error { return nil },
 		List: func() ([]ports.SaveSlot, error) { return slots, nil },
-		Load: func(path string) (Simulation, ports.SaveMeta, error) { return &stubSim{w: 4, h: 4}, ports.SaveMeta{Name: path}, nil },
+		Load: func(path string) (Simulation, ports.SaveMeta, error) {
+			return &stubSim{w: 4, h: 4}, ports.SaveMeta{Name: path}, nil
+		},
 	}
 	a.finishBoot()
 	quickStart(t, a)

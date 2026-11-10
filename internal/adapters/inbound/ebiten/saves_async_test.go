@@ -110,7 +110,10 @@ func queued(a *App, log *saveLog) *fakeQueue {
 		return nil
 	}
 	a.cfg.Saves.Queue = q
-	a.cfg.Saves.Save = func(_ Simulation, m ports.SaveMeta) error { log.saves = append(log.saves, m.Name); return start(m.Name) }
+	a.cfg.Saves.Save = func(_ Simulation, m ports.SaveMeta) error {
+		log.saves = append(log.saves, m.Name)
+		return start(m.Name)
+	}
 	return q
 }
 

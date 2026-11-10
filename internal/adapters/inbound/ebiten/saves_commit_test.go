@@ -52,7 +52,9 @@ func (l *saveLog) hooks() SaveHooks {
 	return SaveHooks{
 		Save: func(_ Simulation, m ports.SaveMeta) error { l.saves = append(l.saves, m.Name); return l.fail },
 		List: func() ([]ports.SaveSlot, error) { return nil, nil },
-		Load: func(path string) (Simulation, ports.SaveMeta, error) { return nil, ports.SaveMeta{}, errors.New("unused") },
+		Load: func(path string) (Simulation, ports.SaveMeta, error) {
+			return nil, ports.SaveMeta{}, errors.New("unused")
+		},
 	}
 }
 

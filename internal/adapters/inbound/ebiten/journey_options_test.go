@@ -253,7 +253,9 @@ func (f *fakeSaves) hooks() SaveHooks {
 			}
 			return out, nil
 		},
-		Load: func(string) (Simulation, ports.SaveMeta, error) { return nil, ports.SaveMeta{}, errors.New("not in this journey") },
+		Load: func(string) (Simulation, ports.SaveMeta, error) {
+			return nil, ports.SaveMeta{}, errors.New("not in this journey")
+		},
 	}
 }
 
