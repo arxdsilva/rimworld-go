@@ -4,7 +4,7 @@ Scope: how animals, raiders, visitors, factions and the storyteller choose targe
 
 ## Status (2026-11-09)
 
-Every row in section 3 is `done` at HEAD, with one qualification: EAI-007's two journey tests were not written; the whole-game test and the unit tests carry the proof (section 4). Performance: section 5.
+Every row in section 3 is `done` at HEAD. Performance: section 5.
 
 ## 1. Decision record
 
@@ -43,7 +43,7 @@ Commit key: contract 36e7840ec; animals 5c8c4ca07; raids and perf c334e2e9e; poi
 | EAI-004 | Predators skipped downed colonists; nobody defended livestock. | Predators take a downed colonist where the difficulty allows hunting people; the shared `hostile()` rule from the contract makes a predator hunting tame animals a foe for colonists, guard animals and turrets. Tests `TestPredatorTakesDownedColonist`, `TestColonistDefendsLivestock`, `TestGuardAnimalDefendsLivestock`, `TestLivestockDefenceNoFlap`. HUD: the "X is attacking Bessie" message. | 36e7840ec, 5c8c4ca07 | done |
 | EAI-005 | Pack sizes ignored threat points. | `domain/animal/pack.go`: `ThreatCost` (our formula from the `Def` alone) and `PackSize(points, species)`; `ManhunterPack` and `WolfPack` pick one species of the map's biome and season and send as many as the points buy (a starving pack two at least). Tests `TestPackSizeScalesWithPoints` (`domain/animal/pack_test.go`), `TestManhunterPackByBiome` (`eai_pack_test.go`). HUD: the letter's animal count. | 5c8c4ca07, ab42be706 | done |
 | EAI-006 | A grieving tame manhunter was never engaged. | `guardFoe` and `Strikes.foe` count a tame manhunter as a foe; turrets engage it too (`TestTurretTargetsTameManhunter`, `combat/eai_b_test.go`); the rage ends on `ManhunterTicks`. Tests `TestGrievingPetIsEngaged`, `TestGrievingPetCalmsNoFlap`. HUD: `AnimalView.Grief`. | 36e7840ec, 5c8c4ca07, c334e2e9e | done |
-| EAI-007 | No whole-game proof of the animal chain. | `TestFailedTamingRage` (`eai_pack_test.go`) runs a whole game through a failed taming. The planned journeys `TestJourneyEAIManhunterPack` and `TestJourneyEAIPredatorCharge` do not exist at HEAD; the unit tests above stand in. | 5c8c4ca07 | done (journeys not written) |
+| EAI-007 | No whole-game proof of the animal chain. | `TestFailedTamingRage` (`eai_pack_test.go`) runs a whole game through a failed taming. `TestJourneyEAIManhunterPack` (`ebiten/journey_eai_animals_test.go`): a pack's letter and hostile alert, a manhunter beside a shut door whose pane reads "Breaking through the door", the door hurt. `TestJourneyEAIPredatorCharge`: "A cougar charges Ada!" in the messages, the alert naming the colonist, the cougar's pane. | 5c8c4ca07, 5917ec06a | done |
 
 ### 3.2 Raids (EAI-010..016)
 
@@ -81,7 +81,6 @@ Commit key: contract 36e7840ec; animals 5c8c4ca07; raids and perf c334e2e9e; poi
 
 - `rage.Memory.Call` keeps one entry per herd (`rage/memory.go`). It is bounded by the number of herds, so it is left as is.
 - The legacy storyteller (`raid/threats.go`, `Threats.Fire`) keeps its old draws, including `(2 + Roll(2)) * 100` points for its wolf pack; the points-based sizing applies to the new storyteller and the scenario.
-- EAI-007: `TestJourneyEAIManhunterPack` and `TestJourneyEAIPredatorCharge` were planned but are not in the tree; `ebiten/journey_eai_test.go` holds only `TestJourneyEAILetterChoice`.
 
 ## 5. Performance
 

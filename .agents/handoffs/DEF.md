@@ -121,7 +121,7 @@ Animals: door bashing, targets, herds, packs, grief · 2026-11-09 · 5c8c4ca07, 
 - Changed: shut-out manhunters, predators and insects bash doors (insects also walls) and give up after a time (EAI-001); manhunters pick standing people and tame animals by rings, lock and switch only for a closer foe (EAI-002); a hurt animal calls its herd (EAI-003); predators take downed colonists where the difficulty allows, and livestock is defended (EAI-004); packs are sized by threat points (`animal.ThreatCost`, EAI-005); a grieving tame manhunter is a foe (EAI-006).
 - Perf: the breach search first flooded whole boxes for foes no door led to; it now runs only for foes worth breaking in for, after a region check, within a box and node budget (25bfd0d6e, 4db4d03c4).
 - HUD/UI: `AnimalView.Bashing`, `.Grief`, `.Defending`.
-- Open: EAI-007 journeys `TestJourneyEAIManhunterPack` and `TestJourneyEAIPredatorCharge` (pending when this was written; see the gap file).
+- EAI-007 journeys `TestJourneyEAIManhunterPack` and `TestJourneyEAIPredatorCharge` landed later in 5917ec06a.
 
 ## EAI-2-raiders
 Raider sight, turret danger and indexed picks · 2026-11-09 · c334e2e9e, 24c080e11, 61967cbd7
@@ -141,4 +141,4 @@ Threat points, wealth, factions at war, visitors defend · 2026-11-09 · f8b8c4a
 Incident queue, letter choices, message merge, positive bias, story panel, infestations · 2026-11-09 · 26621c22c, 505e52d8c, 3cee1b30a, 812c036fb
 - Changed: saved incident queue (EAI-030); letter choices and the refugee-chased event (EAI-031); repeated plain notices merge into xN within 600 ticks (EAI-032); positive-event bias on setup colonies (EAI-033); `devtools/story.go` story panel (EAI-034); infestations search the whole map for hive spots, or the story sends a raid (EAI-035); raid alerts name the plan (EAI-016).
 - Limits: game-package ceilings raised in 812c036fb (user-approved, perf holds): Grown/250 +6 %, Raid/500 -34 %.
-- Open: EAI-007 journeys (see the gap file); the legacy storyteller keeps its old draws and pack rolls.
+- Open: the legacy storyteller keeps its old draws and pack rolls.
