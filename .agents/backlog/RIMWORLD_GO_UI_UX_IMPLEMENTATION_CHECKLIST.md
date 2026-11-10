@@ -1317,7 +1317,7 @@ the player what just happened and what requires attention.
 
 ## 24.2 Graphs
 
--   [ ] **Wealth graph**
+-   [x] **Wealth graph** (EAI-0: the History window's Wealth tab plots the daily wealth samples, read only; `windows/history_wealth.go`)
 -   [ ] **Population graph**
 -   [ ] **Colonist/animal counts**
 -   [ ] **Threat/event history**
@@ -1629,35 +1629,35 @@ the player what just happened and what requires attention.
 ## 33.1 In-game menu
 
 -   [x] **Resume**
--   [x] **Save** (writes the colony's slot, "saved <slot>" hint)
+-   [x] **Save** (SAV-001: opens the Save dialog; a commitment colony's row is shown off because the game saves itself; the panel says "Saving...", "Not saved yet" or "Saved N in-game hours ago", SAV-013)
 -   [x] **Load** (pause and main menu open the save list; main menu Continue loads the newest)
 -   [x] **Options** (opens the Options screen, Back returns to pause)
--   [x] **Return to main menu**
+-   [x] **Return to main menu** (SAV-005: plus Save & Quit to Menu and Save & Quit to Desktop; the leave waits for the file and a failed save keeps the player in the game; SAV-013: a reload-anytime colony with unsaved progress asks Save & leave, Leave or Cancel)
 -   [x] **Quit**
 
 ## 33.2 Save dialog
 
--   [ ] **Save name**
--   [ ] **Existing saves**
--   [ ] **Timestamp/game date**
--   [ ] **Colony name**
--   [ ] **Enabled plugin summary**
--   [ ] **Overwrite confirmation**
--   [ ] **Saving progress/error**
+-   [x] **Save name** (SAV-001, SAV-004: a name field prefilled with the colony's last save; `savefmt.CheckName` shows the reason in red and disables Save; Enter saves)
+-   [x] **Existing saves** (SAV-001: the saves on disk as a table under the name field; a click on a row takes its name; `options/saves/dialog.go`)
+-   [x] **Timestamp/game date** (SAV-001, SAV-011: the table shows when each file was saved and the in-game date)
+-   [x] **Colony name** (SAV-003, SAV-011: the header names the colony; rows show it and the overwrite question names another colony's file)
+-   [!] **Enabled plugin summary** (blocked: no mod system; headers carry `["core"]` since SAV-025 but nothing lists it)
+-   [x] **Overwrite confirmation** (SAV-002: a danger confirm naming the file's date and the other colony when it differs; `TestJourneySavesOverwriteAsks`)
+-   [x] **Saving progress/error** (CI-002 "Saving..." row and failure toast; SAV-013 pause status; SAV-005 a failed Save & Quit stays in the game)
 -   [x] **Commitment/ironman restrictions** (NG-1: one save slot that the game updates itself at each day, on return to menu, on quit and on window close; Pause offers Save & Quit; Load is disabled with its reason; developer mode is locked; saves are tagged Commitment)
 
 ## 33.3 Load dialog
 
 -   [x] **Save list** (newest first: slot, game date, colonists, file time)
--   [ ] **Version**
+-   [x] **Version** (SAV-011, SAV-020: a row shows the build that wrote the save; SAV-021 tags a save of another version)
 -   [x] **Game date**
--   [ ] **Colony**
--   [ ] **Plugin set**
--   [ ] **Compatibility warning**
--   [ ] **Missing plugin warning**
--   [ ] **Migration warning/error**
--   [x] **Corrupt save handling** (listed disabled with the reason)
--   [ ] **Delete save confirmation**
+-   [x] **Colony** (SAV-011, SAV-012: rows show colony, day and season, colonists, storyteller and biome; a colony filter cycles All and each colony; Sort toggles Newest and Name)
+-   [!] **Plugin set** (blocked: no mod system; see Enabled plugin summary)
+-   [x] **Compatibility warning** (SAV-021, SAV-025: older loads after a confirm, newer or too-old is disabled with the reason, a same-build save with other content asks)
+-   [-] **Missing plugin warning** (SAV-025: the notice and `savefmt.MissingPlugins` are tested with fakes; no plugin can be missing until a mod system exists)
+-   [x] **Migration warning/error** (SAV-021: "will be upgraded" confirm for an older save; a newer or too-old save is refused with what to do)
+-   [x] **Corrupt save handling** (SAV-022: the verifier reads each unseen file to its end; a damaged file is listed disabled with "damaged file"; a file that fails to load is marked until the list is read again)
+-   [x] **Delete save confirmation** (SAV-010: a Delete button on each row asks first; a running commitment colony's one save cannot be deleted)
 
 ## 33.4 Autosave feedback
 
