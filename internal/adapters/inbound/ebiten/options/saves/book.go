@@ -37,8 +37,7 @@ type Book struct {
 	AutosaveDay int              // in-game day of the last autosave
 	SlotPage    int              // the Load screen's page of saves
 
-	// Declared for the named-saves work (SAV-001…025); each says who fills
-	// it. Until then only NewColony writes them.
+	// The named saves' state (SAV-001…025); each says who fills it.
 
 	// session is the running colony as its saves name it (SAV-003).
 	session session
