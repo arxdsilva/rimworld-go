@@ -54,7 +54,7 @@ func openDialog(b *Book, done func()) {
 				focused = true
 				k.TabTo = nameFieldID
 			}
-			drawDialog(b, k, body, &picked)
+			drawDialog(b, k, body, &picked, done)
 		},
 		Buttons: []uikit.ModalButton{
 			{ID: "ok", Label: b.sh.T("Save"), Style: uikit.BtnPrimary,
@@ -80,14 +80,20 @@ func dialogShown(k *uikit.Kit) bool {
 }
 
 // drawDialog declares the dialog's body: the name, its note, the saves.
-func drawDialog(b *Book, k *uikit.Kit, body gfx.Rect, picked *string) {
+// Enter in the name field is Save (done as Save's).
+func drawDialog(b *Book, k *uikit.Kit, body gfx.Rect, picked *string, done func()) {
 	if k.Top() == dialogID && k.Editing() && k.Host().Frame().Key("Escape") {
 		k.CloseTop() // Esc in the name field cancels the dialog, not only the edit
 		return
 	}
 	k.Label(body.X, body.Y, b.sh.T("Save name"), uikit.DimText())
 	field := gfx.Rect{X: body.X, Y: body.Y + 22, W: body.W, H: fieldH}
-	k.TextField(nameFieldID, field, &b.dialog.name, uikit.TextFieldSpec{MaxLen: savefmt.NameMax})
+	typing := k.Edit.ID == nameFieldID // the field reads its keys after this declare
+	_, committed := k.TextField(nameFieldID, field, &b.dialog.name, uikit.TextFieldSpec{MaxLen: savefmt.NameMax})
+	if (typing || committed) && enter(k) {
+		submit(b, done) // a name the rules refuse is kept, its note shown
+		return
+	}
 	lh := float32(gfx.LineH(gfx.Small))
 	if note, c := nameNote(b, b.dialog.name); note != "" {
 		k.Label(field.X, field.Bottom()+3, note, gfx.WithColor(gfx.Small, c))
@@ -222,4 +228,10 @@ func commitSave(b *Book, name string, done func()) {
 	if done != nil {
 		done()
 	}
+}
+
+// enter: Enter (or the keypad's) was pressed this frame.
+func enter(k *uikit.Kit) bool {
+	f := k.Host().Frame()
+	return f.Key("Enter") || f.Key("NumpadEnter")
 }

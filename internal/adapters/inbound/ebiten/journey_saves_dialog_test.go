@@ -307,3 +307,24 @@ func TestJourneySavesDeleteConfirm(t *testing.T) {
 		t.Fatalf("%s still shown after its save was deleted", del)
 	}
 }
+
+// TestJourneySavesEnterSaves: Enter in the name field is Save; a name
+// the rules refuse keeps the dialog open with nothing written.
+func TestJourneySavesEnterSaves(t *testing.T) {
+	t.Parallel()
+	j, h := dialogJourney(t)
+	openSave(j)
+	j.typeText("Salt Flats") // over the prefilled, selected name
+	j.key("Enter", 0)
+	if m := h.last(t); m.Name != "Salt Flats" || j.a.uiSt().ModalOpen() {
+		t.Fatalf("Enter saved %+v, modal %q; want Salt Flats saved and the dialog closed", m, j.a.uiSt().Top())
+	}
+
+	j, h = dialogJourney(t)
+	openSave(j)
+	j.typeText("x-autosave") // reserved
+	j.key("Enter", 0)
+	if len(h.metas) != 0 || j.a.uiSt().Top() != "save" {
+		t.Fatalf("Enter on a refused name: saves %v, top %q; want nothing written, the dialog kept", h.metas, j.a.uiSt().Top())
+	}
+}
