@@ -1,6 +1,6 @@
 # DEF handoffs
 
-Families: DEF, CBT, SHT. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
+Families: DEF, CBT, SHT, EAI. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
 
 ## CBT-1-damage-model
 Damage model · 2026-10-30 · 5d88bf5b6
@@ -109,3 +109,36 @@ Gap analyses of shooting, mining and rescue · 2026-11-05 · 84f1acb97
 - Changed (new rows): capturing a downed neutral has no cost (RSC-203); shooting a downed target has no rule (SHT-008); `AimCooldown` slows melee (SHT-103); scanners work under a roof (MIN-304). RSC-205 (doctor repeating an unreachable trip) from code reading, no test yet.
 - Limits: Doctor, Capture, Medical bed wiki pages returned 404; Traits, Events, Factions rows came via a summary and say so; re-read before a phase uses them. No Go changes, no checklist ticks, no HUD (docs only).
 - Open: lethal thick cave-ins, and adopting all mining numbers at once (recommendations in the mining doc).
+
+## EAI-0-enemy-ai-contract
+Enemy AI contract and the `rage` extraction · 2026-11-09 · f8a109751, 36e7840ec
+- Changed: animal aggression moved into `game/rage` (hash-neutral). The shared hostility rule: a wild or enraged tame animal hunting a colonist, guest or tame animal is a foe for colonists, guards and turrets. Skeletons for `rage.Memory`, `wealth.Tracker`, raid `Senses`, the incident queue, letter choices, `Faction.Enemies`; read models `AnimalView.Bashing/Grief/Defending`, `MessageView.Repeat`, `LetterView.Choices`, `Game.StoryDebug()`, `Game.WealthHistory()`.
+- Save impact: format v17 (wealth tracker seeded, `Faction.Enemies` filled by `migrateSave`). Seed 1 benchmark hashes and seed 7's 120 fixtures moved on purpose: a wild predator hunting tame animals is now hostile.
+- Open: none.
+
+## EAI-1-animals
+Animals: door bashing, targets, herds, packs, grief · 2026-11-09 · 5c8c4ca07, 25bfd0d6e, 4db4d03c4
+- Changed: shut-out manhunters, predators and insects bash doors (insects also walls) and give up after a time (EAI-001); manhunters pick standing people and tame animals by rings, lock and switch only for a closer foe (EAI-002); a hurt animal calls its herd (EAI-003); predators take downed colonists where the difficulty allows, and livestock is defended (EAI-004); packs are sized by threat points (`animal.ThreatCost`, EAI-005); a grieving tame manhunter is a foe (EAI-006).
+- Perf: the breach search first flooded whole boxes for foes no door led to; it now runs only for foes worth breaking in for, after a region check, within a box and node budget (25bfd0d6e, 4db4d03c4).
+- HUD/UI: `AnimalView.Bashing`, `.Grief`, `.Defending`.
+- Open: EAI-007 journeys `TestJourneyEAIManhunterPack` and `TestJourneyEAIPredatorCharge` (pending when this was written; see the gap file).
+
+## EAI-2-raiders
+Raider sight, turret danger and indexed picks · 2026-11-09 · c334e2e9e, 24c080e11, 61967cbd7
+- Changed: raiders advance on home until they see a foe, remember it 600 ticks, share group sight 1200, and turn on a shooter (EAI-010); raiders and colonists step out of a sparking turret's blast (EAI-012); standing counts once a tick (EAI-020), picks every 15 ticks (EAI-021), indexed `NearestThreat` (EAI-022), thief, burner and kidnap-guard scans through indexes (EAI-023).
+- HUD/UI: `PawnView.Advancing` on the colony sheet; a sparking-turret alert.
+- Perf: `BenchmarkTickRaid` about 20-30 % faster a tick; Raid/500 299k -> 198k ns/op in the lead's interleaved run (812c036fb).
+- Decisions: the raid fixture's movement changed on purpose (sight-limited advance, 1-in-15 picks).
+
+## EAI-3-points-wealth-factions
+Threat points, wealth, factions at war, visitors defend · 2026-11-09 · f8b8c4a79, ab42be706, 992629ff5, cc8ba7a0d
+- Changed: `ThreatPoints` capped at `PointsCap` 10000 and colonists weighted by a wealth curve of our own (EAI-013); `wealth.Tracker` sweeps in slices, one pass an in-game hour, 60 daily samples (EAI-014); `Faction.Enemies` by a seeded rule, rival raid groups fight, a beaten raid thanks the attacker's enemies (EAI-015); visitors and trader guards fight raiders and hostile animals (EAI-011).
+- Decisions: no wiki number is used; the curve and cap are marked original tuning. No new RNG stream. Wealth sweep state is saved so a mid-sweep save loads into the same hash.
+- HUD/UI: the History window's Wealth tab; the Factions window lists enemies.
+- Save impact: v17; `saveV12Hash` re-pinned (the migration fills wars), `TestHabitsOffKeepTheHash` re-pinned twice.
+
+## EAI-4-story-and-hud
+Incident queue, letter choices, message merge, positive bias, story panel, infestations · 2026-11-09 · 26621c22c, 505e52d8c, 3cee1b30a, 812c036fb
+- Changed: saved incident queue (EAI-030); letter choices and the refugee-chased event (EAI-031); repeated plain notices merge into xN within 600 ticks (EAI-032); positive-event bias on setup colonies (EAI-033); `devtools/story.go` story panel (EAI-034); infestations search the whole map for hive spots, or the story sends a raid (EAI-035); raid alerts name the plan (EAI-016).
+- Limits: game-package ceilings raised in 812c036fb (user-approved, perf holds): Grown/250 +6 %, Raid/500 -34 %.
+- Open: EAI-007 journeys (see the gap file); the legacy storyteller keeps its old draws and pack rolls.

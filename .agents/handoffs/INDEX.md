@@ -9,7 +9,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | [ART.md](ART.md) | ART, SHADOW, CURSOR, VIEW |
 | [AX.md](AX.md) | AX |
 | [BASE.md](BASE.md) | PRD, PWR, REF, TEMP, RSCH, BED, WRK, SURV, RES |
-| [DEF.md](DEF.md) | DEF, CBT, SHT |
+| [DEF.md](DEF.md) | DEF, CBT, SHT, EAI |
 | [DOS.md](DOS.md) | DOS |
 | [ENG.md](ENG.md) | ENG |
 | [FOOD.md](FOOD.md) | FOOD, FEED, FISH |
@@ -23,7 +23,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | [SIM.md](SIM.md) | SIM |
 | [SND.md](SND.md) | SND |
 | [STORAGE.md](STORAGE.md) | STK, NST, STO, ZONE, HAUL |
-| [UI.md](UI.md) | UI, CTL, TIME, UIS |
+| [UI.md](UI.md) | UI, CTL, TIME, UIS, SAV |
 | [WORLD.md](WORLD.md) | MAP, WG |
 
 | ID | Title | Date | Ledger |
@@ -138,6 +138,11 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | DOS-8-lessons | Colonist card lessons (RHUD-043..047) | 2026-11-04 | [DOS.md](DOS.md#dos-8-lessons) |
 | DOS-9-card-on | The colonist card on by default, and the audit | 2026-11-04 | [DOS.md](DOS.md#dos-9-card-on) |
 | DOS-10-compact | The docked card in 30 % of the screen | 2026-11-04 | [DOS.md](DOS.md#dos-10-compact) |
+| EAI-0-enemy-ai-contract | Enemy AI contract and the `rage` extraction | 2026-11-09 | [DEF.md](DEF.md#eai-0-enemy-ai-contract) |
+| EAI-1-animals | Animals: door bashing, targets, herds, packs, grief | 2026-11-09 | [DEF.md](DEF.md#eai-1-animals) |
+| EAI-2-raiders | Raider sight, turret danger and indexed picks | 2026-11-09 | [DEF.md](DEF.md#eai-2-raiders) |
+| EAI-3-points-wealth-factions | Threat points, wealth, factions at war, visitors defend | 2026-11-09 | [DEF.md](DEF.md#eai-3-points-wealth-factions) |
+| EAI-4-story-and-hud | Incident queue, letter choices, message merge, positive bias, story panel, infestations | 2026-11-09 | [DEF.md](DEF.md#eai-4-story-and-hud) |
 | ENG-001-scale-500 | Engine scale: 200 to 500 tiles a side | 2026-10-22 | [ENG.md](ENG.md#eng-001-scale-500) |
 | ENG-002-grass-batch | Grass drawn as composed tufts (PLAY-010) | 2026-10-23 | [ENG.md](ENG.md#eng-002-grass-batch) |
 | ENG-003-social-contract | Social system contract, M0 (SOCIAL_SYSTEM_CONTRACT C1–C4) | 2026-10-23 | [ENG.md](ENG.md#eng-003-social-contract) |
@@ -287,6 +292,10 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | RSCH-1-research-simulation | Research simulation at wiki fidelity | 2026-11-01 | [BASE.md](BASE.md#rsch-1-research-simulation) |
 | RSCH-2-research-tab | The Research tab as RimWorld's research screen | 2026-11-01 | [BASE.md](BASE.md#rsch-2-research-tab) |
 | RSCH-3-research-bench-art | Research bench and multi-analyzer art | 2026-11-01 | [BASE.md](BASE.md#rsch-3-research-bench-art) |
+| SAV-0-saves-contract | Saves contract: the saves book, one Save hook and the save dir | 2026-11-09 | [UI.md](UI.md#sav-0-saves-contract) |
+| SAV-1-header-and-store | Save header v16, names, delete, compat, damage, content id | 2026-11-09 | [UI.md](UI.md#sav-1-header-and-store) |
+| SAV-2-save-dialog | Save dialog, overwrite and delete questions | 2026-11-09 | [UI.md](UI.md#sav-2-save-dialog) |
+| SAV-3-load-and-leave | Load rows, sort and filter, Save & Quit, unsaved progress | 2026-11-09 | [UI.md](UI.md#sav-3-load-and-leave) |
 | SHADOW-creatures-cast-none | Creatures cast no shadow (agent SH) | 2026-11-01 | [ART.md](ART.md#shadow-creatures-cast-none) |
 | SHT-MIN-RSC-0-gap-analyses | Gap analyses of shooting, mining and rescue | 2026-11-05 | [DEF.md](DEF.md#sht-min-rsc-0-gap-analyses) |
 | SIM-001-climate-and-spoilage | Climate, seasons, spoilage and frost | 2026-10-06 | [SIM.md](SIM.md#sim-001-climate-and-spoilage) |

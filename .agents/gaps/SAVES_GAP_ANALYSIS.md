@@ -68,5 +68,5 @@ State legend: `done` (all acceptance criteria met, with the commit), `[!]` block
 
 ## Known leftovers (true at HEAD)
 
-- **Enter in the name field does not save.** `uikit/textfield.go` ends the edit on Enter and stores the value, but the dialog binds Save only to its button (`options/saves/dialog.go`, `submit`). The player must click Save.
+- **Enter in the name field saves** (fixed in `4198f7ae1`, `TestJourneySavesEnterSaves`); the first version of this file listed it as a leftover.
 - **The commitment daily save is written with `Autosave:false`.** `Book.SaveNow` (`options/saves/store.go`) builds its header with the autosave flag off, so the commitment colony's one daily slot is not tagged Autosave in the list. This is harmless today (the colony has one slot, found by id), but a future rule that reads the flag will see a manual save.

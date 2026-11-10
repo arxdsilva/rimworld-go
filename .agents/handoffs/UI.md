@@ -1,6 +1,6 @@
 # UI handoffs
 
-Families: UI, CTL, TIME, UIS. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
+Families: UI, CTL, TIME, UIS, SAV. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
 
 ## CTL-001-mouse-controls
 Mouse controls (CTL-001..020) · 2026-11-04 · c72269fee
@@ -251,3 +251,32 @@ Options, letters and window sizes · 2026-11-07 · 0f0df2694, e0e591e1c, 5f19123
 - HUD/UI: these rows are the representation; captures viewed for options, a letter and its card, and each window at scales 1 and 1.5 (schedule re-shot at 1.5 after the Manage... button was widened).
 - Checks: full `go test -race ./internal/adapters/inbound/ebiten/...` in 3 min 11 s wall; `make arch` passes (with `-skip TestAgentLinksResolve` until the quests gap file lands, then whole).
 - Open: UIS-041 and UIS-066 (the Quests tab and window) move to the quests gap analysis, rows QST-120..139.
+
+## SAV-0-saves-contract
+Saves contract: the saves book, one Save hook and the save dir · 2026-11-09 · b118decff
+- Changed: the saves book left `options` for `options/saves` (type `Book`, own `Host` and `Saver` interfaces); `options.Screen` keeps one field. `SaveCommit` and `App.saveHook` are gone (SAV-024), and a commitment colony's slot goes through `Save`. `SaveHooks.Dir` reaches `Env.SavesDir`, so `-save-dir` drives the Options "Saves folder" button (SAV-023).
+- Changed: ports `SaveMeta`, `SaveSlot` with the header fields, `Delete(name)`; the pause menu has nine rows; new ids in `ids`.
+- Decisions: the book declares every field and stub the next waves fill, so they own disjoint files. Save version 16 is a header-only change (below).
+- Limits: `App` methods 243 -> 242; the book keeps the Options screen under its method budget.
+- Open: none.
+
+## SAV-1-header-and-store
+Save header v16, names, delete, compat, damage, content id · 2026-11-09 · 0f6700b19, 3f46a8a97, 6e935dfec, 6ea621105
+- Changed: `game/savefmt` holds `Info` (alias `game.SaveInfo`) with `Colony`, `ColonyName`, `Base`, `Autosave`, `Season`, `Build`, `Content`; `CheckName`, `CompatOf`, `BaseSlot`, `SlotKey`, `Drain`/`Finish` (SAV-003, 004, 020, 021, 022). `Store.Delete` and `Queue.Delete` (SAV-010). `filesave.Verifier` reads each unseen file to its end. `game/contentid` fingerprints the content registries (SAV-025).
+- Decisions: the colony id comes from `crypto/rand` in the adapter, never in simulation state. A save before v16 gets `"slot:"+<base slot>`. Plugin discovery stays `[!]` blocked: there is no mod system; the header holds `["core"]` and the missing-plugin check is tested with fakes.
+- Save impact: `SaveVersion` 16, header only; no state hash moves (`statehash` pins its own info version); the schema golden is refreshed.
+- Perf: the verifier runs in parallel and remembers files by path, size and modification time (`BenchmarkListVerify10Large`).
+- Open: SAV-025 plugin discovery (needs a mod system).
+
+## SAV-2-save-dialog
+Save dialog, overwrite and delete questions · 2026-11-09 · c3e5ebb72, 4198f7ae1
+- Changed: pause > Save opens a dialog with a name field (prefilled with the colony's last save), Save and Cancel, and the saves on disk as a table; a danger confirm before replacing names the file's date and another colony (SAV-001, 002); Delete on each row asks first (SAV-010); the reason a name is refused shows in red (SAV-004). `NewColony` starts the colony session (SAV-003); autosaves rotate inside the colony.
+- Changed: Enter in the name field saves (4198f7ae1); it was a leftover in the first gap analysis.
+- UI: the dialog is the representation; journeys `TestJourneySavesOverwriteAsks` and `TestJourneySavesAutosaveFollowsColony`.
+- Open: none.
+
+## SAV-3-load-and-leave
+Load rows, sort and filter, Save & Quit, unsaved progress · 2026-11-09 · f4eaca8b8, b94dd2f32, fe3c8a910
+- Changed: two-line Load rows with tags for older, newer and damaged saves (SAV-011, 021, 022); Sort Newest/Name and a colony filter (SAV-012); Save & Quit to Menu and to Desktop in the pause menu, leaving only after the file is written (SAV-005); an "Unsaved progress" confirm and a "Saved N in-game hours ago" line in the pause panel (SAV-013).
+- Decisions: a colony is unsaved from a save's encode tick until that save succeeds; Load and `NewColony` reset it. A commitment colony's Save row is shown off (the game saves itself).
+- Open: the commitment daily save is written with `Autosave:false` (`Book.SaveNow`), harmless while that colony has one slot. The `Book` struct comment still says its fields are "declared for the named-saves work".
