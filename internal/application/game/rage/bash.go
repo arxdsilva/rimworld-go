@@ -22,9 +22,14 @@ import (
 // Cost: only a foe worth breaking in for starts a search (a manhunter's
 // or an insect's any foe, a predator's only a person or a tame animal: a
 // wild predator after wild prey just paths), the search keeps to a box
-// around the animal and its foe (breachMargin), and a search that finds
-// no block is remembered (a Bash at X -1) and not run again for
-// BreachRetry ticks.
+// around the animal and its foe (breachMargin) within a budget of nodes
+// (breachNodes a tile, at least breachFloor: a near foe's whole box), and
+// runs only when a region check says the foe could be reached with doors
+// open (the tame layer; an insect, which breaks walls too, skips it). A
+// foe with no way through is marked (a Bash at X -1, Y minus the times
+// running, for the foe in Memory.Lock) for breachWait: no path or breach
+// search for it meanwhile, and the animal's next look takes a reachable
+// foe instead (target.go).
 
 // BashGiveUp is how long an animal batters one block before giving up.
 const BashGiveUp = 2500
@@ -34,12 +39,30 @@ const BashGiveUp = 2500
 const bashRetry = 90
 
 // BreachRetry: an animal whose breach search found no block searches
-// again only this many ticks later.
+// again only this many ticks later (the first time: breachWait).
 const BreachRetry = 600
 
 // breachMargin: the breach search keeps to the box around the animal and
 // its foe grown by this many tiles.
 const breachMargin = 12
+
+// breachNodes and breachFloor bound the breach search: it expands at
+// most breachNodes nodes per tile between the animal and its foe (plus
+// breachMargin), and never fewer than breachFloor (a box 64 tiles a side:
+// a foe within about 40 tiles is searched in full). A way through is
+// found well within it; a search with none (a hive insect's foe behind
+// fences or rock) gives up long before it floods a far foe's box.
+const (
+	breachNodes = 16
+	breachFloor = 4096
+)
+
+// breachWait is how long a foe marked unreachable (Bash X -1) stays
+// marked: BreachRetry, doubled for each time running it was found so
+// (Y -1, -2, ...), at most 8 times.
+func breachWait(bs Bash) uint64 {
+	return BreachRetry << (min(max(-bs.Y, 1), 4) - 1)
+}
 
 // breaker: a wild animal that breaks through to its foe: one enraged
 // (hive insects are, for good), or a predator after a person or a tame
@@ -66,12 +89,22 @@ func (r *Rage) shutOut(id entity.EntityID, a *animal.State, tp Pos, now uint64) 
 	if !r.breaker(*a, def, now) {
 		return
 	}
-	if bs, held := r.m.Bash[id]; held && (bs.X >= 0 || now < bs.Since+BreachRetry) {
-		return // a block held, or no way through found lately
+	bs, held := r.m.Bash[id]
+	if held && (bs.X >= 0 || r.m.unreachable(id, a.Target, now)) {
+		return // a block held, or no way to this foe found lately
 	}
-	c, ok := block(r, r.pos(id), tp, a.Tame, def.Hive)
+	pos := r.pos(id)
+	c, ok := Pos{}, def.Hive || r.ReachesFoe(true, pos, tp) // a region check first
+	if ok {
+		c, ok = block(r, pos, tp, a.Tame, def.Hive)
+	}
 	if !ok {
-		c = Pos{X: -1, Y: -1} // none: remembered for BreachRetry
+		c = Pos{X: -1, Y: -1} // none: remembered (breachWait) for this foe
+		if l := r.m.Lock[id]; l.Foe != a.Target {
+			r.m.lock(id, Lock{Foe: a.Target, Until: now}) // a predator's: the mark's foe
+		} else if held && bs.X < 0 {
+			c.Y = max(bs.Y, -4) - 1 // again: remembered longer
+		}
 	}
 	r.m.hold(id, Bash{X: c.X, Y: c.Y, Since: now})
 }
@@ -85,11 +118,8 @@ func (r *Rage) bashing(id entity.EntityID, a *animal.State, pos Pos, now uint64)
 	if !ok {
 		return false
 	}
-	if bs.X < 0 { // no way through found: forgotten once it may search again
-		if now >= bs.Since+BreachRetry {
-			delete(r.m.Bash, id)
-		}
-		return false
+	if bs.X < 0 {
+		return false // no way through found: kept (Chase, shutOut)
 	}
 	def := animal.DefOf(a.Species)
 	if now-bs.Since > BashGiveUp || !r.breaker(*a, def, now) {
@@ -126,8 +156,8 @@ func (r *Rage) bashing(id entity.EntityID, a *animal.State, pos Pos, now uint64)
 }
 
 // breachQuery is an animal's walk with the blocks it may break (shut
-// doors; walls too) counted open, inside the box x0..x1, y0..y1; fences
-// stay shut.
+// doors; walls too) counted open, inside the box x0..x1, y0..y1 and while
+// the rage's budget lasts; fences stay shut.
 type breachQuery struct {
 	pathing.Query
 	r              *Rage
@@ -136,9 +166,10 @@ type breachQuery struct {
 }
 
 func (q breachQuery) Walkable(x, y int) bool {
-	if x < q.x0 || x > q.x1 || y < q.y0 || y > q.y1 {
+	if x < q.x0 || x > q.x1 || y < q.y0 || y > q.y1 || q.r.budget <= 0 {
 		return false
 	}
+	q.r.budget--
 	if q.Query.Walkable(x, y) {
 		return true
 	}
@@ -153,6 +184,7 @@ func block(r *Rage, pos, tp Pos, tame, walls bool) (Pos, bool) {
 	bq := breachQuery{Query: q, r: r, walls: walls,
 		x0: min(pos.X, tp.X) - breachMargin, y0: min(pos.Y, tp.Y) - breachMargin,
 		x1: max(pos.X, tp.X) + breachMargin, y1: max(pos.Y, tp.Y) + breachMargin}
+	r.budget = 8 * max(breachFloor, breachNodes*(weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)+breachMargin)) // 8 checks a node
 	path, ok := r.srch.Find(bq, pos.X, pos.Y, tp.X, tp.Y)
 	if !ok {
 		return Pos{}, false

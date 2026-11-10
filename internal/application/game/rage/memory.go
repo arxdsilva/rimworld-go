@@ -40,6 +40,14 @@ func (m *Memory) Forget(id entity.EntityID) {
 	delete(m.Lock, id)
 }
 
+// unreachable reports foe marked unreachable for animal id, even through
+// the blocks it may break, at now (a Bash at X -1 kept breachWait, for the
+// foe in Lock).
+func (m *Memory) unreachable(id, foe entity.EntityID, now uint64) bool {
+	bs, ok := m.Bash[id]
+	return ok && bs.X < 0 && now < bs.Since+breachWait(bs) && m.Lock[id].Foe == foe
+}
+
 // hold records animal id battering b (EAI-001).
 func (m *Memory) hold(id entity.EntityID, b Bash) {
 	if m.Bash == nil {

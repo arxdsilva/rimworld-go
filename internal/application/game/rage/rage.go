@@ -12,11 +12,12 @@ import (
 // Rage is the animals' fight-or-flight brain over the host's animals.
 // Every animal's state lives in its animal.State, and what the brain
 // remembers across ticks (doors bashed, foes locked, herd calls) in the
-// saved Memory m; probes and srch are scratch (target.go, bash.go).
+// saved Memory m; probes, budget and srch are scratch (target.go, bash.go).
 type Rage struct {
 	h      Host
 	m      *Memory
 	probes int
+	budget int              // bash.go: the breach search's walkability checks left
 	srch   pathing.Searcher // bash.go's breach search, reused
 }
 
@@ -105,6 +106,14 @@ func (r *Rage) Provoked(id entity.EntityID, a *animal.State, by entity.EntityID)
 	}
 }
 
+// repathSlack is how far a chased foe may stray from the path's goal
+// before the chaser plans again at once: a tile when near, an eighth of
+// the way when far (a far foe's every step is no reason for a new path).
+// A foe that strayed at all is planned for again every 30 ticks.
+func repathSlack(pos, tp Pos) int {
+	return max(1, weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)/8)
+}
+
 // Chase closes on a.Target and bites on cooldown.
 func (r *Rage) Chase(id entity.EntityID, a *animal.State, now uint64) {
 	def := animal.DefOf(a.Species)
@@ -129,13 +138,16 @@ func (r *Rage) Chase(id entity.EntityID, a *animal.State, now uint64) {
 	if r.bashing(id, a, pos, now) {
 		return // bash.go: breaking through to it (EAI-001)
 	}
-	if now < a.RetryAt && a.PathI >= len(a.Path) {
-		return // backing off after a failed path search
+	if a.PathI >= len(a.Path) && (now < a.RetryAt || r.m.unreachable(id, a.Target, now)) {
+		return // backing off after a failed path search, or no way to it at all
 	}
-	if a.PathI >= len(a.Path) || weapon.Distance(a.GoalX, a.GoalY, tp.X, tp.Y) > 1 || (now+uint64(id))%30 == 0 {
+	moved := weapon.Distance(a.GoalX, a.GoalY, tp.X, tp.Y)
+	if a.PathI >= len(a.Path) || moved > repathSlack(pos, tp) || moved > 0 && (now+uint64(id))%30 == 0 {
 		*a = r.h.GoTo(id, *a, tp.X, tp.Y)
 		if a.PathI >= len(a.Path) && now < a.RetryAt {
 			r.shutOut(id, a, tp, now) // no way there: bash one (bash.go)
+		} else if bs, ok := r.m.Bash[id]; ok && bs.X < 0 && a.PathI < len(a.Path) {
+			delete(r.m.Bash, id) // a way there after all: the mark is done
 		}
 	}
 }
