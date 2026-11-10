@@ -1454,7 +1454,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.8 Combat AI
 
--   [x] **Hostile target selection** (CBT-4: threat-weighted choice; DEF-4: raiders take a colonist or ally, a powered turret in sight (also when no colonist is reachable), a rival faction's raider closer, then the walls and doors in the way; no threat weighting yet)
+-   [x] **Hostile target selection** (CBT-4: threat-weighted choice; DEF-4: raiders take a colonist or ally, a powered turret in sight (also when no colonist is reachable), a rival faction's raider closer, then the walls and doors in the way; EAI-010: a raider acts only on a foe it has seen or heard of from its group, picks every 15 ticks; EAI-015: a rival faction's raiders are foes by the faction wars)
 -   [x] **Approach/ranged engagement**
 -   [x] **Melee closing**
 -   [x] **Basic cover seeking** (CBT-4: raiders and threat-responding colonists take cover and hold their spot, with hysteresis)
@@ -1506,7 +1506,7 @@ children systems.
 -   [x] **Hunt designation**
 -   [x] **Hunter requires suitable ranged weapon**
 -   [ ] **Stalk/approach/fire job**
--   [-] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; SIM-024: badly hurt fighters break off, predators give up chases; SIM-035: tame fighters defend themselves against anything but their own colonists)
+-   [x] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; SIM-024: badly hurt fighters break off, predators give up chases; SIM-035: tame fighters defend themselves against anything but their own colonists; EAI-003: a hurt wild animal calls its herd, fighters join and grazers flee; EAI-006: a grieving tame manhunter is a foe for guards and turrets)
 -   [x] **Corpse hauling/butchering integration**
 
 ## 18.4 Taming
@@ -1553,10 +1553,10 @@ children systems.
 
 ## 18.9 Manhunter/scaria-like state
 
--   [x] **Manhunter** (wild animals hurt by colonists may enrage for a day; chance by behaviour class (deer 0%, timber wolf 45%))
+-   [x] **Manhunter** (wild animals hurt by colonists may enrage; chance by behaviour class (deer 0%, timber wolf 45%); the rage lasts `ManhunterTicks`; EAI-002: it picks standing people and tame animals through the creature index in widening rings, locks a target and switches only for a foe a margin closer; EAI-001: shut out, it finds the first door on its way and bashes it, gives up after a time, retries the path)
     -   Hostile animal mental state.
     -   Can result from damage/event.
--   [x] **Manhunter pack incident** (storyteller: manhunter herbivore packs outside winter, wolf packs in winter; SIM-025: single mad animal also in the threat pool)
+-   [x] **Manhunter pack incident** (storyteller: manhunter herbivore packs outside winter, wolf packs in winter; SIM-025: single mad animal also in the threat pool; EAI-005: a storyteller or scenario pack is sized by threat points, one species of the map's biome and season; the legacy storyteller keeps its old rolls)
     -   Storyteller-generated group attack.
 
 ------------------------------------------------------------------------
@@ -1645,7 +1645,7 @@ change relationships, and settlements exist on the world map.
 
 ## 20.3 Visitors
 
--   [x] **Friendly visitor group** (SIM-046: friendly/neutral factions wander, socialise, leave)
+-   [x] **Friendly visitor group** (SIM-046: friendly/neutral factions wander, socialise, leave; EAI-011: visitors and trader guards fight a raider or hostile animal within 10 tiles (the trader only when hurt), hold at least 600 ticks and let go)
     -   Enters map.
     -   wanders/stays.
     -   leaves.
@@ -1883,7 +1883,7 @@ colonists. citeturn1search8turn1search9
     -   Regular pressure and recovery cadence.
 -   [x] **Relaxed storyteller** (Bram Holloway: long gaps, eases after a loss)
     -   Longer building/recovery windows.
--   [x] **Random storyteller** (Kestrel Quay: daily dice with rising odds, occasional double threats; positive-event bias is defined but not applied yet)
+-   [x] **Random storyteller** (Kestrel Quay: daily dice with rising odds, occasional double threats; EAI-033: on a setup colony the positive bias is drawn once more and then only helpful events qualify)
     -   Less predictable event timing/type.
 
 Use original names rather than copying RimWorld storyteller characters.
@@ -1894,12 +1894,12 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.1 Colony wealth
 
--   [ ] **Wealth calculation**
+-   [x] **Wealth calculation** (EAI-014: `game/wealth.Tracker` sweeps the map in slices, one full pass an hour, 60 daily samples kept and saved; `Game.Wealth()` reads it; the History window's Wealth tab shows the history)
     -   Items.
     -   buildings.
     -   pawns/animals where appropriate.
     -   Expose wealth history.
--   [x] **Threat points** (NG-1: colonists, a wealth curve, threat scale, adaptation and optional time escalation, for colonies from the wizard)
+-   [x] **Threat points** (NG-1: colonists, a wealth curve, threat scale, adaptation and optional time escalation, for colonies from the wizard; EAI-013: capped at `PointsCap`, each colonist weighted by a wealth curve of our own unless the difficulty ignores wealth)
     -   Storyteller converts colony state, population, wealth, time,
         adaptation/difficulty into threat budget.
     -   Exact RimWorld formula is not required and should not be copied.
@@ -1911,7 +1911,7 @@ Use original names rather than copying RimWorld storyteller characters.
 -   [x] **Generate equipment based on faction/tech** (NG-1: neolithic factions field clubs only, industrial ones rifles; CBT-3: armor kits in `domain/combat/kit` by tech and weapon cost, wiki pawn kinds)
 -   [x] **Map-edge arrival** (raids walk in from a map edge)
 -   [x] **Immediate attack** (the assault plan)
--   [x] **Prepare-before-attack behavior** (DEF-4 staged raids: gather 10 tiles in from the edge, storm on a colonist in sight, when gathered after 3 h, or at a 6-14 h limit; `raid/stage.go`)
+-   [x] **Prepare-before-attack behavior** (DEF-4 staged raids: gather 10 tiles in from the edge, storm on a colonist in sight, when gathered after 3 h, or at the 10-15 h assault timer (`raiddef.StageLimitMin` + 0..5); `raid/stage.go`)
 
 ## 24.3 Raid tactics
 
@@ -1940,10 +1940,10 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.5 Mechanoid threats
 
--   [-] **Mechanoid pawn types** (DEF-4 R2: Harrow, Spindle, Bulwark, Quill, original designs with wiki role stats; own brain (`game/raid/mech.go`), no needs, never tamed, never down or flee, EMP stun with adaptation, wrecks shredded for salvage; voices generated with MOSS and installed 2026-10-31 (SND-004); missing: closed doors block them)
+-   [x] **Mechanoid pawn types** (DEF-4 R2: Harrow, Spindle, Bulwark, Quill, original designs with wiki role stats; own brain (`game/raid/mech.go`), no needs, never tamed, never down or flee, EMP stun with adaptation, wrecks shredded for salvage; voices generated with MOSS and installed 2026-10-31 (SND-004); CBT-4: they bash a wall or shut door in their way (`Mech.Bash`, `mechBashGap`))
     -   Machine enemies with different weapon/range roles.
     -   No human mood/needs.
--   [-] **Mechanoid raid** (`Mechs.Raid` from 300 points at an arrival spot, storyteller face with 1/(hostile human factions + 1); missing: mech groups do not use the pod hook)
+-   [x] **Mechanoid raid** (`Mechs.Raid` from 300 points at an arrival spot, storyteller face with 1/(hostile human factions + 1); CBT-4: a mech raid's pods fall and land through `Mechs.pods` (`raid/pods.go`))
     -   Persistent hostile behavior; does not use ordinary human morale.
 -   [x] **Crashed ship-part threat** (DEF-4 R2: `construction.ShipPart` 6x3, 1200 HP, plant blight 5 to 100 tiles over 20 days, sleeping mech guards that wake once, salvage on destruction, incident weight 2 with a 400-point gate)
     -   Psychic/defoliator-like hostile world object.
@@ -1956,7 +1956,7 @@ Use original names rather than copying RimWorld storyteller characters.
 -   [x] **Insect species** (SIM-019: hive beetle, hive brute, hive crawler; original designs)
 -   [x] **Hive** (CBT-4: construction `HiveMound`, wiki 130 HP, cap 30, spreads within 10 tiles, -17 C; breed and spread rates original)
     -   Spawns/maintains insect population.
--   [-] **Infestation incident** (SIM-019: hive swarm bursts from the rock nearest the colony from day 12; hive mounds exist since CBT-4; the dark/warm placement rule is not verified)
+-   [x] **Infestation incident** (EAI-035: `Hives.Spots` lists every hive spot of the map nearest home first (roofed, dry, free, above -17 C, below 30 % light), `Hives.Infest` raises a hive there or reports false so the story sends a raid instead; `Swarm` keeps the rock-face burst; hive mounds since CBT-4)
     -   Can emerge in valid under-mountain/dark/warm areas according to
         independently implemented rules.
 -   [x] **Hive reproduction** (CBT-4: hive mounds breed and spread at original rates)
@@ -1987,7 +1987,7 @@ and other colony incidents. citeturn2search2turn2search7
     -   target map/world object.
     -   point budget.
     -   execute function.
--   [ ] **Incident queue**
+-   [x] **Incident queue** (EAI-030: `incident.State.Enqueue/PopDue`, saved, fires soonest first in queue order; `Game.QueueIncident` and `Game.QueueRaid`)
     -   Scheduled delayed incidents.
     -   Save/load safe.
 
@@ -2012,7 +2012,7 @@ and other colony incidents. citeturn2search2turn2search7
 ## 25.3 Negative incidents
 
 -   [x] **Raid** (edge arrival, assault nearest colonist, flee, bleed out, dropped weapons; saved)
--   [ ] **Infestation**
+-   [x] **Infestation** (see 24.6, EAI-035)
 -   [x] **Manhunter pack**
 -   [x] **Animal insanity** (SIM-025: mad animal, a single manhunter)
 -   [x] **Disease outbreak** (MED-04: six Nature incidents from day 15, biome-gated (malaria warm, sleeping sickness tropical), weights scaled by Disease frequency (0 = none), one or several victims, caution letter)
@@ -2035,12 +2035,12 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.4 Letters/messages
 
--   [-] **Event letter system** (PLAY-018: letters kept and saved in a right-side stack with threat/caution/info/good kinds, camera jump to their place or creature, dismissed by the player; no choices yet)
+-   [x] **Event letter system** (PLAY-018: letters kept and saved in a right-side stack with threat/caution/info/good kinds, camera jump to their place or creature, dismissed by the player; EAI-031: a letter can carry choices, shown as buttons and routed by `command.AnswerLetter`; the refugee-chased event uses them)
     -   Positive/neutral/negative/threat categories.
     -   Camera jump target.
     -   relevant entities.
     -   optional choices.
--   [-] **Message system** (short notices under the colonist bar that fade; no rate limiting yet)
+-   [x] **Message system** (short notices under the colonist bar that fade; EAI-032: a plain notice repeated within 600 ticks merges into one with a count (xN); danger messages and letters never merge)
     -   Short transient notices.
     -   Rate-limit repeated low-value messages.
 -   [-] **Alert system** (persistent alerts for low food, rescue, starving, collapsed, break risk, hypothermia/heatstroke, fuel, spoiling, waiting blueprints, unhappy, raids, fire, animals; PLAY-018: severity order, hover explanation, click/right-click cycling; no idle/unburied/beds alerts yet; RSCH-2: "Need research project" shows from `WorldView.ResearchAlert`, which RSCH-1 raises)
@@ -2163,7 +2163,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 27.6 History/statistics
 
--   [ ] **Colony wealth graph**
+-   [x] **Colony wealth graph** (EAI-0: the History window's Wealth tab plots `Game.WealthHistory()`, read only)
 -   [ ] **Population history**
 -   [ ] **Major event history**
 -   [ ] **Pawn records**
@@ -2235,7 +2235,7 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 -   [x] **Visitors of a faction turned hostile** (MAP-18: they leave as enemies, shooting back; trade closes; a letter says so)
 -   [x] **Claim a defeated base's turrets** (MAP-21, wiki: Faction base: once no defender stands, a turret is claimed, fires for us with no grid, reloads by hauler; a mini-turret can be uninstalled and then needs power)
 -   [x] **Turret fuse** (MAP-21, wiki: Mini-turret, Autocannon turret, Uranium slug turret: 50 % below 20 % health, 240 ticks, 3.9 or 5.9 tiles; autocannon and slug can't be re-installed)
--   [-] Raiders running from a sparking turret (wiki: Uranium slug turret) and the fuse's hiss: not built
+-   [-] Raiders running from a sparking turret (wiki: Uranium slug turret) and the fuse's hiss: EAI-012 built the running (raiders and colonists in the blast step out to reach+2, `combat/turret_step.go`); the fuse's hiss is not built
 -   [x] **Wanderers after a launch, and the wanderer event** (MAP-22, wiki: Ending: all aboard counts as gone; a wanderer event restarts a gone colony)
 -   [x] **Arresting a visitor turns the faction** (MAP-23, wiki: Events, Factions: at most -75 goodwill on reaching the target, whatever the roll; everyone there turns)
 -   [x] **Leaving visitors carry their wounded** (MAP-23, wiki: Visitor)
@@ -2314,15 +2314,15 @@ Use original narrative text and generated names.
     -   Group objective controls broad behavior.
     -   Individual pawns use local jobs.
 
--   [ ] **Staging**
+-   [x] **Staging** (DEF-4: staged raids gather 10 tiles in from the edge, `raid/stage.go`)
 
     -   Raiders wait at rally area before attack.
 
--   [ ] **Assault trigger**
+-   [x] **Assault trigger** (DEF-4: a colonist in sight, gathered after 3 h, or the 10-15 h assault timer; siege camps storm after `SiegeHoldMax` or when a besieger is hurt)
 
     -   Time, damage, player proximity, or storyteller condition.
 
--   [ ] **Target priority**
+-   [x] **Target priority** (see 17.8: colonist or ally, a powered turret in sight, a rival faction's raider closer, then the walls and doors in the way; EAI-010 limits it to what the raiders have seen)
 
     -   Reachable colonists.
     -   defensive structures.
@@ -2333,18 +2333,18 @@ Use original narrative text and generated names.
 
     -   Select wall/door targets when normal route unsuitable.
 
--   [-] **Siege construction** (sandbags in front of each besieger; player mortars exist (DEF-3), raiders do not use mortars (DEF-4))
+-   [x] **Siege construction** (sandbags in front of each besieger (CBT-4); raiders build and man siege mortars (`SiegeWorks`, DEF-4), restocked by siege supply drops)
 
--   [ ] **Siege bombardment**
+-   [x] **Siege bombardment** (DEF-4: besiegers' mortars fire from the camp, `raid/roles.go` `SiegeWorks`, `raid/tactics.go` restock)
 
--   [ ] **Siege assault transition**
+-   [x] **Siege assault transition** (a siege storms after `SiegeHoldMax` or when a besieger takes damage, `raid/raid.go`)
 
 -   [x] **Retreat** (raiders leave at the flee thresholds)
 
     -   Human raid morale.
     -   carry stolen goods/kidnapped pawn if feasible.
 
--   [ ] **Faction-on-faction hostility**
+-   [x] **Faction-on-faction hostility** (EAI-015: `faction.SetEnemies` makes wars between human peoples, `Rival` raid groups fight each other, beating a raid thanks the attacker's enemies; older saves get wars in the v17 migration)
 
     -   NPC groups from hostile factions can fight each other when
         simultaneously present.
@@ -2375,7 +2375,7 @@ Use original narrative text and generated names.
     -   Give goods to faction for goodwill.
 -   [ ] **Wealth-driven expectations**
     -   Pawn expectation thought scales with colony development.
--   [ ] **Wealth-driven threats**
+-   [x] **Wealth-driven threats** (EAI-013: `difficulty.ThreatPoints` weights each colonist by a wealth curve of our own, capped at `PointsCap`)
     -   Storyteller threat budget uses colony wealth plus other pacing
         variables.
 
@@ -2437,24 +2437,24 @@ experience with original names/assets/text.
 Although foundational persistence exists earlier, this phase completes
 the player-facing system.
 
--   [x] **Manual save** (pause > Save writes the colony's slot)
+-   [x] **Manual save** (SAV-001: pause > Save opens a dialog with a name field, the saves on disk as a list, and Enter or the Save button; SAV-002 asks before replacing; SAV-010 deletes after a question)
 -   [x] **Load game** (pause > Load and main menu Load/Continue)
--   [-] **Save metadata** (slot name, in-game date, day, colonists, format version 2, plus commitment, storyteller, difficulty, map size and biome; no plugins/content hash)
+-   [-] **Save metadata** (SAV-003, SAV-011, SAV-020, SAV-025: the v16 header holds slot name, colony id and name, base slot, autosave flag, date, season, day, colonists, version, build, commitment, storyteller, difficulty, map size, biome and a content hash with the plugin list `["core"]`; missing: the world seed)
     -   Colony.
     -   world seed.
     -   tick/date.
     -   version.
     -   enabled plugins.
     -   content hash.
--   [-] **Autosave** (every in-game morning at 06:00 to <slot>-autosave; cadence not configurable)
+-   [x] **Autosave** (the game saves at 06:00 every Options-chosen number of in-game days (0: never) through the save queue, which writes off the tick; autosaves follow the colony after a Save As, SAV-003)
     -   Configurable cadence.
     -   Consistent snapshot without long simulation stall.
--   [ ] **Rotating autosaves**
--   [-] **Save naming/overwrite** (one slot per colony, named at start, overwritten on save; no name prompt)
+-   [x] **Rotating autosaves** (Options `AutosavesKept`: with more than one the next of `<slot>-autosave-1..N` is written, kept inside the colony, SAV-003; `TestAutosavesRotate`)
+-   [x] **Save naming/overwrite** (SAV-001, SAV-002, SAV-004: a player-chosen name checked by `savefmt.CheckName` (empty, too long, bad characters, the autosave suffix, device names), a danger confirm before replacing, several saves per colony side by side; SAV-005 Save & Quit to menu and desktop; SAV-013 asks about unsaved progress on leaving)
 -   [x] **Ironman/commitment-style save mode** (NG-1: chosen at setup and fixed; one save slot written by the game itself at each day, on return to menu, on quit and on window close; Load and developer mode disabled)
     -   Restricts ordinary save-scumming behavior if selected.
--   [-] **Schema migration** (NG-1: version 1 saves still load, with neutral legacy bios for old colonists; no migration tool or warning dialog)
--   [-] **Corruption validation** (unreadable or wrong-version files listed but not loadable)
+-   [x] **Schema migration** (NG-1: version 1 saves still load, with neutral legacy bios for old colonists; `migrateSave` fills newer fields (v17: wealth tracker, faction wars); SAV-021: an older save loads after a confirm that says it will be upgraded, a newer or too-old one is refused with the reason)
+-   [x] **Corruption validation** (SAV-022: `game.Load` reads the gzip stream to its end so a cut or flipped file is `ErrCorrupt`; `filesave.Verifier` checks unseen files in parallel and lists a damaged one disabled with "damaged file")
 -   [x] **Safe atomic writes** (temp file + fsync + rename)
 -   [x] **Save/replay deterministic equality tests** (save mid-game, load, run both in lock step: identical)
 
@@ -2800,9 +2800,9 @@ Hooks must have documented ordering.
     -   Namespaced versioned blob/schema.
     -   Deterministic serialization.
 -   [ ] **Plugin migration API**
--   [ ] **Missing-plugin save diagnostics**
--   [ ] **Plugin set stored in save metadata**
--   [ ] **Content hash/replay compatibility**
+-   [-] **Missing-plugin save diagnostics** (SAV-025: `savefmt.MissingPlugins` and the load notice are tested with fakes; there is no mod system, so no plugin can be missing yet)
+-   [-] **Plugin set stored in save metadata** (SAV-025: every header carries `Content.Plugins` = `["core"]`; discovery and load order `[!]` blocked: no mod system)
+-   [-] **Content hash/replay compatibility** (SAV-025: `game/contentid` fingerprints the content registries into the header; a same-build save with another hash asks before loading; replay compatibility not built)
 
 ## 38.5 Plugin UI
 
@@ -2847,7 +2847,7 @@ agent-developed. citeturn0search4
 -   [ ] **Navigation overlay**
 -   [ ] **Temperature overlay**
 -   [x] **Power network overlay** (PLAY-021: Shift+P; auto-shown while placing power buildings)
--   [ ] **Incident/storyteller debug panel**
+-   [x] **Incident/storyteller debug panel** (EAI-034: `devtools/story.go` lists the incident queue, next threat, points and wealth, and fires an incident, from `Game.StoryDebug`)
 -   [ ] **RNG stream diagnostics**
 -   [ ] **State hash inspector**
 -   [ ] **Tick profiler**
@@ -2978,7 +2978,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [ ] High mood can create positive opportunities.
 -   [ ] Storyteller alternates pressure/opportunity/recovery.
 -   [ ] Enemy factions behave differently by tech/tactic.
--   [ ] Colony wealth increases stakes.
+-   [x] Colony wealth increases stakes. (EAI-013, EAI-014: threat points weigh the colony's wealth)
 -   [ ] Deaths and disasters remain visible in colony history.
 -   [ ] The game can produce interesting stories without scripted
     campaign missions.
