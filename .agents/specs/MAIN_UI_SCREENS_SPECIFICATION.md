@@ -1699,16 +1699,30 @@ Session-level controls.
 
 ## Actions
 
+Nine rows, in both modes (SAV-005):
+
 -   Resume
--   Save
--   Load
+-   Save (opens the Save dialog, section 40)
+-   Load (opens the Load screen, section 41)
 -   Options
--   Help
+-   Help (shown off: not implemented)
+-   Save & Quit to Menu
+-   Save & Quit to Desktop
 -   Return to Main Menu
 -   Quit
 
-Destructive session exits require confirmation when unsaved progress
-exists.
+In a commitment colony Save and Load are shown off with their reason ("the game saves itself", the Load reason): the game writes the colony's one save itself. Save & Quit stays.
+
+Save & Quit writes the file first and leaves only once it is written; a
+failed save keeps the player in the game (SAV-005).
+
+A status line at the foot of the panel says "Saving...", "Not saved yet" or
+"Saved N in-game hours ago" (SAV-013).
+
+Return to Main Menu, Quit and an in-game Load in a reload-anytime colony ask
+when progress is unsaved: "Unsaved progress since <date>" with Save & leave,
+Leave and Cancel (SAV-013). A colony counts as unsaved from the tick a save
+was encoded until that save succeeds.
 
 ------------------------------------------------------------------------
 
@@ -1716,27 +1730,42 @@ exists.
 
 ## Purpose
 
-Create and manage saves.
+Create and manage saves. It is a dialog over the pause menu
+(`options/saves/dialog.go`, SAV-001).
+
+## Layout
+
+-   a name field, prefilled with the colony's last save and selected;
+-   Save and Cancel; Enter in the field saves;
+-   the saves on disk as a table; a click on a row takes its name.
+
+The name is checked as the player types (`savefmt.CheckName`, SAV-004): an
+empty name, one that is too long, bad characters, the reserved autosave
+suffix and device names are refused. The reason shows in red and Save is
+shown off.
 
 ## List information
 
--   name;
--   real timestamp;
--   game date;
--   colony;
--   version;
--   plugin summary.
+Two-line rows (SAV-011): the title and tags, then colony, in-game day and
+season, colonists, storyteller, biome and build. The hover card holds every
+field. A header from an older build leaves blanks, never "Day 0".
 
 ## Actions
 
--   create save;
--   overwrite;
--   delete;
+-   save under the typed name;
+-   overwrite: a danger confirm names the file's date, and the other colony
+    when it differs (SAV-002);
+-   delete: a Delete button on each row asks first (SAV-010); a running
+    commitment colony's one save cannot be deleted;
 -   cancel.
 
-Show save progress and errors without freezing indefinitely.
+A save is written off the frame by the save queue. The "Saving..." row and a
+failure toast report it (CI-002); the dialog never freezes.
 
-Commitment/ironman-like modes may restrict controls.
+A commitment colony has no Save dialog (see section 39).
+
+There is no plugin summary: the game has no mod system. Headers carry the
+plugin list `["core"]` and a content hash (SAV-025).
 
 ------------------------------------------------------------------------
 
@@ -1748,22 +1777,32 @@ Choose a campaign safely.
 
 ## Information
 
--   save name;
--   colony;
--   game date;
--   version;
--   required plugins;
--   compatibility.
+Rows are the same two-line rows as the Save dialog (section 40), with:
+
+-   save name and colony;
+-   in-game date and season;
+-   the build that wrote the save;
+-   a state tag (below).
+
+Sort toggles Newest and Name (case-folded, stable). A colony filter cycles
+All and each colony. Both reset paging (SAV-012). Each row has a Delete
+button that asks first (SAV-010).
 
 ## States
 
--   compatible;
--   migration required;
--   missing plugin;
--   incompatible version;
--   corrupt.
+-   compatible: loads;
+-   older version ("migration required"): loads after a confirm that says
+    the save will be upgraded (SAV-021);
+-   newer or too old: disabled, with the reason and what to do (SAV-021);
+-   other content, same build: asks before loading (SAV-025);
+-   damaged: disabled with "damaged file". Each unseen file is read to its
+    end in the background; a file that fails to load is marked until the
+    list is read again (SAV-022);
+-   missing plugin: the check and its notice exist and are tested with
+    fakes (SAV-025), but no plugin can be missing until a mod system exists.
 
-Never silently load a materially incompatible save.
+Never silently load a materially incompatible save. In-game, loading over a
+colony with unsaved progress asks first (section 39).
 
 ------------------------------------------------------------------------
 
