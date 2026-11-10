@@ -87,7 +87,8 @@ Commit key: contract 36e7840ec; animals 5c8c4ca07; raids and perf c334e2e9e; poi
 
 - B measured `BenchmarkTickRaid` about 20-30% faster per tick, and target picks went from every tick to one in 15.
 - cc8ba7a0d: the wealth tick is within noise on the `BenchmarkTick*` runs.
-- Perf (lead): TBD
+- 25bfd0d6e, 4db4d03c4: the EAI-001 breach search flooded whole boxes for foes no door led to (2537 searches in the 100-day bench, 66 finding a block). It now runs only for a foe worth breaking in for, after a region check, within a box and node budget, and a foe found unreachable is marked with a doubling wait (600 to 4800 ticks); foe picks prefer reachable foes.
+- Perf (lead, 812c036fb): the same saved colony (dumped by fe3c8a910) stepped by each build, interleaved, 3 rounds x count 2, ns/op: day rollover 500 2.238M -> 2.235M; Grown/120 131.5k -> 129.5k; Grown/250 156.1k -> 166.0k (+6%, the wave's features); Raid/500 299.4k -> 198.3k (-34%). The standard `BenchmarkTickDayRollover500` reads 2.23M -> 2.84M because each build simulates its own 100-day fixture and this one draws a mech raid; the fixed state shows no code cost. On that basis the `game` package ceilings rose to 173 files, 51644 lines and 1767 `Game` methods (user-approved raise when performance holds).
 
 ## 6. Benchmark and pin moves (intentional)
 
