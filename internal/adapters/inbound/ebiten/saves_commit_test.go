@@ -91,11 +91,6 @@ func buttonByID(t *testing.T, bs []uikit.Button, id string) uikit.Button {
 	return b
 }
 
-func lacksButton(bs []uikit.Button, id string) bool {
-	_, ok := hasButton(bs, id)
-	return !ok
-}
-
 func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 	log := &saveLog{}
 	a, s := newCommitColony(t, log)
