@@ -7,6 +7,7 @@ Developer mode: the dev panel's spawns, cheats and toggles, the map-field overla
 - `Panel` (20 methods, 10 exported) built by `New(sh Shell) *Panel`.
 - `State` (dev panel state; holds `Run func(d Tools) string` per action), `Action`, `Env`, `Selected`, `PanelRects`, `FieldsOverlay`.
 - Interfaces: `Host` (7 methods: `Env`, `HUD`, `Toast`, `Selected`, `StepTick`, `Icon`, `CardTiming`, the colonist card's per-widget timings for the inspector); `Tools` (8 methods: `SpawnAnimal`, `KillAnimal`, `FireIncident`, `Raid`, `SpawnStack`, `SetNeeds`, `DevLosePart`, `DevSpawnImplants`); `Keys` (`Fired`); `FieldSource` (`MapFieldLayers`).
+- Story panel (story.go, EAI-034): a read-only panel of the storyteller (threat points, wealth, next threat tick, the incident queue with its first eight rows) from `StorySource.StoryDebug()`, which `*game.Game` answers through the `Env().Game` assertion (zero view when the colony does not answer). `State.Story` toggles it from the debug menu, which also fires the chased-refugee event through `Tools.FireIncident`. The panel changes nothing.
 - Helpers: `FieldPixels`, `FieldLegendLines`, `Column`, `LoseParts`; constants `FieldAlpha`, `LosePickID`.
 - `var _ Tools = (*game.Game)(nil)` in `state.go` is the compile check that the root's game satisfies `Tools`.
 
@@ -22,10 +23,12 @@ Developer mode: the dev panel's spawns, cheats and toggles, the map-field overla
 ## Contracts
 - `New(sh Shell) *Panel`; `Shell` = `Sizer + Commands + World + View + Speed + Widgets + Settings + Host`.
 - Dev actions are applied through `Tools`, which the root wires to `*game.Game`. This path is not `ports.Commands` only: the cheats call game methods directly. The handoff does not say whether that is intended; treat new cheats the same way until decided.
+- The story panel only reads `StoryDebug`; firing an incident goes through `Tools`.
 - Spawns and cheats change simulation state through `Tools`; they are developer-only and must not run in a normal session.
 
 ## Invariants
 - Panels are off unless dev mode is on (`TestPanelsOffWithoutDevMode`).
+- The story panel lists the queue in the order the game holds it (soonest first) and is off until toggled (`TestStoryPanelLists` in `story_test.go`).
 - Map-field overlay colours and legend lines are pure functions of the layer (`TestMapFieldPixels`, `TestMapFieldLegendListsClasses`).
 
 ## Hot paths
