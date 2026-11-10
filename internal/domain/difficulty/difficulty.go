@@ -266,12 +266,12 @@ func Valid(s Settings) []string {
 
 // Threat points constants (§3.3).
 const (
-	pointsFloor   = 35
-	colonistPts   = 25
+	pointsFloor = 35
+	colonistPts = 25
 	// PointsCap is the most a threat may ever be given (EAI-013, original
 	// tuning): wealth, colonists, adaptation and escalation never push a
 	// raid past it.
-	PointsCap = 10_000
+	PointsCap     = 10_000
 	timePtsPerYr  = 80
 	wealthKnee1   = 20_000
 	wealthKnee2   = 100_000

@@ -2,9 +2,9 @@ package savefmt
 
 import (
 	"bytes"
-	"slices"
 	"errors"
 	"io"
+	"slices"
 	"testing"
 )
 
