@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"rimworld-go/pkg/mathx"
@@ -54,6 +55,29 @@ type Settings struct {
 	Interface     Interface     `json:"interface"`
 	Camera        Camera        `json:"camera"`
 	Developer     Developer     `json:"developer"`
+	Plugins       Plugins       `json:"plugins"`
+}
+
+// Plugins are the plugins the player turned on (PLG-003). A new install
+// enables none; the load order is computed (application/modding), so the
+// list is a set, kept sorted and unique. Changes apply at the next start.
+type Plugins struct {
+	Enabled []string `json:"enabled,omitempty"`
+}
+
+// Normalize sorts the list, drops blanks and repeats.
+func (p Plugins) Normalize() Plugins {
+	out := make([]string, 0, len(p.Enabled))
+	for _, id := range p.Enabled {
+		if id = strings.TrimSpace(id); id != "" && !contains(out, id) {
+			out = append(out, id)
+		}
+	}
+	slices.Sort(out)
+	if len(out) == 0 {
+		out = nil
+	}
+	return Plugins{Enabled: out}
 }
 
 // Telemetry is the usage data the game sends (usagehttp). Basic data is
@@ -252,6 +276,7 @@ func snap(v, lo, hi, step int) int {
 // with their defaults.
 func (s Settings) Normalize() Settings {
 	d := Defaults()
+	s.Plugins = s.Plugins.Normalize()
 	if s.Version < 2 { // before PLAY-012: no Auto or HiDPI field, both default on
 		s.Accessibility.UIScaleAuto = true
 		s.Graphics.HiDPI = true
