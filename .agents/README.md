@@ -56,6 +56,7 @@ Each file holds the decisions, wiki constants and phase rows for one area. Load 
 | MIN-* | `MINING_GAP_ANALYSIS.md` | Mining time and yield, ore, cave-ins, veins, deep drill, infestation |
 | CTL-* | `MOUSE_CONTROLS_GAP_ANALYSIS.md` | What the mouse does on the map, bar, windows, dialogs |
 | MAP-* | `MULTIMAP_GAP_ANALYSIS.md` | Several maps ticking at once; caravan and pod rules; map switching |
+| PLG-* | `MODDING_GAP_ANALYSIS.md` | The plugin (mod) system: manifest, discovery, load order, definitions and patches, contentlint, plugin set in saves, Plugins and Content Errors windows, scripting decision |
 | NST-* | `NEAT_STORAGE_GAP_ANALYSIS.md` | The 27 Neat Storage furniture pieces |
 | OPT-* | `OPTIONS_GAP_ANALYSIS.md` | The Options screen and the translation layer |
 | SIM-061..066 | `PAWN_INTERACTION_GAP_ANALYSIS.md` | Orders on a pawn, rescue, feeding patients, visiting, mental breaks involving others |
