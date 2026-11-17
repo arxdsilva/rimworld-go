@@ -132,7 +132,7 @@ rimworld-go/
 │   ├── adapters/
 │   │   ├── inbound/      ebiten (the client's composition root; features in sub-packages behind
 │   │   │                 `ports` roles, ARCH-001…006), cli, debugui, future_net
-│   │   └── outbound/     contentfs, modloader, filesave, settingsfile, scenariofile, cardpresetfile,
+│   │   └── outbound/     modloader, filesave, settingsfile, scenariofile, cardpresetfile,
 │   │                     slogmetrics, ebitenaudio, updatecheck, usagehttp
 │   ├── platform/         assetroot, atomicfile, config, input, openfolder, sysinfo
 │   ├── testkit/          simtest, fixtures, fakecontent, replaytest, deepeq
@@ -436,7 +436,7 @@ Tick            internal/domain/sim/clock
 EntityID        internal/domain/sim/entity
 ```
 
-Other identifiers are typed per package (`skill.ID`, `trait.ID`, `recipe.ID`, `zone.ID`, …). Content definitions are consumed through the `internal/ports/outbound/content.go` port and loaded by `internal/adapters/outbound/contentfs`; there is no shared domain content package.
+Other identifiers are typed per package (`skill.ID`, `trait.ID`, `recipe.ID`, `zone.ID`, …). Content definitions from plugins are read by `internal/adapters/outbound/modloader` into plain trees and turned into frozen per-class books by `internal/application/modding` (its `Source` port, PLG-*); the books reach the game through `game.Config.Content`. There is no shared domain content package.
 
 Never recreate these types elsewhere.
 
