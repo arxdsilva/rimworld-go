@@ -143,7 +143,9 @@ func patchTarget(id string, v any) (string, bool) {
 // copied first, so neither defs nor ops change. Every applied op appends
 // a Touch to its def; a different plugin's set, merge or replace over a
 // field an earlier plugin set, merged or replaced is a warning naming
-// both. The output is defs in input order minus removed ones.
+// both, and so is its remove. Optional excuses a missing target and, for
+// remove, a missing field or item; a set, add or merge that cannot reach
+// its path is always an error. The output is defs in input order minus removed ones.
 func Apply(defs []Def, ops []Op, loads func(id string) bool) ([]Def, []Problem) {
 	out := make([]Def, len(defs))
 	byRef := make(map[string]int, len(defs))
@@ -200,7 +202,7 @@ func (a *applier) apply(op Op) {
 	d := &a.defs[i]
 	err := a.run(i, op)
 	if err != nil {
-		if !(err.missing && op.Optional) {
+		if !(err.missing && op.Optional && op.Kind == "remove") {
 			a.probs = append(a.probs, op.problem(op.Target, op.Path, err.msg, false))
 		}
 		return
@@ -329,12 +331,13 @@ func patchRemove(path string, cur any, exists bool, value any) (any, bool, *tree
 	return kept, false, nil
 }
 
-// conflict warns when op overrides a field another plugin set, merged or
-// replaced (PLG-033), naming the latest such plugin, and records op's own
-// change. A plugin changing its own field again is not a conflict.
+// conflict warns when op (a set, merge, replace or remove) overrides a
+// field another plugin set, merged or replaced (PLG-033), naming the
+// latest such plugin, and records op's own set, merge or replace. A
+// plugin changing its own field again is not a conflict; add never is.
 func (a *applier) conflict(i int, op Op) {
-	if op.Kind != "set" && op.Kind != "merge" && op.Kind != "replace" {
-		return
+	if op.Kind == "add" {
+		return // an append or a new entry overrides nothing
 	}
 	list := a.changes[i]
 	for k := len(list) - 1; k >= 0; k-- {
@@ -352,6 +355,9 @@ func (a *applier) conflict(i int, op Op) {
 		a.probs = append(a.probs, op.problem(op.Target, op.Path,
 			field+" was changed by "+c.plugin+"; "+op.Plugin+" overrides it", true))
 		break
+	}
+	if op.Kind == "remove" {
+		return // warned above; a removed field has no owner to record
 	}
 	kept := list[:0:0]
 	for _, c := range list {

@@ -20,16 +20,6 @@ func tops(t *testing.T, id string, ops ...any) []Op {
 // tnone is a loads func under which no other plugin loads.
 func tnone(string) bool { return false }
 
-// tbody is the body of the def with ref in defs, or nil.
-func tbody(defs []Def, ref string) tobj {
-	for _, d := range defs {
-		if d.Ref() == ref {
-			return d.Body
-		}
-	}
-	return nil
-}
-
 func TestParseOpsFields(t *testing.T) {
 	data := tarr(
 		tobj{"op": "set", "target": "backstory/x", "path": "skills.shooting", "value": 3.0},
@@ -482,5 +472,69 @@ func TestApplyDeterministic(t *testing.T) {
 	}
 	if !strings.Contains(probs0[0].Msg, "f00.k00 already set") || !strings.Contains(probs0[1].Msg, "f01.k20 already set") {
 		t.Fatalf("add must report the first existing key in sorted order: %v", probs0[:2])
+	}
+}
+
+func TestApplyOptionalExcusesOnlyTargetsAndRemoves(t *testing.T) {
+	defs := []Def{tdef("core", "a", "", false, tobj{"skills": tobj{}, "list": tarr()})}
+	ops := tops(t, "m",
+		tobj{"op": "set", "target": "backstory/core.a", "path": "nope.x", "value": 1.0, "optional": true},
+		tobj{"op": "set", "target": "backstory/core.a", "path": "list.3", "value": 1.0, "optional": true},
+		tobj{"op": "add", "target": "backstory/core.a", "path": "nope", "value": 1.0, "optional": true},
+		tobj{"op": "add", "target": "backstory/core.a", "path": "nope.x", "value": 1.0, "optional": true},
+		tobj{"op": "merge", "target": "backstory/core.a", "path": "nope", "value": tobj{}, "optional": true},
+		tobj{"op": "remove", "target": "backstory/core.a", "path": "nope.x", "optional": true},
+	)
+	_, probs := Apply(defs, ops, tnone)
+	if len(probs) != 5 {
+		t.Fatalf("optional must excuse only the remove, got %v", probs)
+	}
+	for i, p := range probs {
+		if p.Warn || !strings.HasPrefix(p.Msg, fmt.Sprintf("patch %d (", i)) {
+			t.Errorf("problem %d = %+v", i, p)
+		}
+	}
+}
+
+func TestApplyRemoveOverridesWarns(t *testing.T) {
+	defs := []Def{tdef("core", "a", "", false, tobj{"x": 1.0, "tags": tarr()})}
+	var ops []Op
+	ops = append(ops, tops(t, "one",
+		tobj{"op": "set", "target": "backstory/core.a", "path": "x", "value": 2.0},
+		tobj{"op": "add", "target": "backstory/core.a", "path": "tags", "value": "t"},
+	)...)
+	ops = append(ops, tops(t, "two",
+		tobj{"op": "remove", "target": "backstory/core.a", "path": "tags", "value": "t"}, // one only added: no warning
+		tobj{"op": "remove", "target": "backstory/core.a", "path": "x"},
+		tobj{"op": "remove", "target": "backstory/core.a"},
+	)...)
+	out, probs := Apply(defs, ops, tnone)
+	want := []string{
+		"two: patches/p.json: backstory/core.a: x: warning: patch 1 (remove): x was changed by one; two overrides it",
+		"two: patches/p.json: backstory/core.a: warning: patch 2 (remove): x was changed by one; two overrides it",
+	}
+	if got := tstrings(probs); !reflect.DeepEqual(got, want) {
+		t.Fatalf("problems =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	if len(out) != 0 {
+		t.Fatalf("out = %v", trefs(out))
+	}
+}
+
+func TestParseOpsDeterministicOverManyFields(t *testing.T) {
+	op := tobj{"op": "set", "target": "backstory/x", "path": "a", "value": 1.0}
+	for i := 0; i < 30; i++ {
+		op[fmt.Sprintf("u%02d", 29-i)] = 1.0
+	}
+	p := tplug("m", nil, []File{{Path: "patches/p.json", Data: tarr(op, op, op)}})
+	_, probs0 := ParseOps(p)
+	for i := 0; i < 50; i++ {
+		ops, probs := ParseOps(p)
+		if len(ops) != 0 || !reflect.DeepEqual(probs, probs0) {
+			t.Fatalf("run %d differs", i)
+		}
+	}
+	if len(probs0) != 3 || probs0[0].Field != "u00" {
+		t.Fatalf("want one problem per op naming the sorted-first unknown field: %v", probs0)
 	}
 }
