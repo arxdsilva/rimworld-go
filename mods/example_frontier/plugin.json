@@ -1,0 +1,9 @@
+{
+  "id": "example_frontier",
+  "name": "Frontier Lives (example)",
+  "authors": ["rimworld-go"],
+  "version": "1.0.0",
+  "game": ["0.1"],
+  "description": "An example plugin that shows how plugins work: it adds frontier backstories (two share an abstract template) and patches one of the game's own.",
+  "url": "https://github.com/insurgencygames/rimworld-go"
+}
