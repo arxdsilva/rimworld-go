@@ -13,3 +13,4 @@ assets/metadata
 assets/palettes
 assets/lang
 assets/source/raster/ui/main_menu_colonist.png
+mods

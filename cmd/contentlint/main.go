@@ -7,11 +7,9 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/cli/contentlint"
 	"rimworld-go/internal/adapters/outbound/modloader"
-	"rimworld-go/internal/application/modding"
 	"rimworld-go/internal/platform/buildinfo"
 )
 
 func main() {
-	open := func(roots ...string) modding.Source { return modloader.New(roots...) }
-	os.Exit(contentlint.Main(os.Args[1:], os.Stdout, os.Stderr, open, modloader.DefaultRoots(), buildinfo.Version))
+	os.Exit(contentlint.Main(os.Args[1:], os.Stdout, os.Stderr, modloader.Open, modloader.DefaultRoots(), buildinfo.Version))
 }

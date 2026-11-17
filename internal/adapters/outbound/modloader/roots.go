@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"rimworld-go/internal/application/modding"
 	"rimworld-go/internal/platform/assetroot"
 )
 
@@ -20,3 +21,6 @@ func DefaultRoots() []string {
 	}
 	return roots
 }
+
+// Open is New as a modding.Source, for wiring that takes a source maker.
+func Open(roots ...string) modding.Source { return New(roots...) }

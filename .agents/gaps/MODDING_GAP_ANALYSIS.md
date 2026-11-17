@@ -72,7 +72,7 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 | ID | Gap | Ships | State |
 |---|---|---|---|
 | PLG-030 | No patches | `patches/*.json`: a list of operations, each `{"op", "target": "<class>/<key>", "path": "field.sub", "value"}`. Ops: `set` (replace a field), `add` (append to a list or add a map entry), `remove` (field, list item by value, or whole def), `merge` (object merge), `replace` (whole def). | open |
-| PLG-031 | No conditions | `"if": {"plugin": "<id>"}` / `{"missing": "<id>"}` runs the op only when that plugin is (not) loaded. | open |
+| PLG-031 | No conditions | `"if": "<id>"` / `"missing": "<id>"` runs the op only when that plugin is (not) loaded. | open |
 | PLG-032 | No order or provenance | Patches apply after all plugins' defs are in, in load order then file order then list order. Every def records who defined it and who patched which field, in order. | open |
 | PLG-033 | No conflict report | Two plugins `set`-ing the same field of the same def: the later wins and a warning names both. A target that does not exist is an error unless the op says `"optional": true`. | open |
 
