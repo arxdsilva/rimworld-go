@@ -81,12 +81,13 @@ var agreement = regexp.MustCompile(`\{[Tt]hey\} (is|are|was|were|has|have|does|d
 var placeholder = regexp.MustCompile(`\{[^}]*\}`)
 
 func TestBackstoryTextUniqueNonEmpty(t *testing.T) {
-	all := All()
+	book := Core()
+	all := book.All()
 	titles := map[string]bool{}
 	descs := map[string]bool{}
 	var child, adult, neoChild, neoAdult int
 	for i, d := range all {
-		if d.ID != ID(i+1) || DefOf(d.ID).Title != d.Title {
+		if d.ID != ID(i+1) || book.DefOf(d.ID).Title != d.Title {
 			t.Fatalf("%q: id %d", d.Title, d.ID)
 		}
 		if d.Title == "" || d.Short == "" || strings.TrimSpace(d.Desc) == "" {
@@ -145,7 +146,7 @@ func TestBackstoryTextUniqueNonEmpty(t *testing.T) {
 	if child < 24 || adult < 30 || neoChild < 8 || neoAdult < 8 {
 		t.Fatalf("counts: %d childhood (%d neolithic), %d adulthood (%d neolithic)", child, neoChild, adult, neoAdult)
 	}
-	if DefOf(0).Title != "" || DefOf(ID(len(all)+1)).Title != "" {
+	if book.DefOf(0).Title != "" || book.DefOf(ID(len(all)+1)).Title != "" {
 		t.Fatal("DefOf out of range")
 	}
 }

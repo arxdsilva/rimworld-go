@@ -663,8 +663,11 @@ func ReadSaveInfo(r io.Reader) (SaveInfo, error) {
 	return info, nil
 }
 
-// Load restores a game written by Save.
-func Load(r io.Reader) (*Game, SaveInfo, error) {
+// Load is LoadContent with core content.
+func Load(r io.Reader) (*Game, SaveInfo, error) { return LoadContent(r, Content{}) }
+
+// LoadContent restores a game written by Save, playing with c (PLG-024).
+func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 	zr, err := savefmt.NewReader(r)
 	if err != nil {
 		return nil, SaveInfo{}, fmt.Errorf("not a save file: %w", err)
@@ -682,7 +685,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	if err := savefmt.Finish(dec.Decode(&s), zr); err != nil { // the body decodes and the CRC holds (SAV-022)
 		return nil, info, fmt.Errorf("read save state: %w", err)
 	}
-	g := New(Config{Width: s.W, Height: s.H})
+	g := New(Config{Width: s.W, Height: s.H, Content: c})
 	if err := g.rng.UnmarshalBinary(s.RNG); err != nil {
 		return nil, info, fmt.Errorf("restore rng: %w", err)
 	}

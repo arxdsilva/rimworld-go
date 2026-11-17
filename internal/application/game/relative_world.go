@@ -273,7 +273,7 @@ func (g *Game) relativeBio(id entity.EntityID, male bool, age int, tag backstory
 	}
 	var p pawngen.Pawn
 	for roll := 0; roll < 32; roll++ {
-		p = pawngen.Generate(seed^relativeSalt, int(id), roll, pawngen.Rules{Tech: tag})
+		p = pawngen.Generate(seed^relativeSalt, int(id), roll, pawngen.Rules{Tech: tag, Backstories: backstoriesOf(g)})
 		if p.Look.Sex == want {
 			break
 		}

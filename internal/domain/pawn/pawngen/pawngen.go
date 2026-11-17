@@ -67,6 +67,8 @@ type Rules struct {
 	// (trait.Generated), so a seed makes exactly the pawn it made before
 	// the ENG-003 traits existed.
 	Legacy bool
+	// Backstories is the run's book (PLG-024); the zero Book is core.
+	Backstories backstory.Book
 }
 
 // DaysPerYear converts AgeDays to years.
@@ -118,12 +120,13 @@ func Generate(seed uint64, slot, roll int, r Rules) Pawn {
 			p.Traits = append(p.Traits, f.Trait)
 		}
 	}
-	p.Childhood = pickBackstory(rng, backstory.Childhood, r.Tech, p.Traits)
+	b := r.Backstories
+	p.Childhood = pickBackstory(rng, b, backstory.Childhood, r.Tech, p.Traits)
 	if years >= adultAge {
-		p.Adulthood = pickBackstory(rng, backstory.Adulthood, r.Tech, p.Traits)
+		p.Adulthood = pickBackstory(rng, b, backstory.Adulthood, r.Tech, p.Traits)
 	}
-	p.Traits = rollTraits(rng, p.Traits, p.Childhood, p.Adulthood, r.Legacy)
-	p.Skills = rollSkills(rng, p, years)
+	p.Traits = rollTraits(rng, p.Traits, b.DefOf(p.Childhood), b.DefOf(p.Adulthood), p.Adulthood != 0, r.Legacy)
+	p.Skills = rollSkills(rng, b, p, years)
 	p.Conditions = rollConditions(rng, r)
 	p.Look = rollLook(rng, p.Look, years, r.NoClothes)
 
@@ -214,9 +217,9 @@ func techTags(rng *randx.Rand, tech backstory.Tag) backstory.Tag {
 	return modern
 }
 
-func pickBackstory(rng *randx.Rand, slot backstory.Slot, tech backstory.Tag, traits []trait.ID) backstory.ID {
+func pickBackstory(rng *randx.Rand, b backstory.Book, slot backstory.Slot, tech backstory.Tag, traits []trait.ID) backstory.ID {
 	tags := techTags(rng, tech)
-	all := backstory.All()
+	all := b.All()
 	var cands []backstory.Def
 	for _, strict := range []bool{true, false} {
 		for _, d := range all {
@@ -264,7 +267,7 @@ func traitWeight(t trait.ID, legacy bool) int {
 
 // rollTraits tops forced up to 1 (30%), 2 (50%) or 3 (20%) traits that
 // neither conflict with each other nor clash with the backstories.
-func rollTraits(rng *randx.Rand, forced []trait.ID, child, adult backstory.ID, legacy bool) []trait.ID {
+func rollTraits(rng *randx.Rand, forced []trait.ID, cb, ab backstory.Def, adult, legacy bool) []trait.ID {
 	out := append([]trait.ID(nil), forced...)
 	n := 1
 	switch x := rng.IntN(100); {
@@ -273,12 +276,11 @@ func rollTraits(rng *randx.Rand, forced []trait.ID, child, adult backstory.ID, l
 	case x >= 30:
 		n = 2
 	}
-	cb, ab := backstory.DefOf(child), backstory.DefOf(adult)
 	for len(out) < n {
 		total := 0
 		var cands []trait.ID
 		for _, t := range trait.Generated(legacy) {
-			if conflictsAny(t, out) || trait.Clashes(t, cb) || (adult != 0 && trait.Clashes(t, ab)) {
+			if conflictsAny(t, out) || trait.Clashes(t, cb) || (adult && trait.Clashes(t, ab)) {
 				continue
 			}
 			cands = append(cands, t)
@@ -298,9 +300,9 @@ func rollTraits(rng *randx.Rand, forced []trait.ID, child, adult backstory.ID, l
 	return out
 }
 
-func rollSkills(rng *randx.Rand, p Pawn, years int) skill.Set {
-	cb, ab := backstory.DefOf(p.Childhood), backstory.DefOf(p.Adulthood)
-	inc := p.Incapable()
+func rollSkills(rng *randx.Rand, b backstory.Book, p Pawn, years int) skill.Set {
+	cb, ab := b.DefOf(p.Childhood), b.DefOf(p.Adulthood)
+	inc := p.Incapable(b)
 	var lv [skill.NumSkills]int
 	for i := range lv {
 		id := skill.ID(i)
@@ -488,9 +490,10 @@ func Legacy(id uint64, name string, skins, hairs, cloths int) Pawn {
 	}
 }
 
-// Incapable is everything p can't do (from backstories and traits).
-func (p Pawn) Incapable() backstory.Bits {
-	b := backstory.DefOf(p.Childhood).Incapable | backstory.DefOf(p.Adulthood).Incapable
+// Incapable is everything p can't do (from backstories in book and
+// traits).
+func (p Pawn) Incapable(book backstory.Book) backstory.Bits {
+	b := book.DefOf(p.Childhood).Incapable | book.DefOf(p.Adulthood).Incapable
 	for _, t := range p.Traits {
 		b |= trait.DefOf(t).Incapable
 	}
@@ -512,12 +515,12 @@ func (p Pawn) FullName() string {
 	return p.First + " '" + p.Nick + "' " + p.Last
 }
 
-// Title is the adulthood title, or the childhood one for the young.
-func (p Pawn) Title() string {
+// Title is the adulthood title in b, or the childhood one for the young.
+func (p Pawn) Title(b backstory.Book) string {
 	if p.Adulthood != 0 {
-		return backstory.DefOf(p.Adulthood).Title
+		return b.DefOf(p.Adulthood).Title
 	}
-	return backstory.DefOf(p.Childhood).Title
+	return b.DefOf(p.Childhood).Title
 }
 
 // Has reports whether p carries trait t.

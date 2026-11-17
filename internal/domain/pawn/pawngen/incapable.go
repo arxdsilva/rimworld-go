@@ -10,9 +10,10 @@ import (
 // IncapableReasons lists each incapability with what causes it:
 // "Violence (backstory: Convoy mechanic)", or several causes joined:
 // "Violence (backstory: Convoy mechanic, trait: Gentle)". Bits go in
-// backstory.Bits order; causes go childhood, adulthood, then traits.
-func (p Pawn) IncapableReasons() []string {
-	all := p.Incapable()
+// backstory.Bits order; causes go childhood, adulthood (from b), then
+// traits.
+func (p Pawn) IncapableReasons(b backstory.Book) []string {
+	all := p.Incapable(b)
 	if all == 0 {
 		return nil
 	}
@@ -22,7 +23,7 @@ func (p Pawn) IncapableReasons() []string {
 	}
 	var causes []cause
 	for _, id := range []backstory.ID{p.Childhood, p.Adulthood} {
-		if d := backstory.DefOf(id); id != 0 && d.Incapable != 0 {
+		if d := b.DefOf(id); id != 0 && d.Incapable != 0 {
 			causes = append(causes, cause{d.Incapable, "backstory: " + d.Title})
 		}
 	}
@@ -32,17 +33,17 @@ func (p Pawn) IncapableReasons() []string {
 		}
 	}
 	var out []string
-	for b := backstory.Bits(1); b&backstory.AllBits != 0; b <<= 1 {
-		if all&b == 0 {
+	for bit := backstory.Bits(1); bit&backstory.AllBits != 0; bit <<= 1 {
+		if all&bit == 0 {
 			continue
 		}
 		var why []string
 		for _, c := range causes {
-			if c.bits&b != 0 {
+			if c.bits&bit != 0 {
 				why = append(why, c.text)
 			}
 		}
-		out = append(out, b.Labels()[0]+" ("+strings.Join(why, ", ")+")")
+		out = append(out, bit.Labels()[0]+" ("+strings.Join(why, ", ")+")")
 	}
 	return out
 }

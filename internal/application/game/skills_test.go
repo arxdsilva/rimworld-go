@@ -1,6 +1,7 @@
 package game
 
 import (
+	"bytes"
 	"rimworld-go/internal/application/game/dossierview"
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/roster"
@@ -52,13 +53,55 @@ func spawnGen(t *testing.T, g *Game, x, y int, p pawngen.Pawn) entity.EntityID {
 // backstoryWith finds an adulthood/childhood backstory incapable of b.
 func backstoryWith(t *testing.T, b backstory.Bits) backstory.Def {
 	t.Helper()
-	for _, d := range backstory.All() {
+	for _, d := range backstory.Core().All() {
 		if d.Incapable&b != 0 {
 			return d
 		}
 	}
 	t.Fatalf("no backstory incapable of %v", b)
 	return backstory.Def{}
+}
+
+// TestRunBookReachesBiosAndLoads: a pawn's title and incapabilities come
+// from Config.Content's book, and LoadContent keeps the book it is given
+// while Load plays with core (PLG-024).
+func TestRunBookReachesBiosAndLoads(t *testing.T) {
+	t.Parallel()
+	core := backstory.Core()
+	list, keys := core.All(), make([]string, core.Len())
+	for i := range keys {
+		keys[i] = core.Key(backstory.ID(i + 1))
+	}
+	list[0].Title, list[0].Incapable = "Lamp child", backstory.Mining
+	c := Content{Backstories: backstory.NewBook(list, keys)}
+	g := New(Config{Seed: 1, Width: 12, Height: 8, Content: c})
+	id := spawnGen(t, g, 2, 2, genPawn("Rain", func(p *pawngen.Pawn) { p.Childhood, p.Adulthood = 1, 0 }))
+	read := func(g *Game) (string, bool) {
+		pv := PawnView{ID: id, Name: "Rain"}
+		g.fillPawnBio(&pv)
+		return pv.Title, g.incapableOf(id)&backstory.Mining != 0
+	}
+	if title, mining := read(g); title != "Lamp child" || !mining {
+		t.Fatalf("run book: title %q, incapable of mining %v", title, mining)
+	}
+	var buf bytes.Buffer
+	if err := g.Save(&buf, "book"); err != nil {
+		t.Fatal(err)
+	}
+	h, _, err := LoadContent(bytes.NewReader(buf.Bytes()), c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if title, mining := read(h); title != "Lamp child" || !mining {
+		t.Fatalf("after LoadContent: title %q, incapable of mining %v", title, mining)
+	}
+	k, _, err := Load(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if title, _ := read(k); title != core.DefOf(1).Title {
+		t.Fatalf("after Load: title %q, want core's %q", title, core.DefOf(1).Title)
+	}
 }
 
 // TestNeutralPawnTimingsUnchanged: a neutral pawn (SpawnNamedPawn) works

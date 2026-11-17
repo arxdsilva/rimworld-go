@@ -105,6 +105,7 @@ func wanderersMax(g *Game) int { return min(max(g.ng.fx.People, 1), scenario.Max
 func fillWanderers(g *Game, ax *axview.World) {
 	ax.WanderersIn, ax.WanderersLeft, ax.WanderersOK = wanderersOpen(g)
 	ax.WanderersMax, ax.WanderersRules = wanderersMax(g), g.ng.fx.Rules
+	ax.WanderersRules.Backstories = backstoriesOf(g) // the run's book (PLG-024)
 }
 
 // WandererPawn is the person seed makes under rules
@@ -116,7 +117,7 @@ func WandererPawn(seed uint64, rules pawngen.Rules) pawngen.Pawn {
 
 // WandererBio is WandererPawn's card for the picker.
 func WandererBio(seed uint64, rules pawngen.Rules) BioView {
-	return roster.BioOf(WandererPawn(seed, rules))
+	return roster.BioOf(WandererPawn(seed, rules), rules.Backstories)
 }
 
 // cmdNewWanderers brings a new group in from an edge of the first colony map,
@@ -161,6 +162,7 @@ func cmdNewWanderers(g *Game, name string) {
 
 // walkInWanderers stands seeds' people on land near a map edge, walking in.
 func walkInWanderers(g *Game, seeds []uint64, rules pawngen.Rules) (ids []entity.EntityID, names []string) {
+	rules.Backstories = backstoriesOf(g)
 	ex, ey, ok := g.worldEdge()
 	if !ok {
 		return nil, nil

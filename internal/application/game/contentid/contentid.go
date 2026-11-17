@@ -71,7 +71,7 @@ func registries() []list {
 		listOf("incident", incident.All(), func(d incident.Def) string { return d.Key }),
 		listOf("trait", trait.All(), func(d trait.Def) string { return d.Key }),
 		listOf("drug", drug.All(), func(d drug.Def) string { return sprint(d.Kind) }),
-		listOf("backstory", backstory.All(), func(d backstory.Def) string { return sprint(d.ID) }),
+		listOf("backstory", backstory.Core().All(), func(d backstory.Def) string { return sprint(d.ID) }),
 		listOf("quest", quest.Defs(), func(d quest.Def) string { return sprint(d.Kind) }),
 		listOf("animal", animalDefs(), func(d animalDef) string { return d.Species.String() }),
 	}

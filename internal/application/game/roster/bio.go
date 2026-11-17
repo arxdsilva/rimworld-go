@@ -106,11 +106,11 @@ var skillAffects = [skill.NumSkills]struct {
 	skill.Intellectual: {"Research", true},
 }
 
-// BioOf builds p's BioView: names, sex/build/age, backstories with their
-// descriptions filled for p's nickname and pronouns, traits, all eleven
-// skills, incapabilities with their reasons, conditions and look. It is
-// pure: the same pawn always gives the same view.
-func BioOf(p pawngen.Pawn) BioView {
+// BioOf builds p's BioView: names, sex/build/age, backstories (from b)
+// with their descriptions filled for p's nickname and pronouns, traits,
+// all eleven skills, incapabilities with their reasons, conditions and
+// look. It is pure: the same pawn and book always give the same view.
+func BioOf(p pawngen.Pawn, b backstory.Book) BioView {
 	name := p.Nick
 	if name == "" {
 		name = p.First
@@ -123,8 +123,8 @@ func BioOf(p pawngen.Pawn) BioView {
 		AgeYears: p.AgeYears(),
 		Look:     p.Look,
 	}
-	v.Childhood, v.ChildhoodDesc = backstoryText(p.Childhood, sex, name)
-	v.Adulthood, v.AdulthoodDesc = backstoryText(p.Adulthood, sex, name)
+	v.Childhood, v.ChildhoodDesc = backstoryText(b, p.Childhood, sex, name)
+	v.Adulthood, v.AdulthoodDesc = backstoryText(b, p.Adulthood, sex, name)
 
 	for _, t := range p.Traits {
 		d := trait.DefOf(t)
@@ -138,7 +138,7 @@ func BioOf(p pawngen.Pawn) BioView {
 		})
 	}
 
-	inc := p.Incapable()
+	inc := p.Incapable(b)
 	workSpeed := int64(pawngen.Stats(p)[stat.WorkSpeed])
 	v.Skills = make([]SkillView, skill.NumSkills)
 	for id := skill.ID(0); id < skill.NumSkills; id++ {
@@ -163,7 +163,7 @@ func BioOf(p pawngen.Pawn) BioView {
 		v.Skills[id] = sv
 	}
 
-	v.Incapable = p.IncapableReasons()
+	v.Incapable = p.IncapableReasons(b)
 	for _, c := range p.Conditions {
 		if c.Label() == "" {
 			continue
@@ -175,8 +175,8 @@ func BioOf(p pawngen.Pawn) BioView {
 
 // backstoryText is a backstory's title and filled description, or
 // ("—", "") when there is none.
-func backstoryText(id backstory.ID, sex look.Sex, name string) (title, desc string) {
-	d := backstory.DefOf(id)
+func backstoryText(b backstory.Book, id backstory.ID, sex look.Sex, name string) (title, desc string) {
+	d := b.DefOf(id)
 	if id == 0 || d.Title == "" {
 		return noBackstory, ""
 	}

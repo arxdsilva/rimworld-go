@@ -149,7 +149,7 @@ func TestIncapableSkillsZeroNoPassion(t *testing.T) {
 	ps := many(2000, Rules{Forced: []ForcedTrait{{Trait: trait.Gentle, Chance: 30}}})
 	seen := 0
 	for _, p := range ps {
-		inc := p.Incapable()
+		inc := p.Incapable(backstory.Core())
 		passions := 0
 		for id := skill.ID(0); id < skill.NumSkills; id++ {
 			s := p.Skills[id]
@@ -186,8 +186,8 @@ func TestTraitConflictsNever(t *testing.T) {
 					}
 				}
 				for _, b := range []backstory.ID{p.Childhood, p.Adulthood} {
-					if b != 0 && trait.Clashes(a, backstory.DefOf(b)) {
-						t.Fatalf("%s clashes with %q", trait.DefOf(a).Label, backstory.DefOf(b).Title)
+					if b != 0 && trait.Clashes(a, backstory.Core().DefOf(b)) {
+						t.Fatalf("%s clashes with %q", trait.DefOf(a).Label, backstory.Core().DefOf(b).Title)
 					}
 				}
 			}
@@ -218,7 +218,7 @@ func TestForcedRules(t *testing.T) {
 		if !p.Look.Bare || p.Look.Vest {
 			t.Fatal("no-clothes rule ignored")
 		}
-		if p.Incapable()&backstory.Violence == 0 || p.Skills[skill.Shooting].Level != 0 {
+		if p.Incapable(backstory.Core())&backstory.Violence == 0 || p.Skills[skill.Shooting].Level != 0 {
 			t.Fatal("gentle pawns can't fight")
 		}
 	}
@@ -246,8 +246,8 @@ func TestForcedRules(t *testing.T) {
 func TestBackstoryFitsTech(t *testing.T) {
 	for _, p := range many(1000, Rules{Tech: backstory.TagNeolithic}) {
 		for _, b := range []backstory.ID{p.Childhood, p.Adulthood} {
-			if b != 0 && !backstory.DefOf(b).Fits(backstory.TagNeolithic) {
-				t.Fatalf("clan colonist with %q", backstory.DefOf(b).Title)
+			if b != 0 && !backstory.Core().DefOf(b).Fits(backstory.TagNeolithic) {
+				t.Fatalf("clan colonist with %q", backstory.Core().DefOf(b).Title)
 			}
 		}
 	}
@@ -262,7 +262,7 @@ func TestBackstoryFitsTech(t *testing.T) {
 				if b == 0 {
 					continue
 				}
-				d := backstory.DefOf(b)
+				d := backstory.Core().DefOf(b)
 				picks++
 				if !d.Fits(modern) {
 					if !d.Fits(backstory.TagNeolithic) {
@@ -297,15 +297,15 @@ func TestLegacyTemperamentMatchesGame(t *testing.T) {
 
 func TestLegacyPawnIsNeutral(t *testing.T) {
 	p := Legacy(17, "Rook", 5, 5, 6)
-	if p.Skills != skill.NeutralSet() || len(p.Traits) != 0 || p.Incapable() != 0 ||
+	if p.Skills != skill.NeutralSet() || len(p.Traits) != 0 || p.Incapable(backstory.Core()) != 0 ||
 		p.AgeYears() != 30 || p.Look != look.Legacy(17, 5, 5, 6) || p.Childhood != 0 || p.Adulthood != 0 {
 		t.Fatalf("legacy pawn %+v", p)
 	}
 	if Stats(p) != stat.Base() {
 		t.Fatalf("legacy stats %v", Stats(p))
 	}
-	if p.FullName() != "Rook" || p.Title() != "" {
-		t.Fatalf("legacy names %q %q", p.FullName(), p.Title())
+	if p.FullName() != "Rook" || p.Title(backstory.Core()) != "" {
+		t.Fatalf("legacy names %q %q", p.FullName(), p.Title(backstory.Core()))
 	}
 	for id := skill.ID(0); id < skill.NumSkills; id++ {
 		if SkillWorkPct(p, id) != 100 || LearnPct(p, id) != 100 {
@@ -361,7 +361,7 @@ func TestNamesAndTitles(t *testing.T) {
 		t.Fatal(p.FullName())
 	}
 	kid := Generate(1, 0, 0, Rules{MaxAge: 15})
-	if kid.Title() != backstory.DefOf(kid.Childhood).Title || kid.Title() == "" {
+	if kid.Title(backstory.Core()) != backstory.Core().DefOf(kid.Childhood).Title || kid.Title(backstory.Core()) == "" {
 		t.Fatal("teen title")
 	}
 	// Everything taken: the full name is the fallback, then a number.
@@ -437,7 +437,7 @@ func TestNamesAvoidBlocklist(t *testing.T) {
 			check("name", n)
 		}
 	}
-	for _, d := range backstory.All() {
+	for _, d := range backstory.Core().All() {
 		check("backstory title", d.Title)
 		check("backstory short", d.Short)
 		check("backstory text", d.Desc)
@@ -448,5 +448,28 @@ func TestNamesAvoidBlocklist(t *testing.T) {
 	}
 	for c := NoCondition + 1; c < numConditions; c++ {
 		check("condition", c.Label()+" "+c.Desc())
+	}
+}
+
+// TestGenerateReadsTheRulesBook: backstories, their skills and their
+// incapabilities come from Rules.Backstories, not core (PLG-024).
+func TestGenerateReadsTheRulesBook(t *testing.T) {
+	book := backstory.NewBook([]backstory.Def{
+		{Slot: backstory.Childhood, Title: "Lamp child", Short: "lamp", Weight: 1, Tags: backstory.TagIndustrial | backstory.TagSpacer | backstory.TagNeolithic,
+			Skills: map[skill.ID]int8{skill.Cooking: 20}},
+		{Slot: backstory.Adulthood, Title: "Lamplighter", Short: "lamps", Weight: 1, Tags: backstory.TagIndustrial | backstory.TagSpacer | backstory.TagNeolithic,
+			Incapable: backstory.Mining},
+	}, []string{"p.lamp_child", "p.lamplighter"})
+	for slot := range 20 {
+		p := Generate(5, slot, 0, Rules{Backstories: book, MinAge: 20})
+		if p.Childhood != 1 || p.Adulthood != 2 || p.Title(book) != "Lamplighter" {
+			t.Fatalf("slot %d: backstories %d %d %q", slot, p.Childhood, p.Adulthood, p.Title(book))
+		}
+		if p.Incapable(book)&backstory.Mining == 0 || p.Skills[skill.Mining].Level != 0 || p.Skills[skill.Cooking].Level < 10 {
+			t.Fatalf("slot %d: incapable %b, mining %d cooking %d", slot, p.Incapable(book), p.Skills[skill.Mining].Level, p.Skills[skill.Cooking].Level)
+		}
+		if r := p.IncapableReasons(book); len(r) == 0 || !strings.Contains(strings.Join(r, ";"), "backstory: Lamplighter") {
+			t.Fatalf("slot %d: reasons %q", slot, r)
+		}
 	}
 }

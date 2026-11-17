@@ -104,7 +104,7 @@ func (p *CandidatePool) valid(i int) bool { return i >= 0 && i < len(p.pawns) }
 func (p *CandidatePool) Views() []CandidateView {
 	out := make([]CandidateView, len(p.pawns))
 	for i, c := range p.pawns {
-		out[i] = CandidateView{BioView: BioOf(c), Selected: i < p.sel, Index: i}
+		out[i] = CandidateView{BioView: BioOf(c, p.fx.Rules.Backstories), Selected: i < p.sel, Index: i}
 	}
 	return out
 }
@@ -249,7 +249,7 @@ func (p *CandidatePool) Team() TeamReport {
 	for id := skill.ID(0); id < skill.NumSkills; id++ {
 		ts := TeamSkill{Key: id.Key(), Label: id.Label()}
 		for _, c := range sel {
-			if c.Incapable().DisablesSkill(id) {
+			if c.Incapable(p.fx.Rules.Backstories).DisablesSkill(id) {
 				continue
 			}
 			if l := int(c.Skills[id].Level); ts.Who == "" || l > ts.Level {
@@ -263,7 +263,7 @@ func (p *CandidatePool) Team() TeamReport {
 	}
 	allIncapable := func(b backstory.Bits) bool {
 		for _, c := range sel {
-			if c.Incapable()&b == 0 {
+			if c.Incapable(p.fx.Rules.Backstories)&b == 0 {
 				return false
 			}
 		}

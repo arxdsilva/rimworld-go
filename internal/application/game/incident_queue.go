@@ -129,7 +129,7 @@ func (g *Game) refugeeChased(now uint64) bool {
 	}
 	hx, hy := g.home()
 	g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: "Refugee asks for shelter", Kind: letters.Caution,
-		Msg: msgfmt.Of("%s begs for shelter: armed riders are close behind. Take them in and the riders will follow; send them away and they go on alone.", quest.PreviewOf(g.refugeeSeed(now)).Name)})
+		Msg: msgfmt.Of("%s begs for shelter: armed riders are close behind. Take them in and the riders will follow; send them away and they go on alone.", quest.PreviewOf(g.refugeeSeed(now), backstoriesOf(g)).Name)})
 	g.letters.EditLast(func(l *letters.Letter) { l.Until, l.Choices = now+refugeeWait, letters.ShelterChoices() })
 	return true
 }
@@ -157,7 +157,7 @@ func (g *Game) shelterGiven(l letters.Letter) {
 		g.worldNote("There is no way for the refugee to come in.")
 		return
 	}
-	id, ok := walkInColonist(g, quest.PawnOf(g.refugeeSeed(l.Tick)), x, y)
+	id, ok := walkInColonist(g, quest.PawnOf(g.refugeeSeed(l.Tick), backstoriesOf(g)), x, y)
 	if !ok {
 		g.worldNote("There is no way for the refugee to come in.")
 		return

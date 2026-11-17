@@ -135,7 +135,8 @@ func (b Bits) Labels() []string {
 // Fits reports whether d carries any of the tags in t.
 func (d Def) Fits(t Tag) bool { return d.Tags&t != 0 }
 
-// defs is indexed by ID; defs[0] is "none".
+// defs is the core catalog indexed by ID; defs[0] is "none". Readers go
+// through a Book (book.go), never this table.
 var defs = func() []Def {
 	out := make([]Def, 1, len(catalog)+1)
 	for i, d := range catalog {
@@ -144,17 +145,6 @@ var defs = func() []Def {
 	}
 	return out
 }()
-
-// All lists every backstory (a copy; the maps inside are shared, read only).
-func All() []Def { return append([]Def(nil), defs[1:]...) }
-
-// DefOf looks a backstory up; unknown IDs give the zero Def.
-func DefOf(id ID) Def {
-	if int(id) >= len(defs) {
-		return Def{}
-	}
-	return defs[id]
-}
 
 // Pronouns for a sex: subject, object, possessive. Any value other than
 // look.Male and look.Female reads as they/them/their.

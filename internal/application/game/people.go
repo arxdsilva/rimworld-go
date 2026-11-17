@@ -225,7 +225,7 @@ func (g *Game) raiderPerson(id entity.EntityID, fac int) {
 		}
 		seed = g.worldSeed()
 	}
-	p := pawngen.Generate(seed^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: tag})
+	p := pawngen.Generate(seed^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: tag, Backstories: backstoriesOf(g)})
 	if name, ok := g.names.Get(id); ok && name != "" && name != p.Nick && name != p.First {
 		p.First, p.Nick = name, ""
 	}
@@ -241,7 +241,7 @@ func (g *Game) worldBio(id entity.EntityID, male bool, age int) pawngen.Pawn {
 	}
 	var p pawngen.Pawn
 	for roll := 0; roll < 32; roll++ {
-		p = pawngen.Generate(g.streams.seed^worldPersonSalt, int(id), roll, pawngen.Rules{})
+		p = pawngen.Generate(g.streams.seed^worldPersonSalt, int(id), roll, pawngen.Rules{Backstories: backstoriesOf(g)})
 		if p.Look.Sex == want {
 			break
 		}

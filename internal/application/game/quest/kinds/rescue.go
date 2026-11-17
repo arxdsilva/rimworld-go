@@ -176,6 +176,7 @@ func (Rescue) Detail(q qd.Quest) []quest.Line {
 		return nil
 	}
 	site, pawn := q.Parts[rescueSite], q.Parts[rescuePawn]
+	name, _ := quest.NameAge(pawn.Seed)
 	state := "quest.rescue.calling"
 	switch {
 	case pawn.Done:
@@ -186,7 +187,7 @@ func (Rescue) Detail(q qd.Quest) []quest.Line {
 	return []quest.Line{
 		{Key: "quest.rescue.site", Args: []quest.Arg{quest.Tile(site.Tile), quest.Faction(q.Target)}},
 		{Key: "quest.rescue.deadline", Args: []quest.Arg{quest.Tick(q.Deadline)}},
-		{Key: "quest.rescue.pawn", Args: []quest.Arg{quest.Text(quest.PreviewOf(pawn.Seed).Name)}},
+		{Key: "quest.rescue.pawn", Args: []quest.Arg{quest.Text(name)}},
 		{Key: state},
 	}
 }

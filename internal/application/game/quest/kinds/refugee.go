@@ -155,11 +155,11 @@ func (Refugee) Detail(q qd.Quest) []quest.Line {
 		return nil
 	}
 	site, p := q.Parts[refugeeSite], q.Parts[refugeePawn]
-	pv := quest.PreviewOf(p.Seed)
+	name, age := quest.NameAge(p.Seed)
 	lines := []quest.Line{
 		{Key: "quest.refugee.site", Args: []quest.Arg{quest.Tile(site.Tile)}},
 		{Key: "quest.refugee.deadline", Args: []quest.Arg{quest.Tick(q.Deadline)}},
-		{Key: "quest.refugee.pawn", Args: []quest.Arg{quest.Text(pv.Name), quest.Num(pv.Age)}},
+		{Key: "quest.refugee.pawn", Args: []quest.Arg{quest.Text(name), quest.Num(age)}},
 	}
 	switch {
 	case q.State == qd.Succeeded:

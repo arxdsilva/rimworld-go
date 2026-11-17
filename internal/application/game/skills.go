@@ -64,7 +64,11 @@ type skillState struct {
 	stun      map[entity.EntityID]uint64       // the tick a stun ends (the card; transient, never hashed)
 	petNames  map[entity.EntityID]string       // a renamed animal's rolled name (saved, nil until a rename)
 	bar       roster.BarOrder                  // the colonist bar's order (saved, CTL-011): only views read it
+	content   Content                          // the run's books (Config.Content, PLG-024; never saved)
 }
+
+// backstoriesOf is the run's backstory book (core's when no plugin adds any).
+func backstoriesOf(g *Game) backstory.Book { return g.sk.content.Backstories }
 
 // barColonists is who stands on the colonist bar: every open map's colonists,
 // maps in id order (Colonists' order, the bar's default).
@@ -203,7 +207,7 @@ func (g *Game) spawnGenerated(p pawngen.Pawn, x, y int) (entity.EntityID, error)
 	}
 	g.giveBio(id, p)
 	pr := g.prio[id]
-	inc := p.Incapable().WorkMask()
+	inc := p.Incapable(backstoriesOf(g)).WorkMask()
 	for t := work.Type(0); t < work.NumTypes; t++ {
 		if inc.Enabled(t) {
 			pr[t] = 0
@@ -221,7 +225,7 @@ func (g *Game) spawnGenerated(p pawngen.Pawn, x, y int) (entity.EntityID, error)
 	switch { // TEMP-4: SpawnNamedPawn dressed it in a T-shirt and pants
 	case p.Look.Bare: // NoClothes: it arrives naked
 		delete(g.apparel, id)
-	case backstory.DefOf(p.Childhood).Tags == backstory.TagNeolithic: // a tribal childhood: tribalwear
+	case backstoriesOf(g).DefOf(p.Childhood).Tags == backstory.TagNeolithic: // a tribal childhood: tribalwear
 		g.apparel[id] = craft.Tribal()
 	}
 	return id, nil
@@ -252,7 +256,7 @@ func (g *Game) rebuildStats(id entity.EntityID) {
 		return
 	}
 	layers := append(pawngen.StatLayers(p), g.difficultyMods(), gearfacts.Mods(gm), bodyMods(key))
-	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(), traits: p.Traits, body: key, gear: gm}
+	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(backstoriesOf(g)), traits: p.Traits, body: key, gear: gm}
 	fx.neutral = fx.sheet == stat.Base()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 		fx.workPct[sk] = int16(pawngen.SkillWorkPct(p, sk))
@@ -319,11 +323,11 @@ func (g *Game) incapableWhy(id entity.EntityID, t work.Type) string {
 	if !g.incapableWork(id).Enabled(t) {
 		return ""
 	}
-	p := g.sk.bios[id]
-	reasons := p.IncapableReasons() // one per bit, in bit order
+	p, book := g.sk.bios[id], backstoriesOf(g)
+	reasons, inc := p.IncapableReasons(book), p.Incapable(book) // one reason per bit, in bit order
 	i := 0
 	for b := backstory.Bits(1); b&backstory.AllBits != 0; b <<= 1 {
-		if p.Incapable()&b == 0 {
+		if inc&b == 0 {
 			continue
 		}
 		if b.WorkMask().Enabled(t) && i < len(reasons) {
@@ -749,8 +753,8 @@ func (g *Game) fillPawnBio(pv *PawnView) {
 		p = legacyBio(pv.ID, pv.Name)
 	}
 	pv.Sex, pv.Build, pv.AgeYears = p.Look.Sex.Label(), p.Look.Build.Label(), p.AgeYears()
-	pv.Look, pv.Title = p.Look, p.Title()
-	pv.Incapable = p.Incapable().WorkMask()
+	pv.Look, pv.Title = p.Look, p.Title(backstoriesOf(g))
+	pv.Incapable = p.Incapable(backstoriesOf(g)).WorkMask()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 		s := g.skillOf(pv.ID, sk)
 		if !ok {
@@ -769,7 +773,7 @@ func (g *Game) bioView(id entity.EntityID) (BioView, bool) {
 	if set := g.sk.skills[id]; set != nil {
 		p.Skills = *set
 	}
-	return roster.BioOf(p), true
+	return roster.BioOf(p, backstoriesOf(g)), true
 }
 
 // --- saves ------------------------------------------------------------

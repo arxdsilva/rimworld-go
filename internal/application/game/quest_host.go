@@ -115,7 +115,9 @@ func (h questHost) Count() int                    { return len(h.g.ng.factions) 
 func (h questHost) Alive(id entity.EntityID) bool {
 	return h.onPawnMap(id, func() bool { return h.g.onMap(id) })
 }
-func (h questHost) Preview(seed uint64) quest.PawnPreview { return quest.PreviewOf(seed) }
+func (h questHost) Preview(seed uint64) quest.PawnPreview {
+	return quest.PreviewOf(seed, backstoriesOf(h.g))
+}
 
 // GrantXP is a fixed award: no learn rate, passion or daily cap (QST-076).
 func (h questHost) GrantXP(id entity.EntityID, s skill.ID, xp int) {
@@ -144,7 +146,7 @@ func (h questHost) WalkIn(seed uint64) (entity.EntityID, bool) {
 	g := h.g
 	ex, ey, ok := g.worldEdge()
 	if x, y, in := g.insetLandNear(ex, ey, nil); ok && in {
-		if id, ok := walkInColonist(g, quest.PawnOf(seed), x, y); ok { // visitors.go
+		if id, ok := walkInColonist(g, quest.PawnOf(seed, backstoriesOf(g)), x, y); ok { // visitors.go
 			g.addHistory("joined", g.personName(id)+" joined the colony through a quest.", id)
 			questSignal(g, quest.Signal{Kind: quest.SigPawnJoined, Pawn: id})
 			return id, true
@@ -443,7 +445,7 @@ func (h questSite) guest(seed uint64, f, x, y int) (entity.EntityID, bool) {
 		return 0, false
 	}
 	id := g.entities.Next()
-	g.peopleReg().add(&person{ID: id, Bio: quest.PawnOf(seed), HasBio: true, Faction: f, Where: whereVisitor})
+	g.peopleReg().add(&person{ID: id, Bio: quest.PawnOf(seed, backstoriesOf(g)), HasBio: true, Faction: f, Where: whereVisitor})
 	g.socState().sig[id] = personSig{}
 	visitsOf(g).Place(id, f, cx, cy, uint64(g.clock.Now()))
 	return id, true

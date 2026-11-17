@@ -47,7 +47,7 @@ func TestGeneratedColonistsDress(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	var tribal backstory.ID
-	for _, d := range backstory.All() {
+	for _, d := range backstory.Core().All() {
 		if d.Slot == backstory.Childhood && d.Tags == backstory.TagNeolithic {
 			tribal = d.ID
 			break

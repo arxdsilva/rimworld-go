@@ -56,13 +56,15 @@ func SettlementAt(fs []faction.Faction, t int) (int, bool) {
 	return 0, false
 }
 
-// PawnOf is the person of seed: the preview and the walk-in agree
-// (QST-087).
-func PawnOf(seed uint64) pawngen.Pawn { return pawngen.Generate(seed, 0, 0, pawngen.Rules{}) }
+// PawnOf is the person of seed with backstories from b: the preview and
+// the walk-in agree (QST-087).
+func PawnOf(seed uint64, b backstory.Book) pawngen.Pawn {
+	return pawngen.Generate(seed, 0, 0, pawngen.Rules{Backstories: b})
+}
 
-// PreviewOf is PawnOf(seed) as the window shows it.
-func PreviewOf(seed uint64) PawnPreview {
-	p := PawnOf(seed)
+// PreviewOf is PawnOf(seed, b) as the window shows it.
+func PreviewOf(seed uint64, b backstory.Book) PawnPreview {
+	p := PawnOf(seed, b)
 	name := p.First + " " + p.Last
 	if p.Nick != "" {
 		name = p.Nick
@@ -77,8 +79,15 @@ func PreviewOf(seed uint64) PawnPreview {
 			best = s
 		}
 	}
-	return PawnPreview{Name: name, Age: int(p.AgeDays) / pawngen.DaysPerYear, Backstory: backstory.DefOf(bs).Title,
+	return PawnPreview{Name: name, Age: int(p.AgeDays) / pawngen.DaysPerYear, Backstory: b.DefOf(bs).Title,
 		Look: p.Look, Best: best, BestLevel: int(p.Skills[best].Level)}
+}
+
+// NameAge is the name and age PreviewOf(seed, b) shows, for any b: both
+// roll before and apart from the backstories (pawngen.Generate).
+func NameAge(seed uint64) (string, int) {
+	pv := PreviewOf(seed, backstory.Book{})
+	return pv.Name, pv.Age
 }
 
 // KindName is kind k's name (ours, clean room; "" for none).

@@ -1031,6 +1031,7 @@ func New(cfg Config) *Game {
 	g.rest = rest.New(newRestHost(g))       // rest_host.go
 	g.lab = rlab.New(researchHost{g})       // research.go
 	g.lab.Prog = research.Complete()        // sandbox: everything known
+	g.sk.content = cfg.Content              // the run's books (skills.go, PLG-024)
 	return g
 }
 

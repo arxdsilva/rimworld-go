@@ -15,7 +15,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
-	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
@@ -119,7 +118,7 @@ func captureSetup(ui string) game.Setup {
 	for i := uint64(0); i < 64; i++ {
 		pool := game.NewCandidatePool(s.Seed+i, fx)
 		s.Colonists = pool.Selected()
-		if slices.ContainsFunc(s.Colonists, func(p pawngen.Pawn) bool { return p.Incapable() != 0 }) {
+		if slices.ContainsFunc(pool.Views(), func(v game.CandidateView) bool { return v.Selected && len(v.Incapable) > 0 }) {
 			break
 		}
 	}

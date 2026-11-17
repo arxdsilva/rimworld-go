@@ -114,7 +114,7 @@ func (g *Game) wandererJoins(now uint64) bool {
 		return g.wandererWalksIn(seed)
 	}
 	letterf(g, letters.Info, "Wanderer asks to join", 0, "%s, a wanderer, asks to join the colony. "+
-		"Accept within a day to welcome them; dismiss this letter and they go their way.", quest.PreviewOf(seed).Name)
+		"Accept within a day to welcome them; dismiss this letter and they go their way.", quest.PreviewOf(seed, backstoriesOf(g)).Name)
 	g.letters.EditLast(func(l *letters.Letter) { l.Wanderer, l.Until = seed, now+clock.TicksPerDay })
 	return true
 }
@@ -127,7 +127,7 @@ func (g *Game) wandererWalksIn(seed uint64) bool {
 	if !ok || !in {
 		return false
 	}
-	id, ok := walkInColonist(g, quest.PawnOf(seed), x, y)
+	id, ok := walkInColonist(g, quest.PawnOf(seed, backstoriesOf(g)), x, y)
 	if !ok {
 		return false
 	}
@@ -328,7 +328,7 @@ type visitArrivals struct{ g *Game }
 func (h visitArrivals) NewPerson(ref int, f *faction.Faction) entity.EntityID {
 	g := h.g
 	id := g.entities.Next()
-	p := pawngen.Generate(g.worldSeed()^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f)})
+	p := pawngen.Generate(g.worldSeed()^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f), Backstories: backstoriesOf(g)})
 	g.peopleReg().add(&person{ID: id, Bio: p, HasBio: true, Faction: ref, Where: whereVisitor})
 	g.socState().sig[id] = personSig{}
 	return id
