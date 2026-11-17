@@ -25,7 +25,7 @@ func TestNewInstallEnablesNoPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Contains(b, []byte(`"enabled"`)) {
+	if !bytes.Contains(b, []byte(`"plugins":{}`)) {
 		t.Fatalf("an empty list is written: %s", b)
 	}
 }
