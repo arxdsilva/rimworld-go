@@ -265,7 +265,7 @@ func carpetStockLine(carpet string, stock int) string {
 // sewHint is ": sew one at a tailoring bench (8 straw)" from the recipe
 // that makes item, or "" when no recipe does.
 func sewHint(item string) string {
-	for _, r := range game.Recipes() {
+	for _, r := range game.CoreRecipes() { // core carpets name core recipes
 		if r.Output == item {
 			return fmt.Sprintf(": sew one at a %s (%s)", r.Bench, r.Input)
 		}

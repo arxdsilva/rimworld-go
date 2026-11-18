@@ -152,7 +152,7 @@ func BuildingTitleIn(tr lang.Tr, b game.BuildingView) string {
 // own, its electric twin's and the ones it runs besides (PRD-3 RunsAt).
 func (a Building) RecipesFor(kind string) []game.RecipeView {
 	var out []game.RecipeView
-	for _, r := range game.Recipes() {
+	for _, r := range game.RecipesOf(a.env().Content) {
 		if r.RunsAt(kind) {
 			out = append(out, r)
 		}

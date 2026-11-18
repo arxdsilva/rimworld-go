@@ -50,7 +50,7 @@ func newInspector(a *App) *inspector.Pane {
 
 func (h inspectorHost) Env() inspector.Env {
 	a := h.a
-	e := inspector.Env{Art: a.art, Keys: a.bindings(), Units: units.FromUnit(a.settings.Gameplay.TempUnit), WinOpen: a.win.Open, ArchOpen: a.arch.Open,
+	e := inspector.Env{Content: a.cfg.Content, Art: a.art, Keys: a.bindings(), Units: units.FromUnit(a.settings.Gameplay.TempUnit), WinOpen: a.win.Open, ArchOpen: a.arch.Open,
 		UIHidden: a.chrome.Hidden, Updates: a.updates, Shift: a.in.Shift(), Ctrl: a.in.Ctrl(), WheelY: a.in.Raw.WheelY}
 	if r := a.renderer; r != nil {
 		e.Sim, e.MapArt = r.game, r.art

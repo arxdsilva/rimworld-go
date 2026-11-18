@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"slices"
 	"strings"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -84,8 +85,9 @@ func (b Book) DefOf(id ID) Def {
 	return l[id]
 }
 
-// All lists every recipe in ID order (shared, read only).
-func (b Book) All() []Def { return b.self().defs }
+// All lists every recipe in ID order (shared, read only; clipped, so an
+// append by a caller copies instead of writing into the book).
+func (b Book) All() []Def { return slices.Clip(b.self().defs) }
 
 // For lists the recipes a bench of kind k runs (At; legacy ones
 // excluded), in ID order: an index built with the book, shared and read
@@ -95,7 +97,7 @@ func (b Book) For(k construction.Kind) []Def {
 	if int(k) >= len(idx) {
 		return nil
 	}
-	return idx[k]
+	return slices.Clip(idx[k])
 }
 
 // Upgrade maps a legacy recipe to the one that replaced it.

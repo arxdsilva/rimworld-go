@@ -59,7 +59,7 @@ func TestOperationStatusColour(t *testing.T) {
 func benchWithMostRecipes() (string, int) {
 	count := map[string]int{}
 	best := ""
-	for _, r := range game.Recipes() {
+	for _, r := range game.CoreRecipes() {
 		count[r.Bench]++
 		if count[r.Bench] > count[best] {
 			best = r.Bench

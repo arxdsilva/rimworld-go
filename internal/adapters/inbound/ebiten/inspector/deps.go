@@ -53,11 +53,14 @@ type PaneBody interface {
 // Env is what the inspector reads of the program around it, as of the
 // call.
 type Env struct {
-	Sim    Sim            // the colony's simulation (nil off the colony)
-	Art    *art.Catalog   // the App's sprites and icons (nil while missing)
-	MapArt *art.Catalog   // the renderer's (nil off the colony)
-	Keys   input.Bindings // the live key bindings (the command keys' labels)
-	Units  units.Temp     // how temperatures read (Options, WG-16)
+	Sim Sim // the colony's simulation (nil off the colony)
+	// Content is the run's definitions (PLG-025): the bill picker offers
+	// its recipes, plugins' included.
+	Content game.Content
+	Art     *art.Catalog   // the App's sprites and icons (nil while missing)
+	MapArt  *art.Catalog   // the renderer's (nil off the colony)
+	Keys    input.Bindings // the live key bindings (the command keys' labels)
+	Units   units.Temp     // how temperatures read (Options, WG-16)
 
 	WinOpen  bool // a main-tab window is open: the pane gives way
 	ArchOpen bool // the Architect is open: the grid shows its tools

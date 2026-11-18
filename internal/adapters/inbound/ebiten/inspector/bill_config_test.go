@@ -325,7 +325,7 @@ func TestRecipeRowNamesKinds(t *testing.T) {
 	t.Parallel()
 	f, a := benchFixture(t)
 	var named game.RecipeView
-	for _, r := range game.Recipes() {
+	for _, r := range game.CoreRecipes() {
 		if len(r.InputKinds) > 0 {
 			named = r
 			break

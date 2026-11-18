@@ -47,8 +47,8 @@ type (
 	WornView           = craft.WornView // PRD-2: PawnView.Worn
 )
 
-// Recipes lists every core recipe.
-func Recipes() []RecipeView { return craft.Recipes(recipe.Core()) }
+// CoreRecipes lists the game's own recipes only; bill pickers use RecipesOf (PLG-025).
+func CoreRecipes() []RecipeView { return craft.Recipes(recipe.Core()) }
 
 // RecipesOf lists the recipes of a run's content c (PLG-025).
 func RecipesOf(c Content) []RecipeView { return craft.Recipes(c.Recipes) }
