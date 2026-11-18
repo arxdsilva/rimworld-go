@@ -154,3 +154,12 @@ Recipes moddable; saves keep definition keys (PLG-025, PLG-044) · 2026-11-17 ·
 - Found: `go test -race ./internal/application/game/` exceeds 10 min as one local binary at baseline too (gap doc leftovers); CI runs it alone.
 - Open: plugin products are not smeltable (`SmeltYield`), PLG-026 more classes, PLG-055 translations, PLG-072 source lines, PLG-060 scripting (user decision).
 
+
+## PLG-3-classes-scripts-translations
+Traits, research, incidents and items as plugin classes; Starlark scripts; translations; source lines; `-plugins` · 2026-11-18 · f24dcc152 (contract), 2b2e74c24 (`-plugins`), the wave commit after it
+- Changed: plugins add and patch traits, research projects (gating plugin recipes), nature incidents (`like` a core incident) and goods items (own PNG, value, category, smelt yield); run Starlark hooks (`on_hour`, `on_day`, `on_incident`, `on_colonist_died`) that post messages/letters and spawn items through typed commands; ship `lang/<locale>.json` translations; the bio tab, bill picker and bill title say "Added by"/"Changed by"; `-plugins a,b` sets one run's plugins. The example plugin shows each.
+- Decisions (user, 2026-11-18): Starlark (`go.starlark.net`, BSD-3), not WASM; all four classes at once. Lead: each class keeps core's IDs and caps at 255/256 (byte IDs, as recipes); plugin items take Kinds after core with neutral `Kind` methods, their data through `Content.Items`; mass and stack limit stay core-only (read straight from the kind in ~30 places); items decode before recipes so recipes can name them; scripts keep no state across saves (PLG-051 deferred); a failing script is turned off, never stops the game.
+- Saves: every class's keys are saved; load remaps traits, research progress/selection, incident cooldowns/queue and every item kind by key, and now also world people's backstories (a PLG-044 gap). Core-only saves and the save schema are unchanged.
+- Limits: `game` 176 files, 52571 lines, `Game` 65 fields; `ebiten` 12176 lines (SPDX headers + translations/textures); `inspector.Pane` kept at 39 by moving the source helpers onto a small `sources` reader.
+- HUD: research tab lists plugin projects; bio shows plugin traits; storage, inspector and bills show plugin items with their texture; dev menu fires plugin incidents; Plugins detail lists locales; Problems lists turned-off scripts.
+- Open: PLG-026 remaining classes and item gaps (gap row); PLG-060 turned-off set not saved, threats that aren't incidents; PLG-072 lines for research, items and incidents; PLG-055 backstory description templates.

@@ -1641,7 +1641,7 @@ the player what just happened and what requires attention.
 -   [x] **Existing saves** (SAV-001: the saves on disk as a table under the name field; a click on a row takes its name; `options/saves/dialog.go`)
 -   [x] **Timestamp/game date** (SAV-001, SAV-011: the table shows when each file was saved and the in-game date)
 -   [x] **Colony name** (SAV-003, SAV-011: the header names the colony; rows show it and the overwrite question names another colony's file)
--   [!] **Enabled plugin summary** (blocked: no mod system; headers carry `["core"]` since SAV-025 but nothing lists it)
+-   [ ] **Enabled plugin summary** (unblocked by PLG-050: save headers carry the load order; nothing lists it in the dialog yet)
 -   [x] **Overwrite confirmation** (SAV-002: a danger confirm naming the file's date and the other colony when it differs; `TestJourneySavesOverwriteAsks`)
 -   [x] **Saving progress/error** (CI-002 "Saving..." row and failure toast; SAV-013 pause status; SAV-005 a failed Save & Quit stays in the game)
 -   [x] **Commitment/ironman restrictions** (NG-1: one save slot that the game updates itself at each day, on return to menu, on quit and on window close; Pause offers Save & Quit; Load is disabled with its reason; developer mode is locked; saves are tagged Commitment)
@@ -1652,9 +1652,9 @@ the player what just happened and what requires attention.
 -   [x] **Version** (SAV-011, SAV-020: a row shows the build that wrote the save; SAV-021 tags a save of another version)
 -   [x] **Game date**
 -   [x] **Colony** (SAV-011, SAV-012: rows show colony, day and season, colonists, storyteller and biome; a colony filter cycles All and each colony; Sort toggles Newest and Name)
--   [!] **Plugin set** (blocked: no mod system; see Enabled plugin summary)
+-   [ ] **Plugin set** (unblocked by PLG-050: the header has the load order; the dialog does not show it yet)
 -   [x] **Compatibility warning** (SAV-021, SAV-025: older loads after a confirm, newer or too-old is disabled with the reason, a same-build save with other content asks)
--   [-] **Missing plugin warning** (SAV-025: the notice and `savefmt.MissingPlugins` are tested with fakes; no plugin can be missing until a mod system exists)
+-   [x] **Missing plugin warning** (SAV-025, PLG-050: a save made with a plugin the run lacks names it before loading; `TestSaveFromPluginRunNamesTheMissingPlugin`)
 -   [x] **Migration warning/error** (SAV-021: "will be upgraded" confirm for an older save; a newer or too-old save is refused with what to do)
 -   [x] **Corrupt save handling** (SAV-022: the verifier reads each unseen file to its end; a damaged file is listed disabled with "damaged file"; a file that fails to load is marked until the list is read again)
 -   [x] **Delete save confirmation** (SAV-010: a Delete button on each row asks first; a running commitment colony's one save cannot be deleted)
@@ -1771,7 +1771,7 @@ first-class interface rather than relying on manual file editing.
     -   disabled.
     -   incompatible.
     -   update/compatibility issue.
--   [-] **Plugin detail** (PLG-070: description, requires, load after/before, conflicts, homepage, position and reason, its problems; no provided-content summary)
+-   [-] **Plugin detail** (PLG-070: description, requires, load after/before, conflicts, homepage, position and reason, its problems; PLG-055: the locales it translates; no provided-content summary)
     -   description.
     -   dependencies.
     -   incompatibilities.
