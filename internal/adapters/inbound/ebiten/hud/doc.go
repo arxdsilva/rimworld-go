@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package hud is the colony HUD's regions: the resource bar, the colonist
 // bar, the right column (letters, messages, alerts), the global controls
 // (speed, date, overlays), the cell info box, the main tabs, the status

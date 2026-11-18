@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package wizard is the New Colony flow (NG-1): scenario choice and the
 // Scenario Editor, storyteller and difficulty, world generation and the
 // landing site on the globe, the factions, the starting colonists and the

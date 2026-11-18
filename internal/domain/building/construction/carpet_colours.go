@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package construction
 
 // Carpet floor colours (AX-3). A carpet floor's Building.Tint and

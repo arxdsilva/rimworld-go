@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package crops is the catalogue of what a growing zone can sow, as the
 // UI reads it (crop picker, hover). A consumer sub-package of
 // internal/application/game (.agents/specs/SOLID_GO.md §10): pure functions

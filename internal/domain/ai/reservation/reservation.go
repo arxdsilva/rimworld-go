@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package reservation tracks entity and tile claims (RES-1): a whole claim
 // holds a target for one pawn; count claims share a stack, each for the
 // part a pawn will take, while their sum fits the stack's quantity.

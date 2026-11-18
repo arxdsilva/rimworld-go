@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package atlasgen is the atlasgen command: it packs one sprite family into texture atlas pages
 // (NG-1 plan 7.1, ART spec 24 and 26), so a family with tens of thousands
 // of small files loads as a handful of images and costs far less disk.

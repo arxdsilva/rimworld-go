@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package quest is the quest model (QST-1, .agents/gaps/QUESTS_GAP_ANALYSIS.md):
 // a quest's states and timers, the kind definitions, threat points,
 // reward budgets and options, the offer cadence and the peace-talk odds.

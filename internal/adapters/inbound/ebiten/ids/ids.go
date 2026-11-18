@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package ids holds the click and widget ids the ebiten client's screens,
 // HUD regions and feature panels share, so a feature can name another's
 // button without importing it, and the root's click router can be filled

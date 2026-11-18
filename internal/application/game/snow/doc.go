@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package snow is the per-tile snow layer and the snow clearing area
 // (PLAY-015 §4): 0..255 per cell (255 = deepest) on open ground, i.e.
 // unroofed, not a wall, not water, not rock. It follows the weather

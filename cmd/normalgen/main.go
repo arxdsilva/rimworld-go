@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Command normalgen writes a normal map next to every world sprite (ART §6.1);
 // the logic lives in internal/adapters/inbound/cli/normalgen.
 package main

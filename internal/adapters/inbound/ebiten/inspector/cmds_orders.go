@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package inspector
 
 // The AX-1 orders in the panes (MAIN_UI_SCREENS §17 inspector commands):

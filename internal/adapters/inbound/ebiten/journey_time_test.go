@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package ebiten
 
 // journey_time_test.go: time, speed and dev journeys (QA-001).

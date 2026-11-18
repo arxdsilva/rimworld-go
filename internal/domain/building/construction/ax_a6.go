@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package construction
 
 // plannedA6 is A6's kinds not live yet (recreation; AX-0 contract). This

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package saves
 
 // Unsaved progress (SAV-013): how far the colony's saves have caught up

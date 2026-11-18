@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package sprite
 
 // TwoDigits is n (0..99) as two decimal digits, the sprite-key suffix:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package animalview is an animal's read model (View, which the game names
 // game.AnimalView; view.go) and what it takes from its species alone. The
 // species tables are constant, so that share is derived once per species

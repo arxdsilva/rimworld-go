@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package appicon draws the rimworld-go app icon procedurally (stdlib only)
 // and writes every size the packaging and the game need: packaging PNGs, a
 // Windows .ico, an .iconset folder for macOS iconutil, and the runtime window

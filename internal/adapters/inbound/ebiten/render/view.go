@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package render holds the frame context the renderer's draw layers read:
 // View, filled once per frame by the root Renderer from one read of the
 // simulation, and Trace, the test hooks (nil in production). Layers get

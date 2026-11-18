@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package scenariofile keeps custom scenarios as JSON files in a folder,
 // one file per scenario, written atomically (temp file + rename) so a
 // crash never leaves a half-written scenario behind. The file content is

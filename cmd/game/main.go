@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Command game is the rimworld-go client. It parses the command line
 // (internal/adapters/inbound/cli/game) and runs the composition root
 // (internal/compose/game) on the Ebitengine screen. Release builds set the

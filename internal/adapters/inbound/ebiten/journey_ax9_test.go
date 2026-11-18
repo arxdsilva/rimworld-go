@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package ebiten
 
 // journey_ax9_test.go (AX-9): stasis caskets, transport pods, the mineral

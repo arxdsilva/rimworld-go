@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sense holds the small everyday habits of a colonist's day: tidying
 // the home, strolling when idle. Each is a component of its own over the
 // roles below (.agents/specs/SOLID_GO.md §10); the game package implements the

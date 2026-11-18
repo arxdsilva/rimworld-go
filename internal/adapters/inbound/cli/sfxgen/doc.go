@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sfxgen implements the sfxgen command (cmd/sfxgen only calls Run).
 //
 // It makes the animal voices (SND-003): it turns the prompts in

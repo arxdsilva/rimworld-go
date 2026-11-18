@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package gather is the colony's weddings and parties (ENG-003, M5). One
 // runs at a time, as the domain's save-safe machine (social.Gathering):
 // the hosts walk to the spot, guests drift in on job.Gather (chairs nearby,

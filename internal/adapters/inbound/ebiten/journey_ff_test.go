@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package ebiten
 
 // Fast-forward (CI-004). A journey that waits on the simulation (a kill, a

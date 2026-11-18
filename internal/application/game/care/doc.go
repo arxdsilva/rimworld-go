@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package care looks after pawns that cannot look after themselves: who
 // carries whom, rescue to a safe bed, tending, bed rest, the care policy,
 // and the orders a player gives one pawn about another (SIM-061…065).

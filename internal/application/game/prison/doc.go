@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package prison keeps the colony's prisoners: their state, their life
 // on the raid roster and the warden's work (ENG-003, M8).
 //

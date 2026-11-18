@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package hit lands combat hits on creatures (CBT-1): body part first,
 // then the armor covering that part, outermost layer first, then the
 // wound the hit's own form leaves, with overkill, stagger and stun.

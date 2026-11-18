@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package research is the colony's research (RSCH-1, ENG-003: the
 // RimWorld wiki's numbers, original names and prose): the project the
 // colony works on, the research bench job, the wiki research speed

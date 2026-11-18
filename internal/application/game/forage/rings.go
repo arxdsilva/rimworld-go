@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package forage
 
 // Rings visits the tiles at Chebyshev distance 0..r from (px, py), ring by

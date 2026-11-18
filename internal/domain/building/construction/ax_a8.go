@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package construction
 
 // plannedA8 is A8's kinds not live yet (the escape ship; AX-0 contract): delete a

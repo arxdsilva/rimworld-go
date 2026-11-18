@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package infection is the race between a condition's severity and the
 // body's immunity (MED-02), shared by wound infections and, from MED-04,
 // the diseases: StepRace advances one condition hour by hour from its

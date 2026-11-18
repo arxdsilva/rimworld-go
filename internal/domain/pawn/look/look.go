@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package look is a colonist's appearance as palette indices (no pixels):
 // sex, build, skin, hair, beard and clothes (NG-1 §4.6, ART §10).
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package bodytemp is exposure for the simulation (TEMP-3): the ledger of
 // every pawn's and animal's hypothermia and heatstroke severities, the
 // animals' exposure on their 60-tick decision cadence (Animals, a hook in

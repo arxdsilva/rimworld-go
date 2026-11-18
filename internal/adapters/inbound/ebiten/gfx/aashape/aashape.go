@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package aashape tessellates anti-aliased shapes into triangles: discs,
 // rings, lines with butt caps, filled and stroked rectangles and filled
 // convex polygons. Each shape's triangles carry a 1-px alpha feather (full

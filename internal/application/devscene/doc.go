@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package devscene builds the developer and capture scenes of cmd/game's
 // -scenario flag: set pieces (walls, lategame, zoo, power, …) placed on a
 // fresh colony through the game's dev hooks (internal/application/game

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package orders is the Architect's remaining vanilla orders (AX-1,
 // .agents/gaps/ARCHITECT_GAP_ANALYSIS.md Orders): uninstall a building into a
 // crate and reinstall it, strip downed people, open graves and caskets,

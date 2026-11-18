@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package ebitenaudio plays the game's sound list
 // (assets/metadata/audio/audio.json) through Ebitengine's audio package:
 // one-shots, positional loops, and music with crossfades and silences.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package lang is the client's translation layer (OPT-001,
 // OPTIONS_GAP_ANALYSIS.md "Translation layer"). Keys are the English source
 // strings, so English needs no catalog and its output is the source text

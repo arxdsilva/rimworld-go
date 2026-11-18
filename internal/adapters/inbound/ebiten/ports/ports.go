@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package ports is the contract between the ebiten client's shell (the
 // root package: App and Renderer) and its feature packages. Each role is
 // one small consumer-owned interface (SOLID_GO.md §6, HEXAGONAL §6): a

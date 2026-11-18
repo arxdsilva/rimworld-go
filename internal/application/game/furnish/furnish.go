@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package furnish is A2's furniture and decor rules that keep state on
 // the buildings themselves (AX-2): plant pots and the decorative plants
 // growing in them, and the one-off move of older saves' 1x1 tables to

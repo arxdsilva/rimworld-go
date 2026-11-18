@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package trade is the pure trading model of PLAY-024: trader kinds and
 // their stock, buy and sell prices in hundredths of a silver, and settling
 // an offer against the colony's goods, the trader's stock and silver, and

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package medcare is the medical care policy (MED-03): how much care a
 // patient gets, from none at all to the best medicine there is. Each
 // patient has a policy; one not set by hand follows its group's default

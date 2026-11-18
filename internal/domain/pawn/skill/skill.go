@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package skill is a colonist's skills: levels 0..20, experience, passions,
 // learning and decay, and how a level turns into work speed (NG-1 §4.6).
 package skill

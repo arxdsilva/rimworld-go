@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package cover holds cover kinds, how much of a shot each blocks, and
 // the rule that picks the best cover next to a target on the shooter's
 // side. Percentages are permille. Values follow the published RimWorld

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package pool runs a simulation stage's independent tasks on a few lanes
 // (GAR-035, ARCH-010): the owner's goroutine is lane 0 and up to seven
 // parked workers join it for one Run, claiming chunks of task indexes from

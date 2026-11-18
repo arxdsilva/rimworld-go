@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package framestatus is the frame inspector's status line (UI-015, plan
 // Part B): the line formats and the pure choice between them, moved out of
 // the game package, which fills game.FrameView.Status from it. It is pure:

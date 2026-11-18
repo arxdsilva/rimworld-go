@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package ebiten
 
 // journey_food1_test.go: the FOOD-1/2/3 journeys (malnutrition, rice and

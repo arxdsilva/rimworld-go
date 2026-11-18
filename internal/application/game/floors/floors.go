@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package floors is the floors' read model for the interface (AX-3): what
 // one cell of a built floor gives its room, by kind and material name, for
 // the Architect's floor cards and the floor's pane. The numbers are the

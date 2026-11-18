@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package light is the renderer's sun, moon and lamp lighting: the light
 // grid (sky exposure and lamp light per tile), the lit-sprite shader
 // (lit.kage) and its pair images, the light sources, the colonists' drop

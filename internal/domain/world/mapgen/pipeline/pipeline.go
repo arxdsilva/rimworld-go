@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package pipeline runs the MAPGEN-2 steps in order (.agents/handoffs/PLAY.md#play013_plan
 // §1.1): the composition of package mapgen's passes.
 package pipeline

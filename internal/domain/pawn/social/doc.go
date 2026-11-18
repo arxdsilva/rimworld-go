@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package social is relationships between people: family and romance
 // relations, opinions and the memories behind them, compatibility,
 // interactions, gatherings (parties, weddings), social fights and grief

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package zone is the per-tile zone map (stockpiles, grow zones, pens) and
 // the legacy zone rectangles older saves hold.
 package zone

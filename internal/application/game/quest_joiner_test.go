@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package game
 
 // quest_joiner_test.go: the threatened joiner inside the game (QST-2a):

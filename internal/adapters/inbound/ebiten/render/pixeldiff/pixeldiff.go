@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package pixeldiff compares two rendered frames so a render change can
 // prove it is byte-identical (batching, reordering) or within a tolerance
 // (an anti-aliasing swap) before it lands. It depends on the standard

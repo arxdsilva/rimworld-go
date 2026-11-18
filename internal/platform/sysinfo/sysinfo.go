@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sysinfo reads how much memory the machine has and how many
 // cores, without cgo. The game uses it to pick graphics settings that run
 // smoothly and to warn on small machines; cmd/rambudget uses it to size

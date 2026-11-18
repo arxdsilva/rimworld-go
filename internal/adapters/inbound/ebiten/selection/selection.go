@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package selection is what the player has selected: one pawn, animal,
 // item, plant, building, frame or zone, or a group of several, the click
 // and box-select rules that set it, and the group's bookkeeping. It is the

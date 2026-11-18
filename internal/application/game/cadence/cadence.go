@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package cadence spreads the simulation's periodic work over the ticks
 // of its period (GAR: the day tick fired every periodic site at once).
 // A per-entity site visits entity id on the ticks where

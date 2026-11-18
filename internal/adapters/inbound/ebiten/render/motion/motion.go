@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package motion is the renderer's per-creature motion: tracks
 // interpolated between simulation ticks, the presentation animation
 // clock, poses, gaits and easing. It is pure math: nothing here draws or

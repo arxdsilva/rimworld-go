@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package ebiten
 
 // journey_infocard_test.go: the read-only Info window (GEAR-006), opened

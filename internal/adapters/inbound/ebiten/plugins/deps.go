@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package plugins is the Plugin Manager (PLG-070, MAIN_UI §45), its load
 // order explanation (PLG-071, §46) and the content problems view (PLG-041,
 // §48). It reads one read model, View, filled once at start by the

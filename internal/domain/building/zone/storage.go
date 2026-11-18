@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package zone
 
 // Stores lists a map's storage zones by priority (STO-1), so a haul

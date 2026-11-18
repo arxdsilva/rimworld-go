@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package wealth tracks the colony's wealth for the storyteller (EAI-014):
 // the current value, a daily history for the graph, and their save.
 //

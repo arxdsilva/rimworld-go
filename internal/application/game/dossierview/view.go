@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package dossierview is the colonist card's read model (RHUD): the facts about
 // one pawn or animal that no other view carries. Plain values, by id, no scan.
 package dossierview

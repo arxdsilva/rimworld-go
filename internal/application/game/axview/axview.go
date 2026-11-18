@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package axview is the AX-0 contract's read-model fields (every vanilla
 // Architect item, .agents/handoffs/AX.md#ax-0-contract): one struct per game
 // view, carried as its AX field (game.BuildingView.AX and so on), so the

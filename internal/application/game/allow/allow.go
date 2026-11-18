@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package allow is the colony's allow system (STK-AL,
 // .agents/gaps/ALLOW_GAP_ANALYSIS.md): forbidding and allowing item stacks and
 // buildings, the auto-forbid rule for what the dead leave behind, and the

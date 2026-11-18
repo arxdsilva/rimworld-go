@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sprite draws one world sprite — by key, tint, colour scale and
 // scale — lit through render/light, and owns the keys around it: the
 // linked-building grid and its keys (walls, rock, fences, conduits), the

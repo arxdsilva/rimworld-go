@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package gfx is the ebiten client's drawing primitives, shared by the HUD
 // and the renderer: the UI canvas (logical pixels in, physical out, scaled
 // by the UI scale), text, rectangles, the triangle batch, the world pass

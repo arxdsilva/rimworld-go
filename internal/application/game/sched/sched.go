@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sched is the game's phase scheduler (GAR): the simulation's
 // systems as descriptors (phase, scope, cadence, run condition, the
 // stores they read and write, order edges) put in one checked order at

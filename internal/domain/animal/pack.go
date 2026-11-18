@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package animal
 
 // Threat cost and pack sizes (EAI-005). Original tuning, from the Def

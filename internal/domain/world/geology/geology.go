@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package geology is what natural rock is made of: the stone type of each
 // rock or stone-ground cell and the ore veins inside rock. It is a pure,
 // deterministic layer generated after terrain; it never touches the sim RNG.

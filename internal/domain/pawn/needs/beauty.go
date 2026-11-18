@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package needs
 
 // Beauty (BED-3; wiki: Beauty, Thoughts). A pawn looks around now and

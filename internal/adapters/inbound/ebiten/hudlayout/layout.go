@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package hudlayout is the colony HUD's pure layout: region rectangles from the screen size and the regions' wanted sizes. No state, no drawing.
 package hudlayout
 

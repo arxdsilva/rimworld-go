@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mathx holds the integer helpers the standard library leaves out:
 // math.Abs is float64 only, and min and max need composing to clamp.
 package mathx

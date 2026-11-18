@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package noise2 is deterministic, seeded 2-D gradient noise for map
 // fields. The lattice gradients are a pure hash of the seed and the cell,
 // so a field needs no storage or RNG draws: any point can be sampled in any

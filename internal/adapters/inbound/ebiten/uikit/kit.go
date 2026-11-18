@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package uikit is the immediate-mode widget kit (NG-1 §1.4): per-Update
 // widget declarations with hit testing, focus, keyboard navigation,
 // scrolling, text editing, modals, tooltips and the paint list, drawn

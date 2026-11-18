@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package units formats temperatures for the player (WG-16): one value
 // type built from the settings, carried by whoever draws a temperature.
 // It holds no package state; the zero value is Celsius.

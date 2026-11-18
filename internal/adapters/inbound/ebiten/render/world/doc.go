@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package world is the renderer's world pipeline: the draw order of one
 // frame (ground, floors, zones, objects by row, marks and labels), the
 // zoom tiers with the chunk and whole-map bakes, the frame's chunk lists,

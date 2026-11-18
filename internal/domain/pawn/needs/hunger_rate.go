@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package needs
 
 // Hunger rate and immunity by saturation (FOOD-6, wiki: Saturation). A

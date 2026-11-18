@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package game
 
 // quest_camp_test.go: the hostile camp through the game (QST-060..064):

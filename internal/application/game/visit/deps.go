@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package visit is the people who come to the colony from the world and
 // leave again (ENG-003 M9, PLAY-024): visitor groups and the fighters a
 // faction sends as military aid. It owns the visitor records and the aid

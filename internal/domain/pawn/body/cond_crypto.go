@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package body
 
 // Cryptosleep sickness (AX-9; wiki: Cryptosleep sickness): whoever comes

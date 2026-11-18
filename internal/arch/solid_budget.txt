@@ -12,7 +12,8 @@ fields rimworld-go/internal/application/game.Game 64
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 30
 files rimworld-go/internal/application/game 173
-lines rimworld-go/internal/application/game 51696
+lines rimworld-go/internal/application/game 52215  # +519: the GPL-3.0 SPDX header (3 lines) on its 173 files, raised by the user's choice (licensing, 2026-11-18); no code
+lines rimworld-go/internal/adapters/inbound/ebiten 12140  # the SPDX header (3 lines a file) took it over the 12000 limit (licensing, 2026-11-18, user's choice); no code
 methods rimworld-go/internal/adapters/inbound/ebiten.App 242
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 71
 methods rimworld-go/internal/application/game.Game 1767

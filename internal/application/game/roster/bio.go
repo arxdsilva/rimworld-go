@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package roster is who a colonist is, as the screens read it: the identity
 // read models built from a generated pawn, the character-creation pool that
 // exists before any Game (NG-1 §2.9, §5.4), and the Health tab's text. It is

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package overlay draws the map overlays over the ground and under or over
 // the objects: blood and dirt stains, fog, roof, home area, plan marks,
 // paths, zones and their labels, bridges, turret ranges, arrivals, fire,

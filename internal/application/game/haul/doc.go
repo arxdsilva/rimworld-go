@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package haul is stockpile hauling's own rules (HAUL-002): the load a
 // hauler gathers from nearby piles before it delivers (Plan, Gather), the
 // room a storage cell has for a load (Cell, Capacity, Toppable), the load

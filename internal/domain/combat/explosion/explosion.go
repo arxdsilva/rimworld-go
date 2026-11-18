@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package explosion is the pure blast model (DEF-2): what a grenade,
 // launcher shell or (later) IED, mortar shell or rocket does where it
 // bursts. It answers which cells a blast reaches, how hard it hits at a

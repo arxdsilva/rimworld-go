@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package noise is deterministic, seeded 2D value noise: a random lattice
 // smoothly interpolated between its points. It has no game concepts; the
 // caller supplies the RNG, so the same draws always give the same field.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package roof holds the per-tile roof model (SIM-018): which tiles are
 // roofed, by colonists or by overhead rock, which are planned for building
 // or removal, and which a wall, door or rock holds up. It is headless and

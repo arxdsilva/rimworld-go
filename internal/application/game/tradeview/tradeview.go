@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package tradeview is the PLAY-024 contract's read models: what the trade
 // and comms dialogs consume (ProposeTrade's offer codec is
 // trade.EncodeOffer). The game fills them (trade_session.go, comms.go) and

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package audiogen renders the game's procedural sound effects
 // (recipes.go, pkg/sfxsynth) to assets/generated/audio as 48 kHz mono
 // 16-bit WAV and updates the sound list (assets/metadata/audio/audio.json),

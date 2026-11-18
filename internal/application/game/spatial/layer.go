@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package spatial holds the per-map cell structures the simulation reads
 // in hot loops: the lazily filled byte layer and the bucket grid.
 package spatial

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package power is the colony's electricity, as pure rules (PLAY-021):
 // what each building kind does on a grid (SpecOf), how conduits, switches
 // and devices join into nets (Builder.Build), and how one net balances

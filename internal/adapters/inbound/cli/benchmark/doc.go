@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package benchmark is the engine-scale benchmark tool (NG-1 §6.2): for each
 // fixture x map size x speed it loads a grown colony, steps it frame by
 // frame and prints p50/p95/p99 per tick, per frame and per Step phase.

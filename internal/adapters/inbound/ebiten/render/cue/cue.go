@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package cue holds the sound cues the world raises: one-shot cues from
 // world diffs, animal calls and hurts, arrivals, thunder, the machine
 // ambience and what is on screen, handed to the App's sound director each

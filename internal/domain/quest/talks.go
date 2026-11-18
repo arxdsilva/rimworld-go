@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package quest
 
 // Peace talks (QST-077, QST-096). Signatures are fixed.

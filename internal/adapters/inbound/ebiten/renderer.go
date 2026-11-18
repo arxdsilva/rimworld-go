@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package ebiten adapts the headless application game to an interactive
 // Ebitengine client: screen routing plus a colony map viewport. It never
 // mutates domain state directly; it only calls Step/Snapshot/World and

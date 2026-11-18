@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package game orchestrates the authoritative simulation: clock, grid,
 // pawns, jobs, movement, items, needs, construction, and harvest.
 package game

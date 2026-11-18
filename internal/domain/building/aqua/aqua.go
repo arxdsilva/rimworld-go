@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package aqua is the rules of fish farming in tanks (FISH-*): the stocks a
 // tank raises and how a stock grows, suffers, dies and is netted. It holds
 // no RNG and reads no clock: the caller steps a Tank over elapsed ticks with

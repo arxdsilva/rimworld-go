@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package factionview is the faction rows of the setup wizard and the
 // colony's Factions window (game.FactionView, game.FactionViewsOf). Plain
 // data built from a faction: no state, no host.

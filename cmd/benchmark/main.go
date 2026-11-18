@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Command benchmark runs the engine-scale fixtures; see cli/benchmark.
 package main
 

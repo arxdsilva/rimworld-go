@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sfxsynth renders original sound effects from recipes: layers of
 // oscillators and noise with envelopes, pitch slides, filters, tremolo and
 // random grains, mixed, normalized and dithered to 16-bit PCM. Output is a

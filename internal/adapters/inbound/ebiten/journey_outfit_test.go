@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package ebiten
 
 // journey_outfit_test.go: the OUT-001…005 journeys (GEAR-3 UI): the Assign

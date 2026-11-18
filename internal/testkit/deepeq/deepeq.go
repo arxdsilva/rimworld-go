@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package deepeq is reflect.DeepEqual with the same answers, made cheap for
 // the large read models tests compare tick after tick.
 //

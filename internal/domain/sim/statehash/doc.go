@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package statehash computes stable FNV-64a fingerprints of simulation
 // state, so golden tests can pin a run's outcome and catch any change in
 // behaviour. Hashes are canonical: map entries are ordered by their

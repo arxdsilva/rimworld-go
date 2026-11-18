@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // The selection's map side (UI-016): the left-button gestures (select, Shift-toggle, the drag box, the double click), the marks drawn over what is selected on the map, and the icon helpers that read the renderer's sprites. The inspector itself lives in inspector/ (ARCH-005); these draw in map pixels with the renderer, so they stay with it.
 package ebiten
 

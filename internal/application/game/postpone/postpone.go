@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package postpone is the store of postponed work (SIM-027): the pawn jobs
 // put off because the way was blocked or the target out of reach, indexed
 // per pawn and job kind. It knows nothing of the game; the game package

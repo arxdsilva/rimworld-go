@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package aqua is fish farming in tanks (FISH-*, .agents/handoffs/FOOD.md#fish_tank_plan
 // §3): the state of each tank on a map, stepped hourly over its own list, the
 // handler's work (work.Handle on the Animals skill), the player's stock

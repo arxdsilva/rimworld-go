@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package memo holds the read models' copy-on-write memos: a list handed
 // out again while it reads the same (shared, read only: never written once
 // handed out), so a renderer cache keyed on the slice holds.

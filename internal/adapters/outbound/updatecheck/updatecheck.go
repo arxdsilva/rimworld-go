@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package updatecheck asks GitHub, once per run, whether a newer release of the
 // game exists, and opens the download page when the player asks. A check that
 // fails says nothing: the player just hears about the release on a later run.

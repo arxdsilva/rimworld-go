@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package pathstage runs the movement phase's path searches as a stage
 // (GAR-035, ARCH-010): decide all, then apply. The phase queues its
 // requests in ascending creature ID while creatures step; after the

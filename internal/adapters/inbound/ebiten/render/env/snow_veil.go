@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package env
 
 // Per-tile snow for the ground cover (PLAY-015 §4): the veil, cover decals

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package creature draws pawns and animals: figure layers and poses, the
 // animal body player, held items, work and combat animation, bursts and
 // particles, graves and pyres, the overlays above creatures (hunt marks,

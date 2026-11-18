@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package modding turns plugins into a frozen content catalog (PLG-*,
 // .agents/gaps/MODDING_GAP_ANALYSIS.md): manifest checks, load order,
 // definition inheritance, patches, typed definitions and provenance.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mapgen is the field-based colony-map generator for landing sites
 // (MAPGEN-2, .agents/handoffs/PLAY.md#play013_plan). It builds a map in ordered passes
 // (steps, in package mapgen/pipeline; each pass lives in mapgen/steps/...):

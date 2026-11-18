@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package resize is the save migrations of building footprints: which
 // kinds a save version grew, and what a building of the older size that
 // no longer fits gives back (its cost in that older save). The game's

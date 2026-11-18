@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package recreation
 
 // JoyKind is the kind of fun an activity gives (AX-0 contract, A6; wiki:

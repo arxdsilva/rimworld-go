@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package inputframe is the client's input abstraction: the raw device state polled once per Update, the resolved frame of fired actions and mouse buttons, and the fake source tests drive. It knows nothing of screens or the game.
 package inputframe
 

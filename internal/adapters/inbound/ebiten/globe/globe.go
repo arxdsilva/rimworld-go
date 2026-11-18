@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package globe is the New Colony wizard's planet view: the baked sphere,
 // starfield, view modes and hit testing. It is built on globemath, gfx and
 // art and never changes the planet it reads.

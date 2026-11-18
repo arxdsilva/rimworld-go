@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package game
 
 // quest_save_test.go: quests and saves (QST-1). A v14 save has no quest

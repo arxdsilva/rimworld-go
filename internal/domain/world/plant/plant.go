@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package plant is map plants: wild trees and berry bushes, and sown crops.
 // Growth is an integer tick counter; a plant is ripe at GrowTicks.
 package plant

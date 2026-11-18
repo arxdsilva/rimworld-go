@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package noise3 is deterministic, seeded 3D value noise and fractal
 // Brownian motion (fBm), meant for sampling fields on the unit sphere. The
 // lattice is a pure hash of the seed and the cell coordinates, so a field

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package component provides a sparse-set component store used by
 // simulation systems to associate typed data with entities.
 package component

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package input is the client's key-binding registry: named actions, the
 // context each belongs to, their default bindings, conflict checks and the
 // resolver that turns one frame of key state into the actions that fired.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package construction
 
 // axMaxHP is the base hit points of an AX-0 contract kind (ok=false: the

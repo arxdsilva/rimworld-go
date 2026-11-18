@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package construction is buildable definitions, frames (blueprints that
 // accept wood then work) and completed buildings.
 package construction

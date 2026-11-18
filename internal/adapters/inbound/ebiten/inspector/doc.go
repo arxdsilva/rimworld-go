@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package inspector is the selection's inspector: the pane with its tabs
 // (the pawn's needs, gear, health, social, bio and log; animals, buildings,
 // frames, items, plants, pens, troughs, caskets, groups), the command grid

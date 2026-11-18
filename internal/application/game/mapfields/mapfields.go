@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mapfields is the developer read model of the fields the map
 // generator built a map from (MAPGEN-2 §6.2): debug layers regenerated from
 // the saved Setup on demand, plus the ones read off the live map. It never

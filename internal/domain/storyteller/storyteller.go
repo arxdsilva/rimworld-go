@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package storyteller paces the colony's story: when threats come and how
 // big, with three original personalities and a hidden legacy profile that
 // reproduces the pre-NG-1 constants (NG-1 §3.2, §4.5).

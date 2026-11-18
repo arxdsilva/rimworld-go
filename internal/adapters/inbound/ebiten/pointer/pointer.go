@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package pointer draws the game's own mouse pointer (OPT-028): with the
 // Custom cursor option on, the OS cursor is hidden and the cursor/pointer
 // sprite is drawn last in App.Draw, over everything.

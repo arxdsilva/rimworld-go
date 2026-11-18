@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mapgen is the mapgen command: it renders the MAPGEN-2 field generator's debug images: one
 // PNG per field, a metrics file, contact sheets of seeds, a hills sweep, or
 // the site of an exact world tile.

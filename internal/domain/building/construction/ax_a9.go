@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package construction
 
 // plannedA9 is A9's kinds not live yet (AX-0 contract). AX-9 made all of

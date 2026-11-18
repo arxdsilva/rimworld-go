@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sociallog is the social log's words (ENG-003, M3/M4): each
 // logged kind's icon, weight, topics and prose, moved out of the game
 // package, which keeps the per-pawn rings (social_log.go) and builds a

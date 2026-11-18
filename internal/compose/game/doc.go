@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package game is the client's composition root: it builds the concrete
 // adapters (settings, saves, colonist card presets, custom scenarios,
 // sound, hardware, usage data, the update check), the colony builders and

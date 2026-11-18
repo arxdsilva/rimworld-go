@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package usagehttp sends the game's usage data to the website. Basic events
 // are always sent; advanced ones only while the player leaves the Options
 // switch on. Nothing here touches the simulation, and nothing the player

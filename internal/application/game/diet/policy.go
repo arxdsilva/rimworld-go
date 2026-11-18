@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package diet is what colonists, prisoners and tame animals eat (FOOD-4,
 // ENG-003: RimWorld wiki numbers, original names and prose): food
 // policies, food choice by optimality, the thoughts a meal gives, the

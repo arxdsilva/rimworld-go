@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package musicsynth renders original music from a score: notes played by
 // a few synthesized instruments (plucked guitar, string pads, violins,
 // horn, bass, frame drum, taiko, shaker), mixed in stereo through a small

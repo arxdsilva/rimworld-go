@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package assetroot finds files the game ships next to it (the assets
 // folder). It looks up from the working directory first (running from the
 // repository), then from the executable's directory (a release archive

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package backstory is a colonist's childhood and adulthood: original
 // titles and text, skill changes and work they can't do (NG-1 §3.7, §4.6).
 package backstory

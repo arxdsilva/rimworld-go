@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package pawngen generates colonists deterministically from a seed: name,
 // sex, build, age, backstories, traits, skills, passions, look and
 // starting conditions (NG-1 §4.6, §4.7).

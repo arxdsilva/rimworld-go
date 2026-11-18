@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package rage is the animals' fight-or-flight brain: manhunter rage and
 // manhunter packs, tame guards, predators' hunts, charges and pack calls,
 // fighting back and fleeing (where to run, and whether a foe can be

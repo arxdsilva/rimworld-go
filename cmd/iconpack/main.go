@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Command iconpack writes the rimworld-go app icons (pkg/appicon); run it
 // through `make app-icon`, which also builds the macOS .icns with iconutil.
 package main

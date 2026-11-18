@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package start holds the landing-spot pass ("start") and the final
 // validation pass ("validate") of MAPGEN-2 (.agents/handoffs/PLAY.md#play013_plan §4).
 package start

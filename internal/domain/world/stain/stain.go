@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package stain is blood and ichor on the ground (SIM-020): how strong a
 // stain is, how it fades over a week and how rain and snow wash it off
 // open ground. Pure and deterministic; the game owns the stains.

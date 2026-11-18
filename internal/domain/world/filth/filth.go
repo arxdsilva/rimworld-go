@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package filth is tracked-in dirt: what colonists pick up on their boots
 // outdoors, shed on indoor floors and wipe off on entrance carpets, and
 // how dirty a room is (SIM-021). Pure integer math, no state.

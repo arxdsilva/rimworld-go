@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package env is the colony view's ground cover and weather: grass tufts
 // and the grass batch, crop furrows and the crop batch, see-through tree
 // canopies, water edges and the water shader, puddles, the snow cache and

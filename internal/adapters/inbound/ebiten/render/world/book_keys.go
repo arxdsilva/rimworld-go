@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package world
 
 // The bookcases' art (A7, AR3's keys): the shelves fill as books go in.

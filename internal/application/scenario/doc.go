@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package scenario builds deterministic benchmark fixtures for the engine
 // scale work (NG-1 §6.2): grown colonies assembled only through the
 // game's public dev hooks and typed commands, warmed up, and returned as

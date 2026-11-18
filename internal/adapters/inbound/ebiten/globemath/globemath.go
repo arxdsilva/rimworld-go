@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package globemath is the pure geometry of the landing-site globe:
 // quaternions, the orbit camera, the perspective projection, ray-sphere
 // picking and the horizon test. It has no Ebitengine dependency, so the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package cardpresetfile keeps the colonist card's presets as one JSON file
 // each in a folder beside the settings file.
 package cardpresetfile

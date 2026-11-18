@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package gearfacts is the Gear tab's summary numbers and what worn armour
 // does to move speed (GEAR-1: GEAR-001, GEAR-002, GEAR-009 in
 // .agents/gaps/GEAR_GAP_ANALYSIS.md). It is pure: the game passes the outfit,

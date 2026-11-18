@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package pawngen
 
 // Original name pools (NG-1 §3.8): common real-world names from many

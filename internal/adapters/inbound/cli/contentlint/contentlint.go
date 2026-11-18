@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package contentlint is behind cmd/contentlint (PLG-040): it runs the
 // whole plugin pipeline headless (no window, no renderer) and prints the
 // load order, what each class holds and every problem with its plugin,

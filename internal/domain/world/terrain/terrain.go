@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package terrain
 
 // Type is a ground type. Rock is natural rock wall: impassable until mined.

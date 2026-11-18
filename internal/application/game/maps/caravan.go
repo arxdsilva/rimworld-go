@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package maps is the world beyond one map (ENG-003 M9, MAP-*): the
 // caravans that leave a map, travel the planet and come back or enter
 // another map, and the open maps' lifecycle. It owns its state; the game

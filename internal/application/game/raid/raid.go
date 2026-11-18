@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package raid runs the colony's threats: the legacy storyteller's die,
 // raid plans, the raider AI (arrive, assault, siege camp, flee), predator
 // packs, hive swarms and sappers' rock damage (DEF-4; moved from the game's

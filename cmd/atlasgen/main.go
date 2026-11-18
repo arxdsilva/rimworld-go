@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Command atlasgen packs one sprite family into texture atlas pages; the
 // logic lives in internal/adapters/inbound/cli/atlasgen.
 package main

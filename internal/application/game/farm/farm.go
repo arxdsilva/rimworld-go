@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package farm is the growing rules the game's plant pass applies
 // (FOOD-2): growing light from the sun, sun lamps and plain lamps, the
 // blight's strike and spread, wild plants sprouting back to the biome's

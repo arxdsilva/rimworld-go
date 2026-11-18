@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package contentid fingerprints the game's content: the definitions in
 // the content registries (research, recipes, buildings, biomes, factions,
 // incidents, traits, drugs, backstories, quests, animals). A save carries

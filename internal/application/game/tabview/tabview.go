@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package tabview is the read models of the inspect tabs fed by the social
 // and host systems (ENG-003 C3): Social, Health, Prisoner, World, Areas and
 // History. The game fills them and names them game.SocialView,

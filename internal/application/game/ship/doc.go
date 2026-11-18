@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package ship is the escape ship, the colony's way off the planet (AX-8,
 // ENG-003: the RimWorld wiki's numbers, original names and prose).
 //

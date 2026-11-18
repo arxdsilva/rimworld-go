@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package quest is the quests root (QST-1 step 2,
 // .agents/gaps/QUESTS_GAP_ANALYSIS.md): every quest the colony was ever
 // offered, sorted by id, a due min-heap of their timers, the offer cadence,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package inventory is what a pawn carries beside what it wields and
 // wears (CBT-2): for now a single slot for one spare weapon (a grenade
 // belt counts as one, however many grenades it holds). It is a value type

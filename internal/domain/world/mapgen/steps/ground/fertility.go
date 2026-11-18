@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package ground holds the MAPGEN-2 ground passes: the fertility field,
 // the stone material regions and the terrain classification (plan §2.4,
 // §2.6). All numbers are our own.

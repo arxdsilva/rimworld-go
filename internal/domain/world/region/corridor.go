@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package region
 
 // Long paths (NG-1 §6.5, E3): a route over the region graph — regions as

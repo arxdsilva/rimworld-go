@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package forage is a tame animal's food search rules (FEED-001): which
 // cells it can reach on its movement layer (Reach), the best meal of its
 // search with animal feed ahead of meals (Pick), and what it remembers

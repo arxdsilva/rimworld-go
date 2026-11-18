@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package thermo is the room temperature model (TEMP-1, ENG-003: the
 // RimWorld wiki's numbers, original names and prose): every
 // temperature.EqualiseInterval ticks each room's air moves toward the

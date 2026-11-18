@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package savefmt is the save file's container and header: a gzip stream
 // around the game's gob encoding, and the header type (Info) with the slot
 // naming rules (SlotKey, BaseSlot) the store and the client share. The game

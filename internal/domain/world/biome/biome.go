@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package biome is a map's natural setting (SIM-023): its climate, ground,
 // wild plants, grass and how much wildlife it carries. The climates reach
 // the wiki's summer and winter extremes (TEMP-2, ENG-003); the other

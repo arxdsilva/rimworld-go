@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package render turns a generated map's fields into PNG-ready images for
 // the mapgen debug tool. It is pure Go (image only), with its own
 // palettes; nothing here is shared with the game's renderer.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package worldview is the colony's full-screen world view (MAP-2,
 // MAIN_UI_SCREENS §33, §35, §36): the planet on the globe with every
 // world object marked (our maps, caravans, settlements, pods in flight,

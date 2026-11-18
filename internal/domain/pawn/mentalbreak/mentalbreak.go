@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mentalbreak is what a colonist does when its mood gives way:
 // for a while it stops taking orders or doing work and acts out instead.
 // Afterwards it feels the relief of catharsis.

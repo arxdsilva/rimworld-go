@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package gearview is the gear and outfit contract's read-model fields
 // (GEAR_GAP_ANALYSIS.md, GEAR-1 and GEAR-3): one struct per game view,
 // carried as its Gear field (game.PawnView.Gear and so on), so the owners

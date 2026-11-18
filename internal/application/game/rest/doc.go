@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package rest is sleeping: where a pawn sleeps (its bed, its partner's
 // double bed, the floor), who owns which bed, the sleep job driver and
 // when a sleeper gets up, and the thoughts it wakes with (BED-0).

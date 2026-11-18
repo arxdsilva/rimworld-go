@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package vault is the shared vocabulary of sealed vaults (MAPGEN-3): old
 // chambers generated inside rock, holding loot, dormant defenders and
 // sleeper caskets. Map generation places them; the game runs their

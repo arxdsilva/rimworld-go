@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package gear is the colonist inspector's Gear tab (GEAR-2,
 // .agents/gaps/GEAR_GAP_ANALYSIS.md; MAIN_UI_SCREENS_SPECIFICATION.md §16): the
 // summary lines (mass carried, the pack, the comfortable range, overall

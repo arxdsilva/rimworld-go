@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package room
 
 // SurgeryCleanliness is the cleanliness (RimWorld cleanliness x100) a room

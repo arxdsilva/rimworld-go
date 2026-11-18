@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package recreate is the colony's recreation at buildings (AX-6; wiki:
 // Recreation, Horseshoes pin, Hoopstone ring, Game of Ur, Chess table,
 // Billiards table, Poker table, Tube/Flatscreen/Megascreen television,

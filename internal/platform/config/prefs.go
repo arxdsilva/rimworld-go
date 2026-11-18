@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package config
 
 // The Options rows added by OPTIONS_GAP_ANALYSIS.md (OPT-001…032), settings

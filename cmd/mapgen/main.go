@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Command mapgen renders the MAPGEN-2 field generator's debug images; the
 // logic lives in internal/adapters/inbound/cli/mapgen.
 package main

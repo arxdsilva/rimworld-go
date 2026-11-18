@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package msgfmt splits a printf call into a format a translator can key on
 // and its arguments as text (OPT-001, Wave 4). The simulation posts English
 // messages; the client translates the format by its key, translates each

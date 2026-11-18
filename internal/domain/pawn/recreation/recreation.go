@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package recreation is the recreation (joy) need: it drains while a
 // colonist is awake and fills while it does something it enjoys.
 // Values are permille-style 0..Full like the other needs.

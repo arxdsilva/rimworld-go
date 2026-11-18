@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package stat is a pawn's derived numbers (work speed, movement, hunger,
 // comfort, accuracy...) built in a fixed order from body, age, conditions,
 // traits and difficulty (NG-1 §4.6).

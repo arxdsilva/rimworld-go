@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package normalgen is the normalgen command: it writes a normal map <name>_n.png next to every world
 // sprite under the given directories (ART §6.1), with pkg/spritenormals,
 // a port of spritefusion-sprite-normals (MIT, (c) 2026 Hugo Duprez); see

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package filesave stores saved games as files in a saves folder: one
 // file per slot, written atomically (temp file, fsync, rename) so a crash
 // never leaves a half-written save behind.

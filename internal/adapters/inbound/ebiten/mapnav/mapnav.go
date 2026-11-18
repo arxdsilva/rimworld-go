@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mapnav is the pure logic of moving between open maps (MAP-1): the
 // colonist bar's groups, the next and previous map for the cycle keys, and
 // the map to show when the one on screen closes. It has no ebiten import and

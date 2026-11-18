@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package planet generates the world: a Goldberg hex sphere with
 // elevation, climate, biomes, hills, rivers, lakes, caves, stones,
 // faction settlements and roads, built in budgeted steps so the UI can

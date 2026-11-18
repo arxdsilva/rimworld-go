@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package exposure is how air temperature affects a pawn or an animal: a
 // comfortable range (set by what it wears, or by its species), mood
 // thoughts outside it, and hypothermia or heatstroke that build up more

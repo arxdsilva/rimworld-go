@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package craft is production: bench bills and their work, drying racks,
 // the tool-cabinet bonus and the electric benches (PRD-0). Later phases
 // add quality rolls, stuff choice, art and deterioration hooks here.

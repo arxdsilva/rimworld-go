@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package book is the books of vanilla 1.5 core (AX-7, ENG-003 wiki
 // numbers, original names and prose): novels, textbooks and schematics,
 // items with a quality and a generated title. A book's identity is one

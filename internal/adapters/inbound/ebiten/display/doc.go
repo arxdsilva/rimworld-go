@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package display holds the client's calls on the Ebitengine window and
 // monitor that the composition root (internal/compose/game) makes: the
 // fullscreen and vsync switches, the window size presets and borderless

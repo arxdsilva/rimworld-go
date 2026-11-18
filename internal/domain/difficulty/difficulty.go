@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package difficulty is how hard the colony's world is: six original
 // presets plus custom settings, threat points with adaptation, the save
 // mode, and the scaling of yields and chances (NG-1 §3.3, §4.5).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package worldinfo is the world-map reading aids shared by the Select
 // Landing Site screen and the in-game world view (WG-3): the tile card
 // (BuildTileInfo), the feature SearchBox, the random-site FilterPanel and

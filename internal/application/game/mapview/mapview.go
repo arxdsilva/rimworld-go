@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mapview is the plain read models of the map and its overlays:
 // zones, rooms, ground, stains and dirt, recent roof collapses and bursts,
 // per-chunk shares of the world view and the minimap, plant growth, fires,

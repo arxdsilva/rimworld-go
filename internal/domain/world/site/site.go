@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package site is what a world tile means for the local colony map: biome,
 // climate, hills, river, coast, lakes, caves, stones and road (NG-1 §4.2).
 // The zero Site is today's map (legacy generation).

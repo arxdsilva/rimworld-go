@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package kit arms a raid (DEF-2): it spends a raid's points on the
 // raiders' weapons from the vanilla catalogue, by the faction's
 // technology. It is pure: the caller passes the roll (the game's main

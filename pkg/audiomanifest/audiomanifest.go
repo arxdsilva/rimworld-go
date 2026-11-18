@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package audiomanifest is the game's sound list
 // (assets/metadata/audio/audio.json): every sound id with its files, mix
 // bus, loudness and provenance. cmd/audiogen writes it and the audio

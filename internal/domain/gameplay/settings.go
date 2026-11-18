@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package gameplay is the colony's habit rules (CSE-*): small switches and
 // limits on how colonists go about their day. They are authoritative game
 // state, carried in the save and changed only by typed commands, so a replay

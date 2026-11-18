@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package water holds the MAPGEN-2 water passes (.agents/handoffs/PLAY.md#play013_plan
 // §2.3): the coast bands, the river with its banks, floodplain, canyon and
 // fords, the lakes, and the wetness field that finishes after them. All

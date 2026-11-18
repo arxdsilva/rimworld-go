@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package faction is the other peoples of the planet: original types,
 // generated names and leaders, goodwill with hysteresis, settlements and
 // raid attribution (NG-1 §3.4, §4).

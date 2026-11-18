@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package arch holds the repository-wide architecture guards: tests that
 // read the source tree and fail when a structural rule is broken. The
 // rules live in .agents/specs/SOLID_GO.md (type, interface and package size,

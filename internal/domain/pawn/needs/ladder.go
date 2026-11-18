@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package needs
 
 // The comfort, beauty and outdoors needs (BED-3) are levels in millionths

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package letters is the letter stack (PLAY-018): every message posted with
 // Letter set also becomes a saved letter that stays in the right-side stack
 // until the player dismisses it (command.DismissLetter). The message itself

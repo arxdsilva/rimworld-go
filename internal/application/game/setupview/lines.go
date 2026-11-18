@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package setupview builds the pre-game wizard's scenario details panel
 // (NG-1 §2.2): the key-value lines of a scenario, as plain values the game
 // package turns into its DetailLine read model. It was moved out of

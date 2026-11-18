@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package zone
 
 // Storage groups (STO-2, wiki: Shelf: linked storage). Building zones of

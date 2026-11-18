@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package vegetation is the MAPGEN-2 "vegetation" pass (.agents/handoffs/PLAY.md#play013_plan
 // §3.6): a vegetation density field with clearings, then wild plants placed
 // hierarchically (trees in groves, shrubs in thickets, ground plants in

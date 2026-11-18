@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package books is reading (AX-7, vanilla 1.5 core books; ENG-003 wiki
 // numbers, original names): colonists read novels, textbooks and
 // schematics for recreation, textbooks teach skills, schematics put

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package minimap is the colony minimap: the baked map layer the simulation
 // hands out by version, its box on screen, the viewport frame and clicks
 // that pan the camera. It reads the frame's *render.View, never the

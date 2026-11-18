@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package combat resolves fighting: line of sight and cover, strikes and
 // their hit rolls, defending against attackers, spike traps, breaching,
 // the sentry turrets (DEF-0), and projectiles in flight with worn armor

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package industry is the colony's water, ground and deep-ore machinery
 // (AX-4, ENG-003: the RimWorld wiki's numbers, original names and
 // prose): the river's flow cells and the watermill that turns them into

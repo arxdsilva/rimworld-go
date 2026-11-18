@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package roads is the "roads" pass (MAPGEN-2, .agents/handoffs/PLAY.md#play013_plan §3.3):
 // world roads enter the map at edge points and meet at a junction near the
 // middle. Each road is routed by A* over a terrain cost grid, pulled

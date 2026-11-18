@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package settingsfile stores the player's settings as one JSON file next
 // to the saves folder, written atomically (temp file + rename).
 package settingsfile

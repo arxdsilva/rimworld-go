@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package store is the storage buildings' own rules (STO-2): the zones
 // shelves, hoppers, graves and sarcophagi lay over their footprint and
 // the storage groups they link into (Buildings), the stacks marked to

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package item
 
 // Stuff (PRD-2): the material a stuffed item is made of, and what that

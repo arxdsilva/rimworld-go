@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package trait is a colonist's personality traits: original set, conflict
 // groups, stat mods and thought scaling (NG-1 §3.6, §4.6).
 package trait

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package options is the Options screen and the settings it edits: the
 // tabs (graphics, audio, controls with key capture, the story tab's
 // difficulty form, RAM notice), loading, applying and saving

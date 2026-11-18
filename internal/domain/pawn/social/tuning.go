@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Values follow the published RimWorld wiki by explicit user decision (ENG-003 balance override).
 
 package social

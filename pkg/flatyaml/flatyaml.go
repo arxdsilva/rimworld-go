@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package flatyaml reads the small YAML subset our tools generate for sprite
 // metadata, atlases and palettes: "key: value" lines with indentation for
 // nesting, and inline [a, b] lists. It is not a YAML parser: anchors, block

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mainmenu is the main menu screen: the hero splash and the colony
 // diorama behind it, the button rail, Continue/Load/New/Options/Credits/Quit,
 // the credits text and the RAM notice. It reaches the shell through a small

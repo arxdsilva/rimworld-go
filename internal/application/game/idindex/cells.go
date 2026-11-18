@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package idindex is the id containers behind the game's indexes (NG-1
 // §6.3 E1, never saved): Cells, one id per map cell and layer behind the
 // plant, building and frame cell indexes, with the cells where two live

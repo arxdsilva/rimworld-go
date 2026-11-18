@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 package scenario
 
 // SplitKit cuts a starting kit into drop-pod loads (NG-1 §2.11): stacks

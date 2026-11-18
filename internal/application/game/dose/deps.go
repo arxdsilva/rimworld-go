@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package dose is drug use (ENG-003, M2; MED-07): a colonist's drug state and
 // policy, the hourly wearing off, the search for a dose, and what a dose
 // does. The states stay on the game (saved as Drugs, in save.go's types, so

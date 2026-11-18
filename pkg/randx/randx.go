@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package randx provides seeded, explicit random number generation for
 // deterministic simulation code. Never use math/rand's global functions in
 // authoritative gameplay.

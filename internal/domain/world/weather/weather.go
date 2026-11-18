@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package weather is the deterministic outdoor weather model (SIM-016):
 // what falls from the sky, how hard, the wind, and what it leaves on the
 // ground. It is pure: callers pass the seed, time and temperature in.

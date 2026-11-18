@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package scenario is how a colony starts: who arrives, how, with what,
 // and the special rules that last the whole game. Built-in scenarios plus
 // custom ones from the editor, encoded as versioned JSON (NG-1 §3.1, §4.4).

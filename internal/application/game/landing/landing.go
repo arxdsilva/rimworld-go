@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package landing builds the new-game landing picker's biome cards:
 // read-only views of the biome definitions, usable before any colony
 // exists (moved out of package game, FOOD-0).

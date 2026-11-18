@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package fire is the rules of fire on the map (PLAY-015): how a fire on a
 // cell grows, spreads to flammable neighbours, burns out and is put out by
 // rain or firefighters. It is pure and deterministic: the game owns the

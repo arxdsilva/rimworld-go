@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package raid names how a raid arrives and how it fights (DEF-4, wave E
 // contract). The values are saved: append only, never reorder.
 package raid

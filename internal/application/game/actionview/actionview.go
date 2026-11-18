@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package actionview is the canonical action words on game.PawnView.Action
 // and game.AnimalView.Action (ART §27.2), the action a job reads as while
 // its pawn is working, and the fixed work of the jobs whose total does not

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package herd is animal husbandry (FOOD-3): taming with food, milking and
 // shearing, slaughter, auto-slaughter, feeding downed tame animals and a
 // hunter's kill carried to storage.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package outfit is how colonists dress (PLAY-017, TEMP-4): the best
 // outfit for the day, fetched piece by piece, with each changed slot
 // kept as it is for Cool, and the apparel policies that decide what may

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package mind runs mental breaks: when a colonist's mood gives way it
 // stops taking orders and acts out for a while (wanders, binges, hides,
 // insults people, goes berserk, hunts one person, or collapses), then

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package atomicfile writes a file so that a crash or a failed write leaves
 // either the old contents or the new ones, never a mix.
 package atomicfile

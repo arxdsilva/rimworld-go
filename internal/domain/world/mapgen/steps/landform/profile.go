@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package landform holds the MAPGEN-2 landform passes (.agents/handoffs/PLAY.md#play013_plan
 // §2.1, §2.2, §2.5): elevation and mountain bias, the provisional rock
 // mask, cave tunnels, and final rock with cleanup and natural roofs.

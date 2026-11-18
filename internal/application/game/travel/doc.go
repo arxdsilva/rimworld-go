@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package travel is the colony's ways off the map and out of time (AX-9,
 // ENG-003: the RimWorld wiki's numbers, original names and prose): the
 // stasis casket that holds a sleeper with needs, aging and illness

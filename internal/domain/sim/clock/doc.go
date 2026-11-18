@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package clock is the authoritative simulation calendar: integer ticks,
 // dates, and derived day periods (morning, afternoon, evening, night).
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package sheet is the colonist card's pure logic (RHUD): layout trees, targets,
 // the widget catalog, built-in presets, the text and tone of every line, colour
 // maths. It imports no ebiten, so all of it is testable headless.

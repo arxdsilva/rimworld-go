@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package openfolder shows a folder in the system's file browser. The path
 // is passed as one argument to the platform's opener; no shell is involved.
 package openfolder

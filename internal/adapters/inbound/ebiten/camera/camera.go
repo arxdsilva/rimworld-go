@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
 // Package camera is the presentation camera: offset, zoom, device density,
 // eased pan and zoom, viewports and clamping. It never touches the
 // simulation.
