@@ -537,7 +537,7 @@ func EncodeSaveAs(g *Game, w io.Writer, stamp savefmt.Stamp) error {
 	})
 	s.Landing = g.exportLanding() // setup_mapgen.go: nil for the map centre
 	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
-	s.ContentKeys = savefmt.Keys{backstory.Class: backstoriesOf(g).Keys()}
+	s.ContentKeys = savefmt.Keys{backstory.Class: backstoriesOf(g).Keys(), recipe.Class: g.craft.Bills.Book().Keys()}
 	s.SkillLive = g.exportSkillLive()
 	s.Troughs = g.troughs
 	for id, e := range g.exposure { // TEMP-3: the wiki scale (bodytemp.Ledger); the dead drop out
@@ -700,6 +700,7 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 	g.messages = s.Messages
 	g.names = importStore(s.Names)
 	g.need, g.vital, g.labor = importStore(s.Need), importStore(s.Vital), importStore(s.Labor)
+	remapRecipes(&s, c.Recipes) // before anything reads a recipe ID
 	g.pending = s.Pending
 	setMap(&g.lastMeal, s.LastMeal)
 	g.craft.Bills.Import(s.Bills)  // craft/bills.go
@@ -811,6 +812,18 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 	}
 	g.mapState = g.view
 	return g, info, nil
+}
+
+// remapRecipes moves saved recipe IDs onto book by key (PLG-044).
+func remapRecipes(s *saveState, book recipe.Book) {
+	to := s.ContentKeys.Recipes(book)
+	to.Bills(s.Bills)
+	s.Pending = to.Commands(s.Pending)
+	rec := func(e *entry[job.Record]) *job.Record { return &e.V }
+	savefmt.RemapJobs(to, s.Jobs, rec)
+	for _, e := range s.ExtraMaps {
+		savefmt.RemapJobs(to, e.State.Jobs, rec)
+	}
 }
 
 // importMapFields restores the current map's fields of s (MAP-0), with the

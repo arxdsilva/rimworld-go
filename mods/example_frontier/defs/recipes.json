@@ -1,0 +1,15 @@
+{
+  "recipe": [
+    {
+      "name": "lash_slat_carpet",
+      "label": "Lash slat carpet",
+      "bench": "crafting spot",
+      "work": 400,
+      "skill": "craft",
+      "learn": "crafting",
+      "input": {"kind": "wood", "qty": 8},
+      "output": "wood carpet",
+      "out_qty": 1
+    }
+  ]
+}

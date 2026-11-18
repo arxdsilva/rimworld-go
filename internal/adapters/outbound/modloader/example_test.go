@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/modding"
+	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/skill"
 )
@@ -52,6 +55,29 @@ func TestExamplePluginBuilds(t *testing.T) {
 	if got := b.DefOf(kid).Skills[skill.Social]; got != 1 || core.DefOf(kid).Skills[skill.Social] != 0 {
 		t.Fatalf("patch: Social = %d, core %d", got, core.DefOf(kid).Skills[skill.Social])
 	}
+	exampleRecipes(t, cat.Recipes)
+}
+
+// exampleRecipes: the example's recipe follows core's at the crafting spot,
+// and its patch lowers the straw carpet's work (PLG-025).
+func exampleRecipes(t *testing.T, r recipe.Book) {
+	t.Helper()
+	core := recipe.Core()
+	if r.Len() != core.Len()+1 {
+		t.Fatalf("recipes Len = %d, want core %d + 1", r.Len(), core.Len())
+	}
+	id := recipe.ID(core.Len())
+	d := r.DefOf(id)
+	if r.Key(id) != "example_frontier.lash_slat_carpet" || d.Bench != construction.CraftingSpot || d.Output != item.CarpetWood ||
+		d.Input != (recipe.Input{Kind: item.Wood, Qty: 8}) || d.Work != 400 {
+		t.Fatalf("plugin recipe %q: %+v", r.Key(id), d)
+	}
+	if l := r.For(construction.CraftingSpot); l[len(l)-1].ID != id {
+		t.Fatal("the crafting spot does not offer the plugin recipe")
+	}
+	if got, was := r.DefOf(recipe.MakeStrawCarpet).Work, core.DefOf(recipe.MakeStrawCarpet).Work; got != 240 || was != 300 {
+		t.Fatalf("patch: straw carpet work %d, core %d", got, was)
+	}
 }
 
 // Disabled, the example changes nothing: the book is core's.
@@ -61,7 +87,7 @@ func TestExamplePluginDisabledIsCore(t *testing.T) {
 		t.Fatal(err)
 	}
 	cat, probs := modding.Build(found, nil, "0.1.35")
-	if len(probs) != 0 || cat.Backstories.Len() != backstory.Core().Len() || len(cat.Plugins) != 0 {
+	if len(probs) != 0 || cat.Backstories.Len() != backstory.Core().Len() || cat.Recipes.Len() != recipe.Core().Len() || len(cat.Plugins) != 0 {
 		t.Fatalf("disabled example changed the build: %v, %d defs", probs, cat.Backstories.Len())
 	}
 }

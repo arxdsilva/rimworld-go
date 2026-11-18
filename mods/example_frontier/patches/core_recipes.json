@@ -1,0 +1,8 @@
+[
+  {
+    "op": "set",
+    "target": "recipe/core.make_straw_carpet",
+    "path": "work",
+    "value": 240
+  }
+]
