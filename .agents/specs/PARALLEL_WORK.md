@@ -97,7 +97,7 @@ contract (spec §, read models, stubs) → **producers in parallel** (domain/sim
 1. `go build ./...`
 2. `make fmt` (must print nothing), `make vet`, `make lint`
 3. `go test -race -count=1 ./...`
-4. Determinism, without -race (golden tests skip under it): `go test -count=3 -run 'Determin|SameSeed|Hash|Golden' ./internal/...`
+4. Determinism: `make test-golden` (TestScaleGolden, six 20 000-tick colonies pinned by state hash, under -race in its own package `internal/application/game/scalegolden`); the other hash, golden and same-seed tests run under -race in step 3
 5. `make art-check` when art changed
 6. `bin/benchmark` against the baseline when the sim or a hot path changed
 7. A visual review (`bin/game -capture …`, frame strips, contact sheets) for presentation or art work

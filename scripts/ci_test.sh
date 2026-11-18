@@ -15,8 +15,10 @@ annotate() {
 
 # heavy are the test binaries closest to the 10-minute -timeout. They run one
 # at a time so each has every CPU; the rest run two at a time. The two lists
-# are complementary, so no package is left out.
+# are complementary, so no package is left out, except own: packages that
+# have a CI job of their own.
 heavy=(rimworld-go/internal/adapters/inbound/ebiten rimworld-go/internal/application/game)
+own=(rimworld-go/internal/application/game/scalegolden) # test.yml, release.yml: golden
 
 log=${1:-}
 code=0
@@ -27,7 +29,7 @@ if [ -z "$log" ]; then
 	go test -race -exec true "${heavy[@]}" >/dev/null || true
 	xvfb-run -a go test -race -p 1 -timeout 10m "${heavy[@]}" 2>&1 | tee "$log"
 	code=${PIPESTATUS[0]}
-	rest=$(go list ./... | grep -vxF -f <(printf '%s\n' "${heavy[@]}"))
+	rest=$(go list ./... | grep -vxF -f <(printf '%s\n' "${heavy[@]}" "${own[@]}"))
 	# shellcheck disable=SC2086 # package paths have no spaces
 	xvfb-run -a go test -race -p 2 -timeout 10m $rest 2>&1 | tee -a "$log"
 	rc=${PIPESTATUS[0]}

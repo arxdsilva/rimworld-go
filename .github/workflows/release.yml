@@ -50,8 +50,25 @@ jobs:
       # the per-binary timeout (.agents/handoffs/OPS.md#ci-001-race-budget-and-memory).
       - run: scripts/ci_test.sh
 
+  golden:
+    # TestScaleGolden (AC-3): six seeded 20000-tick colonies pinned by state
+    # hash, under -race, in their own job so the test job keeps its budget.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: scale golden (-race)
+        run: |
+          make test-golden 2>&1 | tee golden.log
+          rc=${PIPESTATUS[0]}
+          scripts/ci_test.sh golden.log
+          exit "$rc"
+
   build:
-    needs: test
+    needs: [test, golden]
     strategy:
       fail-fast: false
       matrix:

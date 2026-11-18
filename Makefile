@@ -78,7 +78,7 @@ diagrams:  ## re-render docs/architecture/*.html from their JSON specs with Arch
 	@ARCHIFY_UPDATE_CHECK_DISABLED=1 node "$(ARCHIFY)" compare architecture docs/architecture/system-architecture.json docs/architecture/target-architecture.json docs/architecture/architecture-delta.html --repo-root $(CURDIR) >/dev/null
 
 .PHONY: test
-test: test-unit
+test: test-unit test-golden
 
 .PHONY: test-journeys
 test-journeys:  ## the player-journey suite (QA-001): fake input through the real Update/Draw loop
@@ -86,7 +86,11 @@ test-journeys:  ## the player-journey suite (QA-001): fake input through the rea
 
 .PHONY: test-unit
 test-unit:
-	go test -race -timeout 10m -cover ./...  # always -race, same budget as CI
+	go test -race -timeout 10m -cover $$(go list ./... | grep -vxF rimworld-go/internal/application/game/scalegolden)  # always -race, same budget as CI
+
+.PHONY: test-golden
+test-golden:  ## TestScaleGolden under -race at full ticks (its own CI job)
+	go test -race -count=1 -v -timeout 15m ./internal/application/game/scalegolden/
 
 .PHONY: simulate
 simulate:
