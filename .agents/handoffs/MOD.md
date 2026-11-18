@@ -145,3 +145,12 @@ Plugins screen and content problems view (PLG-070, 071, 041) · 2026-11-17 · 01
 - Limits: root ebiten package 11,958 of 12,000 lines; no `App` field or method added.
 - Open: Copy diagnostics (no clipboard), search/filter, plugin settings PLG-073, source lines PLG-072.
 
+## PLG-2-recipes-and-saved-keys
+Recipes moddable; saves keep definition keys (PLG-025, PLG-044) · 2026-11-17 · e0450f1be
+- Changed: plugins add recipes (offered by their bench's bill picker, made like core ones) and patch core recipes' plain fields; `recipe.Book` (per-bench index, no allocation in work discovery) held by `craft.Bills`, package `recipe.DefOf/All/For/Upgrade` gone. Saves write `ContentKeys` (backstory, recipe) and a load remaps saved IDs by key: a moved plugin definition keeps its meaning, a gone one becomes none (backstory) or drops its bill (recipe). `Build` is a per-class table; a broken `plugin.json` reports line and column.
+- Decisions: behaviour-bound recipe flags are core-only (gap doc PLG-025). `ContentKeys` is excluded from `StateHash` (content, not state): every pin holds. Recipe IDs stay a byte (256 per run).
+- Perf: tick benchmarks within noise, allocs equal (ColonyHour 193.78 → 192.98 ms; TickGrown/500 3.129 → 3.031 ms). `game` line budget 51666 → 51696 (key remap 13, recipe hand-off 17; user-approved, perf holds).
+- Tests: `TestSavedBackstoriesFollowTheirKeys`, the recipe twin, `TestBillPickerOffersPluginRecipes`, round trips straight and through JSON.
+- Found: `go test -race ./internal/application/game/` exceeds 10 min as one local binary at baseline too (gap doc leftovers); CI runs it alone.
+- Open: plugin products are not smeltable (`SmeltYield`), PLG-026 more classes, PLG-055 translations, PLG-072 source lines, PLG-060 scripting (user decision).
+

@@ -59,11 +59,11 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 | ID | Gap | Ships | State |
 |---|---|---|---|
 | PLG-020 | No data definitions from plugins | `defs/*.json`: a file holds `{"<class>": [ {def}, … ]}`; keys are `<plugin>.<name>`. | done (`d36ba7967`) |
-| PLG-021 | No core codec | Core defs of a moddable class encode to trees and decode back with no change (round-trip test per class). | done for backstory (`fb5e6b858`); each new class brings its codec |
+| PLG-021 | No core codec | Core defs of a moddable class encode to trees and decode back with no change (round-trip test per class). | done for backstory (`fb5e6b858`) and recipe (`555ad39ff`); each new class brings its codec |
 | PLG-022 | No inheritance | `"abstract": true` defs are templates only; `"parent": "<key>"` copies the parent's fields under the child's (objects merge, lists and scalars replace); cycles and missing parents are errors. | done (`d36ba7967`) |
 | PLG-023 | No same-key override | A later plugin defining an existing key is an error; replacing is a patch (`replace`), so every change is explicit and traceable. | done (`d36ba7967`) |
 | PLG-024 | Backstory class | `backstory.Book`; plugin backstories appear in pawn generation and bios. | done (`fb5e6b858`, `e266b7a9f`) |
-| PLG-025 | Recipe class | `recipe.Book`; plugin recipes appear on their bench's bill list; patches to core recipe numbers apply. | open |
+| PLG-025 | Recipe class | `recipe.Book`; plugin recipes appear on their bench's bill list; patches to core recipe numbers apply. | done (`555ad39ff`, `41810c86f`, `e0450f1be`): plugin recipes on their bench's bill picker, patches to plain fields of core recipes; behaviour flags (`by_species`, `legacy`, `dry`, `ferment`, `salvage`, `builds`, inputs' `smelt`, `smelt_wear`, `wreck`, `any_dryable`) refused on plugin recipes and unchangeable on core ones; plugin products are not smeltable yet (`SmeltYield` scans core) |
 | PLG-026 | More classes | Trait, research project, incident, biome, faction, drug, building, item, species: each needs its registry turned into a `Book`. One per change. | open |
 | PLG-027 | Def extensions | `"ext": {"<plugin>": {…}}` on any def: free data kept per plugin for later behaviour hooks; never read by core. | deferred (needs PLG-060) |
 
@@ -82,9 +82,9 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 |---|---|---|---|
 | PLG-040 | `contentlint` is empty | `cmd/contentlint [-mods dir] [-enable a,b]`: runs the whole pipeline headless, prints every problem with plugin, file, def and field, exit 1 on errors. | done (`ca88a0512`, `0aa422ddf`) |
 | PLG-041 | No content error screen | Errors at start open the Content Errors window (§48): plugin, file, def, field, message; Copy, Disable plugin, Continue without it, Quit. | [-] (`d32c2a1c1`, `011fd4e68`): main-menu notice, Problems view with Show plugin and Disable; no Copy (the client has no clipboard), no recovery-mode or Quit actions |
-| PLG-042 | No range/reference checks | Each codec checks its fields (ranges, references to other keys) and names the field path. | done for backstory (`fb5e6b858`): ranges and types; backstories reference nothing |
+| PLG-042 | No range/reference checks | Each codec checks its fields (ranges, references to other keys) and names the field path. | done for backstory and recipe: ranges, types and references (item, bench, skill, work type) with field paths |
 | PLG-043 | Content hash ignores plugins | `contentid.Current(catalog)`: hash covers every frozen book; `Content.Plugins` is the load order with versions. | done (`ac91b0589`, `e266b7a9f`) |
-| PLG-044 | Saves keep raw indexes | Save keys, map to indexes at load. | deferred (header guard is enough for v1) |
+| PLG-044 | Saves keep raw indexes | Save keys, map to indexes at load. | done (`8c253fe35` backstories, `41810c86f` recipes): `saveState.ContentKeys`, remap by key on load; a gone backstory becomes none, a gone recipe drops its bill |
 
 ### Saves
 
@@ -152,6 +152,8 @@ Integration after each wave: `go build ./...`, `make arch`, `go test -race` of t
 | Patch conditions | `"if": "<id>"` and `"missing": "<id>"` are plugin-id strings on the op. |
 | `optional` | Excuses a missing target and a missing field or item for `remove`; `set`/`add`/`merge` on a missing path are always errors. |
 | Bad def or patch | Drops only itself; the plugin still loads. A manifest or dependency error stops the plugin and its dependants. |
+| Recipe IDs | A recipe ID is a byte, so a run holds at most 256 recipes; plugin recipes are never a new bench's default bill; a plugin recipe's key is its `Name` (research unlocks say `recipe:<Name>`). |
+| Carpet hint | The Architect's "sew one at…" hint reads `game.CoreRecipes()`: core carpets name core recipes. |
 | Where the book lives | `game.Content` on the skill state (`backstoriesOf(g)`), set in `New`; `LoadContent(r, c)` loads a save with the run's books; `Load(r)` is core. |
 | Captures | Load no plugin, so their frames never depend on what is installed. |
 

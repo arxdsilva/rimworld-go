@@ -7,11 +7,11 @@ The plugin pipeline (PLG-*, `.agents/gaps/MODDING_GAP_ANALYSIS.md`): manifests, 
 - `modding.go`: the contract (`Manifest`, `File`, `Plugin`, `Source`, `Problem`, `Placed`, `Order`, `Def`, `Touch`, `Op`).
 - `order.go`: `CheckManifest`, `Resolve` (requires/after/before/conflicts, cycles, version warnings, a reason per position).
 - `defs.go` `CollectDefs`, `inherit.go` `Inherit`, `patch.go` `ParseOps`/`Apply`, `tree.go` (deep copy, equal, merge, paths).
-- `class_backstory.go`: the backstory codec (`EncodeBackstories`, `DecodeBackstories`).
+- `class_backstory.go`, `class_recipe.go`: the class codecs (`Encode*`, `Decode*`); recipe behaviour flags are refused on plugin recipes and fixed on core ones.
 - `build.go`: `Build` (the pipeline), `Catalog`, `keepCore`, `Classes`, `Errors`.
 
 ## Depends on
-Domain books (`domain/pawn/backstory`) and their key helpers (`skill.Key`, `backstory.BitKey`, `TagKey`).
+Domain books (`domain/pawn/backstory`, `domain/economy/recipe`) and their key helpers (`skill.Key`, `backstory.BitKey`/`TagKey`, `item.ParseKind`, `construction.Parse`, `work` and `item` stuff keys).
 
 ## Contracts
 - Output never depends on file-system or map order: same plugins, any permutation, same catalog and problems (tests shuffle).
