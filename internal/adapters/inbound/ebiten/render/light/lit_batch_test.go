@@ -177,12 +177,11 @@ func TestGroundBatchReusesItsBuffer(t *testing.T) {
 	verts, idx := r.lit.batch.verts[:64*4], r.lit.batch.idx[:64*6]
 	sh := r.litShader()
 	r.lit.Opts.Images[0] = r.lit.batch.sheet.pages[0]
-	ebitenOnly := testing.AllocsPerRun(200, func() {
+	ebitenOnly := fewestAllocs(100, func() {
 		dst.DrawTrianglesShader32(verts, idx, sh, &r.lit.Opts)
 	})
-	allocs := testing.AllocsPerRun(200, pass)
-	// +1: Ebiten's own sync.Pool (invokeUsageCallbacks) jitters under GC and -race
-	if allocs > ebitenOnly+1 {
+	allocs := fewestAllocs(100, pass)
+	if allocs > ebitenOnly {
 		t.Fatalf("a ground pass allocates %v, one Ebiten call %v", allocs, ebitenOnly)
 	}
 	if &r.lit.batch.verts[:1][0] != &verts[0] {

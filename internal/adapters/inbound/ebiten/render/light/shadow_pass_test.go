@@ -36,12 +36,12 @@ func TestColonistShadowPass(t *testing.T) {
 		many[i] = Foot{X: float64(i%10) + 0.5, Y: float64(i/10) + 0.5, Scale: 1}
 	}
 	st.Draw(v, l, screen, many, 15) // grow the batch once
-	few := testing.AllocsPerRun(20, func() { st.Draw(v, l, screen, feet, 15) })
-	lots := testing.AllocsPerRun(20, func() { st.Draw(v, l, screen, many, 15) })
+	few := fewestAllocs(100, func() { st.Draw(v, l, screen, feet, 15) })
+	lots := fewestAllocs(100, func() { st.Draw(v, l, screen, many, 15) })
 	if st.blobImg != tex || st.Drawn != 40 {
 		t.Fatal("the blob texture was remade")
 	}
-	if lots > few+2 { // ebiten's per-draw bookkeeping varies by one or two; a per-colonist cost would add ~37
+	if lots > few { // one batched draw either way; a per-colonist cost would add ~37
 		t.Fatalf("%.0f allocations a frame for 40 colonists, %.0f for 3", lots, few)
 	}
 	flushes := st.Flushes
