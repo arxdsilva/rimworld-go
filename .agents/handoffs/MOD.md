@@ -1,6 +1,6 @@
 # MOD handoffs
 
-Families: MOD, CSE. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
+Families: MOD, CSE, PLG. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
 
 ## MOD-000-mods-programme
 RimHUD, Neat Storage and Common Sense programme · 2026-11-03 · f7631b72a
@@ -127,3 +127,13 @@ Wander, snow sky, cold store (CSE-028, 041, 042, 043) · 2026-11-04 · b4830ea8d
 Recipe ingredient kinds named (CSE-046) · 2026-11-04 · b4830ea8d
 - Changed: `recipe.Input.Kinds()` (kinds `Accepts` takes, in kind order); `craft/view.go` `Recipes()` fills `RecipeView.InputKinds`; `Bills.pickTip(r)` in `inspector/bill_config.go` returns "Takes: wood, steel, ..." when `FullRecipeList` is on, "" otherwise. Tests `TestInputKindsMatchPlanner` (stateless inputs only; the planner's per-stack state: dryable, smelt yield, wreck, is not in `Kinds`), `TestRecipeRowNamesKinds`. `Def.InputKinds` unchanged.
 - Open: the picker row is not wired: `openBillPicker` in `inspector/building_inspector.go` needs `Tip: func(i int) string { return a.Bills().pickTip(recipes[i]) }` on its `uikit.ListSpec`.
+
+## PLG-0-plugin-engine
+Plugin system: discovery to save header (PLG-001…050) · 2026-11-17 · e266b7a9f
+- Changed: a folder in `mods/` (shipped) or `<config>/rimworld-go/mods` with `plugin.json`, `defs/`, `patches/` loads when its id is in `Settings.Plugins.Enabled` (next start). `application/modding` resolves the order (requires/after/before/conflicts, reasons), builds defs with templates and patches, and freezes per-class books; `modloader` reads through `os.Root` with caps. Backstory is the first moddable class; plugin backstories are drawn in pawn generation. `cmd/contentlint` lints headless. `mods/example_frontier` ships (off by default) and is built by a test.
+- Decisions: JSON via the standard library (no dependency). No package registry changes at run time: `game.Config.Content` carries the books (zero = core), package `backstory.DefOf/All` are gone. Core defs keep their slots whatever a patch does (saves keep indexes). Captures load no plugin. Gap doc "Decision record" and "Decisions made while building" hold the rest.
+- Save: `SaveVersion` unchanged; the header's `Content.Plugins` is the load order and `contentid.Of` hashes the run's books, so the SAV-025 missing-plugin and content-mismatch notices now fire on real saves. With no plugin the fingerprint is unchanged (`TestOfCoreIsCurrent`).
+- Limits: `game` line budget 51644 → 51666 for the book threading (user-approved ceilings rise when perf holds; no tick-path change).
+- UI: the Plugins screen and Content Errors view are PLG-070/071/041 (next section); until then problems go to the log.
+- Open: PLG-025 recipes, PLG-026 more classes, PLG-055 translations, PLG-072 source lines, PLG-003 `-plugins` flag, PLG-060 scripting (needs a user decision on Starlark/WASM).
+

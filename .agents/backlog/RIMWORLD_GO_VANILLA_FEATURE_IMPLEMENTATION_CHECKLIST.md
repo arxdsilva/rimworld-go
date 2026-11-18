@@ -2439,7 +2439,7 @@ the player-facing system.
 
 -   [x] **Manual save** (SAV-001: pause > Save opens a dialog with a name field, the saves on disk as a list, and Enter or the Save button; SAV-002 asks before replacing; SAV-010 deletes after a question)
 -   [x] **Load game** (pause > Load and main menu Load/Continue)
--   [-] **Save metadata** (SAV-003, SAV-011, SAV-020, SAV-025: the v16 header holds slot name, colony id and name, base slot, autosave flag, date, season, day, colonists, version, build, commitment, storyteller, difficulty, map size, biome and a content hash with the plugin list `["core"]`; missing: the world seed)
+-   [-] **Save metadata** (SAV-003, SAV-011, SAV-020, SAV-025: the v16 header holds slot name, colony id and name, base slot, autosave flag, date, season, day, colonists, version, build, commitment, storyteller, difficulty, map size, biome and a content hash with the plugin load order (PLG-050); missing: the world seed)
     -   Colony.
     -   world seed.
     -   tick/date.
@@ -2606,7 +2606,7 @@ method patching.
 
 ## 37.1 Plugin manifest
 
--   [ ] **Plugin metadata**
+-   [x] **Plugin metadata** (PLG-001: `plugin.json`, `modding.CheckManifest`)
     -   Unique namespaced ID.
     -   display name.
     -   author(s).
@@ -2624,16 +2624,16 @@ hints. citeturn0search2
 
 ## 37.2 Plugin discovery
 
--   [ ] **Plugin directories**
+-   [x] **Plugin directories** (PLG-002: `modloader`, shipped `mods/` and `<config>/rimworld-go/mods`)
     -   Discover installed plugins from configured directories.
--   [ ] **Enable/disable list**
+-   [x] **Enable/disable list** (PLG-003: `Settings.Plugins.Enabled`, applied at the next start)
     -   Player chooses active plugins.
--   [ ] **Deterministic load order**
+-   [x] **Deterministic load order** (PLG-010: `modding.Resolve`, reasons per position)
     -   Resolve dependencies.
     -   topological ordering.
     -   stable tie-break.
     -   explicit errors for cycles.
--   [ ] **Compatibility validation**
+-   [x] **Compatibility validation** (PLG-011)
     -   Missing dependency.
     -   incompatible version.
     -   duplicate plugin ID.
@@ -2641,10 +2641,10 @@ hints. citeturn0search2
 
 ## 37.3 Data definitions
 
--   [ ] **Definition registry**
+-   [x] **Definition registry** (PLG-024: frozen per-class books in `modding.Catalog`, namespaced keys, dense indexes)
     -   Namespaced stable IDs.
     -   Immutable after game start.
--   [ ] **Definition classes**
+-   [-] **Definition classes** (PLG-024: backstory only; recipes next, PLG-025/026)
     -   Item.
     -   material.
     -   terrain.
@@ -2666,26 +2666,26 @@ hints. citeturn0search2
     -   scenario.
     -   recreation.
     -   drug.
--   [ ] **Human-readable definition format**
+-   [x] **Human-readable definition format** (PLG-020: JSON, strict per-class codecs)
     -   YAML or JSON.
     -   Strong schema validation.
     -   Convert strings to compact runtime indexes.
--   [ ] **Definition inheritance/templates**
+-   [x] **Definition inheritance/templates** (PLG-022: `abstract`, `parent`)
     -   Allow reusable parent/template definitions without runtime
         reflection-heavy behavior.
 
 ## 37.4 Patching definitions
 
--   [ ] **Declarative patch operations**
+-   [x] **Declarative patch operations** (PLG-030, PLG-031: set, add, remove, merge, replace; `if`/`missing`)
     -   Add.
     -   remove.
     -   replace.
     -   merge.
     -   conditional patch based on another plugin.
--   [ ] **Patch ordering**
+-   [x] **Patch ordering** (PLG-032: load order, file, position; `Def.Touched` provenance)
     -   Deterministic.
     -   diagnostics show which plugin changed a definition.
--   [ ] **Conflict diagnostics**
+-   [x] **Conflict diagnostics** (PLG-033: overlapping-path warnings naming both plugins)
     -   Detect/describe conflicting patches where possible.
 
 RimWorld mods use patch operations to alter definitions without
@@ -2695,7 +2695,7 @@ class of capability with an intentionally designed schema.
 
 ## 37.5 Content validation
 
--   [ ] **`contentlint`**
+-   [-] **`contentlint`** (PLG-040: pipeline, schema, references, dependency graph, ranges, provenance; plugin assets not validated yet)
     -   Parse all active plugin definitions.
     -   validate schema.
     -   validate references.
@@ -2715,7 +2715,7 @@ class of capability with an intentionally designed schema.
     -   Adapter-level only.
 -   [ ] **Namespaced asset paths**
     -   Prevent collisions.
--   [ ] **Safe path handling**
+-   [x] **Safe path handling** (PLG-004: `os.Root` per plugin, size and count caps)
     -   No traversal outside plugin root.
 
 ## 37.7 Localization
@@ -2800,9 +2800,9 @@ Hooks must have documented ordering.
     -   Namespaced versioned blob/schema.
     -   Deterministic serialization.
 -   [ ] **Plugin migration API**
--   [-] **Missing-plugin save diagnostics** (SAV-025: `savefmt.MissingPlugins` and the load notice are tested with fakes; there is no mod system, so no plugin can be missing yet)
--   [-] **Plugin set stored in save metadata** (SAV-025: every header carries `Content.Plugins` = `["core"]`; discovery and load order `[!]` blocked: no mod system)
--   [-] **Content hash/replay compatibility** (SAV-025: `game/contentid` fingerprints the content registries into the header; a same-build save with another hash asks before loading; replay compatibility not built)
+-   [x] **Missing-plugin save diagnostics** (SAV-025, PLG-050: the header lists the real load order, so `savefmt.MissingPlugins` names a plugin the save had and this run lacks)
+-   [x] **Plugin set stored in save metadata** (PLG-050: `Content.Plugins` is the load order, core first)
+-   [-] **Content hash/replay compatibility** (SAV-025, PLG-043: `contentid.Of` fingerprints the run's frozen books, plugins included; replay compatibility not built)
 
 ## 38.5 Plugin UI
 

@@ -15,7 +15,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | [FOOD.md](FOOD.md) | FOOD, FEED, FISH |
 | [GEAR.md](GEAR.md) | GEAR |
 | [MED.md](MED.md) | MED, AIL |
-| [MOD.md](MOD.md) | MOD, CSE |
+| [MOD.md](MOD.md) | MOD, CSE, PLG |
 | [NG.md](NG.md) | NG (the NG1 new-game plan) |
 | [OPS.md](OPS.md) | CI, DEPS, REL, UPDATE, USAGE, LOG, TOKEN, DOCS, REVIEW, QA, SYS |
 | [PERF.md](PERF.md) | OPT, PERF |
@@ -268,6 +268,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PLAY-013-sleep-and-anti-flap | Sleep rules, anti-flap pass, zones over floors | 2026-10-21 | [PLAY.md](PLAY.md#play-013-sleep-and-anti-flap) |
 | PLAY-022-power-followups | Lamp bulb, solar weather, smooth lamp light | 2026-10-26 | [PLAY.md](PLAY.md#play-022-power-followups) |
 | PLAY-023-zones-rimworld-rules | Zone placement rules, dumping stockpile, storage priority | 2026-10-26 | [PLAY.md](PLAY.md#play-023-zones-rimworld-rules) |
+| PLG-0-plugin-engine | Plugin system: discovery to save header (PLG-001…050) | 2026-11-17 | [MOD.md](MOD.md#plg-0-plugin-engine) |
 | PRD-0-craft-package | The craft package and the quality domain | 2026-10-29 | [BASE.md](BASE.md#prd-0-craft-package) |
 | PRD-1-bill-settings | Bill settings, multi-ingredient recipes, gathering | 2026-10-29 | [BASE.md](BASE.md#prd-1-bill-settings) |
 | PRD-2-quality-stuff-condition | Quality, stuff, condition, inspiration | 2026-10-29 | [BASE.md](BASE.md#prd-2-quality-stuff-condition) |

@@ -42,27 +42,27 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 
 | ID | Gap | Ships | State |
 |---|---|---|---|
-| PLG-001 | No plugin manifest | `plugin.json`: `id` (lowercase `[a-z0-9_]`, unique, not `core`), `name`, `authors`, `version`, `game` (supported versions, `major.minor`), `description`, `url`, `requires`, `after`, `before`, `conflicts`. Strict decoding, every error names file and field. | open |
-| PLG-002 | No discovery | `modloader` lists the folders under each plugin root (`<exe>/mods`, the user data dir `mods`), reads each manifest, sorts by id; enumeration order never matters. | open |
-| PLG-003 | No enabled set | `settings.Plugins.Enabled []string`; a new install enables nothing; `-plugins a,b` overrides for a run. | open |
-| PLG-004 | Unsafe paths | All reads through `os.Root` per plugin; symlinks out of the root, absolute paths and `..` are errors; file size (4 MiB) and file count (2,000) caps. | open |
+| PLG-001 | No plugin manifest | `plugin.json`: `id` (lowercase `[a-z0-9_]`, unique, not `core`), `name`, `authors`, `version`, `game` (supported versions, `major.minor`), `description`, `url`, `requires`, `after`, `before`, `conflicts`. Strict decoding, every error names file and field. | done (`ddeb8d3ee`) |
+| PLG-002 | No discovery | `modloader` lists the folders under each plugin root (`<exe>/mods`, the user data dir `mods`), reads each manifest, sorts by id; enumeration order never matters. | done (`9c91fb22e`, `ca88a0512` folders) |
+| PLG-003 | No enabled set | `settings.Plugins.Enabled []string`; a new install enables nothing; `-plugins a,b` overrides for a run. | [-] (`cd2c2991e`): settings and Plugins screen; the `-plugins` run flag is not built |
+| PLG-004 | Unsafe paths | All reads through `os.Root` per plugin; symlinks out of the root, absolute paths and `..` are errors; file size (4 MiB) and file count (2,000) caps. | done (`9c91fb22e`) |
 
 ### Load order and compatibility
 
 | ID | Gap | Ships | State |
 |---|---|---|---|
-| PLG-010 | No load order | Topological order over `requires` and `after`/`before`; ties broken by id; core first. Every position has a reason (`required by x`, `after y`, `alphabetical`) for the order screen. | open |
-| PLG-011 | No dependency errors | Missing requirement, requirement disabled, cycle (names the loop), duplicate id, conflicting pair both enabled, unsupported game version (warning, still loads). A plugin with an error is not loaded; its dependants are not loaded either, each with its own message. | open |
+| PLG-010 | No load order | Topological order over `requires` and `after`/`before`; ties broken by id; core first. Every position has a reason (`required by x`, `after y`, `alphabetical`) for the order screen. | done (`ddeb8d3ee`) |
+| PLG-011 | No dependency errors | Missing requirement, requirement disabled, cycle (names the loop), duplicate id, conflicting pair both enabled, unsupported game version (warning, still loads). A plugin with an error is not loaded; its dependants are not loaded either, each with its own message. | done (`ddeb8d3ee`; release tags checked since `e266b7a9f`) |
 
 ### Definitions
 
 | ID | Gap | Ships | State |
 |---|---|---|---|
-| PLG-020 | No data definitions from plugins | `defs/*.json`: a file holds `{"<class>": [ {def}, … ]}`; keys are `<plugin>.<name>`. | open |
-| PLG-021 | No core codec | Core defs of a moddable class encode to trees and decode back with no change (round-trip test per class). | open |
-| PLG-022 | No inheritance | `"abstract": true` defs are templates only; `"parent": "<key>"` copies the parent's fields under the child's (objects merge, lists and scalars replace); cycles and missing parents are errors. | open |
-| PLG-023 | No same-key override | A later plugin defining an existing key is an error; replacing is a patch (`replace`), so every change is explicit and traceable. | open |
-| PLG-024 | Backstory class | `backstory.Book`; plugin backstories appear in pawn generation and bios. | open |
+| PLG-020 | No data definitions from plugins | `defs/*.json`: a file holds `{"<class>": [ {def}, … ]}`; keys are `<plugin>.<name>`. | done (`d36ba7967`) |
+| PLG-021 | No core codec | Core defs of a moddable class encode to trees and decode back with no change (round-trip test per class). | done for backstory (`fb5e6b858`); each new class brings its codec |
+| PLG-022 | No inheritance | `"abstract": true` defs are templates only; `"parent": "<key>"` copies the parent's fields under the child's (objects merge, lists and scalars replace); cycles and missing parents are errors. | done (`d36ba7967`) |
+| PLG-023 | No same-key override | A later plugin defining an existing key is an error; replacing is a patch (`replace`), so every change is explicit and traceable. | done (`d36ba7967`) |
+| PLG-024 | Backstory class | `backstory.Book`; plugin backstories appear in pawn generation and bios. | done (`fb5e6b858`, `e266b7a9f`) |
 | PLG-025 | Recipe class | `recipe.Book`; plugin recipes appear on their bench's bill list; patches to core recipe numbers apply. | open |
 | PLG-026 | More classes | Trait, research project, incident, biome, faction, drug, building, item, species: each needs its registry turned into a `Book`. One per change. | open |
 | PLG-027 | Def extensions | `"ext": {"<plugin>": {…}}` on any def: free data kept per plugin for later behaviour hooks; never read by core. | deferred (needs PLG-060) |
@@ -71,26 +71,26 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 
 | ID | Gap | Ships | State |
 |---|---|---|---|
-| PLG-030 | No patches | `patches/*.json`: a list of operations, each `{"op", "target": "<class>/<key>", "path": "field.sub", "value"}`. Ops: `set` (replace a field), `add` (append to a list or add a map entry), `remove` (field, list item by value, or whole def), `merge` (object merge), `replace` (whole def). | open |
-| PLG-031 | No conditions | `"if": "<id>"` / `"missing": "<id>"` runs the op only when that plugin is (not) loaded. | open |
-| PLG-032 | No order or provenance | Patches apply after all plugins' defs are in, in load order then file order then list order. Every def records who defined it and who patched which field, in order. | open |
-| PLG-033 | No conflict report | Two plugins `set`-ing the same field of the same def: the later wins and a warning names both. A target that does not exist is an error unless the op says `"optional": true`. | open |
+| PLG-030 | No patches | `patches/*.json`: a list of operations, each `{"op", "target": "<class>/<key>", "path": "field.sub", "value"}`. Ops: `set` (replace a field), `add` (append to a list or add a map entry), `remove` (field, list item by value, or whole def), `merge` (object merge), `replace` (whole def). | done (`d36ba7967`, `77f4f39fb`) |
+| PLG-031 | No conditions | `"if": "<id>"` / `"missing": "<id>"` runs the op only when that plugin is (not) loaded. | done (`d36ba7967`) |
+| PLG-032 | No order or provenance | Patches apply after all plugins' defs are in, in load order then file order then list order. Every def records who defined it and who patched which field, in order. | done (`d36ba7967`) |
+| PLG-033 | No conflict report | Two plugins `set`-ing the same field of the same def: the later wins and a warning names both. A target that does not exist is an error unless the op says `"optional": true`. | done (`77f4f39fb`) |
 
 ### Validation and diagnostics
 
 | ID | Gap | Ships | State |
 |---|---|---|---|
-| PLG-040 | `contentlint` is empty | `cmd/contentlint [-mods dir] [-enable a,b]`: runs the whole pipeline headless, prints every problem with plugin, file, def and field, exit 1 on errors. | open |
+| PLG-040 | `contentlint` is empty | `cmd/contentlint [-mods dir] [-enable a,b]`: runs the whole pipeline headless, prints every problem with plugin, file, def and field, exit 1 on errors. | done (`ca88a0512`, `0aa422ddf`) |
 | PLG-041 | No content error screen | Errors at start open the Content Errors window (§48): plugin, file, def, field, message; Copy, Disable plugin, Continue without it, Quit. | open |
-| PLG-042 | No range/reference checks | Each codec checks its fields (ranges, references to other keys) and names the field path. | open |
-| PLG-043 | Content hash ignores plugins | `contentid.Current(catalog)`: hash covers every frozen book; `Content.Plugins` is the load order with versions. | open |
+| PLG-042 | No range/reference checks | Each codec checks its fields (ranges, references to other keys) and names the field path. | done for backstory (`fb5e6b858`): ranges and types; backstories reference nothing |
+| PLG-043 | Content hash ignores plugins | `contentid.Current(catalog)`: hash covers every frozen book; `Content.Plugins` is the load order with versions. | done (`ac91b0589`, `e266b7a9f`) |
 | PLG-044 | Saves keep raw indexes | Save keys, map to indexes at load. | deferred (header guard is enough for v1) |
 
 ### Saves
 
 | ID | Gap | Ships | State |
 |---|---|---|---|
-| PLG-050 | Plugin set in saves is always `["core"]` | Real load order (`id@version`). The existing missing-plugin notice (`savefmt.MissingPlugins`) fires for real. | open |
+| PLG-050 | Plugin set in saves is always `["core"]` | Real load order (`id@version`). The existing missing-plugin notice (`savefmt.MissingPlugins`) fires for real. | done (`e266b7a9f`): ids in load order; the existing missing-plugin notice now fires for real |
 | PLG-051 | No plugin-owned save state | Namespaced versioned blobs. | deferred (needs PLG-060) |
 
 ### Localization and assets
@@ -144,6 +144,17 @@ Scope blocks are written in each agent's prompt from the rows above; the rows ar
 
 Integration after each wave: `go build ./...`, `make arch`, `go test -race` of the touched packages, then the zero-plugin check: with no plugins the state hash, goldens and content fingerprint are unchanged. Commit per wave with explicit paths.
 
+## Decisions made while building
+
+| Item | Decision |
+|---|---|
+| Core defs are fixed in place | `Build` refuses a patch that removes or breaks a core def (problem names the plugin; the game's own def is kept), because saves keep backstories by index (`keepCore`, `ac91b0589`). |
+| Patch conditions | `"if": "<id>"` and `"missing": "<id>"` are plugin-id strings on the op. |
+| `optional` | Excuses a missing target and a missing field or item for `remove`; `set`/`add`/`merge` on a missing path are always errors. |
+| Bad def or patch | Drops only itself; the plugin still loads. A manifest or dependency error stops the plugin and its dependants. |
+| Where the book lives | `game.Content` on the skill state (`backstoriesOf(g)`), set in `New`; `LoadContent(r, c)` loads a save with the run's books; `Load(r)` is core. |
+| Captures | Load no plugin, so their frames never depend on what is installed. |
+
 ## Known leftovers (true at HEAD)
 
-- Everything above is open; the SAV-025 rows in the vanilla checklist stay `[-]` until PLG-050 lands.
+- `.claude/scheduled_tasks.lock` (the loop's harness lock) trips `TestNoToolFolders` locally while a loop runs; it is untracked.
