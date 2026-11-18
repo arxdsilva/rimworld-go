@@ -125,6 +125,19 @@ func TestPerfOverlayAvoidsHUDRegions(t *testing.T) {
 // are cached between recomputes, so a frame costs what the canvas
 // primitives it calls cost (ebiten's text and vector paths allocate by
 // themselves) and nothing more.
+//
+// What else moves the two counts, and how each is held:
+//   - Ebitengine's atlas queue (test_main_test.go): every draw appends to
+//     it, and its array grows by however full it already is, which depends
+//     on the tests before. quietAtlas runs a window's draws once first and
+//     drains the queue, so each window starts empty with room for all of
+//     its draws: neither window counts a regrowth.
+//   - Ebitengine's sync.Pools (the usage-callback slices of every draw,
+//     text/v2's buffers): under -race, sync.Pool.Put drops a quarter of what
+//     it gets at random (sync/pool.go, race.Enabled), so each Get's New
+//     runs by chance. Samples ran 905 to 937 per frame on either side
+//     (pprof alloc_objects: ebiten.init.func2 under invokeUsageCallbacks),
+//     inside the 5% the comparison allows.
 func TestPerfOverlayDrawNoAllocs(t *testing.T) {
 	a, _ := perfApp(t, true)
 	a.meter.SeedCapture()
@@ -138,10 +151,13 @@ func TestPerfOverlayDrawNoAllocs(t *testing.T) {
 		}
 		uikit.DrawSparkline(img, r, a.meter.Clock.Spark, uikit.Accent)
 	}
+	overlay := func() { a.drawPerfOverlay(img, 1280, 720) }
 	prims()
-	a.drawPerfOverlay(img, 1280, 720) // warm the glyph caches
+	overlay() // warm the glyph caches
+	quietAtlas(prims)
 	base := testing.AllocsPerRun(10, prims)
-	got := testing.AllocsPerRun(10, func() { a.drawPerfOverlay(img, 1280, 720) })
+	quietAtlas(overlay)
+	got := testing.AllocsPerRun(10, overlay)
 	if got > base+base/20+4 {
 		t.Fatalf("overlay allocates %v per frame, its primitives alone %v", got, base)
 	}
@@ -174,4 +190,14 @@ func TestOptionsPerfOverlayToggle(t *testing.T) {
 	if !store.s.Graphics.PerfOverlay || optionBtn(t, a, "options.perfoverlay").Label != "On" {
 		t.Fatal("overlay should be on and saved")
 	}
+}
+
+// quietAtlas readies the atlas queue for testing.AllocsPerRun(10, f): it
+// runs f as often as the window will (one warm-up and ten runs), so the
+// queue's array holds that many draws, then drains it.
+func quietAtlas(f func()) {
+	for range 11 {
+		f()
+	}
+	drainAtlasQueue()
 }

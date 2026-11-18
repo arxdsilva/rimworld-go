@@ -29,13 +29,36 @@ import (
 
 // realQueue is a filesave.Queue as internal/compose/game wires it. It
 // also records every result it hands the options screen (reported), so a
-// test can see a save was reported whichever Update polled it.
+// test can see a save was reported whichever Update polled it. With a
+// hold, Done hands out nothing and Busy stays true however soon the worker
+// finished, until a Wait after the test armed the hold: the test then
+// knows the report comes from that Wait (the Load list's), never from an
+// Update's poll. The hold is read and written only on the App's goroutine.
 type realQueue struct {
 	*filesave.Queue
 	reported *[]SaveResult
+	hold     *saveHold
+}
+
+// saveHold: on holds the results back; armed lets the next Wait release
+// them (a Wait before that, the Save dialog's own list, keeps holding).
+type saveHold struct{ on, armed bool }
+
+func (q realQueue) holding() bool { return q.hold != nil && q.hold.on }
+
+func (q realQueue) Busy() bool { return q.holding() || q.Queue.Busy() }
+
+func (q realQueue) Wait() {
+	q.Queue.Wait()
+	if q.hold != nil && q.hold.armed {
+		q.hold.on = false
+	}
 }
 
 func (q realQueue) Done() []SaveResult {
+	if q.holding() {
+		return nil
+	}
 	var out []SaveResult
 	for _, r := range q.Queue.Done() {
 		if !r.View {
@@ -53,7 +76,7 @@ func realSaves(t *testing.T, dir string) SaveHooks {
 	q := filesave.NewQueue(store)
 	t.Cleanup(q.Close)
 	return SaveHooks{
-		Queue: realQueue{q, new([]SaveResult)},
+		Queue: realQueue{q, new([]SaveResult), nil},
 		Save:  func(sim Simulation, m ports.SaveMeta) error { return q.Save(sim.(*game.Game), m.Name) },
 		List: func() ([]SaveSlot, error) {
 			slots, err := store.List()
@@ -167,46 +190,74 @@ func TestJourneySaveAsyncAutosaveRotation(t *testing.T) {
 // TestSaveFromPauseThenLoad. The colony steps on after Pause › Save (with
 // -race: while the worker writes); the Load list waits for the file and
 // lists it, the save is reported exactly once, and it loads to the state
-// of the save's tick. The report comes from whichever call finds the save
-// written: an Update's PollSaves (the hint then shows until the Load click
-// clears it, as any click does) or the Load list's own wait (the hint then
-// shows on the list).
+// of the save's tick. Either call can be the one that finds the save
+// written, and each is pinned, not left to the worker's timing:
+//   - update: the test waits on the worker, so the next Update's PollSaves
+//     reports it (the hint then shows until the Load click clears it, as
+//     any click does);
+//   - list: the queue holds the result until the Load list's Wait (the
+//     Save dialog's own Wait, before the save, keeps holding), so only
+//     that wait reports it (the hint then shows on the list).
+//
+// Left to timing, a worker that finished between the test's look at the
+// reports and the Load click's layout Update had that Update report it and
+// the click clear the hint ("the Load list reported the save, hint \"\"";
+// release run 42610487265 failed an older form of the same check).
 func TestJourneySaveAsyncLoadsTheSavedTick(t *testing.T) {
 	t.Parallel()
-	j, _ := savesJourney(t)
-	j.a.cfg.Saves = realSaves(t, t.TempDir())
-	reported := j.a.cfg.Saves.Queue.(realQueue).reported
-	j.key("Escape", 0)
-	tick, hash := j.g.Tick(), j.g.StateHash() // the pause menu holds the clock
-	j.clickID("pause.save")
-	j.update(1)       // the Save dialog's field takes the keyboard, its name selected
-	j.typeText("col") // the slot savesJourney gave the colony
-	j.clickID("modal.save.ok")
-	j.g.Step(600) // while the worker may still be writing
-	j.key("Escape", 0)
-	j.update(1)
-	early := len(*reported) // reported by an Update before the Load click
-	if early > 0 && j.a.hint != "saved col" {
-		t.Fatalf("save reported by an Update, hint %q, want %q", j.a.hint, "saved col")
-	}
-	j.clickID("pause.load")
-	if j.a.nav.screen() != ports.ScreenLoad || len(j.a.opt.Saves.Slots) != 1 {
-		t.Fatalf("load list %s with %+v", j.a.nav.screen(), j.a.opt.Saves.Slots)
-	}
-	if want := []SaveResult{{Slot: "col"}}; fmt.Sprint(*reported) != fmt.Sprint(want) {
-		t.Fatalf("reported %+v, want %+v once", *reported, want)
-	}
-	if early == 0 && j.a.hint != "saved col" {
-		t.Fatalf("the Load list reported the save, hint %q, want %q", j.a.hint, "saved col")
-	}
-	sim, _, err := j.a.cfg.Saves.Load(j.a.opt.Saves.Slots[0].Path) // the file as written, before a loaded colony steps
-	if g, ok := sim.(*game.Game); err != nil || !ok || g.Tick() != tick || g.StateHash() != hash {
-		t.Fatalf("file: %v (%T); want the save's tick %d and state hash %x", err, sim, tick, hash)
-	}
-	j.clickID("load.slot.0")
-	j.clickID("modal.saves.unsaved.leave") // the colony stepped on since the save (SAV-013)
-	if g, ok := j.a.renderer.game.(*game.Game); j.a.nav.screen() != ports.ScreenColony || !ok || g == j.g {
-		t.Fatalf("after load: %s", j.a.nav.screen())
+	for _, byList := range []bool{false, true} {
+		name := map[bool]string{false: "update", true: "list"}[byList]
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			j, _ := savesJourney(t)
+			j.a.cfg.Saves = realSaves(t, t.TempDir())
+			q := j.a.cfg.Saves.Queue.(realQueue)
+			if byList {
+				q.hold = &saveHold{on: true}
+				j.a.cfg.Saves.Queue = q
+			}
+			j.key("Escape", 0)
+			tick, hash := j.g.Tick(), j.g.StateHash() // the pause menu holds the clock
+			j.clickID("pause.save")
+			j.update(1)       // the Save dialog's field takes the keyboard, its name selected
+			j.typeText("col") // the slot savesJourney gave the colony
+			j.clickID("modal.save.ok")
+			j.g.Step(600) // while the worker may still be writing
+			if !byList {
+				q.Queue.Wait() // the worker's own signal: written, not yet reported
+			}
+			j.key("Escape", 0)
+			j.update(1)
+			early := len(*q.reported) // reported by an Update before the Load click
+			if want := map[bool]int{false: 1, true: 0}[byList]; early != want {
+				t.Fatalf("%d saves reported by an Update before the Load click, want %d", early, want)
+			}
+			if early > 0 && j.a.hint != "saved col" {
+				t.Fatalf("save reported by an Update, hint %q, want %q", j.a.hint, "saved col")
+			}
+			if byList {
+				q.hold.armed = true // the Load list's wait, inside the click, reports
+			}
+			j.clickID("pause.load")
+			if j.a.nav.screen() != ports.ScreenLoad || len(j.a.opt.Saves.Slots) != 1 {
+				t.Fatalf("load list %s with %+v", j.a.nav.screen(), j.a.opt.Saves.Slots)
+			}
+			if want := []SaveResult{{Slot: "col"}}; fmt.Sprint(*q.reported) != fmt.Sprint(want) {
+				t.Fatalf("reported %+v, want %+v once", *q.reported, want)
+			}
+			if early == 0 && j.a.hint != "saved col" {
+				t.Fatalf("the Load list reported the save, hint %q, want %q", j.a.hint, "saved col")
+			}
+			sim, _, err := j.a.cfg.Saves.Load(j.a.opt.Saves.Slots[0].Path) // the file as written, before a loaded colony steps
+			if g, ok := sim.(*game.Game); err != nil || !ok || g.Tick() != tick || g.StateHash() != hash {
+				t.Fatalf("file: %v (%T); want the save's tick %d and state hash %x", err, sim, tick, hash)
+			}
+			j.clickID("load.slot.0")
+			j.clickID("modal.saves.unsaved.leave") // the colony stepped on since the save (SAV-013)
+			if g, ok := j.a.renderer.game.(*game.Game); j.a.nav.screen() != ports.ScreenColony || !ok || g == j.g {
+				t.Fatalf("after load: %s", j.a.nav.screen())
+			}
+		})
 	}
 }
 

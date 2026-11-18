@@ -45,9 +45,9 @@ func TestCommsDisabledReasons(t *testing.T) {
 	if _, ok := a.uiSt().Find("comms.call"); ok {
 		t.Fatal("no ship, no call button")
 	}
-	s.cv.Orbital = game.OrbitalView{Present: true, CallReason: "needs a trade beacon"}
+	s.cv.Orbital = game.OrbitalView{Present: true, CallReason: game.ReasonNoBeacon}
 	f.Frame(t, a)
-	if w, _ := a.uiSt().Find("comms.call"); !w.Disabled || w.Reason != "needs a trade beacon" {
+	if w, _ := a.uiSt().Find("comms.call"); !w.Disabled || w.Reason != game.ReasonNoBeacon {
 		t.Fatalf("call = %+v", w)
 	}
 }

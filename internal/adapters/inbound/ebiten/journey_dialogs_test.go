@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/scenario"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -286,6 +287,45 @@ func useRadio(t *testing.T, j *journey) {
 	j.until(func() bool { return j.a.uiModalTop() == dialogs.CommsModalID }, 3000)
 }
 
+// commsAlly makes the warmest faction that takes caravan requests an ally
+// through the radio, as a player would: silver gifts until its goodwill
+// reaches faction.FriendlyAt. Each gift's silver is spawned first, so the
+// colony's silver total stays what radioColony left (the gift takes the
+// oldest stacks). No seed is pinned to an ally, so the fixture does not
+// move when faction generation or the relation band does.
+func commsAlly(t *testing.T, j *journey) {
+	t.Helper()
+	v, ok := j.g.CommsView()
+	if !ok {
+		t.Fatal("the comms dialog is open with no comms session")
+	}
+	id, gw := -1, 0
+	for _, f := range v.Factions {
+		if f.Caravan.Allowed && (id < 0 || f.Goodwill > gw) {
+			id, gw = f.ID, f.Goodwill
+		}
+	}
+	if id < 0 {
+		t.Fatalf("no faction takes caravan requests: %+v", v.Factions)
+	}
+	const gift = faction.GiftSilverPerGoodwill * 10 // 10 goodwill, under GiftGoodwillMax
+	for i := 0; gw < faction.FriendlyAt; i++ {
+		if i == 20 {
+			t.Fatalf("faction %d stuck at goodwill %d after %d gifts", id, gw, i)
+		}
+		if _, err := j.g.SpawnStack(item.Silver, gift, 12, 6); err != nil {
+			t.Fatal(err)
+		}
+		j.g.Apply(command.Command{Kind: command.CommsGift, Index: id, Count: gift})
+		j.g.Step(1)
+		for _, f := range j.g.Factions() {
+			if f.ID == id {
+				gw = f.Goodwill
+			}
+		}
+	}
+}
+
 // TestJourneyDialogsCommsConsole: a colonist ordered onto a powered radio
 // console opens the comms dialog: gift silver, request a caravan and aid
 // from a friendly faction, close it. Back on the radio, call the trade
@@ -297,6 +337,7 @@ func TestJourneyDialogsCommsConsole(t *testing.T) {
 		t.Skip("the orbital trader incident refused this colony")
 	}
 	useRadio(t, j)
+	commsAlly(t, j)
 	v, ok := j.g.CommsView()
 	if !ok {
 		t.Fatal("the comms dialog is open with no comms session")

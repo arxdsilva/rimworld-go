@@ -367,10 +367,19 @@ func TestRightClickOverTheResourcesIsTaken(t *testing.T) {
 	}
 }
 
+// TestResourceRowsAreCachedPerView: Rows for an unchanged view is a cache
+// hit that draws nothing (a key built and compared, one translation
+// lookup), with no pool or queue on that path. testing.AllocsPerRun counts
+// the whole process; the background allocator known to run beside a
+// serial test is Ebitengine's image cleanup, which appends to the atlas
+// queue. The drain first leaves that queue empty with its array, so such an
+// append does not regrow it, and a stray allocation would need 50 of them
+// in the window to round up to 1. Stable at -race -shuffle=on -count=50.
 func TestResourceRowsAreCachedPerView(t *testing.T) {
 	w := game.WorldView{Stored: htManyStored(30)}
 	a, _ := htResApp(t, w)
 	a.chrome.Res().Rows()
+	drainAtlasQueue()
 	if n := testing.AllocsPerRun(50, func() { a.chrome.Res().Rows() }); n != 0 {
 		t.Fatalf("resourceRows allocates %v per call for an unchanged view", n)
 	}
