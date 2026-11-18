@@ -1,6 +1,6 @@
 # Test flakiness gap analysis (TFL-001..)
 
-Scope: every Go test package in the repo (`go list ./...` = 292, plus the new `scalegolden`). What was checked, what was fixed, what was ruled out, what stays on watch. Source run: `.loops/runs/20261118-1734-follow-ups-ally-band-beacon-power-golden` (`research/flaky.md`, `audit/scan.md`, lane reports and QA files). The summary row is in `handoffs/OPS.md`; this file holds the per-package table.
+Scope: every Go test package in the repo (`go list ./...` = 294 at 58dc5a4b9: 292 before this run, plus the new `scalegolden` and `testkit/allocs`). What was checked, what was fixed, what was ruled out, what stays on watch. Source run: `.loops/runs/20261118-1734-follow-ups-ally-band-beacon-power-golden` (`research/flaky.md`, `audit/scan.md`, lane reports and QA files). The summary row is in `handoffs/OPS.md`; this file holds the per-package table.
 
 ## Decision record
 
@@ -145,7 +145,7 @@ Columns: package, `t.Parallel()` calls, what was checked, disposition, evidence.
 | `internal/application/benchmark` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
 | `internal/application/commands` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
 | `internal/application/devscene` | 4 | scan, sweep | ruled out | t.Parallel only, no shared-state hit; swept ok. |
-| `internal/application/game` | 2350 | CI history (time budget, golden), scan, lane | fixed: W3-flaky-game a3746ef50; golden moved to scalegolden by W2-golden 3c431e8a0 | Heavy binary, last green 333 s of the 10 min budget. Candidates: `fog_test.go:392-406` 5 ms wall threshold, Once fixtures, 12 package vars, `race_off_test.go` skips. W3-flaky-game (a3746ef50): the fog bound counts 401 flooded cells per reveal; a test proves the shared planet read-only; the wall-clock day budget is opt-in (`RIMWORLD_TIMING=1`), as it already skipped under -race. |
+| `internal/application/game` | 2350 | CI history (time budget, golden), scan, lane | fixed: W3-flaky-game a3746ef50; golden moved to scalegolden by W2-golden 3c431e8a0 | Heavy binary, last green 333 s of the 10 min budget. Candidates: `fog_test.go:392-406` 5 ms wall threshold, Once fixtures, 12 package vars, `race_off_test.go` skips. W3-flaky-game (a3746ef50): the fog bound counts 401 flooded cells per reveal; a test proves the shared planet read-only; the wall-clock day budget is opt-in (`RIMWORLD_TIMING=1`), as it already skipped under -race. Whole package once at CI pressure (`GOMAXPROCS=2 -p 1 -race -shuffle=on`): ok in 325.9 s (product proof AC-7). |
 | `internal/application/game/scalegolden` | 0 | new package, lane | fixed, lane W2-golden 3c431e8a0 | Six pins stale since cc8ba7a0d (EAI-014), unseen because the golden never ran in CI. Re-pinned; moved out of the heavy binary to run under race in its own job (est. 40 s). amd64 equals arm64. |
 | `internal/application/game/actionview` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
 | `internal/application/game/allow` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
@@ -332,6 +332,7 @@ Columns: package, `t.Parallel()` calls, what was checked, disposition, evidence.
 | `internal/platform/sysinfo` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
 | `internal/ports/inbound` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
 | `internal/ports/outbound` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
+| `internal/testkit/allocs` | 1 | new (58dc5a4b9), sweep | ruled out | `Fewest` takes the minimum of single calls; its test fails an averaging version; `-race -shuffle=on -count=3` ok. |
 | `internal/testkit/deepeq` | 3 | scan, sweep | ruled out | imports math/rand but only seeded rand.New sources (no top-level rand.X( calls anywhere in tests); swept ok. |
 | `internal/testkit/fakecontent` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |
 | `internal/testkit/fixtures` | 0 | scan, sweep | ruled out | No pattern hit; swept (race, shuffle, count 3) ok. |

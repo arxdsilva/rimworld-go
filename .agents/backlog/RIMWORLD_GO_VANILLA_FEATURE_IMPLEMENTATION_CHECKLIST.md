@@ -1631,7 +1631,7 @@ change relationships, and settlements exist on the world map.
 
 ## 20.2 Goodwill
 
--   [x] **Relationship score** (NG-1: goodwill -100..100 with hysteresis: hostile at -50 or less, calm again at -10; friendly at +50, neutral again below +30)
+-   [x] **Relationship score** (NG-1: goodwill -100..100 with hysteresis: hostile at -75 or less, calm again at 0; ally at +75, kept until goodwill reaches 0; wiki: Factions, PLG-4/PLG-5)
     -   Hostile / neutral / ally states derived from goodwill/rules.
 -   [-] **Goodwill changes** (NG-1: a repelled raid costs 5 and goodwill drifts toward a baseline daily; PLAY-024: gifts by radio (1 per 40 silver, at most 15), caravan requests cost 12, killing or capturing a trader costs 40, military aid costs 20 (friendly only, 3-day cooldown); no quests)
     -   Gifts.
