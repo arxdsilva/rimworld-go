@@ -29,6 +29,7 @@ AppName=rimworld-go
 AppVersion={#AppTag}
 AppVerName=rimworld-go {#AppTag}
 AppPublisher=rimworld-go
+AppCopyright=Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
 AppPublisherURL=https://github.com/arxdsilva/rimworld-go
 AppSupportURL=https://github.com/arxdsilva/rimworld-go/issues
 AppUpdatesURL=https://github.com/arxdsilva/rimworld-go/releases

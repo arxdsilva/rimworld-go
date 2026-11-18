@@ -12,6 +12,8 @@ version_schema: semver
 release: "1"
 section: games
 priority: optional
+# the code is GPL-3.0-only; the art and audio have their own license (ASSETS-LICENSE.md)
+license: GPL-3.0-only AND LicenseRef-rimworld-go-assets
 maintainer: Arthur Silva <arxdsilva@gmail.com>
 vendor: rimworld-go
 homepage: https://github.com/arxdsilva/rimworld-go

@@ -35,5 +35,7 @@
 	<true/>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright (C) 2026 Arthur Rodrigues Xavier da Silva. Code GPL-3.0-only; see LICENSE.</string>
 </dict>
 </plist>
