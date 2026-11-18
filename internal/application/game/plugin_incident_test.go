@@ -126,3 +126,25 @@ func TestSavedIncidentsFollowTheirKeys(t *testing.T) {
 		}
 	}
 }
+
+// A plugin incident's message names its plugin; a patched core one's
+// letter names the patchers; an untouched core one says nothing (PLG-072).
+func TestIncidentMessageNamesItsPlugin(t *testing.T) {
+	t.Parallel()
+	book := incidentBookWith(false, "frontier.dark_noon")
+	src := map[string]Source{
+		SourceKey(incident.Class, "frontier.dark_noon"):                  {AddedBy: "frontier"},
+		SourceKey(incident.Class, incident.Core().Key(incident.Eclipse)): {PatchedBy: []string{"frontier"}},
+	}
+	g := New(Config{Seed: 3, Width: 20, Height: 20, Content: Content{Incidents: book, Sources: src}})
+	if !g.FireIncident("frontier.dark_noon") {
+		t.Fatal("the plugin incident did not fire")
+	}
+	if eventMessages(g, "Dark noon (added by frontier)") == 0 {
+		t.Fatal("the message does not name the plugin")
+	}
+	id, _ := book.IDOf("frontier.dark_noon")
+	if patchedNote(g.sk.content, incident.Eclipse) != " (changed by frontier)" || patchedNote(g.sk.content, incident.Flu) != "" || patchedNote(g.sk.content, id) != "" {
+		t.Fatalf("patched notes: %q %q", patchedNote(g.sk.content, incident.Eclipse), patchedNote(g.sk.content, incident.Flu))
+	}
+}

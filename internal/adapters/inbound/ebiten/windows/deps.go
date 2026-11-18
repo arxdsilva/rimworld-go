@@ -36,6 +36,9 @@ type Reader interface {
 type Env struct {
 	Game  Reader    // nil off the colony (no renderer)
 	Items item.Book // the run's item kinds: plugin goods in the storage tree (PLG-026)
+	// SourceOf is who added or changed a definition (game.Content.SourceOf;
+	// nil: nobody, PLG-072).
+	SourceOf func(class, key string) game.Source
 }
 
 // Faction is one row of the colony's Factions table as the window's

@@ -98,7 +98,7 @@ func needsFirst(tr lang.Tr, v game.ResearchView) string {
 // buildPanel remakes the panel's lines for the selected project at body
 // width w.
 func (st *researchState) buildPanel(w float32) {
-	tr := st.tr
+	tr := st.sh
 	p := &st.panel
 	p.dirty, p.w, p.bench = false, w, st.hasBench
 	p.rows, p.h = p.rows[:0], 0
@@ -122,6 +122,11 @@ func (st *researchState) buildPanel(w float32) {
 	add(research.TechLevel(n.level).String(), gfx.Small, uikit.TextDim)
 	gap(4)
 	add(v.Desc, gfx.Small, uikit.Text)
+	if note := st.sourceNote(v.Name); note != "" { // PLG-072: only plugin-touched projects
+		for _, l := range strings.Split(note, "\n") {
+			add(l, gfx.Small, uikit.TextDim)
+		}
+	}
 	gap(8)
 	prog := lang.Tf(tr, "Progress: %d / %d", researchDone(v), researchCost(v))
 	if !v.Done {
@@ -299,4 +304,22 @@ func (w Research) drawPanel(dst *ebiten.Image, st *researchState, g researchGeom
 			Disabled: p.finishOff, Quiet: true}
 		uikit.DrawButton(dst, f, f.Contains(mx, my) && !f.Disabled)
 	}
+}
+
+// sourceNote is "Added by"/"Changed by" for the project named name (a core
+// project's key is "core."+name, a plugin's its name), "" for the game's
+// own untouched ones.
+func (st *researchState) sourceNote(name string) string {
+	if st.sh == nil {
+		return ""
+	}
+	of := st.sh.Env().SourceOf
+	if of == nil {
+		return ""
+	}
+	s := of("research", name)
+	if s.AddedBy == "" && len(s.PatchedBy) == 0 {
+		s = of("research", "core."+name)
+	}
+	return uikit.SourceNote(st.sh, s.AddedBy, s.PatchedBy, nil)
 }

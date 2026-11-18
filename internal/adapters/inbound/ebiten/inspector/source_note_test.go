@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 )
 
 func sourcesContent() game.Content {
@@ -64,5 +65,28 @@ func TestRecipeSourceLines(t *testing.T) {
 	}
 	if got := a.Bills().billTitle(game.BillView{Recipe: "stone_block", Label: "Cut blocks"}); got != "Bill: Cut blocks" {
 		t.Fatalf("core bill title = %q", got)
+	}
+}
+
+// A plugin item says who added it, a patched core item who changed it, an
+// untouched one nothing (PLG-072).
+func TestItemSourceLine(t *testing.T) {
+	f, a := benchFixture(t)
+	core := item.Core()
+	defs := make([]item.Def, 0, item.CoreKinds+1)
+	for k := range item.CoreKinds {
+		defs = append(defs, core.Def(item.Kind(k)))
+	}
+	items := item.NewBook(append(defs, item.Def{Label: "trail bell", Path: "Manufactured/Components"}),
+		append(core.Keys(), "frontier.trail_bell"))
+	f.env.Content = game.Content{Items: items, Sources: map[string]game.Source{
+		game.SourceKey("item", "frontier.trail_bell"): {AddedBy: "frontier"},
+		game.SourceKey("item", core.Key(item.Steel)):  {PatchedBy: []string{"frontier"}},
+	}}
+	s := a.sources()
+	for name, want := range map[string]string{"frontier.trail_bell": "Added by frontier", "steel": "Changed by frontier", "wood": ""} {
+		if got := s.itemSource(name); got != want {
+			t.Errorf("itemSource(%q) = %q, want %q", name, got, want)
+		}
 	}
 }

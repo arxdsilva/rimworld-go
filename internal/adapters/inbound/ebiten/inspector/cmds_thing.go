@@ -429,6 +429,9 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 	if ln := CrateLine(it); ln != "" { // cmds_orders.go (AX-1)
 		lines = append(lines, ln)
 	}
+	if n := a.sources().itemSource(it.Kind); n != "" { // PLG-072
+		lines = append(lines, strings.Split(n, "\n")...)
+	}
 	var bars []Bar
 	if b, ok := RotBarT(a.shell, it); ok { // FOOD-5: how much shelf life is left
 		bars = append(bars, b)

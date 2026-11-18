@@ -114,7 +114,7 @@ type researchState struct {
 	match       []bool
 	matches     int
 
-	tr       lang.Tr                    // the shell, for the cached texts
+	sh       Shell                      // the shell: cached texts and the projects' provenance
 	benchSrc listKey[game.BuildingView] // the building list hasBench was read from
 	hasBench bool
 
@@ -155,7 +155,7 @@ func (w *Set) rs() *researchState {
 	if w.research == nil {
 		w.research = &researchState{sel: -1}
 	}
-	w.research.tr = w.sh
+	w.research.sh = w.sh
 	return w.research
 }
 
@@ -174,7 +174,7 @@ func (st *researchState) refresh(views []game.ResearchView) {
 		st.rebuild(views)
 	}
 	for i := range views {
-		st.nodes[i].update(st.tr, views[i])
+		st.nodes[i].update(st.sh, views[i])
 	}
 	st.panel.dirty = true
 	st.searchAgain()

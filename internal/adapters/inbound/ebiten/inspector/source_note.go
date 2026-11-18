@@ -62,3 +62,13 @@ func (s sources) recipeSource(name string) string {
 	}
 	return s.sourceNote("recipe", "core."+name)
 }
+
+// itemSource is the note of the item kind named name (Content.Items keys
+// it), "" for the game's own untouched ones.
+func (s sources) itemSource(name string) string {
+	k, ok := s.c.Items.Parse(name)
+	if !ok {
+		return ""
+	}
+	return s.sourceNote("item", s.c.Items.Key(k))
+}

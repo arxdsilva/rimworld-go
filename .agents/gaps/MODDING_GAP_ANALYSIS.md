@@ -106,7 +106,7 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 |---|---|---|---|
 | PLG-070 | No Plugin manager | Main menu → Plugins: list (name, author, version, id, enabled, state), detail (description, requires, conflicts, url, why it sits where it does), enable/disable, "takes effect after restart". | [-] (`d32c2a1c1`, `0d70d8b61`, `011fd4e68`): list, detail, toggles, restart banner, empty state; no search, filter or capabilities |
 | PLG-071 | No load-order view | Order column with its reason on each row (§46). Manual reorder is not offered: the order is computed. | done (`d32c2a1c1`): rows in load order with `#N`, detail says "Position N: <reason>" |
-| PLG-072 | No source on info cards | Inspector and bio lines name the plugin that added or patched a def. | [-]: "Added by …" / "Changed by …" on backstories (bio), traits (bio chips), recipes (bill picker, bill title). Open: research tab, item inspector and incident letters have no line yet (their hosts carry no Content); plugin ids are shown, not names |
+| PLG-072 | No source on info cards | Inspector and bio lines name the plugin that added or patched a def. | done: "Added by …" / "Changed by …" on backstories and traits (bio), recipes (bill picker, bill title), research projects (research tab), items (item pane) and incidents (a plugin incident's message, a patched timed letter). Open: plugin ids are shown, not names; raid-style threats a plugin patched carry no note |
 | PLG-073 | No plugin settings | Typed schema in the manifest, generated controls (§47). | deferred (no plugin has behaviour to configure yet) |
 
 ### Behaviour and scripting (Phase 38)

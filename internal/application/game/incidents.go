@@ -5,6 +5,7 @@ package game
 
 import (
 	"slices"
+	"strings"
 
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/farm"
@@ -149,8 +150,22 @@ func (g *Game) incidentFired(id incident.ID, now uint64) {
 	g.incidents.Fired(id, g.rel(now))
 	if d := g.sk.content.Incidents.DefOf(id); d.Like != d.ID {
 		hx, hy := g.home()
-		g.notice(hx, hy, 0, "%s", d.Name)
+		if src := g.sk.content.SourceOf(incident.Class, d.Key); src.AddedBy != "" { // PLG-072: name the plugin
+			g.notice(hx, hy, 0, "%s (added by %s)", d.Name, src.AddedBy)
+		} else {
+			g.notice(hx, hy, 0, "%s", d.Name)
+		}
 	}
+}
+
+// patchedNote is " (changed by A, B)" for a core incident a plugin patched
+// in c (PLG-072), "" for the game's own untouched ones.
+func patchedNote(c Content, id incident.ID) string {
+	src := c.SourceOf(incident.Class, c.Incidents.Key(id))
+	if len(src.PatchedBy) == 0 {
+		return ""
+	}
+	return " (changed by " + strings.Join(src.PatchedBy, ", ") + ")"
 }
 
 // pickNature picks one nature event (one g.rng draw when any is
@@ -286,7 +301,7 @@ func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
 	case incident.Eclipse, incident.ToxicFallout, incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter: // FOOD-6, TEMP-2 (incident/sky.go, climate.go)
 		title, text, ok := g.incidents.StartTimed(id, now, g.rng.IntN)
 		if hx, hy := g.home(); ok {
-			g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letters.Caution, Text: text})
+			g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letters.Caution, Text: text + patchedNote(g.sk.content, id)})
 		}
 		return ok
 	}

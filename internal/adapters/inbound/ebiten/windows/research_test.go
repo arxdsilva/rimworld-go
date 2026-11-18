@@ -402,3 +402,32 @@ func TestResearchPanelCostAndMissingBench(t *testing.T) {
 		t.Fatal("lines without Prereqs")
 	}
 }
+
+// A plugin project says who added it, a patched core one who changed it,
+// an untouched core one nothing (PLG-072).
+func TestResearchSourceNote(t *testing.T) {
+	st := &researchState{sh: sourceShell{env: Env{SourceOf: func(class, key string) game.Source {
+		switch {
+		case class != "research":
+		case key == "demo.deep_drill":
+			return game.Source{AddedBy: "demo"}
+		case key == "core.Smithing":
+			return game.Source{PatchedBy: []string{"demo"}}
+		}
+		return game.Source{}
+	}}}}
+	for name, want := range map[string]string{"demo.deep_drill": "Added by demo", "Smithing": "Changed by demo", "Irrigation": ""} {
+		if got := st.sourceNote(name); got != want {
+			t.Errorf("sourceNote(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+// sourceShell is a shell that translates as English and has one Env.
+type sourceShell struct {
+	Shell
+	env Env
+}
+
+func (s sourceShell) T(src string) string { return src }
+func (s sourceShell) Env() Env            { return s.env }
