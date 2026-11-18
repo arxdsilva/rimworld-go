@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/testkit/allocs"
 )
 
 func near(a, b, eps float64) bool { return math.Abs(a-b) <= eps }
@@ -36,8 +37,9 @@ func TestColonistShadowPass(t *testing.T) {
 		many[i] = Foot{X: float64(i%10) + 0.5, Y: float64(i/10) + 0.5, Scale: 1}
 	}
 	st.Draw(v, l, screen, many, 15) // grow the batch once
-	few := fewestAllocs(100, func() { st.Draw(v, l, screen, feet, 15) })
-	lots := fewestAllocs(100, func() { st.Draw(v, l, screen, many, 15) })
+	// a call meets no pool refill with odds near 0.55 (allocs.Fewest)
+	few := allocs.Fewest(100, func() { st.Draw(v, l, screen, feet, 15) })
+	lots := allocs.Fewest(100, func() { st.Draw(v, l, screen, many, 15) })
 	if st.blobImg != tex || st.Drawn != 40 {
 		t.Fatal("the blob texture was remade")
 	}

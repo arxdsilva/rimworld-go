@@ -10,6 +10,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/testkit/allocs"
 )
 
 // groundRig is a rig whose sheet has 32 px pages, so a 24 px image needs a
@@ -177,12 +178,13 @@ func TestGroundBatchReusesItsBuffer(t *testing.T) {
 	verts, idx := r.lit.batch.verts[:64*4], r.lit.batch.idx[:64*6]
 	sh := r.litShader()
 	r.lit.Opts.Images[0] = r.lit.batch.sheet.pages[0]
-	ebitenOnly := fewestAllocs(100, func() {
+	// a call meets no pool refill with odds near 0.55 (allocs.Fewest)
+	ebitenOnly := allocs.Fewest(100, func() {
 		dst.DrawTrianglesShader32(verts, idx, sh, &r.lit.Opts)
 	})
-	allocs := fewestAllocs(100, pass)
-	if allocs > ebitenOnly {
-		t.Fatalf("a ground pass allocates %v, one Ebiten call %v", allocs, ebitenOnly)
+	own := allocs.Fewest(100, pass)
+	if own > ebitenOnly {
+		t.Fatalf("a ground pass allocates %v, one Ebiten call %v", own, ebitenOnly)
 	}
 	if &r.lit.batch.verts[:1][0] != &verts[0] {
 		t.Fatal("the vertex buffer was not reused")

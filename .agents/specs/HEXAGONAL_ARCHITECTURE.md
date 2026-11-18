@@ -135,7 +135,7 @@ rimworld-go/
 │   │   └── outbound/     modloader, filesave, settingsfile, scenariofile, cardpresetfile,
 │   │                     slogmetrics, ebitenaudio, updatecheck, usagehttp
 │   ├── platform/         assetroot, atomicfile, config, input, openfolder, sysinfo
-│   ├── testkit/          simtest, fixtures, fakecontent, replaytest, deepeq
+│   ├── testkit/          simtest, fixtures, fakecontent, replaytest, deepeq, allocs
 │   └── arch/             architecture and SOLID tests (solid_budget.txt)
 ├── pkg/                  low-level primitives with no game concepts (mathx, randx, noise*, flatyaml, msgfmt, synths, ...)
 ├── api/proto/  assets/  content/  mods/  scenarios/  benchmarks/  docs/  migrations/  scripts/  tools/  third_party/

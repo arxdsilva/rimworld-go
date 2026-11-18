@@ -19,24 +19,8 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/testkit/allocs"
 )
-
-// fewestAllocs is the fewest allocations of n single calls of f, for an
-// allocation test that compares a draw with Ebitengine's own call. Each
-// Ebitengine draw takes a scratch slice from a sync.Pool twice (image.go
-// invokeUsageCallbacks); the race build drops 1 Put in 4 and the next Get
-// allocates 2, so an average over many calls carries a random share of
-// refills and rounds either way. One call at a time the count is exact and
-// a refill only adds, so the fewest of n is f's own cost. A one-draw call
-// meets no refill with odds near 9/16, so 100 calls all meeting one is
-// under 1e-30.
-func fewestAllocs(n int, f func()) float64 {
-	least := math.Inf(1)
-	for range n {
-		least = min(least, testing.AllocsPerRun(1, f))
-	}
-	return least
-}
 
 // cordScene is w as one chunk over a 40x40 map, seen at zoom 1 on 640x640.
 func cordScene(w *game.WorldView) (*Set, *render.View, *Chunks) {
@@ -333,11 +317,12 @@ func TestCordsAllocateNothing(t *testing.T) { // not parallel: AllocsPerRun
 	var b gfx.TriBatch
 	b.Verts, b.Idx = append(b.Verts, o.Wiring.Cords.batch.Verts...), append(b.Idx, o.Wiring.Cords.batch.Idx...)
 	white := o.whiteImg()
-	ebitenOnly := fewestAllocs(100, func() {
+	// one draw: a call meets no pool refill with odds near 9/16 (allocs.Fewest)
+	ebitenOnly := allocs.Fewest(100, func() {
 		b.Verts, b.Idx = b.Verts[:verts], b.Idx[:idx]
 		b.Flush(screen, white, ebiten.BlendSourceOver)
 	})
-	draw := fewestAllocs(100, func() { o.Wiring.DrawCords(v, ch, screen, w, 640, 640, 64) })
+	draw := allocs.Fewest(100, func() { o.Wiring.DrawCords(v, ch, screen, w, 640, 640, 64) })
 	if draw > ebitenOnly {
 		t.Fatalf("DrawCords allocates %v per frame, Ebiten alone %v", draw, ebitenOnly)
 	}

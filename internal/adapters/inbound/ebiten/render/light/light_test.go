@@ -14,6 +14,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/world/weather"
+	"rimworld-go/internal/testkit/allocs"
 )
 
 const (
@@ -24,23 +25,6 @@ const (
 var flatN = [3]float32{0, 0, 1}
 
 func lumOf(c [3]float32) float64 { return float64(Lum3(c)) }
-
-// fewestAllocs is the fewest allocations of n single calls of f, for an
-// allocation test that compares a draw with Ebitengine's own call. Each
-// Ebitengine draw takes a scratch slice from a sync.Pool twice (image.go
-// invokeUsageCallbacks); the race build drops 1 Put in 4 and the next Get
-// allocates 2, so an average over many calls carries a random share of
-// refills and rounds either way. One call at a time the count is exact and
-// a refill only adds, so the fewest of n is f's own cost. Here a call meets
-// no refill with odds of 3 in 10 or better (two draws per call in
-// TestDrawLitFlatAndNormalPaths), so 100 calls all meeting one is under 1e-15.
-func fewestAllocs(n int, f func()) float64 {
-	least := math.Inf(1)
-	for range n {
-		least = min(least, testing.AllocsPerRun(1, f))
-	}
-	return least
-}
 
 func TestSunRisesEastSetsWest(t *testing.T) {
 	t.Parallel()
@@ -424,21 +408,23 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 		t.Fatal("pair image should be built once")
 	}
 
-	// drawLit adds no allocation of its own over Ebiten's draw call
+	// drawLit adds no allocation of its own over Ebiten's draw call. Two
+	// draws per call: a call meets no pool refill with odds near 0.31, so
+	// 100 calls all meeting one is under 1e-15 (allocs.Fewest).
 	sh := r.litShader()
 	pair2, _, _ := r.litSource(sprite)
-	ebitenOnly := fewestAllocs(100, func() {
+	ebitenOnly := allocs.Fewest(100, func() {
 		r.lit.Opts.Images[0] = pair2
 		dst.DrawTrianglesShader32(r.lit.Verts[:], Indices[:], sh, &r.lit.Opts)
 		r.lit.Opts.Images[0] = plain
 		dst.DrawTrianglesShader32(r.lit.Verts[:], Indices[:], sh, &r.lit.Opts)
 	})
-	allocs := fewestAllocs(100, func() {
+	own := allocs.Fewest(100, func() {
 		r.drawLit(dst, sprite, ebiten.GeoM{}, noCS, 0, 0)
 		r.drawLit(dst, plain, ebiten.GeoM{}, noCS, 2, 1)
 	})
-	if allocs > ebitenOnly {
-		t.Fatalf("drawLit allocates %v per call pair, Ebiten alone %v", allocs, ebitenOnly)
+	if own > ebitenOnly {
+		t.Fatalf("drawLit allocates %v per call pair, Ebiten alone %v", own, ebitenOnly)
 	}
 }
 

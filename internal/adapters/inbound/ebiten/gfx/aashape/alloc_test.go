@@ -9,12 +9,9 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
-)
 
-// painterSamples is how many single-call samples each side takes. A call
-// meets no pool refill with odds 9/16, so every sample of one side carrying
-// one has odds (7/16)^40, under 1e-14.
-const painterSamples = 40
+	"rimworld-go/internal/testkit/allocs"
+)
 
 // mixed adds n shapes of every kind, sizes and angles varying.
 func mixed(m *Mesh, n int) {
@@ -52,26 +49,21 @@ func TestMeshAllocatesNothing(t *testing.T) { // not parallel: AllocsPerRun
 
 // The painter adds nothing over Ebitengine's own DrawTriangles32. Outside
 // a game loop that call allocates 3 (atlas.Image.DrawTriangles copies the
-// vertices and indices into a queued closure) plus, under -race, a refill
-// now and then: each draw takes a scratch slice from a sync.Pool twice
-// (Image.invokeUsageCallbacks, for the target and the source), the race
-// build drops 1 Put in 4 (sync.Pool.Put), and the next Get's New allocates
-// 2. A 20-call average rounds to 3 or 4 by chance, so the fewest of five
-// could be 4 on the painter's side and 3 on the other. One call at a time
-// the count is exact (3, 5, 7: refills only add), so the fewest of many
-// interleaved samples is each side's own cost; an allocation of the
-// painter's is in every one.
+// vertices and indices into a queued closure), plus Ebitengine's sync.Pool
+// refills under -race; a 20-call average rounded those to 3 or 4 by chance,
+// so the fewest of five could be 4 on the painter's side and 3 on the other.
+// allocs.Fewest counts single calls instead (3, 5, 7: refills only add). A
+// call meets no refill with odds 9/16, so 40 calls of one side all meeting
+// one has odds (7/16)^40, under 1e-14. An allocation of the painter's is in
+// every call.
 func TestPainterAllocatesOnlyEbitengine(t *testing.T) { // not parallel: AllocsPerRun
 	dst := ebiten.NewImage(64, 64)
 	var clr color.Color = color.RGBA{200, 100, 50, 255}
 	var p Painter
 	p.Disc(dst, 30, 30, 12, clr) // warm: the white source, the mesh
 	verts, idx := append([]ebiten.Vertex(nil), p.mesh.Verts...), append([]uint32(nil), p.mesh.Idx...)
-	ebitenOnly, got := math.Inf(1), math.Inf(1)
-	for range painterSamples {
-		ebitenOnly = min(ebitenOnly, testing.AllocsPerRun(1, func() { dst.DrawTriangles32(verts, idx, p.white, &p.op) }))
-		got = min(got, testing.AllocsPerRun(1, func() { p.Disc(dst, 30, 30, 12, clr) }))
-	}
+	ebitenOnly := allocs.Fewest(40, func() { dst.DrawTriangles32(verts, idx, p.white, &p.op) })
+	got := allocs.Fewest(40, func() { p.Disc(dst, 30, 30, 12, clr) })
 	if got > ebitenOnly {
 		t.Fatalf("Painter.Disc allocates %v, DrawTriangles32 alone %v", got, ebitenOnly)
 	}
