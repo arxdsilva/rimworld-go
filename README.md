@@ -79,10 +79,20 @@ Every key can be changed in Options › Controls.
 
 Full list of what is and isn't sent: [privacy](https://github.com/arxdsilva/rimworld-go/blob/main/docs/PRIVACY.md).
 
+## License
+
+- **Code:** [GPL-3.0](LICENSE) (GPL-3.0-only), Copyright (C) 2026 Arthur Rodrigues Xavier da Silva. If you distribute a game or tool built on it, ship its full source under GPL-3.0 too.
+- **Art and audio:** not under the GPL. You may share them only as part of unmodified rimworld-go builds; see [`ASSETS-LICENSE.md`](ASSETS-LICENSE.md).
+- **Closed-source games:** to ship one built on rimworld-go, buy a commercial license; see [`COMMERCIAL-LICENSING.md`](COMMERCIAL-LICENSING.md).
+- **Contributors:** sign the [Contributor License Agreement](CLA.md) before your first pull request is merged; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- Third-party parts keep their own licenses: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+rimworld-go is inspired by RimWorld. It is not affiliated with, endorsed by or connected to Ludeon Studios or RimWorld.
+
 ## Credits and contributing
 
 Normal maps are generated with a Go port of
 [spritefusion-sprite-normals](https://github.com/Hugo-Dz/spritefusion-sprite-normals) by Hugo Duprez (MIT); see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
-Read [`AGENTS.md`](AGENTS.md) before changing code. It sets the rules: hexagonal architecture, and a headless, deterministic domain.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md) before changing code. `AGENTS.md` sets the rules: hexagonal architecture, and a headless, deterministic domain.
 Specs live in [`.agents/README.md`](.agents/README.md), and the art pipeline is documented in [`assets/AGENTS.md`](assets/AGENTS.md).
