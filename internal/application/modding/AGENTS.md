@@ -17,7 +17,7 @@ Domain books (`domain/pawn/backstory`) and their key helpers (`skill.Key`, `back
 - Output never depends on file-system or map order: same plugins, any permutation, same catalog and problems (tests shuffle).
 - Core defs come first in core order and keep their slots: a patch that removes or breaks one is refused with a problem (saves keep indexes; `keepCore`).
 - A bad def or patch drops only itself; a manifest or dependency error stops the plugin and its dependants. Adapter read problems are reported for every enabled plugin.
-- A new moddable class: a codec file (`class_<name>.go`, round-trip test `Decode(Encode(core))` deep-equal), its book on `Catalog` and `game.Content`, its keys in `savefmt.Keys` on save, and its `keepCore` step.
+- A new moddable class: a codec file (`class_<name>.go`, round-trip test `Decode(Encode(core))` deep-equal), one `classes()` entry in `build.go` (core trees + decode into its book on `Catalog`), its book on `game.Content`, its keys in `savefmt.Keys` on save with a remap on load. `keepCore` and the pipeline are class-generic.
 
 ## Tests
 `order_test.go` (determinism under shuffles), `defs_test.go`, `inherit_test.go`, `patch_test.go`, `tree_test.go`, `class_backstory_test.go` (round trip), `build_test.go` (core kept, unknown class, read problems, release tags). The shipped example plugin is built in `adapters/outbound/modloader/example_test.go`.
