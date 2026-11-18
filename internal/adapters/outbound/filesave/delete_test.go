@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 )
@@ -63,6 +64,11 @@ func TestQueueDeleteWaitsForInFlightWrite(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() { done <- q.Delete("a") }()
+	// The delete must be queued (a's waiting jobs dropped) before the write
+	// in flight finishes; else the worker could start a's second save first.
+	for !deleteQueued(q) {
+		runtime.Gosched()
+	}
 	select {
 	case err := <-done:
 		t.Fatalf("Delete returned (%v) while a write was in flight", err)
@@ -86,6 +92,13 @@ func TestQueueDeleteWaitsForInFlightWrite(t *testing.T) {
 	if !slices.Equal(got, []string{"a", "b"}) {
 		t.Fatalf("results %v, want the in-flight a then b (a's waiting save and view dropped)", got)
 	}
+}
+
+// deleteQueued reports a delete job heads q's queue.
+func deleteQueued(q *Queue) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.jobs) > 0 && q.jobs[0].deleted != nil
 }
 
 // A slot whose save failed is forgotten on delete: a save queued after it
