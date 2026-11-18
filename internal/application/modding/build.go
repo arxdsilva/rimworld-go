@@ -18,7 +18,11 @@ type Catalog struct {
 }
 
 // IDs is the load order's plugin ids, core first: what a save records.
+// The zero Catalog is core alone.
 func (c Catalog) IDs() []string {
+	if len(c.Order.Loaded) == 0 {
+		return []string{Core}
+	}
 	out := make([]string, len(c.Order.Loaded))
 	for i, p := range c.Order.Loaded {
 		out[i] = p.ID

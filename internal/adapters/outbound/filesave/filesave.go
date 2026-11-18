@@ -25,7 +25,12 @@ import (
 const Ext = ".rwsave"
 
 // Store is a folder of saves.
-type Store struct{ Dir string }
+type Store struct {
+	Dir string
+	// Content is the run's definitions a loaded game plays with (PLG-024);
+	// zero: core.
+	Content game.Content
+}
 
 // Default is the per-user saves folder (e.g. ~/Library/Application
 // Support/rimworld-go/saves on macOS).
@@ -116,7 +121,7 @@ func (s Store) Load(path string) (*game.Game, game.SaveInfo, error) {
 		return nil, game.SaveInfo{}, fmt.Errorf("open save: %w", err)
 	}
 	defer f.Close()
-	return game.Load(f)
+	return game.LoadContent(f, s.Content)
 }
 
 // ViewExt is the extension of the camera sidecar written beside a save.

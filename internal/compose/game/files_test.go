@@ -22,7 +22,7 @@ func TestSaveDirReplacesThePlayersSaves(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "probe.rwsave"), []byte("not a save"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	slots, err := saveHooks(dir, "test").List()
+	slots, err := saveHooks(dir, "test", runContent{}).List()
 	if err != nil && len(slots) == 0 {
 		t.Fatal(err)
 	}
@@ -36,14 +36,14 @@ func TestSaveDirReplacesThePlayersSaves(t *testing.T) {
 func TestSaveDirReachesTheSavesFolderRow(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	if got := saveHooks(dir, "test").Dir; got != dir {
+	if got := saveHooks(dir, "test", runContent{}).Dir; got != dir {
 		t.Fatalf("Dir %q, want -save-dir's %q", got, dir)
 	}
 	def, err := filesave.Default()
 	if err != nil {
 		t.Skip("no per-user config folder here")
 	}
-	if got := saveHooks("", "test").Dir; got != def.Dir {
+	if got := saveHooks("", "test", runContent{}).Dir; got != def.Dir {
 		t.Fatalf("Dir %q without -save-dir, want the per-user folder %q", got, def.Dir)
 	}
 }
@@ -61,7 +61,7 @@ func TestSaveHeaderRoundTripsThroughTheHooks(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "old.rwsave"), old, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	h := saveHooks(dir, "v1.2.3")
+	h := saveHooks(dir, "v1.2.3", runContent{})
 	meta := ports.SaveMeta{Name: "New Hope 2", Colony: "col-1", ColonyName: "New Hope", Base: "New Hope", Season: "Aprimay"}
 	if err := h.Save(appgame.NewColony(appgame.Config{Seed: 4, Width: 40, Height: 30}), meta); err != nil {
 		t.Fatal(err)
@@ -151,7 +151,7 @@ func TestMissingPluginNotice(t *testing.T) {
 func TestDeleteHookRemovesTheSave(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	h := saveHooks(dir, "test")
+	h := saveHooks(dir, "test", runContent{})
 	defer closeSaves(h)
 	if err := h.Save(appgame.NewColony(appgame.Config{Seed: 4, Width: 30, Height: 30}), ports.SaveMeta{Name: "Gone soon"}); err != nil {
 		t.Fatal(err)

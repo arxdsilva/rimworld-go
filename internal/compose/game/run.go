@@ -50,17 +50,20 @@ func Run(opts cligame.Options, version string, d Display) {
 	usage := usageTracker(version, devRun, d)
 	scenes := devScenes{devscene.Config{Scenario: opts.Scenario, Width: opts.Width, Height: opts.Height, Hour: opts.Hour, Day: opts.Day, Capturing: shot != nil}}
 
+	settings := settingsHooks(shot != nil, gfx, d)
+	content := loadContent(shot != nil, enabledPlugins(settings.Load), version)
 	cfg := uiadapter.AppConfig{
+		Content:       content.game(),
 		DefaultSeed:   defaultSeed,
 		DefaultBiome:  biomeID,
 		Version:       version,
 		Capture:       shot,
-		Saves:         saveHooks(opts.SaveDir, version),
-		Settings:      settingsHooks(shot != nil, gfx, d),
+		Saves:         saveHooks(opts.SaveDir, version, content),
+		Settings:      settings,
 		CardFiles:     cardFiles(shot != nil),
 		Scenarios:     scenarioStore(shot != nil),
 		FPSProbe:      probe,
-		NewSimBuilder: newSimBuilder(simPool(shot != nil)),
+		NewSimBuilder: newSimBuilder(simPool(shot != nil), content.game()),
 		DeviceScale:   d.DeviceScale, // the App never reads the monitor itself
 		Window:        d.Window,
 		Display:       d.Apply,               // OPT-029

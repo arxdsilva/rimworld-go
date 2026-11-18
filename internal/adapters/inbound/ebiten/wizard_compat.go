@@ -114,6 +114,7 @@ func (h wizHost) Env() wizard.Env {
 		MenuTick:    a.menuTick,
 		SessionErr:  a.sessionErr,
 		Now:         a.now(),
+		Content:     a.cfg.Content,
 	}
 }
 

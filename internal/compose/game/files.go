@@ -13,7 +13,6 @@ import (
 	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/adapters/outbound/scenariofile"
 	appgame "rimworld-go/internal/application/game"
-	"rimworld-go/internal/application/game/contentid"
 	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/platform/openfolder"
 )
@@ -40,7 +39,7 @@ func cardFiles(capturing bool) uiadapter.CardFiles {
 // is the game's version, written into every save's header with the
 // content fingerprint (SAV-003, SAV-025). List checks each new file's body
 // (filesave.Verifier, SAV-022) and says how this build reads it (SAV-021).
-func saveHooks(dir, build string) uiadapter.SaveHooks {
+func saveHooks(dir, build string, content runContent) uiadapter.SaveHooks {
 	store, err := filesave.Default()
 	if dir != "" {
 		store, err = filesave.Store{Dir: dir}, nil
@@ -49,8 +48,9 @@ func saveHooks(dir, build string) uiadapter.SaveHooks {
 		log.Printf("saving disabled: %v", err)
 		return uiadapter.SaveHooks{}
 	}
+	store.Content = content.game() // a loaded game plays with the run's definitions (PLG-024)
 	queue, verifier := filesave.NewQueue(store), filesave.NewVerifier()
-	rt := saveRuntime(build, contentid.Current())
+	rt := saveRuntime(build, content.save())
 	return uiadapter.SaveHooks{
 		Queue: saveQueue{queue},
 		Dir:   store.Dir,

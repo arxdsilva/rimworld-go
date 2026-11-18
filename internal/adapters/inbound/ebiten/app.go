@@ -83,6 +83,9 @@ type NewGame struct {
 // AppConfig is the composition-root wiring for the interactive client.
 type AppConfig struct {
 	Version string
+	// Content is the run's frozen content, core plus the enabled plugins
+	// (PLG-024); the wizard rolls candidates from it. Zero: core.
+	Content game.Content
 	NewSim  SimFactory
 	// DefaultSeed pre-fills the wizard's seed (0: a random one).
 	DefaultSeed uint64

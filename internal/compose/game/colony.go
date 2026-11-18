@@ -12,9 +12,9 @@ import (
 
 // newSimBuilder starts wizard colonies for the loading screen, their path
 // stages on p (GAR-035).
-func newSimBuilder(p *pool.Pool) func(uiadapter.NewGame) (uiadapter.SimBuilder, error) {
+func newSimBuilder(p *pool.Pool, content appgame.Content) func(uiadapter.NewGame) (uiadapter.SimBuilder, error) {
 	return func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
-		return &colonyBuilder{b: appgame.NewColonyBuilder(appgame.Config{Seed: ng.Seed, Biome: ng.Biome, Setup: ng.Setup, Pool: p})}, nil
+		return &colonyBuilder{b: appgame.NewColonyBuilder(appgame.Config{Seed: ng.Seed, Biome: ng.Biome, Setup: ng.Setup, Pool: p, Content: content})}, nil
 	}
 }
 

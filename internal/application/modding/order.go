@@ -216,8 +216,10 @@ func (r *resolver) failConflicts() bool {
 	return len(ids) > 0
 }
 
-// majorMinor reduces "1.2.3-dev" to "1.2"; "" when it is not a version.
+// majorMinor reduces "1.2.3-dev" (or a release tag "v1.2.3") to "1.2";
+// "" when it is not a version.
 func majorMinor(v string) string {
+	v = strings.TrimPrefix(v, "v")
 	if i := strings.IndexAny(v, "-+ "); i >= 0 {
 		v = v[:i]
 	}

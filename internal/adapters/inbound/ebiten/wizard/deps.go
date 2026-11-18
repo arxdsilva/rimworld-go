@@ -57,6 +57,7 @@ type Env struct {
 	MenuTick    uint64 // drives the backdrop's drift
 	SessionErr  string // why the last start failed ("" none)
 	Now         time.Time
+	Content     game.Content // the run's definitions (PLG-024): core plus enabled plugins
 }
 
 // Host is what the wizard needs of the program that no ports role

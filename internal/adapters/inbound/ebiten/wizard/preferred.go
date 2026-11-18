@@ -55,7 +55,9 @@ func applyPreferredNames(p candidatePool, names []string) {
 // newPool is the candidate pool of a draft's seed and scenario with the
 // preferred names applied.
 func (w pawnsPage) newPool(ng *Draft) *game.CandidatePool {
-	p := game.NewCandidatePool(SetupSeedOf(ng), ng.Scenario.Apply())
+	fx := ng.Scenario.Apply()
+	fx.Rules.Backstories = w.sh.Env().Content.Backstories // the run's, plugins included (PLG-024)
+	p := game.NewCandidatePool(SetupSeedOf(ng), fx)
 	applyPreferredNames(p, w.sh.Settings().General.PreferredNames)
 	return p
 }

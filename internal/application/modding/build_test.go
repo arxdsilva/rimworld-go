@@ -76,3 +76,16 @@ func TestBuildUnknownClass(t *testing.T) {
 		t.Fatalf("problems = %v", probs)
 	}
 }
+
+// Release builds report their tag ("v0.1.35"): the version check runs.
+func TestReleaseTagVersionIsChecked(t *testing.T) {
+	if got := majorMinor("v0.1.35"); got != "0.1" {
+		t.Fatalf("majorMinor(v0.1.35) = %q", got)
+	}
+	p := plugin("old", nil, nil)
+	p.Manifest.Game = []string{"0.0"}
+	_, probs := Build([]Plugin{p}, []string{"old"}, "v0.1.35")
+	if len(probs) != 1 || !probs[0].Warn || !strings.Contains(probs[0].Msg, "0.0") {
+		t.Fatalf("problems = %v", probs)
+	}
+}
