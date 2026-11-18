@@ -49,7 +49,7 @@ func TestPluginRecipeShownAndMade(t *testing.T) {
 	offered := slices.ContainsFunc(RecipesOf(Content{Recipes: book}), func(r RecipeView) bool {
 		return r.ID == uint8(slats) && r.Label == "Plugin frontier.slats" && r.RunsAt("workbench")
 	})
-	if !offered || slices.ContainsFunc(Recipes(), func(r RecipeView) bool { return r.ID == uint8(slats) }) {
+	if !offered || slices.ContainsFunc(CoreRecipes(), func(r RecipeView) bool { return r.ID == uint8(slats) }) {
 		t.Fatalf("the run's recipes offer the plugin recipe (%v); core's do not", offered)
 	}
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(slats), Mode: uint8(recipe.DoCount), Count: 1})

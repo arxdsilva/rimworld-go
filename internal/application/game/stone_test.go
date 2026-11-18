@@ -157,7 +157,7 @@ func TestStonecutterBillCutsChunks(t *testing.T) {
 		t.Fatalf("stone total %d", w.Stone)
 	}
 	byName := map[string]RecipeView{}
-	for _, r := range Recipes() {
+	for _, r := range CoreRecipes() {
 		byName[r.Name] = r
 	}
 	if r := byName["cut_granite"]; r.Bench != "stonecutter table" || r.Input != "1 granite chunk" || r.Output != "granite blocks" {

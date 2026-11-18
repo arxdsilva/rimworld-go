@@ -2,7 +2,10 @@ package game
 
 import (
 	"path/filepath"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	appgame "rimworld-go/internal/application/game"
 	"slices"
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/adapters/outbound/modloader"
@@ -62,5 +65,36 @@ func TestContentView(t *testing.T) {
 	}
 	if v := loadContent(true, []string{"example_frontier"}, "0.1.35").view(); len(v.Rows)+len(v.Problems)+len(v.Enabled)+len(v.Folders) != 0 {
 		t.Fatalf("capture view %+v", v)
+	}
+}
+
+// The missing-plugin notice works on a real save (PLG-050): saved with
+// the example plugin on, the slot listed by a run without it names it;
+// listed by a run with it, there is no notice; and the save still loads.
+func TestSaveFromPluginRunNamesTheMissingPlugin(t *testing.T) {
+	dir := t.TempDir()
+	src := modloader.New(filepath.Join("..", "..", "..", "mods"))
+	on := buildContent(src, []string{"example_frontier"}, "v1.2.3")
+	h := saveHooks(dir, "v1.2.3", on)
+	meta := ports.SaveMeta{Name: "Frontier", Colony: "col-9", ColonyName: "Frontier", Base: "Frontier"}
+	if err := h.Save(appgame.NewColony(appgame.Config{Seed: 4, Width: 30, Height: 30, Content: on.game()}), meta); err != nil {
+		t.Fatal(err)
+	}
+	closeSaves(h)
+
+	off := saveHooks(dir, "v1.2.3", buildContent(src, nil, "v1.2.3"))
+	slots, err := off.List()
+	if err != nil || len(slots) != 1 {
+		t.Fatalf("slots %+v, %v", slots, err)
+	}
+	if !strings.Contains(slots[0].Notice, "example_frontier") {
+		t.Fatalf("notice %q does not name the missing plugin", slots[0].Notice)
+	}
+	if _, _, err := off.Load(slots[0].Path); err != nil {
+		t.Fatalf("a run without the plugin cannot load the save: %v", err)
+	}
+	same, _ := saveHooks(dir, "v1.2.3", on).List()
+	if len(same) != 1 || same[0].Notice != "" {
+		t.Fatalf("the same plugin set gives a notice: %+v", same)
 	}
 }

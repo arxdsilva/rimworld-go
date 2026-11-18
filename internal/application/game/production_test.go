@@ -125,7 +125,7 @@ func TestBillWaitsForIngredients(t *testing.T) {
 	if st := g.World().Buildings[0].Bills[0].Status; st != BillNoInput {
 		t.Fatalf("status = %q", st)
 	}
-	if len(Recipes()) < 2 {
+	if len(CoreRecipes()) < 2 {
 		t.Fatal("recipes listed")
 	}
 }

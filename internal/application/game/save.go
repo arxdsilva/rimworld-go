@@ -817,12 +817,12 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 // remapRecipes moves saved recipe IDs onto book by key (PLG-044).
 func remapRecipes(s *saveState, book recipe.Book) {
 	to := s.ContentKeys.Recipes(book)
-	to.Bills(s.Bills)
+	moved := to.Bills(s.Bills) // each map's jobs point into the same bills
 	s.Pending = to.Commands(s.Pending)
 	rec := func(e *entry[job.Record]) *job.Record { return &e.V }
-	savefmt.RemapJobs(to, s.Jobs, rec)
+	savefmt.RemapJobs(to, moved, s.Jobs, rec)
 	for _, e := range s.ExtraMaps {
-		savefmt.RemapJobs(to, e.State.Jobs, rec)
+		savefmt.RemapJobs(to, moved, e.State.Jobs, rec)
 	}
 }
 

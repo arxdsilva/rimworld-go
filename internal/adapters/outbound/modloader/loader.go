@@ -21,6 +21,7 @@ const (
 	maxManifestBytes = 64 << 10
 	maxDataFileBytes = 4 << 20
 	maxDataFiles     = 2000
+	maxPluginBytes   = 32 << 20 // all of a plugin's data files together
 	maxDepth         = 16
 )
 
@@ -68,6 +69,8 @@ type reader struct {
 	root *os.Root
 	pl   *modding.Plugin
 	name string // folder name, until the manifest gives an id
+	size int    // data bytes read so far (maxPluginBytes)
+	full bool   // the plugin's data cap was reached: the rest is skipped
 }
 
 func (r *reader) problem(file, field, msg string, warn bool) {
@@ -241,9 +244,17 @@ func (r *reader) lang() []string {
 func (r *reader) decodeAll(paths []string) []modding.File {
 	var files []modding.File
 	for _, p := range paths {
+		if r.full {
+			break
+		}
 		b, ok := r.read(p, maxDataFileBytes)
 		if !ok {
 			continue
+		}
+		if r.size += len(b); r.size > maxPluginBytes {
+			r.full = true
+			r.problem(p, "", fmt.Sprintf("the plugin's data passes %d MiB: this file and the rest are skipped", maxPluginBytes>>20), false)
+			break
 		}
 		var v any
 		dec := json.NewDecoder(bytes.NewReader(b))

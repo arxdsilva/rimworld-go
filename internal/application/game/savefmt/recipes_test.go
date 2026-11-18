@@ -82,18 +82,43 @@ func TestRecipeIDsRemapSavedState(t *testing.T) {
 		t.Fatalf("no drop: %+v", out)
 	}
 	for _, c := range []struct{ in, want int }{{int(n), -1}, {int(n + 1), int(n)}, {0, 0}} {
-		if j := m.Job(job.Record{Kind: job.PackIngredients, SpareX: c.in}); j.SpareX != c.want {
+		if j := m.Job(job.Record{Kind: job.PackIngredients, SpareX: c.in}, nil); j.SpareX != c.want {
 			t.Errorf("pack job recipe %d -> %d, want %d", c.in, j.SpareX, c.want)
 		}
 	}
 	jobs := []job.Record{{Kind: job.PackIngredients, SpareX: int(n + 1)}}
-	if RemapJobs(m, jobs, func(j *job.Record) *job.Record { return j }); jobs[0].SpareX != int(n) {
+	if RemapJobs(m, nil, jobs, func(j *job.Record) *job.Record { return j }); jobs[0].SpareX != int(n) {
 		t.Fatalf("RemapJobs: %+v", jobs)
 	}
-	if j := m.Job(job.Record{Kind: job.Haul, SpareX: int(n)}); j.SpareX != int(n) {
+	if j := m.Job(job.Record{Kind: job.Haul, SpareX: int(n)}, nil); j.SpareX != int(n) {
 		t.Fatal("another job's SpareX is not a recipe")
 	}
 	if !slices.Equal(Keys(nil).Recipes(recipe.Core()).Commands(cmds[:1]), cmds[:1]) {
 		t.Fatal("an older save's commands change")
+	}
+}
+
+// A dropped bill moves the later bills' indexes: a job mid-way on a later
+// bill follows its own bill, and a job on the dropped bill gets an index
+// past the list (it fails, never working another bill).
+func TestDroppedBillMovesJobsWithTheirBills(t *testing.T) {
+	core := recipe.Core()
+	m := Keys{recipe.Class: append(core.Keys(), "gone.plugin_recipe")}.Recipes(core)
+	gone := recipe.ID(core.Len()) // the saved plugin recipe's index
+	bills := map[entity.EntityID][]recipe.Bill{7: {{Recipe: gone}, {Recipe: 3}, {Recipe: 4}}}
+	moved := m.Bills(bills)
+	if len(bills[7]) != 2 || bills[7][0].Recipe != 3 || bills[7][1].Recipe != 4 {
+		t.Fatalf("bills = %+v", bills[7])
+	}
+	on := func(i int) job.Record { return m.Job(job.Record{Kind: job.Bill, Dest: 7, BillIndex: i}, moved) }
+	if j := on(2); j.BillIndex != 1 || bills[7][j.BillIndex].Recipe != 4 {
+		t.Fatalf("a job on the third bill now points at %d", j.BillIndex)
+	}
+	if j := on(0); j.BillIndex < len(bills[7]) {
+		t.Fatalf("a job on the dropped bill points at bill %d", j.BillIndex)
+	}
+	other := m.Job(job.Record{Kind: job.Bill, Dest: 9, BillIndex: 1}, moved)
+	if other.BillIndex != 1 {
+		t.Fatal("a job at a bench that lost no bill moved")
 	}
 }

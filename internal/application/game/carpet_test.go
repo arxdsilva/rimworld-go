@@ -82,7 +82,7 @@ func TestBuildablesListCarpetMaterials(t *testing.T) {
 func TestCarpetRecipesListed(t *testing.T) {
 	t.Parallel()
 	got := map[uint8]RecipeView{}
-	for _, r := range Recipes() {
+	for _, r := range CoreRecipes() {
 		got[r.ID] = r
 	}
 	for id, want := range map[recipe.ID][3]string{

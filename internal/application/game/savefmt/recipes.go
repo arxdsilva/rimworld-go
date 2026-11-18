@@ -1,6 +1,8 @@
 package savefmt
 
 import (
+	"math"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/command"
@@ -29,27 +31,38 @@ func (k Keys) Recipes(book recipe.Book) RecipeIDs {
 	}
 }
 
+// Moved is, per bench whose list lost a bill, each saved bill index's new
+// index (-1: dropped), for the jobs that point at a bill by index.
+type Moved map[entity.EntityID][]int
+
 // Bills remaps every saved bill's recipe in place. A bill whose recipe is
 // gone is dropped, never pointed at another recipe; a bench's list is
-// rebuilt only then (the jobs on it fare as after a removed bill). Each
-// bench is done on its own, so the map's order never shows.
-func (m RecipeIDs) Bills(bills map[entity.EntityID][]recipe.Bill) {
+// rebuilt only then, and its index moves are returned for Job. Each bench
+// is done on its own, so the map's order never shows.
+func (m RecipeIDs) Bills(bills map[entity.EntityID][]recipe.Bill) Moved {
+	var moved Moved
 	for bid, list := range bills {
 		kept := list[:0:0]
-		gone := false
+		to := make([]int, len(list))
 		for i, bl := range list {
 			id, ok := m(bl.Recipe)
 			if !ok {
-				gone = true
+				to[i] = -1
 				continue
 			}
 			list[i].Recipe, bl.Recipe = id, id
+			to[i] = len(kept)
 			kept = append(kept, bl)
 		}
-		if gone {
+		if len(kept) < len(list) {
 			bills[bid] = kept
+			if moved == nil {
+				moved = Moved{}
+			}
+			moved[bid] = to
 		}
 	}
+	return moved
 }
 
 // Commands remaps the recipe of every AddBill command in cmds, in place,
@@ -78,10 +91,20 @@ func (m RecipeIDs) Commands(cmds []command.Command) []command.Command {
 	return out
 }
 
-// Job remaps a pack gathering's recipe (job.PackIngredients keeps it in
-// SpareX); a gone recipe becomes -1, which no bill matches, so the job
-// ends as when its bill is removed.
-func (m RecipeIDs) Job(j job.Record) job.Record {
+// Job remaps a bill job onto the loaded content: its bill index follows
+// moved (a job whose bill was dropped gets an index past every list, so
+// it fails as when its bill is removed, never working another bill), and
+// a pack gathering's recipe (job.PackIngredients keeps it in SpareX)
+// follows its key, a gone one becoming -1, which no bill matches.
+func (m RecipeIDs) Job(j job.Record, moved Moved) job.Record {
+	if j.Kind == job.Bill || j.Kind == job.HaulIngredients || j.Kind == job.PackIngredients {
+		if to, ok := moved[j.Dest]; ok && j.BillIndex >= 0 && j.BillIndex < len(to) {
+			j.BillIndex = to[j.BillIndex]
+			if j.BillIndex < 0 {
+				j.BillIndex = math.MaxInt32
+			}
+		}
+	}
 	if j.Kind != job.PackIngredients || j.SpareX < 0 || j.SpareX >= recipe.MaxBook {
 		return j
 	}
@@ -93,11 +116,11 @@ func (m RecipeIDs) Job(j job.Record) job.Record {
 	return j
 }
 
-// RemapJobs remaps the pack gatherings among a job store's saved entries,
-// in place (Job); rec reaches an entry's job.
-func RemapJobs[E any](m RecipeIDs, entries []E, rec func(*E) *job.Record) {
+// RemapJobs remaps the bill jobs among a job store's saved entries, in
+// place (Job); rec reaches an entry's job.
+func RemapJobs[E any](m RecipeIDs, moved Moved, entries []E, rec func(*E) *job.Record) {
 	for i := range entries {
 		r := rec(&entries[i])
-		*r = m.Job(*r)
+		*r = m.Job(*r, moved)
 	}
 }

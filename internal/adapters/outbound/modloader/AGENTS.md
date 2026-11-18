@@ -8,7 +8,7 @@ Finds plugins on disk and reads them into the plain trees `application/modding` 
 - `roots.go`: `DefaultRoots()` (the shipped `mods/` found like the assets, then `<user config>/rimworld-go/mods`), `Open` (a `modding.Source` maker for wiring).
 
 ## Contracts
-- Every read goes through an `os.Root` per plugin: a path or symlink leaving the folder is a problem, never a read. Caps: 4 MiB per file, 2,000 data files per plugin.
+- Every read goes through an `os.Root` per plugin: a path or symlink leaving the folder is a problem, never a read. Caps: 4 MiB per file, 2,000 data files and 32 MiB of data per plugin (`TestPluginDataTotalIsCapped`).
 - An unreadable manifest still lists the plugin (id and name = folder name) with its problem; JSON errors carry line and column.
 - No global state, no goroutines.
 
