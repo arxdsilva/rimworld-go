@@ -1,0 +1,8 @@
+[
+  {
+    "op": "set",
+    "target": "backstory/core.lighthouse_kid",
+    "path": "skills.social",
+    "value": 1
+  }
+]

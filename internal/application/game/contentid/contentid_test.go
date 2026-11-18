@@ -25,7 +25,7 @@ func TestFingerprintIsStable(t *testing.T) {
 	if c := Current(); c.Hash != a || !reflect.DeepEqual(c.Plugins, []string{Core}) {
 		t.Fatalf("current %+v", c)
 	}
-	for _, l := range registries() {
+	for _, l := range registries(backstory.Core()) {
 		if len(l.items) == 0 {
 			t.Errorf("registry %s is empty", l.name)
 		}

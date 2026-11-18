@@ -26,19 +26,23 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 )
 
-// Core is the plugin every build runs: the game's own content. There is
-// no mod system yet, so it is the only one.
+// Core is the plugin every build runs: the game's own content.
 const Core = "core"
 
-// Current is the running build's content: its fingerprint and plugins in
-// load order. It walks every registry, so the composition root calls it
-// once.
-func Current() savefmt.Content {
-	return savefmt.Content{Hash: Fingerprint(), Plugins: []string{Core}}
+// Current is the build's own content with no plugin: its fingerprint and
+// the plugin list ["core"].
+func Current() savefmt.Content { return Of([]string{Core}, backstory.Core()) }
+
+// Of is a run's content (PLG-043, PLG-050): plugins is the load order
+// (core first) and the books are the frozen ones the run plays with, so
+// the fingerprint covers what plugins added and patched. It walks every
+// registry, so the composition root calls it once.
+func Of(plugins []string, backstories backstory.Book) savefmt.Content {
+	return savefmt.Content{Hash: fingerprintOf(registries(backstories)), Plugins: append([]string(nil), plugins...)}
 }
 
-// Fingerprint is an FNV-64a hash of every registry's definitions.
-func Fingerprint() uint64 { return fingerprintOf(registries()) }
+// Fingerprint is an FNV-64a hash of the build's own definitions.
+func Fingerprint() uint64 { return fingerprintOf(registries(backstory.Core())) }
 
 // list is one registry: its name and its definitions.
 type list struct {
@@ -60,7 +64,7 @@ func listOf[T any](name string, defs []T, key func(T) string) list {
 	return l
 }
 
-func registries() []list {
+func registries(backstories backstory.Book) []list {
 	sprint := func(v any) string { return fmt.Sprint(v) }
 	return []list{
 		listOf("research", research.All(), func(d research.Def) string { return sprint(d.Project) }),
@@ -71,7 +75,7 @@ func registries() []list {
 		listOf("incident", incident.All(), func(d incident.Def) string { return d.Key }),
 		listOf("trait", trait.All(), func(d trait.Def) string { return d.Key }),
 		listOf("drug", drug.All(), func(d drug.Def) string { return sprint(d.Kind) }),
-		listOf("backstory", backstory.Core().All(), func(d backstory.Def) string { return sprint(d.ID) }),
+		listOf("backstory", backstories.All(), func(d backstory.Def) string { return sprint(d.ID) }),
 		listOf("quest", quest.Defs(), func(d quest.Def) string { return sprint(d.Kind) }),
 		listOf("animal", animalDefs(), func(d animalDef) string { return d.Species.String() }),
 	}

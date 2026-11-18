@@ -1,0 +1,38 @@
+{
+  "backstory": [
+    {
+      "name": "frontier_adult",
+      "abstract": true,
+      "slot": "adulthood",
+      "weight": 6,
+      "tags": ["neolithic", "industrial"]
+    },
+    {
+      "name": "salt_flat_surveyor",
+      "parent": "frontier_adult",
+      "title": "Salt-flat surveyor",
+      "short": "Surveyor",
+      "desc": "{name} walked the white flats with a chain and a sighting pole, marking where the crust would bear a wagon. {They} learned to read distance in shimmering air and to trust numbers over eyes.",
+      "skills": {"intellectual": 3, "construction": 2}
+    },
+    {
+      "name": "mule_train_drover",
+      "parent": "frontier_adult",
+      "title": "Mule-train drover",
+      "short": "Drover",
+      "desc": "For years {name} led strings of pack mules over mountain passes, sleeping beside the loads. {They} could calm a balking animal with a word and settle an argument with a stick.",
+      "skills": {"animals": 4, "melee": 1},
+      "incapable": ["intellectual"]
+    },
+    {
+      "name": "well_diggers_child",
+      "slot": "childhood",
+      "title": "Well-digger's child",
+      "short": "Digger",
+      "desc": "{name} spent {their} childhood at the bottom of other people's wells, passing up buckets of clay and listening for water. Dark, narrow places never frightened {them} again.",
+      "skills": {"mining": 3, "plants": 1},
+      "weight": 8,
+      "tags": ["industrial"]
+    }
+  ]
+}

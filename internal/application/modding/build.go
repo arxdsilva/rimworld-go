@@ -50,7 +50,8 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 	order, probs := Resolve(manifests, enabled, gameVersion)
 	cat := Catalog{Order: order}
 
-	defs := EncodeBackstories(backstory.Core())
+	core := EncodeBackstories(backstory.Core())
+	defs := slices.Clone(core)
 	var ops []Op
 	for _, placed := range order.Loaded {
 		if placed.ID == Core {
@@ -72,17 +73,70 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 	defs, ap := Apply(defs, ops, order.Has)
 	probs = append(probs, ap...)
 
-	var bs []Def
-	for _, d := range defs {
-		if d.Class == BackstoryClass {
-			bs = append(bs, d)
-		}
-	}
+	bs, kp := keepCore(core, defs, ops)
+	probs = append(probs, kp...)
 	book, bp := DecodeBackstories(bs)
 	probs = append(probs, bp...)
 	cat.Backstories = book
-	cat.Defs = defs
+	cat.Defs = bs
 	return cat, probs
+}
+
+// keepCore is the backstory defs after patches with every core def in
+// its own place, first and in core order: saves keep backstories by
+// index, so a core def a patch removed or broke would shift every later
+// one. Such a patch is refused (the game's own def is kept) with a
+// problem; plugin defs follow in load order.
+func keepCore(core, defs []Def, ops []Op) ([]Def, []Problem) {
+	var probs []Problem
+	patched := make(map[string]Def, len(core))
+	var extra []Def
+	for _, d := range defs {
+		switch {
+		case d.Class != BackstoryClass:
+		case d.Plugin == Core:
+			patched[d.Key] = d
+		default:
+			extra = append(extra, d)
+		}
+	}
+	out := make([]Def, 0, len(core)+len(extra))
+	for _, orig := range core {
+		d, ok := patched[orig.Key]
+		if !ok {
+			probs = append(probs, Problem{Plugin: remover(ops, orig.Ref()), Def: orig.Ref(),
+				Msg: "the game's own definitions cannot be removed (saves refer to them); the removal is ignored"})
+			out = append(out, orig)
+			continue
+		}
+		if _, dp := DecodeBackstories([]Def{d}); Errors(dp) {
+			probs = append(probs, dp...)
+			probs = append(probs, Problem{Plugin: lastToucher(d), Def: d.Ref(),
+				Msg: "the patched definition is invalid; the game's own is kept"})
+			out = append(out, orig)
+			continue
+		}
+		out = append(out, d)
+	}
+	return append(out, extra...), probs
+}
+
+// remover is the plugin of the last whole-def remove op on ref.
+func remover(ops []Op, ref string) string {
+	for i := len(ops) - 1; i >= 0; i-- {
+		if o := ops[i]; o.Kind == "remove" && o.Path == "" && o.Target == ref {
+			return o.Plugin
+		}
+	}
+	return ""
+}
+
+// lastToucher is the plugin whose patch touched d last ("" for none).
+func lastToucher(d Def) string {
+	if n := len(d.Touched); n > 0 {
+		return d.Touched[n-1].Plugin
+	}
+	return ""
 }
 
 // known drops defs of a class no book reads, each with a problem.
