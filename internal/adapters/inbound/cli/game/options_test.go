@@ -72,3 +72,21 @@ func TestHelpedScenariosExist(t *testing.T) {
 		}
 	}
 }
+
+// -plugins replaces the saved set for one run: absent leaves it, ” means
+// none, ids are split on commas with blanks dropped (PLG-003).
+func TestPluginsFlag(t *testing.T) {
+	t.Parallel()
+	o, err := Parse([]string{"game"})
+	if err != nil || o.PluginsSet {
+		t.Fatalf("no flag: set %v, err %v", o.PluginsSet, err)
+	}
+	o, err = Parse([]string{"game", "-plugins", ""})
+	if err != nil || !o.PluginsSet || len(o.Plugins) != 0 {
+		t.Fatalf("-plugins '': %+v %v", o.Plugins, err)
+	}
+	o, err = Parse([]string{"game", "-plugins", " example_frontier, ,other "})
+	if err != nil || !o.PluginsSet || strings.Join(o.Plugins, "|") != "example_frontier|other" {
+		t.Fatalf("-plugins list: %q %v", o.Plugins, err)
+	}
+}

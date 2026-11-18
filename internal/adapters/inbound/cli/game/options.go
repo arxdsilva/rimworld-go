@@ -55,6 +55,11 @@ type Options struct {
 	HiDPI, VSync *bool
 	Graphics     string
 	RenderScale  float64
+
+	// Plugins replaces the saved enabled plugin set for this run when
+	// PluginsSet (PLG-003): "-plugins a,b", or "-plugins ''" for none.
+	Plugins    []string
+	PluginsSet bool
 }
 
 // Parse reads args (os.Args: the program name, then the flags). On a bad
@@ -74,6 +79,10 @@ func parse(args []string, out io.Writer) (Options, error) {
 	}
 	var hidpi, vsync bool
 	fs.Uint64Var(&o.Seed, "seed", 1, "deterministic RNG seed")
+	fs.Func("plugins", "comma-separated plugin ids to enable for this run instead of the saved set ('' for none; not saved)", func(v string) error {
+		o.Plugins, o.PluginsSet = pluginList(v), true
+		return nil
+	})
 	fs.IntVar(&o.Width, "width", 48, "map width in tiles")
 	fs.IntVar(&o.Height, "height", 40, "map height in tiles")
 	fs.StringVar(&o.Capture, "capture", "", "dev: save one colony frame to this PNG and exit")
@@ -137,4 +146,16 @@ func BiomeKeys() string {
 		keys = append(keys, d.Key)
 	}
 	return strings.Join(keys, ", ")
+}
+
+// pluginList splits a -plugins value: ids separated by commas, blanks
+// dropped.
+func pluginList(v string) []string {
+	var out []string
+	for _, id := range strings.Split(v, ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			out = append(out, id)
+		}
+	}
+	return out
 }

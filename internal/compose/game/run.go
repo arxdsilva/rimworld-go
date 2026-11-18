@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/devscene"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/logfile"
 	"rimworld-go/internal/platform/profiling"
 )
@@ -54,7 +55,11 @@ func Run(opts cligame.Options, version string, d Display) {
 	scenes := devScenes{devscene.Config{Scenario: opts.Scenario, Width: opts.Width, Height: opts.Height, Hour: opts.Hour, Day: opts.Day, Capturing: shot != nil}}
 
 	settings := settingsHooks(shot != nil, gfx, d)
-	content := loadContent(shot != nil, enabledPlugins(settings.Load), version)
+	enabled := enabledPlugins(settings.Load)
+	if opts.PluginsSet { // -plugins: this run's set, not saved (PLG-003)
+		enabled = config.Plugins{Enabled: opts.Plugins}.Normalize().Enabled
+	}
+	content := loadContent(shot != nil, enabled, version)
 	if shot != nil {
 		content = captureContent(opts.CaptureUI, version)
 		settings = captureSettings(opts.CaptureUI, settings, content)
