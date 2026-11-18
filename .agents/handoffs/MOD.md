@@ -137,3 +137,11 @@ Plugin system: discovery to save header (PLG-001…050) · 2026-11-17 · e266b7a
 - UI: the Plugins screen and Content Errors view are PLG-070/071/041 (next section); until then problems go to the log.
 - Open: PLG-025 recipes, PLG-026 more classes, PLG-055 translations, PLG-072 source lines, PLG-003 `-plugins` flag, PLG-060 scripting (needs a user decision on Starlark/WASM).
 
+## PLG-1-plugins-screens
+Plugins screen and content problems view (PLG-070, 071, 041) · 2026-11-17 · 011fd4e68
+- Changed: main menu › Plugins lists every installed plugin in load order (`#N`), with an on/off box, state (loaded, not loaded: <first error>, off, on/off after restart) and problem counts; the detail says what it requires, loads after/before, conflicts with and "Position N: <reason>". Toggling rewrites `Settings.Plugins.Enabled`; a banner says changes apply at the next start. Errors raise a main-menu notice that opens the Problems view (plugin › file › def › field, Show plugin, Disable).
+- Decisions: read model `plugins.View` filled once by compose (`runContent.view`), so the feature never imports `modding`. The banner compares the saved set with the set the run started with, not the loaded ids. Host and wiring sit in `mainmenu_compat.go` (the root package is at its 60-file ceiling). The screens draw through `Host.PaintMenu`, like Options.
+- Review: frames shot with `-capture-ui plugins` and `plugins-problems` (shipped `mods/` plus an in-memory fixture that cannot load, in-memory settings); the review found the bare backdrop and a lone "…" by each unlabelled checkbox (`gfx.Ellipsize("")`), both fixed.
+- Limits: root ebiten package 11,958 of 12,000 lines; no `App` field or method added.
+- Open: Copy diagnostics (no clipboard), search/filter, plugin settings PLG-073, source lines PLG-072.
+

@@ -44,7 +44,7 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 |---|---|---|---|
 | PLG-001 | No plugin manifest | `plugin.json`: `id` (lowercase `[a-z0-9_]`, unique, not `core`), `name`, `authors`, `version`, `game` (supported versions, `major.minor`), `description`, `url`, `requires`, `after`, `before`, `conflicts`. Strict decoding, every error names file and field. | done (`ddeb8d3ee`) |
 | PLG-002 | No discovery | `modloader` lists the folders under each plugin root (`<exe>/mods`, the user data dir `mods`), reads each manifest, sorts by id; enumeration order never matters. | done (`9c91fb22e`, `ca88a0512` folders) |
-| PLG-003 | No enabled set | `settings.Plugins.Enabled []string`; a new install enables nothing; `-plugins a,b` overrides for a run. | [-] (`cd2c2991e`): settings and Plugins screen; the `-plugins` run flag is not built |
+| PLG-003 | No enabled set | `settings.Plugins.Enabled []string`; a new install enables nothing; `-plugins a,b` overrides for a run. | [-] (`cd2c2991e`, `d32c2a1c1`): settings and the Plugins screen toggles; the `-plugins` run flag is not built |
 | PLG-004 | Unsafe paths | All reads through `os.Root` per plugin; symlinks out of the root, absolute paths and `..` are errors; file size (4 MiB) and file count (2,000) caps. | done (`9c91fb22e`) |
 
 ### Load order and compatibility
@@ -81,7 +81,7 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 | ID | Gap | Ships | State |
 |---|---|---|---|
 | PLG-040 | `contentlint` is empty | `cmd/contentlint [-mods dir] [-enable a,b]`: runs the whole pipeline headless, prints every problem with plugin, file, def and field, exit 1 on errors. | done (`ca88a0512`, `0aa422ddf`) |
-| PLG-041 | No content error screen | Errors at start open the Content Errors window (§48): plugin, file, def, field, message; Copy, Disable plugin, Continue without it, Quit. | open |
+| PLG-041 | No content error screen | Errors at start open the Content Errors window (§48): plugin, file, def, field, message; Copy, Disable plugin, Continue without it, Quit. | [-] (`d32c2a1c1`, `011fd4e68`): main-menu notice, Problems view with Show plugin and Disable; no Copy (the client has no clipboard), no recovery-mode or Quit actions |
 | PLG-042 | No range/reference checks | Each codec checks its fields (ranges, references to other keys) and names the field path. | done for backstory (`fb5e6b858`): ranges and types; backstories reference nothing |
 | PLG-043 | Content hash ignores plugins | `contentid.Current(catalog)`: hash covers every frozen book; `Content.Plugins` is the load order with versions. | done (`ac91b0589`, `e266b7a9f`) |
 | PLG-044 | Saves keep raw indexes | Save keys, map to indexes at load. | deferred (header guard is enough for v1) |
@@ -104,8 +104,8 @@ State legend: `open`, `done` (all criteria met, with commit), `[-]` partial (wha
 
 | ID | Gap | Ships | State |
 |---|---|---|---|
-| PLG-070 | No Plugin manager | Main menu → Plugins: list (name, author, version, id, enabled, state), detail (description, requires, conflicts, url, why it sits where it does), enable/disable, "takes effect after restart". | open |
-| PLG-071 | No load-order view | Order column with its reason on each row (§46). Manual reorder is not offered: the order is computed. | open |
+| PLG-070 | No Plugin manager | Main menu → Plugins: list (name, author, version, id, enabled, state), detail (description, requires, conflicts, url, why it sits where it does), enable/disable, "takes effect after restart". | [-] (`d32c2a1c1`, `0d70d8b61`, `011fd4e68`): list, detail, toggles, restart banner, empty state; no search, filter or capabilities |
+| PLG-071 | No load-order view | Order column with its reason on each row (§46). Manual reorder is not offered: the order is computed. | done (`d32c2a1c1`): rows in load order with `#N`, detail says "Position N: <reason>" |
 | PLG-072 | No source on info cards | Inspector and bio lines name the plugin that added or patched a def. | open |
 | PLG-073 | No plugin settings | Typed schema in the manifest, generated controls (§47). | deferred (no plugin has behaviour to configure yet) |
 
