@@ -259,6 +259,10 @@ const (
 	// ScreenScenarioEditor is the Scenario Editor, pushed from Choose
 	// Scenario (NG-1 §2.3).
 	ScreenScenarioEditor
+	// ScreenPlugins is the Plugin Manager and ScreenPluginProblems the
+	// content problems view, pushed from the main menu (PLG-070, PLG-041).
+	ScreenPlugins
+	ScreenPluginProblems
 )
 
 func (s Screen) String() string {
@@ -287,6 +291,10 @@ func (s Screen) String() string {
 		return "credits"
 	case ScreenScenarioEditor:
 		return "scenario_editor"
+	case ScreenPlugins:
+		return "plugins"
+	case ScreenPluginProblems:
+		return "plugin_problems"
 	}
 	return "unknown"
 }

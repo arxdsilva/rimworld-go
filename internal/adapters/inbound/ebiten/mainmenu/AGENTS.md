@@ -1,7 +1,7 @@
 # internal/adapters/inbound/ebiten/mainmenu
 
 ## Purpose
-The main menu screen: the hero splash and the colony diorama behind it, the button rail (Continue, Load, New, Options, Credits, Quit), the credits text, and the RAM and update notice cards. It reaches the shell through a small interface and the simulation not at all. Feature package (ARCH-005 wave 5.1, agent A3).
+The main menu screen: the hero splash and the colony diorama behind it, the button rail (Continue, Load, New, Plugins, Options, Credits, Quit), the credits text, and the RAM, update and plugin problems notice cards. It reaches the shell through a small interface and the simulation not at all. Feature package (ARCH-005 wave 5.1, agent A3).
 
 ## Owns
 - `Screen` built by `New(sh Shell) *Screen`: splash, diorama, rail, credits lines, RAM and update notice cards.
@@ -10,7 +10,8 @@ The main menu screen: the hero splash and the colony diorama behind it, the butt
 - `Host` (8 methods): `LoadSplash`, `LoadMenuScene`, `Version`, `MenuTick`, `HasSaves`, `LowRAMNotice`, `DismissRAMNotice`, `DrawFlame`.
 - `Updates` (`update_notice.go`, 2 methods): `UpdateAvailable`, `DownloadUpdate`. `internal/compose/game` wires `outbound/updatecheck`. Separate from `Host`, which is at the 8-method limit.
 - `VersionLine`, `UpdateCard`: the running version with any newer one, and the notice's card.
-- `Shell` = `Sizer + Settings + Widgets + Host + Updates`.
+- `PluginNotice` (`plugin_notice.go`, 1 method): `PluginErrors`; `PluginCard` and the notice whose View pushes `ports.ScreenPluginProblems` (PLG-041).
+- `Shell` = `Sizer + Settings + Widgets + Texts + Dispatcher + Host + Updates + PluginNotice`.
 
 ## Depends on
 - Leaves: `art`, `gfx`, `ids`, `ports`, `uikit`.

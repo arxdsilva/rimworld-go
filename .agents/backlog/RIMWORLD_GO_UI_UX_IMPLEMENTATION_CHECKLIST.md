@@ -1418,7 +1418,7 @@ the player what just happened and what requires attention.
 -   [x] **New game** (NG-1: opens the Choose Scenario wizard)
 -   [x] **Load game** (save list; Continue loads the newest, commitment saves included)
 -   [x] **Options** (Audio, Graphics, Gameplay, Accessibility, Controls, and Story during play)
--   [-] **Plugins** (disabled)
+-   [x] **Plugins** (PLG-070: opens the Plugin Manager)
 -   [x] **Credits** (creator, originality notice, asset credits)
 -   [x] **Quit**
 -   [-] **Version/build identifier** (shows `dev` / AppConfig.Version on the main menu and the pause menu; no commit id)
@@ -1756,14 +1756,14 @@ first-class interface rather than relying on manual file editing.
 
 ## 36.1 Plugin manager
 
--   [ ] **Installed plugin list**
+-   [-] **Installed plugin list** (PLG-070: name, author, version, id, enabled box, loaded/failed/off/after-restart state, problem counts; compatibility only as the game-version warning)
     -   Name.
     -   author.
     -   version.
     -   plugin ID.
     -   compatibility.
     -   enabled state.
--   [ ] **Enable/disable**
+-   [x] **Enable/disable** (PLG-070: saves `Settings.Plugins.Enabled`; a banner says it takes effect at the next start)
 -   [ ] **Search**
 -   [ ] **Sort**
 -   [ ] **Filter**
@@ -1771,7 +1771,7 @@ first-class interface rather than relying on manual file editing.
     -   disabled.
     -   incompatible.
     -   update/compatibility issue.
--   [ ] **Plugin detail**
+-   [-] **Plugin detail** (PLG-070: description, requires, load after/before, conflicts, homepage, position and reason, its problems; no provided-content summary)
     -   description.
     -   dependencies.
     -   incompatibilities.
@@ -1780,12 +1780,12 @@ first-class interface rather than relying on manual file editing.
 
 ## 36.2 Load order
 
--   [ ] **Resolved load-order list**
+-   [x] **Resolved load-order list** (PLG-071: loaded plugins listed in load order with their position)
 -   [ ] **Dependency visualization**
--   [ ] **Manual ordering only where permitted**
+-   [x] **Manual ordering only where permitted** (PLG-071: never; the order is computed from requires/after/before)
 -   [ ] **Load-before/load-after hints**
--   [ ] **Cycle/conflict error**
--   [ ] **Explain why plugin appears at position**
+-   [-] **Cycle/conflict error** (PLG-071: shown as the plugin's problems and its "not loaded" state; no dedicated dialog)
+-   [x] **Explain why plugin appears at position** (PLG-071: "Position N: after x (requires it)" in the detail)
 -   [ ] **Reset automatic order**
 
 ## 36.3 Compatibility
@@ -1816,15 +1816,15 @@ first-class interface rather than relying on manual file editing.
 
 ## 37.1 Content errors
 
--   [ ] **Startup configuration-error window**
+-   [-] **Startup configuration-error window** (PLG-041: a main-menu notice opens the problems view with plugin, file, def, field and message; it does not block at start)
     -   Plugin ID.
     -   file.
     -   definition.
     -   path/field.
     -   validation message.
--   [ ] **Copy diagnostics**
+-   [!] **Copy diagnostics** (blocked: the client has no system clipboard)
 -   [ ] **Open provenance information where environment permits**
--   [ ] **Do not crash on recoverable content errors**
+-   [x] **Do not crash on recoverable content errors** (PLG-041: a broken def, patch or plugin drops only itself and is listed in the problems view)
 
 ## 37.2 Definition inspector
 

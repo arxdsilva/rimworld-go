@@ -1,6 +1,7 @@
 package mainmenu
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -84,5 +86,31 @@ func TestUpdateCardFitsAndClearsTheRail(t *testing.T) {
 		if card.W < updateDownloadW+updateBtnGap+updateLaterW+2*ramCardPad {
 			t.Errorf("width %d: card %v is too narrow for its buttons", sw, card.W)
 		}
+	}
+}
+
+// The plugin problems card sits in the left column's foot, on screen and
+// clear of the rail and of the update card (PLG-041).
+func TestPluginCardFitsAndClearsTheRail(t *testing.T) {
+	t.Parallel()
+	for _, size := range [][2]int{{800, 600}, {1280, 720}, {2560, 1440}} {
+		sw, sh := size[0], size[1]
+		card := PluginCard(sw, sh)
+		if card.Right() > RailX(sw) || card.Bottom() > float32(sh) || card.Y < UpdateCard(sw, "x").Bottom() {
+			t.Errorf("%dx%d: card %+v (rail at %v, update card %+v)", sw, sh, card, RailX(sw), UpdateCard(sw, "x"))
+		}
+		if card.W < pluginViewW+2*ramCardPad+ramCardStripe+100 {
+			t.Errorf("%dx%d: card %v too narrow for its text and View", sw, sh, card.W)
+		}
+	}
+}
+
+// Plugins is offered on the rail between Load Game and Options.
+func TestButtonsOfferPlugins(t *testing.T) {
+	t.Parallel()
+	bs := New(fakeShell{}).Buttons(1280, 720)
+	i := slices.IndexFunc(bs, func(b uikit.Button) bool { return b.ID == ids.MenuPlugins })
+	if i < 1 || bs[i].Disabled || bs[i-1].ID != ids.MenuLoad || bs[i+1].ID != ids.MenuOptions {
+		t.Fatalf("rail %+v", bs)
 	}
 }

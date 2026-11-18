@@ -81,6 +81,7 @@ const (
 	MenuLoad     = "menu.load"
 	MenuContinue = "menu.continue"
 	MenuOptions  = "menu.options"
+	MenuPlugins  = "menu.plugins"
 	MenuCredits  = "menu.credits"
 	MenuQuit     = "menu.quit"
 

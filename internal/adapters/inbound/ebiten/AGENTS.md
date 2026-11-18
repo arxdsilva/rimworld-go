@@ -16,7 +16,7 @@ Since ARCH-001…006 (`.agents/specs/SOLID_GO.md`, `.agents/handoffs/ARCH.md`) t
 | `render/{motion,light,sprite,env,creature,overlay,cue,minimap,world}` | the draw layers: movement tracks, lighting and shadows, sprite painting and linked art, ground cover and weather, creatures, map overlays, sound cues, the minimap, the world draw order with its zoom tiers | each dir |
 | `selection/` | what is selected (`Model`) | `selection/AGENTS.md` |
 | `dossier/`, `dossier/sheet/` | the colonist card and its setup modal; `sheet` is its pure logic | `dossier/AGENTS.md` |
-| `mainmenu/`, `wizard/`, `options/`, `options/saves/` | the main menu, the New Colony flow, the Options screen with the settings store; the saves book (saving, autosave, leaving, the Load screen) | each dir |
+| `mainmenu/`, `wizard/`, `options/`, `options/saves/`, `plugins/` | the main menu, the New Colony flow, the Options screen with the settings store; the saves book (saving, autosave, leaving, the Load screen); the Plugins screens (PLG-070) | each dir |
 | `windows/`, `architect/`, `orders/`, `dialogs/`, `learn/`, `devtools/`, `perf/`, `inspector/`, `hud/` | the colony's features: the main-tab windows, the Architect, the order flow, trade/comms/caravan, the learning helper, developer mode, the frame-timing instruments, the selection's inspector, the HUD regions | each dir |
 
 In this package:

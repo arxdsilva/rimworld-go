@@ -40,12 +40,15 @@ type Host interface {
 	DrawFlame(dst *ebiten.Image, sx, sy float32, t, tile, k float64)
 }
 
-// Shell composes the roles the menu calls with its Host.
+// Shell composes the roles the menu calls with its Host; Do opens the
+// plugin problems view.
 type Shell interface {
 	ports.Sizer
 	ports.Settings
 	ports.Widgets
 	ports.Texts
+	ports.Dispatcher
 	Host
 	Updates
+	PluginNotice
 }

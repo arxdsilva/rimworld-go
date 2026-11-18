@@ -74,7 +74,7 @@ func (s *Screen) Buttons(sw, sh int) []uikit.Button {
 	specs := []uikit.ButtonSpec{
 		{ID: ids.MenuNewGame, Label: s.sh.T("New Colony")},
 		{ID: ids.MenuLoad, Label: s.sh.T("Load Game")},
-		{ID: "menu.plugins", Label: s.sh.T("Plugins"), Disabled: true, Reason: s.sh.T("not implemented")},
+		{ID: ids.MenuPlugins, Label: s.sh.T("Plugins")},
 		{ID: ids.MenuOptions, Label: s.sh.T("Options")},
 		{ID: "menu.tutorial", Label: s.sh.T("Tutorial / Help"), Disabled: true, Reason: s.sh.T("not implemented")},
 		{ID: ids.MenuCredits, Label: s.sh.T("Credits")},
@@ -112,6 +112,7 @@ func (s *Screen) RAMNoticeCard(sw, sh int, text string) gfx.Rect {
 func (s *Screen) Declare(sw, sh int) {
 	s.declareUpdateNotice(sw)
 	s.declareRAMNotice(sw, sh)
+	s.declarePluginNotice(sw, sh)
 }
 
 // declareRAMNotice declares the low-RAM card when it is due.

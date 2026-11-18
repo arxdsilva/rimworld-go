@@ -88,7 +88,7 @@ Primary entry point for a play session.
 -   [x] New Game (opens Choose Scenario; the wizard keeps its draft until the menu or Start)
 -   [x] Load Game (save list: slot, game date, colonists, file time; commitment saves tagged)
 -   [x] Continue (loads the most recent save, commitment ones included; disabled with "no saves yet" when there are none)
--   [-] Plugins (visible, disabled)
+-   [x] Plugins (PLG-070: the Plugin Manager; a notice under the left column when plugins failed to load opens the problems view, PLG-041)
 -   [x] Options (Audio/Graphics/Gameplay/Accessibility/Controls tabs, saved to settings.json; a Story tab appears during play)
 -   [-] Tutorial/Help (visible, disabled)
 -   [x] Credits (creator, originality notice, asset credits)
@@ -2292,7 +2292,7 @@ Agents should implement screens approximately in this dependency order.
 ## Wave UI-1 --- First interactive simulation
 
 -   [-] Boot (phase list + pack load; no plugin/fatal recovery)
--   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left over the animated colony diorama, actions right rail)
+-   [-] Main Menu (navigation shell; Tutorial disabled; original colonist splash left over the animated colony diorama, actions right rail)
 -   [-] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts)
 -   [x] camera (WASD/arrows pan with Shift fast pan, edge pan, middle-drag, keyboard/wheel zoom, centre on colonist)
 -   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; cursor temperature, biome chip, season, weather and climate event chips present; Shift+T temperature overlay, TEMP-5)
@@ -2372,10 +2372,10 @@ required before a polished external build.
 
 ## Wave UI-9 --- Modding platform
 
--   [ ] Plugin Manager
--   [ ] Load Order
+-   [-] Plugin Manager (PLG-070: list with name, author, version, id, enabled box, state and problem counts; detail with description, requires, load after/before, conflicts, homepage; toggles save the enabled set and say they apply at the next start; empty state names the plugin folders. Missing: search/filter/sort, capabilities, settings)
+-   [-] Load Order (PLG-071: the list is the resolved order, each loaded row with its position and the reason for it; cycles, conflicts and missing dependencies show as the plugin's problems. Missing: a dependency graph; manual order is not offered, the order is computed)
 -   [ ] Plugin Settings
--   [ ] Content Error
+-   [-] Content Error (PLG-041: main-menu notice on errors, not warnings; problems view with plugin, file, def, field and message; Show plugin; Disable <plugin>. Missing: Copy (no system clipboard), recovery mode and Quit from the view, a blocking window at start)
 -   [ ] Definition Inspector
 
 ## Wave UI-10 --- Developer/scaling

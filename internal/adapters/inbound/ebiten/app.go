@@ -26,6 +26,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/orders"
 	"rimworld-go/internal/adapters/inbound/ebiten/perf"
+	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
 	"rimworld-go/internal/adapters/inbound/ebiten/pointer"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
@@ -141,6 +142,8 @@ type AppConfig struct {
 	Updates mainmenu.Updates
 	// CardFiles keeps the colonist card's presets (zero value: none).
 	CardFiles CardFiles
+	// Plugins is the run's plugins for the Plugins screens (PLG-070; zero: none installed).
+	Plugins plugins.View
 }
 
 // Usage is what the App reports about a session (internal/compose/game wires usagehttp).
@@ -465,6 +468,8 @@ func (a *App) clickIntent(id string) intent {
 		return intent{kind: intentPush, screen: portspkg.ScreenOptions}
 	case "menu.credits":
 		return intent{kind: intentPush, screen: portspkg.ScreenCredits}
+	case "menu.plugins":
+		return intent{kind: intentPush, screen: portspkg.ScreenPlugins}
 	case "menu.quit", "pause.quit":
 		return intent{kind: intentQuit}
 	case "wizard.back", "options.back", "load.back", "credits.back":
@@ -1053,6 +1058,8 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.opt.Saves.DrawLoad(screen, sw, sh)
 	case portspkg.ScreenCredits:
 		a.drawCredits(screen, sw, sh)
+	case portspkg.ScreenPlugins, portspkg.ScreenPluginProblems:
+		a.shell.plugins.Draw(screen, a.nav.screen(), sw, sh)
 	default:
 		a.stamp.draw = time.Time{}
 		screen.Fill(uikit.Space)

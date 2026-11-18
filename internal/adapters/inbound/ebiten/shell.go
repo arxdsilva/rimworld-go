@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/mapnav"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
 	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strconv"
 	"strings"
@@ -54,13 +55,14 @@ type shell struct {
 
 	screens map[ports.Screen]func(a *App, sw, sh int) // uiBegin: each screen's widgets
 	routes  []clickRoute                              // applyClick: by id or prefix, in order
+	plugins *plugins.Screen                           // the Plugins screens (PLG-070), whose widgets run on their own
 }
 
 func newShell(a *App) shell {
 	return shell{
 		shellHint{a}, shellSize{a}, shellCmd{a}, shellWorld{a}, shellView{a}, shellSel{a},
 		shellOverlay{a}, shellSpeed{a}, shellSettings{a}, shellPanels{a}, shellWidgets{a}, shellSaves{a}, shellDispatch{a},
-		newTexts(), screenTable(), clickRoutes(),
+		newTexts(), screenTable(), clickRoutes(), plugins.New(pluginsHost{menuHost{a}}),
 	}
 }
 
@@ -477,6 +479,8 @@ func screenTable() map[ports.Screen]func(a *App, sw, sh int) {
 		ports.ScreenPawns:          func(a *App, sw, sh int) { a.pawnsUI(sw, sh) },
 		ports.ScreenOptions:        func(a *App, sw, sh int) { a.opt.UI(sw, sh) },
 		ports.ScreenColony:         func(a *App, sw, sh int) { a.colonyUI(sw, sh) },
+		ports.ScreenPlugins:        func(a *App, sw, sh int) { a.shell.plugins.Declare(ports.ScreenPlugins, sw, sh) },
+		ports.ScreenPluginProblems: func(a *App, sw, sh int) { a.shell.plugins.Declare(ports.ScreenPluginProblems, sw, sh) },
 	}
 }
 

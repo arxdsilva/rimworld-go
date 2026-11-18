@@ -38,3 +38,29 @@ func TestCapturesLoadNoPlugin(t *testing.T) {
 		t.Fatalf("capture content = %+v", c.save())
 	}
 }
+
+// The Plugins screens' view (PLG-070): the example plugin enabled is a
+// loaded row at position 1 with its reason and the set the run started
+// with; off, the same row is not loaded; a broken enabled set lists its
+// problems; a capture's view is empty.
+func TestContentView(t *testing.T) {
+	src := modloader.New(filepath.Join("..", "..", "..", "mods"))
+	on := buildContent(src, []string{"example_frontier"}, "0.1.35").view()
+	if len(on.Rows) != 1 || !slices.Equal(on.Enabled, []string{"example_frontier"}) {
+		t.Fatalf("on: %+v", on)
+	}
+	if r := on.Rows[0]; r.ID != "example_frontier" || !r.Loaded || r.Position != 1 || r.Reason == "" || r.Name == "" {
+		t.Fatalf("on: row %+v", r)
+	}
+	off := buildContent(src, nil, "0.1.35").view()
+	if len(off.Rows) != 1 || off.Rows[0].Loaded || off.Enabled != nil || len(off.Problems) != 0 {
+		t.Fatalf("off: %+v", off)
+	}
+	bad := buildContent(src, []string{"example_frontier", "missing"}, "0.1.35").view()
+	if bad.Errors() != 1 || bad.Problems[0].Plugin != "missing" {
+		t.Fatalf("missing plugin: problems %+v", bad.Problems)
+	}
+	if v := loadContent(true, []string{"example_frontier"}, "0.1.35").view(); len(v.Rows)+len(v.Problems)+len(v.Enabled)+len(v.Folders) != 0 {
+		t.Fatalf("capture view %+v", v)
+	}
+}

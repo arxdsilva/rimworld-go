@@ -381,9 +381,9 @@ func TestDisabledActionsDoNotNavigate(t *testing.T) {
 	if a.hint != "no saves yet" {
 		t.Fatalf("hint = %q, want no saves yet", a.hint)
 	}
-	click(t, a, "menu.plugins")
+	click(t, a, "menu.tutorial")
 	if a.nav.screen() != ports.ScreenMainMenu {
-		t.Fatalf("plugins navigated to %s", a.nav.screen())
+		t.Fatalf("tutorial navigated to %s", a.nav.screen())
 	}
 }
 

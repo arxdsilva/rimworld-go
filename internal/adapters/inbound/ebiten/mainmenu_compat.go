@@ -7,6 +7,8 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
@@ -109,7 +111,9 @@ func (h menuHost) DismissRAMNotice(total uint64)  { h.a.dismissRAMNotice(total) 
 func (h menuHost) UpdateAvailable() (string, string) {
 	return h.a.cfg.Updates.UpdateAvailable()
 }
-func (h menuHost) DownloadUpdate() { h.a.cfg.Updates.DownloadUpdate() }
+func (h menuHost) DownloadUpdate()    { h.a.cfg.Updates.DownloadUpdate() }
+func (h menuHost) Do(it ports.Intent) { h.a.shell.Do(it) }
+func (h menuHost) PluginErrors() int  { return h.a.cfg.Plugins.Errors() }
 func (h menuHost) DrawFlame(dst *ebiten.Image, sx, sy float32, t, tile, k float64) {
 	creature.DrawFlameScreen(dst, sx, sy, t, tile, k)
 }
@@ -117,3 +121,12 @@ func (h menuHost) DrawFlame(dst *ebiten.Image, sx, sy float32, t, tile, k float6
 // MenuSeed is the presentation seed the menu's "random" background draws
 // from: the launch time, never the simulation's RNG.
 func (h menuHost) MenuSeed() uint64 { return uint64(h.a.now().UnixNano()) }
+
+// pluginsHost is what the Plugins screens see of the App (PLG-070): the
+// menu's roles, the run's plugins and the settings store.
+type pluginsHost struct{ menuHost }
+
+var _ plugins.Shell = pluginsHost{}
+
+func (h pluginsHost) Plugins() plugins.View         { return h.a.cfg.Plugins }
+func (h pluginsHost) SetSettings(s config.Settings) { h.a.setSettings(s) }

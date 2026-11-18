@@ -54,6 +54,7 @@ func Run(opts cligame.Options, version string, d Display) {
 	content := loadContent(shot != nil, enabledPlugins(settings.Load), version)
 	cfg := uiadapter.AppConfig{
 		Content:       content.game(),
+		Plugins:       content.view(), // PLG-070: the Plugins screens; empty for captures
 		DefaultSeed:   defaultSeed,
 		DefaultBiome:  biomeID,
 		Version:       version,
