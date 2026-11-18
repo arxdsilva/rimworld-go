@@ -156,3 +156,14 @@ GPL-3.0-only code, commercial licenses, separate assets license, CLA · 2026-11-
 - Limits: headers add 3 lines a file: `game` lines 51696 → 52215, `ebiten` enters the budget at 12140 (user's choice; no code changed).
 - HUD: none; licensing has no in-game behaviour.
 - Open: a lawyer reviews the documents; make `cla` a required status check on main; the commercial term sheet is not written.
+
+## CI-006-flaky-test-audit
+Flaky-test audit of every package; root-cause fixes; the scale golden runs under -race in its own job · 2026-11-18 · cb5e5abbb, d53afbf69, 659c5ea45, 3c431e8a0, a3746ef50
+- Checked: CI history (42 test.yml and 40 release.yml runs since 2026-10-22, every failed job's annotations), a static scan of every test file, and `-race -shuffle=on` sweeps of all 292 packages (`-count=3`, the lane-owned ones `-count=10`+). Per-package table and findings TFL-001..009: `.agents/gaps/TEST_FLAKINESS_GAP_ANALYSIS.md`.
+- Fixed at the root, no threshold or assertion loosened:
+  - gfx/aashape allocation check (failed CI 11-09, 11-18): under -race `sync.Pool` drops one Put in four and Ebitengine pools a scratch slice twice per draw, so an averaged `AllocsPerRun` rounded up; each side now takes the fewest allocations of 40 single calls (32/600 failures before, 0/600 after; an extra Painter allocation still fails). Four light/overlay checks had the same cause behind +1/+2 slack and lose the slack.
+  - pool (goroutine counts per label), usagehttp (Close proven bounded by an injected timer, no wall clock), filesave delete test (fails in 10 s instead of hanging), globe warm-up, the ebiten atlas drain goroutine (gone), async-save ordering (pinned), fog bound (flooded-cell count), shared test planet (proven read-only).
+- Golden: `TestScaleGolden` skipped under -race and nothing ran it otherwise, so its pins went stale at cc8ba7a0d (EAI-014) unnoticed. It moved to `internal/application/game/scalegolden`, runs all 20000 ticks under -race (~10 s local, ~40 s CI) in a `golden` job in test.yml and release.yml (a release needs it), re-pinned once with that cause. `make test` = test-unit + test-golden.
+- Not a flake: release run 42669968005 (v0.1.34) failed with its test job green and no build job; the 15 historical 10-minute timeouts ended 2026-11-08 (CI-005).
+- Limits: min-of-single-calls hides an intermittent (not per-call) allocation, as the old truncated average did; the globe fix rests on reasoning (never reproduced). `TestDayTickUnderBudget` is wall-clock and opt-in (`RIMWORLD_TIMING=1`).
+- Open: the first linux run of the `golden` job is the check that the pins hold on linux/amd64 (amd64 under Rosetta agrees).

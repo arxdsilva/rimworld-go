@@ -106,6 +106,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | CI-003-game-test-time | `application/game` test time under `-race` | 2026-11-06 | [OPS.md](OPS.md#ci-003-game-test-time) |
 | CI-004-ebiten-test-time | The ebiten root's `-race` test time | 2026-11-06 | [OPS.md](OPS.md#ci-004-ebiten-test-time) |
 | CI-005-heavy-binaries-serial | CI headroom: heavy test binaries alone, catalog parsed once, journeys skip wasted world work | 2026-11-08 | [OPS.md](OPS.md#ci-005-heavy-binaries-serial) |
+| CI-006-flaky-test-audit | Flaky-test audit of every package; root-cause fixes; the scale golden runs under -race in its own job | 2026-11-18 | [OPS.md](OPS.md#ci-006-flaky-test-audit) |
 | CSE-W1-habits | Options Habits tab (CSE-049, CSE-023) | 2026-11-03 | [MOD.md](MOD.md#cse-w1-habits) |
 | CSE-W2-pack | The pack (CSE-036) | 2026-11-03 | [MOD.md](MOD.md#cse-w2-pack) |
 | CSE-W3-tidy | Tidying a room around a job (CSE-017…027) | 2026-11-04 | [MOD.md](MOD.md#cse-w3-tidy) |
@@ -274,6 +275,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PLG-2-recipes-and-saved-keys | Recipes moddable; saves keep definition keys (PLG-025, PLG-044) | 2026-11-17 | [MOD.md](MOD.md#plg-2-recipes-and-saved-keys) |
 | PLG-3-classes-scripts-translations | Traits, research, incidents and items as plugin classes; Starlark scripts; translations; source lines; `-plugins` | 2026-11-18 | [MOD.md](MOD.md#plg-3-classes-scripts-translations) |
 | PLG-4-plugin-items-and-vanilla-fixes | Plugin items with their own mass, stack, trade, shelves and info card; four vanilla mismatches fixed | 2026-11-18 | [MOD.md](MOD.md#plg-4-plugin-items-and-vanilla-fixes) |
+| PLG-5-follow-ups-ally-beacon-power-offers | The PLG-4 open items: ally band, beacon power, offer quantities, Go 1.27.4 | 2026-11-18 | [MOD.md](MOD.md#plg-5-follow-ups-ally-beacon-power-offers) |
 | PRD-0-craft-package | The craft package and the quality domain | 2026-10-29 | [BASE.md](BASE.md#prd-0-craft-package) |
 | PRD-1-bill-settings | Bill settings, multi-ingredient recipes, gathering | 2026-10-29 | [BASE.md](BASE.md#prd-1-bill-settings) |
 | PRD-2-quality-stuff-condition | Quality, stuff, condition, inspiration | 2026-10-29 | [BASE.md](BASE.md#prd-2-quality-stuff-condition) |

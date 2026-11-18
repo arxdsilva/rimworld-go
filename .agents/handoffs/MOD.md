@@ -173,3 +173,10 @@ Plugin items with their own mass, stack, trade, shelves and info card; four vani
 - Limits: `game` lines 52586 → 52628, `Game` methods 1769 → 1770 (`collectGoods`), `ebiten` lines 12176 → 12180 (user rule: raises OK while perf holds).
 - HUD: info card rows; fuel line "12 / 50 wood"; faction window and wizard tips show the thresholds; beacon ghost ring 7.5 tiles and build text; orbital letter "about 16 hours".
 - Open: ally band (wiki 75, kept until 0; ours 50/30); beacon needs power on the wiki (40 W); existing shelves don't auto-admit a newly enabled plugin's items; `Settle` accepts a `math.MinInt` offer quantity (pre-existing); `TestScaleGolden` was not run (it skips under the race detector; run it once without it); CI's `TestPainterAllocatesOnlyEbitengine` (aashape) flaked on 46184ef77; go1.27.4 fixes GO-2026-6859 (net/http).
+
+## PLG-5-follow-ups-ally-beacon-power-offers
+The PLG-4 open items: ally band, beacon power, offer quantities, Go 1.27.4 · 2026-11-18 · 02b37c56b
+- Changed: factions become allies at >= +75 and stay allies until goodwill reaches 0 (wiki: Factions; `FriendlyEndAt`, `FriendlyKeep` gone); start ranges unchanged, so none starts allied. The orbital trade beacon is a 40 W consumer (wiki: Orbital trade beacon): only powered beacons give trade reach, gift and drop-pod spots; the reach cache key is `structVer + pwc.vers` (a power flip alone refreshes it). `DecodeOffer` and `Settle` reject quantities beyond `MaxOfferQty` (1,000,000), `math.MinInt` and overflowing totals ("impossible quantity"). `go.mod` pins `toolchain go1.27.4` (GO-2026-6859; `make vuln` clean).
+- HUD: faction tips show all four thresholds; the build text, the no-beacon reason ("needs a powered trade beacon"), the alert and the beacon glow follow power.
+- Saves: an old save's beacon simply needs power; `saveV12Hash` unchanged.
+- Flaky-test audit and the golden: OPS.md CI-006.

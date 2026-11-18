@@ -1225,7 +1225,7 @@ This screen centralizes per-pawn behavioral policies.
 ## 22.2 Goodwill explanation
 
 -   [ ] **Current goodwill**
--   [-] **Hostile/neutral/ally thresholds** (hostile <= -75 and neutral >= 0 shown in the faction window tooltip and wizard tips; ally band still open)
+-   [x] **Hostile/neutral/ally thresholds** (hostile <= -75, neutral >= 0, ally >= +75 until 0, wiki: Factions; shown in the faction window tooltip and wizard tips)
 -   [ ] **Recent modifiers/history**
 -   [ ] **Permanent hostility explanation**
 

@@ -1672,7 +1672,7 @@ change relationships, and settlements exist on the world map.
 ## 20.5 Orbital trade
 
 -   [x] **Communications console** (PLAY-024: powered radio console (3x2, wiki, STK-BN) behind Radio relay research: faction list, gifts, caravan requests, call trade ship, military aid)
--   [x] **Orbital trade beacon** (PLAY-024: goods in a 15-tile-wide area walls cut are tradable with ships; purchases land by drop pod)
+-   [x] **Orbital trade beacon** (PLAY-024: a powered beacon (40 W, wiki) marks goods in a 15-tile-wide area walls cut as tradable with ships; purchases land by drop pod)
     -   Defines tradeable nearby storage.
 -   [x] **Orbital trader event** (PLAY-024: a ship in radio range for 40000 ticks (about 16 hours) when a powered console exists; letter and alert)
 -   [x] **Remote faction communication** (PLAY-024: gifts, caravan requests and military aid by radio (ENG-007))
