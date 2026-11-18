@@ -56,6 +56,7 @@ func Run(opts cligame.Options, version string, d Display) {
 		content = captureContent(opts.CaptureUI, version)
 		settings = captureSettings(opts.CaptureUI, settings, content)
 	}
+	scenes.cfg.Content = content.game() // a set piece plays with the run's definitions too
 	cfg := uiadapter.AppConfig{
 		Content:       content.game(),
 		Plugins:       content.view(), // PLG-070: the Plugins screens; empty for captures

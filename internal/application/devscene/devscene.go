@@ -17,6 +17,9 @@ type Config struct {
 	Capturing     bool // a media capture: the grown colony gets its roofs
 	// FixtureDir caches the grown colony (RIMWORLD_FIXTURE_DIR); "" builds it.
 	FixtureDir string
+	// Content is the run's definitions for a set-piece colony (PLG-024);
+	// the grown and social fixtures stay core, as their pins were taken.
+	Content game.Content
 }
 
 // Build makes the colony a new game starts on, with the wizard's seed and
@@ -47,7 +50,7 @@ func build(c Config, seed uint64, b biome.ID) (*game.Game, error) {
 		g, _, err := appscenario.Social(seed, c.Width, c.Height)
 		return g, err
 	}
-	g := game.NewColony(game.Config{Seed: seed, Width: c.Width, Height: c.Height, Biome: b})
+	g := game.NewColony(game.Config{Seed: seed, Width: c.Width, Height: c.Height, Biome: b, Content: c.Content})
 	if scene, ok := scenes[c.Scenario]; ok {
 		scene(g, c.Width, c.Height)
 	}
