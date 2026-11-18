@@ -43,7 +43,7 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Reorder, copy and paste bills; bill config dialog. | `command.ReorderBill`, `ConfigureBill`, `SetBillIngredient` (`domain/sim/command`); `Bills.reorder`/`applySetting` (`craft/settings.go`); dialog, reorder and copy/paste buttons in `inspector/bill_config.go` (clipboard is local to the UI). | None. | PRD-1 | done |
 | Bench pane shows the current worker, progress, and why a bill cannot run. | `BillView.CurrentWorker`, `Progress`, `Gathering`, `NoWorker` filled by `Bills.AppendViews`/`current`/`noWorker` (`craft/view.go`); shown in `inspector/bill_config.go`. | None. | PRD-1 | done |
 | Bills need the right research. | Research locks recipes and benches through `lockedBy` and `lockedKeys` (`research.go`), shown as "Needs research: X". | None. | - | done |
-| Bills can require fuel, power or a free rack. | `fuel[bid]` for the wood-fired forge and campfire (forge: 5 logs, 1 per 375 work only while worked, refuel below half to full, no-flap test), `electricBench` with `powered`; wiki watts on the five powered benches, autocannon, slug turret and powered door; `craft/station.go`, `fuel.go`, `power.go`. | Chemfuel stove or generator fuel waits on the refinery (PRD-4). | PRD-3 | done |
+| Bills can require fuel, power or a free rack. | `fuel[bid]` for the wood-fired forge and campfire (forge: 50 logs, 1 per 750 worked ticks, only while worked, refuel below half to full, no-flap test), `electricBench` with `powered`; wiki watts on the five powered benches, autocannon, slug turret and powered door; `craft/station.go`, `fuel.go`, `power.go`. | Chemfuel stove or generator fuel waits on the refinery (PRD-4). | PRD-3 | done |
 
 ### 3.2 Quality, stuff and condition
 

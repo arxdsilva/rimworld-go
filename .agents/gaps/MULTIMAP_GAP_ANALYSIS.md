@@ -131,7 +131,7 @@ Older saves that launched before this keep their passengers as stashed, so they 
 
 ### Noticed, not changed
 
-- Our hostile threshold is -50 and calm is -10; the wiki says hostile at -75 or below. Moving it changes every goodwill balance.
+- Hostile at <= -75 and neutral again at >= 0 now match the wiki (Factions); drifters' start range is -90..10 to keep their hostile-start share near 16 %. The ally band (ours 50/30; wiki 75, kept until 0) is still open.
 - After a base falls, the wiki has "enemies will arrive in 4 days" unless you settle, and the site vanishes. Ours has the 24-hour pack-up from the Caravan page and no such raid. Both pages are published, and MAP-03 is the one built.
 
 ## Attack and founding

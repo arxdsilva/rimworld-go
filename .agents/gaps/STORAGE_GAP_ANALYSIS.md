@@ -42,7 +42,7 @@ gap · done.
 
 ## Tests
 
-- `item/stack_limit_test.go` TestStackLimit: every kind is 1 (per-unit identity or chunk) or 1000.
+- `item/stack_limit_test.go` TestStackLimit: every core kind is 1 (per-unit identity or chunk) or 1000; plugin items set `stack_limit` 1..1000 (PLG-026).
 - `zone/sto2_test.go` TestNewStorageDefaults (dump at Normal, custom, one stack per cell) and TestStackCap.
 - `game/stk_stack_test.go`: one tile reaches 1000 wood over 10+ hauls and never goes past; chunks stay one per tile, merged or hauled into a dump; a hopper keeps 75.
 - `adapters/inbound/ebiten/journey_stk_test.go`: a dump painted from the Architect (pane: Normal, a corpse/chunk filter) gets a carcass and a chunk hauled in; a one-tile stockpile stacks 240 wood.

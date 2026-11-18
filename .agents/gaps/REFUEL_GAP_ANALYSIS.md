@@ -30,7 +30,7 @@ Wiki pages read on 2026-11-06. All loaded; several carry "needs fact checking" o
 | [Chemfuel powered generator](https://rimworldwiki.com/wiki/Chemfuel_powered_generator) | 30 chemfuel, 4.5 a day, 70 % explosion when damaged, radius by fuel |
 | [Campfire](https://rimworldwiki.com/wiki/Campfire) | 20 wood, 10 a day, 46 in rain, "Automatic refuel toggle on/off", no wood back on removal |
 | [Torch lamp](https://rimworldwiki.com/wiki/Torch_lamp) | 20 wood, 2 a day, 38 in rain, no wood back on removal |
-| [Fueled stove](https://rimworldwiki.com/wiki/Fueled_stove) | 50 wood, burns only while cooking, "eject fuel", can't be fuelled while cooking |
+| [Fueled stove](https://rimworldwiki.com/wiki/Fueled_stove) | 50 wood, burns only while cooking (160 a day), "eject fuel", can't be fuelled while cooking |
 | [Passive cooler](https://rimworldwiki.com/wiki/Passive_cooler) | 50 wood, 10 a day, waits to be restocked when empty |
 | [Hauling](https://rimworldwiki.com/wiki/Hauling) | Refuel is Haul work, second after "Rearm turrets" |
 | [Work](https://rimworldwiki.com/wiki/Work) | Incapable of Hauling blocks refuelling; a forced task needs its work type assigned |
@@ -54,7 +54,7 @@ State: `done` shipped; `open` owed to a later change; `kept` differs on purpose.
 | REF-008 | Burning in rain | Campfire 46 a day, torch 38 a day in rain | Rain and snow douse a fire in the open: it stops burning (`game.burning`) | open, weather scope |
 | REF-009 | Chemfuel generator explosion | "70% chance to explode" when damaged, radius by fuel | Not modelled (`ARCHITECT_GAP_ANALYSIS.md`, chemfuel generator row) | open, DEF scope |
 | REF-010 | Fuel on removal | Campfire and torch: no wood back; others not published | Fuel is dropped with the building (`placement.go`, `delete(g.fuel, id)`) | matches where published, kept elsewhere |
-| REF-011 | Capacities and burn rates | 75 and 22, 30 and 4.5, 20 and 10, 20 and 2, 50 and 10; stove 50 while cooking | Same (`industry/fuel.go`); smithy and stove scaled / 10 with their work | matches, scale kept |
+| REF-011 | Capacities and burn rates | 75 and 22, 30 and 4.5, 20 and 10, 20 and 2, 50 and 10; stove 50 while cooking | Stove and smithy hold 50 logs, refuel below half, burn only on ticks a pawn works the bench: stove 1 log per 375 worked ticks (160 a day), smithy 1 per 750 (80 a day); the rest as before (`industry/fuel.go`). Per-item fuel stays below vanilla while recipe work is scaled (cook 40 %, smithy /10). Old saves' 5-log benches just refuel | matches capacity and rate |
 | REF-012 | Who refuels and when | Haul work, second after rearming; incapable of Hauling can't | Haul chain: urgent hauls, then refuel (`priorities.go`, WRK-007); the order needs Hauling (`orderWork`) | matches |
 | REF-013 | Hostile burners | Not ours to feed | Haulers used to refuel a settlement's burners; they now skip `Building.Hostile` | done [REF-1] |
 | REF-014 | Fish tank feed | No vanilla counterpart | Fed by the refuel work with hay, kibble or plant food once a stock is chosen | kept, outside both controls |

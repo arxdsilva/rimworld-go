@@ -273,6 +273,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PLG-1-plugins-screens | Plugins screen and content problems view (PLG-070, 071, 041) | 2026-11-17 | [MOD.md](MOD.md#plg-1-plugins-screens) |
 | PLG-2-recipes-and-saved-keys | Recipes moddable; saves keep definition keys (PLG-025, PLG-044) | 2026-11-17 | [MOD.md](MOD.md#plg-2-recipes-and-saved-keys) |
 | PLG-3-classes-scripts-translations | Traits, research, incidents and items as plugin classes; Starlark scripts; translations; source lines; `-plugins` | 2026-11-18 | [MOD.md](MOD.md#plg-3-classes-scripts-translations) |
+| PLG-4-plugin-items-and-vanilla-fixes | Plugin items with their own mass, stack, trade, shelves and info card; four vanilla mismatches fixed | 2026-11-18 | [MOD.md](MOD.md#plg-4-plugin-items-and-vanilla-fixes) |
 | PRD-0-craft-package | The craft package and the quality domain | 2026-10-29 | [BASE.md](BASE.md#prd-0-craft-package) |
 | PRD-1-bill-settings | Bill settings, multi-ingredient recipes, gathering | 2026-10-29 | [BASE.md](BASE.md#prd-1-bill-settings) |
 | PRD-2-quality-stuff-condition | Quality, stuff, condition, inspiration | 2026-10-29 | [BASE.md](BASE.md#prd-2-quality-stuff-condition) |
