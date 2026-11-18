@@ -438,7 +438,7 @@ func podsReady(t *testing.T, goods, cap bool) (j *journey, pod entity.EntityID, 
 		}
 		picked := ""
 		for _, k := range []string{"silver", "herbal medicine", "meal", "components"} {
-			if total[k] > 0 && dialogs.GoodsKg(k, total[k]) <= 30 {
+			if total[k] > 0 && dialogs.GoodsKg(item.Book{}, k, total[k]) <= 30 {
 				picked = k
 				break
 			}
@@ -449,7 +449,7 @@ func podsReady(t *testing.T, goods, cap bool) (j *journey, pod entity.EntityID, 
 		if !j.clickID("pods.goods."+strings.ReplaceAll(picked, " ", "_")+".all") || !j.clickID("modal."+dialogs.LoadPodsID+".pods.load") {
 			t.Fatalf("no row for %s, or Load is disabled", picked)
 		}
-		want := dialogs.GoodsKg(picked, total[picked])
+		want := dialogs.GoodsKg(item.Book{}, picked, total[picked])
 		j.key("Digit3", 0)
 		j.until(func() bool { return ax9PodLoad(j, pod) > 0 }, 1500)
 		j.until(func() bool { return ax9PodLoad(j, pod) >= want }, 600)

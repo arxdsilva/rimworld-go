@@ -44,7 +44,7 @@ func EncodeOffer(offer []Delta) string {
 
 // DecodeOffer reads EncodeOffer's output. It refuses malformed
 // text, unknown item kinds, zero quantities and a kind listed twice.
-func DecodeOffer(s string) ([]Delta, error) {
+func DecodeOffer(b item.Book, s string) ([]Delta, error) {
 	if s == "" {
 		return nil, nil
 	}
@@ -61,9 +61,9 @@ func DecodeOffer(s string) ([]Delta, error) {
 		if err != nil {
 			return nil, errOfferSyntax
 		}
-		var b uint64
+		var bld uint64
 		if crated {
-			if b, err = strconv.ParseUint(bs, 10, 8); err != nil || b == 0 || item.Kind(k) != item.MinifiedBuilding {
+			if bld, err = strconv.ParseUint(bs, 10, 8); err != nil || bld == 0 || item.Kind(k) != item.MinifiedBuilding {
 				return nil, errOfferSyntax
 			}
 		}
@@ -71,7 +71,7 @@ func DecodeOffer(s string) ([]Delta, error) {
 		if err != nil {
 			return nil, errOfferSyntax
 		}
-		g := Goods{item.Kind(k), uint8(b)}
+		g := Goods{item.Kind(k), uint8(bld)}
 		if q == 0 || g.Kind.String() == "unknown" || seen[g] {
 			return nil, errOfferLine
 		}

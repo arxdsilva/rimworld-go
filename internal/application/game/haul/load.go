@@ -7,8 +7,8 @@ import "rimworld-go/internal/domain/economy/item"
 
 // Toppable reports stack o still takes more of its kind: it is below
 // its stack limit (STK-ST: one load tops a stack up to whatever room is
-// left; Capacity caps the load).
-func Toppable(o item.Stack) bool { return o.Qty < o.Kind.StackLimit() }
+// left; Capacity caps the load). lim is the kind's stack limit.
+func Toppable(o item.Stack, lim int) bool { return o.Qty < lim }
 
 // Cell tallies the stacks lying on one storage cell for Room: how many,
 // and the smallest of the hauled kind.

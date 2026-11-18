@@ -75,3 +75,26 @@ func TestBookCoreAndPlugin(t *testing.T) {
 		t.Fatal("None is not neutral")
 	}
 }
+
+// The zero book, Core() and the Kind methods agree on mass, stack limit and
+// value for every core kind and for None (W0: the read paths move to the book
+// without moving a core number).
+func TestBookMatchesKindMethods(t *testing.T) {
+	t.Parallel()
+	books := map[string]Book{"zero": {}, "core": Core()}
+	kinds := []Kind{None}
+	for k := range CoreKinds {
+		kinds = append(kinds, Kind(k))
+	}
+	for name, b := range books {
+		for _, k := range kinds {
+			if b.MassGrams(k) != k.MassGrams() || b.StackLimit(k) != k.StackLimit() || b.Value(k) != k.Value() {
+				t.Fatalf("%s book, kind %d: mass %d/%d stack %d/%d value %d/%d", name, k, b.MassGrams(k), k.MassGrams(),
+					b.StackLimit(k), k.StackLimit(), b.Value(k), k.Value())
+			}
+		}
+	}
+	if CoreDef(Steel).TraderStock != 0 {
+		t.Fatal("a core def never carries trader stock")
+	}
+}

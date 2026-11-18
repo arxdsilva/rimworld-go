@@ -190,7 +190,7 @@ func TestPackBillBalancesWholeBill(t *testing.T) {
 	for i := 0; i < 30000 && !p.done(); i++ {
 		p.step(t, 1, nil)
 		seen[jobKind(p.g, p.ada)] = true
-		if g, c := s.Packs[p.ada].Grams(), s.Gear.Capacity(p.ada); g > c {
+		if g, c := s.Packs[p.ada].Grams(item.Book{}), s.Gear.Capacity(p.ada); g > c {
 			t.Fatalf("tick %d: %d g in a pack of %d", i, g, c)
 		}
 	}
@@ -416,7 +416,7 @@ func TestPackBillRespectsCapacity(t *testing.T) {
 			g.SetNeeds(ada, needs.Full, needs.Full)
 		}
 		g.Step(1)
-		if got, c := s.Packs[ada].Grams(), s.Gear.Capacity(ada); got > c {
+		if got, c := s.Packs[ada].Grams(item.Book{}), s.Gear.Capacity(ada); got > c {
 			t.Fatalf("tick %d: %d g in a pack of %d", i, got, c)
 		}
 		has := slices.ContainsFunc(s.Packs[ada].Items, func(e inventory.Entry) bool { return e.Stack.Kind == item.Wood })

@@ -321,7 +321,7 @@ func (h craftPrep) StackFirst(id entity.EntityID, x, y int, stacks []entity.Enti
 	open := r < 0 || r >= len(g.rooms) || g.rooms[r].contents.Cells > 160
 	for _, sid := range stacks {
 		st, ok := g.stacks.Get(sid)
-		if !ok || st.Kind.StackLimit() <= 1 || !open && g.roomAt(st.X, st.Y) == r {
+		if !ok || h.g.sk.content.Items.StackLimit(st.Kind) <= 1 || !open && g.roomAt(st.X, st.Y) == r {
 			continue
 		}
 		if dx, dy, ok := g.haulDest(id, st, 0); ok && pathing.Dist(pos.X, pos.Y, dx, dy) < pathing.Dist(pos.X, pos.Y, x, y) {
@@ -336,6 +336,7 @@ func (h craftPrep) StackFirst(id entity.EntityID, x, y int, stacks []entity.Enti
 type craftPacks struct{ g *Game }
 
 func (h craftPacks) PackRoom(id entity.EntityID) int { return senseOf(h.g).Gear.Room(id) }
+func (h craftPacks) Items() item.Book                { return h.g.sk.content.Items }
 func (h craftPacks) Stow(id, stack entity.EntityID, n int) (uint32, bool) {
 	s := senseOf(h.g)
 	st, ok := h.g.stacks.Get(stack)

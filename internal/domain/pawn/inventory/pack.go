@@ -67,11 +67,11 @@ func (p *Pack) Take(id uint32, n int) (item.Stack, bool) {
 	return out, true
 }
 
-// Grams is the pack's mass: each item's mass times its quantity.
-func (p Pack) Grams() int {
+// Grams is the pack's mass in book b: each item's mass times its quantity.
+func (p Pack) Grams(b item.Book) int {
 	total := 0
 	for _, e := range p.Items {
-		total += e.Stack.Kind.MassGrams() * e.Stack.Qty
+		total += b.MassGrams(e.Stack.Kind) * e.Stack.Qty
 	}
 	return total
 }

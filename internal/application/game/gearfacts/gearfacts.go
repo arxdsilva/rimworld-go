@@ -23,12 +23,12 @@ const CarryGrams = 75000
 // Manipulation manip and body size size (both permille).
 func Capacity(manip, size int) int { return CarryGrams * max(manip, 0) / 1000 * max(size, 0) / 1000 }
 
-// Grams is the mass of qty units of k (0 for nothing).
-func Grams(k item.Kind, qty int) int {
+// Grams is the mass of qty units of k in book b (0 for nothing).
+func Grams(b item.Book, k item.Kind, qty int) int {
 	if k == 0 || qty <= 0 {
 		return 0
 	}
-	return k.MassGrams() * qty
+	return b.MassGrams(k) * qty
 }
 
 // Moves is what outfit o adds to move speed, in hundredths of a cell per
@@ -57,18 +57,18 @@ func Mods(move int32) []stat.Mod {
 	return []stat.Mod{{Stat: stat.MoveSpeed, Add: move}}
 }
 
-// Of is the Gear tab's summary of a pawn wearing o and carrying carried
+// Of is the Gear tab's summary, mass read from book b, of a pawn wearing o and carrying carried
 // grams besides (weapons and pack), with Manipulation manip and body size
 // size (permille): GearGrams, CapacityGrams, OverallArmor and MovePct.
 // The apparel-policy fields stay for game/outfit.
-func Of(o craft.Outfit, carried, manip, size int) gearview.Pawn {
+func Of(b item.Book, o craft.Outfit, carried, manip, size int) gearview.Pawn {
 	var worn [craft.Slots]armor.Layer
 	n, grams := 0, carried
 	for _, p := range o.On {
 		if p.Kind == 0 {
 			continue
 		}
-		grams += Grams(p.Kind, 1)
+		grams += Grams(b, p.Kind, 1)
 		if l, ok := armor.Piece(p.Kind, p.Stuff, p.Quality); ok {
 			worn[n] = l
 			n++

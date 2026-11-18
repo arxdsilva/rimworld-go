@@ -21,6 +21,8 @@ type Cells interface {
 	// Shelf is how many stacks lie on shelf cell (x, y) and whether one
 	// of kind k still takes a load (haul.Ground.Shelf).
 	Shelf(k item.Kind, x, y int) (n int, top bool)
+	// Items is the run's frozen item book: stack limits.
+	Items() item.Book
 	// TileTaken reports a reservation on (x, y).
 	TileTaken(x, y int) bool
 	// Blocked reports (x, y) can't take a new stack: not walkable, a
@@ -118,7 +120,7 @@ func (s *search) topUp(cx, cy int, shelf, hopper bool) {
 		}
 		return
 	}
-	if o, ok := s.c.First(cx, cy); ok && o.Kind == k && haul.Toppable(o) && s.open(cx, cy) && !(hopper && o.Qty*2 > zone.KindHopper.StackCap(k.StackLimit())) {
+	if o, ok := s.c.First(cx, cy); ok && o.Kind == k && haul.Toppable(o, s.c.Items().StackLimit(k)) && s.open(cx, cy) && !(hopper && o.Qty*2 > zone.KindHopper.StackCap(s.c.Items().StackLimit(k))) {
 		s.take(cx, cy)
 	}
 }

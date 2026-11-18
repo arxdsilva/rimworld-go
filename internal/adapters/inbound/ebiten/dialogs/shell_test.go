@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -67,6 +68,7 @@ func (s *fakeShell) Icon(key string) *ebiten.Image {
 	return nil
 }
 func (s *fakeShell) Kit() *uikit.Kit               { return s.kit }
+func (s *fakeShell) Items() item.Book              { return item.Book{} }
 func (s *fakeShell) Sites() []game.WorldSiteView   { return s.sites }
 func (s *fakeShell) Trade() (game.TradeView, bool) { return opt(s.tv) }
 func (s *fakeShell) Comms() (game.CommsView, bool) { return opt(s.cv) }

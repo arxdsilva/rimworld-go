@@ -111,6 +111,7 @@ func (g *Game) TradeView() (TradeView, bool) {
 	}
 	v.HoursLeft = hoursLeft(p.until, uint64(g.clock.Now()))
 	v.Social, v.PriceModPct = terms.Social, priceModPct(terms)
+	b := g.sk.content.Items
 	gd := g.colonyGoods(v.Orbital)
 	v.ColonySilver, v.TraderSilver = gd.counts[item.Silver], p.stock.Silver
 	theirs := map[trade.Goods]int{} // AX-1: a crated building is goods of its own
@@ -131,10 +132,10 @@ func (g *Game) TradeView() (TradeView, bool) {
 		if gk.Building != 0 {
 			colony = 0 // the colony's own crates are not on offer
 		}
-		v.Rows = append(v.Rows, TradeRowView{Kind: gk.Name(), Label: cmp.Or(gk.Label(), itemLabel(k)), Category: k.Category(),
+		v.Rows = append(v.Rows, TradeRowView{Kind: gk.Name(b), Label: cmp.Or(gk.Label(b), itemLabel(k)), Category: k.Category(),
 			ColonyQty: colony, TraderQty: theirs[gk],
-			BuyC: trade.PriceOf(gk, p.kind, trade.Buy, terms), SellC: trade.PriceOf(gk, p.kind, trade.Sell, terms),
-			WillBuy: theirs[gk] > 0, WillSell: gk.Building == 0 && trade.Wants(p.kind, k)})
+			BuyC: trade.PriceOf(b, gk, p.kind, trade.Buy, terms), SellC: trade.PriceOf(b, gk, p.kind, trade.Sell, terms),
+			WillBuy: theirs[gk] > 0, WillSell: gk.Building == 0 && trade.Wants(b, p.kind, k)})
 	}
 	slices.SortStableFunc(v.Rows, func(a, b TradeRowView) int {
 		if ra, rb := item.CategoryRank(a.Category), item.CategoryRank(b.Category); ra != rb {
@@ -163,7 +164,7 @@ func (g *Game) cmdProposeTrade(offer string, gift bool) {
 	if !ok {
 		return
 	}
-	deltas, err := trade.DecodeOffer(offer)
+	deltas, err := trade.DecodeOffer(g.sk.content.Items, offer)
 	if err != nil {
 		s.reason = ReasonOfferBroken
 		return
@@ -174,7 +175,7 @@ func (g *Game) cmdProposeTrade(offer string, gift bool) {
 		return
 	}
 	gd := g.colonyGoods(orbital)
-	res := trade.Settle(deltas, gd.counts, *p.stock, g.termsFor(s.negotiator, p.f), gift)
+	res := trade.Settle(g.sk.content.Items, deltas, gd.counts, *p.stock, g.termsFor(s.negotiator, p.f), gift)
 	if !res.OK() {
 		s.reason = res.Reject.String()
 		return

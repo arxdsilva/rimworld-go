@@ -106,6 +106,8 @@ type Goods interface {
 	// stack, its kind and how many.
 	PickUp(id, stack entity.EntityID, qty int) (entity.EntityID, item.Kind, int, bool)
 	Stack(id entity.EntityID) (item.Stack, bool)
+	// Items is the run's frozen item book: mass and stack limits.
+	Items() item.Book
 	// Spend deletes a carried stack (it went into a pod).
 	Spend(carry entity.EntityID)
 	// DropStack sets a copy of st down at (x, y), or beside it.

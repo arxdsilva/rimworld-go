@@ -46,7 +46,7 @@ type source struct {
 }
 
 // Build is the card for q, from the read models r.
-func Build(r Reader, q ports.OpenInfoCard) Card {
+func Build(r Reader, _ Kinds, q ports.OpenInfoCard) Card {
 	s := resolve(r, q)
 	if !s.found {
 		return Card{Title: r.T("Item"), Desc: r.T("This item is no longer there.")}

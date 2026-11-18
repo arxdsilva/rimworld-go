@@ -218,7 +218,7 @@ func neolithicBanned(it item.Kind) bool { return it == item.Rifle || it == item.
 // Generate is a fresh stock for a trader of kind k from a faction of
 // technology tech, drawn from rng only. Neolithic traders carry no rifles
 // or components.
-func Generate(k TraderKind, tech faction.Tech, rng *randx.Rand) Stock {
+func Generate(b item.Book, k TraderKind, tech faction.Tech, rng *randx.Rand) Stock {
 	d := DefOf(k)
 	st := Stock{Kind: k}
 	if k >= NumKinds {
@@ -248,7 +248,7 @@ func Generate(k TraderKind, tech faction.Tech, rng *randx.Rand) Stock {
 
 // Wants reports whether a trader of kind k buys goods of kind it. Silver
 // is not a good: it settles every trade.
-func Wants(k TraderKind, it item.Kind) bool {
+func Wants(b item.Book, k TraderKind, it item.Kind) bool {
 	if k >= NumKinds || it.Value() <= 0 || it == item.Silver || it == item.MinifiedBuilding { // AX-1: crates are only sold to the colony
 		return false
 	}
@@ -276,17 +276,17 @@ func isSpecialty(k TraderKind, it item.Kind) bool {
 // Price is one unit of it on side s with a trader of kind k under terms
 // t, in hundredths of a silver. Silver is always at face value (100). A
 // hostile faction, or a kind without a market value, has no price (0).
-func Price(it item.Kind, k TraderKind, s Side, t Terms) int {
-	return PriceOf(Goods{Kind: it}, k, s, t)
+func Price(b item.Book, it item.Kind, k TraderKind, s Side, t Terms) int {
+	return PriceOf(b, Goods{Kind: it}, k, s, t)
 }
 
 // PriceOf is Price for goods g: a crated building is worth CrateValue.
-func PriceOf(g Goods, k TraderKind, s Side, t Terms) int {
+func PriceOf(b item.Book, g Goods, k TraderKind, s Side, t Terms) int {
 	it := g.Kind
 	if it == item.Silver {
 		return 100
 	}
-	v := g.Value() * 100
+	v := g.Value(b) * 100
 	if v <= 0 || t.Hostile {
 		return 0
 	}
@@ -309,7 +309,7 @@ func PriceOf(g Goods, k TraderKind, s Side, t Terms) int {
 // stock and silver, and terms t, and returns what moves. A gift moves only
 // the colony's goods (and silver) to the trader, for goodwill; no silver
 // comes back.
-func Settle(offer []Delta, colony map[item.Kind]int, st Stock, t Terms, gift bool) Result {
+func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Terms, gift bool) Result {
 	if t.Hostile {
 		return Result{Reject: RejectHostile}
 	}
@@ -343,7 +343,7 @@ func Settle(offer []Delta, colony map[item.Kind]int, st Stock, t Terms, gift boo
 			if stock[g] < q {
 				return Result{Reject: RejectOverStock}
 			}
-			buyC += q * PriceOf(g, st.Kind, Buy, t)
+			buyC += q * PriceOf(b, g, st.Kind, Buy, t)
 			res.Buy = append(res.Buy, Line{Kind: it, Qty: q, Building: g.Building})
 		default:
 			q = -q
@@ -354,15 +354,15 @@ func Settle(offer []Delta, colony map[item.Kind]int, st Stock, t Terms, gift boo
 				if it.Value() <= 0 {
 					return Result{Reject: RejectUnwanted}
 				}
-			} else if !Wants(st.Kind, it) {
+			} else if !Wants(b, st.Kind, it) {
 				return Result{Reject: RejectUnwanted}
 			}
-			sellC += q * Price(it, st.Kind, Sell, t)
+			sellC += q * Price(b, it, st.Kind, Sell, t)
 			res.Sell = append(res.Sell, Line{Kind: it, Qty: q})
 		}
 	}
 	if gift {
-		res.Goodwill = faction.GiftGoodwill(GiftValue(offer))
+		res.Goodwill = faction.GiftGoodwill(GiftValue(b, offer))
 		return res
 	}
 	res.SilverCenti = sellC - buyC
@@ -382,7 +382,7 @@ func Settle(offer []Delta, colony map[item.Kind]int, st Stock, t Terms, gift boo
 
 // GiftValue is the market value, in whole silver, of what the colony
 // gives in offer (its negative lines; silver counts at face value).
-func GiftValue(offer []Delta) int {
+func GiftValue(b item.Book, offer []Delta) int {
 	total := 0
 	for _, d := range offer {
 		if d.Qty < 0 {

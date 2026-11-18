@@ -164,7 +164,7 @@ func TestPackGatherSplitsByCapacity(t *testing.T) {
 		if j.Kind != job.PackIngredients {
 			break
 		}
-		if g := f.pack(pawn).Grams(); g > f.room {
+		if g := f.pack(pawn).Grams(item.Book{}); g > f.room {
 			t.Fatalf("%d grams in a pack of %d", g, f.room)
 		}
 		if j.Target == j.Dest {

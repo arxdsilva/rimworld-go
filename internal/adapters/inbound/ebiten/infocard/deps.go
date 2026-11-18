@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 )
 
 // Reader is the read model the card is built from.
@@ -24,8 +25,19 @@ type Shell interface {
 	ports.Texts
 }
 
-// Window opens the Info card over a shell.
-type Window struct{ sh Shell }
+// Kinds is what the card reads of the run's content: the frozen item book
+// (a plugin item's label, value, mass and stack limit) and who added a
+// definition (SourceOf nil: nobody, PLG-072). It mirrors windows.Env.
+type Kinds struct {
+	Items    item.Book
+	SourceOf func(class, key string) game.Source
+}
 
-// New builds the window over its shell.
-func New(sh Shell) *Window { return &Window{sh: sh} }
+// Window opens the Info card over a shell.
+type Window struct {
+	sh Shell
+	k  Kinds
+}
+
+// New builds the window over its shell and the run's kinds.
+func New(sh Shell, k Kinds) *Window { return &Window{sh: sh, k: k} }

@@ -348,7 +348,7 @@ func TestBuyCratedBigScreenFromOrbitalTrader(t *testing.T) {
 	v, _ := g.TradeView()
 	var row TradeRowView
 	for _, r := range v.Rows {
-		if r.Kind == tv.Name() {
+		if r.Kind == tv.Name(item.Book{}) {
 			row = r
 		}
 	}

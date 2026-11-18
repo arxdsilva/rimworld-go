@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/look"
 )
 
@@ -40,6 +41,9 @@ func (h dialogsHost) DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, ht fl
 
 // Icon is a UI icon, untinted.
 func (h dialogsHost) Icon(key string) *ebiten.Image { return h.a.art.Image(key, color.NRGBA{}) }
+
+// Items is the run's frozen item book.
+func (h dialogsHost) Items() item.Book { return h.a.cfg.Content.Items }
 
 // Trade is the open trade session, if the simulation offers sessions.
 func (h dialogsHost) Trade() (game.TradeView, bool) {

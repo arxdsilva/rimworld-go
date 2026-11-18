@@ -34,6 +34,7 @@ func (h senseGear) Rotted(id entity.EntityID, k item.Kind, qty int) {
 }
 
 func (h senseGear) Stack(stack entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(stack) }
+func (h senseGear) Items() item.Book                               { return h.g.sk.content.Items }
 func (h senseGear) RemoveQty(stack entity.EntityID, n int) {
 	if st, ok := h.g.stacks.Get(stack); ok && st.Qty <= n {
 		h.g.deleteItem(stack)
@@ -202,5 +203,5 @@ func packView(g *Game, id entity.EntityID) ([]PackItemView, int, int) {
 	for _, e := range p.Items {
 		rows = append(rows, PackItemView{ID: e.ID, Name: g.sk.content.Items.Name(e.Stack.Kind), Qty: e.Stack.Qty, Unload: e.Unload, Gear: gear.PackGear(id, e)}) // a plugin's by key (PLG-026)
 	}
-	return rows, p.Grams(), gear.Capacity(id)
+	return rows, p.Grams(g.sk.content.Items), gear.Capacity(id)
 }

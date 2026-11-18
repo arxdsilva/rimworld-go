@@ -34,10 +34,6 @@ const (
 	traderCaravanStay = clock.TicksPerDay * 3 / 4
 	// traderCaravanRange is how far from home() its people stroll.
 	traderCaravanRange = 6
-	// orbitalStay is how long an orbital ship stays in radio range.
-	orbitalStay = clock.TicksPerDay * 3 / 2
-	// beaconRadius is a trade beacon's reach (Euclidean tiles).
-	beaconRadius = 6
 	// tradePodFall is how long an orbital purchase takes to land.
 	tradePodFall = 60
 	// traderLostGoodwill is what killing or capturing a trader costs.
@@ -314,27 +310,19 @@ type tradeGoods struct {
 }
 
 func (g *Game) colonyGoods(orbital bool) tradeGoods {
-	gd := tradeGoods{ids: map[item.Kind][]entity.EntityID{}, counts: map[item.Kind]int{}}
-	var beacons [][2]int
 	if orbital {
-		for _, bid := range g.beaconIDs() {
-			b := g.bldgs.Ref(bid)
-			beacons = append(beacons, [2]int{b.X, b.Y})
-		}
-		if len(beacons) == 0 {
-			return gd
-		}
+		return beaconGoods(g)
 	}
+	return g.collectGoods(g.stockpiled)
+}
+
+// collectGoods is the unforbidden, unfogged loose stacks whose cell
+// passes in (one pass over the items).
+func (g *Game) collectGoods(in func(x, y int) bool) tradeGoods {
+	gd := tradeGoods{ids: map[item.Kind][]entity.EntityID{}, counts: map[item.Kind]int{}}
 	for _, iid := range g.itemIDs {
 		st := g.stacks.Ref(iid)
-		if st == nil || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 || g.fogged(st.X, st.Y) {
-			continue
-		}
-		if orbital {
-			if !nearAny(st.X, st.Y, beacons, beaconRadius) {
-				continue
-			}
-		} else if !g.stockpiled(st.X, st.Y) {
+		if st == nil || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 || g.fogged(st.X, st.Y) || !in(st.X, st.Y) {
 			continue
 		}
 		gd.ids[st.Kind] = append(gd.ids[st.Kind], iid)
@@ -344,17 +332,6 @@ func (g *Game) colonyGoods(orbital bool) tradeGoods {
 		slices.Sort(gd.ids[k])
 	}
 	return gd
-}
-
-// nearAny reports (x, y) within r (Euclidean) of any of pts.
-func nearAny(x, y int, pts [][2]int, r int) bool {
-	for _, p := range pts {
-		dx, dy := x-p[0], y-p[1]
-		if dx*dx+dy*dy <= r*r {
-			return true
-		}
-	}
-	return false
 }
 
 // takeGoods removes n of kind k from gd's stacks, ascending id first.

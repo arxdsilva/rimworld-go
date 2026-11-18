@@ -62,7 +62,7 @@ func (s *fakeShell) Kit() *uikit.Kit                   { return s.kit }
 func newFake() (*fakeShell, *Window) {
 	s := &fakeShell{sw: 1280, sh: 720}
 	s.kit = uikit.New(fakeHost{s})
-	return s, New(s)
+	return s, New(s, Kinds{})
 }
 
 // text is every row and the description, flattened.
@@ -101,7 +101,7 @@ func pawnWithGear() game.PawnView {
 func TestApparelCard(t *testing.T) {
 	s, _ := newFake()
 	s.pawns = []game.PawnView{pawnWithGear()}
-	c := Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModeApparel, Index: 0})
+	c := Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModeApparel, Index: 0})
 	wants(t, c, "Mass: 6.00 kg", "Quality: good", "Hit points: 30 / 60 (50%)", "Sharp: 100%", "Blunt: 36%", "Heat: 27%",
 		"Covers: torso", "Layers: middle", "Insulation", "Move speed: -3%", "carried by Ada")
 	if c.Desc != wordsApparel {
@@ -112,16 +112,16 @@ func TestApparelCard(t *testing.T) {
 func TestWeaponCard(t *testing.T) {
 	s, _ := newFake()
 	s.pawns = []game.PawnView{pawnWithGear()}
-	c := Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModeWeapon})
+	c := Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModeWeapon})
 	wants(t, c, "Mass: 4.20 kg", "Damage:", "Armour penetration:", "Range:", "Accuracy:", "Cooldown:")
-	sp := Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModeSpare})
+	sp := Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModeSpare})
 	wants(t, sp, "Mass: 500 g", "Reach: adjacent")
 }
 
 func TestFoodCard(t *testing.T) {
 	s, _ := newFake()
 	s.pawns = []game.PawnView{pawnWithGear()}
-	c := Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModePack, Index: 3})
+	c := Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModePack, Index: 3})
 	wants(t, c, "Count: 4", "Nutrition:", "Stack mass:")
 	if c.Desc != wordsFood {
 		t.Fatalf("description %q", c.Desc)
@@ -131,7 +131,7 @@ func TestFoodCard(t *testing.T) {
 func TestDrugCard(t *testing.T) {
 	s, _ := newFake()
 	s.pawns = []game.PawnView{pawnWithGear()}
-	c := Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModePack, Index: 4})
+	c := Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModePack, Index: 4})
 	if c.Desc != wordsDrug {
 		t.Fatalf("description %q", c.Desc)
 	}
@@ -141,7 +141,7 @@ func TestDrugCard(t *testing.T) {
 func TestResourceCardFromMapItem(t *testing.T) {
 	s, _ := newFake()
 	s.w.Items = []game.ItemView{{ID: 90, Kind: "steel", Qty: 40, FreshDays: -1}}
-	c := Build(s, ports.OpenInfoCard{ID: 90})
+	c := Build(s, Kinds{}, ports.OpenInfoCard{ID: 90})
 	wants(t, c, "Count: 40", "Mass:", "Stack limit:")
 	if c.Desc != wordsMaterial || c.Title != "Steel" {
 		t.Fatalf("got %q %q", c.Title, c.Desc)
@@ -153,14 +153,14 @@ func TestResourceCardFromMapItem(t *testing.T) {
 
 func TestKindOnlyAndGone(t *testing.T) {
 	s, _ := newFake()
-	wants(t, Build(s, ports.OpenInfoCard{Kind: "plate armor"}), "Layers:", "Move speed: -17%")
-	if c := Build(s, ports.OpenInfoCard{ID: 5}); c.Desc != wordsGone {
+	wants(t, Build(s, Kinds{}, ports.OpenInfoCard{Kind: "plate armor"}), "Layers:", "Move speed: -17%")
+	if c := Build(s, Kinds{}, ports.OpenInfoCard{ID: 5}); c.Desc != wordsGone {
 		t.Fatalf("a missing item says so: %q", c.Desc)
 	}
-	if c := Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModeApparel, Index: 9}); c.Desc != wordsGone {
+	if c := Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModeApparel, Index: 9}); c.Desc != wordsGone {
 		t.Fatalf("a missing row says so: %q", c.Desc)
 	}
-	if c := Build(s, ports.OpenInfoCard{Kind: "zzz"}); c.Desc != wordsUnknown {
+	if c := Build(s, Kinds{}, ports.OpenInfoCard{Kind: "zzz"}); c.Desc != wordsUnknown {
 		t.Fatalf("unknown kind: %q", c.Desc)
 	}
 }
@@ -187,8 +187,8 @@ func TestFitsEveryUIScale(t *testing.T) {
 	s, _ := newFake()
 	s.pawns = []game.PawnView{pawnWithGear()}
 	cards := []Card{
-		Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModeApparel}),
-		Build(s, ports.OpenInfoCard{Pawn: 7, Mode: ModeWeapon}),
+		Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModeApparel}),
+		Build(s, Kinds{}, ports.OpenInfoCard{Pawn: 7, Mode: ModeWeapon}),
 	}
 	for _, pc := range []int{75, 100, 125, 150, 200} {
 		sw, sh := 1280*100/pc, 720*100/pc
@@ -217,7 +217,7 @@ func TestFitsEveryUIScale(t *testing.T) {
 
 func ExampleBuild() {
 	s, _ := newFake()
-	c := Build(s, ports.OpenInfoCard{Kind: "rice"})
+	c := Build(s, Kinds{}, ports.OpenInfoCard{Kind: "rice"})
 	fmt.Println(c.Title, "-", c.Sub)
 	// Output: Rice - Food
 }

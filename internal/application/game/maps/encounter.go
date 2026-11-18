@@ -63,6 +63,8 @@ type Waylayer interface {
 	// DropLetter takes a letter off the stack.
 	DemandLetter(title, format string, args ...any) uint64
 	DropLetter(id uint64)
+	// Items is the run's frozen item book: mass and stack limits.
+	Items() item.Book
 }
 
 // Ask is a demand waiting for its answer (zero: none; saved).

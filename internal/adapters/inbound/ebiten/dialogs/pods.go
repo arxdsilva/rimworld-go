@@ -101,12 +101,12 @@ func (dl *Dealings) goodsRows() []goodsRow {
 }
 
 // GoodsKg is n of kind name's mass in kilograms (rounded up).
-func GoodsKg(kind string, n int) int {
-	k, ok := item.ParseKind(kind)
+func GoodsKg(b item.Book, kind string, n int) int {
+	k, ok := b.Parse(kind)
 	if !ok {
 		return 0
 	}
-	return (n*k.MassGrams() + 999) / 1000
+	return (n*b.MassGrams(k) + 999) / 1000
 }
 
 // AnimalKg is an animal's mass aboard by its species key.
@@ -132,7 +132,7 @@ func (dl *Dealings) pickedKg(f *podLoad) int {
 		}
 	}
 	for k, n := range f.goods {
-		kg += GoodsKg(k, n)
+		kg += GoodsKg(dl.sh.Items(), k, n)
 	}
 	return kg
 }

@@ -374,6 +374,7 @@ func newTravelHost(g *Game) travelHost {
 }
 
 func (h travelHost) Pos(id entity.EntityID) (int, int)   { return h.industryHost.Pos(id) }
+func (h travelHost) Items() item.Book                    { return h.g.sk.content.Items }
 func (h travelHost) Work(id entity.EntityID, m bool) int { return h.industryHost.Work(id, m) }
 func (h travelHost) Name(id entity.EntityID) string      { return h.g.name(id) }
 func (h travelHost) Fuel(id entity.EntityID) int         { return h.g.fuel[id] / chemfuelTicks }
@@ -981,6 +982,7 @@ func (h mapsFound) Wipe() {
 type mapsWaylay struct{ g *Game }
 
 func (h mapsWaylay) RoadRoll(n int) int { return h.g.stream(streamRoad).IntN(n) }
+func (h mapsWaylay) Items() item.Book   { return h.g.sk.content.Items }
 
 // Ambush sends raiders of faction fac in from an edge of the current map;
 // its draws come from seed, so g.rng does not move.

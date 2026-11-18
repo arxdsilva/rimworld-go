@@ -58,6 +58,8 @@ type Packs interface {
 	// PackRoom is the grams id's pack still takes (RespectCapacity off: more
 	// than anything weighs).
 	PackRoom(id entity.EntityID) int
+	// Items is the run's frozen item book: mass and stack limits.
+	Items() item.Book
 	// Stow moves n of stack from the map to id's pack, marked to go to storage
 	// if the bill leaves it over, and returns the pack entry; false: nothing
 	// moved.

@@ -502,5 +502,5 @@ func (h hitHarm) Hold(id entity.EntityID, until uint64) {
 // gearFacts is PawnView.Gear's mass (weapons, apparel, pack), capacity, armour and speed (game/gearfacts, GEAR-1).
 func gearFacts(g *Game, id entity.EntityID) gearview.Pawn {
 	sk, sq, _ := g.combat.Drafts.Spare(id)
-	return gearfacts.Of(g.apparel[id], gearfacts.Grams(g.equip[id], 1)+gearfacts.Grams(sk, sq)+senseOf(g).Gear.Pack(id).Grams(), int(keyOf(g.bodies[id])[1]), hitBodies{g}.Size(id))
+	return gearfacts.Of(g.sk.content.Items, g.apparel[id], gearfacts.Grams(g.sk.content.Items, g.equip[id], 1)+gearfacts.Grams(g.sk.content.Items, sk, sq)+senseOf(g).Gear.Pack(id).Grams(g.sk.content.Items), int(keyOf(g.bodies[id])[1]), hitBodies{g}.Size(id))
 }

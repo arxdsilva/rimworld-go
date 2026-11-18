@@ -40,6 +40,9 @@ type Def struct {
 	// Smelt is the steel one unit gives back at a smelter (a plugin kind
 	// only; 0 goes by the recipe that makes it, recipe.Book.SmeltYield).
 	Smelt int
+	// TraderStock is the most units a trader that deals in the kind carries
+	// (a plugin kind only; 0 is never stocked).
+	TraderStock int
 }
 
 // CoreDef is the game's own data for core kind k.

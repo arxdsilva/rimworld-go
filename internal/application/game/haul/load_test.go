@@ -25,10 +25,10 @@ func TestSplitLoadKeepsCorpseSpecies(t *testing.T) {
 func TestToppable(t *testing.T) {
 	// STK-ST: any stack below its limit takes more (the load is capped by
 	// the room left); a one-per-stack kind never tops up
-	if !Toppable(item.Stack{Kind: item.Wood, Qty: 999}) || Toppable(item.Stack{Kind: item.Wood, Qty: 1000}) {
+	if !Toppable(item.Stack{Kind: item.Wood, Qty: 999}, 1000) || Toppable(item.Stack{Kind: item.Wood, Qty: 1000}, 1000) {
 		t.Fatal("a 1000 stack takes any room")
 	}
-	if !Toppable(item.Stack{Kind: item.Pemmican, Qty: 900}) || Toppable(item.Stack{Kind: item.Rifle, Qty: 1}) {
+	if !Toppable(item.Stack{Kind: item.Pemmican, Qty: 900}, 1000) || Toppable(item.Stack{Kind: item.Rifle, Qty: 1}, 1) {
 		t.Fatal("pemmican tops up to 1000; a rifle stays one")
 	}
 }
@@ -82,5 +82,19 @@ func TestSlotsAndShares(t *testing.T) {
 	}
 	if r := Route(sh); len(r) != 2 || r[0] != 1 || r[1] != 2 {
 		t.Fatalf("route %v", r)
+	}
+}
+
+// A plugin kind of stack limit 25 takes no more at 25 and tops up below it.
+func TestToppableUsesLimit(t *testing.T) {
+	var defs []item.Def
+	for k := range item.CoreKinds {
+		defs = append(defs, item.CoreDef(item.Kind(k)))
+	}
+	b := item.NewBook(append(defs, item.Def{Label: "bell", Mass: 700, Stack: 25}), append(item.Core().Keys(), "frontier.bell"))
+	bell := item.Kind(item.CoreKinds)
+	lim := b.StackLimit(bell)
+	if lim != 25 || !Toppable(item.Stack{Kind: bell, Qty: 24}, lim) || Toppable(item.Stack{Kind: bell, Qty: 25}, lim) {
+		t.Fatalf("limit %d: a stack of 25 must be full, 24 not", lim)
 	}
 }

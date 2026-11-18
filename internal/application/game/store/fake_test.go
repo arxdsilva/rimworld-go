@@ -69,6 +69,7 @@ func (w *world) ObjectAt(x, y int) entity.EntityID {
 	}
 	return 0
 }
+func (w *world) Items() item.Book                { return item.Book{} }
 func (w *world) Powered(id entity.EntityID) bool { return !w.dark[id] }
 func (w *world) ItemAt(x, y int) entity.EntityID {
 	for _, id := range w.items {

@@ -69,18 +69,37 @@ func TestPackTakeKeepsIDs(t *testing.T) {
 func TestPackGramsAndFind(t *testing.T) {
 	t.Parallel()
 	var p Pack
-	if p.Grams() != 0 {
+	if p.Grams(item.Book{}) != 0 {
 		t.Fatal("an empty pack weighs something")
 	}
 	a := p.Add(item.Stack{Kind: item.Wood, Qty: 3})
 	p.Add(item.Stack{Kind: item.Steel, Qty: 2})
-	if want := 3*item.Wood.MassGrams() + 2*item.Steel.MassGrams(); p.Grams() != want {
-		t.Fatalf("grams %d, want %d", p.Grams(), want)
+	if want := 3*item.Wood.MassGrams() + 2*item.Steel.MassGrams(); p.Grams(item.Book{}) != want {
+		t.Fatalf("grams %d, want %d", p.Grams(item.Book{}), want)
 	}
 	if id, ok := p.Find(item.Wood); !ok || id != a {
 		t.Fatalf("find wood: %d %v", id, ok)
 	}
 	if _, ok := p.Find(item.Stone); ok {
 		t.Fatal("found what is not there")
+	}
+}
+
+// Pack.Grams reads each kind's mass from the book, so a plugin kind weighs
+// what its def says.
+func TestPackGramsReadsTheBook(t *testing.T) {
+	t.Parallel()
+	var defs []item.Def
+	for k := range item.CoreKinds {
+		defs = append(defs, item.CoreDef(item.Kind(k)))
+	}
+	defs = append(defs, item.Def{Label: "bell", Mass: 700, Stack: 25})
+	b := item.NewBook(defs, append(item.Core().Keys(), "frontier.bell"))
+	bell := item.Kind(item.CoreKinds)
+	var p Pack
+	p.Add(item.Stack{Kind: bell, Qty: 3})
+	p.Add(item.Stack{Kind: item.Wood, Qty: 2})
+	if got, want := p.Grams(b), 700*3+item.Wood.MassGrams()*2; got != want {
+		t.Fatalf("Grams = %d, want %d", got, want)
 	}
 }

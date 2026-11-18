@@ -320,6 +320,7 @@ func (b *benchCells) First(x, y int) (item.Stack, bool) {
 	}
 	return item.Stack{}, false
 }
+func (b *benchCells) Items() item.Book                        { return item.Book{} }
 func (b *benchCells) Shelf(k item.Kind, x, y int) (int, bool) { return b.full[[2]int{x, y}], false }
 func (b *benchCells) TileTaken(x, y int) bool                 { return false }
 func (b *benchCells) Blocked(x, y int, building bool) bool    { return false }

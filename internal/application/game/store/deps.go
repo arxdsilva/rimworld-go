@@ -19,6 +19,8 @@ type Machines interface {
 	ObjectAt(x, y int) entity.EntityID
 	// Powered reports a consumer running on power now.
 	Powered(id entity.EntityID) bool
+	// Items is the run's frozen item book: stack limits.
+	Items() item.Book
 }
 
 // Larder reads and writes the loose stacks.

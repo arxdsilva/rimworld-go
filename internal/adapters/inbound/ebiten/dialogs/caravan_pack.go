@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/caravan"
 )
@@ -44,10 +45,10 @@ func (f *formCaravan) capKg(dl *Dealings) int {
 }
 
 // massKg is the goods' mass.
-func (f *formCaravan) massKg() int {
+func (f *formCaravan) massKg(b item.Book) int {
 	kg := 0
 	for k, n := range f.goods {
-		kg += GoodsKg(k, n)
+		kg += GoodsKg(b, k, n)
 	}
 	return kg
 }
@@ -55,7 +56,7 @@ func (f *formCaravan) massKg() int {
 // caravanLoadLine is the summary's load and pace ("80 / 105 kg · about
 // 1.6 tiles a day").
 func (dl *Dealings) caravanLoadLine(f *formCaravan) string {
-	c, m := f.capKg(dl), f.massKg()
+	c, m := f.capKg(dl), f.massKg(dl.sh.Items())
 	load := int32(0)
 	if c > 0 {
 		load = int32(1000 * min(m, c) / c)

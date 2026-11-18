@@ -76,7 +76,7 @@ func (g *Game) traderCaravanFrom(ref int, now uint64, requested bool) bool {
 	if len(ids) == 0 {
 		return false
 	}
-	stock := trade.Generate(kind, faction.DefOf(f.Type).Tech, r)
+	stock := trade.Generate(g.sk.content.Items, kind, faction.DefOf(f.Type).Tech, r)
 	members := slices.Clone(ids)
 	slices.Sort(members)
 	g.trade.caravan = &traderCaravan{Trader: ids[0], Members: members, Faction: f.ID, Kind: kind, Stock: stock,

@@ -319,7 +319,7 @@ func TestJourneyAX9CaravanPacks(t *testing.T) {
 	}
 	picked := ""
 	for k, n := range total {
-		if dialogs.GoodsKg(k, n) <= 30 && (picked == "" || k < picked) {
+		if dialogs.GoodsKg(item.Book{}, k, n) <= 30 && (picked == "" || k < picked) {
 			picked = k
 		}
 	}

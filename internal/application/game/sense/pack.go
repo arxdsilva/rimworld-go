@@ -50,6 +50,8 @@ type GearStock interface {
 	// SetDown lays st down where id is: on its tile; away, in its caravan's
 	// goods, else where it left the map. It never fails.
 	SetDown(id entity.EntityID, st item.Stack)
+	// Items is the run's frozen item book: mass and stack limits.
+	Items() item.Book
 }
 
 // Pack is id's pack, to read: its slice stays Gear's.
@@ -69,7 +71,7 @@ func (g Gear) Room(id entity.EntityID) int {
 	if !g.s.Rules.On(gameplay.RespectCapacity) {
 		return roomUnlimited
 	}
-	return max(g.Capacity(id)-g.s.Packs[id].Grams(), 0)
+	return max(g.Capacity(id)-g.s.Packs[id].Grams(g.r.Items()), 0)
 }
 
 // Stow moves n items of stack from the map into id's pack. False, with nothing

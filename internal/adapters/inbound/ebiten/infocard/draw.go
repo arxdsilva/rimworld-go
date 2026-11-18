@@ -28,7 +28,7 @@ func (w *Window) Open(q ports.OpenInfoCard) {
 	k := w.sh.Kit()
 	k.CloseModal(ID)
 	k.Push(uikit.Modal{
-		ID: ID, Title: Build(w.sh, q).Title, W: winW, H: winH,
+		ID: ID, Title: Build(w.sh, w.k, q).Title, W: winW, H: winH,
 		Draw: func(body gfx.Rect) { w.body(q, body) },
 		Buttons: []uikit.ModalButton{
 			{ID: CloseID, Label: w.sh.T("Close"), Closes: true},
@@ -50,7 +50,7 @@ func (w *Window) Opened() bool {
 // hit points and the pack follow the colony.
 func (w *Window) body(q ports.OpenInfoCard, body gfx.Rect) {
 	k := w.sh.Kit()
-	c := Build(w.sh, q)
+	c := Build(w.sh, w.k, q)
 	ls, h := Layout(c, body.W-uikit.ScrollBarW)
 	area := k.ScrollArea(ScrollID, body, h, uikit.ScrollOpts{})
 	for _, l := range ls {

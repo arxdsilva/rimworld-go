@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -18,6 +19,38 @@ import (
 // from the comms dialog (comms.go); only goods within beaconRadius of a
 // trade beacon can be traded, and purchases come down in a drop pod near
 // the first beacon tradePodFall ticks later (streamTrade picks the spot).
+
+const (
+	// orbitalStay is how long an orbital ship stays in radio range.
+	orbitalStay = clock.TicksPerDay * 3 / 2
+	// beaconRadius is a trade beacon's reach (Euclidean tiles).
+	beaconRadius = 6
+)
+
+// beaconGoods is what the orbital ship can trade: the goods within
+// beaconRadius of a trade beacon; nothing without one.
+func beaconGoods(g *Game) tradeGoods {
+	var beacons [][2]int
+	for _, bid := range g.beaconIDs() {
+		b := g.bldgs.Ref(bid)
+		beacons = append(beacons, [2]int{b.X, b.Y})
+	}
+	if len(beacons) == 0 {
+		return tradeGoods{ids: map[item.Kind][]entity.EntityID{}, counts: map[item.Kind]int{}}
+	}
+	return g.collectGoods(func(x, y int) bool { return nearAny(x, y, beacons, beaconRadius) })
+}
+
+// nearAny reports (x, y) within r (Euclidean) of any of pts.
+func nearAny(x, y int, pts [][2]int, r int) bool {
+	for _, p := range pts {
+		dx, dy := x-p[0], y-p[1]
+		if dx*dx+dy*dy <= r*r {
+			return true
+		}
+	}
+	return false
+}
 
 // shipNames are the orbital traders' ship names (original).
 var shipNames = [...]string{
@@ -38,7 +71,7 @@ func (g *Game) orbitalArrive(now uint64) bool {
 	}
 	r := g.stream(streamTrade)
 	name := shipNames[r.IntN(len(shipNames))]
-	stock := trade.Generate(trade.CurioMerchant, faction.Spacer, r)
+	stock := trade.Generate(g.sk.content.Items, trade.CurioMerchant, faction.Spacer, r)
 	g.trade.orbital = &orbitalShip{Name: name, Kind: trade.CurioMerchant, Stock: stock, Until: now + orbitalStay}
 	letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about a day and a half. Call it from a powered radio console; only goods within reach of a trade beacon can be traded.",
 		name, lower(trade.DefOf(trade.CurioMerchant).Label))

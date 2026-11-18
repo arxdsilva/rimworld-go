@@ -28,7 +28,7 @@ func storageCellRef(g *Game, st item.Stack, nx, ny int, keep func(x, y int) bool
 					first = id
 				}
 				n++
-				top = top || o.Kind == st.Kind && haul.Toppable(*o)
+				top = top || o.Kind == st.Kind && haul.Toppable(*o, g.sk.content.Items.StackLimit(st.Kind))
 			}
 		}
 		return first, n, top
@@ -57,7 +57,7 @@ func storageCellRef(g *Game, st item.Stack, nx, ny int, keep func(x, y int) bool
 					var good bool
 					if pass == 0 {
 						o := g.stacks.Ref(first)
-						good = first != 0 && free(cx, cy) && (shelf && top || !shelf && o.Kind == st.Kind && haul.Toppable(*o))
+						good = first != 0 && free(cx, cy) && (shelf && top || !shelf && o.Kind == st.Kind && haul.Toppable(*o, g.sk.content.Items.StackLimit(st.Kind)))
 					} else {
 						good = (shelf && n < zone.ShelfStacks || !shelf && first == 0) && g.grid.Walkable(cx, cy) && free(cx, cy) &&
 							g.layerFrameAt(cx, cy, construction.LayerObject) == 0 && (shelf || !g.occupiedAt(cx, cy))

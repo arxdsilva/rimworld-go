@@ -445,7 +445,7 @@ func (s shellDispatch) Do(it ports.Intent) {
 	case ports.CloseWorld:
 		a.world.Close()
 	case ports.OpenInfoCard:
-		infocard.New(a.shell).Open(it) // GEAR-006: a kit modal over the map, no state of its own
+		infocard.New(a.shell, infocard.Kinds{Items: a.cfg.Content.Items, SourceOf: a.cfg.Content.SourceOf}).Open(it) // GEAR-006: a kit modal over the map, no state of its own
 	case ports.Push:
 		if it.Screen == ports.ScreenLoad { // the ending's Load game: a fresh list, never the main menu's
 			a.opt.Saves.RefreshSlots()

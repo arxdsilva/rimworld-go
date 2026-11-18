@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/look"
 )
 
@@ -34,6 +35,8 @@ type Host interface {
 	DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, h float64) bool
 	// Icon is UI icon key's image (nil: missing).
 	Icon(key string) *ebiten.Image
+	// Items is the run's frozen item book (plugin kinds included).
+	Items() item.Book
 }
 
 // Shell composes the roles the feature calls with its Host.

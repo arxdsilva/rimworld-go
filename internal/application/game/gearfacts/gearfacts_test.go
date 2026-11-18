@@ -44,7 +44,7 @@ func TestGramsWiki(t *testing.T) {
 		{item.AssaultRifle, 1, 3500}, {item.FlakVest, 1, 6000}, {item.PlateArmor, 1, 18000}, {item.Knife, 2, 1000},
 		{0, 1, 0}, {item.Rifle, 0, 0},
 	} {
-		if got := Grams(c.k, c.qty); got != c.want {
+		if got := Grams(item.Book{}, c.k, c.qty); got != c.want {
 			t.Errorf("Grams(%v, %d) = %d, want %d", c.k, c.qty, got, c.want)
 		}
 	}
@@ -85,7 +85,7 @@ func TestMovesWiki(t *testing.T) {
 func TestOf(t *testing.T) {
 	t.Parallel()
 	o := outfit(item.FlakVest, item.FlakPants, item.TShirt)
-	got := Of(o, 4200+1000, 1000, 1000)
+	got := Of(item.Book{}, o, 4200+1000, 1000, 1000)
 	if want := 6000 + 3000 + 250 + 5200; got.GearGrams != want {
 		t.Errorf("grams %d, want %d", got.GearGrams, want)
 	}
@@ -100,7 +100,7 @@ func TestOf(t *testing.T) {
 	if want := armor.Overall(layers); got.OverallArmor != want || want.Sharp <= 490 {
 		t.Errorf("armor %+v, want %+v", got.OverallArmor, want)
 	}
-	if bare := Of(craft.Outfit{}, 0, 500, 1000); bare.GearGrams != 0 || bare.CapacityGrams != 37500 || bare.OverallArmor != (armor.Set{}) || bare.MovePct != 0 {
+	if bare := Of(item.Book{}, craft.Outfit{}, 0, 500, 1000); bare.GearGrams != 0 || bare.CapacityGrams != 37500 || bare.OverallArmor != (armor.Set{}) || bare.MovePct != 0 {
 		t.Errorf("bare: %+v", bare)
 	}
 }

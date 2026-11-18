@@ -88,11 +88,13 @@ func (f *fakeHost) pack(id entity.EntityID) *inventory.Pack {
 	return p
 }
 
+func (f *fakeHost) Items() item.Book { return item.Book{} }
+
 func (f *fakeHost) PackRoom(id entity.EntityID) int {
 	if f.room == 0 {
 		return 1 << 30
 	}
-	return max(f.room-f.pack(id).Grams(), 0)
+	return max(f.room-f.pack(id).Grams(item.Book{}), 0)
 }
 
 func (f *fakeHost) Stow(id, stack entity.EntityID, n int) (uint32, bool) {

@@ -383,8 +383,11 @@ func (h haulHost) Zones() *zone.Map                    { return h.g.zones }
 func (h haulHost) First(x, y int) (item.Stack, bool) {
 	return h.g.stacks.Get(h.g.idx.ground.First(h, x, y))
 }
-func (h haulHost) Shelf(k item.Kind, x, y int) (int, bool) { return h.g.idx.ground.Shelf(h, k, x, y) }
-func (h haulHost) TileTaken(x, y int) bool                 { _, taken := h.g.reserve.TileOwner(x, y); return taken }
+func (h haulHost) Shelf(k item.Kind, x, y int) (int, bool) {
+	return h.g.idx.ground.Shelf(h, k, h.Items().StackLimit(k), x, y)
+}
+func (h haulHost) Items() item.Book        { return h.g.sk.content.Items }
+func (h haulHost) TileTaken(x, y int) bool { _, taken := h.g.reserve.TileOwner(x, y); return taken }
 func (h haulHost) Blocked(x, y int, building bool) bool {
 	g := h.g
 	return !g.grid.Walkable(x, y) || g.layerFrameAt(x, y, construction.LayerObject) != 0 || !building && g.occupiedAt(x, y)

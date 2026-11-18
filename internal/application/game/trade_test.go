@@ -340,7 +340,7 @@ func TestProposeTradeMovesGoods(t *testing.T) {
 	if gd.counts[item.Components] != 10 || gd.counts[item.Silver] != 900 {
 		t.Fatalf("colony goods %v", gd.counts)
 	}
-	res := trade.Settle(offer, gd.counts, c.Stock, g.termsFor(neg, f), false)
+	res := trade.Settle(item.Book{}, offer, gd.counts, c.Stock, g.termsFor(neg, f), false)
 	if !res.OK() {
 		t.Fatalf("settle: %s", res.Reject)
 	}
@@ -553,7 +553,7 @@ func TestOrbitalPurchaseDropsPod(t *testing.T) {
 	o := g.trade.orbital
 	buy := o.Stock.Lines[0]
 	offer := []trade.Delta{{Kind: buy.Kind, Qty: 1}}
-	res := trade.Settle(offer, g.colonyGoods(true).counts, o.Stock, g.termsFor(pawn, nil), false)
+	res := trade.Settle(item.Book{}, offer, g.colonyGoods(true).counts, o.Stock, g.termsFor(pawn, nil), false)
 	if !res.OK() {
 		t.Fatalf("settle: %s", res.Reject)
 	}

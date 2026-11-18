@@ -78,7 +78,7 @@ func (dl *Dealings) formReason(f *formCaravan) string {
 	if r := f.reason(); r != "" {
 		return r
 	}
-	if f.massKg() > f.capKg(dl) {
+	if f.massKg(dl.sh.Items()) > f.capKg(dl) {
 		return FormTooHeavy
 	}
 	return ""

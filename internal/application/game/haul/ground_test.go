@@ -54,7 +54,7 @@ func TestGroundListsInItemOrder(t *testing.T) {
 	if gr.First(f, 2, 3) != 5 || gr.First(f, 0, 0) != 0 || gr.Others(f, 3, 2, 3) != 2 {
 		t.Fatal("First and Others read the list")
 	}
-	if n, top := gr.Shelf(f, item.Wood, 2, 3); n != 3 || !top {
+	if n, top := gr.Shelf(f, item.Wood, 1000, 2, 3); n != 3 || !top {
 		t.Fatalf("Shelf = %d, %v: three stacks, the 10 wood takes a load", n, top)
 	}
 	if r := gr.Room(f, item.Wood, 2, 3, 3, item.Wood.StackLimit()); r != item.Wood.StackLimit()-10 {

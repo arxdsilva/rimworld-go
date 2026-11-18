@@ -103,12 +103,12 @@ func (gr *Ground) Room(h Items, k item.Kind, x, y, slots, lim int) int {
 
 // Shelf is how many stacks lie loose on shelf cell (x, y) and whether
 // one of them takes a load of kind k (Toppable: as a plain cell, the kind
-// decides).
-func (gr *Ground) Shelf(h Items, k item.Kind, x, y int) (n int, top bool) {
+// decides); lim is k's stack limit.
+func (gr *Ground) Shelf(h Items, k item.Kind, lim, x, y int) (n int, top bool) {
 	for _, oid := range gr.Loose(h, x, y) {
 		o := h.StackRef(oid)
 		n++
-		top = top || o.Kind == k && Toppable(*o)
+		top = top || o.Kind == k && Toppable(*o, lim)
 	}
 	return n, top
 }

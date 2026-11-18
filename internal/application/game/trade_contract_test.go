@@ -33,7 +33,7 @@ func TestEncodeTradeOfferRoundTrip(t *testing.T) {
 		{{Kind: item.Wood, Qty: 1000000}, {Kind: item.Food, Qty: -999}},
 	} {
 		s := trade.EncodeOffer(offer)
-		got, err := trade.DecodeOffer(s)
+		got, err := trade.DecodeOffer(item.Book{}, s)
 		if err != nil || !reflect.DeepEqual(got, offer) && (len(got) != 0 || len(offer) != 0) {
 			t.Fatalf("%q decodes to %v, %v; want %v", s, got, err, offer)
 		}
@@ -45,7 +45,7 @@ func TestEncodeTradeOfferRoundTrip(t *testing.T) {
 		t.Fatalf("encoding %q, want %q", s, want)
 	}
 	for _, bad := range []string{"x", "1", "1:", ":2", "1:2,", "1:0", "1:2,1:3", "250:1", "-1:2", "1:2:3", "1;2", "1: 2"} {
-		if got, err := trade.DecodeOffer(bad); err == nil {
+		if got, err := trade.DecodeOffer(item.Book{}, bad); err == nil {
 			t.Errorf("%q decoded to %v", bad, got)
 		}
 	}

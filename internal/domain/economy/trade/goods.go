@@ -41,7 +41,7 @@ const crateSep = ":"
 
 // Name is the goods' row key: the item kind's name, and for a crate
 // "crated building:<building>" (ParseGoods reads it back).
-func (g Goods) Name() string {
+func (g Goods) Name(b item.Book) string {
 	if g.Building == 0 {
 		return g.Kind.String()
 	}
@@ -50,7 +50,7 @@ func (g Goods) Name() string {
 
 // Label is the goods' display name: "Big screen television (crated)" for
 // a crate, else "" (the caller's item label stands).
-func (g Goods) Label() string {
+func (g Goods) Label(b item.Book) string {
 	if g.Building == 0 {
 		return ""
 	}
@@ -59,7 +59,7 @@ func (g Goods) Label() string {
 }
 
 // ParseGoods reads Name's output.
-func ParseGoods(name string) (Goods, bool) {
+func ParseGoods(b item.Book, name string) (Goods, bool) {
 	if kn, bn, crate := strings.Cut(name, crateSep); crate {
 		k, ok := item.ParseKind(kn)
 		b, okB := construction.Parse(bn)
@@ -74,7 +74,7 @@ func ParseGoods(name string) (Goods, bool) {
 
 // Value is one unit's market value in silver: a crate's CrateValue, else
 // its item kind's.
-func (g Goods) Value() int {
+func (g Goods) Value(b item.Book) int {
 	if g.Building != 0 {
 		return CrateValue(construction.Kind(g.Building))
 	}
