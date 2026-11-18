@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	itemkind "rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
@@ -41,6 +42,10 @@ func Current() savefmt.Content { return Of([]string{Core}, Books{}) }
 type Books struct {
 	Backstories backstory.Book
 	Recipes     recipe.Book
+	Traits      trait.Book
+	Research    research.Book
+	Incidents   incident.Book
+	Items       itemkind.Book // its kinds' keys: the items agent adds their defs (PLG-026)
 }
 
 // Of is a run's content (PLG-043, PLG-050): plugins is the load order
@@ -77,13 +82,13 @@ func listOf[T any](name string, defs []T, key func(T) string) list {
 func registries(books Books) []list {
 	sprint := func(v any) string { return fmt.Sprint(v) }
 	return []list{
-		listOf("research", research.All(), func(d research.Def) string { return sprint(d.Project) }),
+		listOf("research", books.Research.All(), func(d research.Def) string { return sprint(d.Project) }),
 		listOf("recipe", books.Recipes.All(), func(d recipe.Def) string { return sprint(d.ID) }),
 		listOf("construction", construction.All(), func(d construction.Def) string { return sprint(d.Kind) }),
 		listOf("biome", biome.All(), func(d biome.Def) string { return d.Key }),
 		listOf("faction", faction.All(), func(d faction.Def) string { return d.Key }),
-		listOf("incident", incident.All(), func(d incident.Def) string { return d.Key }),
-		listOf("trait", trait.All(), func(d trait.Def) string { return d.Key }),
+		listOf("incident", books.Incidents.All(), func(d incident.Def) string { return d.Key }),
+		listOf("trait", books.Traits.All(), func(d trait.Def) string { return d.Key }),
 		listOf("drug", drug.All(), func(d drug.Def) string { return sprint(d.Kind) }),
 		listOf("backstory", books.Backstories.All(), func(d backstory.Def) string { return sprint(d.ID) }),
 		listOf("quest", quest.Defs(), func(d quest.Def) string { return sprint(d.Kind) }),

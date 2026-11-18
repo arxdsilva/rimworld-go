@@ -25,6 +25,8 @@ const (
 	maxDataFileBytes = 4 << 20
 	maxDataFiles     = 2000
 	maxPluginBytes   = 32 << 20 // all of a plugin's data files together
+	maxScriptBytes   = 256 << 10
+	maxTextureBytes  = 1 << 20
 	maxDepth         = 16
 )
 
@@ -96,17 +98,23 @@ func readPlugin(dir, name string) modding.Plugin {
 	defs := r.collect("defs")
 	patches := r.collect("patches")
 	lang := r.lang()
-	total := len(defs) + len(patches) + len(lang)
+	scripts := r.collectExt("scripts", ".star")
+	textures := r.collectExt("textures", ".png")
+	total := len(defs) + len(patches) + len(lang) + len(scripts) + len(textures)
 	if total > maxDataFiles {
 		r.problem("", "", fmt.Sprintf("too many data files (%d, at most %d): the rest are skipped", total, maxDataFiles), false)
 		budget := maxDataFiles
 		defs, budget = trim(defs, budget)
 		patches, budget = trim(patches, budget)
-		lang, _ = trim(lang, budget)
+		lang, budget = trim(lang, budget)
+		scripts, budget = trim(scripts, budget)
+		textures, _ = trim(textures, budget)
 	}
 	pl.Defs = r.decodeAll(defs)
 	pl.Patches = r.decodeAll(patches)
 	pl.Lang = r.decodeAll(lang)
+	pl.Scripts = r.rawAll(scripts, maxScriptBytes)
+	pl.Textures = r.rawAll(textures, maxTextureBytes)
 	return pl
 }
 
@@ -171,14 +179,17 @@ func isEscape(err error) bool {
 }
 
 // collect lists the .json files under dir, recursively, sorted.
-func (r *reader) collect(dir string) []string {
+func (r *reader) collect(dir string) []string { return r.collectExt(dir, ".json") }
+
+// collectExt lists the files named *ext under dir, recursively, sorted.
+func (r *reader) collectExt(dir, ext string) []string {
 	var out []string
-	r.walk(dir, 0, &out, true)
+	r.walk(dir, ext, 0, &out, true)
 	sort.Strings(out)
 	return out
 }
 
-func (r *reader) walk(dir string, depth int, out *[]string, top bool) {
+func (r *reader) walk(dir, ext string, depth int, out *[]string, top bool) {
 	if depth > maxDepth {
 		r.problem(dir, "", "folders nested too deeply or looping", false)
 		return
@@ -213,8 +224,8 @@ func (r *reader) walk(dir string, depth int, out *[]string, top bool) {
 		}
 		switch {
 		case isDir:
-			r.walk(p, depth+1, out, false)
-		case strings.HasSuffix(e.Name(), ".json"):
+			r.walk(p, ext, depth+1, out, false)
+		case strings.HasSuffix(e.Name(), ext):
 			*out = append(*out, p)
 		}
 	}
@@ -273,6 +284,28 @@ func (r *reader) decodeAll(paths []string) []modding.File {
 		files = append(files, modding.File{Path: p, Data: v})
 	}
 	return files
+}
+
+// rawAll reads paths as they are (scripts, textures), each at most limit
+// bytes, counted in the plugin's data total.
+func (r *reader) rawAll(paths []string, limit int) []modding.Blob {
+	var out []modding.Blob
+	for _, p := range paths {
+		if r.full {
+			break
+		}
+		b, ok := r.read(p, limit)
+		if !ok {
+			continue
+		}
+		if r.size += len(b); r.size > maxPluginBytes {
+			r.full = true
+			r.problem(p, "", fmt.Sprintf("the plugin's data passes %d MiB: this file and the rest are skipped", maxPluginBytes>>20), false)
+			break
+		}
+		out = append(out, modding.Blob{Path: p, Data: b})
+	}
+	return out
 }
 
 var errTrailing = errors.New("unexpected data after the top-level value")

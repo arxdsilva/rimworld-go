@@ -7,7 +7,6 @@ package game
 
 import (
 	"fmt"
-	"rimworld-go/internal/domain/pawn/backstory"
 
 	"rimworld-go/internal/application/game/aqua"
 	"rimworld-go/internal/application/game/axview"
@@ -27,6 +26,7 @@ import (
 	"rimworld-go/internal/application/game/sched"
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/application/game/wealth"
+	"rimworld-go/internal/application/scripting"
 	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
@@ -45,7 +45,6 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/health"
@@ -90,14 +89,8 @@ type Config struct {
 	Pool  pathstage.Pool // the path stage's lanes (GAR-035): a built colony and the maps it opens; nil serial
 	// Content is the run's frozen content (PLG-024); the zero value is core.
 	Content Content
-}
-
-// Content is the frozen definition books a run plays with: core's plus
-// the enabled plugins' (application/modding builds it at start). Each
-// moddable class reads its book from here, never a package registry.
-type Content struct {
-	Backstories backstory.Book
-	Recipes     recipe.Book
+	// Scripts runs the enabled plugins' scripts (PLG-060); nil runs none.
+	Scripts scripting.Host
 }
 
 // PawnView is a read-only snapshot of a single pawn.

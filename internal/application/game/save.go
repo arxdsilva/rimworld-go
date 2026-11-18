@@ -35,7 +35,6 @@ import (
 	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
-	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/world/fire"
@@ -540,7 +539,7 @@ func EncodeSaveAs(g *Game, w io.Writer, stamp savefmt.Stamp) error {
 	})
 	s.Landing = g.exportLanding() // setup_mapgen.go: nil for the map centre
 	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
-	s.ContentKeys = savefmt.Keys{backstory.Class: backstoriesOf(g).Keys(), recipe.Class: g.craft.Bills.Book().Keys()}
+	s.ContentKeys = contentKeys(g)
 	s.SkillLive = g.exportSkillLive()
 	s.Troughs = g.troughs
 	for id, e := range g.exposure { // TEMP-3: the wiki scale (bodytemp.Ledger); the dead drop out
@@ -704,6 +703,10 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 	g.names = importStore(s.Names)
 	g.need, g.vital, g.labor = importStore(s.Need), importStore(s.Vital), importStore(s.Labor)
 	remapRecipes(&s, c.Recipes) // before anything reads a recipe ID
+	remapItems(&s, c.Items)     // before anything reads an item kind (PLG-026)
+	remapTraits(&s, c.Traits)
+	remapResearch(&s, c.Research)
+	remapIncidents(&s, c.Incidents)
 	g.pending = s.Pending
 	setMap(&g.lastMeal, s.LastMeal)
 	g.craft.Bills.Import(s.Bills)  // craft/bills.go

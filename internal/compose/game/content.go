@@ -31,12 +31,39 @@ type runContent struct {
 
 // game is the books the simulation reads.
 func (c runContent) game() appgame.Content {
-	return appgame.Content{Backstories: c.catalog.Backstories, Recipes: c.catalog.Recipes}
+	cat := c.catalog
+	return appgame.Content{Backstories: cat.Backstories, Recipes: cat.Recipes, Traits: cat.Traits,
+		Research: cat.Research, Incidents: cat.Incidents, Items: cat.Items, Sources: sources(cat.Defs)}
+}
+
+// sources is who added or patched each def a plugin touched (PLG-072).
+func sources(defs []modding.Def) map[string]appgame.Source {
+	var out map[string]appgame.Source
+	for _, d := range defs {
+		var s appgame.Source
+		if d.Plugin != modding.Core {
+			s.AddedBy = d.Plugin
+		}
+		for _, t := range d.Touched {
+			if !slices.Contains(s.PatchedBy, t.Plugin) {
+				s.PatchedBy = append(s.PatchedBy, t.Plugin)
+			}
+		}
+		if s.AddedBy == "" && len(s.PatchedBy) == 0 {
+			continue
+		}
+		if out == nil {
+			out = map[string]appgame.Source{}
+		}
+		out[appgame.SourceKey(d.Class, d.Key)] = s
+	}
+	return out
 }
 
 // save is the content a save header records: fingerprint and load order.
 func (c runContent) save() savefmt.Content {
-	return contentid.Of(c.catalog.IDs(), contentid.Books{Backstories: c.catalog.Backstories, Recipes: c.catalog.Recipes})
+	return contentid.Of(c.catalog.IDs(), contentid.Books{Backstories: c.catalog.Backstories, Recipes: c.catalog.Recipes,
+		Traits: c.catalog.Traits, Research: c.catalog.Research, Incidents: c.catalog.Incidents, Items: c.catalog.Items})
 }
 
 // loadContent reads the plugin folders and builds the catalog for the

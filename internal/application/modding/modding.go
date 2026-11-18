@@ -43,6 +43,12 @@ type File struct {
 	Data any    // the decoded tree
 }
 
+// Blob is one file read as it is: a script or a texture.
+type Blob struct {
+	Path string // slash path inside the plugin ("scripts/main.star")
+	Data []byte
+}
+
 // Plugin is one folder as the adapter found it. Files are sorted by
 // path, so the file system's listing order never matters.
 type Plugin struct {
@@ -51,6 +57,8 @@ type Plugin struct {
 	Defs     []File    // defs/*.json
 	Patches  []File    // patches/*.json
 	Lang     []File    // lang/<locale>.json
+	Scripts  []Blob    // scripts/**.star (PLG-060), as written
+	Textures []Blob    // textures/**.png (PLG-026 items), as written
 	Problems []Problem // what the adapter could not read (bad JSON, unsafe path)
 }
 

@@ -7,8 +7,12 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
+	"rimworld-go/internal/domain/pawn/trait"
+	"rimworld-go/internal/domain/research"
 )
 
 // Catalog is the frozen content of one run: the load order, the loaded
@@ -19,6 +23,10 @@ type Catalog struct {
 	Plugins     []Manifest // the loaded plugins in load order, core excluded
 	Backstories backstory.Book
 	Recipes     recipe.Book
+	Traits      trait.Book
+	Research    research.Book
+	Incidents   incident.Book
+	Items       item.Book
 	Defs        []Def // every typed def after inheritance and patches
 }
 
@@ -68,7 +76,7 @@ func classes() []class {
 			}
 			return probs
 		},
-	}}
+	}, traitClass(), researchClass(), incidentClass(), itemClass()}
 }
 
 // Classes are the moddable class names, in the order their books are built.

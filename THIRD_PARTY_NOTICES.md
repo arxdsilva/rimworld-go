@@ -56,6 +56,7 @@ The game's binary links these modules. Their license files, with any NOTICE file
 | `github.com/jfreymuth/vorbis` | MIT | all |
 | `github.com/rivo/uniseg` | MIT | all |
 | `github.com/srwiley/rasterx` | BSD-3-Clause | all (Ebitengine `text/v2` glyph rasterising) |
+| `go.starlark.net` | BSD-3-Clause | all (plugin scripts, PLG-060) |
 | `golang.org/x/image` | BSD-3-Clause | all |
 | `golang.org/x/mod` | BSD-3-Clause | all |
 | `golang.org/x/sync` | BSD-3-Clause | all |
