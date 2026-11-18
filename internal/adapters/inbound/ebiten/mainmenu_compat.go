@@ -130,3 +130,6 @@ var _ plugins.Shell = pluginsHost{}
 
 func (h pluginsHost) Plugins() plugins.View         { return h.a.cfg.Plugins }
 func (h pluginsHost) SetSettings(s config.Settings) { h.a.setSettings(s) }
+func (h pluginsHost) PaintMenu(dst *ebiten.Image, sw, sh int, title string, body []string, buttons []uikit.Button) {
+	h.a.paintMenu(dst, sw, sh, title, body, buttons)
+}

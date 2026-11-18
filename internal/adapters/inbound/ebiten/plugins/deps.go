@@ -7,7 +7,10 @@
 package plugins
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -17,6 +20,9 @@ type Host interface {
 	Plugins() View
 	// SetSettings applies changed settings and stores them.
 	SetSettings(config.Settings)
+	// PaintMenu draws the menu backdrop (the dimmed diorama when there is
+	// one) and the title, as the other main-menu screens do.
+	PaintMenu(dst *ebiten.Image, sw, sh int, title string, body []string, buttons []uikit.Button)
 }
 
 // Shell composes the roles the screens call with their Host.

@@ -4,12 +4,14 @@ import (
 	"log"
 	"slices"
 
+	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
 	"rimworld-go/internal/adapters/outbound/modloader"
 	appgame "rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/contentid"
 	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/application/modding"
+	"rimworld-go/internal/platform/assetroot"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -46,6 +48,52 @@ func loadContent(capturing bool, enabled []string, version string) runContent {
 	c := buildContent(modloader.New(roots...), enabled, version)
 	c.roots = roots
 	return c
+}
+
+// pluginCaptures are the -capture-ui states of the Plugins screens.
+var pluginCaptures = []string{"plugins", "plugins-problems"}
+
+// captureContent is a capture's content: no plugin, except for the
+// Plugins captures, which read only the shipped mods folder (never the
+// player's) with its example enabled beside a fixture plugin that cannot
+// load, so the screens are reviewed with rows, a reason and a problem.
+func captureContent(ui, version string) runContent {
+	if !slices.Contains(pluginCaptures, ui) {
+		return buildContent(nil, nil, version)
+	}
+	root, err := assetroot.Find("mods", true)
+	if err != nil {
+		return buildContent(nil, nil, version)
+	}
+	c := buildContent(fixtureSource{modloader.New(root)}, []string{"example_frontier", "needs_missing"}, version)
+	c.roots = []string{root}
+	return c
+}
+
+// captureSettings are a Plugins capture's settings: the defaults with the
+// fixture's enabled set, in memory only (no Save), so the screen shows the
+// plugins as on. Other captures keep h.
+func captureSettings(ui string, h uiadapter.SettingsHooks, c runContent) uiadapter.SettingsHooks {
+	if !slices.Contains(pluginCaptures, ui) {
+		return h
+	}
+	return uiadapter.SettingsHooks{Load: func() (config.Settings, error) {
+		s := config.Defaults()
+		s.Plugins.Enabled = c.enabled
+		return s.Normalize(), nil
+	}}
+}
+
+// fixtureSource adds a capture-only plugin whose requirement is missing.
+type fixtureSource struct{ modding.Source }
+
+func (f fixtureSource) Plugins() ([]modding.Plugin, error) {
+	ps, err := f.Source.Plugins()
+	ps = append(ps, modding.Plugin{Dir: "(capture fixture)", Manifest: modding.Manifest{
+		ID: "needs_missing", Name: "Needs a missing plugin", Authors: []string{"rimworld-go"}, Version: "0.1.0",
+		Game: []string{"0.1"}, Requires: []string{"absent_library"},
+		Description: "A capture fixture: it requires a plugin that is not installed, so it cannot load."}})
+	return ps, err
 }
 
 // buildContent is loadContent over src (nil: no plugin folders).

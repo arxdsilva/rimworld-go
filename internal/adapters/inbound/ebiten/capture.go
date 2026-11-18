@@ -234,6 +234,8 @@ var menuCaptures = map[string][]string{
 	"seed":             capWorld,
 	"credits":          {"menu.credits"},
 	"options":          {"menu.options"},
+	"plugins":          {"menu.plugins"},
+	"plugins-problems": {"menu.plugins", "plugins.problems"},
 	"options-graphics": {"menu.options", "options.tab.graphics"},
 	"options-gameplay": {"menu.options", "options.tab.gameplay"},
 	"options-access":   {"menu.options", "options.tab.access"},

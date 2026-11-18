@@ -52,6 +52,10 @@ func Run(opts cligame.Options, version string, d Display) {
 
 	settings := settingsHooks(shot != nil, gfx, d)
 	content := loadContent(shot != nil, enabledPlugins(settings.Load), version)
+	if shot != nil {
+		content = captureContent(opts.CaptureUI, version)
+		settings = captureSettings(opts.CaptureUI, settings, content)
+	}
 	cfg := uiadapter.AppConfig{
 		Content:       content.game(),
 		Plugins:       content.view(), // PLG-070: the Plugins screens; empty for captures

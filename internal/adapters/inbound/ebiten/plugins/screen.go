@@ -53,13 +53,11 @@ func (s *Screen) Declare(scr ports.Screen, sw, sh int) {
 
 // Draw paints the backdrop and the title; the kit paints the rest.
 func (s *Screen) Draw(dst *ebiten.Image, scr ports.Screen, sw, sh int) {
-	uikit.DrawMenuBackdrop(dst, sw, sh)
-	uikit.DrawPanel(dst, margin, 24, float32(sw-2*margin), 56)
 	title := s.sh.T("Plugins")
 	if scr == ports.ScreenPluginProblems {
 		title = s.sh.T("Plugin problems")
 	}
-	gfx.Text(dst, title, margin+16, 40, gfx.Large)
+	s.sh.PaintMenu(dst, sw, sh, title, nil, nil)
 }
 
 // enabledNow is the saved enabled set as a lookup.

@@ -1,6 +1,8 @@
 package plugins
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"fmt"
 	"slices"
 	"testing"
@@ -53,8 +55,9 @@ func (f *fakeShell) Do(it ports.Intent) {
 		f.nav(it)
 	}
 }
-func (f *fakeShell) Plugins() View                 { return f.view }
-func (f *fakeShell) SetSettings(s config.Settings) { f.settings = s.Normalize(); f.saves++ }
+func (f *fakeShell) Plugins() View                                                       { return f.view }
+func (f *fakeShell) SetSettings(s config.Settings)                                       { f.settings = s.Normalize(); f.saves++ }
+func (f *fakeShell) PaintMenu(*ebiten.Image, int, int, string, []string, []uikit.Button) {}
 
 // harness is one screen over a fake shell, on screen scr; Push and Back
 // move scr as the root's navigator would (the main menu below).

@@ -308,6 +308,9 @@ func WrapPx(s string, st TextStyle, maxW float64) []string {
 
 // Ellipsize shortens s with "…" so it fits maxW.
 func Ellipsize(s string, st TextStyle, maxW float64) string {
+	if s == "" { // nothing to shorten: no lone "…" in a box too narrow for it
+		return ""
+	}
 	if w, _ := Measure(s, st); w <= maxW {
 		return s
 	}
