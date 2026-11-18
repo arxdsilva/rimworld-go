@@ -27,7 +27,7 @@ import (
 // Comms order and action refusals.
 const (
 	ReasonNoPower      = "no power"
-	ReasonNoBeacon     = "needs a trade beacon"
+	ReasonNoBeacon     = "needs a powered trade beacon"
 	ReasonNoSilver     = "no silver near a trade beacon"
 	ReasonOnTheWay     = "a caravan is on its way"
 	ReasonCaravanHere  = "a caravan is already here"

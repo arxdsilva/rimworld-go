@@ -767,7 +767,7 @@ func WaitingFramesAlertIn(tr lang.Tr, w game.WorldView) (Alert, bool) {
 // (the card shown while the alert is hovered). Keys with a numeric suffix
 // ("penopen.3") share the text of their prefix.
 var alertExplanations = map[string]string{
-	"tradeorbit":    "A trade ship is in radio range for a few more hours. Work the radio console to trade with it: goods within a trade beacon's reach (15 tiles across; walls cut it off) are on offer, and purchases arrive by drop pod.",
+	"tradeorbit":    "A trade ship is in radio range for a few more hours. Work the radio console to trade with it: goods within a powered trade beacon's reach (15 tiles across; walls cut it off) are on offer, and purchases arrive by drop pod.",
 	"tradecaravan":  "A trader caravan is camped near the colony and leaves soon. Right-click the trader to send a colonist to trade; the caravan buys and sells goods from your stockpiles.",
 	"nobed":         "Some colonists have no bed of their own and sleep on the ground. Build a bed for each of them, or free one: sleeping rough costs rest and mood.",
 	"bleeding":      "A colonist will bleed to death within hours. Get a doctor to tend the wounds now: a tend stops the bleeding at once, with or without medicine.",

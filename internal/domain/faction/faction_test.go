@@ -174,11 +174,11 @@ func TestFactionHostilityHysteresis(t *testing.T) {
 		{Hostile, -74, Hostile}, {Hostile, -30, Hostile}, {Hostile, -1, Hostile},
 		{Hostile, 0, Neutral}, {Neutral, -30, Neutral},
 		{Friendly, -75, Hostile},
-		// Friendly at +50, kept down to +30.
-		{Neutral, 49, Neutral}, {Neutral, 50, Friendly}, {Friendly, 49, Friendly},
-		{Friendly, 31, Friendly}, {Friendly, 30, Friendly}, {Friendly, 29, Neutral},
-		{Neutral, 30, Neutral}, {Neutral, 40, Neutral}, {Friendly, 40, Friendly},
-		{Hostile, 50, Friendly}, {Hostile, 20, Neutral},
+		// Friendly at +75, kept down to +1, neutral at 0.
+		{Neutral, 74, Neutral}, {Neutral, 75, Friendly}, {Friendly, 74, Friendly},
+		{Friendly, 31, Friendly}, {Friendly, 1, Friendly}, {Friendly, 0, Neutral},
+		{Neutral, 1, Neutral}, {Neutral, 50, Neutral}, {Friendly, 40, Friendly},
+		{Hostile, 75, Friendly}, {Hostile, 20, Neutral}, {Friendly, -74, Neutral},
 	}
 	for _, s := range steps {
 		if got := RelationFor(s.cur, s.gw); got != s.want {
@@ -215,17 +215,17 @@ func TestFactionHostilityHysteresis(t *testing.T) {
 	}
 	rel = Friendly
 	for i := 0; i < 200; i++ {
-		rel = RelationFor(rel, 30+i%20)
+		rel = RelationFor(rel, 1+i%74)
 	}
 	if rel != Friendly {
-		t.Error("friendly stays friendly between 30 and 49")
+		t.Error("friendly stays friendly from 74 down to 1")
 	}
 }
 
 func TestDailyDriftAndAdjust(t *testing.T) {
 	t.Parallel()
-	// Settlers drift from +60 to the +10 baseline, one point a day, and lose
-	// friendliness below +30.
+	// Settlers at 60 drift to the +10 baseline, one point a day, and stay
+	// Friendly: an ally holds until goodwill reaches 0.
 	f := Faction{Type: Settlers, Goodwill: 60, Relation: Friendly}
 	for d := 0; d < 30; d++ {
 		DailyDrift(&f)
@@ -234,14 +234,14 @@ func TestDailyDriftAndAdjust(t *testing.T) {
 		t.Errorf("day 30: %d %v", f.Goodwill, f.Relation)
 	}
 	DailyDrift(&f)
-	if f.Goodwill != 29 || f.Relation != Neutral {
+	if f.Goodwill != 29 || f.Relation != Friendly {
 		t.Errorf("day 31: %d %v", f.Goodwill, f.Relation)
 	}
 	for d := 0; d < 100; d++ {
 		DailyDrift(&f)
 	}
-	if f.Goodwill != 10 {
-		t.Errorf("settles at baseline: %d", f.Goodwill)
+	if f.Goodwill != 10 || f.Relation != Friendly {
+		t.Errorf("settles at baseline: %d %v", f.Goodwill, f.Relation)
 	}
 	if len(f.History) != HistoryDays || f.History[len(f.History)-1] != 10 {
 		t.Errorf("history keeps 60 days: %d", len(f.History))
@@ -492,5 +492,31 @@ func TestEnemyBonusAt(t *testing.T) {
 	f := Faction{ID: 1, Enemies: []int{3, 5}}
 	if f.EnemyBonusAt(5) != EnemyBonus || f.EnemyBonusAt(4) != 0 || (Faction{}).EnemyBonusAt(3) != 0 {
 		t.Fatal("EnemyBonusAt: only an enemy's people earn the bonus")
+	}
+}
+
+func TestAllyBandNoFlap(t *testing.T) {
+	t.Parallel()
+	walk := func(start Relation, seq []int, want []Relation) {
+		t.Helper()
+		rel := start
+		for i, gw := range seq {
+			rel = RelationFor(rel, gw)
+			if rel != want[i] {
+				t.Fatalf("start %v step %d gw %d: %v want %v", start, i, gw, rel, want[i])
+			}
+		}
+	}
+	// Neutral: 74 stays, 75 turns Friendly, one-point wobble 74 keeps Friendly.
+	walk(Neutral, []int{74, 75, 74, 75, 74}, []Relation{Neutral, Friendly, Friendly, Friendly, Friendly})
+	// Friendly: 1 holds, 0 ends it, 1 again stays Neutral until 75.
+	walk(Friendly, []int{1, 0, 1, 2, 0}, []Relation{Friendly, Neutral, Neutral, Neutral, Neutral})
+	walk(Neutral, []int{0, 1, 0, 1}, []Relation{Neutral, Neutral, Neutral, Neutral})
+}
+
+func TestNoSettlersStartFriendly(t *testing.T) {
+	t.Parallel()
+	if mx := def(Settlers).GoodwillMax; mx >= FriendlyAt {
+		t.Errorf("Settlers start max %d reaches the ally band", mx)
 	}
 }

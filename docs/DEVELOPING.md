@@ -4,7 +4,7 @@ Building, testing, profiling and refreshing media and sound. Back to the [README
 
 ## Build and test
 
-To build from source you need Go 1.26.10 or later (the version in [`go.mod`](../go.mod)).
+To build from source you need Go 1.27.4 or later (the version in [`go.mod`](../go.mod)).
 
 ```sh
 go run ./cmd/game   # start the game

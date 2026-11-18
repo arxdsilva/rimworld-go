@@ -47,10 +47,10 @@ func beaconGoods(g *Game) tradeGoods {
 	return gd
 }
 
-// beaconCells is the trade beacons' reach (beacon.Reach; rock and built walls
-// cut it, doors and frames don't), cached under bit 254 (no kind) per structVer.
+// beaconCells is the powered beacons' reach (beacon.Reach; rock and built walls cut it),
+// cached under bit 254 keyed structVer+pwc.vers (build; any power change, flicks too; both grow).
 func beaconCells(g *Game) tileSet {
-	return g.cellSet([4]uint64{3: 1 << 62}).get(g, g.structVer, func() tileSet {
+	return g.cellSet([4]uint64{3: 1 << 62}).get(g, g.structVer+g.pwc.vers, func() tileSet {
 		w, h, walls := g.grid.Width(), g.grid.Height(), g.buildingCells(construction.Wall)
 		set := newTileSet(w * h)
 		for _, bid := range g.beaconIDs() {
@@ -82,7 +82,7 @@ func (g *Game) orbitalArrive(now uint64) bool {
 	name := shipNames[r.IntN(len(shipNames))]
 	stock := trade.Generate(g.sk.content.Items, trade.CurioMerchant, faction.Spacer, r)
 	g.trade.orbital = &orbitalShip{Name: name, Kind: trade.CurioMerchant, Stock: stock, Until: now + orbitalStay}
-	letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about 16 hours. Call it from a powered radio console; only goods within reach of a trade beacon can be traded.",
+	letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about 16 hours. Call it from a powered radio console; only goods within reach of a powered trade beacon can be traded.",
 		name, lower(trade.DefOf(trade.CurioMerchant).Label))
 	return true
 }
@@ -112,7 +112,7 @@ func (g *Game) orbitalView(now uint64) OrbitalView {
 	}
 	v := OrbitalView{Present: true, Ship: o.Name, Kind: lower(trade.DefOf(o.Kind).Label), HoursLeft: hoursLeft(o.Until, now), CallOK: true}
 	if len(g.beaconIDs()) == 0 {
-		v.CallOK, v.CallReason = false, "needs a trade beacon"
+		v.CallOK, v.CallReason = false, ReasonNoBeacon
 	}
 	return v
 }

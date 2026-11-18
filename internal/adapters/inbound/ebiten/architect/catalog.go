@@ -397,7 +397,7 @@ func toolDefs(tr lang.Tr) []ToolDef {
 		{ID: "radio_console", Label: tr.T("Radio console"), Category: "misc", Icon: "radio_console", Mode: PlaceSingle, Build: overlay.RadioConsoleKind,
 			Desc: tr.T("A powered desk (3x2): a colonist works it to call traders, gift silver and ask factions for help. Q/E rotates.")},
 		{ID: "trade_beacon", Label: tr.T("Trade beacon"), Category: "misc", Icon: "trade_beacon", Mode: PlaceSingle, Build: overlay.TradeBeaconKind,
-			Desc: tr.T("Marks the goods an orbital trader can buy: stacks in a 15-tile-wide area around it that walls cut off. Unpowered; the ghost shows its area.")},
+			Desc: lang.Tf(tr, "Marks the goods an orbital trader can buy: stacks in a 15-tile-wide area around it that walls cut off. Needs %d W of power; the ghost shows its area.", power.SpecOf(construction.TradeBeacon).Draw)},
 		{ID: "foam_popper", Label: tr.T("Foam popper"), Category: "misc", Icon: "foam_popper", Mode: PlaceSingle, Build: "foam popper", // AX-5
 			Desc: tr.T("Bursts in foam over 10 tiles when a fire starts within 3 tiles of it, then is rebuilt in its place.")},
 		{ID: "brewing_bench", Label: tr.T("Brewing bench"), Category: "production", Icon: "brewing_bench", Mode: PlaceSingle, Build: "brewing bench",

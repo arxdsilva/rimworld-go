@@ -52,7 +52,7 @@ Download the installer for your system from [Releases](https://github.com/arxdsi
 Each release also has a portable archive per system: unpack it and run `rimworld-go`, keeping the `assets` folder next to it. If the game can't find its files, `rimworld-go -selfcheck` prints where it looked.
 
 You need 64-bit Windows, macOS or Linux, 6 GB of RAM or more (8 GB recommended), and a GPU with Metal, DirectX 11 or OpenGL drivers.
-To build from source, install Go 1.26.10 or later (see `go.mod`) and run `go run ./cmd/game`.
+To build from source, install Go 1.27.4 or later (see `go.mod`) and run `go run ./cmd/game`.
 
 ## First five minutes
 

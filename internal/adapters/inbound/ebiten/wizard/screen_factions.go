@@ -69,7 +69,7 @@ func GoodwillTipIn(tr lang.Tr, r FacRow) string {
 	case faction.Hostile:
 		return lang.Tf(tr, "Hostile. They raid you. Goodwill must climb to %d before they calm down.", faction.CalmAt)
 	case faction.Friendly:
-		return lang.Tf(tr, "Friendly. They stay friendly while goodwill stays at %+d or more.", faction.FriendlyKeep)
+		return lang.Tf(tr, "Friendly. They stay friendly until goodwill falls to %d.", faction.FriendlyEndAt)
 	}
 	return lang.Tf(tr, "Neutral. At %d or less they turn hostile; at %+d or more, friendly.", faction.HostileAt, faction.FriendlyAt)
 }

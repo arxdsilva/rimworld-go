@@ -92,10 +92,21 @@ func commsReason(tr lang.Tr, act game.CommsActionView) string {
 	return act.Reason
 }
 
+// commsHeader is the console line: who works it and the silver a powered
+// beacon reaches.
+func commsHeader(sh Shell, v game.CommsView) string {
+	return sh.Tf("%s is at the console · %d silver within reach of a powered trade beacon", v.OperatorName, v.BeaconSilver)
+}
+
+// noSilverReason is the gift button's reason when no powered beacon reaches any silver.
+func noSilverReason(sh Shell) string {
+	return sh.T("No silver within reach of a powered trade beacon.")
+}
+
 // commsBody declares the header, the faction rows and the orbital row.
 func (dl *Dealings) commsBody(d *commsDraft, body gfx.Rect) {
 	v := d.view
-	dl.kit().Label(body.X, body.Y, dl.sh.Tf("%s is at the console · %d silver within reach of a trade beacon", v.OperatorName, v.BeaconSilver), gfx.Label)
+	dl.kit().Label(body.X, body.Y, commsHeader(dl.sh, v), gfx.Label)
 	orbH := float32(64)
 	list := gfx.Rect{X: body.X, Y: body.Y + 28, W: body.W, H: body.H - 28 - orbH - 8}
 	orb := gfx.Rect{X: body.X, Y: body.Bottom() - orbH, W: body.W, H: orbH}
@@ -162,7 +173,7 @@ func (dl *Dealings) commsFaction(d *commsDraft, f game.CommsFactionView, r gfx.R
 	gift := f.Gift
 	why := commsReason(dl.sh, gift)
 	if gift.Allowed && d.view.BeaconSilver < 1 {
-		why = dl.sh.T("No silver within reach of a trade beacon.")
+		why = noSilverReason(dl.sh)
 	}
 	if dl.kit().Button(fmt.Sprintf("comms.%d.giftless", id), gfx.Rect{X: r.X + 10, Y: by, W: 30, H: h}, "-", uikit.BtnOpts{Disabled: amount <= 1, Reason: dl.sh.T("Least is 1 silver.")}) {
 		d.stepGift(id, -CommsGiftStep*qtyMult(dl.kit()))

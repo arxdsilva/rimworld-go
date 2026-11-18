@@ -327,6 +327,6 @@ func facInitial(name string) string {
 
 // standingTip states the four goodwill thresholds from the domain constants.
 func standingTip(tr lang.Tr) string {
-	return lang.Tf(tr, "Standing\nTurns hostile at %d or less and calms at %d or more. Turns friendly at %+d or more and stays friendly while at %+d or more.",
-		faction.HostileAt, faction.CalmAt, faction.FriendlyAt, faction.FriendlyKeep)
+	return lang.Tf(tr, "Standing\nTurns hostile at %d or less and calms at %d or more. Turns friendly at %+d or more and stays friendly until it falls to %d.",
+		faction.HostileAt, faction.CalmAt, faction.FriendlyAt, faction.FriendlyEndAt)
 }

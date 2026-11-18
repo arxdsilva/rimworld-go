@@ -124,6 +124,12 @@ func BeaconLit(present uint64, id entity.EntityID, reduced bool) bool {
 	return (present+uint64(id)*17)%BeaconBlinkFrames < beaconOnFrames
 }
 
+// BeaconGlowOn is whether the beacon's light is drawn: only while it is
+// powered (as for turrets), then on its blink phase.
+func BeaconGlowOn(powered bool, present uint64, id entity.EntityID, reduced bool) bool {
+	return powered && BeaconLit(present, id, reduced)
+}
+
 // DrawDefenseParts draws what the turret and the beacon add over their
 // base sprite (drawn just before): the turret's gun on its aim frame,
 // pushed back by the recoil, and the beacon's blinking light. A turret's
@@ -148,7 +154,7 @@ func (o *Wiring) DrawDefenseParts(v *render.View, ps sprite.Pass, ch *Chunks, ds
 		o.P.DrawCS(v, ps, dst, gk, color.NRGBA{}, wx, wy, tile, sw, sh, sprite.NoCS)
 	case TradeBeaconKind:
 		g := o.Parts.glowOf(key)
-		if v.Art.Has(g) && BeaconLit(v.Present, b.ID, v.ReducedMotion) &&
+		if v.Art.Has(g) && BeaconGlowOn(b.Powered, v.Present, b.ID, v.ReducedMotion) &&
 			o.drawUnlitSprite(v, dst, g, float64(b.X), float64(b.Y), tile, sw, sh, sprite.NoCS) {
 			o.PowerTrace("glow", g)
 		}

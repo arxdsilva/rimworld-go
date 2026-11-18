@@ -25,6 +25,7 @@ func TestSpecOf(t *testing.T) {
 		construction.WindTurbine:            {Role: Producer, Peak: 1100, Toggle: true},
 		construction.GeothermalGenerator:    {Role: Producer, Peak: 1800, Toggle: true},
 		construction.Battery:                {Role: Storage, CapWh: 1200},
+		construction.TradeBeacon:            {Role: Consumer, Class: ClassNone, Draw: 40, Idle: 40, Toggle: true}, // wiki: Orbital trade beacon
 		construction.Lamp:                   {Role: Consumer, Class: ClassLamp, Draw: 50, Idle: 50, Toggle: true},
 		construction.Heater:                 {Role: Consumer, Class: ClassHeater, Draw: 175, Idle: 17, Toggle: true}, // TEMP-1, wiki: Heater
 		construction.Cooler:                 {Role: Consumer, Class: ClassCooler, Draw: 200, Idle: 20, Toggle: true}, // TEMP-1, wiki: Cooler

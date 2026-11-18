@@ -130,7 +130,15 @@ const (
 	RejectOverStock
 	// RejectUnwanted: the trader won't take that kind of goods.
 	RejectUnwanted
+	// RejectBadQty: a line's quantity, or a goods' summed quantity, is
+	// beyond MaxOfferQty.
+	RejectBadQty
 )
+
+// MaxOfferQty bounds one offer line and one goods' summed quantity (ours:
+// no stock reaches it, and MaxOfferQty times the highest centi price stays
+// far below MaxInt64, so Settle's and GiftValue's products cannot overflow).
+const MaxOfferQty = 1_000_000
 
 // String is the player-facing reason ("" for RejectNone).
 func (r Reject) String() string {
@@ -145,6 +153,8 @@ func (r Reject) String() string {
 		return "not enough goods"
 	case RejectUnwanted:
 		return "they don't want that"
+	case RejectBadQty:
+		return "impossible quantity"
 	}
 	return ""
 }
@@ -337,7 +347,14 @@ func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Te
 	}
 	net := map[Goods]int{}
 	for _, d := range offer {
-		net[Goods{d.Kind, d.Building}] += d.Qty
+		if d.Qty < -MaxOfferQty || d.Qty > MaxOfferQty {
+			return Result{Reject: RejectBadQty}
+		}
+		g := Goods{d.Kind, d.Building}
+		net[g] += d.Qty // |net| <= 2*MaxOfferQty before the check: no overflow
+		if net[g] < -MaxOfferQty || net[g] > MaxOfferQty {
+			return Result{Reject: RejectBadQty}
+		}
 	}
 	keys := make([]Goods, 0, len(net))
 	for g, q := range net {
@@ -403,7 +420,9 @@ func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Te
 }
 
 // GiftValue is the market value, in whole silver, of what the colony
-// gives in offer (its negative lines; silver counts at face value).
+// gives in offer (its negative lines; silver counts at face value). It
+// relies on Settle's MaxOfferQty bound: callers pass only offers Settle
+// accepted, so the products cannot overflow.
 func GiftValue(b item.Book, offer []Delta) int {
 	total := 0
 	for _, d := range offer {

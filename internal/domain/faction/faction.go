@@ -108,14 +108,14 @@ type Globe interface {
 
 // Goodwill bands (NG-1 §3.4). A faction turns hostile at or below HostileAt
 // and only calms down at or above CalmAt; it turns friendly at or above
-// FriendlyAt and stays friendly while at or above FriendlyKeep.
+// FriendlyAt (+75) and stays friendly until goodwill reaches FriendlyEndAt (0).
 const (
-	HostileAt    = -75 // wiki: Factions
-	CalmAt       = 0   // wiki: Factions
-	FriendlyAt   = 50
-	FriendlyKeep = 30
-	goodwillMin  = -100
-	goodwillMax  = 100
+	HostileAt     = -75 // wiki: Factions
+	CalmAt        = 0   // wiki: Factions
+	FriendlyAt    = 75  // wiki: Factions
+	FriendlyEndAt = 0   // wiki: Factions ("remain allies until it reaches 0")
+	goodwillMin   = -100
+	goodwillMax   = 100
 	// HistoryDays is how many daily goodwill values are kept.
 	HistoryDays = 60
 	// EventCount is how many recent goodwill events are kept.
@@ -240,7 +240,8 @@ func uniqueName(t Type, rng *randx.Rand, used map[string]bool) string {
 
 // RelationFor applies the hysteresis bands to goodwill gw given the
 // current relation: hostile at or below -75 and calm again only at or above
-// 0; friendly at or above +50 and neutral again only below +30.
+// 0; friendly at or above +75 and neutral again once goodwill reaches 0
+// (an ally is kept while goodwill stays above FriendlyEndAt).
 func RelationFor(cur Relation, gw int) Relation {
 	if gw <= HostileAt {
 		return Hostile
@@ -248,7 +249,7 @@ func RelationFor(cur Relation, gw int) Relation {
 	if cur == Hostile && gw < CalmAt {
 		return Hostile
 	}
-	if gw >= FriendlyAt || cur == Friendly && gw >= FriendlyKeep {
+	if gw >= FriendlyAt || cur == Friendly && gw > FriendlyEndAt {
 		return Friendly
 	}
 	return Neutral

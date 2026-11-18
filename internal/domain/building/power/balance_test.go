@@ -8,6 +8,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 )
 
@@ -334,5 +335,20 @@ func BenchmarkBalance(b *testing.B) {
 	for b.Loop() {
 		now += 50
 		Balance(devs, 50, now)
+	}
+}
+
+// TestBalanceBeaconShedBeforeLamp: the trade beacon (ClassNone, 40 W) goes
+// first in a brownout, before any lamp; ClassNone is not a bench.
+func TestBalanceBeaconShedBeforeLamp(t *testing.T) {
+	t.Parallel()
+	b := SpecOf(construction.TradeBeacon)
+	if b.Role != Consumer || b.Draw != 40 || b.Idle != 40 || b.Class != ClassNone || !b.Toggle || b.Class == ClassBench {
+		t.Fatalf("beacon spec %+v", b)
+	}
+	devs := []Dev{gen(10, 80), use(1, ClassLamp, 50), use(2, b.Class, b.Draw)}
+	out := Balance(devs, 50, 7000)
+	if out.Load != 50 || !out.Brownout || byID(devs, 2).Powered || !byID(devs, 1).Powered {
+		t.Fatalf("beacon must shed before the lamp: %+v %+v", out, devs)
 	}
 }

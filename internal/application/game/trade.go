@@ -289,11 +289,11 @@ func (g *Game) setCooldown(id int, cd faction.Cooldowns) {
 	g.trade.cooldowns = slices.Insert(cs, i, factionCooldown{Faction: id, CD: cd})
 }
 
-// beaconIDs lists the trade beacons, ascending.
+// beaconIDs lists the powered trade beacons, ascending.
 func (g *Game) beaconIDs() []entity.EntityID {
 	var out []entity.EntityID
 	for _, id := range g.bldgIDs {
-		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.TradeBeacon {
+		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.TradeBeacon && g.powered(id) {
 			out = append(out, id)
 		}
 	}

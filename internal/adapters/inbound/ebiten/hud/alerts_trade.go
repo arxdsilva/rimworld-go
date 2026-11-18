@@ -32,7 +32,11 @@ type commsSource interface {
 func tradeAlerts(tr lang.Tr, orbital game.OrbitalView, caravan bool) []Alert {
 	var out []Alert
 	if orbital.Present {
-		out = append(out, Alert{Key: "tradeorbit", Label: lang.Tf(tr, "Trade ship in orbit (%dh left)", max(orbital.HoursLeft, 0))})
+		label := lang.Tf(tr, "Trade ship in orbit (%dh left)", max(orbital.HoursLeft, 0))
+		if !orbital.CallOK && orbital.CallReason == game.ReasonNoBeacon {
+			label = lang.Tf(tr, "Trade ship in orbit (%dh left): no powered beacon", max(orbital.HoursLeft, 0))
+		}
+		out = append(out, Alert{Key: "tradeorbit", Label: label})
 	}
 	if caravan {
 		label := tr.T("Trader caravan visiting")

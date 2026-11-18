@@ -4,6 +4,7 @@
 package wizard
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -13,13 +14,13 @@ import (
 func TestFactionTipShowsThresholds(t *testing.T) {
 	t.Parallel()
 	got := GoodwillTip(FacRow{Relation: faction.Neutral})
-	if want := "Neutral. At -75 or less they turn hostile; at +50 or more, friendly."; got != want {
+	if want := fmt.Sprintf("Neutral. At %d or less they turn hostile; at %+d or more, friendly.", faction.HostileAt, faction.FriendlyAt); got != want {
 		t.Errorf("neutral tip %q, want %q", got, want)
 	}
 	if h := GoodwillTip(FacRow{Relation: faction.Hostile}); !strings.Contains(h, "climb to 0 before") {
 		t.Errorf("hostile tip %q", h)
 	}
-	if f := GoodwillTip(FacRow{Relation: faction.Friendly}); !strings.Contains(f, "+30 or more") {
+	if f := GoodwillTip(FacRow{Relation: faction.Friendly}); !strings.Contains(f, fmt.Sprintf("until goodwill falls to %d.", faction.FriendlyEndAt)) {
 		t.Errorf("friendly tip %q", f)
 	}
 }

@@ -124,7 +124,7 @@ const (
 	VitalsMonitor
 	// Defence and trade (PLAY-024, append only, saved). SentryTurret is a
 	// powered 1x1 gun post that shoots hostiles in range; TradeBeacon is
-	// an unpowered post that marks the goods an orbital trader can reach;
+	// a powered post (40 W) that marks the goods an orbital trader can reach;
 	// RadioConsole is a powered 3x2 desk a colonist works to call
 	// factions and ships.
 	SentryTurret

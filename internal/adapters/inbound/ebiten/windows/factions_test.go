@@ -75,7 +75,7 @@ func TestFactionInitialSkipsTheArticle(t *testing.T) {
 func TestFactionStandingTipShowsThresholds(t *testing.T) {
 	t.Parallel()
 	got := standingTip(lang.English{})
-	for _, want := range []string{"-75 or less", "0 or more", "+50 or more", "+30 or more"} {
+	for _, want := range []string{"-75 or less", "0 or more", "+75 or more", "until it falls to 0"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("standing tip %q lacks %q", got, want)
 		}

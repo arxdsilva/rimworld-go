@@ -66,7 +66,7 @@ func (r Role) Device() bool { return r == Producer || r == Consumer || r == Stor
 type Class uint8
 
 const (
-	ClassNone Class = iota // not a consumer
+	ClassNone Class = iota // not a consumer, or one with no shed priority (the trade beacon): shed first
 	ClassLamp
 	ClassBench
 	ClassCooler
@@ -112,6 +112,8 @@ func SpecOf(k construction.Kind) Spec {
 		return producer(1800)
 	case construction.Battery:
 		return Spec{Role: Storage, CapWh: 1200}
+	case construction.TradeBeacon: // wiki: Orbital trade beacon (40 W)
+		return consumer(ClassNone, 40, 40)
 	case construction.Lamp:
 		return consumer(ClassLamp, 50, 50)
 	case construction.Heater: // TEMP-1, wiki: Heater (175 W heating, 17 W idle)

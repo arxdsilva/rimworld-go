@@ -43,7 +43,7 @@ func EncodeOffer(offer []Delta) string {
 }
 
 // DecodeOffer reads EncodeOffer's output. It refuses malformed
-// text, item kinds outside the run's book b, zero quantities and a kind
+// text, item kinds outside the run's book b, zero or out-of-bound (|qty| > MaxOfferQty) quantities and a kind
 // listed twice.
 func DecodeOffer(b item.Book, s string) ([]Delta, error) {
 	if s == "" {
@@ -73,7 +73,7 @@ func DecodeOffer(b item.Book, s string) ([]Delta, error) {
 			return nil, errOfferSyntax
 		}
 		g := Goods{item.Kind(k), uint8(bld)}
-		if q == 0 || int(g.Kind) >= b.Len() || seen[g] {
+		if q == 0 || q < -MaxOfferQty || q > MaxOfferQty || int(g.Kind) >= b.Len() || seen[g] {
 			return nil, errOfferLine
 		}
 		seen[g] = true

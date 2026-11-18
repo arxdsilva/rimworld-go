@@ -31,7 +31,7 @@ func TestBeaconWallCutsReach(t *testing.T) {
 	t.Parallel()
 	g, _, _, pawn := orbitalGame(t)
 	g.orbitalArrive(uint64(g.clock.Now()))
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 22, 14)
+	powerBeacon(t, g, 22, 14)
 	spawn(t, g, item.Silver, 100, 26, 14) // to be walled in
 	spawn(t, g, item.Silver, 7, 22, 21)   // 7 tiles south: in reach (radius 7.5)
 	spawn(t, g, item.Silver, 50, 30, 14)  // 8 tiles east: out of reach
@@ -74,7 +74,7 @@ func TestBeaconWallCutsReach(t *testing.T) {
 func TestBeaconRockCutsReach(t *testing.T) {
 	t.Parallel()
 	g, _, _, _ := orbitalGame(t)
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 22, 14)
+	powerBeacon(t, g, 22, 14)
 	spawn(t, g, item.Silver, 40, 22, 19)
 	if got := beaconGoods(g).counts[item.Silver]; got != 40 {
 		t.Fatalf("open: %d silver, want 40", got)
@@ -100,8 +100,8 @@ func TestBeaconGoodsUnionOfBeacons(t *testing.T) {
 	if gd := beaconGoods(g); len(gd.ids) != 0 || gd.counts == nil {
 		t.Fatalf("no beacon: goods %+v", gd)
 	}
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 20, 14)
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 26, 14)
+	powerBeacon(t, g, 20, 14)
+	powerBeacon(t, g, 26, 14)
 	spawn(t, g, item.Silver, 10, 23, 14) // both reach it
 	spawn(t, g, item.Silver, 5, 32, 14)  // the second beacon's only
 	spawn(t, g, item.Steel, 3, 14, 15)   // the first's only
@@ -128,7 +128,7 @@ func TestBeaconGoodsUnionOfBeacons(t *testing.T) {
 // leave the reach stale unnoticed.
 func TestBeaconCellsSelfCheckCatchesRawWrite(t *testing.T) {
 	g, _, _, _ := orbitalGame(t)
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 22, 14)
+	powerBeacon(t, g, 22, 14)
 	beaconCells(g)
 	g.terr.Set(23, 14, terrain.Rock) // raw: structVer is not bumped
 	defer func() {

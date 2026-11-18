@@ -536,7 +536,7 @@ func TestOrbitalGoodsOnlyNearBeacon(t *testing.T) {
 	if _, ok := g.TradeView(); ok {
 		t.Fatal("called the ship without a beacon")
 	}
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 22, 14)
+	powerBeacon(t, g, 22, 14)
 	cv, _ = g.CommsView()
 	if !cv.Orbital.CallOK || cv.BeaconSilver != 100 {
 		t.Fatalf("comms with a beacon %+v", cv)
@@ -574,7 +574,7 @@ func TestOrbitalPurchaseDropsPod(t *testing.T) {
 	t.Parallel()
 	g, _, _, pawn := orbitalGame(t)
 	g.orbitalArrive(uint64(g.clock.Now()))
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 22, 14)
+	powerBeacon(t, g, 22, 14)
 	spawn(t, g, item.Silver, 3000, 23, 15)
 	openComms(t, g, pawn)
 	g.Enqueue(command.Command{Kind: command.CommsCallTrader})
@@ -639,7 +639,7 @@ func TestCommsGiftRaisesGoodwill(t *testing.T) {
 	t.Parallel()
 	g, _, _, pawn := orbitalGame(t)
 	f := commsFactions(g)
-	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 22, 14)
+	powerBeacon(t, g, 22, 14)
 	spawn(t, g, item.Silver, 300, 23, 15)
 	spawn(t, g, item.Silver, 500, 35, 20) // out of reach
 	openComms(t, g, pawn)

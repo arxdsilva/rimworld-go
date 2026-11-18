@@ -75,7 +75,7 @@ var PowerDeviceKinds = map[string]bool{
 	"chemfuel generator": true, WatermillKind: true, "deep drill": true, "ground-penetrating scanner": true,
 	"moisture pump": true, "electric crematorium": true, // AX-4
 	"wall lamp": true, "flood light": true, SunLampKind: true, "vitals monitor": true, "multi-analyzer": true,
-	"radio console": true, "electric forge": true, "machining table": true, "fabrication bench": true,
+	"radio console": true, "trade beacon": true, "electric forge": true, "machining table": true, "fabrication bench": true,
 	"electric smelter": true, "fuel refinery": true, "nutrient paste dispenser": true, "hydroponics basin": true,
 	"fish tank": true, "tube television": true, "flatscreen television": true, "big screen television": true,
 	"long-range mineral scanner": true, "ship reactor": true, "powered door": true,
