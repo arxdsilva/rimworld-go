@@ -49,6 +49,9 @@ type envelope struct {
 type senderConfig struct {
 	endpoint, installID, sessionID, version, os, arch string
 	now                                               func() time.Time
+	// closeTimer starts close's deadline (nil: a real timer). Tests inject a
+	// timer they control, so the bound is asserted without wall-clock waits.
+	closeTimer func(d time.Duration) (fires <-chan time.Time, stop func())
 }
 
 // sender owns the queue and the one goroutine that posts it. Events stay in
@@ -136,16 +139,24 @@ func (s *sender) dropAdvanced() {
 func (s *sender) close() {
 	s.closeOnce.Do(func() {
 		close(s.stop)
-		timer := time.NewTimer(closeBudget)
-		defer timer.Stop()
+		fires, stop := s.startCloseTimer()
+		defer stop()
 		select {
 		case <-s.done:
-		case <-timer.C:
+		case <-fires:
 			s.cancel()
 			<-s.done
 		}
 		s.cancel()
 	})
+}
+
+func (s *sender) startCloseTimer() (<-chan time.Time, func()) {
+	if s.cfg.closeTimer != nil {
+		return s.cfg.closeTimer(closeBudget)
+	}
+	t := time.NewTimer(closeBudget)
+	return t.C, func() { t.Stop() }
 }
 
 func (s *sender) run() {

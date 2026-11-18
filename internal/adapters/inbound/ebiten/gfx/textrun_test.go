@@ -93,6 +93,10 @@ func TestRunsStayWithinTheirCap(t *testing.T) {
 	}
 }
 
+// Deterministic once warm: a hit is a lock, a face-table lookup and a map
+// read on a key that is already in the cache (78 runs, under RunCap, so no
+// eviction); the warm loop fills the face table and the cache. The test is
+// serial, so no parallel test shares the process while it counts.
 func TestRunsSteadyStateAllocatesNothing(t *testing.T) {
 	var c Runs
 	for n := 2; n < 80; n++ {

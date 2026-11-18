@@ -4,45 +4,81 @@
 package pool
 
 import (
+	"bytes"
+	"context"
 	"errors"
-	"runtime"
+	"fmt"
+	"runtime/pprof"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 	"unsafe"
 )
 
-// TestWorkersStartLazilyAndStop: no goroutine before the first parallel
-// Run, seven parked after it, none after Close. It runs first: no other
-// test's workers are still stopping.
-func TestWorkersStartLazilyAndStop(t *testing.T) {
-	before := runtime.NumGoroutine()
-	p := New(Options{})
-	if runtime.NumGoroutine() != before {
-		t.Fatal("New started workers")
+// labeled counts the live goroutines carrying the pprof label key=val. A
+// goroutine inherits its creator's labels, so this sees only this test's
+// pool workers, whatever other tests' pools are doing.
+func labeled(key, val string) int {
+	var buf bytes.Buffer
+	if err := pprof.Lookup("goroutine").WriteTo(&buf, 1); err != nil {
+		panic(err)
 	}
-	p.Run(64, func(int, int) {})
-	if got := runtime.NumGoroutine() - before; got != MaxLanes-1 {
-		t.Fatalf("%d workers after a parallel run, want %d", got, MaxLanes-1)
-	}
-	p.Close()
-	for range 1000 {
-		if runtime.NumGoroutine() == before {
-			break
+	want := fmt.Sprintf("%q:%q", key, val)
+	total, count := 0, 0
+	for _, line := range strings.Split(buf.String(), "\n") {
+		if n, _, ok := strings.Cut(line, " @ "); ok {
+			count, _ = strconv.Atoi(n)
+		} else if strings.HasPrefix(line, "# labels:") && strings.Contains(line, want) {
+			total += count
 		}
-		runtime.Gosched()
 	}
-	if runtime.NumGoroutine() != before {
-		t.Fatal("workers still running after Close")
+	return total
+}
+
+// settle polls (bounded) until the labelled goroutine count is want.
+func settle(key, val string, want int) int {
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		got := labeled(key, val)
+		if got == want || time.Now().After(deadline) {
+			return got
+		}
+		time.Sleep(time.Millisecond)
 	}
-	var n atomic.Int32
-	p.Run(64, func(lane, _ int) {
-		if lane == 0 {
-			n.Add(1)
+}
+
+// TestWorkersStartLazilyAndStop: no worker before the first parallel Run,
+// seven parked after it, none after Close. Only this test's workers are
+// counted (a unique pprof label), so test order and other pools' goroutines
+// do not matter.
+func TestWorkersStartLazilyAndStop(t *testing.T) {
+	key, val := "pooltest", t.Name()+"/"+strconv.FormatInt(time.Now().UnixNano(), 36)
+	pprof.Do(context.Background(), pprof.Labels(key, val), func(context.Context) {
+		self := labeled(key, val) // the test goroutine carries the label too
+		p := New(Options{})
+		if got := labeled(key, val) - self; got != 0 {
+			t.Fatalf("New started %d workers", got)
+		}
+		p.Run(64, func(int, int) {})
+		if got := settle(key, val, self+MaxLanes-1) - self; got != MaxLanes-1 {
+			t.Fatalf("%d workers after a parallel run, want %d", got, MaxLanes-1)
+		}
+		p.Close()
+		if got := settle(key, val, self) - self; got != 0 {
+			t.Fatalf("%d workers still running after Close", got)
+		}
+		var n atomic.Int32
+		p.Run(64, func(lane, _ int) {
+			if lane == 0 {
+				n.Add(1)
+			}
+		})
+		if n.Load() != 64 {
+			t.Fatal("a closed pool's run was not inline")
 		}
 	})
-	if n.Load() != 64 {
-		t.Fatal("a closed pool's run was not inline")
-	}
 }
 
 func TestRunCallsEveryTaskOnce(t *testing.T) {

@@ -763,7 +763,17 @@ func TestGlobeNoAllocSteadyState(t *testing.T) {
 	g := New(globeTestPlanet(t, 100), nil)
 	g.Sw, g.Sh = 1280, 720
 	g.Select(50)
-	g.Build() // warm: the first build sizes nothing, but be safe
+	// Cause of the possible flake: the frame buffers (Verts, Ov, Oi) grow to
+	// the peak the camera has shown, so a later angle with more overlay
+	// could allocate inside the measured runs. The warm-up therefore walks
+	// the exact sweep the measurement walks (21 steps: AllocsPerRun adds one
+	// warm run), then rewinds; the number is unchanged.
+	lon := g.Cam.Lon
+	for range 22 {
+		g.Cam.Lon += 0.01
+		g.Build()
+	}
+	g.Cam.Lon = lon
 	allocs := testing.AllocsPerRun(20, func() {
 		g.Cam.Lon += 0.01
 		g.Build()

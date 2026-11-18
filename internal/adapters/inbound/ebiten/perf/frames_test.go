@@ -70,7 +70,9 @@ func TestProbeUpdatesPerDraw(t *testing.T) {
 	}
 }
 
-// The per-frame bookkeeping allocates nothing.
+// The per-frame bookkeeping allocates nothing. Deterministic: Hist and
+// UpdatesPerDraw are fixed arrays and counters (no pool, map or queue), so the
+// count is the same on every run; stable at -race -shuffle=on -count=50.
 func TestProbeAllocFree(t *testing.T) {
 	var h Hist
 	var u UpdatesPerDraw

@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"sync"
 	"testing"
+	"time"
 )
 
 func exists(t *testing.T, path string) bool {
@@ -52,6 +54,9 @@ func TestQueueDeleteWaitsForInFlightWrite(t *testing.T) {
 	q := NewQueue(s)
 	defer q.Close()
 	started, gate := make(chan struct{}, 8), make(chan struct{})
+	var once sync.Once
+	release := func() { once.Do(func() { close(gate) }) }
+	defer release() // runs before q.Close, so a failed wait cannot hang the worker
 	q.saveTo = func(path string, raw []byte) error { started <- struct{}{}; <-gate; return writeSave(path, raw) }
 	if err := q.put("a", raw("first")); err != nil {
 		t.Fatal(err)
@@ -66,7 +71,16 @@ func TestQueueDeleteWaitsForInFlightWrite(t *testing.T) {
 	go func() { done <- q.Delete("a") }()
 	// The delete must be queued (a's waiting jobs dropped) before the write
 	// in flight finishes; else the worker could start a's second save first.
+	// Bounded: a queue that never takes the delete fails here instead of
+	// hanging to the package timeout.
+	deadline := time.Now().Add(10 * time.Second)
 	for !deleteQueued(q) {
+		if time.Now().After(deadline) {
+			q.mu.Lock()
+			n := len(q.jobs)
+			q.mu.Unlock()
+			t.Fatalf("delete job never headed the queue within 10s (%d jobs queued)", n)
+		}
 		runtime.Gosched()
 	}
 	select {
@@ -74,7 +88,7 @@ func TestQueueDeleteWaitsForInFlightWrite(t *testing.T) {
 		t.Fatalf("Delete returned (%v) while a write was in flight", err)
 	default:
 	}
-	close(gate)
+	release()
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}

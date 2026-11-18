@@ -151,6 +151,9 @@ func TestTopOffDoesNotFlap(t *testing.T) {
 	}
 }
 
+// Deterministic: the one map (TopOffOn) holds a single key. The warm call above
+// inserts it (Full is over the high mark), so its small-map group exists, and
+// every later insert or delete reuses that slot with no growth.
 func TestTopOffWantsAllocatesNothing(t *testing.T) {
 	s, _ := joyGame()
 	s.TopOff.Wants(1, recreation.Full)

@@ -77,12 +77,16 @@ func ev(name, tier string) event {
 
 func waitFor(t *testing.T, what string, ok func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	// No wall deadline: a slow machine only waits longer. A condition that never
+	// comes true ends at the test binary's -timeout, or when the test is
+	// cancelled, never at a guess about how fast the machine is.
 	for !ok() {
-		if time.Now().After(deadline) {
-			t.Fatalf("timed out waiting for %s", what)
+		select {
+		case <-t.Context().Done():
+			t.Fatalf("cancelled while waiting for %s", what)
+		default:
 		}
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(time.Millisecond) // pacing only: no deadline hangs on it
 	}
 }
 
@@ -279,19 +283,40 @@ func TestQueueDropsTheOldest(t *testing.T) {
 	}
 }
 
-// A dead network must not hold up quitting the game.
+// A dead network must not hold up quitting the game: close returns because its
+// budget timer fired, not because the request gave up. The timer is injected and
+// the client's own request timeout is off, so only the timer can end close and
+// no wall time is measured. Ignoring the timer hangs until the -timeout.
 func TestCloseIsBounded(t *testing.T) {
 	t.Parallel()
+	entered := make(chan struct{}, 1)
 	release := make(chan struct{})
-	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { <-release }))
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		entered <- struct{}{}
+		<-release
+	}))
 	defer srv.Close()
 	defer close(release)
-	s := newTestSender(srv.URL)
+	fire := make(chan time.Time) // not fired yet
+	var asked time.Duration
+	s := newSender(senderConfig{endpoint: srv.URL, now: time.Now, closeTimer: func(d time.Duration) (<-chan time.Time, func()) {
+		asked = d
+		return fire, func() {}
+	}})
+	s.client.Timeout = 0 // the request budget must not end close on its own
 	s.add(ev("e", tierBasic))
-	start := time.Now()
-	s.close()
-	if took := time.Since(start); took > closeBudget+time.Second {
-		t.Errorf("close took %v", took)
+	returned := make(chan struct{})
+	go func() { s.close(); close(returned) }()
+	<-entered // the request is in the air
+	select {
+	case <-returned:
+		t.Fatal("close returned before its timer fired")
+	default:
+	}
+	fire <- time.Time{} // the budget is spent
+	<-returned          // only the timer can end it now
+	if asked != closeBudget {
+		t.Errorf("close asked for a %v budget, want %v", asked, closeBudget)
 	}
 }
 

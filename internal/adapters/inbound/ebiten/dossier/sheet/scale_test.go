@@ -51,6 +51,8 @@ func TestDockedForTinyScreens(t *testing.T) {
 
 // The widths follow the text, the rest is untouched, and the call allocates
 // nothing (it runs every frame through the pane). Not parallel: AllocsPerRun.
+// Deterministic: DockedFor is integer arithmetic over value copies and a read
+// of the tree (no pool, map write or queue), so the count cannot vary.
 func TestDockedForCopiesValuesOnly(t *testing.T) {
 	d := config.Defaults().HUD
 	d.Colors = map[string]string{"ok": "#01020304"}

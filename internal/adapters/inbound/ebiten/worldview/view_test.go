@@ -27,7 +27,12 @@ import (
 	"rimworld-go/internal/platform/input"
 )
 
-// testPlanet is one small charted world the tests share (read-only).
+// testPlanet is one small charted world the tests share. It is read-only: no
+// test or worldview code path writes a table, and none calls Planet.Hops (the
+// one query that writes planet state, a buffer: commit 0322b6959); the
+// worldview code reads hops through HopsWith with its own HopScratch, and
+// Route and ValidLanding allocate their own scratch. A path that needs Hops
+// must use testPlanet().Fork().
 var testPlanet = sync.OnceValue(func() *planet.Planet {
 	b := planet.NewBuilder(testParams)
 	for {
