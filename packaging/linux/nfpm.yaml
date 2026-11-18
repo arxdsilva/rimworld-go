@@ -35,6 +35,12 @@ contents:
     dst: /opt/rimworld-go/README.md
   - src: dist/rimworld-go-linux-pkg-stage/THIRD_PARTY_NOTICES.md
     dst: /opt/rimworld-go/THIRD_PARTY_NOTICES.md
+  - src: dist/rimworld-go-linux-pkg-stage/LICENSE
+    dst: /opt/rimworld-go/LICENSE
+  - src: dist/rimworld-go-linux-pkg-stage/NOTICE
+    dst: /opt/rimworld-go/NOTICE
+  - src: dist/rimworld-go-linux-pkg-stage/ASSETS-LICENSE.md
+    dst: /opt/rimworld-go/ASSETS-LICENSE.md
   - src: /opt/rimworld-go/rimworld-go
     dst: /usr/bin/rimworld-go
     type: symlink

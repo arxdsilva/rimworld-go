@@ -36,7 +36,7 @@ while IFS= read -r entry || [ -n "$entry" ]; do
   mkdir -p "$stage/$(dirname "$entry")"
   cp -R "$entry" "$stage/$(dirname "$entry")/"
 done < packaging/assets.txt
-cp README.md THIRD_PARTY_NOTICES.md "$stage/"
+cp README.md THIRD_PARTY_NOTICES.md LICENSE NOTICE ASSETS-LICENSE.md "$stage/"
 cp -R third_party "$stage/"
 if [ "$fmt" = dir ]; then
   echo "package_release: $stage/ ($(du -sh "$stage" | cut -f1))"

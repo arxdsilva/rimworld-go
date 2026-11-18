@@ -43,7 +43,7 @@ build() {
   rm -rf "$root"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   mv "$stage/$(basename "$bin")" "$app/Contents/MacOS/$app_name"
-  mv "$stage/assets" "$stage/README.md" "$stage/THIRD_PARTY_NOTICES.md" "$stage/third_party" "$app/Contents/Resources/"
+  mv "$stage/assets" "$stage/README.md" "$stage/THIRD_PARTY_NOTICES.md" "$stage/LICENSE" "$stage/NOTICE" "$stage/ASSETS-LICENSE.md" "$stage/third_party" "$app/Contents/Resources/"
   rm -rf "$stage"
   if [ -f "$icon" ]; then
     cp "$icon" "$app/Contents/Resources/"
