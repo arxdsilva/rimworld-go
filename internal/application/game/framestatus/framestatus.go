@@ -32,13 +32,14 @@ const (
 
 // Of is frame fr's one-line status: incoming is its material on the way,
 // free the material's unreserved stock, compIncoming the components on
-// the way and builder the colonist building it ("" when none is).
-func Of(fr construction.Frame, incoming, free, compIncoming int, builder string) string {
+// the way and builder the colonist building it ("" when none is); book
+// is the run's recipes (CraftHint).
+func Of(fr construction.Frame, incoming, free, compIncoming int, builder string, book recipe.Book) string {
 	switch {
 	case fr.Reinstall != 0:
 		return fmt.Sprintf(Moving, construction.DefOf(fr.Kind).Name)
 	case !fr.Ready() && fr.Wood+incoming < fr.Need && free <= 0:
-		return fmt.Sprintf(NoStock, fr.Stuff.String()) + CraftHint(fr.Stuff)
+		return fmt.Sprintf(NoStock, fr.Stuff.String()) + CraftHint(fr.Stuff, book)
 	case fr.Wood >= fr.Need && fr.Comp < fr.CompNeed && compIncoming > 0:
 		return CompsWay
 	case fr.Wood >= fr.Need && fr.Comp < fr.CompNeed:
@@ -58,8 +59,8 @@ func Of(fr construction.Frame, incoming, free, compIncoming int, builder string)
 // CraftHint tells where a crafted material is made (": sew one at a
 // tailoring bench"), from the first offered recipe whose output it is;
 // "" for gathered materials.
-func CraftHint(k item.Kind) string {
-	for _, d := range recipe.All() {
+func CraftHint(k item.Kind, book recipe.Book) string {
+	for _, d := range book.All() {
 		if d.Output != k || d.Legacy || d.Name == "" || d.OutQty <= 0 {
 			continue
 		}

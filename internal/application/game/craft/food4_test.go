@@ -105,7 +105,7 @@ func TestBatchBillCooksFour(t *testing.T) {
 	t.Parallel()
 	f, c := stove(recipe.CookSimpleMealBulk)
 	f.put(50, item.Stack{Kind: item.Potatoes, Qty: 45, X: 1, Y: 1})
-	if d := recipe.DefOf(recipe.CookSimpleMealBulk); d.Work != 4*recipe.DefOf(recipe.SimpleMeal).Work || d.OutQty != recipe.BatchSize {
+	if d := recipe.Core().DefOf(recipe.CookSimpleMealBulk); d.Work != 4*recipe.Core().DefOf(recipe.SimpleMeal).Work || d.OutQty != recipe.BatchSize {
 		t.Fatalf("bulk def %+v", d)
 	}
 	if j := runBill(t, f, c, cookOnly, 1000); j.State != job.Complete || f.meals != 4 || f.Stock(item.Potatoes) != 5 {
@@ -147,14 +147,14 @@ func TestStoveBurnsWood(t *testing.T) {
 	}
 	f.fuel[1] = 10
 	j := runBill(t, f, c, cookOnly, 400)
-	if j.State != job.Fail || f.burnt == 0 || f.burnt >= recipe.DefOf(recipe.SimpleMeal).Work {
+	if j.State != job.Fail || f.burnt == 0 || f.burnt >= recipe.Core().DefOf(recipe.SimpleMeal).Work {
 		t.Fatalf("burnt out: job %v burnt %d", j.State, f.burnt)
 	}
 	f.fuel[1] = 1 << 20
 	f.burnt = 0
 	f.jobs = map[entity.EntityID]job.Record{}
 	f.claims = map[entity.EntityID]entity.EntityID{}
-	if j := runBill(t, f, c, cookOnly, 400); j.State != job.Complete || f.burnt < recipe.DefOf(recipe.SimpleMeal).Work {
+	if j := runBill(t, f, c, cookOnly, 400); j.State != job.Complete || f.burnt < recipe.Core().DefOf(recipe.SimpleMeal).Work {
 		t.Fatalf("cooked: job %v burnt %d", j.State, f.burnt)
 	}
 	if !Fueled(construction.Stove) || BurnsWhileWorked(construction.ElectricStove) || BurnsWhileWorked(construction.Campfire) {

@@ -84,7 +84,7 @@ func TestForgeSmithsAndBurns(t *testing.T) {
 		t.Fatal("no mace forged")
 	}
 	burnt := full - g.fuel[forge]
-	work := recipe.DefOf(recipe.MakeMace).Work
+	work := recipe.Core().DefOf(recipe.MakeMace).Work
 	if want := work * TicksPerWood / craft.WorkPerWood; burnt < want/2 || burnt > want*2 {
 		t.Fatalf("burnt %d fuel ticks for %d work, want about %d", burnt, work, want)
 	}

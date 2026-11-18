@@ -13,14 +13,14 @@ func TestRecipesAndBills(t *testing.T) {
 	// the simple meal first, then PRD-4's fine, lavish, pemmican and
 	// survival meals, then FOOD-4's variants and batches
 	var outs []item.Kind
-	for _, d := range For(construction.Stove) {
+	for _, d := range Core().For(construction.Stove) {
 		outs = append(outs, d.Output)
 	}
 	if want := []item.Kind{item.Meal, item.FineMeal, item.LavishMeal, item.Pemmican, item.SurvivalMeal,
 		item.FineMeal, item.FineMeal, item.LavishMeal, item.LavishMeal, item.Meal, item.FineMeal, item.LavishMeal, item.SurvivalMeal, item.Pemmican}; !slices.Equal(outs, want) {
 		t.Fatalf("stove cooks %v, want %v", outs, want)
 	}
-	meal := DefOf(SimpleMeal)
+	meal := Core().DefOf(SimpleMeal)
 	if !meal.Input.Accepts(item.Berries) || !meal.Input.Accepts(item.Meat) || meal.Input.Accepts(item.Meal) {
 		t.Fatal("meals take any raw food")
 	}
@@ -41,7 +41,7 @@ func TestRecipesAndBills(t *testing.T) {
 
 func TestKnifeSpearRecipes(t *testing.T) {
 	t.Parallel()
-	k, s := DefOf(Knife), DefOf(Spear)
+	k, s := Core().DefOf(Knife), Core().DefOf(Spear)
 	if k.Bench != construction.Workbench || k.Input != (Input{Kind: item.GraniteBlocks, Qty: 3, Stuff: item.MadeFrom(item.Knife)}) || k.Output != item.Knife || k.OutQty != 1 {
 		t.Fatalf("knife recipe = %+v", k)
 	}
@@ -52,7 +52,7 @@ func TestKnifeSpearRecipes(t *testing.T) {
 		t.Fatalf("a spear takes longer than a knife: %d vs %d", s.Work, k.Work)
 	}
 	seen := map[item.Kind]bool{}
-	for _, d := range For(construction.Workbench) {
+	for _, d := range Core().For(construction.Workbench) {
 		seen[d.Output] = true
 	}
 	if !seen[item.Knife] || !seen[item.Spear] {
@@ -62,17 +62,17 @@ func TestKnifeSpearRecipes(t *testing.T) {
 
 func TestCremateBurnsAHumanCorpseOnAPyre(t *testing.T) {
 	t.Parallel()
-	d := DefOf(Cremate)
+	d := Core().DefOf(Cremate)
 	if d.Bench != construction.Pyre || !d.Input.Accepts(item.CorpseHuman) || d.Input.Qty != 1 {
 		t.Fatalf("cremate: %+v", d)
 	}
 	if d.Input.Accepts(item.CorpseAnimal) || d.OutQty != 0 || d.Extra != item.Wood || d.ExtraQty != 2 || d.Work != 300 {
 		t.Fatalf("cremate burns one body with 2 wood, makes nothing: %+v", d)
 	}
-	if len(For(construction.Pyre)) != 1 {
+	if len(Core().For(construction.Pyre)) != 1 {
 		t.Fatal("a pyre only cremates")
 	}
-	for _, r := range For(construction.ButcherTable) {
+	for _, r := range Core().For(construction.ButcherTable) {
 		if r.Input.Accepts(item.CorpseHuman) != (r.ID == ButcherHuman) {
 			t.Fatal("human corpses are butchered only by Butcher human (FOOD-3)")
 		}

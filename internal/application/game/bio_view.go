@@ -4,7 +4,6 @@ import (
 	"rimworld-go/internal/application/game/dossierview"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/body"
@@ -133,7 +132,7 @@ func workTypeOfJob(g *Game, j job.Record) int {
 		return dossierview.WorkTypeOf(j.Kind)
 	}
 	if bills := g.craft.Bills.Of(j.Dest); j.BillIndex >= 0 && j.BillIndex < len(bills) {
-		return int(recipe.DefOf(bills[j.BillIndex].Recipe).Skill)
+		return int(g.craft.Bills.Book().DefOf(bills[j.BillIndex].Recipe).Skill)
 	}
 	return dossierview.NoneID
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/recipe"
 	proj "rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -33,6 +34,9 @@ type Lab struct {
 	rateNow, rateWas int64
 	memo             memo
 	prereqs          [][]int // View.Prereqs per project, built once
+	// Recipes is the run's recipes, which name the recipe unlocks
+	// (PLG-025; zero: core).
+	Recipes recipe.Book
 }
 
 // New is an empty lab on host h (nothing researched).
@@ -162,7 +166,7 @@ func (l *Lab) finish(x, y int) {
 	d := proj.DefOf(l.Cur)
 	text := d.Desc
 	if len(d.Unlocks) > 0 {
-		text += "\n\nUnlocked: " + strings.Join(UnlockLabels(d), ", ") + "."
+		text += "\n\nUnlocked: " + strings.Join(UnlockLabels(d, l.Recipes), ", ") + "."
 	}
 	l.h.Letter("Research complete: "+d.Label, text, x, y)
 	l.Set, l.Carry = false, 0

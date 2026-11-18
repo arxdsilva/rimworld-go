@@ -17,10 +17,10 @@ func (b *Bills) applySetting(bid entity.EntityID, bills []recipe.Bill, c command
 	bl := bills[c.Index]
 	switch c.Kind {
 	case command.ConfigureBill:
-		bl = configured(bl, c)
+		bl = configured(bl, c, b.book.DefOf(bl.Recipe))
 	case command.SetBillIngredient:
 		k := item.Kind(c.Stuff)
-		if !recipe.DefOf(bl.Recipe).Accepts(k) {
+		if !b.book.DefOf(bl.Recipe).Accepts(k) {
 			return
 		}
 		bl = bl.SetAllowed(k, c.Enabled)
@@ -37,8 +37,8 @@ func (b *Bills) applySetting(bid entity.EntityID, bills []recipe.Bill, c command
 // configured is bill bl with ConfigureBill c's settings, each brought
 // into range: an unknown store mode is the best stockpile, the radius
 // and resume level are at least 0, the skill range lies in 0..20 with
-// its ends in order.
-func configured(bl recipe.Bill, c command.Command) recipe.Bill {
+// its ends in order. d is the bill's recipe.
+func configured(bl recipe.Bill, c command.Command, d recipe.Def) recipe.Bill {
 	bl.Store = recipe.StoreMode(c.Store)
 	if !bl.Store.Valid() {
 		bl.Store = recipe.BestStockpile
@@ -51,7 +51,7 @@ func configured(bl recipe.Bill, c command.Command) recipe.Bill {
 	}
 	bl.Worker = entity.EntityID(c.Worker)
 	bl.UnpauseAt = max(0, c.UnpauseAt)
-	return bl.PinStuff(recipe.DefOf(bl.Recipe), item.Kind(c.Stuff)) // PRD-2: 0 or a kind it doesn't take unpins
+	return bl.PinStuff(d, item.Kind(c.Stuff)) // PRD-2: 0 or a kind it doesn't take unpins
 }
 
 // reorder moves bill from to place to (clamped) in bench bid's bills, and

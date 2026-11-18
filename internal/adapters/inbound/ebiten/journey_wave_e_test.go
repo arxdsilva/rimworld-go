@@ -168,7 +168,7 @@ func TestJourneyCraftFineMeal(t *testing.T) {
 	j.g.FuelCampfire(10, 5) // FOOD-4: the stove burns wood
 	var def recipe.Def
 	found := false
-	for _, d := range recipe.For(construction.Stove) {
+	for _, d := range recipe.Core().For(construction.Stove) {
 		if d.Output == item.FineMeal && !found { // the plain fine meal, not FOOD-4's variants or batch
 			def, found = d, true
 		}

@@ -15,7 +15,7 @@ func TestWaveECatalogue(t *testing.T) {
 	t.Parallel()
 	made := map[item.Kind]construction.Kind{}
 	for id := CookFineMeal; id < numRecipes; id++ {
-		d := DefOf(id)
+		d := Core().DefOf(id)
 		if d.ID != id || d.Name == "" || d.Label == "" || d.Work <= 0 || d.Bench == 0 {
 			t.Errorf("recipe %d: %+v", id, d)
 		}
@@ -58,7 +58,7 @@ func TestWaveECatalogue(t *testing.T) {
 			continue
 		}
 		found := false
-		for _, d := range All() {
+		for _, d := range Core().All() {
 			found = found || d.Output == k
 		}
 		if !found {
@@ -71,7 +71,7 @@ func TestWaveECatalogue(t *testing.T) {
 // animal products; kibble yields 50 at the table and 35 at the spot.
 func TestMealInputs(t *testing.T) {
 	t.Parallel()
-	fine := DefOf(CookFineMeal)
+	fine := Core().DefOf(CookFineMeal)
 	veg, meat := fine.Inputs[0], fine.Inputs[1]
 	if !veg.Accepts(item.Corn) || veg.Accepts(item.Meat) || veg.Accepts(item.Egg) || !meat.Accepts(item.Meat) ||
 		!meat.Accepts(item.Milk) || meat.Accepts(item.Corn) || veg.Accepts(item.Meal) {
@@ -80,13 +80,13 @@ func TestMealInputs(t *testing.T) {
 	if veg.Label() != "0.25 nutrition of plant food" || meat.Label() != "0.25 nutrition of meat or animal product" || fine.MinSkill != 6 || fine.Work != 180 {
 		t.Fatalf("fine meal: %s, %s, skill %d, work %d", veg.Label(), meat.Label(), fine.MinSkill, fine.Work)
 	}
-	if DefOf(MakeKibble).OutQty != 50 || DefOf(MakeKibbleSpot).OutQty != 35 || !DefOf(MakeKibbleSpot).At(construction.ButcherSpot) {
+	if Core().DefOf(MakeKibble).OutQty != 50 || Core().DefOf(MakeKibbleSpot).OutQty != 35 || !Core().DefOf(MakeKibbleSpot).At(construction.ButcherSpot) {
 		t.Fatal("kibble yields")
 	}
 	if !Cooked(item.FineMeal) || !Cooked(item.Meal) || Cooked(item.Pemmican) || Cooked(item.Kibble) {
 		t.Fatal("cooked meals carry the cook's poison roll")
 	}
-	fill := DefOf(FillBarrel)
+	fill := Core().DefOf(FillBarrel)
 	if !fill.Ferment || fill.Input.Kind != item.Wort || fill.Input.Take(40) != BarrelWort || fill.Output != item.Beer {
 		t.Fatalf("fill barrel %+v", fill)
 	}
@@ -97,7 +97,7 @@ func TestMealInputs(t *testing.T) {
 // takes no apparel.
 func TestSmeltApparelYield(t *testing.T) {
 	t.Parallel()
-	in := DefOf(SmeltApparel).Input
+	in := Core().DefOf(SmeltApparel).Input
 	vest := item.Stack{Kind: item.FlakVest, Qty: 1}
 	if !in.AcceptsStack(vest) || SmeltYield(vest) != 1 || in.Label() != "1 metal apparel" {
 		t.Fatalf("flak vest smelts to %d (%s)", SmeltYield(vest), in.Label())
@@ -106,7 +106,7 @@ func TestSmeltApparelYield(t *testing.T) {
 	if in.AcceptsStack(wooden) || in.AcceptsStack(item.Stack{Kind: item.Parka, Qty: 1}) {
 		t.Fatal("no steel, nothing to smelt")
 	}
-	if DefOf(SmeltWeapon).Input.Accepts(item.FlakVest) || in.Accepts(item.Mace) {
+	if Core().DefOf(SmeltWeapon).Input.Accepts(item.FlakVest) || in.Accepts(item.Mace) {
 		t.Fatal("weapons and apparel keep their own bills")
 	}
 }
@@ -116,7 +116,7 @@ func TestSmeltApparelYield(t *testing.T) {
 // butchering never takes one, nor shredding an animal carcass.
 func TestShredMechWreck(t *testing.T) {
 	t.Parallel()
-	shred, butcher := DefOf(ShredMech), DefOf(ButcherAnimal)
+	shred, butcher := Core().DefOf(ShredMech), Core().DefOf(ButcherAnimal)
 	wreck := item.Stack{Kind: item.CorpseAnimal, Qty: 1, Animal: uint8(animal.Bulwark)}
 	deer := item.Stack{Kind: item.CorpseAnimal, Qty: 1, Animal: uint8(animal.Deer)}
 	if !shred.Input.AcceptsStack(wreck) || shred.Input.AcceptsStack(deer) || butcher.Input.AcceptsStack(wreck) ||

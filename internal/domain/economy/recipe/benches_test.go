@@ -38,15 +38,15 @@ func TestBenchMapping(t *testing.T) {
 		{construction.BiofuelRefinery, nil, []ID{SimpleMeal}},
 	}
 	for _, tc := range cases {
-		got := ids(For(tc.bench))
+		got := ids(Core().For(tc.bench))
 		for _, id := range tc.has {
 			if !slices.Contains(got, id) {
-				t.Errorf("%s does not run %s", tc.bench, DefOf(id).Name)
+				t.Errorf("%s does not run %s", tc.bench, Core().DefOf(id).Name)
 			}
 		}
 		for _, id := range tc.not {
 			if slices.Contains(got, id) {
-				t.Errorf("%s runs %s", tc.bench, DefOf(id).Name)
+				t.Errorf("%s runs %s", tc.bench, Core().DefOf(id).Name)
 			}
 		}
 	}
@@ -61,20 +61,20 @@ func TestBenchMapping(t *testing.T) {
 // material count.
 func TestNewRecipes(t *testing.T) {
 	t.Parallel()
-	m := DefOf(MakeMace)
+	m := Core().DefOf(MakeMace)
 	if !m.Stuffed() || m.Input.Kind != item.Steel || !m.Input.Accepts(item.Wood) || m.Input.Accepts(item.GraniteBlocks) {
 		t.Fatalf("mace %+v", m.Input)
 	}
-	r := DefOf(MakeRevolver)
+	r := Core().DefOf(MakeRevolver)
 	if r.InputsLabel() != "3 steel + 2 components" || r.Output != item.Revolver {
 		t.Fatalf("revolver %q", r.InputsLabel())
 	}
-	s := DefOf(SculptGrand)
+	s := Core().DefOf(SculptGrand)
 	if s.Builds != construction.GrandSculpture || s.Input.Qty != construction.DefOf(construction.GrandSculpture).Wood ||
 		!s.Input.Accepts(item.MarbleBlocks) || !s.Input.Accepts(item.Silver) || s.Input.Accepts(item.Cloth) || !s.Stuffed() {
 		t.Fatalf("grand sculpture %+v", s)
 	}
-	if DefOf(MakeShortBow).Also == nil || DefOf(MakePila).Also != nil {
+	if Core().DefOf(MakeShortBow).Also == nil || Core().DefOf(MakePila).Also != nil {
 		t.Fatal("bows at the spot also at the smithy; the pila only at the smithy")
 	}
 }
@@ -102,7 +102,7 @@ func TestSmeltYield(t *testing.T) {
 			t.Errorf("%s/%s: %d, want %d", tc.st.Kind, tc.st.Stuff, got, tc.want)
 		}
 	}
-	in := DefOf(SmeltWeapon).Input
+	in := Core().DefOf(SmeltWeapon).Input
 	if !in.Accepts(item.Revolver) || !in.Accepts(item.Club) || in.Accepts(item.Rifle) || in.Accepts(item.Steel) {
 		t.Fatal("smeltable kinds")
 	}

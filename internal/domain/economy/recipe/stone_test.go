@@ -24,7 +24,7 @@ func TestCutRecipes(t *testing.T) {
 		{CutMarble, geology.Marble, "cut_marble", "Cut marble blocks"},
 	}
 	for _, tc := range tests {
-		d := DefOf(tc.id)
+		d := Core().DefOf(tc.id)
 		if d.ID != tc.id || d.Name != tc.name || d.Label != tc.label {
 			t.Errorf("%v: id/name/label = %v/%q/%q", tc.stone, d.ID, d.Name, d.Label)
 		}
@@ -44,7 +44,7 @@ func TestCutRecipes(t *testing.T) {
 	if CutYield != 10 {
 		t.Fatalf("CutYield = %d", CutYield)
 	}
-	if got := For(construction.StonecutterTable); len(got) != len(tests) {
+	if got := Core().For(construction.StonecutterTable); len(got) != len(tests) {
 		t.Fatalf("stonecutter runs %d recipes, want %d", len(got), len(tests))
 	}
 }
@@ -54,7 +54,7 @@ func TestCutRecipes(t *testing.T) {
 // and the legacy stone kind never do.
 func TestKnifeAcceptsAnyBlocks(t *testing.T) {
 	t.Parallel()
-	in := DefOf(Knife).Input
+	in := Core().DefOf(Knife).Input
 	for _, k := range item.StoneBlocks() {
 		if !in.Accepts(k) || !in.AcceptsStack(item.Stack{Kind: k, Qty: 5}) {
 			t.Errorf("knife rejects %v", k)

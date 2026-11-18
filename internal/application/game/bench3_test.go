@@ -133,7 +133,7 @@ func TestPawnWorksWikiBenchFromMiddleFront(t *testing.T) {
 
 // plainRecipe is a bill of k whose inputs inputKind can stand in for.
 func plainRecipe(k construction.Kind) (recipe.Def, bool) {
-	for _, r := range recipe.For(k) {
+	for _, r := range recipe.Core().For(k) {
 		if r.Legacy || r.BySpecies || r.Salvage {
 			continue
 		}
@@ -164,7 +164,7 @@ func inputKind(in recipe.Input) item.Kind {
 	case in.AnyMeat:
 		return item.Meat
 	case in.Smelt:
-		for _, d := range recipe.All() {
+		for _, d := range recipe.Core().All() {
 			if d.Output.IsWeapon() && recipe.SmeltYield(item.Stack{Kind: d.Output, Qty: 1}) > 0 {
 				return d.Output
 			}

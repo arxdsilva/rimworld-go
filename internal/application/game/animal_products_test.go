@@ -203,7 +203,7 @@ func TestWoolParkaRecipe(t *testing.T) {
 		qty int
 		out item.Kind
 	}{recipe.KnitWoolParka: {16, item.WoolParka}, recipe.WeaveWoolCarpet: {8, item.CarpetWool}} {
-		d := recipe.DefOf(id)
+		d := recipe.Core().DefOf(id)
 		if d.Bench != construction.TailoringBench || d.Input.Kind != item.Wool || d.Input.Qty != want.qty || d.Output != want.out {
 			t.Fatalf("recipe %v = %+v", id, d)
 		}

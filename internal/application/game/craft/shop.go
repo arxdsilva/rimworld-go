@@ -42,7 +42,7 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 		var spot [2]int // the work spot, worked out once a bill wants doing
 		spotOK, unreach := false, false
 		for i, bl := range s.bills.list[bid] {
-			d := recipe.DefOf(bl.Recipe)
+			d := s.bills.book.DefOf(bl.Recipe)
 			if !m.Enabled(d.Skill) || !s.workerOK(id, bl, d) {
 				continue
 			}
@@ -246,7 +246,7 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 		return
 	}
 	bl := bills[j.BillIndex]
-	d := recipe.DefOf(bl.Recipe)
+	d := s.bills.book.DefOf(bl.Recipe)
 	switch j.Kind {
 	case job.HaulIngredients:
 		s.gather(id, j, b)

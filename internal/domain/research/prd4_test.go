@@ -28,12 +28,12 @@ func TestPRD4Gates(t *testing.T) {
 	}
 	for _, id := range []recipe.ID{recipe.CookFineMeal, recipe.CookLavishMeal, recipe.MakeKibble, recipe.BrewWort,
 		recipe.FillBarrel, recipe.RefineChemfuelWood, recipe.MakeFragGrenades, recipe.SmeltApparel} {
-		if p, ok := pr.Locks("recipe:" + recipe.DefOf(id).Name); ok {
-			t.Errorf("%s needs no research beyond its bench, locked by %v", recipe.DefOf(id).Name, p)
+		if p, ok := pr.Locks("recipe:" + recipe.Core().DefOf(id).Name); ok {
+			t.Errorf("%s needs no research beyond its bench, locked by %v", recipe.Core().DefOf(id).Name, p)
 		}
 	}
 	names := map[string]bool{}
-	for _, d := range recipe.All() {
+	for _, d := range recipe.Core().All() {
 		names["recipe:"+d.Name] = true
 	}
 	for _, d := range All() {

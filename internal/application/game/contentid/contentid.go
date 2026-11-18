@@ -31,18 +31,25 @@ const Core = "core"
 
 // Current is the build's own content with no plugin: its fingerprint and
 // the plugin list ["core"].
-func Current() savefmt.Content { return Of([]string{Core}, backstory.Core()) }
+func Current() savefmt.Content { return Of([]string{Core}, Books{}) }
+
+// Books are the frozen books of the moddable classes a run plays with
+// (the zero value is core's).
+type Books struct {
+	Backstories backstory.Book
+	Recipes     recipe.Book
+}
 
 // Of is a run's content (PLG-043, PLG-050): plugins is the load order
 // (core first) and the books are the frozen ones the run plays with, so
 // the fingerprint covers what plugins added and patched. It walks every
 // registry, so the composition root calls it once.
-func Of(plugins []string, backstories backstory.Book) savefmt.Content {
-	return savefmt.Content{Hash: fingerprintOf(registries(backstories)), Plugins: append([]string(nil), plugins...)}
+func Of(plugins []string, books Books) savefmt.Content {
+	return savefmt.Content{Hash: fingerprintOf(registries(books)), Plugins: append([]string(nil), plugins...)}
 }
 
 // Fingerprint is an FNV-64a hash of the build's own definitions.
-func Fingerprint() uint64 { return fingerprintOf(registries(backstory.Core())) }
+func Fingerprint() uint64 { return fingerprintOf(registries(Books{})) }
 
 // list is one registry: its name and its definitions.
 type list struct {
@@ -64,18 +71,18 @@ func listOf[T any](name string, defs []T, key func(T) string) list {
 	return l
 }
 
-func registries(backstories backstory.Book) []list {
+func registries(books Books) []list {
 	sprint := func(v any) string { return fmt.Sprint(v) }
 	return []list{
 		listOf("research", research.All(), func(d research.Def) string { return sprint(d.Project) }),
-		listOf("recipe", recipe.All(), func(d recipe.Def) string { return sprint(d.ID) }),
+		listOf("recipe", books.Recipes.All(), func(d recipe.Def) string { return sprint(d.ID) }),
 		listOf("construction", construction.All(), func(d construction.Def) string { return sprint(d.Kind) }),
 		listOf("biome", biome.All(), func(d biome.Def) string { return d.Key }),
 		listOf("faction", faction.All(), func(d faction.Def) string { return d.Key }),
 		listOf("incident", incident.All(), func(d incident.Def) string { return d.Key }),
 		listOf("trait", trait.All(), func(d trait.Def) string { return d.Key }),
 		listOf("drug", drug.All(), func(d drug.Def) string { return sprint(d.Kind) }),
-		listOf("backstory", backstories.All(), func(d backstory.Def) string { return sprint(d.ID) }),
+		listOf("backstory", books.Backstories.All(), func(d backstory.Def) string { return sprint(d.ID) }),
 		listOf("quest", quest.Defs(), func(d quest.Def) string { return sprint(d.Kind) }),
 		listOf("animal", animalDefs(), func(d animalDef) string { return d.Species.String() }),
 	}

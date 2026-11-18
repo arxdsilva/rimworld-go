@@ -30,9 +30,9 @@ func TestFabricateAndRefineRecipes(t *testing.T) {
 		{recipe.RefineMedicine, "refine_medicine", recipe.Input{Kind: item.HerbalMedicine, Qty: 2}, item.IndustrialMedicine,
 			800, work.Doctor, skill.Medicine, 4},
 	}
-	bench := recipe.For(construction.Workbench)
+	bench := recipe.Core().For(construction.Workbench)
 	for _, tc := range tests {
-		d := recipe.DefOf(tc.id)
+		d := recipe.Core().DefOf(tc.id)
 		if d.ID != tc.id || d.Name != tc.name || d.Bench != construction.Workbench || d.Input != tc.in ||
 			d.Output != tc.out || d.OutQty != 1 || d.Work != tc.work || d.Skill != tc.wt || d.Learn != tc.learn ||
 			d.MinSkill != tc.minSkill || d.Legacy {
@@ -71,7 +71,7 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 		// FOOD-4: the variants and batches keep their meal's level.
 		recipe.CookFineMealVeg: 6, recipe.CookFineMealMeat: 6, recipe.CookLavishMealVeg: 8, recipe.CookLavishMealMeat: 8,
 		recipe.CookFineMealBulk: 6, recipe.CookLavishMealBulk: 8, recipe.CookSurvivalMealBulk: 8}
-	for _, d := range recipe.All() {
+	for _, d := range recipe.Core().All() {
 		if d.Skill == work.Haul && d.Ferment {
 			continue // FOOD-4: haulers fill the barrel, which trains no skill
 		}
@@ -86,7 +86,7 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 			t.Errorf("%s: min skill %d, want %d", d.Name, d.MinSkill, minSkill[d.ID])
 		}
 	}
-	if recipe.DefOf(recipe.Cremate).Learn != skill.Crafting || recipe.DefOf(recipe.ButcherAnimal).Learn != skill.Cooking {
+	if recipe.Core().DefOf(recipe.Cremate).Learn != skill.Crafting || recipe.Core().DefOf(recipe.ButcherAnimal).Learn != skill.Cooking {
 		t.Fatal("cremate is crafting, butchering is cooking")
 	}
 }
@@ -97,7 +97,7 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 func TestFabricateNeedsSkillAndResearch(t *testing.T) {
 	t.Parallel()
 	var pr research.Progress
-	key := "recipe:" + recipe.DefOf(recipe.FabricateComponent).Name
+	key := "recipe:" + recipe.Core().DefOf(recipe.FabricateComponent).Name
 	if p, ok := pr.Locks(key); !ok || p != research.Fabrication {
 		t.Fatalf("fabricate locked by %v %v", p, ok)
 	}
@@ -118,11 +118,11 @@ func TestFabricateNeedsSkillAndResearch(t *testing.T) {
 			t.Errorf("%s is behind %v %v, want %v", b, got, ok, p)
 		}
 	}
-	refine := "recipe:" + recipe.DefOf(recipe.RefineMedicine).Name
+	refine := "recipe:" + recipe.Core().DefOf(recipe.RefineMedicine).Name
 	if p, ok := pr.Locks(refine); !ok || p != research.Pharmacology {
 		t.Fatalf("refine locked by %v %v", p, ok)
 	}
-	if recipe.DefOf(recipe.FabricateComponent).MinSkill != 6 || recipe.DefOf(recipe.RefineMedicine).MinSkill != 4 {
+	if recipe.Core().DefOf(recipe.FabricateComponent).MinSkill != 6 || recipe.Core().DefOf(recipe.RefineMedicine).MinSkill != 4 {
 		t.Fatal("minimum skills")
 	}
 }
@@ -141,7 +141,7 @@ func TestResearchUnlockKeysResolve(t *testing.T) {
 			case "crop":
 				_, ok = plant.Parse(name)
 			case "recipe":
-				for _, r := range recipe.All() {
+				for _, r := range recipe.Core().All() {
 					ok = ok || r.Name == name && !r.Legacy
 				}
 			}
@@ -162,11 +162,11 @@ func TestInputTakeModesAndUnknown(t *testing.T) {
 	if !in.AcceptsStack(item.Stack{Kind: item.Steel}) || in.AcceptsStack(item.Stack{Kind: item.Wood}) {
 		t.Fatal("steel input takes steel stacks")
 	}
-	dry := recipe.DefOf(recipe.DryFood).Input
+	dry := recipe.Core().DefOf(recipe.DryFood).Input
 	if !dry.AcceptsStack(item.Stack{Kind: item.Meat, Qty: 3}) || dry.AcceptsStack(item.Stack{Kind: item.Meat, Qty: 3, Dried: true}) {
 		t.Fatal("dry recipes skip dried stacks")
 	}
-	if recipe.DefOf(recipe.ID(250)).Name != "" {
+	if recipe.Core().DefOf(recipe.ID(250)).Name != "" {
 		t.Fatal("unknown recipe")
 	}
 	for m, want := range map[recipe.Mode]string{recipe.DoCount: "do", recipe.Forever: "forever", recipe.UntilHave: "until you have"} {

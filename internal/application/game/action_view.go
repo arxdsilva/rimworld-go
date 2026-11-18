@@ -10,7 +10,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 )
@@ -147,7 +146,7 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		return j.Count // set from the tile's filth (or snow) when the job starts
 	case job.Bill:
 		if bills := g.craft.Bills.Of(j.Dest); j.BillIndex < len(bills) {
-			return recipe.DefOf(bills[j.BillIndex].Recipe).Work
+			return g.craft.Bills.Book().DefOf(bills[j.BillIndex].Recipe).Work
 		}
 	}
 	return 0

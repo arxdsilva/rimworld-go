@@ -35,7 +35,7 @@ func TestMealRecipesAreTheWikis(t *testing.T) {
 		{CookPemmicanBulk, 20, 20, item.Pemmican, 64, 1120, 0},
 	}
 	for _, c := range cases {
-		d := DefOf(c.id)
+		d := Core().DefOf(c.id)
 		var ins []Input
 		ins = d.AppendInputs(ins)
 		ok := d.Output == c.out && d.OutQty == c.qty && d.Work == c.work && d.MinSkill == c.skill && ins[0].Qty == c.veg
@@ -48,14 +48,14 @@ func TestMealRecipesAreTheWikis(t *testing.T) {
 			t.Errorf("%s: %+v", d.Name, d)
 		}
 	}
-	if !DefOf(CookFineMealVeg).Accepts(item.Rice) || DefOf(CookFineMealVeg).Accepts(item.Meat) ||
-		!DefOf(CookLavishMealMeat).Accepts(item.Egg) || DefOf(CookLavishMealMeat).Accepts(item.Corn) {
+	if !Core().DefOf(CookFineMealVeg).Accepts(item.Rice) || Core().DefOf(CookFineMealVeg).Accepts(item.Meat) ||
+		!Core().DefOf(CookLavishMealMeat).Accepts(item.Egg) || Core().DefOf(CookLavishMealMeat).Accepts(item.Corn) {
 		t.Fatal("the variants take one side")
 	}
-	if !DefOf(MakeKibble).Accepts(item.Hay) || DefOf(CookFineMeal).Accepts(item.Hay) {
+	if !Core().DefOf(MakeKibble).Accepts(item.Hay) || Core().DefOf(CookFineMeal).Accepts(item.Hay) {
 		t.Fatal("kibble takes hay; meals don't")
 	}
-	if DefOf(RefineChemfuelFood).Input.Qty != 70 {
+	if Core().DefOf(RefineChemfuelFood).Input.Qty != 70 {
 		t.Fatal("chemfuel takes 3.5 nutrition")
 	}
 }
@@ -65,7 +65,7 @@ func TestMealRecipesAreTheWikis(t *testing.T) {
 // items.
 func TestFoodInputsCountNutrition(t *testing.T) {
 	t.Parallel()
-	meal := DefOf(SimpleMeal).Input
+	meal := Core().DefOf(SimpleMeal).Input
 	egg, potato := item.Stack{Kind: item.Egg, Qty: 3}, item.Stack{Kind: item.Potatoes, Qty: 9}
 	if meal.Weight(egg) != 5 || meal.Weight(potato) != 1 || meal.TakeFrom(egg) != 2 || meal.TakeFrom(potato) != 10 {
 		t.Fatalf("weights %d %d takes %d %d", meal.Weight(egg), meal.Weight(potato), meal.TakeFrom(egg), meal.TakeFrom(potato))
@@ -73,14 +73,14 @@ func TestFoodInputsCountNutrition(t *testing.T) {
 	if !meal.Enough(egg, 2) || meal.Enough(egg, 1) || meal.Enough(potato, 9) || meal.Items(egg, 7) != 2 {
 		t.Fatal("enough")
 	}
-	wood := DefOf(Club).Input
+	wood := Core().DefOf(Club).Input
 	if wood.ByNutrition() || wood.Weight(item.Stack{Kind: item.Wood}) != 1 || wood.TakeFrom(item.Stack{Kind: item.Wood, Qty: 50}) != wood.Qty {
 		t.Fatal("plain inputs count items")
 	}
 	if l := meal.Label(); l != "0.5 nutrition of raw food" {
 		t.Fatalf("label %q", l)
 	}
-	if l := DefOf(MakeKibble).Inputs[0].Label(); l != "1 nutrition of plant food or hay" {
+	if l := Core().DefOf(MakeKibble).Inputs[0].Label(); l != "1 nutrition of plant food or hay" {
 		t.Fatalf("kibble label %q", l)
 	}
 }

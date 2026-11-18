@@ -26,11 +26,11 @@ import (
 
 func TestButcheringYieldsLeather(t *testing.T) {
 	t.Parallel()
-	d := recipe.DefOf(recipe.ButcherAnimal) // leather by species (SIM-019)
+	d := recipe.Core().DefOf(recipe.ButcherAnimal) // leather by species (SIM-019)
 	if d.Extra != item.Leather || !d.BySpecies || animal.DefOf(animal.Deer).Leather <= 0 {
 		t.Fatalf("butchering should give leather: %+v", d)
 	}
-	if recipe.DefOf(recipe.MakeParka).Input.Kind != item.Leather {
+	if recipe.Core().DefOf(recipe.MakeParka).Input.Kind != item.Leather {
 		t.Fatal("parkas are sewn from leather")
 	}
 }

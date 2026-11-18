@@ -145,11 +145,11 @@ const (
 	NoWorkerNone  = "no colonist has the skill"
 )
 
-// Recipes lists every recipe but the legacy ones (older saves' recipes,
-// upgraded on load).
-func Recipes() []RecipeView {
+// Recipes lists every recipe of book but the legacy ones (older saves'
+// recipes, upgraded on load).
+func Recipes(book recipe.Book) []RecipeView {
 	var out []RecipeView
-	for _, d := range recipe.All() {
+	for _, d := range book.All() {
 		if d.Legacy {
 			continue
 		}
@@ -176,7 +176,7 @@ func Recipes() []RecipeView {
 func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 	for i := range b.list[bid] {
 		bl, st := b.Line(bid, i)
-		d := recipe.DefOf(bl.Recipe)
+		d := b.book.DefOf(bl.Recipe)
 		v := BillView{
 			Recipe: d.Name, Label: d.Label, Mode: bl.Mode.String(), ModeID: uint8(bl.Mode),
 			Target: bl.Target, Done: bl.Done, Suspended: bl.Suspended, Status: st,

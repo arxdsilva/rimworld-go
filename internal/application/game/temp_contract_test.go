@@ -98,7 +98,7 @@ func TestTempContractGarments(t *testing.T) {
 			!slices.Contains(item.Apparel(), k) || !slices.Contains(scenario.ItemChoices(), k) {
 			t.Errorf("%s: slot %s value %d, not live", k, k.Slot(), k.Value())
 		}
-		if !slices.ContainsFunc(recipe.All(), func(r recipe.Def) bool { return r.Output == k && r.Bench == construction.TailoringBench }) {
+		if !slices.ContainsFunc(recipe.Core().All(), func(r recipe.Def) bool { return r.Output == k && r.Bench == construction.TailoringBench }) {
 			t.Errorf("no tailoring recipe makes %s", k)
 		}
 	}

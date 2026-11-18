@@ -22,12 +22,12 @@ func TestCarpetRecipes(t *testing.T) {
 		{SewClothCarpet, construction.TailoringBench, item.Cloth, 8, item.CarpetCloth},
 		{SewLeatherCarpet, construction.TailoringBench, item.Leather, 6, item.CarpetLeather},
 	} {
-		d := DefOf(tc.id)
+		d := Core().DefOf(tc.id)
 		if d.Bench != tc.bench || d.Input != (Input{Kind: tc.in, Qty: tc.qty}) || d.Output != tc.out || d.OutQty != 1 || d.Skill != work.Craft || d.Work <= 0 {
 			t.Fatalf("%s = %+v", d.Name, d)
 		}
 		found := false
-		for _, r := range For(tc.bench) {
+		for _, r := range Core().For(tc.bench) {
 			found = found || r.ID == tc.id
 		}
 		if !found {

@@ -47,8 +47,11 @@ type (
 	WornView           = craft.WornView // PRD-2: PawnView.Worn
 )
 
-// Recipes lists every recipe.
-func Recipes() []RecipeView { return craft.Recipes() }
+// Recipes lists every core recipe.
+func Recipes() []RecipeView { return craft.Recipes(recipe.Core()) }
+
+// RecipesOf lists the recipes of a run's content c (PLG-025).
+func RecipesOf(c Content) []RecipeView { return craft.Recipes(c.Recipes) }
 
 // stockOf is the colony's count of kind k.
 func (g *Game) stockOf(k item.Kind) int {

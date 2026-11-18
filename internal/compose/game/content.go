@@ -28,12 +28,12 @@ type runContent struct {
 
 // game is the books the simulation reads.
 func (c runContent) game() appgame.Content {
-	return appgame.Content{Backstories: c.catalog.Backstories}
+	return appgame.Content{Backstories: c.catalog.Backstories, Recipes: c.catalog.Recipes}
 }
 
 // save is the content a save header records: fingerprint and load order.
 func (c runContent) save() savefmt.Content {
-	return contentid.Of(c.catalog.IDs(), c.catalog.Backstories)
+	return contentid.Of(c.catalog.IDs(), contentid.Books{Backstories: c.catalog.Backstories, Recipes: c.catalog.Recipes})
 }
 
 // loadContent reads the plugin folders and builds the catalog for the

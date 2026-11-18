@@ -27,7 +27,7 @@ func TestJourneySmithyBillWithFuel(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}))
 	wdBuild(j, "wood-fired forge", 10, 5)
-	defs := recipe.For(construction.FueledSmithy)
+	defs := recipe.Core().For(construction.FueledSmithy)
 	if len(defs) == 0 {
 		t.Fatal("no recipe for the wood-fired forge yet (PRD-3)")
 	}

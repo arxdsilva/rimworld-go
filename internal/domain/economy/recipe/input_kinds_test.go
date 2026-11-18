@@ -11,7 +11,7 @@ import (
 // exactly the kinds the planner's per-stack test (AcceptsStack) takes.
 func TestInputKindsMatchPlanner(t *testing.T) {
 	t.Parallel()
-	for _, d := range All() {
+	for _, d := range Core().All() {
 		for _, in := range d.AppendInputs(nil) {
 			ks := in.Kinds()
 			if !slices.IsSorted(ks) {
@@ -27,7 +27,7 @@ func TestInputKindsMatchPlanner(t *testing.T) {
 			}
 		}
 	}
-	club := DefOf(Club).Input
+	club := Core().DefOf(Club).Input
 	if ks := club.Kinds(); !slices.Contains(ks, item.Wood) || !slices.Contains(ks, item.Steel) || slices.Contains(ks, item.Cloth) {
 		t.Fatalf("club kinds %v", ks)
 	}

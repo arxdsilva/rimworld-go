@@ -150,3 +150,28 @@ func TestBillLineStatus(t *testing.T) {
 		t.Errorf("have enough: %q", got)
 	}
 }
+
+// A plugin's recipe at a butcher table is offered there but never a new
+// table's default bill (PLG-025); every bill reads the run's book.
+func TestPluginRecipeNeverDefault(t *testing.T) {
+	t.Parallel()
+	core := recipe.Core()
+	d := core.DefOf(recipe.ButcherAnimal)
+	d.Name, d.BySpecies, d.Also = "p.render", false, nil
+	book := recipe.NewBook(append(append([]recipe.Def(nil), core.All()...), d), append(core.Keys(), "p.render"))
+	c := New(newFake())
+	c.Bills.UseBook(book)
+	c.Bills.Defaults(3, construction.ButcherTable)
+	plugin := recipe.ID(core.Len())
+	if l := book.For(construction.ButcherTable); l[len(l)-1].ID != plugin {
+		t.Fatal("the table does not run the plugin recipe")
+	}
+	for _, b := range c.Bills.Of(3) {
+		if b.Recipe == plugin {
+			t.Fatal("a plugin recipe became a default bill")
+		}
+	}
+	if c.Bills.Book().Key(plugin) != "p.render" {
+		t.Fatal("the bills do not read the run's book")
+	}
+}

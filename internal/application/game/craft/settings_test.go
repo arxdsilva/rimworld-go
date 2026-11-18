@@ -290,7 +290,7 @@ func TestGatherSeveralIngredientsOntoTheBench(t *testing.T) {
 	f.put(50, item.Stack{Kind: item.Steel, Qty: 5, X: 5, Y: 7})
 	f.put(51, item.Stack{Kind: item.Wood, Qty: 3, X: 5, Y: 6})
 	f.put(52, item.Stack{Kind: item.Wood, Qty: 3, X: 6, Y: 6})
-	d := recipe.DefOf(recipe.Club)
+	d := recipe.Core().DefOf(recipe.Club)
 	d.Inputs = []recipe.Input{{Kind: item.Wood, Qty: 4}, {Kind: item.Steel, Qty: 2}}
 	bl := c.Bills.Of(1)[0]
 	rec, ok := c.Shop.plan(pawn, bl, d, [2]int{4, 5})
@@ -423,7 +423,7 @@ func TestBillViews(t *testing.T) {
 	if vs = c.Bills.AppendViews(nil, 1); vs[2].NoWorker != "" {
 		t.Fatalf("Bo has the skill now: %q", vs[2].NoWorker)
 	}
-	if rv := Recipes(); len(rv) == 0 || rv[0].Input != "0.5 nutrition of raw food" {
+	if rv := Recipes(recipe.Core()); len(rv) == 0 || rv[0].Input != "0.5 nutrition of raw food" {
 		t.Fatalf("recipes %+v", rv)
 	}
 }
@@ -470,7 +470,7 @@ func TestIngredientSearchEdges(t *testing.T) {
 	}
 
 	// two inputs taking the same kind fold onto one stack; one short fails
-	d := recipe.DefOf(recipe.Club)
+	d := recipe.Core().DefOf(recipe.Club)
 	d.Inputs = []recipe.Input{{Kind: item.Wood, Qty: 2}, {Kind: item.Wood, Qty: 1}}
 	f, c = clubBench(t, recipe.Bill{})
 	f.put(50, item.Stack{Kind: item.Wood, Qty: 5})

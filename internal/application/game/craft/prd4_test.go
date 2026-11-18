@@ -173,7 +173,7 @@ func TestSmeltApparelGivesSteelBack(t *testing.T) {
 	f.put(51, item.Stack{Kind: item.PlateArmor, Qty: 1, Stuff: item.Steel, X: 2, Y: 1})
 	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.SmeltApparel, Mode: recipe.DoCount, Target: 1}})
 	j := runBill(t, f, c, work.Mask(0).Set(work.Craft, true), 400)
-	want := recipe.DefOf(recipe.MakePlateArmor).Input.Qty * recipe.SmeltPct / 100
+	want := recipe.Core().DefOf(recipe.MakePlateArmor).Input.Qty * recipe.SmeltPct / 100
 	if j.State != job.Complete || f.Stock(item.Steel) != want || f.Stock(item.Parka) != 1 || f.Stock(item.PlateArmor) != 0 {
 		t.Fatalf("job %v steel %d (want %d) parka %d plate %d", j.State, f.Stock(item.Steel), want, f.Stock(item.Parka), f.Stock(item.PlateArmor))
 	}

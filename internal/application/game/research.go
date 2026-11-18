@@ -124,7 +124,7 @@ func (g *Game) cropLocked(s plant.Species) bool {
 }
 
 func (g *Game) recipeLocked(id recipe.ID) bool {
-	return g.lab.LockedBy("recipe:"+recipe.DefOf(id).Name) != ""
+	return g.lab.LockedBy("recipe:"+g.craft.Bills.Book().DefOf(id).Name) != ""
 }
 
 func (g *Game) doResearch(id entity.EntityID, j job.Record) {

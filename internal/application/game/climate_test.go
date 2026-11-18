@@ -106,7 +106,7 @@ func TestRottenCorpseIsNotButchered(t *testing.T) {
 		st.Rot = item.CorpseAnimal.ShelfTicks()
 		g.putStack(id, st)
 	}
-	if id, _ := g.ingredientFor(0, recipe.DefOf(recipe.ButcherAnimal).Input); id != 0 {
+	if id, _ := g.ingredientFor(0, recipe.Core().DefOf(recipe.ButcherAnimal).Input); id != 0 {
 		t.Fatal("rotten corpse offered as butchering ingredient")
 	}
 }

@@ -462,7 +462,7 @@ func (g *Game) canFetch(patient, doctor entity.EntityID, x, y int) bool {
 // makes implant k ("" when one is open, or none makes it).
 func (g *Game) implantResearch(k item.Kind) string {
 	locked := ""
-	for _, r := range recipe.All() {
+	for _, r := range g.craft.Bills.Book().All() {
 		if r.Output != k {
 			continue
 		}

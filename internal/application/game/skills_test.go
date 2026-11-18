@@ -833,7 +833,7 @@ func TestDossierFacts(t *testing.T) {
 	}
 	g.craft.Bills.Set(77, []recipe.Bill{{Recipe: recipe.CampfireMeal}})
 	g.jobs.Set(col, job.Record{Kind: job.Bill, State: job.Do, Dest: 77})
-	if c := card(t, g, col); c.WorkType != int(recipe.DefOf(recipe.CampfireMeal).Skill) {
+	if c := card(t, g, col); c.WorkType != int(recipe.Core().DefOf(recipe.CampfireMeal).Skill) {
 		t.Fatalf("bill work type %d", c.WorkType)
 	}
 	g.jobs.Set(col, job.Record{Kind: job.Bill, State: job.Do, Dest: 78})

@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/backstory"
 )
 
@@ -14,6 +15,7 @@ type Catalog struct {
 	Order       Order
 	Plugins     []Manifest // the loaded plugins in load order, core excluded
 	Backstories backstory.Book
+	Recipes     recipe.Book
 	Defs        []Def // every typed def after inheritance and patches
 }
 
@@ -50,6 +52,16 @@ func classes() []class {
 			b, probs := DecodeBackstories(defs)
 			if cat != nil {
 				cat.Backstories = b
+			}
+			return probs
+		},
+	}, {
+		name: RecipeClass,
+		core: func() []Def { return EncodeRecipes(recipe.Core()) },
+		decode: func(cat *Catalog, defs []Def) []Problem {
+			b, probs := DecodeRecipes(defs)
+			if cat != nil {
+				cat.Recipes = b
 			}
 			return probs
 		},

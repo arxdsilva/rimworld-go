@@ -54,7 +54,7 @@ func TestWaveDGates(t *testing.T) {
 func TestUnlockKeysExist(t *testing.T) {
 	t.Parallel()
 	recipes := map[string]bool{}
-	for _, d := range recipe.All() {
+	for _, d := range recipe.Core().All() {
 		recipes[d.Name] = true
 	}
 	for _, d := range All() {

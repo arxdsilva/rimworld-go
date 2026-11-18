@@ -42,6 +42,7 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/health"
@@ -93,6 +94,7 @@ type Config struct {
 // moddable class reads its book from here, never a package registry.
 type Content struct {
 	Backstories backstory.Book
+	Recipes     recipe.Book
 }
 
 // PawnView is a read-only snapshot of a single pawn.
@@ -1030,8 +1032,9 @@ func New(cfg Config) *Game {
 	g.prison = prison.New(newPrisonHost(g)) // prison_host.go
 	g.rest = rest.New(newRestHost(g))       // rest_host.go
 	g.lab = rlab.New(researchHost{g})       // research.go
-	g.lab.Prog = research.Complete()        // sandbox: everything known
 	g.sk.content = cfg.Content              // the run's books (skills.go, PLG-024)
+	g.craft.Bills.UseBook(cfg.Content.Recipes)
+	g.lab.Prog, g.lab.Recipes = research.Complete(), cfg.Content.Recipes // sandbox: everything known; the run's recipes (PLG-025)
 	return g
 }
 

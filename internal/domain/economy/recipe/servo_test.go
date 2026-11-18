@@ -20,7 +20,7 @@ func TestServoRecipesNeedResearch(t *testing.T) {
 		recipe.MakeSpinalBrace: item.SpinalBrace, recipe.MakePumpHeart: item.PumpHeart, recipe.MakeSynthStomach: item.SynthStomach}
 	var pr research.Progress
 	for id, out := range servo {
-		d := recipe.DefOf(id)
+		d := recipe.Core().DefOf(id)
 		if d.Output != out || d.OutQty != 1 || d.Bench != construction.Workbench || d.Input.Kind != item.Components ||
 			d.Input.Qty <= 0 || d.MinSkill != 8 {
 			t.Errorf("%s = %+v", d.Name, d)
@@ -29,7 +29,7 @@ func TestServoRecipesNeedResearch(t *testing.T) {
 			t.Errorf("%s locked by %v %v", d.Name, p, ok)
 		}
 	}
-	v := recipe.DefOf(recipe.MakeValveHeart)
+	v := recipe.Core().DefOf(recipe.MakeValveHeart)
 	if v.Output != item.ValveHeart || v.Input != (recipe.Input{Kind: item.Steel, Qty: 25}) || v.MinSkill != 5 {
 		t.Errorf("valve heart = %+v", v)
 	}
@@ -54,10 +54,10 @@ func TestServoRecipesNeedResearch(t *testing.T) {
 	if !pr.Available(research.ServoReplacements) || !pr.Add(research.ServoReplacements, d.Cost) {
 		t.Fatal("servo replacements researchable once both are done")
 	}
-	if _, ok := pr.Locks("recipe:" + recipe.DefOf(recipe.MakePumpHeart).Name); ok {
+	if _, ok := pr.Locks("recipe:" + recipe.Core().DefOf(recipe.MakePumpHeart).Name); ok {
 		t.Fatal("researched: the pump heart is unlocked")
 	}
-	for _, r := range recipe.All() {
+	for _, r := range recipe.Core().All() {
 		if r.Output == item.NanomedKit || r.Output.IsOrgan() {
 			t.Errorf("%s makes %v", r.Name, r.Output)
 		}

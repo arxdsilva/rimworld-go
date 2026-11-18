@@ -181,7 +181,7 @@ func fishCycle(t *testing.T, seed uint64) uint64 {
 	}
 
 	// cook-able: a stove's meal takes them
-	in := recipe.DefOf(recipe.SimpleMeal).Input
+	in := recipe.Core().DefOf(recipe.SimpleMeal).Input
 	if sid, st := g.ingredientFor(ada, in); sid == 0 || st.Kind != item.Fish {
 		t.Fatalf("a simple meal cannot use the catch: %d %+v", sid, st)
 	}

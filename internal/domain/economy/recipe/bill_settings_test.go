@@ -9,21 +9,21 @@ import (
 
 func TestDefInputs(t *testing.T) {
 	t.Parallel()
-	club := DefOf(Club)
+	club := Core().DefOf(Club)
 	if in := club.AppendInputs(nil); len(in) != 1 || in[0] != club.Input {
 		t.Fatalf("a single-input recipe: %v", in)
 	}
 	// PRD-2: a stuffed recipe lists its material families.
-	if club.InputsLabel() != "4 wood, metal or stone blocks" || DefOf(SimpleMeal).InputsLabel() != "0.5 nutrition of raw food" || DefOf(MakeParka).InputsLabel() != "8 fabric or leather" { // TEMP-4: the wiki parka's 80 stuff / 10
-		t.Fatalf("labels %q %q %q", club.InputsLabel(), DefOf(SimpleMeal).InputsLabel(), DefOf(MakeParka).InputsLabel())
+	if club.InputsLabel() != "4 wood, metal or stone blocks" || Core().DefOf(SimpleMeal).InputsLabel() != "0.5 nutrition of raw food" || Core().DefOf(MakeParka).InputsLabel() != "8 fabric or leather" { // TEMP-4: the wiki parka's 80 stuff / 10
+		t.Fatalf("labels %q %q %q", club.InputsLabel(), Core().DefOf(SimpleMeal).InputsLabel(), Core().DefOf(MakeParka).InputsLabel())
 	}
 	if ks := club.InputKinds(); !slices.Equal(ks, item.Stuffs(item.Woody|item.Metallic|item.Stony)) || ks[0] != item.Wood {
 		t.Fatalf("club kinds %v", ks)
 	}
-	if ks := DefOf(Cremate).InputKinds(); len(ks) != 1 || ks[0] != item.CorpseHuman {
+	if ks := Core().DefOf(Cremate).InputKinds(); len(ks) != 1 || ks[0] != item.CorpseHuman {
 		t.Fatalf("cremate kinds %v", ks)
 	}
-	meal := DefOf(SimpleMeal).InputKinds()
+	meal := Core().DefOf(SimpleMeal).InputKinds()
 	if !slices.Contains(meal, item.Berries) || !slices.Contains(meal, item.Meat) || slices.Contains(meal, item.Meal) || len(meal) > 32 {
 		t.Fatalf("meal kinds %v", meal)
 	}
@@ -38,7 +38,7 @@ func TestDefInputs(t *testing.T) {
 	if multi.InputsLabel() != "4 wood + 2 steel" || len(multi.InputKinds()) != 2 {
 		t.Fatalf("label %q kinds %v", multi.InputsLabel(), multi.InputKinds())
 	}
-	for _, d := range All()[:MakeMace] { // every older recipe takes what it always took (PRD-3's guns take two)
+	for _, d := range Core().All()[:MakeMace] { // every older recipe takes what it always took (PRD-3's guns take two)
 		if len(d.Inputs) != 0 || !d.Accepts(d.Input.Kind) && !d.Input.AnyRaw && !d.Input.AnyDryable && !d.Input.AnyStoneBlocks {
 			t.Fatalf("%s: inputs %v", d.Name, d.Inputs)
 		}

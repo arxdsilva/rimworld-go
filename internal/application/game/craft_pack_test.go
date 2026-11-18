@@ -37,7 +37,7 @@ type packBill struct {
 func quickMixedRecipe(t *testing.T) recipe.Def {
 	t.Helper()
 	var best recipe.Def
-	for _, d := range recipe.All() {
+	for _, d := range recipe.Core().All() {
 		if len(d.Inputs) < 2 || d.Legacy {
 			continue
 		}
@@ -473,7 +473,7 @@ func TestBillHaulsWholeStackFirst(t *testing.T) {
 	if st, ok := g.stacks.Get(wood); ok && st.X == 8 && st.Y == 9 {
 		t.Fatal("the stack stayed where it was")
 	}
-	if got := inPlay(g, item.Wood); got != 20-recipe.DefOf(recipe.Club).Input.Qty {
+	if got := inPlay(g, item.Wood); got != 20-recipe.Core().DefOf(recipe.Club).Input.Qty {
 		t.Fatalf("%d wood", got)
 	}
 }

@@ -28,7 +28,15 @@ type Bills struct {
 	p      planner
 	drying *Drying
 	list   map[entity.EntityID][]recipe.Bill
+	book   recipe.Book // the run's recipes (PLG-025; zero: core)
 }
+
+// UseBook sets the run's recipes (game.Content.Recipes): every bill's
+// recipe ID is read in it.
+func (b *Bills) UseBook(book recipe.Book) { b.book = book }
+
+// Book is the run's recipes.
+func (b *Bills) Book() recipe.Book { return b.book }
 
 // Of is bench bid's bills: the live slice, so a caller may change a bill
 // in place but never appends to it.
@@ -61,7 +69,7 @@ func (b *Bills) Apply(c command.Command) {
 	bills := b.list[bid]
 	switch c.Kind {
 	case command.AddBill:
-		d := recipe.DefOf(recipe.ID(c.Recipe))
+		d := b.book.DefOf(recipe.ID(c.Recipe))
 		if d.Name == "" || !d.At(bench.Kind) || b.h.RecipeLocked(d.ID) {
 			return
 		}
@@ -125,9 +133,9 @@ func (b *Bills) Defaults(id entity.EntityID, k construction.Kind) {
 	if k != construction.ButcherTable && k != construction.DryingRack && k != construction.FermentingBarrel {
 		return
 	}
-	for _, d := range recipe.For(k) {
-		if d.Output == item.Kibble || d.Output == item.HumanMeat {
-			continue // PRD-4: kibble is made to order, never by default; FOOD-3: nor is butchering humans
+	for _, d := range b.book.For(k) {
+		if d.Output == item.Kibble || d.Output == item.HumanMeat || int(d.ID) >= recipe.Core().Len() {
+			continue // PRD-4: kibble is made to order, never by default; FOOD-3: nor is butchering humans; PLG-025: nor a plugin's recipe
 		}
 		b.list[id] = append(b.list[id], recipe.Bill{Recipe: d.ID, Mode: recipe.Forever, Target: 1})
 	}
@@ -141,7 +149,7 @@ func (b *Bills) Defaults(id entity.EntityID, k construction.Kind) {
 func (b *Bills) AnyFor(t work.Type) bool {
 	for _, bills := range b.list {
 		for _, bl := range bills {
-			if recipe.DefOf(bl.Recipe).Skill == t {
+			if b.book.DefOf(bl.Recipe).Skill == t {
 				return true
 			}
 		}
@@ -157,7 +165,7 @@ func (b *Bills) UpgradeLegacy() {
 		out, has := bills[:0:0], false
 		changed := false
 		for _, bl := range bills {
-			up := recipe.Upgrade(bl.Recipe)
+			up := b.book.Upgrade(bl.Recipe)
 			if up != bl.Recipe {
 				changed = true
 				if has {
@@ -200,7 +208,7 @@ func (b *Bills) stock(d recipe.Def) int {
 // mutate) and its status (one of the Bill* strings).
 func (b *Bills) Line(bid entity.EntityID, i int) (recipe.Bill, string) {
 	bl := b.list[bid][i]
-	d := recipe.DefOf(bl.Recipe)
+	d := b.book.DefOf(bl.Recipe)
 	stock := b.stock(d)
 	bl = bl.Update(stock)
 	switch {

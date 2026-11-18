@@ -67,7 +67,7 @@ func TestButcherHuman(t *testing.T) {
 // 450 ticks, and the spot's default bills butcher animals, never humans.
 func TestButcherSpotYield(t *testing.T) {
 	t.Parallel()
-	if recipe.DefOf(recipe.ButcherAnimal).Work != 450 || recipe.DefOf(recipe.ButcherHuman).Work != 450 {
+	if recipe.Core().DefOf(recipe.ButcherAnimal).Work != 450 || recipe.Core().DefOf(recipe.ButcherHuman).Work != 450 {
 		t.Fatal("butchering is 450 ticks of work")
 	}
 	f := newFake()

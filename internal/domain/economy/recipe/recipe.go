@@ -495,36 +495,6 @@ func cut(id ID, s geology.Stone) Def {
 // RackCapacity is how many items one drying rack holds.
 const RackCapacity = 25
 
-// DefOf returns the recipe definition.
-func DefOf(id ID) Def {
-	if id >= numRecipes {
-		return Def{}
-	}
-	return defs[id]
-}
-
-// All lists every recipe.
-func All() []Def { return defs[:] }
-
-// Upgrade maps a legacy recipe to the one that replaced it.
-func Upgrade(id ID) ID {
-	if id == ButcherDustbuck || id == ButcherRidgewolf {
-		return ButcherAnimal
-	}
-	return id
-}
-
-// For lists recipes a bench kind can run (legacy ones excluded; At).
-func For(bench construction.Kind) []Def {
-	var out []Def
-	for _, d := range defs {
-		if d.At(bench) && !d.Legacy {
-			out = append(out, d)
-		}
-	}
-	return out
-}
-
 // Accepts reports whether stack kind k can feed input in.
 func (in Input) Accepts(k item.Kind) bool {
 	switch {

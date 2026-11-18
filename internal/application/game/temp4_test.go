@@ -111,8 +111,8 @@ func TestOldSaveColonistsGetEverydayClothes(t *testing.T) {
 // tribalwear at a crafting spot.
 func TestTailorSewsTShirt(t *testing.T) {
 	t.Parallel()
-	d := recipe.DefOf(recipe.MakeTShirt)
-	if d.Input.Qty != 4 || d.Work != 160 || d.Output != item.TShirt || !d.Stuffed() || !recipe.DefOf(recipe.MakeTribalwear).At(construction.CraftingSpot) {
+	d := recipe.Core().DefOf(recipe.MakeTShirt)
+	if d.Input.Qty != 4 || d.Work != 160 || d.Output != item.TShirt || !d.Stuffed() || !recipe.Core().DefOf(recipe.MakeTribalwear).At(construction.CraftingSpot) {
 		t.Fatalf("recipe %+v", d)
 	}
 	g := New(Config{Seed: 1, Width: 24, Height: 12})

@@ -160,7 +160,7 @@ func (g *Game) fillFrameViews(views []FrameView) {
 		}
 		fv.Builder = builders[fv.ID]
 		fv.Haulers = haulers[fv.ID]
-		fv.Status = framestatus.Of(fr, fv.Incoming, fv.InStock-fv.Reserved, fv.CompIncoming, fv.Builder)
+		fv.Status = framestatus.Of(fr, fv.Incoming, fv.InStock-fv.Reserved, fv.CompIncoming, fv.Builder, g.craft.Bills.Book())
 		if fr.Swaps != 0 && g.bldgs.Has(fr.Swaps) {
 			fv.Status = fmt.Sprintf(framestatus.Changing, fr.Stuff.String())
 		}

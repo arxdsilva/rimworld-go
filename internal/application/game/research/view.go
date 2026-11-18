@@ -84,7 +84,7 @@ func (l *Lab) views(k viewKey) []View {
 	for _, d := range proj.All() {
 		p := d.Project
 		v := View{ID: uint8(p), Name: d.Name, Label: d.Label, Desc: d.Desc, Cost: d.Cost, Progress: l.Prog[p],
-			Done: l.Prog.Done(p), Unlocks: UnlockLabels(d), Available: l.Prog.Available(p), Current: l.Set && l.Cur == p,
+			Done: l.Prog.Done(p), Unlocks: UnlockLabels(d, l.Recipes), Available: l.Prog.Available(p), Current: l.Set && l.Cur == p,
 			TechLevel: d.TechLevel.String(), Bench: d.Bench.String(), CostNow: d.Cost * l.costPct(p) / 100, Prereqs: l.prereqs[p]}
 		for _, r := range d.Requires {
 			if !l.Prog.Done(r) {
@@ -178,21 +178,22 @@ func (l *Lab) Alert() bool {
 	return false
 }
 
-// UnlockLabels is d's unlocks in words (nil: none).
-func UnlockLabels(d proj.Def) (out []string) {
+// UnlockLabels is d's unlocks in words (nil: none), recipes named as
+// book labels them.
+func UnlockLabels(d proj.Def, book recipe.Book) (out []string) {
 	for _, u := range d.Unlocks {
-		out = append(out, unlockLabel(u))
+		out = append(out, unlockLabel(u, book))
 	}
 	return out
 }
 
 // unlockLabel turns an unlock key into words.
-func unlockLabel(key string) string {
+func unlockLabel(key string, book recipe.Book) string {
 	for _, p := range []struct{ prefix, suffix string }{{"build:", ""}, {"crop:", " crop"}, {"recipe:", ""}} {
 		if len(key) > len(p.prefix) && key[:len(p.prefix)] == p.prefix {
 			name := key[len(p.prefix):]
 			if p.prefix == "recipe:" {
-				for _, r := range recipe.All() {
+				for _, r := range book.All() {
 					if r.Name == name {
 						return r.Label
 					}

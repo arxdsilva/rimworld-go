@@ -191,7 +191,7 @@ func TestActionProgress(t *testing.T) {
 	}
 	totals := map[string]int{
 		"cut": plant.DefOf(plant.BerryBush).CutWork, "harvest": plant.DefOf(plant.BerryBush).HarvestWork, "mine": MineWork, "sow": SowWork, "research": rlab.Session,
-		"tend": TendWork, "tame": animal.TameWork, "construct": fr.WorkLeft, "bill": recipe.DefOf(recipe.Club).Work, "eat": needs.EatWorkTicks,
+		"tend": TendWork, "tame": animal.TameWork, "construct": fr.WorkLeft, "bill": recipe.Core().DefOf(recipe.Club).Work, "eat": needs.EatWorkTicks,
 	}
 	for _, c := range cases {
 		c.j.State = job.Do

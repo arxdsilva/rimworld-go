@@ -334,7 +334,7 @@ func TestJourneyMealShowsIngredients(t *testing.T) {
 	wdBuild(j, "stove", 10, 5)
 	var def recipe.Def
 	found := false
-	for _, d := range recipe.For(construction.Stove) {
+	for _, d := range recipe.Core().For(construction.Stove) {
 		if d.Output == item.Meal && !found {
 			def, found = d, true
 		}

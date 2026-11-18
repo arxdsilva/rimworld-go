@@ -144,7 +144,7 @@ func TestPackGatherSplitsByCapacity(t *testing.T) {
 	f.room = item.Wood.MassGrams() * 2 // two logs a trip
 	f.put(50, item.Stack{Kind: item.Wood, Qty: 3, X: 5, Y: 6})
 	f.put(51, item.Stack{Kind: item.Wood, Qty: 3, X: 9, Y: 9})
-	d := recipe.DefOf(recipe.Club)
+	d := recipe.Core().DefOf(recipe.Club)
 	bl := c.Bills.Of(1)[0]
 	rec, ok := c.Shop.plan(pawn, bl, d, [2]int{4, 5})
 	if !ok || rec.Kind != job.PackIngredients {
@@ -263,7 +263,7 @@ func TestPendingCountsAPackGathering(t *testing.T) {
 	f, c := clubBench(t, recipe.Bill{})
 	f.jobs[pawn] = job.Record{Kind: job.PackIngredients, State: job.Goto, Dest: 1}
 	bl := recipe.Bill{Recipe: recipe.Club, Mode: recipe.UntilHave}
-	if c.Shop.pending(bl, recipe.DefOf(recipe.Club)) != recipe.DefOf(recipe.Club).OutQty {
+	if c.Shop.pending(bl, recipe.Core().DefOf(recipe.Club)) != recipe.Core().DefOf(recipe.Club).OutQty {
 		t.Fatal("two crafters would both start the last club")
 	}
 }
@@ -296,7 +296,7 @@ func TestLaidLoadsKeepOrder(t *testing.T) {
 	f.put(50, item.Stack{Kind: item.Steel, Qty: 5, X: 5, Y: 7})
 	f.put(51, item.Stack{Kind: item.Wood, Qty: 4, X: 5, Y: 6})
 	f.put(52, item.Stack{Kind: item.Cloth, Qty: 1, X: 6, Y: 6})
-	d := recipe.DefOf(recipe.Club)
+	d := recipe.Core().DefOf(recipe.Club)
 	d.Inputs = []recipe.Input{{Kind: item.Wood, Qty: 4}, {Kind: item.Steel, Qty: 2}, {Kind: item.Cloth, Qty: 1}}
 	rec, ok := c.Shop.plan(pawn, c.Bills.Of(1)[0], d, [2]int{4, 5})
 	if !ok || rec.Kind != job.PackIngredients {
@@ -431,7 +431,7 @@ func TestSingleStackBillMindsSpoiling(t *testing.T) {
 // choice among medicines, and no recipe offers one.
 func TestPlanPotencyFirst(t *testing.T) {
 	t.Parallel()
-	for _, d := range recipe.All() {
+	for _, d := range recipe.Core().All() {
 		for _, in := range d.AppendInputs(nil) {
 			n := 0
 			for _, k := range []item.Kind{item.HerbalMedicine, item.IndustrialMedicine, item.NanomedKit} {
@@ -643,7 +643,7 @@ func BenchmarkPlanManyStacks(b *testing.B) {
 	} {
 		b.Run(tc.name, func(b *testing.B) {
 			_, c := benchFake(b, 2000, tc.rules...)
-			d := recipe.DefOf(recipe.Club)
+			d := recipe.Core().DefOf(recipe.Club)
 			bl := c.Bills.Of(1)[0]
 			b.ReportAllocs()
 			for b.Loop() {
@@ -660,7 +660,7 @@ func BenchmarkPackGatherManyPicks(b *testing.B) {
 	for b.Loop() {
 		b.StopTimer()
 		f, c := benchFake(b, 2000, gameplay.HaulAllIngredients)
-		d := recipe.DefOf(recipe.Club)
+		d := recipe.Core().DefOf(recipe.Club)
 		d.Input.Qty = 20
 		rec, ok := c.Shop.plan(pawn, c.Bills.Of(1)[0], d, [2]int{4, 5})
 		if !ok {

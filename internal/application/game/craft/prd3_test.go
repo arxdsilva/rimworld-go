@@ -139,7 +139,7 @@ func TestForgeFuel(t *testing.T) {
 	}
 	f.fuel[1] = 700
 	j := runBill(t, f, c, crafting, 100)
-	if j.State != job.Complete || f.Stock(item.Mace) != 1 || f.burnt != recipe.DefOf(recipe.MakeMace).Work {
+	if j.State != job.Complete || f.Stock(item.Mace) != 1 || f.burnt != recipe.Core().DefOf(recipe.MakeMace).Work {
 		t.Fatalf("job %v maces %d burnt %d", j.State, f.Stock(item.Mace), f.burnt)
 	}
 	f.jobs = map[entity.EntityID]job.Record{}
@@ -256,7 +256,7 @@ func TestSmeltAndButcherSpot(t *testing.T) {
 // electric twins included, and a sculpture's output is its kind.
 func TestRecipeViewsBenches(t *testing.T) {
 	t.Parallel()
-	for _, r := range Recipes() {
+	for _, r := range Recipes(recipe.Core()) {
 		switch r.Name {
 		case "make_mace":
 			if !r.RunsAt("wood-fired forge") || !r.RunsAt("electric forge") || r.RunsAt("workbench") {
