@@ -1,0 +1,20 @@
+rimworld-go
+Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
+
+The source code in this repository is licensed under the GNU General Public
+License, version 3 only (SPDX-License-Identifier: GPL-3.0-only). The full
+text is in LICENSE.
+
+Commercial licenses, for shipping a closed-source game built on this code,
+are available from the copyright holder: see COMMERCIAL-LICENSING.md or
+write to arxdsilva@gmail.com.
+
+The art and audio under assets/ are not under the GPL. They have their own
+license: see ASSETS-LICENSE.md.
+
+Third-party components keep their own licenses (MIT, Apache-2.0, BSD,
+SIL Open Font License 1.1 and others): see THIRD_PARTY_NOTICES.md and
+third_party/.
+
+rimworld-go is inspired by RimWorld. It is not affiliated with, endorsed by
+or connected to Ludeon Studios or RimWorld.
