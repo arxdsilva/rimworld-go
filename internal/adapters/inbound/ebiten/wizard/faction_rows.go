@@ -101,7 +101,7 @@ func HostileCapable(slots []faction.Slot) bool {
 		if s.Count <= 0 || !s.Type.Human() {
 			continue
 		}
-		if d.GoodwillMin <= -50 {
+		if d.GoodwillMin <= faction.HostileAt {
 			return true
 		}
 	}

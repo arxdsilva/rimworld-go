@@ -278,7 +278,7 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 		return
 	}
 	if BurnsWhileWorked(b.Kind) {
-		h.UseFuel(j.Dest, u) // PRD-3: the forge (FOOD-4: the stove) burns while worked
+		h.UseFuel(j.Dest) // the forge and the stove burn a fixed amount per worked tick, whatever u is (u == 0 returned above)
 	}
 	j.WorkLeft -= u
 	if j.WorkLeft > 0 {

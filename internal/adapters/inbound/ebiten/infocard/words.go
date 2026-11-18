@@ -11,9 +11,15 @@ import (
 // The card's short descriptions are original prose, one per category (never
 // a game's text); each is a literal at its T call so the catalog lists it.
 // describe is the description for kind k ("" ok: an unknown name).
-func describe(tr lang.Tr, k item.Kind, ok bool) string {
+func describe(tr lang.Tr, kn Kinds, k item.Kind, ok bool) string {
 	if !ok {
 		return tr.T("Nothing is known about this item.")
+	}
+	if kn.Items.Plugin(k) {
+		if d := kn.Items.Def(k).Desc; d != "" {
+			return d
+		}
+		return byCategory(tr, kn.Items.Category(k))
 	}
 	switch {
 	case k.IsDrug():
@@ -21,7 +27,12 @@ func describe(tr lang.Tr, k item.Kind, ok bool) string {
 	case k.IsMedicine():
 		return tr.T("Used by a doctor to tend wounds and illness. Better stock lowers the chance an injury turns bad.")
 	}
-	switch k.Category() {
+	return byCategory(tr, k.Category())
+}
+
+// byCategory is the prose of a category heading.
+func byCategory(tr lang.Tr, cat string) string {
+	switch cat {
 	case "Food":
 		return tr.T("Eaten to ease hunger. Meals made from several ingredients keep better and satisfy more than raw scraps.")
 	case "Apparel":

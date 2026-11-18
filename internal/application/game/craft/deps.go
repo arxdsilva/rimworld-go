@@ -222,9 +222,9 @@ type Workshop interface {
 	// (room.CleanlinessLabel); indoors is false outside any room or in a
 	// room that feels outdoors (TEMP-6, wiki: Rooms: PsychologicallyOutdoors).
 	Cleanliness(x, y int) (hundredths int, indoors bool)
-	// UseFuel burns the fuel work units of forge work take (one log per
-	// WorkPerWood units).
-	UseFuel(id entity.EntityID, work int)
+	// UseFuel burns one worked tick of fuel at bench id (its table's
+	// WorkBurn, however many work units the tick did).
+	UseFuel(id entity.EntityID)
 	// CanInstall reports Install would set a building of kind k down at
 	// (x, y): the placement rule allows it there.
 	CanInstall(k construction.Kind, x, y int) bool

@@ -26,7 +26,7 @@ func TestDefTable(t *testing.T) {
 	rows := []row{
 		{Settlers, "settlers", Industrial, -20, 60, false, true, 10, 12, "Warden,Steward", 100},
 		{Clans, "clans", Neolithic, -40, 40, false, true, 0, 16, "Elder,Hearth-mother,Hearth-father", 100},
-		{Drifters, "drifters", Industrial, -60, 10, false, true, -30, 10, "Boss,Caller", 100},
+		{Drifters, "drifters", Industrial, -90, 10, false, true, -30, 10, "Boss,Caller", 100},
 		{Freebooters, "freebooters", Industrial, -100, -100, true, false, -100, 8, "Captain,Ringleader", 120},
 		{Swarm, "swarm", Neolithic, -100, -100, true, false, -100, 0, "", 100},
 	}
@@ -169,11 +169,11 @@ func TestFactionHostilityHysteresis(t *testing.T) {
 		gw   int
 		want Relation
 	}{
-		// Becoming hostile is at -50, calming only at -10.
-		{Neutral, -49, Neutral}, {Neutral, -50, Hostile}, {Neutral, -100, Hostile},
-		{Hostile, -49, Hostile}, {Hostile, -30, Hostile}, {Hostile, -11, Hostile},
-		{Hostile, -10, Neutral}, {Hostile, 0, Neutral}, {Neutral, -30, Neutral},
-		{Friendly, -50, Hostile},
+		// Becoming hostile is at -75, calming only at 0.
+		{Neutral, -74, Neutral}, {Neutral, -75, Hostile}, {Neutral, -100, Hostile},
+		{Hostile, -74, Hostile}, {Hostile, -30, Hostile}, {Hostile, -1, Hostile},
+		{Hostile, 0, Neutral}, {Neutral, -30, Neutral},
+		{Friendly, -75, Hostile},
 		// Friendly at +50, kept down to +30.
 		{Neutral, 49, Neutral}, {Neutral, 50, Friendly}, {Friendly, 49, Friendly},
 		{Friendly, 31, Friendly}, {Friendly, 30, Friendly}, {Friendly, 29, Neutral},
@@ -187,7 +187,7 @@ func TestFactionHostilityHysteresis(t *testing.T) {
 	}
 	// Walk goodwill down and up one point at a time: each band is crossed
 	// once in each direction and the relation changes at different points.
-	rel, downHostile, upCalm := Neutral, 0, 0
+	rel, downHostile, upCalm, foundUp := Neutral, 0, 0, false
 	for gw := 0; gw >= -100; gw-- {
 		rel = RelationFor(rel, gw)
 		if rel == Hostile && downHostile == 0 {
@@ -196,12 +196,12 @@ func TestFactionHostilityHysteresis(t *testing.T) {
 	}
 	for gw := -100; gw <= 0; gw++ {
 		rel = RelationFor(rel, gw)
-		if rel != Hostile && upCalm == 0 {
-			upCalm = gw
+		if rel != Hostile && !foundUp {
+			upCalm, foundUp = gw, true
 		}
 	}
-	if downHostile != -50 || upCalm != -10 {
-		t.Errorf("hostile at %d, calm at %d; want -50 and -10", downHostile, upCalm)
+	if downHostile != HostileAt || upCalm != CalmAt {
+		t.Errorf("hostile at %d, calm at %d; want -75 and 0", downHostile, upCalm)
 	}
 	// Jitter inside the dead band never flips the relation.
 	for _, start := range []Relation{Hostile, Neutral} {

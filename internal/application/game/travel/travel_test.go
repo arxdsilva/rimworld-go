@@ -19,10 +19,10 @@ func TestHoldMassAndValue(t *testing.T) {
 	if len(h.Items) != 1 || h.Items[0].Qty != 40 {
 		t.Fatalf("like stacks did not merge: %+v", h.Items)
 	}
-	if kg := h.massKg(animalKg); kg != 60+20 {
+	if kg := h.massKg(item.Core(), animalKg); kg != 60+20 {
 		t.Fatalf("mass %d kg, want 80", kg)
 	}
-	if v := h.value(); v != 40*item.Steel.Value() {
+	if v := h.value(item.Core()); v != 40*item.Steel.Value() {
 		t.Fatalf("value %d", v)
 	}
 }

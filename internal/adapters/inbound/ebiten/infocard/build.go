@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -46,39 +47,52 @@ type source struct {
 }
 
 // Build is the card for q, from the read models r.
-func Build(r Reader, _ Kinds, q ports.OpenInfoCard) Card {
+func Build(r Reader, kn Kinds, q ports.OpenInfoCard) Card {
 	s := resolve(r, q)
 	if !s.found {
 		return Card{Title: r.T("Item"), Desc: r.T("This item is no longer there.")}
 	}
-	k, ok := item.ParseKind(s.name)
-	c := Card{Title: upper(s.name), Sub: subtitle(r, k, ok, s), Desc: describe(r, k, ok)}
+	k, ok := kn.Items.Parse(s.name)
+	plug := ok && kn.Items.Plugin(k)
+	title := s.name
+	if ok {
+		title = kn.Items.Label(k)
+	}
+	c := Card{Title: upper(title), Sub: subtitle(r, kn, k, ok, s), Desc: describe(r, kn, k, ok)}
 	if s.qty > 1 {
 		c.add(r.T("Count"), fmt.Sprint(s.qty))
 	}
-	c.facts(r, s, k, ok)
-	if ok {
+	c.facts(r, kn, s, k, ok)
+	if ok && !plug {
 		c.food(r, s, k)
 		c.apparel(r, s, k)
 	}
-	c.weapon(r, s, k, ok)
+	if !plug {
+		c.weapon(r, s, k, ok)
+	}
+	if plug && kn.SourceOf != nil {
+		src := kn.SourceOf("item", kn.Items.Key(k))
+		if n := uikit.SourceNote(r, src.AddedBy, src.PatchedBy, nil); n != "" {
+			c.add(r.T("Source"), n)
+		}
+	}
 	return c
 }
 
 func (c *Card) add(label, value string) { c.Rows = append(c.Rows, Row{label, value}) }
 
 // facts are the numbers every item has: mass, worth, quality, condition.
-func (c *Card) facts(tr lang.Tr, s source, k item.Kind, ok bool) {
+func (c *Card) facts(tr lang.Tr, kn Kinds, s source, k item.Kind, ok bool) {
 	if ok {
-		g := k.MassGrams()
+		g := kn.Items.MassGrams(k)
 		c.add(tr.T("Mass"), mass(tr, g))
 		if s.qty > 1 {
 			c.add(tr.T("Stack mass"), mass(tr, g*s.qty))
 		}
-		if v := k.Value(); v > 0 {
+		if v := kn.Items.Value(k); v > 0 {
 			c.add(tr.T("Value"), lang.Tf(tr, "%d silver", v))
 		}
-		if n := k.StackLimit(); n > 1 {
+		if n := kn.Items.StackLimit(k); n > 1 {
 			c.add(tr.T("Stack limit"), fmt.Sprint(n))
 		}
 	} else if s.grams > 0 {
@@ -241,10 +255,10 @@ func qualityByLabel(l string) uint8 {
 	return 0
 }
 
-func subtitle(tr lang.Tr, k item.Kind, ok bool, s source) string {
+func subtitle(tr lang.Tr, kn Kinds, k item.Kind, ok bool, s source) string {
 	out := tr.T("Item")
 	if ok {
-		out = k.Category()
+		out = kn.Items.Category(k)
 	}
 	if s.holder != "" {
 		out += lang.Tf(tr, ", carried by %s", s.holder)

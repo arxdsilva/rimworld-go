@@ -5,7 +5,7 @@ The read-only Info window (GEAR-006): one item described in our own words with t
 
 ## Owns
 - `Window` (`New(Shell)`, `Open`, `Opened`): pushes a `uikit.Modal`, so Esc and the Close button are the kit's. No state of its own.
-- `Build(Reader, ports.OpenInfoCard) Card`: pure facts from `PawnView`, `WorldView.Items` and domain catalogs (`armor`, `weapon`, `item`, `quality`). `Layout(Card, w)`: pure wrapped lines.
+- `Build(Reader, Kinds, ports.OpenInfoCard) Card` (plugin items resolve through `Kinds.Items`: description plus an "Added by" row; food, apparel and weapon sections are core-only): pure facts from `PawnView`, `WorldView.Items` and domain catalogs (`armor`, `weapon`, `item`, `quality`). `Layout(Card, w)`: pure wrapped lines.
 - `words.go`: the per-category prose.
 
 ## Depends on

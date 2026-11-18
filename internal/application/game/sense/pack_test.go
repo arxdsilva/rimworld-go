@@ -13,6 +13,7 @@ import (
 
 // fakeGear is the game's side of Gear: a few stacks and pawns.
 type fakeGear struct {
+	book   item.Book // the run's items (zero: core)
 	pawns  []entity.EntityID
 	temp   int
 	manip  int
@@ -50,7 +51,7 @@ func (f *fakeGear) SpawnCarried(id entity.EntityID, st item.Stack) (entity.Entit
 	f.stacks[f.next+1000] = st
 	return f.next + 1000, true
 }
-func (f *fakeGear) Items() item.Book                         { return item.Book{} }
+func (f *fakeGear) Items() item.Book                         { return f.book }
 func (f *fakeGear) SetDown(_ entity.EntityID, st item.Stack) { f.down = append(f.down, st) }
 
 func gearScene() (*Sense, *fakeGear) {

@@ -4,9 +4,11 @@
 package windows
 
 import (
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 )
 
 // facShell is a fakeShell with n factions.
@@ -66,6 +68,16 @@ func TestFactionInitialSkipsTheArticle(t *testing.T) {
 	for in, want := range map[string]string{"the Lone Drift": "L", "Oakwood": "O", "people": "P", "": "?", "the ": "T"} {
 		if got := facInitial(in); got != want {
 			t.Errorf("facInitial(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestFactionStandingTipShowsThresholds(t *testing.T) {
+	t.Parallel()
+	got := standingTip(lang.English{})
+	for _, want := range []string{"-75 or less", "0 or more", "+50 or more", "+30 or more"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("standing tip %q lacks %q", got, want)
 		}
 	}
 }

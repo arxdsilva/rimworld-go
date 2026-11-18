@@ -39,46 +39,52 @@ func (g Goods) Compare(o Goods) int {
 // crateSep joins a crate's item name and building name in Name.
 const crateSep = ":"
 
-// Name is the goods' row key: the item kind's name, and for a crate
-// "crated building:<building>" (ParseGoods reads it back).
+// Name is the goods' row key: the item kind's name in the run's book b
+// (a plugin kind's key), and for a crate "crated building:<building>"
+// (ParseGoods reads it back).
 func (g Goods) Name(b item.Book) string {
 	if g.Building == 0 {
-		return g.Kind.String()
+		return b.Name(g.Kind)
 	}
 	return g.Kind.String() + crateSep + construction.Kind(g.Building).String()
 }
 
 // Label is the goods' display name: "Big screen television (crated)" for
-// a crate, else "" (the caller's item label stands).
+// a crate, a plugin kind's def label, else "" (the caller's core item
+// label stands).
 func (g Goods) Label(b item.Book) string {
 	if g.Building == 0 {
+		if b.Plugin(g.Kind) {
+			return b.Label(g.Kind)
+		}
 		return ""
 	}
 	n := construction.Kind(g.Building).String()
 	return strings.ToUpper(n[:1]) + n[1:] + " (crated)"
 }
 
-// ParseGoods reads Name's output.
+// ParseGoods reads Name's output (a plugin kind's key by the run's book
+// b).
 func ParseGoods(b item.Book, name string) (Goods, bool) {
 	if kn, bn, crate := strings.Cut(name, crateSep); crate {
 		k, ok := item.ParseKind(kn)
-		b, okB := construction.Parse(bn)
-		if !ok || !okB || k != item.MinifiedBuilding || int(b) > 255 {
+		bld, okB := construction.Parse(bn)
+		if !ok || !okB || k != item.MinifiedBuilding || int(bld) > 255 {
 			return Goods{}, false
 		}
-		return Goods{k, uint8(b)}, true
+		return Goods{k, uint8(bld)}, true
 	}
-	k, ok := item.ParseKind(name)
+	k, ok := b.Parse(name)
 	return Goods{Kind: k}, ok
 }
 
 // Value is one unit's market value in silver: a crate's CrateValue, else
-// its item kind's.
+// its item kind's in the run's book b.
 func (g Goods) Value(b item.Book) int {
 	if g.Building != 0 {
 		return CrateValue(construction.Kind(g.Building))
 	}
-	return g.Kind.Value()
+	return b.Value(g.Kind)
 }
 
 // CrateValue is the market value of crated building k when a trader sells

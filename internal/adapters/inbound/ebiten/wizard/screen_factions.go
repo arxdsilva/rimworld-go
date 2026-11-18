@@ -67,11 +67,11 @@ func GoodwillTip(r FacRow) string { return GoodwillTipIn(lang.English{}, r) }
 func GoodwillTipIn(tr lang.Tr, r FacRow) string {
 	switch r.Relation {
 	case faction.Hostile:
-		return tr.T("Hostile. They raid you. Goodwill must climb to -10 before they calm down.")
+		return lang.Tf(tr, "Hostile. They raid you. Goodwill must climb to %d before they calm down.", faction.CalmAt)
 	case faction.Friendly:
-		return tr.T("Friendly. They stay friendly while goodwill stays at +30 or more.")
+		return lang.Tf(tr, "Friendly. They stay friendly while goodwill stays at %+d or more.", faction.FriendlyKeep)
 	}
-	return tr.T("Neutral. At -50 or less they turn hostile; at +50 or more, friendly.")
+	return lang.Tf(tr, "Neutral. At %d or less they turn hostile; at %+d or more, friendly.", faction.HostileAt, faction.FriendlyAt)
 }
 
 // drawGoodwill is the -100..+100 bar with the number.

@@ -72,7 +72,7 @@ func exampleItems(t *testing.T, b item.Book, r recipe.Book) {
 	t.Helper()
 	bell := item.Kind(item.CoreKinds)
 	if b.Len() != item.CoreKinds+1 || b.Key(bell) != "example_frontier.trail_bell" || b.Label(bell) != "trail bell" ||
-		b.Def(bell).Path != "Manufactured/Components" || b.Value(bell) != 18 || b.Def(bell).Texture != "textures/trail_bell.png" {
+		b.Def(bell).Path != "Manufactured/Components" || b.Value(bell) != 18 || b.Def(bell).Mass != 250 || b.Def(bell).Stack != 75 || b.Def(bell).TraderStock != 6 || b.Def(bell).Texture != "textures/trail_bell.png" {
 		t.Fatalf("plugin item: len %d, %q %+v", b.Len(), b.Key(bell), b.Def(bell))
 	}
 	id, ok := r.IDOf("example_frontier.cast_trail_bells")

@@ -83,7 +83,7 @@ func (g Gear) Stow(id, stack entity.EntityID, n int) bool {
 	if !ok || n <= 0 || st.Qty < n || st.Carrier != 0 && st.Carrier != id || st.Kind.IsCorpse() {
 		return false
 	}
-	if st.Kind.MassGrams()*n > g.Room(id) {
+	if g.r.Items().MassGrams(st.Kind)*n > g.Room(id) {
 		return false
 	}
 	g.r.RemoveQty(stack, n)
@@ -179,7 +179,7 @@ func (g Gear) Wealth() int {
 	w := 0
 	for _, id := range g.r.PawnIDs() {
 		for _, e := range g.s.Packs[id].Items {
-			w += e.Stack.Kind.Value() * e.Stack.Qty
+			w += g.r.Items().Value(e.Stack.Kind) * e.Stack.Qty
 		}
 	}
 	return w

@@ -12,7 +12,7 @@ fields rimworld-go/internal/application/game.Game 65  # +1 scripts (PLG-060, 202
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 30
 files rimworld-go/internal/application/game 176  # +2 content.go, remap_content.go (PLG-026 contract); +1 scripts.go (PLG-060) (2026-11-18, raises OK while perf holds)
-lines rimworld-go/internal/application/game 52604  # +519 SPDX headers; +371 the PLG-026 classes, scripts, remaps and PLG-072 incident notes; +18 item-book read paths and trade signatures (2026-11-18, raises OK while perf holds; A/B hash-identical, tick mean within noise)
+lines rimworld-go/internal/application/game 52628  # +519 SPDX headers; +371 the PLG-026 classes, scripts, remaps and PLG-072 incident notes; +18 item-book read paths and trade signatures; +24 plugin trade, worked-tick fuel, beacon reach (2026-11-18, raises OK while perf holds; A/B tick mean within noise)
 lines rimworld-go/internal/adapters/inbound/ebiten 12180  # SPDX headers took it over 12000; +36 plugin translations and item textures; +4 dialogs Items/GoodsKg (2026-11-18, raises OK while perf holds)
 methods rimworld-go/internal/adapters/inbound/ebiten.App 242
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 71

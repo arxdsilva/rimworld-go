@@ -28,7 +28,8 @@ type world struct {
 	claims  map[entity.EntityID]entity.EntityID
 	reserve map[[2]int]bool
 	blocked map[[2]int]bool
-	walls   bool // nothing reachable
+	walls   bool      // nothing reachable
+	book    item.Book // the run's item book (zero: no plugin kinds)
 }
 
 func newWorld() *world {
@@ -69,7 +70,7 @@ func (w *world) ObjectAt(x, y int) entity.EntityID {
 	}
 	return 0
 }
-func (w *world) Items() item.Book                { return item.Book{} }
+func (w *world) Items() item.Book                { return w.book }
 func (w *world) Powered(id entity.EntityID) bool { return !w.dark[id] }
 func (w *world) ItemAt(x, y int) entity.EntityID {
 	for _, id := range w.items {

@@ -288,8 +288,13 @@ func (h craftShop) Cleanliness(x, y int) (int, bool) {
 	rs := g.rooms[r]
 	return rs.tally.Inputs(rs.contents.Cells, rs.contents.Floored-rs.tally.Covered, sum, 0).CleanlinessHundredths, true
 }
-func (h craftShop) UseFuel(id entity.EntityID, work int) {
-	h.g.setFuel(id, max(0, h.g.fuel[id]-work*TicksPerWood/craft.WorkPerWood)) // light.go
+func (h craftShop) UseFuel(id entity.EntityID) {
+	b := h.g.bldgs.Ref(id)
+	if b == nil {
+		return
+	}
+	spec, _ := fuelSpec(b.Kind)
+	h.g.setFuel(id, max(0, h.g.fuel[id]-spec.WorkBurn)) // light.go
 }
 func (h craftShop) CanInstall(k construction.Kind, x, y int) bool {
 	ok, _ := h.g.canPlaceAt(k, construction.South, x, y)

@@ -347,7 +347,7 @@ func factionTypeTip(tr lang.Tr, d faction.Def) string {
 	switch {
 	case d.Fixed && d.GoodwillMax < 0:
 		rel = tr.T("Always hostile.")
-	case d.GoodwillMin <= -50:
+	case d.GoodwillMin <= faction.HostileAt:
 		rel = tr.T("Can turn hostile and raid you.")
 	}
 	return d.Label + "\n" + lang.Tf(tr, "%s people. %s", techLabel(tr, d.Tech), rel)

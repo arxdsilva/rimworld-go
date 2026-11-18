@@ -140,14 +140,16 @@ func TestForgeFuel(t *testing.T) {
 	if _, st := c.Bills.Line(1, 0); st != BillNoFuel {
 		t.Fatalf("status %q", st)
 	}
-	f.fuel[1] = 700
-	j := runBill(t, f, c, crafting, 100)
-	if j.State != job.Complete || f.Stock(item.Mace) != 1 || f.burnt != recipe.Core().DefOf(recipe.MakeMace).Work {
+	f.work = 1 // one work unit a tick: one fuel burn a worked tick
+	work := recipe.Core().DefOf(recipe.MakeMace).Work
+	f.fuel[1] = work*fakeWorkBurn + 100
+	j := runBill(t, f, c, crafting, work+10)
+	if j.State != job.Complete || f.Stock(item.Mace) != 1 || f.burnt != work*fakeWorkBurn {
 		t.Fatalf("job %v maces %d burnt %d", j.State, f.Stock(item.Mace), f.burnt)
 	}
 	f.jobs = map[entity.EntityID]job.Record{}
 	f.claims = map[entity.EntityID]entity.EntityID{}
-	j = runBill(t, f, c, crafting, 1) // fetched; 100 fuel left, 600 work to do
+	j = runBill(t, f, c, crafting, 1) // fetched; 100 fuel ticks left, 600 work to do
 	j = runBill2(f, c, 100)
 	if j.State != job.Fail || j.Fail != job.Blocked || f.fuel[1] != 0 {
 		t.Fatalf("burnt out: %+v fuel %d", j, f.fuel[1])

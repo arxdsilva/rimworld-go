@@ -75,7 +75,7 @@ func (o Ops) Pack(cid uint64, list string, members int) {
 	}
 	room, left := caravanKg(members, species)*1000, 0
 	for _, st := range goods {
-		g := st.Qty * st.Kind.MassGrams()
+		g := st.Qty * o.h.Items().MassGrams(st.Kind)
 		if g > room {
 			left++
 			continue
@@ -136,7 +136,7 @@ func (o Ops) Pace(cid uint64, members int) int {
 	}
 	g := 0
 	for _, st := range h.Items {
-		g += st.Qty * st.Kind.MassGrams()
+		g += st.Qty * o.h.Items().MassGrams(st.Kind)
 	}
 	c := max(1, caravanKg(members, species)*1000)
 	return max(250, 1000-750*min(g, c)/c)

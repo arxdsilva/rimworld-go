@@ -959,7 +959,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position, ids []entity.En
 // the same load among the candidates the caller's search put in g.haul.cands; a pile in
 // storage joins only a load bound for a higher priority.
 func planGather(g *Game, id entity.EntityID, rec job.Record, first item.Stack) job.Record {
-	rec.Count = haul.Capacity(first.Kind.StackLimit(), haulRoom(g, first.Kind, rec.DestX, rec.DestY))
+	rec.Count = haul.Capacity(g.sk.content.Items.StackLimit(first.Kind), haulRoom(g, first.Kind, rec.DestX, rec.DestY))
 	dz, _ := g.storageAt(rec.DestX, rec.DestY)
 	r, keep := g.restrictedRef(id), g.haul.cands[:0]
 	for _, c := range g.haul.cands {
@@ -1306,7 +1306,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.jobs.Set(id, j)
 			return
 		}
-		take := min(st.Qty, item.CarryLimit, st.Kind.StackLimit()) // PRD-4: no more than a tile holds
+		take := min(st.Qty, item.CarryLimit, g.sk.content.Items.StackLimit(st.Kind)) // PRD-4: no more than a tile holds
 		if len(j.Route) > 0 || j.Dest == 0 && j.Count > 0 {
 			take = min(st.Qty, max(1, j.Count), g.reserve.FreeFor(id, j.Target, st.Qty)) // the planned load (haul_route.go, planGather), never another hauler's part (RES-1)
 		} else if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {

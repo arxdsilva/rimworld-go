@@ -248,7 +248,7 @@ func (g Gear) PackGear(id entity.EntityID, e inventory.Entry) gearview.Pack {
 	case k.IsFood():
 		use = gearview.UseEat
 	}
-	return gearview.Pack{Grams: e.Stack.Kind.MassGrams() * e.Stack.Qty, Use: use, Why: g.EatWhy(id, e.ID)}
+	return gearview.Pack{Grams: g.r.Items().MassGrams(e.Stack.Kind) * e.Stack.Qty, Use: use, Why: g.EatWhy(id, e.ID)}
 }
 
 // entryOf is the entry of p with ID id.

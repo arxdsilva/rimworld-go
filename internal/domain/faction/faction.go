@@ -106,14 +106,14 @@ type Globe interface {
 	Hops(a, b, limit int) int
 }
 
-// Goodwill bands (NG-1 §3.4). A faction turns hostile at or below
-// hostileAt and only calms down at or above calmAt; it turns friendly at or
-// above friendlyAt and stays friendly while at or above friendlyKeep.
+// Goodwill bands (NG-1 §3.4). A faction turns hostile at or below HostileAt
+// and only calms down at or above CalmAt; it turns friendly at or above
+// FriendlyAt and stays friendly while at or above FriendlyKeep.
 const (
-	hostileAt    = -50
-	calmAt       = -10
-	friendlyAt   = 50
-	friendlyKeep = 30
+	HostileAt    = -75 // wiki: Factions
+	CalmAt       = 0   // wiki: Factions
+	FriendlyAt   = 50
+	FriendlyKeep = 30
 	goodwillMin  = -100
 	goodwillMax  = 100
 	// HistoryDays is how many daily goodwill values are kept.
@@ -130,7 +130,8 @@ var defs = [NumTypes]Def{
 	Clans: {Key: "clans", Label: "Clans", Tech: Neolithic, GoodwillMin: -40, GoodwillMax: 40,
 		Baseline: 0, CanBeFriendly: true, PerTenK: 16, MaxCount: 4, PointsPct: 100,
 		Leaders: []string{"Elder", "Hearth-mother", "Hearth-father"}, Accent: "#7f9e4c"},
-	Drifters: {Key: "drifters", Label: "Drifters", Tech: Industrial, GoodwillMin: -60, GoodwillMax: 10,
+	Drifters: {Key: "drifters", Label: "Drifters", Tech: Industrial, GoodwillMin: -90, GoodwillMax: 10,
+		// original: keeps the hostile start share at the -75 band (16/101 vs the old 11/71)
 		Baseline: -30, CanBeFriendly: true, PerTenK: 10, MaxCount: 3, PointsPct: 100,
 		Leaders: []string{"Boss", "Caller"}, Accent: "#c0904e"},
 	Freebooters: {Key: "freebooters", Label: "Freebooters", Tech: Industrial, GoodwillMin: -100, GoodwillMax: -100,
@@ -238,16 +239,16 @@ func uniqueName(t Type, rng *randx.Rand, used map[string]bool) string {
 }
 
 // RelationFor applies the hysteresis bands to goodwill gw given the
-// current relation: hostile at or below -50 and calm again only at or above
-// -10; friendly at or above +50 and neutral again only below +30.
+// current relation: hostile at or below -75 and calm again only at or above
+// 0; friendly at or above +50 and neutral again only below +30.
 func RelationFor(cur Relation, gw int) Relation {
-	if gw <= hostileAt {
+	if gw <= HostileAt {
 		return Hostile
 	}
-	if cur == Hostile && gw < calmAt {
+	if cur == Hostile && gw < CalmAt {
 		return Hostile
 	}
-	if gw >= friendlyAt || cur == Friendly && gw >= friendlyKeep {
+	if gw >= FriendlyAt || cur == Friendly && gw >= FriendlyKeep {
 		return Friendly
 	}
 	return Neutral

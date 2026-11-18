@@ -722,13 +722,13 @@ func nearestColonistScan(g *Game, p Position) (entity.EntityID, Position, bool) 
 func loot(g *Game, x, y, r int) (entity.EntityID, int, int, bool) {
 	return spatial.Nearest(&g.food().items, x, y, r, func(id entity.EntityID) (int, int, bool) {
 		st, ok := g.stacks.Get(id)
-		return st.X, st.Y, ok && worthStealing(st)
+		return st.X, st.Y, ok && worthStealing(g.sk.content.Items, st)
 	})
 }
 
 // worthStealing: a loose stack a thief takes (stealMin silver or more).
-func worthStealing(st item.Stack) bool {
-	return st.Carrier == 0 && st.Qty > 0 && st.Kind.Value()*st.Qty >= stealMin
+func worthStealing(b item.Book, st item.Stack) bool {
+	return st.Carrier == 0 && st.Qty > 0 && b.Value(st.Kind)*st.Qty >= stealMin
 }
 
 // woodIndex is the grid of the wooden buildings (what a burner sets

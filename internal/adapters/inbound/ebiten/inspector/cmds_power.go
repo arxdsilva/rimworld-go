@@ -231,6 +231,13 @@ func powerBars(tr lang.Tr, b game.BuildingView) []Bar {
 // say why).
 func fuelLine(tr lang.Tr, b game.BuildingView) string {
 	line := fuelState(b)
+	if b.Fuel && b.FuelCapLogs > 0 && b.Kind != passiveCoolerKind { // the tank, in logs against its size
+		logs := fmt.Sprintf(tr.T("%d / %d wood"), b.FuelLogs, b.FuelCapLogs)
+		if line != "" {
+			logs = line + ", " + logs
+		}
+		line = logs
+	}
 	if !b.Refuelable || b.AutoRefuel {
 		return line
 	}

@@ -8,6 +8,7 @@ The plugin pipeline (PLG-*, `.agents/gaps/MODDING_GAP_ANALYSIS.md`): manifests, 
 - `order.go`: `CheckManifest`, `Resolve` (requires/after/before/conflicts, cycles, version warnings, a reason per position).
 - `defs.go` `CollectDefs`, `inherit.go` `Inherit`, `patch.go` `ParseOps`/`Apply`, `tree.go` (deep copy, equal, merge, paths).
 - `class_backstory.go`, `class_recipe.go`, `class_trait.go`: the class codecs (`Encode*`, `Decode*`); recipe behaviour flags are refused on plugin recipes and fixed on core ones; a trait's note and thought tables (code keyed on core traits) are refused on plugin traits and kept from core on patched core ones. `class_research.go`: research projects decode after recipes (a plugin project's unlocks name the run's recipes); a patch may change a core project's numbers and words, never its prerequisites or unlocks; a plugin project needing an unknown or left-out project, or on a prerequisite loop, is left out (`rsResolve`).
+- `class_item.go`: item defs; a plugin item may set `mass` (1 to 100000 g, default 1000), `stack_limit` (1 to 1000, default 1000) and `trader_stock` (0 to 1000, default 0); a core patch may not change them.
 - `build.go`: `Build` (the pipeline), `Catalog`, `keepCore`, `Classes`, `Errors`.
 
 ## Depends on

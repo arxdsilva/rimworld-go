@@ -135,8 +135,8 @@ func TestPemmicanKeepsIngredients(t *testing.T) {
 }
 
 // TestStoveBurnsWood (wiki: Fueled stove): a stove with no wood takes no
-// bill, and one burns a log per WorkPerWood work, failing when it burns
-// out mid-meal; the electric stove burns nothing.
+// bill, and one burns a fixed amount per worked tick, failing when it
+// burns out mid-meal; the electric stove burns nothing.
 func TestStoveBurnsWood(t *testing.T) {
 	t.Parallel()
 	f, c := stove(recipe.SimpleMeal)
@@ -148,20 +148,44 @@ func TestStoveBurnsWood(t *testing.T) {
 	if _, st := c.Bills.Line(1, 0); st != BillNoFuel {
 		t.Fatalf("status %q", st)
 	}
-	f.fuel[1] = 10
+	f.work = 1
+	f.fuel[1] = 10 * fakeWorkBurn // less than one meal's worth
 	j := runBill(t, f, c, cookOnly, 400)
-	if j.State != job.Fail || f.burnt == 0 || f.burnt >= recipe.Core().DefOf(recipe.SimpleMeal).Work {
-		t.Fatalf("burnt out: job %v burnt %d", j.State, f.burnt)
+	if j.State != job.Fail || f.burns == 0 || f.burns >= recipe.Core().DefOf(recipe.SimpleMeal).Work {
+		t.Fatalf("burnt out: job %v burns %d", j.State, f.burns)
 	}
 	f.fuel[1] = 1 << 20
-	f.burnt = 0
+	f.burnt, f.burns = 0, 0
 	f.jobs = map[entity.EntityID]job.Record{}
 	f.claims = map[entity.EntityID]entity.EntityID{}
-	if j := runBill(t, f, c, cookOnly, 400); j.State != job.Complete || f.burnt < recipe.Core().DefOf(recipe.SimpleMeal).Work {
-		t.Fatalf("cooked: job %v burnt %d", j.State, f.burnt)
+	work := recipe.Core().DefOf(recipe.SimpleMeal).Work
+	if j := runBill(t, f, c, cookOnly, 400); j.State != job.Complete || f.burns != work || f.burnt != work*fakeWorkBurn {
+		t.Fatalf("cooked: job %v burns %d burnt %d", j.State, f.burns, f.burnt)
 	}
 	if !Fueled(construction.Stove) || BurnsWhileWorked(construction.ElectricStove) || BurnsWhileWorked(construction.Campfire) {
 		t.Fatal("which benches burn while worked")
+	}
+}
+
+// TestStoveBurnIgnoresWorkUnits: a cook doing two work units a tick burns
+// one worked tick's fuel, not two; a tick that does no work burns nothing.
+func TestStoveBurnIgnoresWorkUnits(t *testing.T) {
+	t.Parallel()
+	f, c := stove(recipe.SimpleMeal)
+	f.put(50, item.Stack{Kind: item.Rice, Qty: 30, X: 1, Y: 1})
+	f.work = 2
+	if j := runBill(t, f, c, cookOnly, 400); j.State != job.Complete {
+		t.Fatalf("job %v", j.State)
+	}
+	if work := recipe.Core().DefOf(recipe.SimpleMeal).Work; f.burns != work/2 || f.burnt != work/2*fakeWorkBurn {
+		t.Fatalf("burns %d burnt %d for %d work at 2 a tick", f.burns, f.burnt, work)
+	}
+	f2, c2 := stove(recipe.SimpleMeal)
+	f2.put(50, item.Stack{Kind: item.Rice, Qty: 30, X: 1, Y: 1})
+	f2.work = -1 // the low-mood skip
+	runBill(t, f2, c2, cookOnly, 50)
+	if f2.burns != 0 {
+		t.Fatalf("idle ticks burnt %d times", f2.burns)
 	}
 }
 

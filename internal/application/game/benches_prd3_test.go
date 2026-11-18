@@ -28,11 +28,11 @@ func TestForgeRefuelNoFlap(t *testing.T) {
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
 	forge := placeFuel(t, g, construction.FueledSmithy, 8, 4)
-	if _, err := g.SpawnStack(item.Wood, 30, 2, 6); err != nil {
+	if _, err := g.SpawnStack(item.Wood, 60, 2, 6); err != nil {
 		t.Fatal(err)
 	}
 	spec, ok := fuelSpec(construction.FueledSmithy)
-	if !ok || spec.CapTicks != 5*TicksPerWood || spec.BurnPermil != 0 {
+	if !ok || spec.CapTicks != 50*TicksPerWood || spec.Below != 25*TicksPerWood || spec.BurnPermil != 0 {
 		t.Fatalf("forge fuel spec %+v %v", spec, ok)
 	}
 	g.setFuel(forge, spec.Below+TicksPerWood/2) // just over half: left alone
@@ -45,7 +45,7 @@ func TestForgeRefuelNoFlap(t *testing.T) {
 		t.Fatalf("an idle forge burnt fuel: %d -> %d", before, g.fuel[forge])
 	}
 	g.setFuel(forge, spec.Below-1) // under half: filled to the top
-	for i := 0; i < 2000 && g.fuel[forge] < spec.CapTicks-TicksPerWood; i++ {
+	for i := 0; i < 6000 && g.fuel[forge] < spec.CapTicks-TicksPerWood; i++ {
 		g.Step(1)
 	}
 	if g.fuel[forge] < spec.CapTicks-TicksPerWood || g.fuel[forge] > spec.CapTicks {
@@ -58,8 +58,8 @@ func TestForgeRefuelNoFlap(t *testing.T) {
 }
 
 // TestForgeSmithsAndBurns: a colonist forges a mace at a fuelled forge,
-// the forge burns a log per WorkPerWood work, and the bench's view shows
-// its work speed.
+// the forge burns WorkBurn fuel per worked tick, and the bench's view
+// shows its work speed.
 func TestForgeSmithsAndBurns(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
@@ -75,21 +75,30 @@ func TestForgeSmithsAndBurns(t *testing.T) {
 	if v := g.craft.Bills.AppendViews(nil, forge)[0]; v.Status != BillNoFuel {
 		t.Fatalf("an empty forge: %q", v.Status)
 	}
-	full := 5 * TicksPerWood
+	full := 50 * TicksPerWood
+	wb := fuelSpecOf(t, construction.FueledSmithy).WorkBurn
+	burntTicks := 0
 	g.setFuel(forge, full)
 	for i := 0; i < 6000 && g.craft.Bills.Of(forge)[0].Done == 0; i++ {
 		if i%100 == 0 {
 			g.SetNeeds(smith, needs.Full, needs.Full)
 		}
+		before := g.fuel[forge]
 		g.Step(1)
+		if d := before - g.fuel[forge]; d != 0 {
+			if d != wb {
+				t.Fatalf("a tick burnt %d fuel ticks, want %d (wiki: Fueled smithy)", d, wb)
+			}
+			burntTicks++
+		}
 	}
 	if g.craft.Bills.Of(forge)[0].Done != 1 {
 		t.Fatal("no mace forged")
 	}
 	burnt := full - g.fuel[forge]
 	work := recipe.Core().DefOf(recipe.MakeMace).Work
-	if want := work * TicksPerWood / craft.WorkPerWood; burnt < want/2 || burnt > want*2 {
-		t.Fatalf("burnt %d fuel ticks for %d work, want about %d", burnt, work, want)
+	if burnt != burntTicks*wb || burntTicks == 0 || burntTicks > work+1 {
+		t.Fatalf("burnt %d fuel ticks over %d worked ticks for %d work", burnt, burntTicks, work)
 	}
 	var bv BuildingView
 	for _, b := range g.World().Buildings {

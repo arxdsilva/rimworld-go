@@ -456,7 +456,7 @@ func (g *Game) spareTakes(st item.Stack, x, y int) bool {
 // cellCap is how many of k one stack on (x, y) holds: StackLimit, a hopper's HopperStack.
 func cellCap(g *Game, k item.Kind, x, y int) int {
 	z, _ := g.storageAt(x, y)
-	return z.Kind.StackCap(k.StackLimit())
+	return z.Kind.StackCap(g.sk.content.Items.StackLimit(k))
 }
 
 // endDelivery completes a delivery whose load is all handed over.

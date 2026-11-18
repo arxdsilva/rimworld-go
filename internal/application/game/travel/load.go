@@ -82,7 +82,7 @@ func (o pods) parseManifest(list string, room int) (Manifest, int) {
 				continue
 			}
 			q = min(q, st.Qty)
-			if !fits(q * st.Kind.MassGrams()) {
+			if !fits(q * o.h.Items().MassGrams(st.Kind)) {
 				continue
 			}
 			k := slices.IndexFunc(m.Items, func(w Want) bool { return w.Kind == st.Kind })
@@ -134,7 +134,7 @@ func (o core) dropHold(h *Hold, x, y int) {
 		}
 	}
 	for _, st := range h.Items {
-		lim := max(1, st.Kind.StackLimit())
+		lim := max(1, o.h.Items().StackLimit(st.Kind))
 		for q := st.Qty; q > 0; q -= lim {
 			part := st
 			part.Qty = min(q, lim)
@@ -191,7 +191,7 @@ func (o pods) inflight(gr *group) (int, map[item.Kind]int) {
 		}
 		if st, ok := o.h.Stack(sid); ok {
 			by[st.Kind] += j.Count
-			kg += (j.Count*st.Kind.MassGrams() + 999) / 1000
+			kg += (j.Count*o.h.Items().MassGrams(st.Kind) + 999) / 1000
 		}
 	}
 	return kg, by
@@ -224,7 +224,7 @@ func (o pods) AssignLoad(id entity.EntityID) bool {
 		kg, by := o.inflight(gr)
 		free := capKg(gr) - o.loadKg(gr) - kg
 		for _, w := range m.Items {
-			n := min(w.Qty-by[w.Kind], free*1000/w.Kind.MassGrams(), item.CarryLimit)
+			n := min(w.Qty-by[w.Kind], free*1000/o.h.Items().MassGrams(w.Kind), item.CarryLimit)
 			if n <= 0 {
 				continue
 			}
@@ -232,7 +232,7 @@ func (o pods) AssignLoad(id entity.EntityID) bool {
 			if !ok {
 				continue
 			}
-			pod := o.podWithRoom(gr, (n*w.Kind.MassGrams()+999)/1000)
+			pod := o.podWithRoom(gr, (n*o.h.Items().MassGrams(w.Kind)+999)/1000)
 			b, _ := o.h.Building(pod)
 			if o.h.StartJob(id, job.Record{Kind: job.LoadPods, Target: sid, TX: x, TY: y, Dest: pod, DestX: b.X, DestY: b.Y, Count: n}) {
 				return true
@@ -341,7 +341,7 @@ func (o pods) doLoad(id entity.EntityID, j job.Record) {
 			o.end(id, j, job.TargetGone)
 			return
 		}
-		o.s.holdOf(o.podWithRoom(gr, (st.Qty*st.Kind.MassGrams()+999)/1000)).addMeal(st, o.h.MealRule())
+		o.s.holdOf(o.podWithRoom(gr, (st.Qty*o.h.Items().MassGrams(st.Kind)+999)/1000)).addMeal(st, o.h.MealRule())
 		if m != nil {
 			for i := range m.Items {
 				if m.Items[i].Kind == st.Kind {

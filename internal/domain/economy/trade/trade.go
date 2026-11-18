@@ -72,6 +72,14 @@ const (
 	SpecialtyPct = 10
 )
 
+// Plugin goods in stock (PLG-026): a plugin kind whose def opts in
+// (item.Def.TraderStock > 0) is stocked by the traders that want it.
+const (
+	// pluginStockPct is the chance a trader carries an opted-in plugin
+	// kind it wants (original tuning).
+	pluginStockPct = 50
+)
+
 // Line is one stock row: Qty units of Kind. Building is a crated
 // building's construction kind (AX-1; Kind item.MinifiedBuilding), 0 for
 // any other goods.
@@ -217,7 +225,9 @@ func neolithicBanned(it item.Kind) bool { return it == item.Rifle || it == item.
 
 // Generate is a fresh stock for a trader of kind k from a faction of
 // technology tech, drawn from rng only. Neolithic traders carry no rifles
-// or components.
+// or components. The run's plugin kinds that opt in (item.Def.TraderStock)
+// and that k wants are drawn last, in kind order, so a run without them
+// draws exactly the core stream.
 func Generate(b item.Book, k TraderKind, tech faction.Tech, rng *randx.Rand) Stock {
 	d := DefOf(k)
 	st := Stock{Kind: k}
@@ -243,16 +253,28 @@ func Generate(b item.Book, k TraderKind, tech faction.Tech, rng *randx.Rand) Sto
 			st.AddGoods(Goods{item.MinifiedBuilding, uint8(c.kind)}, qty)
 		}
 	}
+	for _, it := range b.Plugins() {
+		n := b.Def(it).TraderStock
+		if n <= 0 || !Wants(b, k, it) {
+			continue
+		}
+		qty := 1 + rng.IntN(n)
+		if rng.IntN(100) < pluginStockPct {
+			st.AddGoods(Goods{Kind: it}, qty)
+		}
+	}
 	return st
 }
 
-// Wants reports whether a trader of kind k buys goods of kind it. Silver
-// is not a good: it settles every trade.
+// Wants reports whether a trader of kind k buys goods of kind it, by its
+// value and category in the run's book b (a plugin kind is Materials or
+// Manufactured, item.Book.Category). Silver is not a good: it settles
+// every trade.
 func Wants(b item.Book, k TraderKind, it item.Kind) bool {
-	if k >= NumKinds || it.Value() <= 0 || it == item.Silver || it == item.MinifiedBuilding { // AX-1: crates are only sold to the colony
+	if k >= NumKinds || b.Value(it) <= 0 || it == item.Silver || it == item.MinifiedBuilding { // AX-1: crates are only sold to the colony
 		return false
 	}
-	c := it.Category()
+	c := b.Category(it)
 	switch k {
 	case BulkHauler:
 		return c == "Food" || c == "Materials" || it == item.HerbalMedicine || it == item.IndustrialMedicine || it == item.Components
@@ -263,8 +285,8 @@ func Wants(b item.Book, k TraderKind, it item.Kind) bool {
 	}
 }
 
-func isSpecialty(k TraderKind, it item.Kind) bool {
-	c := it.Category()
+func isSpecialty(b item.Book, k TraderKind, it item.Kind) bool {
+	c := b.Category(it)
 	for _, s := range DefOf(k).Specialty {
 		if s == c {
 			return true
@@ -299,7 +321,7 @@ func PriceOf(b item.Book, g Goods, k TraderKind, s Side, t Terms) int {
 	}
 	cut := max(SellCutPct*100-SocialStepCenti*social-SellGoodwillMilli/10*t.Goodwill, SellFloorPct*100)
 	sell := v * (10000 - cut) / 10000
-	if isSpecialty(k, it) {
+	if isSpecialty(b, k, it) {
 		sell = sell * (100 + SpecialtyPct) / 100
 	}
 	return min(sell, buy*SellCapPct/100)
@@ -351,7 +373,7 @@ func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Te
 				return Result{Reject: RejectOverStock}
 			}
 			if gift {
-				if it.Value() <= 0 {
+				if b.Value(it) <= 0 {
 					return Result{Reject: RejectUnwanted}
 				}
 			} else if !Wants(b, st.Kind, it) {
@@ -386,7 +408,7 @@ func GiftValue(b item.Book, offer []Delta) int {
 	total := 0
 	for _, d := range offer {
 		if d.Qty < 0 {
-			total += -d.Qty * d.Kind.Value()
+			total += -d.Qty * b.Value(d.Kind)
 		}
 	}
 	return total

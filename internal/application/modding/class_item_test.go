@@ -106,8 +106,17 @@ func TestItemCodecPluginItem(t *testing.T) {
 		"broken":        {map[string]any{"texture": "textures/broken.png"}, "texture", "not a valid PNG"},
 		"huge":          {map[string]any{"texture": "textures/huge.png"}, "texture", "300x4"},
 		"outside":       {map[string]any{"texture": "../bell.png"}, "texture", "inside the plugin"},
-		"stack":         {map[string]any{"stack_limit": float64(25)}, "stack_limit", "not moddable yet"},
-		"mass":          {map[string]any{"mass": float64(700)}, "mass", "not moddable yet"},
+		"mass 0":        {map[string]any{"mass": float64(0)}, "mass", "out of range"},
+		"mass big":      {map[string]any{"mass": float64(100001)}, "mass", "out of range"},
+		"mass frac":     {map[string]any{"mass": 2.5}, "mass", "whole number"},
+		"mass text":     {map[string]any{"mass": "heavy"}, "mass", "want a number"},
+		"stack 0":       {map[string]any{"stack_limit": float64(0)}, "stack_limit", "out of range"},
+		"stack big":     {map[string]any{"stack_limit": float64(1001)}, "stack_limit", "out of range"},
+		"stack neg":     {map[string]any{"stack_limit": float64(-1)}, "stack_limit", "out of range"},
+		"stack frac":    {map[string]any{"stack_limit": 2.5}, "stack_limit", "whole number"},
+		"stock big":     {map[string]any{"trader_stock": float64(1001)}, "trader_stock", "out of range"},
+		"stock neg":     {map[string]any{"trader_stock": float64(-1)}, "trader_stock", "out of range"},
+		"stock frac":    {map[string]any{"trader_stock": 2.5}, "trader_stock", "whole number"},
 		"unknown field": {map[string]any{"colour": "red"}, "colour", "unknown field"},
 	} {
 		got, probs := DecodeItems(append(EncodeItems(item.Core()), itBell(c.body)), tex)
@@ -125,8 +134,8 @@ func TestItemCodecPluginItem(t *testing.T) {
 	}
 }
 
-// A patch may change a core item's value, never its name, mass or stack
-// limit.
+// A patch may change a core item's value, never its name, mass, stack limit
+// or trader stock.
 func TestItemCodecCorePatch(t *testing.T) {
 	t.Parallel()
 	patched := func(f string, v any) []Def {
@@ -146,9 +155,58 @@ func TestItemCodecCorePatch(t *testing.T) {
 	if len(probs) > 0 || b.Value(item.Steel) != 3 || b.Def(item.Steel).Mass != item.Steel.MassGrams() {
 		t.Fatalf("value patch: %v %+v", probs, b.Def(item.Steel))
 	}
-	for f, v := range map[string]any{"label": "iron", "texture": "textures/x.png", "mass": float64(1), "stack_limit": float64(10)} {
+	for f, v := range map[string]any{"label": "iron", "texture": "textures/x.png", "mass": float64(1), "stack_limit": float64(10), "trader_stock": float64(9)} {
 		if _, probs := DecodeItems(patched(f, v), nil); len(probs) != 1 || probs[0].Field != f {
 			t.Errorf("patching %s: %v", f, probs)
+		}
+	}
+}
+
+// A plugin item sets its mass, stack limit and trader stock.
+func TestDecodeItemsPluginMassStackStock(t *testing.T) {
+	t.Parallel()
+	tex := itTex("frontier", map[string][]byte{"textures/bell.png": itPNG(t, 4, 4)})
+	b, probs := DecodeItems(append(EncodeItems(item.Core()), itBell(map[string]any{
+		"mass": float64(250), "stack_limit": float64(75), "trader_stock": float64(6)})), tex)
+	d := b.Def(item.Kind(item.CoreKinds))
+	if len(probs) > 0 || d.Mass != 250 || d.Stack != 75 || d.TraderStock != 6 {
+		t.Fatalf("%v %+v", probs, d)
+	}
+	// Each bound is accepted.
+	for _, body := range []map[string]any{{"mass": float64(1), "stack_limit": float64(1), "trader_stock": float64(0)},
+		{"mass": float64(100000), "stack_limit": float64(item.StackLimit), "trader_stock": float64(1000)}} {
+		if _, probs := DecodeItems(append(EncodeItems(item.Core()), itBell(body)), tex); len(probs) > 0 {
+			t.Errorf("%v: %v", body, probs)
+		}
+	}
+}
+
+// Absent fields keep what every Kind method answers for a plugin good.
+func TestDecodeItemsPluginDefaults(t *testing.T) {
+	t.Parallel()
+	tex := itTex("frontier", map[string][]byte{"textures/bell.png": itPNG(t, 4, 4)})
+	b, probs := DecodeItems(append(EncodeItems(item.Core()), itBell(nil)), tex)
+	d := b.Def(item.Kind(item.CoreKinds))
+	if len(probs) > 0 || d.Mass != 1000 || d.Stack != 1000 || d.TraderStock != 0 ||
+		d.Mass != item.None.MassGrams() || d.Stack != item.None.StackLimit() {
+		t.Fatalf("%v %+v", probs, d)
+	}
+}
+
+// A patch to a core item's mass or stack limit that differs is refused.
+func TestDecodeCoreRefusesMassStack(t *testing.T) {
+	t.Parallel()
+	for _, f := range []string{"mass", "stack_limit", "trader_stock"} {
+		defs := EncodeItems(item.Core())
+		body := map[string]any{}
+		for k, x := range defs[item.Steel].Body {
+			body[k] = x
+		}
+		body[f] = float64(7)
+		defs[item.Steel].Body = body
+		b, probs := DecodeItems(defs, nil)
+		if len(probs) != 1 || probs[0].Field != f || !strings.Contains(probs[0].Msg, "core item") || b.Len() != item.CoreKinds {
+			t.Errorf("%s: %v", f, probs)
 		}
 	}
 }

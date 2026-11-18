@@ -23,7 +23,7 @@ func (g Gear) BackToPack(id, carry entity.EntityID) bool {
 	}
 	delete(g.s.FromPack, id)
 	st, ok := g.r.Stack(carry)
-	if !ok || st.Carrier != id || !g.s.Rules.On(gameplay.PutBack) || st.Kind.MassGrams()*st.Qty > g.Room(id) {
+	if !ok || st.Carrier != id || !g.s.Rules.On(gameplay.PutBack) || g.r.Items().MassGrams(st.Kind)*st.Qty > g.Room(id) {
 		return false
 	}
 	j := g.r.Job(id)

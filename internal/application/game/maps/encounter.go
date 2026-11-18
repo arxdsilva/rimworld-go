@@ -167,15 +167,16 @@ func (f Fleet) demand(c *Caravan, fac int, now uint64) bool {
 	if fac == 0 || len(goods) == 0 {
 		return false
 	}
+	bk := f.h.Items()
 	st := slices.MaxFunc(goods, func(a, b item.Stack) int {
-		if d := cmp.Compare(a.Kind.Value()*a.Qty, b.Kind.Value()*b.Qty); d != 0 {
+		if d := cmp.Compare(bk.Value(a.Kind)*a.Qty, bk.Value(b.Kind)*b.Qty); d != 0 {
 			return d
 		}
 		return cmp.Compare(b.Kind, a.Kind)
 	})
 	qty := (st.Qty + 1) / 2
 	name := f.h.Factions()[fac-1].Name
-	id := f.h.DemandLetter("A demand on the road", "Fighters of %s block the caravan's way near %s and want %d %s. Give it up and they let it pass; refuse and they attack.", name, f.h.TileName(c.C.Tile), qty, st.Kind)
+	id := f.h.DemandLetter("A demand on the road", "Fighters of %s block the caravan's way near %s and want %d %s. Give it up and they let it pass; refuse and they attack.", name, f.h.TileName(c.C.Tile), qty, bk.Label(st.Kind))
 	c.Ask = Ask{Letter: id, Faction: fac, Kind: st.Kind, Qty: qty, Until: now + demandWait}
 	return true
 }

@@ -474,13 +474,42 @@ func TestOrbitalNeedsPoweredConsole(t *testing.T) {
 		t.Fatal("a second ship fits")
 	}
 	st, ok := g.TradeStatus()
-	if !ok || !st.Present || st.Ship != o.Name || st.HoursLeft != 36 || st.CallOK || st.CallReason != ReasonNoBeacon || st.CaravanVisiting {
+	if !ok || !st.Present || st.Ship != o.Name || st.HoursLeft != 16 || st.CallOK || st.CallReason != ReasonNoBeacon || st.CaravanVisiting {
 		t.Fatalf("trade status %+v", st)
 	}
 	o.Until = uint64(g.clock.Now()) + 3
 	g.Step(5)
 	if g.trade.orbital != nil {
 		t.Fatal("the ship outstayed its time")
+	}
+}
+
+// TestOrbitalStays40000: an orbital ship stays 40000 ticks (wiki: Trade),
+// 16 hours, and its letter says so; it is still there one tick before.
+func TestOrbitalStays40000(t *testing.T) {
+	t.Parallel()
+	g, _, _, _ := orbitalGame(t)
+	now := uint64(g.clock.Now())
+	if !g.orbitalArrive(now) || g.trade.orbital.Until != now+40000 {
+		t.Fatalf("ship %+v, want Until %d", g.trade.orbital, now+40000)
+	}
+	if 40000/clock.TicksPerHour != 16 {
+		t.Fatalf("40000 ticks is %d hours", 40000/clock.TicksPerHour)
+	}
+	list := g.letters.List()
+	if l := list[len(list)-1]; l.Title != "Trade ship" || !strings.Contains(l.Text, "in radio range for about 16 hours.") {
+		t.Fatalf("letter %q: %q", l.Title, l.Text)
+	}
+	if st, _ := g.TradeStatus(); st.HoursLeft != 16 {
+		t.Fatalf("hours left %d, want 16", st.HoursLeft)
+	}
+	g.Step(40000 - 1)
+	if g.trade.orbital == nil {
+		t.Fatal("the ship left before its 40000 ticks")
+	}
+	g.Step(2)
+	if g.trade.orbital != nil {
+		t.Fatal("the ship outstayed 40000 ticks")
 	}
 }
 
@@ -749,7 +778,7 @@ func TestTradeStatusReportsShipAndCaravan(t *testing.T) {
 	t.Parallel()
 	g := tradeRich(t)
 	st, ok := g.TradeStatus()
-	if !ok || !st.Present || !st.CaravanVisiting || st.Ship == "" || st.CaravanFaction == "" || st.HoursLeft != 36 || st.CaravanHoursLeft != 18 {
+	if !ok || !st.Present || !st.CaravanVisiting || st.Ship == "" || st.CaravanFaction == "" || st.HoursLeft != 16 || st.CaravanHoursLeft != 18 {
 		t.Fatalf("status %+v %v", st, ok)
 	}
 	if _, open := g.TradeView(); open {

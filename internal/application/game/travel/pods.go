@@ -146,7 +146,7 @@ func (o pods) loadKg(gr *group) int {
 	kg := 0
 	for _, p := range gr.pods {
 		if h := o.s.holds[p]; h != nil {
-			kg += h.massKg(animalKg)
+			kg += h.massKg(o.h.Items(), animalKg)
 		}
 	}
 	return kg
@@ -194,7 +194,7 @@ func (o pods) podWithRoom(gr *group, kg int) entity.EntityID {
 	for _, p := range gr.pods {
 		left := caravan.PodCapacityKg
 		if h := o.s.holds[p]; h != nil {
-			left -= h.massKg(animalKg)
+			left -= h.massKg(o.h.Items(), animalKg)
 		}
 		if left >= kg {
 			return p

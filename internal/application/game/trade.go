@@ -301,9 +301,9 @@ func (g *Game) beaconIDs() []entity.EntityID {
 }
 
 // tradeGoods is what the colony can trade: for a caravan the unforbidden
-// loose stacks on stockpile cells, for the orbital ship those within
-// beaconRadius of a trade beacon (one pass over the items, so it stays
-// bounded by the item count). ids are ascending per kind.
+// loose stacks on stockpile cells, for the orbital ship those in a
+// trade beacon's reach (beaconCells; one pass over those cells, so it stays
+// bounded by the reach). ids are ascending per kind.
 type tradeGoods struct {
 	ids    map[item.Kind][]entity.EntityID
 	counts map[item.Kind]int
@@ -351,11 +351,12 @@ func (g *Game) takeGoods(gd tradeGoods, k item.Kind, n int) {
 }
 
 // dropGoods puts line l down at (x, y) in stacks of at most its kind's
-// StackLimit (spilling to free tiles), forbidden when forbid; a crated
-// building keeps its kind, in its default material (AX-1).
+// book stack limit (spilling), forbidden when forbid; a crate keeps its
+// kind, in its default material (AX-1); a gone kind (item.None) drops none.
 func (g *Game) dropGoods(l trade.Line, x, y int, forbid bool) {
-	for qty := l.Qty; qty > 0; {
-		n := min(qty, l.Kind.StackLimit())
+	b := g.sk.content.Items
+	for qty := l.Qty; qty > 0 && int(l.Kind) < b.Len(); {
+		n := min(qty, b.StackLimit(l.Kind))
 		qty -= n
 		sid, err := g.SpawnStack(l.Kind, n, x, y)
 		if err != nil {

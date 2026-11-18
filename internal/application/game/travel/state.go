@@ -377,10 +377,10 @@ type (
 func (s *State) Ops(h Host) Ops { return Ops{core{s, h}} }
 
 // massKg is a hold's mass in whole kilograms (rounded up).
-func (h *Hold) massKg(animalMass func(animal.Species) int) int {
+func (h *Hold) massKg(b item.Book, animalMass func(animal.Species) int) int {
 	g := 0
 	for _, st := range h.Items {
-		g += st.Qty * st.Kind.MassGrams()
+		g += st.Qty * b.MassGrams(st.Kind)
 	}
 	kg := len(h.Pawns)*humanKg + (g+999)/1000
 	for _, b := range h.Animals {
@@ -422,10 +422,10 @@ func (h *Hold) merge(o *Hold, r item.MealRule) {
 }
 
 // value is the hold's market value (goods and animals; a gift's worth).
-func (h *Hold) value() int {
+func (h *Hold) value(b item.Book) int {
 	v := 0
 	for _, st := range h.Items {
-		v += st.Qty * st.Kind.Value()
+		v += st.Qty * b.Value(st.Kind)
 	}
 	for _, b := range h.Animals {
 		v += animalValue(b.State.Species)

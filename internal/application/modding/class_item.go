@@ -20,6 +20,8 @@ const (
 	itMaxLabel   = 60  // runes
 	itMaxDesc    = 400 // runes
 	itMaxValue   = 100_000
+	itMaxMass    = 100_000 // grams
+	itMaxStock   = 1000
 	itMaxSmelt   = 1000
 	itMaxTexture = 256 // pixels a side
 )
@@ -33,10 +35,9 @@ func ItemPaths() []string {
 		"Raw resources/Chemicals", "Raw resources/Brewing and leaves", "Items/Parts"}
 }
 
-// itFixed is why mass and stack limit are refused (PLG-026 open): every
-// carrying, caravan and storage rule reads them from the kind alone, and
-// stack limits are 1 or item.StackLimit by design (STK-ST).
-const itFixed = "not moddable yet: an item's mass and stack limit are the game's (a plugin good weighs 1 kg and stacks to 1000)"
+// itFixed is why a patch may not change a core item's mass, stack limit or
+// trader stock: saves and the game's own rules read them from the kind.
+const itFixed = "a patch may not change a core item's mass, stack limit or trader stock (a plugin item sets its own)"
 
 // itCoded are fields asking for behaviour a plugin item cannot have.
 func itCoded() []string {
@@ -82,8 +83,8 @@ func itemClassWith(tex Textures) class {
 }
 
 // EncodeItems turns a book's core kinds into trees under their keys, in
-// Kind order: the label, mass and stack limit (fixed) and the value (a
-// patch may change it).
+// Kind order: the label, mass and stack limit (fixed for core) and the value
+// (a patch may change it). Trader stock is not encoded.
 // Plugin kinds are not encoded (core's trees are what patches target).
 func EncodeItems(b item.Book) []Def {
 	out := make([]Def, 0, item.CoreKinds)
@@ -98,9 +99,10 @@ func EncodeItems(b item.Book) []Def {
 // DecodeItems types item defs into a book: core's first, in Kind order (a
 // patch may change their value only), then the plugins' simple goods,
 // each with a label, a storage category of ItemPaths, a value and a
-// texture tex finds and decodes as a PNG. Mass and stack limit are not
-// moddable yet (itFixed): a plugin good weighs and stacks as every
-// uncategorised good does (Kind.MassGrams, item.StackLimit). A bad def is a problem and is left out; kinds past
+// texture tex finds and decodes as a PNG. A plugin good may set mass
+// (grams, 1 to 100000; default 1000), stack_limit (1 to item.StackLimit;
+// default item.StackLimit) and trader_stock (0 to 1000; default 0, a trader
+// carries none). A bad def is a problem and is left out; kinds past
 // item.MaxKinds are refused.
 func DecodeItems(defs []Def, tex Textures) (item.Book, []Problem) {
 	var list []item.Def
@@ -140,6 +142,7 @@ func (id *itDecoder) decode(core item.Book) item.Def {
 	if id.def.Plugin == Core {
 		return id.decodeCore(core)
 	}
+	d.Mass, d.Stack = item.None.MassGrams(), item.None.StackLimit() // defaults: what every Kind method answers for it
 	body := id.def.Body
 	for _, k := range rcSorted(body) {
 		id.field(&d, k, body[k])
@@ -149,7 +152,6 @@ func (id *itDecoder) decode(core item.Book) item.Def {
 			id.fail(k, "required")
 		}
 	}
-	d.Mass, d.Stack = item.None.MassGrams(), item.None.StackLimit() // what every Kind method answers for it
 	return d
 }
 
@@ -169,8 +171,8 @@ func (id *itDecoder) decodeCore(core item.Book) item.Def {
 			if s, _ := v.(string); s != d.Label {
 				id.fail(f, "the game's own items keep their names (a translation renames them)")
 			}
-		case "mass", "stack_limit":
-			if n, ok := v.(float64); !ok || int(n) != map[string]int{"mass": d.Mass, "stack_limit": d.Stack}[f] {
+		case "mass", "stack_limit", "trader_stock":
+			if n, ok := v.(float64); !ok || int(n) != map[string]int{"mass": d.Mass, "stack_limit": d.Stack, "trader_stock": d.TraderStock}[f] {
 				id.fail(f, "%s", itFixed)
 			}
 		case "value":
@@ -194,8 +196,12 @@ func (id *itDecoder) field(d *item.Def, k string, v any) {
 			id.fail(k, "%q: a plugin item goes under one of %s (the other categories need code)", d.Path,
 				strings.Join(ItemPaths(), ", "))
 		}
-	case "mass", "stack_limit":
-		id.fail(k, "%s", itFixed)
+	case "mass":
+		d.Mass = id.num(k, v, 1, itMaxMass)
+	case "stack_limit":
+		d.Stack = id.num(k, v, 1, item.StackLimit)
+	case "trader_stock":
+		d.TraderStock = id.num(k, v, 0, itMaxStock)
 	case "value":
 		d.Value = id.num(k, v, 0, itMaxValue)
 	case "smelt":

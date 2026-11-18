@@ -65,21 +65,16 @@ func ElectricPct(k construction.Kind) int {
 	return 0
 }
 
-// WorkPerWood is the forge work one log of fuel lasts (wiki: Fueled
-// stove, one log per 375 ticks of work; the fueled smithy burns the
-// same; logs and work both scaled / 10).
-const WorkPerWood = 375
-
 // Fueled reports a bench that works only with fuel in it: the campfire
 // (it burns on its own), the wood-fired forge and the fueled stove
-// (FOOD-4, wiki: Fueled stove: 50 wood, scaled / 10 as the forge's), which
+// (FOOD-4, wiki: Fueled stove: 50 wood), which
 // burn while worked (BurnsWhileWorked).
 func Fueled(k construction.Kind) bool {
 	return k == construction.Campfire || BurnsWhileWorked(k)
 }
 
-// BurnsWhileWorked reports a bench that burns one log per WorkPerWood
-// work done at it: the fueled smithy and the fueled stove.
+// BurnsWhileWorked reports a bench that burns fuel on every worked tick
+// (Workshop.UseFuel): the fueled smithy and the fueled stove.
 func BurnsWhileWorked(k construction.Kind) bool {
 	return k == construction.FueledSmithy || k == construction.Stove
 }

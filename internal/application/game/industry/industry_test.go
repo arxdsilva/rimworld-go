@@ -330,3 +330,22 @@ func TestRoomRounding(t *testing.T) {
 		t.Fatal("room rounding")
 	}
 }
+
+// TestStoveSmithyFuelSpec (wiki: Fueled stove, Fueled smithy): both hold
+// 50 logs, ask for more under 25 and burn per worked tick only (160 and 80
+// a day).
+func TestStoveSmithyFuelSpec(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		k    construction.Kind
+		burn int
+	}{{construction.Stove, 16}, {construction.FueledSmithy, 8}} {
+		s, ok := FuelSpec(c.k)
+		if !ok || s.CapTicks != 50*TicksPerWood || s.Below != 25*TicksPerWood || s.WorkBurn != c.burn || s.BurnPermil != 0 {
+			t.Errorf("%v: %+v %v", c.k, s, ok)
+		}
+	}
+	if s, _ := FuelSpec(construction.Campfire); s.WorkBurn != 0 {
+		t.Errorf("a campfire burns per worked tick: %+v", s)
+	}
+}

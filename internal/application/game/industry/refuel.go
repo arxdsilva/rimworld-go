@@ -79,6 +79,19 @@ func Room(capTicks, fuel int, k item.Kind) int {
 	return max(0, (capTicks-fuel+per-1)/per)
 }
 
+// RefuelItem is the item haulers bring to burner kind k first: wood for
+// most, chemfuel for the chemfuel generator and pod launcher (AX-4, AX-9),
+// hay for the fish tank (FISH-*).
+func RefuelItem(k construction.Kind) item.Kind {
+	switch k {
+	case construction.ChemfuelGenerator, construction.PodLauncher:
+		return item.Chemfuel
+	case construction.FishTank:
+		return item.Hay
+	}
+	return item.Wood
+}
+
 // Plan is the refuel job pawn would start on burner bid, or why it can't:
 // RefuseFull, RefuseNoFuel plus the fuel, or RefuseUnreachable. It does not
 // check the burner's threshold, reservations or the pawn's work types.
@@ -89,12 +102,7 @@ func Plan(h RefuelHost, pawn, bid entity.EntityID) (job.Record, string) {
 	}
 	spec, _ := FuelSpec(b.Kind)
 	have := h.Fuel(bid)
-	fuel := item.Wood
-	if b.Kind == construction.ChemfuelGenerator || b.Kind == construction.PodLauncher {
-		fuel = item.Chemfuel // AX-4, AX-9: they take chemfuel only
-	} else if b.Kind == construction.FishTank {
-		fuel = item.Hay // FISH-*: hay first; the tank feed has the rest
-	}
+	fuel := RefuelItem(b.Kind)
 	need := Room(spec.CapTicks, have, fuel)
 	if need == 0 {
 		return job.Record{}, RefuseFull

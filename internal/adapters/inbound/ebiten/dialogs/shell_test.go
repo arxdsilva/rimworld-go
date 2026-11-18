@@ -24,6 +24,7 @@ type fakeShell struct {
 	tv    *game.TradeView
 	cv    *game.CommsView
 	sites []game.WorldSiteView
+	items item.Book
 
 	w         game.WorldView
 	portraits int
@@ -68,7 +69,7 @@ func (s *fakeShell) Icon(key string) *ebiten.Image {
 	return nil
 }
 func (s *fakeShell) Kit() *uikit.Kit               { return s.kit }
-func (s *fakeShell) Items() item.Book              { return item.Book{} }
+func (s *fakeShell) Items() item.Book              { return s.items }
 func (s *fakeShell) Sites() []game.WorldSiteView   { return s.sites }
 func (s *fakeShell) Trade() (game.TradeView, bool) { return opt(s.tv) }
 func (s *fakeShell) Comms() (game.CommsView, bool) { return opt(s.cv) }

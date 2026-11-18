@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/beacon"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -36,9 +37,10 @@ const (
 	TurretRecoilTicks = 6
 	turretRecoilTiles = 0.07
 	// TurretRangeTiles and BeaconRadiusTiles are the rings shown on
-	// selection and on the placement ghost (mirror the tuning table).
+	// selection and on the placement ghost. The beacon's is half its reach
+	// across (beacon.Diameter); walls cut the reach inside the ring.
 	TurretRangeTiles  = 10.0
-	BeaconRadiusTiles = 6.0
+	BeaconRadiusTiles = float64(beacon.Diameter) / 2
 	// turretEngagedTicks: a shot this recent means the turret holds a target.
 	turretEngagedTicks = 90
 	BeaconBlinkFrames  = 90

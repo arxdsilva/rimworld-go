@@ -117,11 +117,14 @@ func (g *Game) TradeView() (TradeView, bool) {
 	theirs := map[trade.Goods]int{} // AX-1: a crated building is goods of its own
 	keys := make([]trade.Goods, 0, len(gd.counts)+len(p.stock.Lines))
 	for _, l := range p.stock.Lines {
+		if int(l.Kind) >= b.Len() {
+			continue // item.None: a removed plugin's goods show no row
+		}
 		theirs[l.Goods()] += l.Qty
 		keys = append(keys, l.Goods())
 	}
 	for k := range gd.counts {
-		if k != item.Silver && k.Value() > 0 && theirs[trade.Goods{Kind: k}] == 0 {
+		if k != item.Silver && b.Value(k) > 0 && theirs[trade.Goods{Kind: k}] == 0 {
 			keys = append(keys, trade.Goods{Kind: k})
 		}
 	}
@@ -132,7 +135,7 @@ func (g *Game) TradeView() (TradeView, bool) {
 		if gk.Building != 0 {
 			colony = 0 // the colony's own crates are not on offer
 		}
-		v.Rows = append(v.Rows, TradeRowView{Kind: gk.Name(b), Label: cmp.Or(gk.Label(b), itemLabel(k)), Category: k.Category(),
+		v.Rows = append(v.Rows, TradeRowView{Kind: gk.Name(b), Label: cmp.Or(gk.Label(b), itemLabel(k)), Category: b.Category(k),
 			ColonyQty: colony, TraderQty: theirs[gk],
 			BuyC: trade.PriceOf(b, gk, p.kind, trade.Buy, terms), SellC: trade.PriceOf(b, gk, p.kind, trade.Sell, terms),
 			WillBuy: theirs[gk] > 0, WillSell: gk.Building == 0 && trade.Wants(b, p.kind, k)})

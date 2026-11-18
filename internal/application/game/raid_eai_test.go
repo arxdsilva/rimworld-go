@@ -291,7 +291,7 @@ func lootScan(g *Game, x, y, r int) (entity.EntityID, int, int, bool) {
 	var best entity.EntityID
 	bx, by, bestD := 0, 0, r+1
 	for _, id := range g.itemIDs {
-		if st, ok := g.stacks.Get(id); ok && worthStealing(st) {
+		if st, ok := g.stacks.Get(id); ok && worthStealing(g.sk.content.Items, st) {
 			if d := weapon.Distance(x, y, st.X, st.Y); d < bestD || d == bestD && id < best {
 				best, bx, by, bestD = id, st.X, st.Y, d
 			}

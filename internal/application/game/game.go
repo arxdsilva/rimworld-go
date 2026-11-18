@@ -455,6 +455,7 @@ type BuildingView struct {
 	// Burners: FuelPct left, Burning when lit; REF-1 Refuelable/AutoRefuel.
 	Fuel, Burning, Refuelable, AutoRefuel bool
 	FuelPct                               int
+	FuelLogs, FuelCapLogs                 int // wood burners: logs held and the tank, in logs (0 for other burners)
 	// HPPct is the building's health (percent); below 100 it is damaged.
 	HPPct int
 	// Catch: an installed carpet's share of tracked dirt wiped, percent (SIM-021).

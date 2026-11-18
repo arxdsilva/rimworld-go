@@ -5,11 +5,13 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/industry"
 	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/application/game/thermo"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
 )
@@ -171,6 +173,9 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	}
 	if pct, ok := g.fuelPct(id, b); ok && b.Kind != construction.FishTank { // campfire, torch lamp, wood-fired generator (fuel.go)
 		bv.Fuel, bv.FuelPct, bv.Burning, bv.Refuelable, bv.AutoRefuel = true, pct, g.burning(id, b), !b.Hostile, !b.NoAutoRefuel // Refuelable = industry.Controllable here
+		if s, _ := fuelSpec(b.Kind); industry.RefuelItem(b.Kind) == item.Wood {
+			bv.FuelLogs, bv.FuelCapLogs = g.fuel[id]/TicksPerWood, s.CapTicks/TicksPerWood
+		}
 	}
 	if b.Kind == construction.FishTank {
 		bv.Tank = tanksOf(g).View(id) // game/aqua: feed reads as Tank.FeedPct, not as fuel
@@ -233,7 +238,7 @@ func equalBuildingView(a, b *BuildingView) bool {
 		a.W == b.W && a.H == b.H && a.HasSpot == b.HasSpot && a.SpotX == b.SpotX && a.SpotY == b.SpotY &&
 		a.Bench == b.Bench && slices.Equal(a.Bills, b.Bills) &&
 		a.DryKind == b.DryKind && a.DryQty == b.DryQty && a.DryPct == b.DryPct &&
-		a.Fuel == b.Fuel && a.FuelPct == b.FuelPct && a.Burning == b.Burning && a.Refuelable == b.Refuelable && a.AutoRefuel == b.AutoRefuel &&
+		a.Fuel == b.Fuel && a.FuelPct == b.FuelPct && a.FuelLogs == b.FuelLogs && a.FuelCapLogs == b.FuelCapLogs && a.Burning == b.Burning && a.Refuelable == b.Refuelable && a.AutoRefuel == b.AutoRefuel &&
 		a.HPPct == b.HPPct && a.Catch == b.Catch &&
 		a.Occupant == b.Occupant && a.Epitaph == b.Epitaph && a.Headstone == b.Headstone &&
 		a.TroughFill == b.TroughFill && a.TroughCap == b.TroughCap && a.TroughFilter == b.TroughFilter &&

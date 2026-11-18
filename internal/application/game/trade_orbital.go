@@ -4,52 +4,61 @@
 package game
 
 import (
+	"math/bits"
+	"slices"
+
+	"rimworld-go/internal/application/game/beacon"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Orbital traders (PLAY-024, agent S2): incident.OrbitalTrader puts a
 // curio merchant's ship in radio range for orbitalStay; it fits only while
 // a radio console is powered. A colonist at a powered console calls it
-// from the comms dialog (comms.go); only goods within beaconRadius of a
-// trade beacon can be traded, and purchases come down in a drop pod near
+// from the comms dialog (comms.go); only goods a trade beacon reaches
+// (beaconCells) can be traded, and purchases come down in a drop pod near
 // the first beacon tradePodFall ticks later (streamTrade picks the spot).
 
-const (
-	// orbitalStay is how long an orbital ship stays in radio range.
-	orbitalStay = clock.TicksPerDay * 3 / 2
-	// beaconRadius is a trade beacon's reach (Euclidean tiles).
-	beaconRadius = 6
-)
+// orbitalStay is how long an orbital ship stays in radio range.
+const orbitalStay = 40000 // wiki: Trade (orbital traders remain 40,000 ticks)
 
-// beaconGoods is what the orbital ship can trade: the goods within
-// beaconRadius of a trade beacon; nothing without one.
+// beaconGoods is what the orbital ship can trade: the loose stacks on the
+// cells a trade beacon reaches (the ground index; nothing without one).
 func beaconGoods(g *Game) tradeGoods {
-	var beacons [][2]int
-	for _, bid := range g.beaconIDs() {
-		b := g.bldgs.Ref(bid)
-		beacons = append(beacons, [2]int{b.X, b.Y})
-	}
-	if len(beacons) == 0 {
-		return tradeGoods{ids: map[item.Kind][]entity.EntityID{}, counts: map[item.Kind]int{}}
-	}
-	return g.collectGoods(func(x, y int) bool { return nearAny(x, y, beacons, beaconRadius) })
-}
-
-// nearAny reports (x, y) within r (Euclidean) of any of pts.
-func nearAny(x, y int, pts [][2]int, r int) bool {
-	for _, p := range pts {
-		dx, dy := x-p[0], y-p[1]
-		if dx*dx+dy*dy <= r*r {
-			return true
+	gd, w := tradeGoods{ids: map[item.Kind][]entity.EntityID{}, counts: map[item.Kind]int{}}, g.grid.Width()
+	for wi, word := range beaconCells(g) {
+		for ; word != 0; word &= word - 1 {
+			c := wi<<6 + bits.TrailingZeros64(word)
+			for _, iid := range g.idx.ground.Loose(haulHost{g}, c%w, c/w) {
+				if st := g.stacks.Ref(iid); st != nil && st.Carrier == 0 && !st.Forbidden && st.Qty > 0 && !g.fogged(c%w, c/w) {
+					gd.ids[st.Kind], gd.counts[st.Kind] = append(gd.ids[st.Kind], iid), gd.counts[st.Kind]+st.Qty
+				}
+			}
 		}
 	}
-	return false
+	for k := range gd.ids {
+		slices.Sort(gd.ids[k])
+	}
+	return gd
+}
+
+// beaconCells is the trade beacons' reach (beacon.Reach; rock and built walls
+// cut it, doors and frames don't), cached under bit 254 (no kind) per structVer.
+func beaconCells(g *Game) tileSet {
+	return g.cellSet([4]uint64{3: 1 << 62}).get(g, g.structVer, func() tileSet {
+		w, h, walls := g.grid.Width(), g.grid.Height(), g.buildingCells(construction.Wall)
+		set := newTileSet(w * h)
+		for _, bid := range g.beaconIDs() {
+			b := g.bldgs.Ref(bid)
+			beacon.Reach(w, h, b.X, b.Y, func(x, y int) bool { return walls.has(y*w+x) || terrain.IsRockWall(g.terr.At(x, y)) }, set.add)
+		}
+		return set
+	})
 }
 
 // shipNames are the orbital traders' ship names (original).
@@ -73,7 +82,7 @@ func (g *Game) orbitalArrive(now uint64) bool {
 	name := shipNames[r.IntN(len(shipNames))]
 	stock := trade.Generate(g.sk.content.Items, trade.CurioMerchant, faction.Spacer, r)
 	g.trade.orbital = &orbitalShip{Name: name, Kind: trade.CurioMerchant, Stock: stock, Until: now + orbitalStay}
-	letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about a day and a half. Call it from a powered radio console; only goods within reach of a trade beacon can be traded.",
+	letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about 16 hours. Call it from a powered radio console; only goods within reach of a trade beacon can be traded.",
 		name, lower(trade.DefOf(trade.CurioMerchant).Label))
 	return true
 }

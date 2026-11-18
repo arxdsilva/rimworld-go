@@ -82,6 +82,9 @@ func (s Buildings) Lay(zs *zone.Map, m Machines, k construction.Kind, cells [][2
 	if !ok || len(cells) == 0 {
 		return
 	}
+	if zk == zone.KindShelf { // not a bookcase or hopper, whose filters start from every legacy good
+		proto.AdmitPlugins(m.Items()) // a new shelf takes the run's plugin goods (an egg box's filter lacks the twin); an adopted zone keeps its own (PLG-026)
+	}
 	adopt := func(z zone.Zone) {
 		if z.Profile == proto.Profile {
 			proto = z

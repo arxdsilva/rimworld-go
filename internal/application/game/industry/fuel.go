@@ -47,6 +47,9 @@ type Fuel struct {
 	// BurnPermil is the fuel used per 1000 ticks of burning: 1000 burns
 	// one tick of fuel per tick, 1600 one and a half times as fast.
 	BurnPermil int
+	// WorkBurn is the fuel ticks one worked tick uses at a bench that burns
+	// only while worked (stove, smithy); 0 for every other burner.
+	WorkBurn int
 	// Banks: the fire banks down in warm air (campfires only).
 	Banks bool
 }
@@ -68,8 +71,10 @@ func FuelSpec(k construction.Kind) (Fuel, bool) {
 		return Fuel{CapTicks: ChemfuelTank * ChemfuelTicks, Below: ChemfuelTank * ChemfuelTicks / 2, BurnPermil: 1000}, true
 	case construction.PodLauncher: // AX-9, wiki: Pod launcher (150 chemfuel; burns only on a launch, game/travel)
 		return Fuel{CapTicks: 150 * ChemfuelTicks, Below: 135 * ChemfuelTicks}, true
-	case construction.FueledSmithy, construction.Stove: // PRD-3, FOOD-4, wiki: Fueled smithy, Fueled stove (50 logs, scaled / 10); burns only while worked (craft.WorkPerWood)
-		return Fuel{CapTicks: 5 * TicksPerWood, Below: 5 * TicksPerWood / 2}, true
+	case construction.Stove: // wiki: Fueled stove (fuel capacity 50, 160 a day while cooking: 1 log per 375 worked ticks); burns only while worked
+		return Fuel{CapTicks: 50 * TicksPerWood, Below: 25 * TicksPerWood, WorkBurn: TicksPerWood / 375}, true
+	case construction.FueledSmithy: // wiki: Fueled smithy (fuel capacity 50, 80 a day while worked: 1 log per 750 worked ticks)
+		return Fuel{CapTicks: 50 * TicksPerWood, Below: 25 * TicksPerWood, WorkBurn: TicksPerWood / 750}, true
 	case construction.PassiveCooler: // TEMP-1, wiki: Passive cooler (50 wood, 10 a day: one per TicksPerWood)
 		return Fuel{CapTicks: 50 * TicksPerWood, Below: 25 * TicksPerWood, BurnPermil: 1000}, true
 	case construction.FishTank: // FISH-*, original (domain/building/aqua): feed, a quarter asks, burns only while stocked and powered (game.burning)

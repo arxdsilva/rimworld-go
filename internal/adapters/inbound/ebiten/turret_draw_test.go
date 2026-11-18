@@ -105,17 +105,19 @@ func TestTurretMuzzleFlashFromBuildingTrace(t *testing.T) {
 	}
 }
 
-func TestBeaconGhostShowsRadius(t *testing.T) {
+// TestPlacementRingIsHalfTheBeaconReach: the beacon ghost's ring is half
+// the 15-tile reach (wiki: Orbital trade beacon).
+func TestPlacementRingIsHalfTheBeaconReach(t *testing.T) {
 	t.Parallel()
-	if rad, ok := overlay.PlacementRing(overlay.TradeBeaconKind); !ok || rad != 6 {
-		t.Fatalf("beacon ring = %v %v, want 6", rad, ok)
+	if rad, ok := overlay.PlacementRing(overlay.TradeBeaconKind); !ok || rad != 7.5 {
+		t.Fatalf("beacon ring = %v %v, want 7.5", rad, ok)
 	}
 	if _, ok := overlay.PlacementRing("wall"); ok {
 		t.Error("only the beacon shows a ghost ring")
 	}
 	r, got := turretRenderer(t, game.BuildingView{ID: 1, Kind: overlay.TradeBeaconKind, X: 2, Y: 2})
 	r.drawRangeRing(ebiten.NewImage(640, 400), 4, 5, overlay.BeaconRadiusTiles, overlay.TokenNRGBA(uikit.Accent))
-	if !pdHas(*got, "ring 4,5,6") {
+	if !pdHas(*got, "ring 4,5,7.5") {
 		t.Errorf("ring not drawn: %v", *got)
 	}
 	// the beacon light blinks (and stays lit under reduced motion)

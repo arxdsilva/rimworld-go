@@ -41,7 +41,7 @@ func (s *Shop) packable(id entity.EntityID, picks []pick) bool {
 	}
 	room := h.PackRoom(id)
 	for _, p := range picks {
-		if p.kind.IsCorpse() || p.kind.MassGrams() > room {
+		if p.kind.IsCorpse() || h.Items().MassGrams(p.kind) > room {
 			return false
 		}
 	}
@@ -120,7 +120,7 @@ func (s *Shop) packGather(id entity.EntityID, j job.Record, b construction.Build
 
 // fits is how many of kind k pawn id's pack still takes (CSE-030).
 func (s *Shop) fits(id entity.EntityID, k item.Kind) int {
-	if g := k.MassGrams(); g > 0 {
+	if g := s.h.Items().MassGrams(k); g > 0 {
 		return s.h.PackRoom(id) / g
 	}
 	return item.CarryLimit

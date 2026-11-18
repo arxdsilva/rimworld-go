@@ -114,6 +114,7 @@ func (w Factions) header(r gfx.Rect, row Faction) {
 	rs := gfx.Label
 	rs.Color = row.Color
 	u.Label(left.X, y, uikit.FitText(lang.Tf(w.sh, "%s  (goodwill %s)", row.Standing, goodwillText(row.Goodwill)), rs, left.W), rs)
+	u.Tip("colfac.standing", gfx.Rect{X: left.X, Y: y, W: left.W, H: 20}, standingTip(w.sh))
 	y += 22
 	if len(row.Enemies) > 0 { // EAI-015: who it is at war with
 		u.Label(left.X, y, uikit.FitText(lang.Tf(w.sh, "Enemies: %s", strings.Join(row.Enemies, ", ")), uikit.DimText(), left.W), uikit.DimText())
@@ -271,7 +272,7 @@ func drawGoodwillChart(tr lang.Tr, dst *ebiten.Image, plot gfx.Rect, hist []int,
 	for _, g := range []struct {
 		v int
 		c color.NRGBA
-	}{{100, chartGrid}, {50, chartGrid}, {0, chartZero}, {-50, chartGrid}, {-100, chartGrid}} {
+	}{{100, chartGrid}, {50, chartGrid}, {0, chartZero}, {faction.HostileAt, chartGrid}, {-100, chartGrid}} {
 		y := plot.Bottom() - plot.H*float32(g.v+100)/200
 		if g.v != 100 && g.v != -100 {
 			gfx.Line(dst, plot.X, y, plot.Right(), y, 1, g.c, false)
@@ -322,4 +323,10 @@ func facInitial(name string) string {
 		return string(unicode.ToUpper(r))
 	}
 	return "?"
+}
+
+// standingTip states the four goodwill thresholds from the domain constants.
+func standingTip(tr lang.Tr) string {
+	return lang.Tf(tr, "Standing\nTurns hostile at %d or less and calms at %d or more. Turns friendly at %+d or more and stays friendly while at %+d or more.",
+		faction.HostileAt, faction.CalmAt, faction.FriendlyAt, faction.FriendlyKeep)
 }
