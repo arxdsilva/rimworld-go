@@ -125,9 +125,9 @@ func (s *Screen) declareList(sw, sh int) {
 	s.sel = max(0, min(s.sel, len(v.Rows)-1))
 	listW := min(520, body.W*0.45)
 	list := gfx.Rect{X: body.X + checkW, Y: body.Y, W: listW, H: body.H}
+	k.Panel(gfx.Rect{X: body.X, Y: body.Y, W: checkW + listW, H: body.H}) // under the boxes and the rows
 	s.declareChecks(v, list)
 	on := s.enabledNow()
-	k.Panel(gfx.Rect{X: body.X, Y: body.Y, W: checkW + listW, H: body.H})
 	k.List(ListID, list, len(v.Rows), &s.sel, uikit.ListSpec{RowH: rowH(), Draw: func(dst *ebiten.Image, i int, row gfx.Rect, hover, selected bool) {
 		s.drawRow(dst, v, i, row, hover, selected, on)
 	}})
@@ -185,10 +185,16 @@ func (s *Screen) stateText(v View, r Row, on map[string]bool) (string, gfx.TextS
 func (s *Screen) countsText(v View, id string) string {
 	errs, warns := v.Counts(id)
 	var parts []string
-	if errs > 0 {
+	switch {
+	case errs == 1:
+		parts = append(parts, s.sh.T("1 error"))
+	case errs > 1:
 		parts = append(parts, s.sh.Tf("%d errors", errs))
 	}
-	if warns > 0 {
+	switch {
+	case warns == 1:
+		parts = append(parts, s.sh.T("1 warning"))
+	case warns > 1:
 		parts = append(parts, s.sh.Tf("%d warnings", warns))
 	}
 	return strings.Join(parts, ", ")

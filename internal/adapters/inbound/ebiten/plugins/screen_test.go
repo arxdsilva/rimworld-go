@@ -216,6 +216,9 @@ func TestViewCounts(t *testing.T) {
 	if e, w := v.Counts("beta"); e != 1 || w != 1 {
 		t.Errorf("beta: %d errors, %d warnings", e, w)
 	}
+	if got := New(&fakeShell{}).countsText(v, "beta"); got != "1 error, 1 warning" {
+		t.Errorf("beta's counts read %q", got)
+	}
 	if got := v.Problems[0].Where(); got != "beta › defs/x.json › backstory/beta.x › title" {
 		t.Errorf("where %q", got)
 	}
