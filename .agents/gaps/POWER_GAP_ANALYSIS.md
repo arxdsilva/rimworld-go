@@ -70,7 +70,7 @@ Each is what the code does today. None is a bug being tracked unless it says so.
 
 | | Count |
 |---|---|
-| Rows PWR-1 to PWR-5 | 5 |
+| Rows PWR-1 to PWR-6 | 6 |
 | Missing | 0 |
 | Partial | 0 |
 | Done | 5 |
