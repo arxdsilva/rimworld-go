@@ -32,6 +32,7 @@ import (
 	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/world/fire"
@@ -270,6 +271,9 @@ type saveState struct {
 	Bios      map[entity.EntityID]pawngen.Pawn
 	Skills    map[entity.EntityID]skill.Set
 	WorkCarry map[entity.EntityID]int32
+	// ContentKeys (PLG-044) is each moddable class's key per saved index;
+	// a load maps the indexes onto the running content. Absent: core only.
+	ContentKeys savefmt.Keys
 	// SkillLive (v2): the rest of the skill state that moves the game —
 	// learning saturation, fractional need drains, the last skilled work
 	// (passion joy) and fractional research; absent in older saves.
@@ -533,6 +537,7 @@ func EncodeSaveAs(g *Game, w io.Writer, stamp savefmt.Stamp) error {
 	})
 	s.Landing = g.exportLanding() // setup_mapgen.go: nil for the map centre
 	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
+	s.ContentKeys = savefmt.Keys{backstory.Class: backstoriesOf(g).Keys()}
 	s.SkillLive = g.exportSkillLive()
 	s.Troughs = g.troughs
 	for id, e := range g.exposure { // TEMP-3: the wiki scale (bodytemp.Ledger); the dead drop out
@@ -746,6 +751,11 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 		}
 	}
 	importMapFields(g, &s)
+	if s.NG1 != nil { // saved backstory IDs follow their keys onto c's book (PLG-044)
+		s.ContentKeys.RemapBackstories(c.Backstories, s.Bios, s.NG1.Setup.Colonists)
+	} else {
+		s.ContentKeys.RemapBackstories(c.Backstories, s.Bios, nil)
+	}
 	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
 	g.applyClimate(uint64(max(s.Tick, 1) - 1))  // weather_ng1.go (TEMP-2): the climate event's offset as at the last tick
 	g.importLanding(s.Landing)                  // setup_mapgen.go: after importSetupState

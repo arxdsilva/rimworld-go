@@ -375,6 +375,10 @@ saveState.CleanQ[] int32
 saveState.CleanWired bool
 saveState.ColonistOrder []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.ColonistOrder[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.ContentKeys rimworld-go/internal/application/game/savefmt.Keys = map[string][]string
+saveState.ContentKeys{key} string
+saveState.ContentKeys{} []string
+saveState.ContentKeys{}[] string
 saveState.Deliveries map[rimworld-go/internal/domain/sim/entity.EntityID][]rimworld-go/internal/application/game/haul.Share
 saveState.Deliveries{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Deliveries{} []rimworld-go/internal/application/game/haul.Share

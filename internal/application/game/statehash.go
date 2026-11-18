@@ -72,6 +72,9 @@ func normalisedFields(info SaveInfo, s *saveState) map[string]any {
 	// DoorsOriented (PLAY-011) only marks the save format: door facings
 	// are hashed through the buildings themselves.
 	delete(f, "DoorsOriented")
+	// ContentKeys (PLG-044) describes the content the indexes refer to, not
+	// the state: the header's content fingerprint covers it.
+	delete(f, "ContentKeys")
 	// ENG-003: priorities are saved as slices (PrioList) now; they are
 	// hashed as the fixed-size arrays they were (a new work type at its
 	// zero value leaves the sparse encoding alone). The streams' base seed

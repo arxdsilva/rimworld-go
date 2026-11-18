@@ -12,7 +12,7 @@ import (
 )
 
 // BackstoryClass is the class name in defs files and patch targets.
-const BackstoryClass = "backstory"
+const BackstoryClass = backstory.Class
 
 // Backstory field limits (PLG-021): what a def may hold.
 const (

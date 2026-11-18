@@ -67,6 +67,30 @@ func (b Book) Key(id ID) string {
 	return b.keys[id]
 }
 
+// Keys is every key in ID order (index i-1 is ID i's), what a save
+// records to map its IDs onto another run's book (PLG-044).
+func (b Book) Keys() []string {
+	out := make([]string, b.Len())
+	for i := range out {
+		out[i] = b.Key(ID(i + 1))
+	}
+	return out
+}
+
+// IDOf is the ID of key in this book (false when the book lacks it).
+func (b Book) IDOf(key string) (ID, bool) {
+	for id := ID(1); int(id) <= b.Len(); id++ {
+		if b.Key(id) == key {
+			return id, true
+		}
+	}
+	return 0, false
+}
+
+// Class is the backstory class name in plugin files, patch targets and a
+// save's key table.
+const Class = "backstory"
+
 // Slug lowercases s and joins its letter and digit runs with "_"
 // ("Ration-line runner" is "ration_line_runner").
 func Slug(s string) string {

@@ -500,6 +500,13 @@ func (p Pawn) Incapable(book backstory.Book) backstory.Bits {
 	return b
 }
 
+// Remapped is p with its backstory IDs mapped by to (a save loaded into a
+// run whose plugin set moved them, PLG-044).
+func (p Pawn) Remapped(to func(backstory.ID) backstory.ID) Pawn {
+	p.Childhood, p.Adulthood = to(p.Childhood), to(p.Adulthood)
+	return p
+}
+
 // AgeYears is p's age in whole years.
 func (p Pawn) AgeYears() int { return int(p.AgeDays) / DaysPerYear }
 

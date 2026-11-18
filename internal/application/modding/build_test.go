@@ -89,3 +89,22 @@ func TestReleaseTagVersionIsChecked(t *testing.T) {
 		t.Fatalf("problems = %v", probs)
 	}
 }
+
+// A plugin whose manifest could not be read fails to load, and the
+// adapter's reason (with its line and column) is reported, not only the
+// empty fields that follow from it.
+func TestBuildReportsReadProblemsOfFailedPlugins(t *testing.T) {
+	broken := Plugin{Manifest: Manifest{ID: "broken", Name: "broken"},
+		Problems: []Problem{{Plugin: "broken", File: "plugin.json", Msg: "line 3, column 5: invalid character '}'"}}}
+	cat, probs := Build([]Plugin{broken}, []string{"broken"}, "0.1.0")
+	if cat.Order.Has("broken") {
+		t.Fatal("a plugin with an unreadable manifest loaded")
+	}
+	if len(probs) == 0 || !strings.Contains(probs[0].Msg, "line 3, column 5") {
+		t.Fatalf("problems = %v", probs)
+	}
+	_, off := Build([]Plugin{broken}, nil, "0.1.0")
+	if len(off) != 0 {
+		t.Fatalf("a disabled plugin's read problems were reported: %v", off)
+	}
+}

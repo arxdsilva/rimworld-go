@@ -51,7 +51,17 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 		manifests[i] = p.Manifest
 		byID[p.Manifest.ID] = i
 	}
-	order, probs := Resolve(manifests, enabled, gameVersion)
+	order, rp := Resolve(manifests, enabled, gameVersion)
+	// What the adapter could not read comes first, for every enabled plugin
+	// whether it loads or not: a broken plugin.json is why a plugin fails,
+	// so its line and column must reach the player (PLG-041).
+	var probs []Problem
+	for _, p := range found {
+		if slices.Contains(enabled, p.Manifest.ID) {
+			probs = append(probs, p.Problems...)
+		}
+	}
+	probs = append(probs, rp...)
 	cat := Catalog{Order: order}
 
 	core := EncodeBackstories(backstory.Core())
@@ -63,7 +73,6 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 		}
 		p := found[byID[placed.ID]] // Resolve loads only ids installed once
 		cat.Plugins = append(cat.Plugins, p.Manifest)
-		probs = append(probs, p.Problems...)
 		d, dp := CollectDefs(p)
 		defs = append(defs, d...)
 		probs = append(probs, dp...)
