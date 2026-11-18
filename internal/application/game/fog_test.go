@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"slices"
 	"testing"
-	"time"
 
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -396,14 +395,21 @@ func TestFogRevealCostBounded(t *testing.T) {
 	if g.fog.visited != 401 || g.Fogged(20, 30) {
 		t.Fatalf("visited %d", g.fog.visited)
 	}
-	start := time.Now()
+	// cost is the cells one flood expands (fog.visited), not wall time: a
+	// reveal that spilled into the 4096-cell rock around the cave, or
+	// re-walked cells, would raise it. BenchmarkFogRevealCave keeps the
+	// timing view.
 	const n = 50
 	for range n {
 		copy(g.fog.hidden, saved)
+		g.fog.visited = 0
 		g.fogOpen(10, 30)
-	}
-	if per := time.Since(start) / n; per > time.Millisecond*5 { // -race headroom; the benchmark pins 1 ms
-		t.Fatalf("reveal of a 400-cell cave took %v", per)
+		if g.fog.visited != 401 {
+			t.Fatalf("reveal of a 400-cell cave expanded %d cells, want 401", g.fog.visited)
+		}
+		if g.Fogged(20, 30) {
+			t.Fatal("the cave stays hidden after the reveal")
+		}
 	}
 }
 

@@ -4,6 +4,7 @@
 package game_test
 
 import (
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -19,10 +20,12 @@ import (
 // times the median tick. Each of three midnights times twenty ticks
 // across it; a midnight's worst is its slowest tick, and the test takes
 // the best of the three (one stray stall is the machine, not the tick).
-// Serial, and skipped under -short and -race (wall-clock timing).
+// Serial, and wall-clock timing, so it is opt-in (RIMWORLD_TIMING=1 on a
+// quiet machine, no -race): a loaded machine or a shuffled whole-package
+// run would otherwise flap it. CI always runs -race and never ran it.
 func TestDayTickUnderBudget(t *testing.T) {
-	if testing.Short() || game.RaceOn {
-		t.Skip("wall-clock budget: not under -short or -race")
+	if testing.Short() || game.RaceOn || os.Getenv("RIMWORLD_TIMING") != "1" {
+		t.Skip("wall-clock budget: set RIMWORLD_TIMING=1 (not under -short or -race)")
 	}
 	game.SetIndexSelfCheck(false)
 	t.Cleanup(func() { game.SetIndexSelfCheck(true) })

@@ -5,6 +5,7 @@ package game
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"sync"
 	"testing"
@@ -32,6 +33,25 @@ var (
 func testPlanet() *planet.Planet {
 	worldTestOnce.Do(func() { worldTestPlanet = planet.Build(worldTestParams) })
 	return worldTestPlanet
+}
+
+// TestWorldTestPlanetStaysReadOnly proves testPlanet is safe to share:
+// parallel colonies built on it leave it (hop scratch aside, which each
+// colony forks) equal to a fresh build. The race detector covers the reads.
+func TestWorldTestPlanetStaysReadOnly(t *testing.T) {
+	t.Run("colonies", func(t *testing.T) {
+		for i := range 4 {
+			t.Run(fmt.Sprint(i), func(t *testing.T) {
+				t.Parallel()
+				g := worldGame(t)
+				nearDest(t, g)
+				g.Step(30)
+			})
+		}
+	})
+	if got, want := testPlanet().Fork(), planet.Build(worldTestParams).Fork(); !reflect.DeepEqual(got, want) {
+		t.Fatal("a caravan test mutated the shared planet")
+	}
 }
 
 // worldGame is a landed Broken Hull colony on testPlanet's first random
