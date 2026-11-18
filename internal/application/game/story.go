@@ -232,7 +232,7 @@ func (g *Game) raiderName(id entity.EntityID, f *faction.Faction) string {
 	if faction.DefOf(f.Type).Tech == faction.Neolithic {
 		tag = backstory.TagNeolithic
 	}
-	p := pawngen.Generate(g.worldSeed()^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: tag, Backstories: backstoriesOf(g)})
+	p := pawngen.Generate(g.worldSeed()^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: tag, Backstories: backstoriesOf(g), Traits: traitsOf(g)})
 	if p.Nick != "" {
 		return p.Nick
 	}
@@ -506,7 +506,7 @@ func wealthPart(g *Game, i, ni, nb, na int) int {
 	switch {
 	case i < ni:
 		if st, ok := g.stacks.Get(g.itemIDs[i]); ok {
-			return st.Kind.Value() * st.Qty
+			return g.sk.content.Items.Value(st.Kind) * st.Qty // a plugin's or patched value (PLG-026)
 		}
 	case i < ni+nb:
 		if b, ok := g.bldgs.Get(g.bldgIDs[i-ni]); ok && !notColonyPiece(b) { // ruins and vents are no one's wealth

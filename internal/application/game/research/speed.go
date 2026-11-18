@@ -221,7 +221,7 @@ func (l *Lab) feel(bench entity.EntityID, b construction.Building) {
 // simple bench, an analyzer project only with a powered linked analyzer
 // (wiki: Research). It does not look at the bench's own power.
 func (l *Lab) CanWork(bench entity.EntityID, b construction.Building, p proj.Project) bool {
-	switch proj.DefOf(p).Bench {
+	switch l.book().DefOf(p).Bench {
 	case proj.HiTechBench:
 		return hiTech(b.Kind)
 	case proj.HiTechAnalyzer:

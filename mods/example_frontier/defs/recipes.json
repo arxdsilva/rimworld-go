@@ -10,6 +10,17 @@
       "input": {"kind": "wood", "qty": 8},
       "output": "wood carpet",
       "out_qty": 1
+    },
+    {
+      "name": "cast_trail_bells",
+      "label": "Cast trail bells",
+      "bench": "workbench",
+      "work": 600,
+      "skill": "craft",
+      "learn": "crafting",
+      "input": {"kind": "steel", "qty": 10},
+      "output": "example_frontier.trail_bell",
+      "out_qty": 2
     }
   ]
 }

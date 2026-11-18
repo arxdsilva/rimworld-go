@@ -75,27 +75,29 @@ func (l *Lab) Lists(cache bool) ([]View, map[string]string) {
 }
 
 func (l *Lab) views(k viewKey) []View {
-	if l.prereqs == nil { // static: built once, shared by every list
-		l.prereqs = make([][]int, proj.NumProjects)
-		for _, d := range proj.All() {
+	book := l.book()
+	if len(l.prereqs) != book.Len() { // static: built once per book, shared by every list
+		l.prereqs = make([][]int, book.Len())
+		for _, d := range book.All() {
 			for _, r := range d.Requires {
 				l.prereqs[d.Project] = append(l.prereqs[d.Project], int(r))
 			}
 		}
 	}
-	out := make([]View, 0, proj.NumProjects)
-	for _, d := range proj.All() {
+	out := make([]View, 0, book.Len())
+	for _, d := range book.All() {
 		p := d.Project
 		v := View{ID: uint8(p), Name: d.Name, Label: d.Label, Desc: d.Desc, Cost: d.Cost, Progress: l.Prog[p],
-			Done: l.Prog.Done(p), Unlocks: UnlockLabels(d, l.Recipes), Available: l.Prog.Available(p), Current: l.Set && l.Cur == p,
-			TechLevel: d.TechLevel.String(), Bench: d.Bench.String(), CostNow: d.Cost * l.costPct(p) / 100, Prereqs: l.prereqs[p]}
+			Done: book.Done(&l.Prog, p), Unlocks: UnlockLabels(d, l.Recipes), Available: book.Available(&l.Prog, p),
+			Current: l.Set && l.Cur == p, TechLevel: d.TechLevel.String(), Bench: d.Bench.String(),
+			CostNow: d.Cost * l.costPct(p) / 100, Prereqs: l.prereqs[p]}
 		for _, r := range d.Requires {
-			if !l.Prog.Done(r) {
-				v.Requires = append(v.Requires, proj.DefOf(r).Label)
+			if !book.Done(&l.Prog, r) {
+				v.Requires = append(v.Requires, book.DefOf(r).Label)
 			}
 		}
 		for _, h := range d.Hidden {
-			v.Hidden = append(v.Hidden, proj.DefOf(h).Label)
+			v.Hidden = append(v.Hidden, book.DefOf(h).Label)
 		}
 		if !v.Done {
 			v.BenchMissing = missing(d.Bench, k.tiers)
@@ -154,8 +156,9 @@ func (l *Lab) rate() int64 {
 // opens it (the UI greys these out).
 func (l *Lab) lockedKeys() map[string]string {
 	out := map[string]string{}
-	for _, d := range proj.All() {
-		if l.Prog.Done(d.Project) {
+	book := l.book()
+	for _, d := range book.All() {
+		if book.Done(&l.Prog, d.Project) {
 			continue
 		}
 		for _, u := range d.Unlocks {
@@ -173,8 +176,9 @@ func (l *Lab) Alert() bool {
 	if l.Working() || len(l.cache().benches) == 0 {
 		return false
 	}
-	for p := proj.Project(0); p < proj.NumProjects; p++ {
-		if l.Prog.Available(p) {
+	book := l.book()
+	for p := range book.Len() { // an int: a Project would wrap at 256
+		if book.Available(&l.Prog, proj.Project(p)) {
 			return l.h.Researcher()
 		}
 	}

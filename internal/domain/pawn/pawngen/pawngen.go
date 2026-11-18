@@ -72,6 +72,9 @@ type Rules struct {
 	Legacy bool
 	// Backstories is the run's book (PLG-024); the zero Book is core.
 	Backstories backstory.Book
+	// Traits is the run's book (PLG-026); the zero Book is core. Plugin
+	// traits are drawn outside Legacy rules only.
+	Traits trait.Book
 }
 
 // DaysPerYear converts AgeDays to years.
@@ -119,17 +122,17 @@ func Generate(seed uint64, slot, roll int, r Rules) Pawn {
 	// Forced traits first, so backstories are chosen around them.
 	for _, f := range r.Forced {
 		hit := rng.IntN(100) < int(f.Chance) || f.Chance == 0 || f.Chance >= 100
-		if hit && f.Trait > trait.None && f.Trait < trait.NumTraits && !conflictsAny(f.Trait, p.Traits) {
+		if hit && f.Trait > trait.None && int(f.Trait) <= r.Traits.Len() && !conflictsAny(r.Traits, f.Trait, p.Traits) {
 			p.Traits = append(p.Traits, f.Trait)
 		}
 	}
 	b := r.Backstories
-	p.Childhood = pickBackstory(rng, b, backstory.Childhood, r.Tech, p.Traits)
+	p.Childhood = pickBackstory(rng, b, r.Traits, backstory.Childhood, r.Tech, p.Traits)
 	if years >= adultAge {
-		p.Adulthood = pickBackstory(rng, b, backstory.Adulthood, r.Tech, p.Traits)
+		p.Adulthood = pickBackstory(rng, b, r.Traits, backstory.Adulthood, r.Tech, p.Traits)
 	}
-	p.Traits = rollTraits(rng, p.Traits, b.DefOf(p.Childhood), b.DefOf(p.Adulthood), p.Adulthood != 0, r.Legacy)
-	p.Skills = rollSkills(rng, b, p, years)
+	p.Traits = rollTraits(rng, r.Traits, p.Traits, b.DefOf(p.Childhood), b.DefOf(p.Adulthood), p.Adulthood != 0, r.Legacy)
+	p.Skills = rollSkills(rng, b, r.Traits, p, years)
 	p.Conditions = rollConditions(rng, r)
 	p.Look = rollLook(rng, p.Look, years, r.NoClothes)
 
@@ -188,18 +191,18 @@ func rollAge(rng *randx.Rand, r Rules) int {
 	return adHi
 }
 
-func conflictsAny(t trait.ID, have []trait.ID) bool {
+func conflictsAny(tb trait.Book, t trait.ID, have []trait.ID) bool {
 	for _, h := range have {
-		if trait.Conflicts(t, h) {
+		if tb.Conflicts(t, h) {
 			return true
 		}
 	}
 	return false
 }
 
-func clashesAny(traits []trait.ID, d backstory.Def) bool {
+func clashesAny(tb trait.Book, traits []trait.ID, d backstory.Def) bool {
 	for _, t := range traits {
-		if trait.Clashes(t, d) {
+		if tb.Clashes(t, d) {
 			return true
 		}
 	}
@@ -220,13 +223,13 @@ func techTags(rng *randx.Rand, tech backstory.Tag) backstory.Tag {
 	return modern
 }
 
-func pickBackstory(rng *randx.Rand, b backstory.Book, slot backstory.Slot, tech backstory.Tag, traits []trait.ID) backstory.ID {
+func pickBackstory(rng *randx.Rand, b backstory.Book, tb trait.Book, slot backstory.Slot, tech backstory.Tag, traits []trait.ID) backstory.ID {
 	tags := techTags(rng, tech)
 	all := b.All()
 	var cands []backstory.Def
 	for _, strict := range []bool{true, false} {
 		for _, d := range all {
-			if d.Slot == slot && d.Fits(tags) && (!strict || !clashesAny(traits, d)) {
+			if d.Slot == slot && d.Fits(tags) && (!strict || !clashesAny(tb, traits, d)) {
 				cands = append(cands, d)
 			}
 		}
@@ -253,7 +256,7 @@ func pickBackstory(rng *randx.Rand, b backstory.Book, slot backstory.Slot, tech 
 // traitWeight: Gentle is rarer than the rest. Outside legacy rules the
 // weights are doubled so a trait's Rarity N can divide them (Rarity 10:
 // a tenth as likely; never below 1).
-func traitWeight(t trait.ID, legacy bool) int {
+func traitWeight(tb trait.Book, t trait.ID, legacy bool) int {
 	w := 10
 	if t == trait.Gentle {
 		w = 4
@@ -262,7 +265,7 @@ func traitWeight(t trait.ID, legacy bool) int {
 		return w
 	}
 	w *= 2
-	if n := int(trait.DefOf(t).Rarity); n > 0 {
+	if n := int(tb.DefOf(t).Rarity); n > 0 {
 		w = max(1, w/n)
 	}
 	return w
@@ -270,7 +273,7 @@ func traitWeight(t trait.ID, legacy bool) int {
 
 // rollTraits tops forced up to 1 (30%), 2 (50%) or 3 (20%) traits that
 // neither conflict with each other nor clash with the backstories.
-func rollTraits(rng *randx.Rand, forced []trait.ID, cb, ab backstory.Def, adult, legacy bool) []trait.ID {
+func rollTraits(rng *randx.Rand, tb trait.Book, forced []trait.ID, cb, ab backstory.Def, adult, legacy bool) []trait.ID {
 	out := append([]trait.ID(nil), forced...)
 	n := 1
 	switch x := rng.IntN(100); {
@@ -282,19 +285,19 @@ func rollTraits(rng *randx.Rand, forced []trait.ID, cb, ab backstory.Def, adult,
 	for len(out) < n {
 		total := 0
 		var cands []trait.ID
-		for _, t := range trait.Generated(legacy) {
-			if conflictsAny(t, out) || trait.Clashes(t, cb) || (adult && trait.Clashes(t, ab)) {
+		for _, t := range tb.Generated(legacy) {
+			if conflictsAny(tb, t, out) || tb.Clashes(t, cb) || (adult && tb.Clashes(t, ab)) {
 				continue
 			}
 			cands = append(cands, t)
-			total += traitWeight(t, legacy)
+			total += traitWeight(tb, t, legacy)
 		}
 		if total == 0 {
 			break
 		}
 		x := rng.IntN(total)
 		for _, t := range cands {
-			if x -= traitWeight(t, legacy); x < 0 {
+			if x -= traitWeight(tb, t, legacy); x < 0 {
 				out = append(out, t)
 				break
 			}
@@ -303,9 +306,9 @@ func rollTraits(rng *randx.Rand, forced []trait.ID, cb, ab backstory.Def, adult,
 	return out
 }
 
-func rollSkills(rng *randx.Rand, b backstory.Book, p Pawn, years int) skill.Set {
+func rollSkills(rng *randx.Rand, b backstory.Book, tb trait.Book, p Pawn, years int) skill.Set {
 	cb, ab := b.DefOf(p.Childhood), b.DefOf(p.Adulthood)
-	inc := p.Incapable(b)
+	inc := p.Incapable(b, tb)
 	var lv [skill.NumSkills]int
 	for i := range lv {
 		id := skill.ID(i)
@@ -326,7 +329,7 @@ func rollSkills(rng *randx.Rand, b backstory.Book, p Pawn, years int) skill.Set 
 		}
 	}
 	for _, t := range p.Traits {
-		for id, v := range trait.DefOf(t).SkillBonus {
+		for id, v := range tb.DefOf(t).SkillBonus {
 			lv[id] += int(v)
 		}
 	}
@@ -494,11 +497,11 @@ func Legacy(id uint64, name string, skins, hairs, cloths int) Pawn {
 }
 
 // Incapable is everything p can't do (from backstories in book and
-// traits).
-func (p Pawn) Incapable(book backstory.Book) backstory.Bits {
+// traits in tb).
+func (p Pawn) Incapable(book backstory.Book, tb trait.Book) backstory.Bits {
 	b := book.DefOf(p.Childhood).Incapable | book.DefOf(p.Adulthood).Incapable
 	for _, t := range p.Traits {
-		b |= trait.DefOf(t).Incapable
+		b |= tb.DefOf(t).Incapable
 	}
 	return b
 }
@@ -507,6 +510,23 @@ func (p Pawn) Incapable(book backstory.Book) backstory.Bits {
 // run whose plugin set moved them, PLG-044).
 func (p Pawn) Remapped(to func(backstory.ID) backstory.ID) Pawn {
 	p.Childhood, p.Adulthood = to(p.Childhood), to(p.Adulthood)
+	return p
+}
+
+// RemappedTraits is p with its trait IDs mapped by to (PLG-044, PLG-026); a
+// trait that maps to None (its plugin is gone) is removed. The slice is a
+// copy.
+func (p Pawn) RemappedTraits(to func(trait.ID) trait.ID) Pawn {
+	if len(p.Traits) == 0 {
+		return p
+	}
+	out := make([]trait.ID, 0, len(p.Traits))
+	for _, t := range p.Traits {
+		if m := to(t); m != trait.None {
+			out = append(out, m)
+		}
+	}
+	p.Traits = out
 	return p
 }
 

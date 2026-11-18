@@ -122,6 +122,7 @@ func (g *Game) applyOne(c command.Command) {
 		g.cmdMove(entity.EntityID(c.Pawn), c.X, c.Y)
 	case command.DesignateStockpile:
 		kind, proto := stockpileProto(c.Build) // zones.go: Build 1 is a dumping stockpile (PLAY-023)
+		proto.AdmitPlugins(g.sk.content.Items) // the run's plugin goods with components (PLG-026)
 		g.paintZone(kind, proto, c.X, c.Y, c.X2, c.Y2)
 		g.autoHomeRect(c.X, c.Y, c.X2, c.Y2) // home.go
 	case command.DesignateWall:
@@ -249,6 +250,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
 	case command.DevStartFire:
 		g.devStartFire(c.X, c.Y) // fire.go (PLAY-015)
+	case command.ScriptMessage, command.ScriptSpawn:
+		applyScript(g, c) // scripts.go (PLG-060)
 	case command.SetDoorHoldOpen, command.SetMortarTarget, command.ClearMortarTarget, command.SetTurretHold:
 		if g.combat.Orders.Apply(c) { // combat/orders.go (DEF-3): doors, turrets, mortars
 			g.structVer++ // a door held open (or let close) changes the hostiles' way (defense.go shutDoors)
@@ -896,7 +899,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position, ids []entity.En
 		g.haul.cands = g.haul.cands[:0] // HAUL-002: the piles a load may gather
 		for _, iid := range ids {
 			st := g.stacks.Ref(iid) // read only: nothing below changes the store
-			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) || dest != 0 && !zone.Universe(dest).Has(st.Kind) {
+			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) || dest != 0 && !zone.UniverseHas(dest, st.Kind) {
 				continue // leftFound (haul_claim.go): found on the map, unmarked
 			}
 			off := len(post) > 0 && slices.Contains(post, iid)

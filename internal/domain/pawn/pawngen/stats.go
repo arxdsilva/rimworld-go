@@ -81,28 +81,30 @@ func ageMods(years int) []stat.Mod {
 // StatLayers are p's stat layers in the fixed NG-1 order: body, age,
 // conditions, traits. The game appends the difficulty layer and calls
 // stat.Build(stat.Base(), layers...).
-func StatLayers(p Pawn) [][]stat.Mod {
+func StatLayers(p Pawn, tb trait.Book) [][]stat.Mod {
 	var cond, traits []stat.Mod
 	for _, c := range p.Conditions {
 		cond = append(cond, c.Mods()...)
 	}
 	for _, t := range p.Traits {
-		traits = append(traits, trait.DefOf(t).Mods...)
+		traits = append(traits, tb.DefOf(t).Mods...)
 	}
 	return [][]stat.Mod{bodyMods(p.Look.Build), ageMods(p.AgeYears()), cond, traits}
 }
 
 // Stats is p's stat sheet before difficulty. A Legacy pawn gets exactly
 // stat.Base().
-func Stats(p Pawn) stat.Sheet { return stat.Build(stat.Base(), StatLayers(p)...) }
+func Stats(p Pawn, tb trait.Book) stat.Sheet {
+	return stat.Build(stat.Base(), StatLayers(p, tb)...)
+}
 
 // SkillWorkPct is p's work speed for jobs using skill id, in percent of
 // normal, from traits (Green thumb) and conditions (Hand tremor). It
 // multiplies the WorkSpeed stat and the skill level's speed.
-func SkillWorkPct(p Pawn, id skill.ID) int {
+func SkillWorkPct(p Pawn, tb trait.Book, id skill.ID) int {
 	pct := 100
 	for _, t := range p.Traits {
-		pct += int(trait.DefOf(t).WorkSpeed[id])
+		pct += int(tb.DefOf(t).WorkSpeed[id])
 	}
 	for _, c := range p.Conditions {
 		if c < numConditions {
@@ -114,10 +116,10 @@ func SkillWorkPct(p Pawn, id skill.ID) int {
 
 // LearnPct is p's learning multiplier for skill id from traits, in
 // percent (Bookish: 150 for Intellectual). It multiplies LearnRate.
-func LearnPct(p Pawn, id skill.ID) int {
+func LearnPct(p Pawn, tb trait.Book, id skill.ID) int {
 	pct := 100
 	for _, t := range p.Traits {
-		if m, ok := trait.DefOf(t).LearnMul[id]; ok {
+		if m, ok := tb.DefOf(t).LearnMul[id]; ok {
 			pct = pct * int(m) / 100
 		}
 	}

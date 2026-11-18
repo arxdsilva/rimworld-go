@@ -234,78 +234,73 @@ var defs = [NumTraits]Def{
 		Desc: "{name} sees no reason to waste good meat just because it once had a name."},
 }
 
-// Generated lists the traits pawn generation may roll, in ID order: under
-// legacy rules only the original set (so existing seeds keep their pawns),
-// otherwise every trait.
-func Generated(legacy bool) []ID {
-	n := NumTraits
-	if legacy {
-		n = legacyTraits
-	}
-	out := make([]ID, 0, n-1)
-	for t := ID(1); t < n; t++ {
-		out = append(out, t)
-	}
-	return out
-}
-
 func init() {
 	for i := range defs {
 		defs[i].ID = ID(i)
 	}
 }
 
-// DefOf looks a trait up; unknown IDs give the zero Def.
-func DefOf(id ID) Def {
-	if id >= NumTraits {
-		return Def{}
+// groupKeys names the conflict groups ("pace"); a plugin trait names one
+// of these to conflict with the game's traits of that group, or a name of
+// its own for a group of its own (GroupOfKey, PLG-026).
+var groupKeys = [...]string{GroupPace: "pace", GroupOutlook: "outlook", GroupNerve: "nerve", GroupGait: "gait",
+	GroupAppetite: "appetite", GroupStandards: "standards", GroupTrigger: "trigger", GroupBeauty: "beauty",
+	GroupOrientation: "orientation", GroupChem: "chem", GroupAugment: "augment", GroupMisanthropy: "misanthropy"}
+
+// GroupKey is a core conflict group's name ("" for no group or an unknown one).
+func GroupKey(g uint8) string {
+	if int(g) >= len(groupKeys) {
+		return ""
 	}
-	return defs[id]
+	return groupKeys[g]
 }
 
-// All lists every trait except None, in ID order.
-func All() []Def { return append([]Def(nil), defs[1:]...) }
-
-// Parse finds a trait by key.
-func Parse(key string) (ID, bool) {
-	for i := ID(1); i < NumTraits; i++ {
-		if defs[i].Key == key {
-			return i, true
+// GroupOfKey finds a core conflict group by name.
+func GroupOfKey(key string) (uint8, bool) {
+	for g := 1; g < len(groupKeys); g++ {
+		if groupKeys[g] == key {
+			return uint8(g), true
 		}
 	}
-	return None, false
+	return NoGroup, false
 }
+
+// FirstPluginGroup is the first conflict group number not taken by core: a
+// plugin's own groups are numbered from it.
+const FirstPluginGroup = uint8(len(groupKeys))
 
 // Conflicts reports whether a and b can't be held together: the same
 // trait twice, two traits of one group, or a pacifist with a trigger
 // style.
-func Conflicts(a, b ID) bool {
-	if a == None || b == None || a >= NumTraits || b >= NumTraits {
+func (b Book) Conflicts(a, c ID) bool {
+	l := b.list()
+	if a == None || c == None || int(a) >= len(l) || int(c) >= len(l) {
 		return false
 	}
-	if a == b {
+	if a == c {
 		return true
 	}
-	da, db := defs[a], defs[b]
-	if da.Group != NoGroup && da.Group == db.Group {
+	da, dc := &l[a], &l[c]
+	if da.Group != NoGroup && da.Group == dc.Group {
 		return true
 	}
-	return da.Incapable&db.Needs != 0 || db.Incapable&da.Needs != 0
+	return da.Incapable&dc.Needs != 0 || dc.Incapable&da.Needs != 0
 }
 
-// Clashes reports whether trait t can't go with backstory b: t needs
-// something b can't do (Green thumb with a plants-incapable past), or t
-// takes away something b is built on (Gentle with a backstory that taught
+// Clashes reports whether trait t can't go with backstory bs: t needs
+// something bs can't do (Green thumb with a plants-incapable past), or t
+// takes away something bs is built on (Gentle with a backstory that taught
 // shooting or melee).
-func Clashes(t ID, b backstory.Def) bool {
-	if t == None || t >= NumTraits {
+func (b Book) Clashes(t ID, bs backstory.Def) bool {
+	l := b.list()
+	if t == None || int(t) >= len(l) {
 		return false
 	}
-	d := defs[t]
-	if d.Needs&b.Incapable != 0 {
+	d := &l[t]
+	if d.Needs&bs.Incapable != 0 {
 		return true
 	}
-	for id, v := range b.Skills {
+	for id, v := range bs.Skills {
 		if v > 0 && d.Incapable.DisablesSkill(id) {
 			return true
 		}

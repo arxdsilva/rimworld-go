@@ -58,6 +58,8 @@ type BioView struct {
 	ChildhoodDesc     string
 	Adulthood         string
 	AdulthoodDesc     string
+	ChildhoodKey      string // the backstories' book keys ("" none): the UI names a plugin's (PLG-072)
+	AdulthoodKey      string
 	Traits            []TraitView
 	Skills            []SkillView
 	Incapable         []string // "Violence (backstory: Convoy mechanic)"
@@ -110,10 +112,10 @@ var skillAffects = [skill.NumSkills]struct {
 }
 
 // BioOf builds p's BioView: names, sex/build/age, backstories (from b)
-// with their descriptions filled for p's nickname and pronouns, traits,
+// with their descriptions filled for p's nickname and pronouns, traits (from tb),
 // all eleven skills, incapabilities with their reasons, conditions and
 // look. It is pure: the same pawn and book always give the same view.
-func BioOf(p pawngen.Pawn, b backstory.Book) BioView {
+func BioOf(p pawngen.Pawn, b backstory.Book, tb trait.Book) BioView {
 	name := p.Nick
 	if name == "" {
 		name = p.First
@@ -128,9 +130,10 @@ func BioOf(p pawngen.Pawn, b backstory.Book) BioView {
 	}
 	v.Childhood, v.ChildhoodDesc = backstoryText(b, p.Childhood, sex, name)
 	v.Adulthood, v.AdulthoodDesc = backstoryText(b, p.Adulthood, sex, name)
+	v.ChildhoodKey, v.AdulthoodKey = b.Key(p.Childhood), b.Key(p.Adulthood)
 
 	for _, t := range p.Traits {
-		d := trait.DefOf(t)
+		d := tb.DefOf(t)
 		if d.Key == "" {
 			continue
 		}
@@ -141,8 +144,8 @@ func BioOf(p pawngen.Pawn, b backstory.Book) BioView {
 		})
 	}
 
-	inc := p.Incapable(b)
-	workSpeed := int64(pawngen.Stats(p)[stat.WorkSpeed])
+	inc := p.Incapable(b, tb)
+	workSpeed := int64(pawngen.Stats(p, tb)[stat.WorkSpeed])
 	v.Skills = make([]SkillView, skill.NumSkills)
 	for id := skill.ID(0); id < skill.NumSkills; id++ {
 		s := p.Skills[id]
@@ -160,13 +163,13 @@ func BioOf(p pawngen.Pawn, b backstory.Book) BioView {
 			sv.XPPct = s.XPPct()
 			if skillAffects[id].hasWork {
 				// Level speed × WorkSpeed stat × trait/condition skill speed.
-				sv.SpeedPct = int(int64(LevelSpeed(id, s.Level)) * workSpeed * int64(pawngen.SkillWorkPct(p, id)) / 1_000_000)
+				sv.SpeedPct = int(int64(LevelSpeed(id, s.Level)) * workSpeed * int64(pawngen.SkillWorkPct(p, tb, id)) / 1_000_000)
 			}
 		}
 		v.Skills[id] = sv
 	}
 
-	v.Incapable = p.IncapableReasons(b)
+	v.Incapable = p.IncapableReasons(b, tb)
 	for _, c := range p.Conditions {
 		if c.Label() == "" {
 			continue

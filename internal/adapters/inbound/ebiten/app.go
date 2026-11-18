@@ -90,7 +90,13 @@ type AppConfig struct {
 	// Content is the run's frozen content, core plus the enabled plugins
 	// (PLG-024); the wizard rolls candidates from it. Zero: core.
 	Content game.Content
-	NewSim  SimFactory
+	// PluginText is what the enabled plugins translate (PLG-055), by locale:
+	// merged in load order over that locale's catalog. Nil: none.
+	PluginText map[string]map[string]string
+	// ItemTextures are the plugin items' textures (PLG-026): PNG bytes by
+	// item key, added to the art catalog when it loads. Nil: none.
+	ItemTextures map[string][]byte
+	NewSim       SimFactory
 	// DefaultSeed pre-fills the wizard's seed (0: a random one).
 	DefaultSeed uint64
 	// DefaultBiome is the biome the landing picker starts on.
@@ -795,7 +801,8 @@ func NewApp(cfg AppConfig) *App {
 			}
 			c, err := loadArtCatalog(root)
 			if err == nil {
-				c.PrewarmAsync() // art_atlas.go: pages cut in the background, not mid-frame
+				addItemTextures(c, cfg.ItemTextures) // art_load.go (PLG-026): before the prewarm reads the sprite map
+				c.PrewarmAsync()                     // art_atlas.go: pages cut in the background, not mid-frame
 			}
 			return c, err
 		}
@@ -845,6 +852,7 @@ func NewApp(cfg AppConfig) *App {
 		devFn:  cfg.DeviceScale,
 	}
 	a.shell = newShell(a)
+	a.shell.extra = cfg.PluginText
 	a.sel = selection.New(a.shell, selHost{a})
 	a.menuScreen = mainmenu.New(menuHost{a})
 	a.wiz = wizard.New(wizHost{a})

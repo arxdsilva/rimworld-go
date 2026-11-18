@@ -67,7 +67,9 @@ func Run(opts cligame.Options, version string, d Display) {
 	scenes.cfg.Content = content.game() // a set piece plays with the run's definitions too
 	cfg := uiadapter.AppConfig{
 		Content:       content.game(),
-		Plugins:       content.view(), // PLG-070: the Plugins screens; empty for captures
+		Plugins:       content.view(),         // PLG-070: the Plugins screens; empty for captures
+		PluginText:    content.text,           // PLG-055: the loaded plugins' translations
+		ItemTextures:  content.itemTextures(), // PLG-026: plugin items' textures
 		DefaultSeed:   defaultSeed,
 		DefaultBiome:  biomeID,
 		Version:       version,
@@ -85,6 +87,7 @@ func Run(opts cligame.Options, version string, d Display) {
 		Hardware:      hardware(shot != nil), // PLAY-019: graphics tier and the low-memory notice
 		NewSim:        scenes.newSim,
 	}
+	cfg = withScripts(cfg, scriptHost(content, shot != nil)) // scripts.go (PLG-060): new colonies and loaded saves run the loaded plugins' scripts; dev scenes and captures none
 	// only a live engine: a nil *Engine in the interface would not be nil
 	if snd := openSound(shot != nil || opts.NoAudio || os.Getenv("RIMWORLD_GO_NOAUDIO") == "1"); snd != nil {
 		cfg.Sound = snd

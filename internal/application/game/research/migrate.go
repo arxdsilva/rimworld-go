@@ -24,8 +24,9 @@ var legacyCost = [...]int{2000, 2500, 3000, 2500, 6000, 5000, 4000, 2500, 3500, 
 // let go. A project already at exactly its wiki cost counts as finished,
 // so a save that is already current comes through unchanged.
 func (l *Lab) Migrate() {
+	book := l.book()
 	for p := range legacyCost {
-		old, now := legacyCost[p], proj.DefOf(proj.Project(p)).Cost
+		old, now := legacyCost[p], book.DefOf(proj.Project(p)).Cost
 		switch v := l.Prog[p]; {
 		case v >= old || v == now: // v == now: already at the wiki cost (a current save relabelled, a sandbox)
 			l.Prog[p] = now
@@ -34,7 +35,7 @@ func (l *Lab) Migrate() {
 		}
 	}
 	l.Carry = 0
-	if l.Set && !l.Prog.Available(l.Cur) {
+	if l.Set && !book.Available(&l.Prog, l.Cur) {
 		l.Set = false
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 )
 
 // Class is the recipe class name in plugin files, patch targets and a
@@ -24,8 +25,10 @@ const MaxBook = 256
 // position, so core's keep theirs. The zero Book is the core set.
 type Book struct {
 	defs  []Def
-	keys  []string // keys[i] is defs[i]'s namespaced key
-	bench [][]Def  // bench[k]: the recipes a bench of kind k runs, legacy ones excluded (For)
+	keys  []string    // keys[i] is defs[i]'s namespaced key
+	bench [][]Def     // bench[k]: the recipes a bench of kind k runs, legacy ones excluded (For)
+	smelt []smeltRate // by item kind: what a plugin kind smelts back (WithItems; nil: core only)
+	items item.Book   // the run's item kinds (WithItems; zero: core)
 }
 
 // core is the game's own book, its bench index built once (read only).

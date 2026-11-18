@@ -289,7 +289,8 @@ func (g *Game) buildZoneViews() []ZoneView {
 		}
 		if z.Kind.Settings() {
 			v.Priority, v.Corpses, v.Chunks, v.Profile = z.Priority.String(), z.Corpses, z.Chunks, store.ProfileName(z.Profile)
-			v.Filter, v.Special, v.Shelf = z.Effective().Names(), z.Special.Names(), uint64(g.haul.store.Buildings.Of(g.zones, haulHost{g}, z))
+			items := g.sk.content.Items // plugin kinds by key (PLG-026)
+			v.Filter, v.Special, v.Shelf = z.EffectiveIn(items).NamesIn(items), z.Special.Names(), uint64(g.haul.store.Buildings.Of(g.zones, haulHost{g}, z))
 		}
 		if z.Kind == zone.KindGrow {
 			v.Crop = plant.Species(z.Crop).String()
@@ -475,12 +476,22 @@ type FilterRow = zone.Row
 // FilterRoot is the node SetStockpileFilter takes for "allow all" and "clear all".
 func StockpileFilterRows(filter []string) []FilterRow { return zone.Rows(filter) }
 func ProfileFilterRows(profile string, filter []string) []FilterRow {
-	return store.ProfileRows(profile, filter)
+	return ProfileFilterRowsIn(item.Book{}, profile, filter)
 }
 func StorageFilterRows(kind string, filter []string) []FilterRow {
+	return StorageFilterRowsIn(item.Book{}, kind, filter)
+}
+
+// StorageFilterRowsIn and ProfileFilterRowsIn are the rows in a run whose
+// item kinds are items: its plugin goods under their categories, by key
+// and label (PLG-026).
+func ProfileFilterRowsIn(items item.Book, profile string, filter []string) []FilterRow {
+	return store.ProfileRowsIn(profile, filter, items)
+}
+func StorageFilterRowsIn(items item.Book, kind string, filter []string) []FilterRow {
 	for k, n := range zoneKindNames {
 		if n == kind {
-			return zone.RowsFor(k, filter)
+			return zone.RowsForProfileIn(k, zone.ProfileNone, filter, items)
 		}
 	}
 	return nil
@@ -521,14 +532,14 @@ func (g *Game) cmdStockpile(c command.Command) {
 	}
 	switch c.Kind {
 	case command.SetStockpileFilter:
-		if set, ok := zone.Resolve(c.Name); ok {
-			g.zones.Update(z.ID, func(z *zone.Zone) { z.SetAllowed(set, c.Enabled) })
+		if set, ok := zone.ResolveIn(c.Name, g.sk.content.Items); ok {
+			g.zones.Update(z.ID, func(z *zone.Zone) { z.SetAllowedIn(set, c.Enabled, g.sk.content.Items) })
 		}
 	case command.SetStockpileSpecial:
 		g.zones.Update(z.ID, func(z *zone.Zone) { z.Special = z.Special.Set(c.Index, c.Enabled, c.X, c.X2) })
 	case command.PasteStockpile:
 		if src, ok := g.zones.Zone(zone.ID(c.Zone)); ok && src.Kind.Settings() && src.ID != z.ID {
-			g.zones.Update(z.ID, func(z *zone.Zone) { z.PasteFrom(src) })
+			g.zones.Update(z.ID, func(z *zone.Zone) { z.PasteFromIn(src, g.sk.content.Items) })
 		}
 	}
 }

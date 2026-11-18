@@ -55,7 +55,11 @@ type class struct {
 }
 
 // classes are the moddable classes, in the order their books are built.
-func classes() []class {
+func classes() []class { return classesWith(nil) }
+
+// classesWith are the classes reading plugin textures through tex. Items
+// come before recipes: a recipe may name a plugin item (PLG-026).
+func classesWith(tex Textures) []class {
 	return []class{{
 		name: BackstoryClass,
 		core: func() []Def { return EncodeBackstories(backstory.Core()) },
@@ -66,17 +70,7 @@ func classes() []class {
 			}
 			return probs
 		},
-	}, {
-		name: RecipeClass,
-		core: func() []Def { return EncodeRecipes(recipe.Core()) },
-		decode: func(cat *Catalog, defs []Def) []Problem {
-			b, probs := DecodeRecipes(defs)
-			if cat != nil {
-				cat.Recipes = b
-			}
-			return probs
-		},
-	}, traitClass(), researchClass(), incidentClass(), itemClass()}
+	}, itemClassWith(tex), recipeClass(), traitClass(), researchClass(), incidentClass()}
 }
 
 // Classes are the moddable class names, in the order their books are built.
@@ -143,7 +137,7 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 	defs, ap := Apply(defs, ops, order.Has)
 	probs = append(probs, ap...)
 
-	for _, c := range classes() {
+	for _, c := range classesWith(TexturesOf(found)) {
 		typed, kp := keepCore(c, defs, ops)
 		probs = append(probs, kp...)
 		probs = append(probs, c.decode(&cat, typed)...)

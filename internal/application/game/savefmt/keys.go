@@ -42,7 +42,7 @@ func (k Keys) Remap(class string, now func(key string) (int, bool)) func(int) in
 // RemapBackstories maps the saved backstory IDs of bios and colonists, in
 // place, onto book: a plugin's backstories move when the plugin set or its
 // order changes, and one whose plugin is gone becomes none.
-func (k Keys) RemapBackstories(book backstory.Book, bios map[entity.EntityID]pawngen.Pawn, colonists []pawngen.Pawn) {
+func (k Keys) RemapBackstories(book backstory.Book, bios map[entity.EntityID]pawngen.Pawn, colonists []pawngen.Pawn, others ...*pawngen.Pawn) {
 	to := k.Remap(backstory.Class, func(key string) (int, bool) {
 		id, ok := book.IDOf(key)
 		return int(id), ok
@@ -53,5 +53,10 @@ func (k Keys) RemapBackstories(book backstory.Book, bios map[entity.EntityID]paw
 	}
 	for i, p := range colonists {
 		colonists[i] = p.Remapped(bs)
+	}
+	for _, p := range others { // the world's people: visitors, raiders, prisoners met before
+		if p != nil {
+			*p = p.Remapped(bs)
+		}
 	}
 }

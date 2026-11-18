@@ -13,7 +13,6 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/social"
-	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -264,7 +263,7 @@ func (g *Game) socialPerson(id entity.EntityID) social.Person {
 		p.Traits = bio.Traits
 		var beauty int
 		for _, t := range bio.Traits {
-			beauty += int(trait.DefOf(t).Beauty)
+			beauty += int(traitsOf(g).DefOf(t).Beauty)
 		}
 		p.Beauty = int8(beauty)
 	}

@@ -131,7 +131,7 @@ func encodePart(p Part) (filePart, error) {
 	fp := filePart{Kind: k}
 	switch p.Kind {
 	case PartForcedTrait:
-		key := trait.DefOf(p.Trait).Key
+		key := trait.Core().DefOf(p.Trait).Key
 		if key == "" {
 			return fp, fmt.Errorf("unknown trait %d", p.Trait)
 		}
@@ -302,7 +302,7 @@ func decodePart(raw json.RawMessage) (Part, error) {
 	p := Part{Kind: kind}
 	switch kind {
 	case PartForcedTrait:
-		t, found := trait.Parse(fp.Trait)
+		t, found := trait.Core().Parse(fp.Trait)
 		if !found {
 			return Part{}, fmt.Errorf("unknown trait %q", fp.Trait)
 		}

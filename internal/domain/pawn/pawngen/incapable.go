@@ -15,8 +15,8 @@ import (
 // "Violence (backstory: Convoy mechanic, trait: Gentle)". Bits go in
 // backstory.Bits order; causes go childhood, adulthood (from b), then
 // traits.
-func (p Pawn) IncapableReasons(b backstory.Book) []string {
-	all := p.Incapable(b)
+func (p Pawn) IncapableReasons(b backstory.Book, tb trait.Book) []string {
+	all := p.Incapable(b, tb)
 	if all == 0 {
 		return nil
 	}
@@ -31,7 +31,7 @@ func (p Pawn) IncapableReasons(b backstory.Book) []string {
 		}
 	}
 	for _, t := range p.Traits {
-		if d := trait.DefOf(t); d.Incapable != 0 {
+		if d := tb.DefOf(t); d.Incapable != 0 {
 			causes = append(causes, cause{d.Incapable, "trait: " + d.Label})
 		}
 	}

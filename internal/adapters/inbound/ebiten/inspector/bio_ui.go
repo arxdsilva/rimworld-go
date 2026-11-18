@@ -155,13 +155,13 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 	}
 	a.kit().Label(tx, y+2, uikit.FitText(bioInfoLine(a.shell, b), uikit.DimText(), in.Right()-tx), uikit.DimText())
 	y += 28
-	a.shell.Backstory(tx, y, in.Right()-tx, "Childhood", b.Childhood, b.ChildhoodDesc, "bio.child")
+	a.shell.Backstory(tx, y, in.Right()-tx, "Childhood", b.Childhood, a.sources().withSource(b.ChildhoodDesc, "backstory", b.ChildhoodKey), "bio.child")
 	y += 20
-	a.shell.Backstory(tx, y, in.Right()-tx, "Adulthood", b.Adulthood, b.AdulthoodDesc, "bio.adult")
+	a.shell.Backstory(tx, y, in.Right()-tx, "Adulthood", b.Adulthood, a.sources().withSource(b.AdulthoodDesc, "backstory", b.AdulthoodKey), "bio.adult")
 
 	// Traits.
 	y = max(pr.Bottom()+6, y+22)
-	y = a.shell.Traits(in.X, y, in.W, game.CandidateView{BioView: b})
+	y = a.shell.Traits(in.X, y, in.W, game.CandidateView{BioView: a.sources().traitsWithSource(b)})
 
 	// Incapable of.
 	short, full := BioIncapable(b)

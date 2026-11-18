@@ -1,0 +1,8 @@
+[
+  {
+    "op": "set",
+    "target": "incident/core.herd_crossing",
+    "path": "weight",
+    "value": 40
+  }
+]

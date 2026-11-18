@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -190,12 +191,17 @@ func rangeOf(special []string, name string, max int) (int, int) {
 // range steppers and the filter tree (game.StockpileFilterRows, pre-order)
 // with the children of a collapsed category left out.
 func treeRows(z game.ZoneView, open map[string]bool, find string) []treeRow {
+	return treeRowsIn(z, open, find, item.Book{})
+}
+
+// treeRowsIn is treeRows in a run whose item kinds are items (PLG-026).
+func treeRowsIn(z game.ZoneView, open map[string]bool, find string, items item.Book) []treeRow {
 	rows := []treeRow{{id: "storage.h.items", label: "Allowed items", head: true, special: -1}}
 	hide := -1 // depth of the collapsed category whose children are skipped
 	find = strings.ToLower(find)
-	rows0 := game.StorageFilterRows(z.Kind, z.Filter)
+	rows0 := game.StorageFilterRowsIn(items, z.Kind, z.Filter)
 	if z.Profile != "" { // a Neat Storage piece lists its own ceiling (NST)
-		rows0 = game.ProfileFilterRows(z.Profile, z.Filter)
+		rows0 = game.ProfileFilterRowsIn(items, z.Profile, z.Filter)
 	}
 	for _, r := range rows0 {
 		if find != "" { // a search lists the matching rows flat, at any depth
@@ -238,7 +244,7 @@ func treeRows(z game.ZoneView, open map[string]bool, find string) []treeRow {
 // tree declares the scrolling tree. Only rows wholly inside the view are
 // declared, so a checkbox never draws over the edge.
 func (w Storage) tree(r gfx.Rect, z game.ZoneView, open map[string]bool) {
-	rows := treeRows(z, open, w.storage.find)
+	rows := treeRowsIn(z, open, w.storage.find, w.sh.Env().Items)
 	area := w.kit().ScrollArea("storage.list", r, float32(len(rows))*storageRowH, uikit.ScrollOpts{Step: storageRowH * 3, Focusable: true})
 	for i, row := range rows {
 		y := area.View.Y + float32(i)*storageRowH - area.Off

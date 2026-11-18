@@ -262,7 +262,7 @@ func (p Part) Summary() string {
 	}
 	switch p.Kind {
 	case PartForcedTrait:
-		return fmt.Sprintf("%s for %s, %d%%", trait.DefOf(p.Trait).Label, who(), p.Chance)
+		return fmt.Sprintf("%s for %s, %d%%", trait.Core().DefOf(p.Trait).Label, who(), p.Chance)
 	case PartAgeRange:
 		return fmt.Sprintf("Ages %d to %d", p.MinAge, p.MaxAge)
 	case PartForcedCondition:

@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
 	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -364,8 +365,9 @@ func (s shellSaves) NewestSlot() int         { return s.a.newestSlot() }
 // Language option sets one, OPT-001); dir is assets/lang ("" when the
 // folder is missing: English only).
 type shellTexts struct {
-	live *lang.Live
-	dir  string
+	live  *lang.Live
+	dir   string
+	extra map[string]map[string]string // the plugins' translations by locale (PLG-055)
 }
 
 // newTexts finds assets/lang and starts in English.
@@ -374,7 +376,7 @@ func newTexts() shellTexts {
 	if err != nil {
 		dir = ""
 	}
-	return shellTexts{&lang.Live{}, dir}
+	return shellTexts{live: &lang.Live{}, dir: dir}
 }
 
 // use switches to the catalog for code; one that does not load is English.
@@ -383,6 +385,7 @@ func (s shellTexts) use(code string) {
 	if err != nil {
 		c = lang.Catalog{}
 	}
+	c = c.With(s.extra[code])
 	s.live.Set(c)
 }
 
@@ -723,4 +726,14 @@ func jumpTo(a *App, s ports.Spot) {
 	if s.X >= 0 && s.Y >= 0 {
 		a.centerOnMap(float64(s.X)+0.5, float64(s.Y)+0.5)
 	}
+}
+
+// pluginLangs are the locales the enabled plugins translate, sorted.
+func (s shellTexts) pluginLangs() []string {
+	out := make([]string, 0, len(s.extra))
+	for code := range s.extra {
+		out = append(out, code)
+	}
+	slices.Sort(out)
+	return out
 }

@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -123,6 +124,7 @@ func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
 	}
 	g.raid.Threats.Settle(&grp, tech, g.raidPoints(int(uint64(g.clock.Now())/clock.TicksPerDay)))
 	if grp.Arrival.DropPod() && len(kit) > 0 {
+		scriptIncident(g, incident.RivalRaid) // scripts.go (PLG-060): a raid is on_incident's "core.rival_raid"
 		podRaid(g, grp, kit, f)
 		return
 	}
@@ -131,6 +133,7 @@ func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
 	if !ok || n <= 0 {
 		return
 	}
+	scriptIncident(g, incident.RivalRaid) // scripts.go (PLG-060)
 	if grp.Plan == raid.Siege {
 		grp.CampX, grp.CampY = g.raid.Raiders.Camp(ex, ey)
 	}

@@ -75,19 +75,28 @@ func (a *Pane) Bills() Bills { return Bills{a} }
 // item kinds its ingredients take, named. "" when the ingredients toggle
 // (FullRecipeList) is off, so the row reads as before, or the recipe names none.
 func (a Bills) pickTip(r game.RecipeView) string {
-	if !a.shell.World().Gameplay.On(gameplay.FullRecipeList) || len(r.InputKinds) == 0 {
-		return ""
+	tip := ""
+	if a.shell.World().Gameplay.On(gameplay.FullRecipeList) && len(r.InputKinds) > 0 {
+		tip = "Takes: " + strings.Join(r.InputKinds, ", ")
 	}
-	return "Takes: " + strings.Join(r.InputKinds, ", ")
+	return uikit.WithSourceNote(tip, a.sources().recipeSource(r.Name)) // PLG-072
 }
 
 // billSettings are bill bl's settings as the read model reports them.
-func billSettings(bl game.BillView) BillSettings {
+func billSettings(bl game.BillView) BillSettings { return billSettingsIn(bl, item.Book{}) }
+
+// billSettingsIn is billSettings in a run whose item kinds are items: a
+// plugin ingredient (PLG-026) goes by its label.
+func billSettingsIn(bl game.BillView, items item.Book) BillSettings {
 	s := BillSettings{Store: bl.Store, Zone: bl.StoreZone, Radius: bl.Radius, SkillMin: bl.SkillMin, SkillMax: bl.SkillMax,
 		Worker: bl.Worker, UnpauseAt: bl.UnpauseAt, Stuff: bl.StuffKind}
 	for k := range bl.Ingredients.Len() {
 		in := bl.Ingredients.At(k)
-		s.Ingredients = append(s.Ingredients, BillIngredient{Item: in.Kind, Label: in.Label, Allowed: in.Allowed})
+		label := in.Label
+		if k := item.Kind(in.Kind); items.Plugin(k) {
+			label = items.Label(k)
+		}
+		s.Ingredients = append(s.Ingredients, BillIngredient{Item: in.Kind, Label: label, Allowed: in.Allowed})
 	}
 	return s
 }
@@ -171,7 +180,7 @@ func (a Bills) openBillConfig(b game.BuildingView, i int) {
 	if i < 0 || i >= len(b.Bills) {
 		return
 	}
-	a.openBillConfigWith(b, i, billSettings(b.Bills[i]))
+	a.openBillConfigWith(b, i, billSettingsIn(b.Bills[i], a.env().Content.Items))
 }
 
 // openBillConfigWith opens bill i's dialog over settings cfg.
@@ -179,7 +188,7 @@ func (a Bills) openBillConfigWith(b game.BuildingView, i int, cfg BillSettings) 
 	mode := b.Bills[i].ModeID
 	cfg.Source = billSource(b.Bills[i])
 	a.kit().Push(uikit.Modal{
-		ID: BillCfgModalID, Title: a.shell.T("Bill: ") + b.Bills[i].Label, W: 460, H: 560,
+		ID: BillCfgModalID, Title: a.billTitle(b.Bills[i]), W: 460, H: 560,
 		Draw:    func(body gfx.Rect) { a.billConfigBody(body, b, i, mode, &cfg) },
 		Buttons: []uikit.ModalButton{{ID: "bill.cfg.done", Label: a.shell.T("Done"), Style: uikit.BtnPrimary, Closes: true}},
 	})
@@ -427,7 +436,7 @@ func billExtra(bl game.BillView) BillExtra {
 // copyBill puts bill i of b on the clipboard.
 func (a Bills) copyBill(b game.BuildingView, i int) {
 	bl := b.Bills[i]
-	a.billClip.Clip = &BillClip{Recipe: bl.Recipe, ModeID: bl.ModeID, Target: bl.Target, Settings: billSettings(bl)}
+	a.billClip.Clip = &BillClip{Recipe: bl.Recipe, ModeID: bl.ModeID, Target: bl.Target, Settings: billSettingsIn(bl, a.env().Content.Items)}
 }
 
 // pasteBlock is why the clipboard cannot be pasted on b ("" it can).
@@ -482,4 +491,14 @@ func (a Bills) billVerb(verb string, n int, b game.BuildingView) bool {
 		return false
 	}
 	return true
+}
+
+// billTitle is the bill dialog's title: "Bill: <recipe>", with the
+// recipe's provenance after it when a plugin added or changed it (PLG-072).
+func (a Bills) billTitle(bl game.BillView) string {
+	t := a.shell.T("Bill: ") + bl.Label
+	if n := a.sources().recipeSource(bl.Recipe); n != "" {
+		t += " (" + strings.ReplaceAll(n, "\n", "; ") + ")"
+	}
+	return t
 }

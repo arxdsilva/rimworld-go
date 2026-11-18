@@ -4,8 +4,11 @@
 package ebiten
 
 import (
+	"log"
+	"maps"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"slices"
 	"sync"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
@@ -47,3 +50,15 @@ var cpuReadBack = sync.OnceValue(func() map[string]bool {
 })
 
 func readBack(key string) bool { return cpuReadBack()[key] }
+
+// addItemTextures adds the plugin items' textures (AppConfig.ItemTextures,
+// PLG-026) to c under their sprite keys, in key order, before anything
+// else reads the catalog. Build refused a texture that does not decode
+// (the same decoder), so a failure here is logged, and no sprite stands in.
+func addItemTextures(c *art.Catalog, tex map[string][]byte) {
+	for _, k := range slices.Sorted(maps.Keys(tex)) {
+		if err := c.AddPNG(world.ItemSprite(k), tex[k]); err != nil {
+			log.Print(err)
+		}
+	}
+}

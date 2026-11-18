@@ -77,6 +77,7 @@ func phaseSystems(g *Game) *sched.Schedule {
 		w("visitors", PhaseWorld, func() { visitsOf(g).Tick(aidOf(g), now()) }).ForColony().When(func() bool { return world() && len(g.worldSt.visitors) > 0 }).Then(PhaseWorld), // game/visit
 		w(PhaseWorld, PhaseWorld, g.phaseWorld).When(world).Then("world-upkeep"),
 		w("world-upkeep", PhaseWorld, func() { worldUpkeep(g, now()) }).ForColony().At(worldStep, 0).When(world),
+		w("scripts", PhaseWeather, func() { scriptClock(g, now()) }).ForColony().At(hour, 0).When(func() bool { return scriptsOn(g) }).Then(PhaseWeather), // scripts.go (PLG-060): on_day, on_hour
 		w(PhaseWeather, PhaseWeather, g.phaseWeather), w(PhaseMovement, PhaseMovement, g.phaseMovement),
 	})
 }

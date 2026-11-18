@@ -256,7 +256,8 @@ func (s *Screen) detailLines(v View, r Row, on map[string]bool) []line {
 		line{text: s.sh.Tf("Requires: %s", s.listOr(r.Requires)), st: gfx.Body},
 		line{text: s.sh.Tf("Loads after: %s", s.listOr(r.After)), st: gfx.Body},
 		line{text: s.sh.Tf("Loads before: %s", s.listOr(r.Before)), st: gfx.Body},
-		line{text: s.sh.Tf("Conflicts with: %s", s.listOr(r.Conflicts)), st: gfx.Body})
+		line{text: s.sh.Tf("Conflicts with: %s", s.listOr(r.Conflicts)), st: gfx.Body},
+		line{text: s.sh.Tf("Translates: %s", s.listOr(r.Locales)), st: gfx.Body})
 	if r.URL != "" {
 		out = append(out, line{text: s.sh.Tf("Homepage: %s", r.URL), st: dim})
 	}

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -219,4 +220,37 @@ func verbLetters(s string) []string {
 	}
 	slices.Sort(v)
 	return v
+}
+
+// CodesWith is Codes plus the languages only plugins translate (PLG-055):
+// each code in extra the folder has no catalog for, named by its code, after
+// the shipped ones in the order given.
+func CodesWith(dir string, extra []string) []Choice {
+	out := Codes(dir)
+	for _, code := range extra {
+		if !codeRE.MatchString(code) || slices.ContainsFunc(out, func(c Choice) bool { return c.Code == code }) {
+			continue
+		}
+		out = append(out, Choice{Code: code, Name: code})
+	}
+	return out
+}
+
+// With is c with extra laid over it: each source string's translation
+// replaces c's, or is added. Entries that are blank or change the source's
+// fmt verbs are skipped, as in Load. c is not changed. For the zero Catalog
+// (English) the extra entries still apply, so a plugin can reword a string.
+func (c Catalog) With(extra map[string]string) Catalog {
+	if len(extra) == 0 {
+		return c
+	}
+	m := make(map[string]string, len(c.m)+len(extra))
+	maps.Copy(m, c.m)
+	for k, v := range extra {
+		if v != "" && sameVerbs(k, v) {
+			m[k] = v
+		}
+	}
+	c.m = m
+	return c
 }

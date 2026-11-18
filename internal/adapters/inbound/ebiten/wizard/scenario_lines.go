@@ -159,7 +159,7 @@ func ScenarioLinesIn(tr lang.Tr, d scenario.Def) []game.DetailLine {
 	for _, p := range d.Parts {
 		switch p.Kind {
 		case scenario.PartForcedTrait:
-			rules = append(rules, game.DetailLine{Text: p.Kind.Label() + ": " + p.Summary(), Tip: trait.DefOf(p.Trait).Label + "\n" + trait.DefOf(p.Trait).Desc})
+			rules = append(rules, game.DetailLine{Text: p.Kind.Label() + ": " + p.Summary(), Tip: trait.Core().DefOf(p.Trait).Label + "\n" + trait.Core().DefOf(p.Trait).Desc})
 		case scenario.PartCondition:
 			rules = append(rules, game.DetailLine{Text: p.Kind.Label() + ": " + p.Summary(), Tip: p.Cond.Label() + "\n" + p.Cond.Desc()})
 		case scenario.PartAgeRange, scenario.PartForcedCondition, scenario.PartNoClothes,

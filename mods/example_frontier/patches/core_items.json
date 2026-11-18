@@ -1,0 +1,8 @@
+[
+  {
+    "op": "set",
+    "target": "item/core.wool",
+    "path": "value",
+    "value": 4
+  }
+]

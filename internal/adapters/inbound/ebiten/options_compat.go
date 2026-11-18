@@ -92,7 +92,7 @@ func (h optionsHost) Env() options.Env {
 	return options.Env{
 		Running: a.renderer != nil, Commitment: a.commitment(), Hardware: a.cfg.Hardware,
 		DeviceScale: a.deviceScale, RenderLimit: h.renderLimit, UIScale: stepInUse(a.scale, a.devRaw), Bindings: a.bindings(),
-		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods, LangDir: a.shell.shellTexts.dir, SavesDir: a.cfg.Saves.Dir,
+		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods, LangDir: a.shell.shellTexts.dir, PluginLangs: a.shell.pluginLangs(), SavesDir: a.cfg.Saves.Dir,
 	}
 }
 

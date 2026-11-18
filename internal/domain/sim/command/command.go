@@ -455,6 +455,19 @@ const (
 	// AnswerLetter (EAI-0 contract; ignored until it lands) picks answer
 	// Mode (an index into the letter's Choices) of letter Target.
 	AnswerLetter
+	// Plugin scripts (PLG-060, application/scripting), on the colony's
+	// home map. ScriptMessage posts Name as a message (Mode 0) or, Mode 1,
+	// a letter whose title is Name up to its first newline and whose text
+	// is the rest. ScriptSpawn drops Count items of key Name ("core.wood")
+	// at the colony's drop spot; an unknown key does nothing.
+	ScriptMessage
+	ScriptSpawn
+)
+
+// ScriptMessage modes (Command.Mode).
+const (
+	ScriptNote   uint8 = iota // a message
+	ScriptLetter              // a letter: "title\ntext"
 )
 
 // EditApparelPolicy modes (Command.Mode), GEAR-3 contract.

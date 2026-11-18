@@ -331,7 +331,7 @@ type visitArrivals struct{ g *Game }
 func (h visitArrivals) NewPerson(ref int, f *faction.Faction) entity.EntityID {
 	g := h.g
 	id := g.entities.Next()
-	p := pawngen.Generate(g.worldSeed()^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f), Backstories: backstoriesOf(g)})
+	p := pawngen.Generate(g.worldSeed()^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f), Backstories: backstoriesOf(g), Traits: traitsOf(g)})
 	g.peopleReg().add(&person{ID: id, Bio: p, HasBio: true, Faction: ref, Where: whereVisitor})
 	g.socState().sig[id] = personSig{}
 	return id

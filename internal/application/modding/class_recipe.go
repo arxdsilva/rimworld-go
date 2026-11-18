@@ -137,12 +137,17 @@ const rcBehaviourMsg = "by_species, legacy, dry, ferment, salvage, builds and an
 // fractional number, an unknown item, bench, skill or work type, a value
 // out of range or a changed behaviour flag is a problem, and its def is
 // left out. Recipes past recipe.MaxBook are refused (an ID is a byte).
-func DecodeRecipes(defs []Def) (recipe.Book, []Problem) {
+func DecodeRecipes(defs []Def) (recipe.Book, []Problem) { return DecodeRecipesWith(defs, item.Book{}) }
+
+// DecodeRecipesWith is DecodeRecipes in a run whose item kinds are items
+// (PLG-026): an input, output or extra may name a plugin item by its key,
+// and the book smelts the plugin items (recipe.Book.WithItems).
+func DecodeRecipesWith(defs []Def, items item.Book) (recipe.Book, []Problem) {
 	var list []recipe.Def
 	var keys []string
 	var probs []Problem
 	for _, d := range defs {
-		rd := rcDecoder{bsDecoder: bsDecoder{def: d}}
+		rd := rcDecoder{bsDecoder: bsDecoder{def: d}, items: items}
 		v := rd.decode()
 		if len(rd.probs) == 0 && len(list) >= recipe.MaxBook {
 			rd.fail("", "too many recipes: a game holds at most %d", recipe.MaxBook)
@@ -153,11 +158,41 @@ func DecodeRecipes(defs []Def) (recipe.Book, []Problem) {
 		}
 		list, keys = append(list, v), append(keys, d.Key)
 	}
-	return recipe.NewBook(list, keys), probs
+	return recipe.NewBook(list, keys).WithItems(items), probs
 }
 
-// rcDecoder types one recipe def (bsDecoder's helpers and problems).
-type rcDecoder struct{ bsDecoder }
+// recipeClass is the recipe class (PLG-025). It types recipes against the
+// catalog's item book, so the item class is built before it (PLG-026).
+func recipeClass() class {
+	return class{
+		name: RecipeClass,
+		core: func() []Def { return EncodeRecipes(recipe.Core()) },
+		decode: func(cat *Catalog, defs []Def) []Problem {
+			var items item.Book
+			if cat != nil {
+				items = cat.Items
+			}
+			b, probs := DecodeRecipesWith(defs, items)
+			if cat != nil {
+				cat.Recipes = b
+			}
+			return probs
+		},
+	}
+}
+
+// rcDecoder types one recipe def (bsDecoder's helpers and problems)
+// against the run's item kinds.
+type rcDecoder struct {
+	bsDecoder
+	items item.Book
+}
+
+// item parses an item a recipe names: a core kind's name or a plugin
+// kind's key.
+func (rd *rcDecoder) item(field string, v any) item.Kind {
+	return rcRef(rd, field, v, "item", rd.items.Parse)
+}
 
 func (rd *rcDecoder) decode() recipe.Def {
 	d := recipe.Def{Name: recipe.NameOf(rd.def.Key)}
@@ -210,7 +245,7 @@ func (rd *rcDecoder) field(d *recipe.Def, k string, v any) {
 	case "inputs":
 		d.Inputs = rd.inputs(k, v)
 	case "output":
-		d.Output = rcRef(rd, k, v, "item", item.ParseKind)
+		d.Output = rd.item(k, v)
 	case "out_qty":
 		d.OutQty = rd.num(k, v, 1, rcMaxQty)
 	case "work":
@@ -222,7 +257,7 @@ func (rd *rcDecoder) field(d *recipe.Def, k string, v any) {
 	case "min_skill":
 		d.MinSkill = uint8(rd.num(k, v, 0, rcMaxSkill))
 	case "extra":
-		d.Extra = rcRef(rd, k, v, "item", item.ParseKind)
+		d.Extra = rd.item(k, v)
 	case "extra_qty":
 		d.ExtraQty = rd.num(k, v, 1, rcMaxQty)
 	case "builds":
@@ -355,7 +390,7 @@ func (rd *rcDecoder) input(field string, v any) recipe.Input {
 		x, f := m[k], field+"."+k
 		switch k {
 		case "kind":
-			in.Kind = rcRef(rd, f, x, "item", item.ParseKind)
+			in.Kind = rd.item(f, x)
 		case "qty":
 			in.Qty = rd.num(f, x, 1, rcMaxQty)
 		case "max":

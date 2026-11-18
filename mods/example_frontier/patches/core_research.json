@@ -1,0 +1,8 @@
+[
+  {
+    "op": "set",
+    "target": "research/core.carpet_making",
+    "path": "cost",
+    "value": 600
+  }
+]

@@ -116,7 +116,7 @@ func (h menuHost) UpdateAvailable() (string, string) {
 }
 func (h menuHost) DownloadUpdate()    { h.a.cfg.Updates.DownloadUpdate() }
 func (h menuHost) Do(it ports.Intent) { h.a.shell.Do(it) }
-func (h menuHost) PluginErrors() int  { return h.a.cfg.Plugins.Errors() }
+func (h menuHost) PluginErrors() int  { return h.a.cfg.Plugins.Live().Errors() }
 func (h menuHost) DrawFlame(dst *ebiten.Image, sx, sy float32, t, tile, k float64) {
 	creature.DrawFlameScreen(dst, sx, sy, t, tile, k)
 }
@@ -131,7 +131,7 @@ type pluginsHost struct{ menuHost }
 
 var _ plugins.Shell = pluginsHost{}
 
-func (h pluginsHost) Plugins() plugins.View         { return h.a.cfg.Plugins }
+func (h pluginsHost) Plugins() plugins.View         { return h.a.cfg.Plugins.Live() } // PLG-060: with the scripts turned off while playing
 func (h pluginsHost) SetSettings(s config.Settings) { h.a.setSettings(s) }
 func (h pluginsHost) PaintMenu(dst *ebiten.Image, sw, sh int, title string, body []string, buttons []uikit.Button) {
 	h.a.paintMenu(dst, sw, sh, title, body, buttons)

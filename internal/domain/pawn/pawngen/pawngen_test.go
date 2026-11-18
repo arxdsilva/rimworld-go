@@ -152,7 +152,7 @@ func TestIncapableSkillsZeroNoPassion(t *testing.T) {
 	ps := many(2000, Rules{Forced: []ForcedTrait{{Trait: trait.Gentle, Chance: 30}}})
 	seen := 0
 	for _, p := range ps {
-		inc := p.Incapable(backstory.Core())
+		inc := p.Incapable(backstory.Core(), trait.Core())
 		passions := 0
 		for id := skill.ID(0); id < skill.NumSkills; id++ {
 			s := p.Skills[id]
@@ -184,13 +184,13 @@ func TestTraitConflictsNever(t *testing.T) {
 		for _, p := range many(2000, rules) {
 			for i, a := range p.Traits {
 				for _, b := range p.Traits[i+1:] {
-					if trait.Conflicts(a, b) {
+					if trait.Core().Conflicts(a, b) {
 						t.Fatalf("conflicting traits %v", p.Traits)
 					}
 				}
 				for _, b := range []backstory.ID{p.Childhood, p.Adulthood} {
-					if b != 0 && trait.Clashes(a, backstory.Core().DefOf(b)) {
-						t.Fatalf("%s clashes with %q", trait.DefOf(a).Label, backstory.Core().DefOf(b).Title)
+					if b != 0 && trait.Core().Clashes(a, backstory.Core().DefOf(b)) {
+						t.Fatalf("%s clashes with %q", trait.Core().DefOf(a).Label, backstory.Core().DefOf(b).Title)
 					}
 				}
 			}
@@ -221,7 +221,7 @@ func TestForcedRules(t *testing.T) {
 		if !p.Look.Bare || p.Look.Vest {
 			t.Fatal("no-clothes rule ignored")
 		}
-		if p.Incapable(backstory.Core())&backstory.Violence == 0 || p.Skills[skill.Shooting].Level != 0 {
+		if p.Incapable(backstory.Core(), trait.Core())&backstory.Violence == 0 || p.Skills[skill.Shooting].Level != 0 {
 			t.Fatal("gentle pawns can't fight")
 		}
 	}
@@ -300,18 +300,18 @@ func TestLegacyTemperamentMatchesGame(t *testing.T) {
 
 func TestLegacyPawnIsNeutral(t *testing.T) {
 	p := Legacy(17, "Rook", 5, 5, 6)
-	if p.Skills != skill.NeutralSet() || len(p.Traits) != 0 || p.Incapable(backstory.Core()) != 0 ||
+	if p.Skills != skill.NeutralSet() || len(p.Traits) != 0 || p.Incapable(backstory.Core(), trait.Core()) != 0 ||
 		p.AgeYears() != 30 || p.Look != look.Legacy(17, 5, 5, 6) || p.Childhood != 0 || p.Adulthood != 0 {
 		t.Fatalf("legacy pawn %+v", p)
 	}
-	if Stats(p) != stat.Base() {
-		t.Fatalf("legacy stats %v", Stats(p))
+	if Stats(p, trait.Core()) != stat.Base() {
+		t.Fatalf("legacy stats %v", Stats(p, trait.Core()))
 	}
 	if p.FullName() != "Rook" || p.Title(backstory.Core()) != "" {
 		t.Fatalf("legacy names %q %q", p.FullName(), p.Title(backstory.Core()))
 	}
 	for id := skill.ID(0); id < skill.NumSkills; id++ {
-		if SkillWorkPct(p, id) != 100 || LearnPct(p, id) != 100 {
+		if SkillWorkPct(p, trait.Core(), id) != 100 || LearnPct(p, trait.Core(), id) != 100 {
 			t.Fatal("legacy multipliers")
 		}
 	}
@@ -324,7 +324,7 @@ func TestStatsLayers(t *testing.T) {
 		Conditions: []Condition{OldFracture, HandTremor},
 		Traits:     []trait.ID{trait.Tireless, trait.Bookish},
 	}
-	s := Stats(p)
+	s := Stats(p, trait.Core())
 	// body x1.03 -> age x0.9 -> fracture x0.92
 	if s[stat.MoveSpeed] != 1000*1030/1000*900/1000*920/1000 {
 		t.Fatalf("move %d", s[stat.MoveSpeed])
@@ -333,14 +333,14 @@ func TestStatsLayers(t *testing.T) {
 	if s[stat.WorkSpeed] != 1020 || s[stat.HungerRate] != 900 || s[stat.ColdComfort] != 20 || s[stat.MeleeAcc] != -5 {
 		t.Fatalf("sheet %v", s)
 	}
-	if SkillWorkPct(p, skill.Crafting) != 90 || SkillWorkPct(p, skill.Intellectual) != 125 || LearnPct(p, skill.Intellectual) != 150 {
+	if SkillWorkPct(p, trait.Core(), skill.Crafting) != 90 || SkillWorkPct(p, trait.Core(), skill.Intellectual) != 125 || LearnPct(p, trait.Core(), skill.Intellectual) != 150 {
 		t.Fatal("skill multipliers")
 	}
-	young := Stats(Pawn{AgeDays: 15 * DaysPerYear, Look: look.Look{Build: look.Heavy}})
+	young := Stats(Pawn{AgeDays: 15 * DaysPerYear, Look: look.Look{Build: look.Heavy}}, trait.Core())
 	if young[stat.LearnRate] != 1250 || young[stat.WorkSpeed] != 850 || young[stat.HungerRate] != 1150 {
 		t.Fatalf("young %v", young)
 	}
-	mid := Stats(Pawn{AgeDays: 55 * DaysPerYear})
+	mid := Stats(Pawn{AgeDays: 55 * DaysPerYear}, trait.Core())
 	if mid[stat.WorkSpeed] != 950 || mid[stat.MoveSpeed] != 950 {
 		t.Fatalf("mid %v", mid)
 	}
@@ -445,7 +445,7 @@ func TestNamesAvoidBlocklist(t *testing.T) {
 		check("backstory short", d.Short)
 		check("backstory text", d.Desc)
 	}
-	for _, d := range trait.All() {
+	for _, d := range trait.Core().All() {
 		check("trait", d.Label)
 		check("trait text", d.Desc)
 	}
@@ -468,10 +468,10 @@ func TestGenerateReadsTheRulesBook(t *testing.T) {
 		if p.Childhood != 1 || p.Adulthood != 2 || p.Title(book) != "Lamplighter" {
 			t.Fatalf("slot %d: backstories %d %d %q", slot, p.Childhood, p.Adulthood, p.Title(book))
 		}
-		if p.Incapable(book)&backstory.Mining == 0 || p.Skills[skill.Mining].Level != 0 || p.Skills[skill.Cooking].Level < 10 {
-			t.Fatalf("slot %d: incapable %b, mining %d cooking %d", slot, p.Incapable(book), p.Skills[skill.Mining].Level, p.Skills[skill.Cooking].Level)
+		if p.Incapable(book, trait.Core())&backstory.Mining == 0 || p.Skills[skill.Mining].Level != 0 || p.Skills[skill.Cooking].Level < 10 {
+			t.Fatalf("slot %d: incapable %b, mining %d cooking %d", slot, p.Incapable(book, trait.Core()), p.Skills[skill.Mining].Level, p.Skills[skill.Cooking].Level)
 		}
-		if r := p.IncapableReasons(book); len(r) == 0 || !strings.Contains(strings.Join(r, ";"), "backstory: Lamplighter") {
+		if r := p.IncapableReasons(book, trait.Core()); len(r) == 0 || !strings.Contains(strings.Join(r, ";"), "backstory: Lamplighter") {
 			t.Fatalf("slot %d: reasons %q", slot, r)
 		}
 	}

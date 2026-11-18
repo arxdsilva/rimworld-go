@@ -529,6 +529,8 @@ func (w pawnsPage) syncNames(ng *Draft, v game.CandidateView) {
 func (w pawnsPage) backstoryLine(x, y, width float32, label, title, desc, id string) {
 	if title == "" {
 		title = "—"
+	} else {
+		title, desc = w.sh.T(title), w.sh.T(desc) // def text: its source string is the key (PLG-055)
 	}
 	w.kit().Label(x, y, label+":", gfx.Label)
 	st := gfx.Body

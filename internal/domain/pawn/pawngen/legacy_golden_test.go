@@ -57,7 +57,7 @@ func TestNewTraitsGenerated(t *testing.T) {
 	for _, p := range many(300, Rules{Legacy: true}) {
 		for _, a := range p.Traits {
 			if a > trait.Sturdy {
-				t.Fatalf("legacy pawn rolled %s", trait.DefOf(a).Label)
+				t.Fatalf("legacy pawn rolled %s", trait.Core().DefOf(a).Label)
 			}
 		}
 	}

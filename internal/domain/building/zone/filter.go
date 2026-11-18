@@ -184,8 +184,12 @@ type Node struct {
 
 // Tree is the filter tree, a category before its sub-categories and
 // then its kinds.
-func Tree() []Node {
-	cats := categories()
+func Tree() []Node { return TreeIn(item.Book{}) }
+
+// TreeIn is Tree in a run whose item kinds are b: each plugin kind is a
+// leaf (Path its key, Label its label) under its def's category.
+func TreeIn(b item.Book) []Node {
+	cats := categoriesIn(b)
 	var out []Node
 	for i, c := range cats {
 		depth := strings.Count(c.path, "/")
@@ -198,7 +202,7 @@ func Tree() []Node {
 		label := c.path[strings.LastIndexByte(c.path, '/')+1:]
 		out = append(out, Node{Path: c.path, Label: label, Depth: depth, Kinds: all})
 		for _, k := range c.kinds {
-			out = append(out, Node{Path: k.String(), Label: k.String(), Depth: depth + 1, Leaf: true, Kind: k,
+			out = append(out, Node{Path: b.Name(k), Label: b.Label(k), Depth: depth + 1, Leaf: true, Kind: k,
 				Kinds: filterOf(k)})
 		}
 	}
@@ -207,14 +211,24 @@ func Tree() []Node {
 
 // Resolve is the kinds under filter-tree node name: Root, a category
 // path, a top category's name or an item kind's name (ok false for none).
-func Resolve(name string) (Filter, bool) {
+func Resolve(name string) (Filter, bool) { return ResolveIn(name, item.Book{}) }
+
+// ResolveIn is Resolve in a run whose item kinds are b: Root and each
+// category hold its plugin kinds too, and a plugin kind is named by its key.
+func ResolveIn(name string, b item.Book) (Filter, bool) {
 	if name == Root {
-		return sets.storable, true
+		return sets.storable.Or(pluginsOf(b)), true
 	}
-	if k, ok := item.ParseKind(name); ok && Storable(k) {
+	if k, ok := b.Parse(name); ok && (Storable(k) || b.Plugin(k)) {
 		return filterOf(k), true
 	}
-	return resolvePath(name)
+	f, found := resolvePath(name)
+	for _, k := range b.Plugins() {
+		if p := b.Def(k).Path; p == name || strings.HasPrefix(p, name+"/") {
+			f, found = f.With(k, true), true
+		}
+	}
+	return f, found
 }
 
 // Storable is every kind the tree files (what storage may ever take).
@@ -223,9 +237,13 @@ func Storable(k item.Kind) bool { return sets.storable.Has(k) }
 // Names is f as the settings window lists it: every category whose kinds
 // are all in f (at any depth), then each kind of f whose own category is
 // only partly in it, in tree order.
-func (f Filter) Names() []string {
+func (f Filter) Names() []string { return f.NamesIn(item.Book{}) }
+
+// NamesIn is Names in a run whose item kinds are b (a plugin kind by its
+// key, under its category).
+func (f Filter) NamesIn(b item.Book) []string {
 	var out []string
-	cats := categories()
+	cats := categoriesIn(b)
 	for _, c := range cats {
 		all := filterOf(c.kinds...)
 		for _, sub := range cats {
@@ -244,7 +262,7 @@ func (f Filter) Names() []string {
 		}
 		for _, k := range c.kinds {
 			if f.Has(k) {
-				out = append(out, k.String())
+				out = append(out, b.Name(k))
 			}
 		}
 	}
@@ -378,7 +396,7 @@ func (z Zone) Allows(k item.Kind) bool {
 	if z.Custom {
 		return z.Filter.Has(k)
 	}
-	return legacy(z).Has(k)
+	return legacy(z).Has(twin(k))
 }
 
 // SetAllowed allows (on) or forbids every kind of set in z (within its
@@ -426,14 +444,19 @@ func RowsFor(k Kind, names []string) []Row { return RowsForProfile(k, ProfileNon
 // RowsForProfile is RowsFor for a zone of kind k with profile p: a storage
 // piece's rows are its own ceiling (UniverseOf).
 func RowsForProfile(k Kind, p Profile, names []string) []Row {
+	return RowsForProfileIn(k, p, names, item.Book{})
+}
+
+// RowsForProfileIn is RowsForProfile in a run whose item kinds are b.
+func RowsForProfileIn(k Kind, p Profile, names []string, b item.Book) []Row {
 	var allowed Filter
 	for _, name := range names {
-		if set, ok := Resolve(name); ok {
+		if set, ok := ResolveIn(name, b); ok {
 			allowed = allowed.Or(set)
 		}
 	}
-	u := UniverseOf(k, p)
-	tree := Tree()
+	u := universeIn(k, p, b)
+	tree := TreeIn(b)
 	out := make([]Row, 0, len(tree))
 	for _, n := range tree {
 		kinds := n.Kinds.And(u)

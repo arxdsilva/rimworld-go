@@ -60,13 +60,19 @@ const (
 
 // Pick sets the current project (ignored unless available).
 func (l *Lab) Pick(p proj.Project) {
-	if l.Prog.Available(p) {
+	if l.book().Available(&l.Prog, p) {
 		l.Cur, l.Set = p, true
 	}
 }
 
 // Working reports a project picked and still open.
-func (l *Lab) Working() bool { return l.Set && l.Prog.Available(l.Cur) }
+func (l *Lab) Working() bool { return l.Set && l.book().Available(&l.Prog, l.Cur) }
+
+// book is the run's projects (PLG-026).
+func (l *Lab) book() proj.Book { return l.h.Projects() }
+
+// Done reports p researched (its cost in the run's book reached).
+func (l *Lab) Done(p proj.Project) bool { return l.book().Done(&l.Prog, p) }
 
 // Assign sends worker to the nearest research bench that can work the
 // current project, trying the next nearest when one can't be started,
@@ -139,7 +145,7 @@ func (l *Lab) Work(worker, bench entity.EntityID) Outcome {
 	l.note(raw)
 	total := raw*100*100/int64(max(1, l.costPct(l.Cur)*l.h.CostPct())) + int64(l.Carry)
 	l.Carry = int(total % nano)
-	if !l.Prog.Add(l.Cur, int(total/nano)) {
+	if !l.book().Add(&l.Prog, l.Cur, int(total/nano)) {
 		return Continue
 	}
 	l.finish(b.X, b.Y)
@@ -147,7 +153,9 @@ func (l *Lab) Work(worker, bench entity.EntityID) Outcome {
 }
 
 // costPct is what p costs this colony, percent of its base cost.
-func (l *Lab) costPct(p proj.Project) int { return proj.CostPct(proj.DefOf(p).TechLevel, l.h.Tech()) }
+func (l *Lab) costPct(p proj.Project) int {
+	return proj.CostPct(l.book().DefOf(p).TechLevel, l.h.Tech())
+}
 
 // note adds raw points to this tick's rate.
 func (l *Lab) note(raw int64) {
@@ -166,7 +174,7 @@ func (l *Lab) note(raw int64) {
 // carries its description and unlocks (wiki: a letter on completion), and
 // the selection clears (no queue; the alert follows).
 func (l *Lab) finish(x, y int) {
-	d := proj.DefOf(l.Cur)
+	d := l.book().DefOf(l.Cur)
 	text := d.Desc
 	if len(d.Unlocks) > 0 {
 		text += "\n\nUnlocked: " + strings.Join(UnlockLabels(d, l.Recipes), ", ") + "."
@@ -183,7 +191,7 @@ func (l *Lab) CostOf(p proj.Project) int { return max(1, l.costPct(p)*l.h.CostPc
 // (AX-7, game/books). Finishing p posts the research letter at (x, y)
 // and drops p if it was the current project; another pick is kept.
 func (l *Lab) Study(p proj.Project, n, x, y int) {
-	if !l.Prog.Add(p, n) {
+	if !l.book().Add(&l.Prog, p, n) {
 		return
 	}
 	cur, set, carry := l.Cur, l.Set, l.Carry
@@ -201,7 +209,8 @@ func (l *Lab) DevFinish() {
 	if !l.Working() {
 		return
 	}
-	l.Prog.Add(l.Cur, proj.DefOf(l.Cur).Cost)
+	book := l.book()
+	book.Add(&l.Prog, l.Cur, book.DefOf(l.Cur).Cost)
 	var x, y int // the letter points at the first research bench, if any
 	if bs := l.cache().benches; len(bs) > 0 {
 		b, _ := l.h.Building(bs[0])
@@ -214,10 +223,11 @@ func (l *Lab) DevFinish() {
 // Grant finishes p and everything it needs, drawn and hidden (a
 // scenario's starting research).
 func (l *Lab) Grant(p proj.Project) {
-	if p >= proj.NumProjects || l.Prog.Done(p) {
+	book := l.book()
+	if int(p) >= book.Len() || book.Done(&l.Prog, p) {
 		return
 	}
-	d := proj.DefOf(p)
+	d := book.DefOf(p)
 	for _, r := range slices.Concat(d.Requires, d.Hidden) {
 		l.Grant(r)
 	}
@@ -232,14 +242,15 @@ func (l *Lab) Reset() {
 
 // Complete finishes every project (sandbox, dev hook).
 func (l *Lab) Complete() {
-	l.Prog = proj.Complete()
+	l.Prog = l.book().Complete()
 	l.h.Changed()
 }
 
 // LockedBy names the project gating an unlock key ("" when usable).
 func (l *Lab) LockedBy(key string) string {
-	if p, ok := l.Prog.Locks(key); ok {
-		return proj.DefOf(p).Label
+	book := l.book()
+	if p, ok := book.Locks(&l.Prog, key); ok {
+		return book.DefOf(p).Label
 	}
 	return ""
 }

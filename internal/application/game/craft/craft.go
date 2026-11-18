@@ -31,16 +31,17 @@ type Craft struct {
 // New builds the production cluster on host h.
 func New(h Host) *Craft {
 	c := &Craft{
-		Bills:   &Bills{h: h, p: planner{h}, list: make(map[entity.EntityID][]recipe.Bill)},
+		Bills:   &Bills{h: h, list: make(map[entity.EntityID][]recipe.Bill)},
 		Drying:  &Drying{h: h, racks: make(map[entity.EntityID]Batch)},
 		Quality: &Quality{h: h},
 	}
+	c.Bills.p = planner{h, c.Bills}
 	c.Condition = &Condition{h: h}
 	c.Bills.drying = c.Drying
 	c.Facilities = &Facilities{h: h}
 	c.Art = &Art{h: h, quality: c.Quality, pieces: map[entity.EntityID]Artwork{}}
 	c.Stations = &Stations{h: h, facilities: c.Facilities, art: c.Art}
-	c.Shop = &Shop{h: h, bills: c.Bills, drying: c.Drying, stations: c.Stations, art: c.Art, quality: c.Quality, p: planner{h}}
+	c.Shop = &Shop{h: h, bills: c.Bills, drying: c.Drying, stations: c.Stations, art: c.Art, quality: c.Quality, p: planner{h, c.Bills}}
 	return c
 }
 

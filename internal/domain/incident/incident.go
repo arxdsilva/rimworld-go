@@ -96,6 +96,10 @@ type Def struct {
 	// Helpful: the colony gains by it (a windfall, a joiner, a trade); the
 	// storyteller's positive bias draws among these (EAI-033).
 	Helpful bool
+	// Like is the event whose behaviour this one runs: its own ID for a core
+	// event, the core event a plugin's names (PLG-026). Code that switches on
+	// an event reads Like; odds, cooldowns and messages keep ID.
+	Like ID
 }
 
 // Odds scales two families' weights, percent (FullFreq keeps the
@@ -171,7 +175,7 @@ var defs = [NumIDs]Def{
 
 func init() {
 	for i := range defs {
-		defs[i].ID = ID(i)
+		defs[i].ID, defs[i].Like = ID(i), ID(i)
 	}
 }
 
@@ -183,7 +187,7 @@ func DefOf(id ID) Def {
 	return defs[id]
 }
 
-// All lists every event.
+// All lists every core event.
 func All() []Def { return append([]Def(nil), defs[:]...) }
 
 // State is the storyteller's memory of events (saved).
@@ -274,11 +278,11 @@ func (d Def) WeightOdds(o Odds) int {
 	return max((d.Weight*pct+FullFreq/2)/FullFreq, 1)
 }
 
-// Pick chooses among the events of category c allowed now (and passing
+// Pick chooses among the core events of category c allowed now (and passing
 // ok, the caller's situational check), weighted; roll is a random number
 // in [0, total weight) supplied by the caller, who asks Total first. It
 // is pure and deterministic. Diseases keep their catalogue weights
-// (PickAt sets the frequency).
+// (PickAt sets the frequency). Book has the same over a run's book.
 func Pick(c Category, st State, now uint64, b biome.ID, roll int, ok func(ID) bool) (ID, bool) {
 	return PickAt(c, st, now, b, FullFreq, roll, ok)
 }
@@ -292,7 +296,11 @@ func PickAt(c Category, st State, now uint64, b biome.ID, freqPct, roll int, ok 
 // PickOdds is Pick with the weights at odds o (WeightOdds); roll is in
 // [0, TotalOdds).
 func PickOdds(c Category, st State, now uint64, b biome.ID, o Odds, roll int, ok func(ID) bool) (ID, bool) {
-	for _, d := range eligible(c, st, now, b, o, ok) {
+	return pickOdds(defs[:], c, st, now, b, o, roll, ok)
+}
+
+func pickOdds(list []Def, c Category, st State, now uint64, b biome.ID, o Odds, roll int, ok func(ID) bool) (ID, bool) {
+	for _, d := range eligible(list, c, st, now, b, o, ok) {
 		w := d.WeightOdds(o)
 		if roll < w {
 			return d.ID, true
@@ -302,7 +310,7 @@ func PickOdds(c Category, st State, now uint64, b biome.ID, o Odds, roll int, ok
 	return 0, false
 }
 
-// Total is the summed weight of the events Pick would choose among.
+// Total is the summed weight of the core events Pick would choose among.
 func Total(c Category, st State, now uint64, b biome.ID, ok func(ID) bool) int {
 	return TotalAt(c, st, now, b, FullFreq, ok)
 }
@@ -315,18 +323,22 @@ func TotalAt(c Category, st State, now uint64, b biome.ID, freqPct int, ok func(
 // TotalOdds is the summed weight of the events PickOdds would choose
 // among.
 func TotalOdds(c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) int {
+	return totalOdds(defs[:], c, st, now, b, o, ok)
+}
+
+func totalOdds(list []Def, c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) int {
 	t := 0
-	for _, d := range eligible(c, st, now, b, o, ok) {
+	for _, d := range eligible(list, c, st, now, b, o, ok) {
 		t += d.WeightOdds(o)
 	}
 	return t
 }
 
-// eligible is the events of category c allowed now with a weight at odds
-// o, passing ok (asked only for those).
-func eligible(c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) []Def {
+// eligible is the events of list in category c allowed now with a weight at
+// odds o, passing ok (asked only for those).
+func eligible(list []Def, c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) []Def {
 	var out []Def
-	for _, d := range defs {
+	for _, d := range list {
 		if d.Category == c && (!o.Helpful || d.Helpful) && d.WeightOdds(o) > 0 && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
 			out = append(out, d)
 		}

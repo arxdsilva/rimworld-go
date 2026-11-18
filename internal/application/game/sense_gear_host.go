@@ -200,7 +200,7 @@ func packView(g *Game, id entity.EntityID) ([]PackItemView, int, int) {
 	p := gear.Pack(id)
 	var rows []PackItemView
 	for _, e := range p.Items {
-		rows = append(rows, PackItemView{ID: e.ID, Name: e.Stack.Kind.String(), Qty: e.Stack.Qty, Unload: e.Unload, Gear: gear.PackGear(id, e)})
+		rows = append(rows, PackItemView{ID: e.ID, Name: g.sk.content.Items.Name(e.Stack.Kind), Qty: e.Stack.Qty, Unload: e.Unload, Gear: gear.PackGear(id, e)}) // a plugin's by key (PLG-026)
 	}
 	return rows, p.Grams(), gear.Capacity(id)
 }

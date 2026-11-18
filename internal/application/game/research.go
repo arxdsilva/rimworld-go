@@ -116,7 +116,8 @@ func (h researchHost) Now() uint64 { return uint64(h.g.clock.Now()) }
 func (h researchHost) Letter(title, text string, x, y int) {
 	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letters.Good})
 }
-func (h researchHost) Changed() { h.g.viewGen++ } // view cache (indexes.go)
+func (h researchHost) Changed()                { h.g.viewGen++ }                  // view cache (indexes.go)
+func (h researchHost) Projects() research.Book { return h.g.sk.content.Research } // the run's (PLG-026)
 
 func (g *Game) buildLocked(k construction.Kind) bool {
 	return g.lab.LockedBy("build:"+k.String()) != ""
@@ -150,15 +151,16 @@ func (g *Game) CompleteResearch() { g.lab.Complete() }
 // AddResearch puts points into a project by name (dev scenarios).
 func (g *Game) AddResearch(name string, pts int) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	if p, ok := research.Parse(name); ok {
-		g.lab.Prog.Add(p, pts)
+	book := g.sk.content.Research
+	if p, ok := book.Parse(name); ok { // a plugin project's name is its key (PLG-026)
+		book.Add(&g.lab.Prog, p, pts)
 	}
 }
 
 // PickResearch sets the current project by name (dev scenarios).
 func (g *Game) PickResearch(name string) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	if p, ok := research.Parse(name); ok {
+	if p, ok := g.sk.content.Research.Parse(name); ok {
 		g.lab.Pick(p)
 	}
 }

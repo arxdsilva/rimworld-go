@@ -138,7 +138,18 @@ func (g *Game) threatActive(now uint64) bool {
 // rollNature picks and fires one nature event.
 func (g *Game) rollNature(now uint64) {
 	if id, picked := g.pickNature(now); picked && g.fireIncident(id, now) {
-		g.incidents.Fired(id, g.rel(now))
+		g.incidentFired(id, now)
+	}
+}
+
+// incidentFired records that event id (the plugin's own ID for a plugin
+// incident: its cooldown is its own) happened, and a plugin incident
+// announces itself under its own label (PLG-026).
+func (g *Game) incidentFired(id incident.ID, now uint64) {
+	g.incidents.Fired(id, g.rel(now))
+	if d := g.sk.content.Incidents.DefOf(id); d.Like != d.ID {
+		hx, hy := g.home()
+		g.notice(hx, hy, 0, "%s", d.Name)
 	}
 }
 
@@ -146,11 +157,12 @@ func (g *Game) rollNature(now uint64) {
 // eligible); the map's checks are asked once per event and remembered for
 // the roll (they draw no randomness).
 func (g *Game) pickNature(now uint64) (incident.ID, bool) {
-	var fit [incident.NumIDs]int8 // 0 unknown, 1 fits, 2 does not
+	book := g.sk.content.Incidents // plugins' incidents too (PLG-026)
+	var fit [incident.MaxBook]int8 // 0 unknown, 1 fits, 2 does not
 	ok := func(id incident.ID) bool {
 		if fit[id] == 0 {
 			fit[id] = 2
-			if !g.incidentDisabled(incident.DefOf(id).Key) && g.incidentFits(id, now) { // setup.go: scenario-disabled (NG-1)
+			if !g.incidentDisabled(book.DefOf(id).Key) && g.incidentFits(id, now) { // setup.go: scenario-disabled (NG-1)
 				fit[id] = 1
 			}
 		}
@@ -158,7 +170,7 @@ func (g *Game) pickNature(now uint64) (incident.ID, bool) {
 	}
 	rn := g.rel(now)      // setup.go: the catalogue's days count from the landing (now itself on a legacy colony)
 	odds := natureOdds(g) // weather_ng1.go: disease frequency (MED-04), Extreme weather (TEMP-2)
-	total := incident.TotalOdds(incident.Nature, g.incidents, rn, g.biome, odds, ok)
+	total := book.Total(incident.Nature, g.incidents, rn, g.biome, odds, ok)
 	if total <= 0 {
 		return 0, false
 	}
@@ -166,19 +178,20 @@ func (g *Game) pickNature(now uint64) (incident.ID, bool) {
 		// EAI-033: the storyteller's positive bias draws among the helpful
 		// events (a setup colony's extra draw; a legacy colony draws none)
 		odds.Helpful = true
-		if t := incident.TotalOdds(incident.Nature, g.incidents, rn, g.biome, odds, ok); t > 0 {
+		if t := book.Total(incident.Nature, g.incidents, rn, g.biome, odds, ok); t > 0 {
 			total = t
 		} else {
 			odds.Helpful = false
 		}
 	}
-	return incident.PickOdds(incident.Nature, g.incidents, rn, g.biome, odds, g.rng.IntN(total), ok)
+	return book.Pick(incident.Nature, g.incidents, rn, g.biome, odds, g.rng.IntN(total), ok)
 }
 
 // incidentFits is the map's situational check for event id. MAP-0: each
 // map rolls its own nature events; the colony's events (gatherings,
 // visitors, traders, colony-wide climate events) fit only on the first map.
 func (g *Game) incidentFits(id incident.ID, now uint64) bool {
+	id = g.sk.content.Incidents.Like(id) // a plugin incident runs its like's checks (PLG-026)
 	switch id {
 	case incident.Party, incident.VisitorGroup, incident.WandererJoins, incident.TraderCaravan, incident.OrbitalTrader,
 		incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter:
@@ -230,7 +243,9 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 
 // fireIncident makes event id happen; false when it could not (no tile,
 // no animal).
-func (g *Game) fireIncident(id incident.ID, now uint64) bool {
+func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
+	defer scriptFired(g, id, &fired)     // scripts.go (PLG-060): on_incident with the key that fired
+	id = g.sk.content.Incidents.Like(id) // a plugin incident runs its like's behaviour (PLG-026)
 	switch id {
 	case incident.Party:
 		return g.throwParty(now) // gathering.go (M5)
@@ -284,13 +299,31 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 func (g *Game) FireIncident(key string) bool {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	now := uint64(g.clock.Now())
-	for _, d := range incident.All() {
-		if d.Key == key && g.incidentFits(d.ID, now) && g.fireIncident(d.ID, now) {
-			g.incidents.Fired(d.ID, g.rel(now))
-			return true
-		}
+	if d, ok := g.sk.content.Incidents.ByName(key); ok && g.incidentFits(d.ID, now) && g.fireIncident(d.ID, now) {
+		g.incidentFired(d.ID, now)
+		return true
 	}
 	return false
+}
+
+// PluginIncident is a plugin's incident for the developer tools' list
+// (PLG-026): the key FireIncident takes, its own label and the core
+// incident whose behaviour it runs.
+type PluginIncident struct {
+	Key, Label, Like string
+}
+
+// PluginIncidents lists the run's plugin incidents in load order (empty
+// with no plugins). Read only.
+func (g *Game) PluginIncidents() []PluginIncident {
+	var out []PluginIncident
+	book := g.sk.content.Incidents
+	for _, d := range book.All() {
+		if d.Like != d.ID {
+			out = append(out, PluginIncident{Key: d.Key, Label: d.Name, Like: book.DefOf(d.Like).Name})
+		}
+	}
+	return out
 }
 
 // notice posts a message about creature focus (the UI's jump link

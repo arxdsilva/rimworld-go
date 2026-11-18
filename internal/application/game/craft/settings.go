@@ -23,7 +23,7 @@ func (b *Bills) applySetting(bid entity.EntityID, bills []recipe.Bill, c command
 		bl = configured(bl, c, b.book.DefOf(bl.Recipe))
 	case command.SetBillIngredient:
 		k := item.Kind(c.Stuff)
-		if !b.book.DefOf(bl.Recipe).Accepts(k) {
+		if !b.book.DefTakes(b.book.DefOf(bl.Recipe), k) {
 			return
 		}
 		bl = bl.SetAllowed(k, c.Enabled)

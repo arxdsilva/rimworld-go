@@ -758,11 +758,7 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 		}
 	}
 	importMapFields(g, &s)
-	if s.NG1 != nil { // saved backstory IDs follow their keys onto c's book (PLG-044)
-		s.ContentKeys.RemapBackstories(c.Backstories, s.Bios, s.NG1.Setup.Colonists)
-	} else {
-		s.ContentKeys.RemapBackstories(c.Backstories, s.Bios, nil)
-	}
+	remapBackstories(&s, c.Backstories)         // saved backstory IDs follow their keys onto c's book (PLG-044)
 	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
 	g.applyClimate(uint64(max(s.Tick, 1) - 1))  // weather_ng1.go (TEMP-2): the climate event's offset as at the last tick
 	g.importLanding(s.Landing)                  // setup_mapgen.go: after importSetupState

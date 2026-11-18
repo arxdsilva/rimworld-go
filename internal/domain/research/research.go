@@ -554,71 +554,34 @@ var defs = [NumProjects]Def{
 		Unlocks: []string{"build:fish tank"}},
 }
 
-// DefOf returns the definition of p.
-func DefOf(p Project) Def {
-	if p >= NumProjects {
-		return Def{}
-	}
-	return defs[p]
-}
+// DefOf returns the definition of core project p (the run's book: Book.DefOf).
+func DefOf(p Project) Def { return core.DefOf(p) }
 
-// All lists every project in display order.
+// All lists every core project in display order (the run's: Book.All).
 func All() []Def { return append([]Def(nil), defs[:]...) }
 
-// Parse finds a project by name.
-func Parse(name string) (Project, bool) {
-	for _, d := range defs {
-		if d.Name == name {
-			return d.Project, true
-		}
-	}
-	return 0, false
-}
+// Parse finds a core project by name (the run's: Book.Parse).
+func Parse(name string) (Project, bool) { return core.Parse(name) }
 
-// Progress is the colony's research state: points put into each project.
-type Progress [NumProjects]int
+// Progress is the colony's research state: points put into each project,
+// indexed by Project (core's, then a run's plugin projects; PLG-026).
+type Progress [MaxBook]int
 
-// Done reports p finished.
-func (pr Progress) Done(p Project) bool { return p < NumProjects && pr[p] >= DefOf(p).Cost }
+// Done reports core project p finished (the run's book: Book.Done).
+func (pr Progress) Done(p Project) bool { return core.Done(&pr, p) }
 
-// Available reports p can be researched now: not done, prerequisites
-// (drawn and hidden) done.
-func (pr Progress) Available(p Project) bool {
-	if p >= NumProjects || pr.Done(p) {
-		return false
-	}
-	d := DefOf(p)
-	for _, rs := range [2][]Project{d.Requires, d.Hidden} {
-		for _, r := range rs {
-			if !pr.Done(r) {
-				return false
-			}
-		}
-	}
-	return true
-}
+// Available reports core project p can be researched now: not done,
+// prerequisites (drawn and hidden) done (the run's: Book.Available).
+func (pr Progress) Available(p Project) bool { return core.Available(&pr, p) }
 
-// Locks returns the project that must be finished before unlock key is
-// usable (ok=false if nothing gates it or it is already researched).
-func (pr Progress) Locks(key string) (Project, bool) {
-	for _, d := range defs {
-		for _, u := range d.Unlocks {
-			if u == key && !pr.Done(d.Project) {
-				return d.Project, true
-			}
-		}
-	}
-	return 0, false
-}
+// Locks returns the core project that must be finished before unlock key
+// is usable (ok=false if nothing gates it or it is already researched;
+// the run's: Book.Locks).
+func (pr Progress) Locks(key string) (Project, bool) { return core.Locks(&pr, key) }
 
-// Add puts n points into p, reporting whether that finished it.
-func (pr *Progress) Add(p Project, n int) bool {
-	if p >= NumProjects || pr.Done(p) {
-		return false
-	}
-	pr[p] = min(DefOf(p).Cost, pr[p]+n)
-	return pr.Done(p)
-}
+// Add puts n points into core project p, reporting whether that finished
+// it (the run's: Book.Add).
+func (pr *Progress) Add(p Project, n int) bool { return core.Add(pr, p, n) }
 
 // V1Projects is how many projects a save from before NG-1 holds.
 const V1Projects = 5
@@ -639,22 +602,28 @@ func FromV1(v V1) Progress { return FromSlice(v[:]) }
 
 // Slice is the progress as a plain slice, indexed by Project. Saves should
 // store this rather than the fixed-size array: gob refuses an array whose
-// length changed, and appending a project changes NumProjects.
-func (pr Progress) Slice() []int { return append([]int(nil), pr[:]...) }
+// length changed, and appending a project changes NumProjects. It holds
+// every core project, and plugin projects up to the last with points, so
+// a core-only colony saves exactly what it did before PLG-026.
+func (pr Progress) Slice() []int {
+	n := int(NumProjects)
+	for i := MaxBook - 1; i >= n; i-- {
+		if pr[i] != 0 {
+			n = i + 1
+			break
+		}
+	}
+	return append([]int(nil), pr[:n]...)
+}
 
 // FromSlice rebuilds progress from Slice's output; projects missing from an
-// older, shorter slice start at zero and extra entries are ignored.
+// older, shorter slice start at zero and entries past MaxBook are ignored.
 func FromSlice(pts []int) Progress {
 	var pr Progress
 	copy(pr[:], pts)
 	return pr
 }
 
-// All researched, for sandboxes and tests.
-func Complete() Progress {
-	var pr Progress
-	for _, d := range defs {
-		pr[d.Project] = d.Cost
-	}
-	return pr
-}
+// Complete is every core project researched, for sandboxes and tests
+// (the run's: Book.Complete).
+func Complete() Progress { return core.Complete() }

@@ -315,3 +315,23 @@ func TestDetailExplainsThePosition(t *testing.T) {
 		}
 	}
 }
+
+// The detail names the languages a plugin translates (PLG-055).
+func TestDetailListsTranslatedLocales(t *testing.T) {
+	t.Parallel()
+	s := New(&fakeShell{})
+	v := twoPlugins()
+	for loc, want := range map[string][]string{"": {"Translates: none"}, "pt-BR, de": {"Translates: pt-BR, de"}} {
+		r := v.Rows[0]
+		if loc != "" {
+			r.Locales = []string{"pt-BR", "de"}
+		}
+		var texts []string
+		for _, l := range s.detailLines(v, r, nil) {
+			texts = append(texts, l.text)
+		}
+		if !slices.Contains(texts, want[0]) {
+			t.Errorf("detail lacks %q: %q", want[0], texts)
+		}
+	}
+}

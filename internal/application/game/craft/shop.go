@@ -395,7 +395,7 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	}
 	if d.Input.Smelt || d.Input.SmeltWear { // PRD-3, PRD-4: a quarter of the steel back
 		if st, ok := h.Stack(j.Carry); ok {
-			out = recipe.SmeltYield(st)
+			out = s.bills.book.SmeltYield(st) // a plugin item's own yield too (PLG-026)
 		}
 	}
 	stuff := item.Kind(0)

@@ -823,7 +823,8 @@ type Game struct {
 	systems *sched.Schedule
 	viewGen uint64
 	// sk: bios, skills, stats and learning (skills.go, NG-1 PAWN-G).
-	sk skillState
+	sk      skillState
+	scripts scriptRun // scripts.go: the plugins' script host (PLG-060)
 	// ng: the new-game setup's live state (setup.go, NG-1 SETUP); zero
 	// for a legacy colony.
 	ng ng1State
@@ -1029,8 +1030,9 @@ func New(cfg Config) *Game {
 	g.rest = rest.New(newRestHost(g))       // rest_host.go
 	g.lab = rlab.New(researchHost{g})       // research.go
 	g.sk.content = cfg.Content              // the run's books (skills.go, PLG-024)
+	g.scripts.host = cfg.Scripts            // scripts.go (PLG-060); nil runs none
 	g.craft.Bills.UseBook(cfg.Content.Recipes)
-	g.lab.Prog, g.lab.Recipes = research.Complete(), cfg.Content.Recipes // sandbox: everything known; the run's recipes (PLG-025)
+	g.lab.Prog, g.lab.Recipes = cfg.Content.Research.Complete(), cfg.Content.Recipes // sandbox: everything known; the run's recipes (PLG-025)
 	return g
 }
 
@@ -1242,7 +1244,7 @@ func (g *Game) SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error
 	g.itemIDs = append(g.itemIDs, id)
 	g.putStack(id, item.Stack{Kind: kind, Qty: qty, X: x, Y: y})
 	if kind.IsBook() {
-		books.Mint(g.stacks.Ref(id), g.streams.seed, uint64(id), g.lab.Prog.Done) // game/books (A7): quality and title, hashed
+		books.Mint(g.stacks.Ref(id), g.streams.seed, uint64(id), g.lab.Done) // game/books (A7): quality and title, hashed
 	}
 	if kind.IsApparel() {
 		g.noteApparel(id) // apparel.go: the free-clothes index

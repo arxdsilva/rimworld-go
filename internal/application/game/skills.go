@@ -73,6 +73,9 @@ type skillState struct {
 // backstoriesOf is the run's backstory book (core's when no plugin adds any).
 func backstoriesOf(g *Game) backstory.Book { return g.sk.content.Backstories }
 
+// traitsOf is the run's trait book (core's when no plugin adds any).
+func traitsOf(g *Game) trait.Book { return g.sk.content.Traits }
+
 // barColonists is who stands on the colonist bar: every open map's colonists,
 // maps in id order (Colonists' order, the bar's default).
 func barColonists(g *Game) []entity.EntityID {
@@ -210,7 +213,7 @@ func (g *Game) spawnGenerated(p pawngen.Pawn, x, y int) (entity.EntityID, error)
 	}
 	g.giveBio(id, p)
 	pr := g.prio[id]
-	inc := p.Incapable(backstoriesOf(g)).WorkMask()
+	inc := p.Incapable(backstoriesOf(g), traitsOf(g)).WorkMask()
 	for t := work.Type(0); t < work.NumTypes; t++ {
 		if inc.Enabled(t) {
 			pr[t] = 0
@@ -258,12 +261,12 @@ func (g *Game) rebuildStats(id entity.EntityID) {
 		g.sk.stats[id] = fx
 		return
 	}
-	layers := append(pawngen.StatLayers(p), g.difficultyMods(), gearfacts.Mods(gm), bodyMods(key))
-	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(backstoriesOf(g)), traits: p.Traits, body: key, gear: gm}
+	layers := append(pawngen.StatLayers(p, traitsOf(g)), g.difficultyMods(), gearfacts.Mods(gm), bodyMods(key))
+	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(backstoriesOf(g), traitsOf(g)), traits: p.Traits, body: key, gear: gm}
 	fx.neutral = fx.sheet == stat.Base()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
-		fx.workPct[sk] = int16(pawngen.SkillWorkPct(p, sk))
-		fx.learnPct[sk] = int16(pawngen.LearnPct(p, sk))
+		fx.workPct[sk] = int16(pawngen.SkillWorkPct(p, traitsOf(g), sk))
+		fx.learnPct[sk] = int16(pawngen.LearnPct(p, traitsOf(g), sk))
 		if fx.workPct[sk] != 100 || fx.learnPct[sk] != 100 {
 			fx.neutral = false
 		}
@@ -327,7 +330,7 @@ func (g *Game) incapableWhy(id entity.EntityID, t work.Type) string {
 		return ""
 	}
 	p, book := g.sk.bios[id], backstoriesOf(g)
-	reasons, inc := p.IncapableReasons(book), p.Incapable(book) // one reason per bit, in bit order
+	reasons, inc := p.IncapableReasons(book, traitsOf(g)), p.Incapable(book, traitsOf(g)) // one reason per bit, in bit order
 	i := 0
 	for b := backstory.Bits(1); b&backstory.AllBits != 0; b <<= 1 {
 		if inc&b == 0 {
@@ -622,9 +625,10 @@ func activeSkill(g *Game, id entity.EntityID) (skill.ID, bool) {
 // offset and the difficulty's mood line (hidden when 0).
 func (g *Game) traitThoughts(id entity.EntityID, ts []mood.Thought) []mood.Thought {
 	if fx := g.sk.stats[id]; fx != nil && len(fx.traits) > 0 {
+		tb := traitsOf(g)
 		for i := range ts {
 			for _, t := range fx.traits {
-				d := trait.DefOf(t)
+				d := tb.DefOf(t)
 				if sc, ok := d.ThoughtScale[ts[i].Kind]; ok {
 					ts[i].Value = ts[i].Value * int(sc) / 100
 				}
@@ -634,9 +638,9 @@ func (g *Game) traitThoughts(id entity.EntityID, ts []mood.Thought) []mood.Thoug
 			}
 		}
 		for _, t := range fx.traits {
-			for _, m := range trait.DefOf(t).Mods {
+			for _, m := range tb.DefOf(t).Mods {
 				if m.Stat == stat.MoodOffset && m.Add != 0 {
-					ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: strings.ToLower(trait.DefOf(t).Label), Value: int(m.Add)})
+					ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: strings.ToLower(tb.DefOf(t).Label), Value: int(m.Add)})
 				}
 			}
 		}
@@ -757,7 +761,7 @@ func (g *Game) fillPawnBio(pv *PawnView) {
 	}
 	pv.Sex, pv.Build, pv.AgeYears = p.Look.Sex.Label(), p.Look.Build.Label(), p.AgeYears()
 	pv.Look, pv.Title = p.Look, p.Title(backstoriesOf(g))
-	pv.Incapable = p.Incapable(backstoriesOf(g)).WorkMask()
+	pv.Incapable = p.Incapable(backstoriesOf(g), traitsOf(g)).WorkMask()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 		s := g.skillOf(pv.ID, sk)
 		if !ok {
@@ -776,7 +780,7 @@ func (g *Game) bioView(id entity.EntityID) (BioView, bool) {
 	if set := g.sk.skills[id]; set != nil {
 		p.Skills = *set
 	}
-	return roster.BioOf(p, backstoriesOf(g)), true
+	return roster.BioOf(p, backstoriesOf(g), traitsOf(g)), true
 }
 
 // --- saves ------------------------------------------------------------

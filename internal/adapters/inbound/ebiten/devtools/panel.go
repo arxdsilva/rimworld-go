@@ -112,7 +112,8 @@ func (p *Panel) Actions(tx, ty int) []Action {
 		return "Fire started"
 	}}
 	out = append(out, kill, feed, lose, spawnImp, start, p.mapFieldsAction())
-	return append(out, p.storyActions(fire)...)
+	out = append(out, p.storyActions(fire)...)
+	return append(out, p.pluginIncidentActions(fire)...)
 }
 
 // HandleKeys runs the Dev context's actions.

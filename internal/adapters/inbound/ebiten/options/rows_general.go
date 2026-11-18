@@ -195,10 +195,10 @@ func languageRow(t lang.Tr) OptionRow {
 		Tip:   t.T("The language of the interface. Only the catalogs found next to the game are listed."),
 		value: func(s config.Settings) string { return langName(nil, s.General.Language) },
 		live: func(o *Screen) string {
-			return langName(lang.Codes(o.sh.Env().LangDir), o.sh.Settings().General.Language)
+			return langName(o.langs(), o.sh.Settings().General.Language)
 		},
 		applyApp: func(o *Screen, s *config.Settings, _ int) {
-			cs := lang.Codes(o.sh.Env().LangDir)
+			cs := o.langs()
 			for i, c := range cs {
 				if c.Code == s.General.Language {
 					s.General.Language = cs[(i+1)%len(cs)].Code
@@ -207,6 +207,13 @@ func languageRow(t lang.Tr) OptionRow {
 			}
 			s.General.Language = cs[0].Code
 		}}
+}
+
+// langs are the catalogs the Language row cycles: the shipped ones, then the
+// languages only plugins translate (PLG-055), by code.
+func (o *Screen) langs() []lang.Choice {
+	env := o.sh.Env()
+	return lang.CodesWith(env.LangDir, env.PluginLangs)
 }
 
 func langName(cs []lang.Choice, code string) string {

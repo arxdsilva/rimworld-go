@@ -134,6 +134,7 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	g.socialOnDeath(id, killer)    // social_grief.go: relations, grief, killer opinion
 	g.bondsOnDeath(id)             // bonds.go: bonded animals lose their master
 	g.mourn(id)
+	scriptDied(g, id) // scripts.go (PLG-060): on_colonist_died
 	// PRD-2 (craft/garment.go): what the dead wore is tainted and falls
 	// beside the body (corpses are not stripped).
 	if o, ok := g.apparel[id]; ok {

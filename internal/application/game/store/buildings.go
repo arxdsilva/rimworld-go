@@ -185,6 +185,11 @@ func ProfileName(p zone.Profile) string {
 // ProfileRows is the settings window's filter tree for the piece named by a
 // ZoneView.Profile, within its own ceiling (nil for any other name).
 func ProfileRows(name string, filter []string) []zone.Row {
+	return ProfileRowsIn(name, filter, item.Book{})
+}
+
+// ProfileRowsIn is ProfileRows in a run whose item kinds are items (PLG-026).
+func ProfileRowsIn(name string, filter []string, items item.Book) []zone.Row {
 	k, ok := construction.Parse(name)
 	if !ok {
 		return nil
@@ -193,7 +198,7 @@ func ProfileRows(name string, filter []string) []zone.Row {
 	if !ok {
 		return nil
 	}
-	return zone.RowsForProfile(zone.KindShelf, zone.Profile(p), filter)
+	return zone.RowsForProfileIn(zone.KindShelf, zone.Profile(p), filter, items)
 }
 
 // Slot is where stack id lies in a storage piece, for ItemView: the piece's

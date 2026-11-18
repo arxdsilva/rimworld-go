@@ -8,15 +8,15 @@ fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 34  # the same de
 fields rimworld-go/internal/adapters/inbound/ebiten/wizard.Draft 42  # the same debt, moved with the type (ARCH-005 wave 5.2; was newGameState 43)
 fields rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 30  # the same debt, moved with the type (ARCH-003 wave 3.2; was uiState 32)
 methods rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 73  # moved from App with the kit (ARCH-003 wave 3.2); seams to split: text editing 14, modals 9, table 4, tooltip 3
-fields rimworld-go/internal/application/game.Game 64
+fields rimworld-go/internal/application/game.Game 65  # +1 scripts (PLG-060, 2026-11-18, raises OK while perf holds)
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 30
-files rimworld-go/internal/application/game 175  # +2: content.go and remap_content.go, the PLG-026 contract (2026-11-18, raises OK while perf holds)
-lines rimworld-go/internal/application/game 52301  # +519 SPDX headers (licensing), +86 the PLG-026 contract (2026-11-18, raises OK while perf holds)
-lines rimworld-go/internal/adapters/inbound/ebiten 12140  # the SPDX header (3 lines a file) took it over the 12000 limit (licensing, 2026-11-18, user's choice); no code
+files rimworld-go/internal/application/game 176  # +2 content.go, remap_content.go (PLG-026 contract); +1 scripts.go (PLG-060) (2026-11-18, raises OK while perf holds)
+lines rimworld-go/internal/application/game 52571  # +519 SPDX headers; +356 the PLG-026 classes, scripts and remaps (2026-11-18, raises OK while perf holds)
+lines rimworld-go/internal/adapters/inbound/ebiten 12176  # SPDX headers took it over 12000; +36 plugin translations and item textures (2026-11-18, raises OK while perf holds)
 methods rimworld-go/internal/adapters/inbound/ebiten.App 242
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 71
-methods rimworld-go/internal/application/game.Game 1767
+methods rimworld-go/internal/application/game.Game 1769  # +2 PluginIncidents and the script hook (PLG-026/060, 2026-11-18)
 methods rimworld-go/internal/domain/pawn/body.Body 99
 
 # --- init(): registration from the composition root instead (SOLID_GO.md §4) ---

@@ -27,6 +27,21 @@ type View struct {
 	// Folders are where plugins are installed from (the empty state names
 	// them).
 	Folders []string
+	// Late are the problems found while playing (a script the game turned
+	// off, PLG-060), read each time the screens ask (Live); nil: none.
+	Late func() []Problem
+}
+
+// Live is v with the problems found while playing after the ones from
+// loading.
+func (v View) Live() View {
+	if v.Late == nil {
+		return v
+	}
+	if late := v.Late(); len(late) > 0 {
+		v.Problems = append(slices.Clip(v.Problems), late...)
+	}
+	return v
 }
 
 // Row is one installed plugin.
@@ -34,9 +49,10 @@ type Row struct {
 	ID, Name, Version, Description, URL string
 	Authors, Requires, After, Before    []string
 	Conflicts                           []string
-	Loaded                              bool   // it loads this run
-	Position                            int    // its place in the load order, the game being 0 (Loaded only)
-	Reason                              string // why it sits there (Loaded only)
+	Locales                             []string // the languages it translates (lang/<locale>.json), sorted
+	Loaded                              bool     // it loads this run
+	Position                            int      // its place in the load order, the game being 0 (Loaded only)
+	Reason                              string   // why it sits there (Loaded only)
 }
 
 // Problem is one diagnostic with its provenance.

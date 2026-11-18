@@ -424,7 +424,7 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 	if rot := itemRotLine(it); rot != "" { // right under the freshness line
 		lines = append(lines[:1:1], append([]string{rot}, lines[1:]...)...)
 	}
-	title := gear.QualifiedTitle(ItemTitle(it), it.Stuff, it.Quality)
+	title := gear.QualifiedTitle(ItemTitleIn(it, a.env().Content.Items), it.Stuff, it.Quality)
 	lines = append(gear.ItemFactLines(a.shell, it), lines...)
 	if ln := CrateLine(it); ln != "" { // cmds_orders.go (AX-1)
 		lines = append(lines, ln)

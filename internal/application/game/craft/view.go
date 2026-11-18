@@ -156,10 +156,13 @@ func Recipes(book recipe.Book) []RecipeView {
 		if d.Legacy {
 			continue
 		}
+		items := book.Items() // a plugin item by its label (PLG-026)
 		v := RecipeView{ID: uint8(d.ID), Name: d.Name, Label: d.Label, Bench: d.Bench.String(),
-			Input: d.InputsLabel(), Output: d.Output.String()}
-		for _, k := range d.InputKinds() { // CSE-046: named, in kind order
-			v.InputKinds = append(v.InputKinds, k.String())
+			Input: book.InputsLabel(d), Output: items.Label(d.Output)}
+		for k := range item.Kind(items.Len()) { // CSE-046: named, in kind order (d.InputKinds, plugin kinds too)
+			if book.DefTakes(d, k) {
+				v.InputKinds = append(v.InputKinds, items.Label(k))
+			}
 		}
 		if d.Builds != 0 {
 			v.Output = d.Builds.String()
@@ -186,7 +189,7 @@ func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 			Waiting: bl.Waiting, ResumeAt: bl.ResumeAt(),
 			Store: uint8(bl.Store), StoreLabel: bl.Store.String(), StoreZone: bl.Zone, Radius: bl.Radius,
 			SkillMin: bl.SkillMin, SkillMax: bl.MaxSkill(), Worker: uint64(bl.Worker), UnpauseAt: bl.UnpauseAt,
-			Inputs: d.InputsLabel(), NoWorker: b.noWorker(bl, d),
+			Inputs: b.book.InputsLabel(d), NoWorker: b.noWorker(bl, d),
 			StuffKind: uint8(bl.Stuff), Quality: item.HasQuality(d.Output),
 		}
 		if bl.Stuff != 0 {
@@ -198,8 +201,8 @@ func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 		if v.Source = bl.Source; bl.Source != 0 {
 			v.SourceName = b.h.SourceName(bl.Source)
 		}
-		for k := item.Kind(0); k.String() != "unknown"; k++ { // as d.InputKinds, allocating nothing
-			if d.Accepts(k) {
+		for k := range item.Kind(b.book.Items().Len()) { // as d.InputKinds, allocating nothing; plugin kinds too
+			if b.book.DefTakes(d, k) {
 				v.Ingredients.add(k, bl.Allows(k))
 			}
 		}

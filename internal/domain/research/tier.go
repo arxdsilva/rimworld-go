@@ -81,3 +81,44 @@ func CostPct(project, faction TechLevel) int {
 	}
 	return 100 + 50*int(project-faction)
 }
+
+var techKeys = [NumTechLevels]string{"neolithic", "medieval", "industrial", "spacer", "ultra"}
+
+// Key is the level's stable key in plugin files ("neolithic" ... "ultra").
+func (t TechLevel) Key() string {
+	if t >= NumTechLevels {
+		return ""
+	}
+	return techKeys[t]
+}
+
+// ParseTechLevel is the level keyed key (Key).
+func ParseTechLevel(key string) (TechLevel, bool) {
+	for i, k := range techKeys {
+		if k == key {
+			return TechLevel(i), true
+		}
+	}
+	return 0, false
+}
+
+var benchKeys = [NumBenchTiers]string{"simple", "hi_tech", "hi_tech_analyzer"}
+
+// Key is the tier's stable key in plugin files ("simple", "hi_tech",
+// "hi_tech_analyzer").
+func (b BenchTier) Key() string {
+	if b >= NumBenchTiers {
+		return ""
+	}
+	return benchKeys[b]
+}
+
+// ParseBenchTier is the tier keyed key (Key).
+func ParseBenchTier(key string) (BenchTier, bool) {
+	for i, k := range benchKeys {
+		if k == key {
+			return BenchTier(i), true
+		}
+	}
+	return 0, false
+}

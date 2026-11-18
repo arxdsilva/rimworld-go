@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/medcare"
@@ -33,7 +34,8 @@ type Reader interface {
 
 // Env is what the windows read of the program around them, as of the call.
 type Env struct {
-	Game Reader // nil off the colony (no renderer)
+	Game  Reader    // nil off the colony (no renderer)
+	Items item.Book // the run's item kinds: plugin goods in the storage tree (PLG-026)
 }
 
 // Faction is one row of the colony's Factions table as the window's

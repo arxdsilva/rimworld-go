@@ -139,7 +139,7 @@ func fixProblemsShort(tr lang.Tr, n int) string {
 // ---- the choice lists ----------------------------------------------------
 
 var (
-	edTraits     = trait.All()
+	edTraits     = trait.Core().All()
 	EdItems      = scenario.ItemChoices()
 	edAnimals    = scenario.AnimalChoices()
 	edBuildings  = construction.All()

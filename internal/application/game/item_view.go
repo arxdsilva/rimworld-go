@@ -41,7 +41,7 @@ func (g *Game) fillItemViews(w *WorldView) {
 	var t itemCounts
 	if !g.views.on {
 		w.Items = g.appendItemViews(make([]ItemView, 0, len(g.itemIDs)), &t)
-		t.apply(w, t.foodByKind(), storedRows(&t.stored))
+		t.apply(w, t.foodByKind(), storedRows(&t.stored, g.sk.content.Items))
 		return
 	}
 	m := &g.views.items
@@ -54,7 +54,7 @@ func (g *Game) fillItemViews(w *WorldView) {
 		m.foodByKind = t.foodByKind()
 	}
 	if !m.ok || t.stored != m.totals.stored {
-		m.stored = storedRows(&t.stored)
+		m.stored = storedRows(&t.stored, g.sk.content.Items)
 	}
 	m.totals, m.ok = t, true
 	w.Items = m.views
@@ -82,7 +82,7 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 		}
 		g.countStored(&t.stored, st)
 		out = append(out, ItemView{
-			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
+			ID: id, Kind: g.sk.content.Items.Name(st.Kind), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0, // Kind: a plugin's by key (PLG-026)
 			FreshDays: craft.FreshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 			Catch:   filth.Catch(st.Kind) / 10, Forbidden: st.Forbidden,

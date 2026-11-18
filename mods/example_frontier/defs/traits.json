@@ -1,0 +1,13 @@
+{
+  "trait": [
+    {
+      "name": "trail_wise",
+      "label": "Trail-wise",
+      "desc": "{name} reads weather, tracks and the temper of a pack animal as other people read a page.",
+      "group": "gait",
+      "mods": [{"stat": "move_speed", "mul": 1080}],
+      "skill_bonus": {"animals": 2},
+      "rarity": 2
+    }
+  ]
+}

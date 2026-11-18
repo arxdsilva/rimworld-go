@@ -77,6 +77,9 @@ type Colony interface {
 	// Changed is called after a hook changes research outside a tick
 	// (the view cache key).
 	Changed()
+	// Projects is the run's research book (core's plus the plugins',
+	// PLG-026): costs, prerequisites and unlocks come from it.
+	Projects() proj.Book
 }
 
 // Pawn is a researcher's research speed inputs (wiki: Research speed):

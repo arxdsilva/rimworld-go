@@ -1,0 +1,13 @@
+{
+  "research": [
+    {
+      "name": "slat_weaving",
+      "label": "Slat weaving",
+      "desc": "Lash split wood slats into a hard-wearing carpet at a crafting spot.",
+      "cost": 400,
+      "tech": "medieval",
+      "requires": ["core.carpet_making"],
+      "unlocks": ["example_frontier.lash_slat_carpet"]
+    }
+  ]
+}

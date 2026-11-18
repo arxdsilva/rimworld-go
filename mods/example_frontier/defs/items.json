@@ -1,0 +1,12 @@
+{
+  "item": [
+    {
+      "name": "trail_bell",
+      "label": "trail bell",
+      "desc": "A small steel bell a pack animal wears on the trail, so the caravan can hear where it wanders.",
+      "category": "Manufactured/Components",
+      "value": 18,
+      "texture": "textures/trail_bell.png"
+    }
+  ]
+}

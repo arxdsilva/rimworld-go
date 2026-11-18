@@ -8,10 +8,15 @@
 package contentlint
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"strings"
+
+	"go.starlark.net/resolve"
+	"go.starlark.net/starlark"
+	"go.starlark.net/syntax"
 
 	"rimworld-go/internal/application/modding"
 )
@@ -48,6 +53,7 @@ func Main(args []string, out, errOut io.Writer, open Open, roots []string, versi
 		}
 	}
 	cat, probs := modding.Build(found, enabled, *game)
+	probs = append(probs, scriptProblems(found, cat)...) // PLG-060
 	if !*quiet {
 		report(out, found, cat)
 	}
@@ -100,4 +106,40 @@ func split(s string) []string {
 		}
 	}
 	return out
+}
+
+// scriptOptions are the Starlark dialect the game runs scripts in
+// (adapters/outbound/starlarkhost.Options; a test keeps them equal).
+func scriptOptions() *syntax.FileOptions {
+	return &syntax.FileOptions{Set: true, TopLevelControl: true}
+}
+
+// scriptProblems compiles the loaded plugins' scripts (PLG-060): a syntax
+// or name error is an error at "<file>:<line>".
+func scriptProblems(found []modding.Plugin, cat modding.Catalog) []modding.Problem {
+	var out []modding.Problem
+	for _, p := range found {
+		if p.Manifest.ID == modding.Core || !cat.Order.Has(p.Manifest.ID) {
+			continue
+		}
+		for _, b := range p.Scripts {
+			if _, _, err := starlark.SourceProgramOptions(scriptOptions(), b.Path, b.Data, func(string) bool { return false }); err != nil {
+				out = append(out, scriptProblem(p.Manifest.ID, b.Path, err))
+			}
+		}
+	}
+	return out
+}
+
+func scriptProblem(plugin, file string, err error) modding.Problem {
+	pr := modding.Problem{Plugin: plugin, File: file, Msg: "script: " + err.Error()}
+	var se syntax.Error
+	var re resolve.ErrorList
+	switch {
+	case errors.As(err, &se):
+		pr.File, pr.Msg = fmt.Sprintf("%s:%d", file, se.Pos.Line), "script: "+se.Msg
+	case errors.As(err, &re) && len(re) > 0:
+		pr.File, pr.Msg = fmt.Sprintf("%s:%d", file, re[0].Pos.Line), "script: "+re[0].Msg
+	}
+	return pr
 }

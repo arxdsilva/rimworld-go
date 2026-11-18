@@ -12,15 +12,20 @@ import (
 
 // storedRows is the resource list's rows (PLAY-018): qty[k] is how much of
 // item kind k lies in stockpiles, one row per kind present, ordered by
-// category (item.Categories) and then label.
-func storedRows(qty *[256]int) []StoredResourceView {
+// category (item.Categories) and then label; a plugin kind (PLG-026) by
+// its key, label and category in the run's items.
+func storedRows(qty *[256]int, items item.Book) []StoredResourceView {
 	var out []StoredResourceView
 	for k := range qty {
 		if qty[k] == 0 {
 			continue
 		}
 		kind := item.Kind(k)
-		out = append(out, StoredResourceView{Kind: kind.String(), Label: itemLabel(kind), Category: kind.Category(), Qty: qty[k]})
+		label := itemLabel(kind)
+		if items.Plugin(kind) {
+			label = items.Label(kind)
+		}
+		out = append(out, StoredResourceView{Kind: items.Name(kind), Label: label, Category: items.Category(kind), Qty: qty[k]})
 	}
 	slices.SortFunc(out, func(a, b StoredResourceView) int {
 		if r := item.CategoryRank(a.Category) - item.CategoryRank(b.Category); r != 0 {

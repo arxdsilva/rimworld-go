@@ -13,7 +13,7 @@ import (
 )
 
 func TestCatalogue(t *testing.T) {
-	all := All()
+	all := Core().All()
 	if len(all) != 41 { // FOOD-4: Cannibal
 		t.Fatalf("%d traits, want 41", len(all))
 	}
@@ -26,17 +26,17 @@ func TestCatalogue(t *testing.T) {
 			t.Fatalf("duplicate %q", d.Key)
 		}
 		keys[d.Key], labels[d.Label] = true, true
-		if got, ok := Parse(d.Key); !ok || got != d.ID {
-			t.Fatalf("Parse(%q)", d.Key)
+		if got, ok := Core().Parse(d.Key); !ok || got != d.ID {
+			t.Fatalf("Core().Parse(%q)", d.Key)
 		}
-		if DefOf(d.ID).Key != d.Key {
+		if Core().DefOf(d.ID).Key != d.Key {
 			t.Fatal("DefOf")
 		}
 	}
-	if _, ok := Parse("nope"); ok {
+	if _, ok := Core().Parse("nope"); ok {
 		t.Fatal("parsed unknown key")
 	}
-	if DefOf(NumTraits).Key != "" || DefOf(None).Key != "" {
+	if Core().DefOf(NumTraits).Key != "" || Core().DefOf(None).Key != "" {
 		t.Fatal("DefOf out of range")
 	}
 }
@@ -54,8 +54,8 @@ func TestConflicts(t *testing.T) {
 		{None, Sunny, false}, {Sunny, NumTraits, false},
 	}
 	for _, c := range cases {
-		if Conflicts(c.a, c.b) != c.want || Conflicts(c.b, c.a) != c.want {
-			t.Fatalf("Conflicts(%d,%d) want %v", c.a, c.b, c.want)
+		if Core().Conflicts(c.a, c.b) != c.want || Core().Conflicts(c.b, c.a) != c.want {
+			t.Fatalf("Core().Conflicts(%d,%d) want %v", c.a, c.b, c.want)
 		}
 	}
 }
@@ -66,15 +66,15 @@ func TestClashes(t *testing.T) {
 	noPlants := backstory.Def{Incapable: backstory.Plants}
 	pacifist := backstory.Def{Incapable: backstory.Violence}
 	switch {
-	case !Clashes(Gentle, soldier):
+	case !Core().Clashes(Gentle, soldier):
 		t.Fatal("gentle soldier")
-	case Clashes(Gentle, hurt):
+	case Core().Clashes(Gentle, hurt):
 		t.Fatal("a negative skill delta is no clash")
-	case !Clashes(GreenThumb, noPlants):
+	case !Core().Clashes(GreenThumb, noPlants):
 		t.Fatal("green thumb without plants")
-	case !Clashes(QuickDraw, pacifist):
+	case !Core().Clashes(QuickDraw, pacifist):
 		t.Fatal("quick draw pacifist")
-	case Clashes(Gentle, pacifist), Clashes(Sunny, soldier), Clashes(None, soldier), Clashes(NumTraits, soldier):
+	case Core().Clashes(Gentle, pacifist), Core().Clashes(Sunny, soldier), Core().Clashes(None, soldier), Core().Clashes(NumTraits, soldier):
 		t.Fatal("false clash")
 	}
 }
@@ -94,10 +94,10 @@ func TestEffectsText(t *testing.T) {
 		Steady:      {"Break threshold -6"},
 	}
 	for id, wants := range cases {
-		e := DefOf(id).Effects()
+		e := Core().DefOf(id).Effects()
 		for _, w := range wants {
 			if !strings.Contains(e, w) {
-				t.Fatalf("%s effects %q lack %q", DefOf(id).Label, e, w)
+				t.Fatalf("%s effects %q lack %q", Core().DefOf(id).Label, e, w)
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func TestEffectsText(t *testing.T) {
 }
 
 func TestTraitStatMods(t *testing.T) {
-	s := stat.Build(stat.Base(), DefOf(Tireless).Mods, DefOf(FleetFooted).Mods, DefOf(Sunny).Mods)
+	s := stat.Build(stat.Base(), Core().DefOf(Tireless).Mods, Core().DefOf(FleetFooted).Mods, Core().DefOf(Sunny).Mods)
 	if s[stat.WorkSpeed] != 1200 || s[stat.MoveSpeed] != 1150 || s[stat.MoodOffset] != 8 {
 		t.Fatalf("%v", s)
 	}
@@ -116,7 +116,7 @@ func TestTraitStatMods(t *testing.T) {
 // TestGenerated: legacy rules roll only the original 19 traits (old seeds
 // keep their pawns); otherwise every trait, in ID order.
 func TestGenerated(t *testing.T) {
-	legacy, all := Generated(true), Generated(false)
+	legacy, all := Core().Generated(true), Core().Generated(false)
 	if len(legacy) != 19 || legacy[0] != Tireless || legacy[18] != Sturdy {
 		t.Fatalf("legacy = %v", legacy)
 	}
@@ -136,25 +136,60 @@ func TestSocialTraitGroups(t *testing.T) {
 	for _, c := range [][2]ID{{Striking, Grotesque}, {Fair, Homely}, {Gay, Bisexual}, {Asexual, Gay},
 		{Abstainer, Hedonist}, {Indulgent, Abstainer}, {AugmentFan, NaturalPurist}, {DistrustsMen, DistrustsWomen},
 		{Idle, Tireless}, {Bloodthirsty, Gentle}} {
-		if !Conflicts(c[0], c[1]) {
-			t.Errorf("%s and %s should conflict", DefOf(c[0]).Label, DefOf(c[1]).Label)
+		if !Core().Conflicts(c[0], c[1]) {
+			t.Errorf("%s and %s should conflict", Core().DefOf(c[0]).Label, Core().DefOf(c[1]).Label)
 		}
 	}
-	if Conflicts(Striking, Gay) || Conflicts(Gracious, ColdHearted) {
+	if Core().Conflicts(Striking, Gay) || Core().Conflicts(Gracious, ColdHearted) {
 		t.Error("false conflict")
 	}
-	if DefOf(Gay).Rarity != 10 || DefOf(Bisexual).Rarity != 10 || DefOf(Asexual).Rarity != 20 || DefOf(Striking).Rarity != 0 {
+	if Core().DefOf(Gay).Rarity != 10 || Core().DefOf(Bisexual).Rarity != 10 || Core().DefOf(Asexual).Rarity != 20 || Core().DefOf(Striking).Rarity != 0 {
 		t.Error("orientation rarity")
 	}
-	if DefOf(Striking).Beauty != 2 || DefOf(Grotesque).Beauty != -2 {
+	if Core().DefOf(Striking).Beauty != 2 || Core().DefOf(Grotesque).Beauty != -2 {
 		t.Error("beauty")
 	}
-	if e := DefOf(Idle).Effects(); !strings.Contains(e, "Work speed -40%") {
+	if e := Core().DefOf(Idle).Effects(); !strings.Contains(e, "Work speed -40%") {
 		t.Errorf("idle effects %q", e)
 	}
-	for _, d := range All() {
+	for _, d := range Core().All() {
 		if strings.Contains(d.Note, "{") {
 			t.Errorf("%s: placeholder in note %q", d.Label, d.Note)
 		}
+	}
+}
+
+func TestBook(t *testing.T) {
+	core := Core()
+	if core.Len() != int(NumTraits)-1 || core.Key(Sunny) != "core.sunny" || len(core.Keys()) != core.Len() || core.Keys()[0] != "core.tireless" {
+		t.Fatalf("core book: %d %q", core.Len(), core.Key(Sunny))
+	}
+	var zero Book
+	if zero.Len() != core.Len() || zero.Key(Sunny) != core.Key(Sunny) || zero.DefOf(Sunny).Key != "sunny" {
+		t.Fatal("zero Book is core")
+	}
+	list := core.All()
+	keys := core.Keys()
+	list = append(list, Def{Key: "x.brave", Label: "Brave", Rarity: 3})
+	keys = append(keys, "x.brave")
+	b := NewBook(list, keys)
+	id, ok := b.IDOf("x.brave")
+	if !ok || id != NumTraits || b.DefOf(id).ID != id || b.Len() != core.Len()+1 {
+		t.Fatalf("plugin trait id %d %v", id, ok)
+	}
+	if b.DefOf(Sunny).Label != "Sunny" || b.Key(Sunny) != "core.sunny" {
+		t.Fatal("core ids kept")
+	}
+	if p, ok := b.Parse("x.brave"); !ok || p != id {
+		t.Fatal("Parse namespaced")
+	}
+	if g := b.Generated(true); len(g) != int(legacyTraits)-1 {
+		t.Fatalf("legacy draws only the original set, got %d", len(g))
+	}
+	if g := b.Generated(false); len(g) != b.Len() || g[len(g)-1] != id {
+		t.Fatal("plugin trait generated outside legacy")
+	}
+	if !b.Conflicts(id, id) || b.Conflicts(id, Sunny) {
+		t.Fatal("conflicts")
 	}
 }

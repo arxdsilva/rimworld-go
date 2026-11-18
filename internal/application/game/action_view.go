@@ -217,7 +217,7 @@ func (g *Game) carryingOf(id entity.EntityID, j job.Record) string {
 	}
 	if j.Carry != 0 {
 		if st, ok := g.stacks.Get(j.Carry); ok && st.Carrier == id {
-			return st.Kind.String()
+			return g.sk.content.Items.Name(st.Kind) // a plugin's by key, as ItemView.Kind (PLG-026)
 		}
 	}
 	return ""

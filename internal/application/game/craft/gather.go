@@ -44,7 +44,18 @@ type pick struct {
 }
 
 // planner searches the colony's stacks for a bill's ingredients.
-type planner struct{ h Host }
+type planner struct {
+	h     Host
+	bills *Bills // its book: the run's recipes, smelting plugin items too (PLG-026)
+}
+
+// book is the run's recipe book (zero: core).
+func (p planner) book() recipe.Book {
+	if p.bills == nil {
+		return recipe.Book{}
+	}
+	return p.bills.book
+}
 
 // planBuf is an ingredient search's scratch: the candidate stacks and the
 // picks, kept between searches so the tick path reuses them.
@@ -100,10 +111,10 @@ func (p planner) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]
 	defer func() { buf.cands, buf.picks = cands[:0], out[:0] }()
 	var inBuf [4]recipe.Input
 	ins := d.AppendInputs(inBuf[:0])
-	minds := p.minds(d)
+	minds, rb := p.minds(d), p.book()
 	for _, sid := range p.h.ItemIDs() {
 		st, ok := p.h.Stack(sid)
-		if !ok || !acceptedBy(ins, st) {
+		if !ok || !acceptedBy(rb, ins, st) {
 			continue
 		}
 		left := p.usable(id, sid, st, bl, spot)
@@ -128,17 +139,17 @@ func (p planner) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]
 	})
 	for _, in := range ins {
 		var ok bool
-		if out, ok = takeFor(in, cands, out); !ok {
+		if out, ok = takeFor(rb, in, cands, out); !ok {
 			return out, false
 		}
 	}
 	return groupByKind(out), true
 }
 
-// acceptedBy reports a stack one of ins takes.
-func acceptedBy(ins []recipe.Input, st item.Stack) bool {
+// acceptedBy reports a stack one of ins takes in the run of book rb.
+func acceptedBy(rb recipe.Book, ins []recipe.Input, st item.Stack) bool {
 	for _, in := range ins {
-		if in.AcceptsStack(st) {
+		if rb.TakesStack(in, st) {
 			return true
 		}
 	}
@@ -147,18 +158,18 @@ func acceptedBy(ins []recipe.Input, st item.Stack) bool {
 
 // takeFor picks input in's quantity from cands (nearest first), lowering
 // what is left of each so the next input doesn't count it twice.
-func takeFor(in recipe.Input, cands, out []pick) ([]pick, bool) {
+func takeFor(rb recipe.Book, in recipe.Input, cands, out []pick) ([]pick, bool) {
 	only := item.Kind(0)
 	if in.Stuff != 0 { // PRD-2: one material only, the nearest there is enough of
 		var ok bool
-		if only, ok = enoughOf(in, cands); !ok {
+		if only, ok = enoughOf(rb, in, cands); !ok {
 			return out, false
 		}
 	}
 	need := in.Qty
 	for i := range cands {
 		c := &cands[i]
-		if c.left <= 0 || !in.AcceptsStack(c.st) || only != 0 && c.kind != only {
+		if c.left <= 0 || !rb.TakesStack(in, c.st) || only != 0 && c.kind != only {
 			continue
 		}
 		if in.Max > 0 { // one stack, up to Max of it
@@ -183,15 +194,15 @@ func takeFor(in recipe.Input, cands, out []pick) ([]pick, bool) {
 
 // enoughOf is the material, nearest first, the candidates hold at least
 // in.Qty of (a stuffed product is made of one material).
-func enoughOf(in recipe.Input, cands []pick) (item.Kind, bool) {
+func enoughOf(rb recipe.Book, in recipe.Input, cands []pick) (item.Kind, bool) {
 	var have [256]int
 	for _, c := range cands {
-		if c.left > 0 && in.AcceptsStack(c.st) {
+		if c.left > 0 && rb.TakesStack(in, c.st) {
 			have[c.kind] += c.left
 		}
 	}
 	for _, c := range cands {
-		if c.left > 0 && have[c.kind] >= in.Qty && in.AcceptsStack(c.st) {
+		if c.left > 0 && have[c.kind] >= in.Qty && rb.TakesStack(in, c.st) {
 			return c.kind, true
 		}
 	}
@@ -239,10 +250,10 @@ func (p planner) nearest(id entity.EntityID, in recipe.Input) (entity.EntityID, 
 	px, py, _ := p.h.Pos(id)
 	var best entity.EntityID
 	var bst item.Stack
-	bestD := 1 << 30
+	bestD, rb := 1<<30, p.book()
 	for _, iid := range p.h.ItemIDs() {
 		st, ok := p.h.Stack(iid)
-		if !ok || st.Carrier != 0 || st.Forbidden || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() && st.Kind != item.CorpseHuman {
+		if !ok || st.Carrier != 0 || st.Forbidden || st.Qty < in.Qty || !rb.TakesStack(in, st) || st.Rotten() && st.Kind != item.CorpseHuman {
 			continue
 		}
 		if p.h.Claims().FreeFor(id, iid, st.Qty) < in.Qty {
@@ -271,9 +282,10 @@ func (p planner) available(bl recipe.Bill, d recipe.Def, spot [2]int) bool {
 	}
 	n := 0
 	var have [256]int // PRD-2: a stuffed input counts each material on its own
+	rb := p.book()
 	for _, sid := range p.h.ItemIDs() {
 		st, ok := p.h.Stack(sid)
-		if !ok || !in.AcceptsStack(st) {
+		if !ok || !rb.TakesStack(in, st) {
 			continue
 		}
 		free := p.usable(0, sid, st, bl, spot)

@@ -198,7 +198,7 @@ func (g *Game) releaseOccupant(occ vault.Occupant, b construction.Building, v *v
 
 // casketBio is a casket occupant's generated identity.
 func (g *Game) casketBio(tech backstory.Tag) pawngen.Pawn {
-	return pawngen.Generate(g.vaultSeed()^casketSalt, int(g.entities.Peek()), 0, pawngen.Rules{Tech: tech, Backstories: backstoriesOf(g)})
+	return pawngen.Generate(g.vaultSeed()^casketSalt, int(g.entities.Peek()), 0, pawngen.Rules{Tech: tech, Backstories: backstoriesOf(g), Traits: traitsOf(g)})
 }
 
 // casketSleeper: a grateful sleeper wakes dazed and joins the colony

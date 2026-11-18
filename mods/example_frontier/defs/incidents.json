@@ -1,0 +1,13 @@
+{
+  "incident": [
+    {
+      "name": "settler_party",
+      "like": "core.party",
+      "label": "Frontier hoedown",
+      "weight": 8,
+      "cooldown": 12,
+      "min_day": 5,
+      "helpful": true
+    }
+  ]
+}

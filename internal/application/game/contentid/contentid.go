@@ -81,7 +81,7 @@ func listOf[T any](name string, defs []T, key func(T) string) list {
 
 func registries(books Books) []list {
 	sprint := func(v any) string { return fmt.Sprint(v) }
-	return []list{
+	lists := []list{
 		listOf("research", books.Research.All(), func(d research.Def) string { return sprint(d.Project) }),
 		listOf("recipe", books.Recipes.All(), func(d recipe.Def) string { return sprint(d.ID) }),
 		listOf("construction", construction.All(), func(d construction.Def) string { return sprint(d.Kind) }),
@@ -94,6 +94,23 @@ func registries(books Books) []list {
 		listOf("quest", quest.Defs(), func(d quest.Def) string { return sprint(d.Kind) }),
 		listOf("animal", animalDefs(), func(d animalDef) string { return d.Species.String() }),
 	}
+	if l := itemList(books.Items); len(l.items) > 0 { // core's own add nothing: its fingerprint stays (PLG-026)
+		lists = append(lists, l)
+	}
+	return lists
+}
+
+// itemList is the item kinds plugins added or patched: every plugin
+// kind and each core kind whose data differs from the game's own.
+func itemList(b itemkind.Book) list {
+	l := list{name: "item"}
+	for k := range b.Len() {
+		kind := itemkind.Kind(k)
+		if d := b.Def(kind); b.Plugin(kind) || d != itemkind.CoreDef(kind) {
+			l.items = append(l.items, item{b.Key(kind), fmt.Sprintf("%+v", d)})
+		}
+	}
+	return l
 }
 
 // animalDef is a species with its definition (animal.All lists species).

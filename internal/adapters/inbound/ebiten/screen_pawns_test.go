@@ -414,7 +414,7 @@ func TestForcedTraitAndAgeHonoured(t *testing.T) {
 		}
 		has := false
 		for _, tr := range v.Traits {
-			has = has || tr.Key == trait.DefOf(trait.Sunny).Key
+			has = has || tr.Key == trait.Core().DefOf(trait.Sunny).Key
 		}
 		if !has {
 			t.Errorf("%s lacks the forced trait: %+v", v.Nick, v.Traits)

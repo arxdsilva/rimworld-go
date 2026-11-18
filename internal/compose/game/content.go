@@ -23,10 +23,11 @@ import (
 // plays with, what saves record, and what the Plugins screen shows.
 type runContent struct {
 	catalog  modding.Catalog
-	found    []modding.Plugin  // every installed plugin, enabled or not
-	problems []modding.Problem // what Build reported for the enabled ones
-	enabled  []string          // the enabled set the run started with
-	roots    []string          // the plugin folders read (none for captures)
+	found    []modding.Plugin             // every installed plugin, enabled or not
+	problems []modding.Problem            // what Build reported for the enabled ones
+	enabled  []string                     // the enabled set the run started with
+	roots    []string                     // the plugin folders read (none for captures)
+	text     map[string]map[string]string // the loaded plugins' translations by locale (PLG-055)
 }
 
 // game is the books the simulation reads.
@@ -137,13 +138,15 @@ func buildContent(src modding.Source, enabled []string, version string) runConte
 		}
 	}
 	cat, probs := modding.Build(found, enabled, version)
+	text, lp := pluginText(found, cat)
+	probs = append(probs, lp...)
 	for _, p := range probs {
 		log.Printf("plugins: %s", p)
 	}
 	if len(cat.Plugins) > 0 {
 		log.Printf("plugins: loaded %v", cat.IDs()[1:])
 	}
-	return runContent{catalog: cat, found: found, problems: probs, enabled: enabled}
+	return runContent{catalog: cat, found: found, problems: probs, enabled: enabled, text: text}
 }
 
 // view is the run's plugins for the Plugins screens (PLG-070): every
@@ -160,7 +163,8 @@ func (c runContent) view() plugins.View {
 	for _, p := range c.found {
 		m := p.Manifest
 		r := plugins.Row{ID: m.ID, Name: m.Name, Version: m.Version, Description: m.Description, URL: m.URL,
-			Authors: m.Authors, Requires: m.Requires, After: m.After, Before: m.Before, Conflicts: m.Conflicts}
+			Authors: m.Authors, Requires: m.Requires, After: m.After, Before: m.Before, Conflicts: m.Conflicts,
+			Locales: modding.PluginLocales(p)}
 		if i, ok := placed[m.ID]; ok && m.ID != modding.Core {
 			r.Loaded, r.Position, r.Reason = true, i, c.catalog.Order.Loaded[i].Reason
 		}

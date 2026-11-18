@@ -53,7 +53,7 @@ func newWindows(a *App) *windows.Set {
 
 func (h windowsHost) Env() windows.Env {
 	a := h.a
-	var e windows.Env
+	e := windows.Env{Items: a.cfg.Content.Items}
 	if r := a.renderer; r != nil {
 		e.Game = r.game
 	}

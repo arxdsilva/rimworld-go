@@ -48,6 +48,9 @@ type Env struct {
 	// LangDir is assets/lang, where the Language row lists the catalogs
 	// ("": English only).
 	LangDir string
+	// PluginLangs are the locales the enabled plugins translate (PLG-055); the
+	// Language row offers them beside the shipped catalogs.
+	PluginLangs []string
 }
 
 // Host is what the screen needs of the program that no ports role

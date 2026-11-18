@@ -48,3 +48,26 @@ func TestMsgIsTheTextInEnglishAndTranslatesFormatAndArgs(t *testing.T) {
 		t.Fatalf("args are translated by exact key: %q", got)
 	}
 }
+
+func TestCatalogWithLaysPluginTextOverTheBase(t *testing.T) {
+	base, err := parse("pt-BR", []byte(`{"Hello": "Ola", "Count %d": "Contar %d"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := base.With(map[string]string{"Hello": "Oi", "Salt-flat surveyor": "Agrimensor", "Count %d": "Contar %s", "Blank": ""})
+	for src, want := range map[string]string{"Hello": "Oi", "Salt-flat surveyor": "Agrimensor", "Count %d": "Contar %d", "Blank": "Blank"} {
+		if got := c.T(src); got != want {
+			t.Errorf("T(%q) = %q, want %q", src, got, want)
+		}
+	}
+	if base.T("Hello") != "Ola" || base.T("Salt-flat surveyor") != "Salt-flat surveyor" {
+		t.Error("With changed the base catalog")
+	}
+}
+
+func TestCodesWithListsPluginOnlyLanguages(t *testing.T) {
+	got := CodesWith(t.TempDir(), []string{"pt-BR", "en", "../x"})
+	if len(got) != 2 || got[0].Code != "en" || got[1].Code != "pt-BR" {
+		t.Errorf("CodesWith = %v", got)
+	}
+}

@@ -295,7 +295,7 @@ func TestBioOfFields(t *testing.T) {
 	p.Skills[skill.Shooting] = skill.Skill{} // incapable skills stay 0
 	p.Skills[skill.Melee] = skill.Skill{}
 	p.Skills[skill.Plants] = skill.Skill{Level: 12, XP: skill.Cost(12) / 4, Passion: skill.Major}
-	v := BioOf(p, backstory.Core())
+	v := BioOf(p, backstory.Core(), trait.Core())
 
 	if v.First != "Ada" || v.Nick != "Wren" || v.Last != "Stone" || v.Sex != "Female" || v.Build != "Thin" || v.AgeYears != 34 {
 		t.Fatalf("identity %+v", v)
@@ -340,17 +340,17 @@ func TestBioOfFields(t *testing.T) {
 
 	// A teenager has no adulthood; a Tireless pawn works faster.
 	teen := pawngen.Pawn{Nick: "Kit", AgeDays: 15 * pawngen.DaysPerYear, Childhood: p.Childhood, Skills: skill.NeutralSet()}
-	if tv := BioOf(teen, backstory.Core()); tv.Adulthood != "—" || tv.AdulthoodDesc != "" || tv.Incapable != nil {
+	if tv := BioOf(teen, backstory.Core(), trait.Core()); tv.Adulthood != "—" || tv.AdulthoodDesc != "" || tv.Incapable != nil {
 		t.Fatalf("teen %+v", tv)
 	}
 	quick := teamPawn("Q", 7, 30)
 	quick.Traits = []trait.ID{trait.Tireless}
-	if s := BioOf(quick, backstory.Core()).Skills[skill.Construction]; s.SpeedPct != 120 {
+	if s := BioOf(quick, backstory.Core(), trait.Core()).Skills[skill.Construction]; s.SpeedPct != 120 {
 		t.Fatalf("tireless construction speed %d%%, want 120", s.SpeedPct)
 	}
 
 	// A legacy pawn: no backstories, all skills neutral at 100% (Plants on its own curve, HRV-009).
-	lv := BioOf(pawngen.Legacy(7, "Mira", 5, 5, 6), backstory.Core())
+	lv := BioOf(pawngen.Legacy(7, "Mira", 5, 5, 6), backstory.Core(), trait.Core())
 	if lv.Childhood != "—" || lv.Adulthood != "—" || lv.Nick != "Mira" || lv.Sex != "Male" || lv.Incapable != nil || lv.Traits != nil {
 		t.Fatalf("legacy %+v", lv)
 	}

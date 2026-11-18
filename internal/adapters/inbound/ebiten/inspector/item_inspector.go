@@ -52,6 +52,15 @@ func ItemCategory(it game.ItemView) string {
 	return "material"
 }
 
+// ItemTitleIn is ItemTitle in a run whose item kinds are items: a plugin
+// item (PLG-026), which its view names by key, goes by its label.
+func ItemTitleIn(it game.ItemView, items item.Book) string {
+	if k, ok := items.Parse(it.Kind); ok && items.Plugin(k) {
+		it.Kind = items.Label(k)
+	}
+	return ItemTitle(it)
+}
+
 // itemTitle is "Rifle", "Wood ×25", "Body of Ada" or "Bones of Ada".
 func ItemTitle(it game.ItemView) string {
 	switch {

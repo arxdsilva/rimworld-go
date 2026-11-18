@@ -31,6 +31,7 @@ type fakeHost struct {
 	letters         []string
 	researcher      bool
 	started, worked int
+	book            proj.Book // the run's projects (zero: core)
 }
 
 func newFake() *fakeHost {
@@ -78,7 +79,8 @@ func (f *fakeHost) Now() uint64                { return f.now }
 func (f *fakeHost) Letter(title, _ string, _, _ int) {
 	f.letters = append(f.letters, title)
 }
-func (f *fakeHost) Changed() {}
+func (f *fakeHost) Changed()            {}
+func (f *fakeHost) Projects() proj.Book { return f.book }
 
 // TestSpeedWikiNumbers (wiki: Research speed, Research): a researcher at
 // Intellectual 8 with healthy hands and eyes has research speed 1.0 and

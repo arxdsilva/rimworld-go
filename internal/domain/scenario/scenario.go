@@ -370,13 +370,13 @@ func (d Def) Validate() []Problem {
 		label := p.Kind.Label()
 		switch p.Kind {
 		case PartForcedTrait:
-			if p.Trait == trait.None || trait.DefOf(p.Trait).Key == "" {
+			if p.Trait == trait.None || trait.Core().DefOf(p.Trait).Key == "" {
 				add(i, Error, "%s: the trait does not exist.", label)
 			} else {
 				for _, j := range forced {
-					if trait.Conflicts(p.Trait, d.Parts[j].Trait) {
+					if trait.Core().Conflicts(p.Trait, d.Parts[j].Trait) {
 						add(i, Error, "%s: %s conflicts with %s (part %d).", label,
-							trait.DefOf(p.Trait).Label, trait.DefOf(d.Parts[j].Trait).Label, j+1)
+							trait.Core().DefOf(p.Trait).Label, trait.Core().DefOf(d.Parts[j].Trait).Label, j+1)
 					}
 				}
 				forced = append(forced, i)
