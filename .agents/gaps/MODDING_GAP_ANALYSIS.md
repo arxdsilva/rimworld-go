@@ -157,4 +157,5 @@ Integration after each wave: `go build ./...`, `make arch`, `go test -race` of t
 
 ## Known leftovers (true at HEAD)
 
+- `go test -race ./internal/application/game/` as one local binary at default parallelism exceeds its 10-minute timeout on a 12-core Mac both before the plugin work (`d6226ad01`: 600.6 s, 3849 s CPU, `TestQuestSoak` 5 min under contention, 22 s alone) and after (`2c220bf5c`: 600.7 s, 3802 s CPU): pre-existing, not a PLG regression; CI runs the binary alone through `scripts/ci_test.sh`.
 - `.claude/scheduled_tasks.lock` (the loop's harness lock) trips `TestNoToolFolders` locally while a loop runs; it is untracked.
