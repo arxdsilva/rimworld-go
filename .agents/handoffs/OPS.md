@@ -1,6 +1,6 @@
 # OPS handoffs
 
-Families: CI, DEPS, REL, UPDATE, USAGE, LOG, TOKEN, DOCS, REVIEW, QA, SYS. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
+Families: CI, DEPS, REL, UPDATE, USAGE, LOG, TOKEN, DOCS, REVIEW, QA, SYS, LIC. Each section condenses one task's handoff; the full original of `<stem>` is `git show 76d605d04:.agents/handoffs/<stem>.md` (a plan: `git show 76d605d04:.agents/handoffs/_plans/<stem>.md`). New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
 
 ## CI-001-race-budget-and-memory
 The `-race` suite within CI's time and memory · 2026-11-02 · 7920f11d3
@@ -147,3 +147,12 @@ Installers as the main release files, an app icon, `-version` and `-selfcheck` �
 - Verified: `make dist-macos` built the DMG; mounted, copied out and run from `/`, `-version` printed the tag and `-selfcheck` found translations, art, splash, sounds and the window icon inside `Contents/Resources/assets`. nfpm deb/rpm listings (layout, modes, Depends). `go vet`, `make lint`, `make arch`, `-race` on the touched packages, `goreleaser check` v2.20.0, actionlint, shellcheck.
 - HUD: the window icon (in the title bar, Dock and taskbar); no in-game screen changed.
 - Open: the first `workflow_dispatch` run must prove Windows (`package_windows.ps1` was never run locally), the AppImage, the .deb install and `ldd`/glibc (printed in the "Installers (linux)" log). Signing secrets are not set. No project LICENSE for installer and package metadata. `make art-check` could not run here (PIL missing).
+
+## LIC-001-dual-licensing
+GPL-3.0-only code, commercial licenses, separate assets license, CLA · 2026-11-18 · branch `licensing`
+- Changed: `LICENSE` (GPL-3.0, unmodified from gnu.org, md5 1ebbd3e3…0464), `NOTICE`, `ASSETS-LICENSE.md`, `COMMERCIAL-LICENSING.md`, `CLA.md`, `CONTRIBUTING.md`, the README's License section. Every package ships `LICENSE`, `NOTICE` and `ASSETS-LICENSE.md`; the .deb/.rpm, macOS app and Windows setup name the license and holder (closes REL-003's "no project LICENSE" open item).
+- Decisions (user): holder Arthur Rodrigues Xavier da Silva, personally; contact arxdsilva@gmail.com. Fees, royalty and keeping `usagehttp` bind commercial licensees only: GPL-3.0 forbids added restrictions and leaves private changes free. Pricing is per deal (example: no upfront fee, 4% of gross after US$50,000); the contribution discount is per deal. Assets policy A: not GPL, unmodified builds only.
+- Decisions: SPDX header (2 lines + blank) on every Go file but `pkg/spritenormals` (MIT port), added by `scripts/spdx_headers.py` and enforced by `TestGoFilesCarryTheLicenseHeader`. The CLA action is pinned by commit (it runs on `pull_request_target` with write access); signatures live on the `cla-signatures` branch, which the bot creates.
+- Limits: headers add 3 lines a file: `game` lines 51696 → 52215, `ebiten` enters the budget at 12140 (user's choice; no code changed).
+- HUD: none; licensing has no in-game behaviour.
+- Open: a lawyer reviews the documents; make `cla` a required status check on main; the commercial term sheet is not written.

@@ -17,7 +17,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | [MED.md](MED.md) | MED, AIL |
 | [MOD.md](MOD.md) | MOD, CSE, PLG |
 | [NG.md](NG.md) | NG (the NG1 new-game plan) |
-| [OPS.md](OPS.md) | CI, DEPS, REL, UPDATE, USAGE, LOG, TOKEN, DOCS, REVIEW, QA, SYS |
+| [OPS.md](OPS.md) | CI, DEPS, REL, UPDATE, USAGE, LOG, TOKEN, DOCS, REVIEW, QA, SYS, LIC |
 | [PERF.md](PERF.md) | OPT, PERF |
 | [PLAY.md](PLAY.md) | PLAY (handoffs and the PLAY010–PLAY024 plans) |
 | [SIM.md](SIM.md) | SIM |
@@ -172,6 +172,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | HAUL-001-batched-delivery | Batched construction delivery | 2026-10-21 | [STORAGE.md](STORAGE.md#haul-001-batched-delivery) |
 | HAUL-002-gather-nearby-piles | Haulers gather nearby piles before delivering | 2026-10-30 | [STORAGE.md](STORAGE.md#haul-002-gather-nearby-piles) |
 | HAUL-003-harvest-sweep | Harvest the field before hauling its piles | 2026-11-04 | [STORAGE.md](STORAGE.md#haul-003-harvest-sweep) |
+| LIC-001-dual-licensing | GPL-3.0-only code, commercial licenses, separate assets license, CLA | 2026-11-18 | [OPS.md](OPS.md#lic-001-dual-licensing) |
 | LOG-001-creature-event-log | Creature event log | 2026-10-21 | [OPS.md](OPS.md#log-001-creature-event-log) |
 | MAP-0-contract | Multiple maps, gap analysis and inert contract | 2026-11-02 | [WORLD.md](WORLD.md#map-0-contract) |
 | MAP-1-site-maps | Site maps, ticking maps, switching | 2026-11-02 | [WORLD.md](WORLD.md#map-1-site-maps) |

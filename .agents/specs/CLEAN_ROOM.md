@@ -15,7 +15,7 @@ Art: never trace, extract, recolor, vectorize or closely reconstruct proprietary
 
 Creatures: never reproduce a RimWorld-invented creature (name, look, sounds or balance); real animals are fine (`.agents/skills/rimworld-go-creatures/SKILL.md`).
 
-Licensing: choose project and asset licenses deliberately. Plausible code choices: MPL-2.0, GPL-3.0, AGPL-3.0, Apache-2.0 or MIT, depending on the reciprocity wanted; assets can use separate licenses. Get legal advice before commercial distribution. Public final branding should be original: `rimworld-go` is a working engineering codename, and a public title should not imply affiliation with another trademark. Every module in `go.mod` is listed in `THIRD_PARTY_NOTICES.md`.
+Licensing (decided 2026-11-18): the code is GPL-3.0-only (`LICENSE`, `NOTICE`; every Go file of ours opens with the SPDX header, `internal/arch` `TestGoFilesCarryTheLicenseHeader`), dual-licensed with commercial licenses for closed-source games (`COMMERCIAL-LICENSING.md`); the art and audio are not GPL and ship only in unmodified builds (`ASSETS-LICENSE.md`). Contributions need the signed `CLA.md` (`.github/workflows/cla.yml`). Never paste third-party code into a GPL file without checking its license; a port keeps its own notice (`pkg/spritenormals`). Get legal advice before commercial distribution. Public final branding should be original: `rimworld-go` is a working engineering codename, and a public title should not imply affiliation with another trademark. Every module in `go.mod` is listed in `THIRD_PARTY_NOTICES.md`.
 
 ## Exceptions (explicit user decisions)
 
