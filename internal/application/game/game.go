@@ -1220,7 +1220,7 @@ func (g *Game) SpawnNamedPawn(x, y int, name string) (entity.EntityID, error) {
 	if name == "" {
 		name = fmt.Sprintf("Colonist %d", id)
 	}
-	g.pawnIDs = append(g.pawnIDs, id)
+	addPawnID(g, id) // scripts.go: pawnIDs and the cadence index (PLG-060)
 	g.positions.Set(id, Position{X: x, Y: y})
 	g.names.Set(id, name)
 	g.jobs.Set(id, job.Record{})

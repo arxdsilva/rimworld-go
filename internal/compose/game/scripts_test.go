@@ -78,10 +78,10 @@ func TestScriptHostFromLoadedPlugins(t *testing.T) {
 	if ps := scriptPlugins(on); len(ps) != 1 || ps[0].ID != "example_frontier" || len(ps[0].Files) == 0 {
 		t.Fatalf("plugins: %+v", ps)
 	}
-	day5 := h.Fire(scripting.Event{Hook: scripting.OnDay, Tick: 5 * clock.TicksPerDay, Seed: 1}, fixedWorld{day: 5})
-	day4 := h.Fire(scripting.Event{Hook: scripting.OnDay, Tick: 4 * clock.TicksPerDay, Seed: 1}, fixedWorld{day: 4})
-	raid := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.rival_raid", Category: "threat"}}, fixedWorld{})
-	herd := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.herd_crossing", Category: "nature"}}, fixedWorld{})
+	day5 := h.Fire(scripting.Event{Hook: scripting.OnDay, Tick: 5 * clock.TicksPerDay, Seed: 1}, fixedWorld{day: 5}, nil)
+	day4 := h.Fire(scripting.Event{Hook: scripting.OnDay, Tick: 4 * clock.TicksPerDay, Seed: 1}, fixedWorld{day: 4}, nil)
+	raid := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.rival_raid", Category: "threat"}}, fixedWorld{}, nil)
+	herd := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.herd_crossing", Category: "nature"}}, fixedWorld{}, nil)
 	if len(day5.Commands) != 1 || !strings.Contains(day5.Commands[0].Name, "Frontier wisdom") || len(day4.Commands) != 0 ||
 		len(raid.Commands) != 1 || len(herd.Commands) != 0 || len(h.Problems()) != 0 {
 		t.Fatalf("example: day 5 %+v, day 4 %+v, raid %+v, herd %+v, problems %+v", day5, day4, raid, herd, h.Problems())

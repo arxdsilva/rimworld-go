@@ -97,7 +97,8 @@ func (h *Host) Problems() []scripting.Problem {
 
 // Fire runs every live module's hook for ev. The first call also returns
 // the files that failed their first run, so the game reports them.
-func (h *Host) Fire(ev scripting.Event, w scripting.World) scripting.Result {
+// The colonist reads (p) are not wired yet (PLG-060 wave 0 stub).
+func (h *Host) Fire(ev scripting.Event, w scripting.World, _ scripting.PawnReader) scripting.Result {
 	var res scripting.Result
 	res.Disabled, h.unsent = h.unsent, nil
 	name := ev.Hook.String()
@@ -118,6 +119,10 @@ func (h *Host) Fire(ev scripting.Event, w scripting.World) scripting.Result {
 	}
 	return res
 }
+
+// Uses reports that a live module defines hook h. Wave 0 stub (PLG-060):
+// always false, so the cadence hooks never fire yet.
+func (h *Host) Uses(scripting.Hook) bool { return false }
 
 // disable turns m off with err as its problem.
 func (h *Host) disable(m *module, err error) scripting.Problem {

@@ -79,7 +79,8 @@ func fireScripts(g *Game, ev scripting.Event) {
 	g.mapState = g.maps[0]
 	defer func() { g.mapState = cur }()
 	ev.Seed = g.streams.seed
-	res := g.scripts.host.Fire(ev, &scriptWorld{g: g, now: ev.Tick})
+	w := &scriptWorld{g: g, now: ev.Tick}
+	res := g.scripts.host.Fire(ev, w, w)
 	for _, c := range res.Commands {
 		c.Map, c.MapSet = g.mapState.id, true
 		g.Enqueue(c)
@@ -131,6 +132,18 @@ func scriptKind(g *Game, key string) (item.Kind, bool) {
 	return k, ok
 }
 
+// addPawnID adds a colonist that arrives on the home map to g.pawnIDs, in
+// id order, and notes it for the scripts' cadence (PLG-060): the one path
+// by which a colonist joins pawnIDs.
+func addPawnID(g *Game, id entity.EntityID) {
+	g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go
+	notePawn(g, id)
+}
+
+// notePawn puts colonist id in the scripts' cadence index. Wave 0 stub
+// (PLG-060): the index lands with the cadence hooks.
+func notePawn(_ *Game, _ entity.EntityID) {}
+
 // scriptWorld is what a script reads (scripting.World), on the home map;
 // the item counts are tallied once per call, so a script asking often
 // costs one pass over the stacks.
@@ -161,3 +174,11 @@ func (w *scriptWorld) ItemCount(key string) (int, bool) {
 	}
 	return w.counts[k], true
 }
+
+// Pawns is every living home colonist (scripting.PawnReader). Wave 0 stub
+// (PLG-060): none yet.
+func (w *scriptWorld) Pawns() []scripting.Pawn { return nil }
+
+// Pawn is home colonist id (scripting.PawnReader). Wave 0 stub (PLG-060):
+// never found yet.
+func (w *scriptWorld) Pawn(uint64) (scripting.Pawn, bool) { return scripting.Pawn{}, false }

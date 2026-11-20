@@ -14,6 +14,13 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
+// The fake and the game's reader satisfy the port.
+var (
+	_ scripting.Host       = (*fakeScripts)(nil)
+	_ scripting.World      = (*scriptWorld)(nil)
+	_ scripting.PawnReader = (*scriptWorld)(nil)
+)
+
 // fakeScripts records the events and answers on_hour with a message, a
 // letter and a spawn; on_day turns a script off.
 type fakeScripts struct {
@@ -21,7 +28,7 @@ type fakeScripts struct {
 	wood   int
 }
 
-func (f *fakeScripts) Fire(ev scripting.Event, w scripting.World) scripting.Result {
+func (f *fakeScripts) Fire(ev scripting.Event, w scripting.World, _ scripting.PawnReader) scripting.Result {
 	f.events = append(f.events, ev)
 	f.wood, _ = w.ItemCount("core.wood")
 	switch ev.Hook {
@@ -37,6 +44,9 @@ func (f *fakeScripts) Fire(ev scripting.Event, w scripting.World) scripting.Resu
 	}
 	return scripting.Result{}
 }
+
+// Uses is false: the fake defines no cadence hook.
+func (f *fakeScripts) Uses(scripting.Hook) bool { return false }
 
 func TestScriptCommandsLandThroughEnqueue(t *testing.T) {
 	t.Parallel()

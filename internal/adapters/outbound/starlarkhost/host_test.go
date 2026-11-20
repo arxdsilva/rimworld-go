@@ -36,7 +36,7 @@ func plugin(id string, files ...string) Plugin {
 }
 
 func fire(h *Host, hook scripting.Hook) scripting.Result {
-	return h.Fire(scripting.Event{Hook: hook, Tick: 2500, Seed: 7}, &fakeWorld{})
+	return h.Fire(scripting.Event{Hook: hook, Tick: 2500, Seed: 7}, &fakeWorld{}, nil)
 }
 
 func TestHooksQueueCommandsInLoadOrder(t *testing.T) {
@@ -71,11 +71,11 @@ def on_colonist_died(ctx, name):
 	if got := fire(h, scripting.OnDay).Commands; len(got) != 1 || got[0].Mode != command.ScriptLetter || got[0].Name != "Dawn\ntick 2500" {
 		t.Fatalf("on_day: %+v", got)
 	}
-	r := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.herd_crossing", Category: "nature"}}, &fakeWorld{})
+	r := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.herd_crossing", Category: "nature"}}, &fakeWorld{}, nil)
 	if len(r.Commands) != 1 || r.Commands[0].Name != "core.herd_crossing/nature" {
 		t.Fatalf("on_incident: %+v", r)
 	}
-	r = h.Fire(scripting.Event{Hook: scripting.OnColonistDied, Tick: 9, Name: "Ada"}, &fakeWorld{})
+	r = h.Fire(scripting.Event{Hook: scripting.OnColonistDied, Tick: 9, Name: "Ada"}, &fakeWorld{}, nil)
 	if len(r.Commands) != 1 || r.Commands[0].Name != "farewell Ada" {
 		t.Fatalf("on_colonist_died: %+v", r)
 	}
@@ -165,7 +165,7 @@ func TestRandIsDeterministic(t *testing.T) {
 	src := "def on_hour(ctx):\n    ctx.message(\"%d %d %d\" % (ctx.rand(1000000), ctx.rand(1000000), ctx.rand(6)))\n"
 	draw := func(id string, seed, tick uint64, hook scripting.Hook) string {
 		h := New([]Plugin{plugin(id, "scripts/s.star", strings.ReplaceAll(src, "on_hour", hook.String()))})
-		r := h.Fire(scripting.Event{Hook: hook, Tick: tick, Seed: seed}, &fakeWorld{})
+		r := h.Fire(scripting.Event{Hook: hook, Tick: tick, Seed: seed}, &fakeWorld{}, nil)
 		if len(r.Commands) != 1 {
 			t.Fatalf("%+v", r)
 		}
@@ -200,7 +200,7 @@ func TestLoadStaysInsideThePlugin(t *testing.T) {
 			"scripts/main.star", "load(\"lib/util.star\", \"greet\")\ndef on_colonist_died(ctx, name):\n    ctx.message(greet(name))\n"),
 		plugin("q", "scripts/secret.star", "word = \"x\"\n"),
 	})
-	r := h.Fire(scripting.Event{Hook: scripting.OnColonistDied, Name: "Bo"}, &fakeWorld{})
+	r := h.Fire(scripting.Event{Hook: scripting.OnColonistDied, Name: "Bo"}, &fakeWorld{}, nil)
 	if len(r.Commands) != 1 || r.Commands[0].Name != "hi Bo" || len(r.Disabled) != 0 {
 		t.Fatalf("load inside the plugin: %+v", r)
 	}
@@ -236,7 +236,7 @@ func TestItemCountsAreAskedPerCall(t *testing.T) {
 	t.Parallel()
 	h := New([]Plugin{plugin("p", "scripts/s.star", "def on_hour(ctx):\n    n = ctx.count(\"core.wood\")\n")})
 	w := &fakeWorld{}
-	h.Fire(scripting.Event{Hook: scripting.OnHour}, w)
+	h.Fire(scripting.Event{Hook: scripting.OnHour}, w, nil)
 	if w.asked != 1 {
 		t.Fatalf("asked %d", w.asked)
 	}
