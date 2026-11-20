@@ -73,12 +73,13 @@ Plugin Manager, Load Order, Plugin Settings, and Content Error screens follow `.
 
 Do not allow arbitrary native Go plugins from untrusted mods.
 
-If scripting is introduced later, prefer deterministic sandboxable choices such as Starlark/WASM with:
+Scripting is Starlark (PLG-060; `MASTER_SPEC` §49 holds the decision and the criteria for any second runtime). The port is `internal/application/scripting` (its package doc is the script author's reference); the runtime is `internal/adapters/outbound/starlarkhost`.
 
-- restricted host API;
-- instruction/resource budgets;
-- no arbitrary filesystem/network;
-- deterministic time/RNG.
+- Hooks: `on_hour`, `on_day`, `on_incident`, `on_colonist_died`; cadence hooks `on_pawns(ctx, pawns)` and `on_pawn(ctx, pawn)` see each home colonist once every 60 ticks in its bucket (`idindex.Buckets`, `cadence.OffPawnScripts`), never every tick.
+- Reads: `ctx.pawns()` (all home colonists in one call, read only) and `ctx.pawn(id)`, fields id, name, x, y, food, rest, mood, downed, drafted; prefer the hook's argument over `ctx.pawns()` inside a cadence hook.
+- Budgets: `MaxSteps`/`MaxCommands` per call; `on_pawn` shares one budget per file per tick, all or nothing. A failing script is turned off, never the game.
+- `pawnIDs` grows only through `addPawnID` (the cadence index notes arrivals; `TestPawnIDsGrowOnlyThroughAddPawnID`).
+- Runtime cost baseline: `internal/adapters/outbound/scriptbench` (Starlark vs gopher-lua, batched vs per call; test code only).
 
 ## Tests
 

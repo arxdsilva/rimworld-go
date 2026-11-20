@@ -1381,7 +1381,9 @@ Core content should use the same definition system available to mods.
 
 Do not load arbitrary native Go plugins by default.
 
-Future choices: Starlark or WASM.
+Runtime: Starlark (`go.starlark.net`, user decision 2026-11-18, confirmed 2026-11-20). Scripts run behind the `internal/application/scripting` port; the runtime is an outbound adapter (`starlarkhost`). A second runtime is added only behind the same port, with the same hooks, reads and typed commands, and is judged on the properties below first: deterministic results on every platform, a deterministic instruction budget (not a wall-clock deadline), a memory budget, cost attributable per mod, and no CGo (pure-Go cross-compiling stays). Speed alone does not decide it. Native Go plugins stay excluded. gopher-lua is benchmarked against Starlark in `internal/adapters/outbound/scriptbench` (test code only); it has no deterministic step budget yet.
+
+Per-entity script work follows the core's cadence: a colonist is visited every 60 ticks in its bucket (`on_pawns`, `on_pawn`), never every tick, and reads are batched (`ctx.pawns()`).
 
 Required properties:
 - sandbox;

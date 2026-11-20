@@ -2739,10 +2739,10 @@ allowing arbitrary mutation of internal Go functions.
 
 -   [ ] **Plugin API version**
 -   [ ] **Capability declaration**
--   [ ] **Read-only world query API**
+-   [-] **Read-only world query API** (Starlark ctx: tick, day, hour, season, colonists, wealth, item counts, `ctx.pawns()`/`ctx.pawn(id)` batched colonist reads; missing: other entity kinds, map and world queries)
 -   [ ] **Command submission API**
 -   [ ] **Definition registration hooks**
--   [ ] **Event subscription**
+-   [-] **Event subscription** (Starlark hooks `on_hour`, `on_day`, `on_incident`, `on_colonist_died`, cadence hooks `on_pawns`/`on_pawn`; missing: most 38.2 events)
 -   [ ] **Custom validation hooks**
 -   [ ] **Custom UI panels/actions where safe**
 -   [ ] **Custom incident behavior**
@@ -2773,8 +2773,8 @@ Hooks must have documented ordering.
 
 ## 38.3 Sandboxed scripting
 
--   [ ] **Choose scripting runtime**
-    -   Starlark or WASM preferred candidates.
+-   [x] **Choose scripting runtime**
+    -   Starlark (decided 2026-11-18; `MASTER_SPEC` §49 has the criteria for any second runtime behind the same port).
     -   No arbitrary native Go plugin loading for untrusted community
         mods.
 -   [ ] **Deterministic host API**
