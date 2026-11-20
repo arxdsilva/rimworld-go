@@ -1383,6 +1383,14 @@ Do not load arbitrary native Go plugins by default.
 
 Runtime: Starlark (`go.starlark.net`, user decision 2026-11-18, confirmed 2026-11-20). Scripts run behind the `internal/application/scripting` port; the runtime is an outbound adapter (`starlarkhost`). A second runtime is added only behind the same port, with the same hooks, reads and typed commands, and is judged on the properties below first: deterministic results on every platform, a deterministic instruction budget (not a wall-clock deadline), a memory budget, cost attributable per mod, and no CGo (pure-Go cross-compiling stays). Speed alone does not decide it. Native Go plugins stay excluded. gopher-lua is benchmarked against Starlark in `internal/adapters/outbound/scriptbench` (test code only); it has no deterministic step budget yet.
 
+Second-runtime candidate: WebAssembly on wazero (pure Go), for mods that keep their own state and work on many entities (combat overhauls, swarms, crowd simulations), user decision 2026-11-20. A contributor's benchmark (100 pawns, hourly work review) put Rust and TinyGo Wasm with fuel at about 1.1-1.2x native Go per pawn decision, against about 7x for Starlark. Starlark stays the default runtime. gopher-lua (no deterministic budget, slower than Starlark in `scriptbench`) and Luau through CGo (breaks pure-Go builds) are not candidates. Nothing Wasm ships until spike PLG-063 shows all of:
+- fuel metering inserted by the host when it loads the module, never trusted from the mod's toolchain;
+- the same state hash on amd64 and arm64 for the same seed: no threads, no relaxed SIMD, NaNs canonicalised, no WASI clock, random, filesystem or network, only the scripting port's imports;
+- a memory cap from the module's maximum pages, and fuel and memory reported per mod;
+- mod-owned state saved through an explicit, versioned, size-capped save/load hook (PLG-051), never a raw memory dump;
+- the same port: the same hooks, reads and typed commands, entity data passed in batches on the cadence or a per-tick hook over an indexed active set (projectiles in flight), never a per-tick call per entity;
+- the benchmark harness in `scriptbench`, reproducible here, with module compile time and the review cost of shipping binaries recorded.
+
 Per-entity script work follows the core's cadence: a colonist is visited every 60 ticks in its bucket (`on_pawns`, `on_pawn`), never every tick, and reads are batched (`ctx.pawns()`).
 
 Required properties:

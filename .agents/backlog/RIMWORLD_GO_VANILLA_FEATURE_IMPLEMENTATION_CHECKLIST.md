@@ -2777,6 +2777,13 @@ Hooks must have documented ordering.
     -   Starlark (decided 2026-11-18; `MASTER_SPEC` §49 has the criteria for any second runtime behind the same port).
     -   No arbitrary native Go plugin loading for untrusted community
         mods.
+-   [ ] **Second runtime spike: WebAssembly on wazero** (PLG-063, `MASTER_SPEC` §49; candidate chosen 2026-11-20)
+    -   Fuel inserted by the host at load, not by the mod's toolchain.
+    -   Same state hash on amd64 and arm64 (no threads, no relaxed SIMD, canonical NaNs, no WASI clock/random/filesystem/network).
+    -   Memory cap from max pages; fuel and memory reported per mod.
+    -   Mod state through a versioned, size-capped save/load hook (38.4), not a memory dump.
+    -   Same port, hooks, reads and typed commands; batched entity data, no per-tick per-entity call.
+    -   Benchmark harness in `scriptbench`, with compile time and binary review cost recorded.
 -   [ ] **Deterministic host API**
     -   Simulation tick, not wall clock.
     -   deterministic RNG service.
