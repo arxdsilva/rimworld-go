@@ -61,6 +61,21 @@ func TestImportsFailWithTheStarlarkMessages(t *testing.T) {
 		}, "message: pointer out of range"},
 		{"length out of range", func(g *guest) []byte {
 			return call("message", false, i32c(0), i32c(-1))
+		}, "message: longer than 500 bytes"},
+		{"huge letter text", func(g *guest) []byte {
+			return call("letter", false, g.str("T"), i32c(0), i32c(1<<30))
+		}, "letter: longer than 500 bytes"},
+		{"huge letter title", func(g *guest) []byte {
+			return call("letter", false, i32c(0), i32c(1<<30), g.str("x"))
+		}, "letter title: longer than 500 bytes"},
+		{"huge spawn key", func(g *guest) []byte {
+			return call("spawn", false, i32c(0), i32c(1<<30), i32c(1))
+		}, "spawn key: longer than 500 bytes"},
+		{"huge count key", func(g *guest) []byte {
+			return call("count", true, i32c(0), i32c(1<<30))
+		}, "count key: longer than 500 bytes"},
+		{"message pointer past memory", func(g *guest) []byte {
+			return call("message", false, i32c(65530), i32c(100))
 		}, "message: pointer out of range"},
 		{"season pointer", func(g *guest) []byte {
 			return call("season", true, i32c(65533), i32c(64))

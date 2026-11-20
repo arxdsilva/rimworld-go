@@ -113,6 +113,13 @@ func (c *callState) put(name string, p uint32, b []byte) {
 	}
 }
 
+// tooLong fails the call before any copy when n bytes are over MaxText.
+func (c *callState) tooLong(what string, n uint32) {
+	if n > scripting.MaxText {
+		c.stopf("%s: longer than %d bytes", what, scripting.MaxText)
+	}
+}
+
 func (c *callState) checkText(what, s string) {
 	switch {
 	case strings.TrimSpace(s) == "":
@@ -135,6 +142,7 @@ func (c *callState) queue(name string, cmd command.Command) {
 
 func (c *callState) message(s []uint64) {
 	p, n := api.DecodeU32(s[0]), api.DecodeU32(s[1])
+	c.tooLong("message", n)
 	b := c.view("message", p, n)
 	c.charge(importCost + words(n))
 	text := string(b)
@@ -144,6 +152,8 @@ func (c *callState) message(s []uint64) {
 
 func (c *callState) letter(s []uint64) {
 	tp, tn, p, n := api.DecodeU32(s[0]), api.DecodeU32(s[1]), api.DecodeU32(s[2]), api.DecodeU32(s[3])
+	c.tooLong("letter title", tn)
+	c.tooLong("letter", n)
 	bt, bx := c.view("letter", tp, tn), c.view("letter", p, n)
 	c.charge(importCost + words(tn) + words(n))
 	title, text := string(bt), string(bx)
@@ -157,6 +167,7 @@ func (c *callState) letter(s []uint64) {
 
 func (c *callState) spawn(s []uint64) {
 	kp, kn, n := api.DecodeU32(s[0]), api.DecodeU32(s[1]), int(api.DecodeI32(s[2]))
+	c.tooLong("spawn key", kn)
 	b := c.view("spawn", kp, kn)
 	c.charge(importCost + words(kn))
 	k := string(b)
@@ -180,6 +191,7 @@ func (c *callState) rand(s []uint64) {
 
 func (c *callState) count(s []uint64) {
 	kp, kn := api.DecodeU32(s[0]), api.DecodeU32(s[1])
+	c.tooLong("count key", kn)
 	b := c.view("count", kp, kn)
 	c.charge(importCost + words(kn))
 	k := string(b)

@@ -23,6 +23,7 @@ const (
 	MaxLocals       = 4096      // params plus locals per function
 	MaxBody         = 64 << 10  // bytes per function body
 	MaxWeight       = 1 << 17   // w(f) per function, after metering
+	MaxWasmBytes    = 1 << 20   // bytes of one module, checked before Prepare
 
 	fuelExport  = "__rimworld_fuel"
 	depthExport = "__rimworld_depth"

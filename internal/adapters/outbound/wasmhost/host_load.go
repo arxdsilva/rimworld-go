@@ -68,6 +68,9 @@ func (h *Host) memoryOver(wasm []byte) string {
 // Prepare runs first so Check's typed rejection names a rule; the original
 // is still compiled by wazero (validity) before the output is trusted.
 func (h *Host) loadFile(plugin string, f File) (*module, string) {
+	if len(f.Wasm) > MaxWasmBytes {
+		return nil, fmt.Sprintf("rejected: module is %d bytes, at most %d", len(f.Wasm), MaxWasmBytes)
+	}
 	out, err := wasmrewrite.Prepare(f.Wasm, h.rw)
 	if err != nil {
 		return nil, "rejected: " + firstLine(err)

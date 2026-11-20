@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/scripting"
+	"rimworld-go/internal/testkit/allocs"
 )
 
 // stops runs f and reports whether it panicked with the host's stop.
@@ -77,5 +78,22 @@ func TestHostWriteEventOutsideMemoryFails(t *testing.T) {
 	cs.m.bufSize = 4096
 	if msg := h.writeEvent(cs.m, event(scripting.OnHour), nil); msg != "event does not fit in memory" {
 		t.Errorf("msg = %q", msg)
+	}
+}
+
+// Not parallel (allocation counts). A text length over MaxText fails before the bytes are copied: the
+// allocations of the failing call do not grow with the length.
+func TestImportsOversizeLengthIsNotCopied(t *testing.T) {
+	_, cs := branchCall(t)
+	run := func(n uint64) func() {
+		return func() {
+			cs.fail = ""
+			stops(func() { cs.message([]uint64{0, n}) })
+		}
+	}
+	small := allocs.Fewest(20, run(uint64(scripting.MaxText+1)))
+	huge := allocs.Fewest(20, run(1<<31)) // 2 GiB: a copy could not even succeed
+	if huge > small || cs.fail != "message: longer than 500 bytes" {
+		t.Errorf("allocs small %v huge %v, fail %q", small, huge, cs.fail)
 	}
 }

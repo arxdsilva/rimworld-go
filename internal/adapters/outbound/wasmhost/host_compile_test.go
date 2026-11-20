@@ -52,3 +52,15 @@ func TestHostCrasherThroughNewIsAProblem(t *testing.T) {
 		t.Fatalf("res = %+v", res)
 	}
 }
+
+func TestHostModuleOverMaxWasmBytesIsRejectedBeforePrepare(t *testing.T) {
+	big := append(readFixture(t, "dice"), make([]byte, MaxWasmBytes)...) // trailing junk: would also fail Prepare
+	h := newHost(t, Options{Engine: Interpreter}, plug("p", "scripts/big.wasm", big), fixture(t, "q", "dice"))
+	p := h.Problems()
+	if len(p) != 1 || !strings.HasPrefix(p[0].Msg, "rejected: module is ") || !strings.Contains(p[0].Msg, "at most 1048576") {
+		t.Fatalf("problems = %+v", p)
+	}
+	if len(h.Stats()) != 1 {
+		t.Error("the other file must load")
+	}
+}

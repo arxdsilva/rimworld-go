@@ -33,7 +33,7 @@
 // Wasm instruction does less than a Starlark step, so this is 5x
 // scripting.MaxSteps. DefaultMaxPages 256 (16 MiB): a module whose declared memory min or max is over Options.MaxPages is rejected at load; one with no declared max is allowed and capped by the runtime limit. MaxState 64 KiB.
 // MaxArity 64 params and 64 results per type. MaxLocals 4096 (params plus
-// locals) per function. MaxBody 64 KiB per body. MaxWeight 1<<17: a
+// locals) per function. MaxBody 64 KiB per body. MaxWasmBytes 1 MiB per module, rejected before Prepare. MaxWeight 1<<17: a
 // function whose weight w(f) is over it is rejected after metering
 // (wasmrewrite.RuleWeight). The call stack is bounded by MaxDepth (1000)
 // floor-weight frames in StackBudget (1<<22) units.
@@ -164,7 +164,8 @@
 // moved (rounded up); bounds are checked before the charge, so a bad
 // pointer reports its own message, not out of fuel; a charge that drives fuel below 0 stops the call at once with
 // "out of fuel in <hook>" and the import does nothing. Every guest pointer
-// and length is bounds-checked. A bad argument or failed check fails the
+// and length is bounds-checked, and a text or key length over MaxText fails
+// the call before any byte is read. A bad argument or failed check fails the
 // whole call with the import's own message, the same strings as
 // starlarkhost (including "more than %d commands in %s"). Host functions
 // never panic on guest input except through the one internal stop the
