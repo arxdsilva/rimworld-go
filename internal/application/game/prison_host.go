@@ -149,7 +149,8 @@ func (g *Game) enlist(p entity.EntityID) {
 	g.interrupt(p, job.Cancelled)
 	g.releaseBed(p)
 	delete(g.raiders, p)
-	g.raiderIDs, g.pawnIDs = withoutID(g.raiderIDs, p), withID(g.pawnIDs, p)
+	g.raiderIDs = withoutID(g.raiderIDs, p)
+	addPawnID(g, p) // scripts.go: pawnIDs and the cadence index (PLG-060)
 	if per := g.personOf(p); per != nil {
 		if _, has := g.sk.bios[p]; !has && per.HasBio {
 			g.giveBio(p, per.Bio) // skills.go: its skills and stats

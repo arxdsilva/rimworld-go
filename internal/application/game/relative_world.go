@@ -68,11 +68,18 @@ func bioName(p pawngen.Pawn) string {
 func (g *Game) homeColonists() []entity.EntityID {
 	var out []entity.EntityID
 	for _, id := range g.pawnIDs {
-		if p := g.personOf(id); g.onMap(id) && (p == nil || p.Where == whereColony) {
+		if colonistHere(g, id) {
 			out = append(out, id)
 		}
 	}
 	return out
+}
+
+// colonistHere reports pawnIDs member id stands on the current map, alive
+// or downed, and is not away (caravan) by its registry record.
+func colonistHere(g *Game, id entity.EntityID) bool {
+	p := g.personOf(id)
+	return g.onMap(id) && (p == nil || p.Where == whereColony)
 }
 
 // relativeFor is the person who comes as a colonist's relative for

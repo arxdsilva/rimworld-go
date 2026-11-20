@@ -17,6 +17,8 @@ const (
 	OffEgg    = 83  // fertile eggs incubate (animal_life.go)
 	OffTrough = 167 // troughs take in feed (trough_feed.go)
 	OffPen    = 41  // unpenned animals, and once a day their leaving roll (pens.go)
+
+	OffPawnScripts = 0 // the plugins' on_pawns/on_pawn colonists (game/scripts.go, PLG-060)
 )
 
 // The whole-map passes' offsets: each runs on the ticks where
@@ -74,6 +76,7 @@ func Calendar() []Site {
 		{"pot", hour, OffPot, false, Light},
 		{"pen", 250, OffPen, true, Light},
 		{"pen-day", day, OffPen, true, Light},
+		{"pawn-scripts", 60, OffPawnScripts, true, Light}, // scripting.PawnEvery
 		{"medical", hour, OffMedical, false, Heavy},
 		{"aging", day, OffMedical, false, Light}, // inside medical's pass
 		{"story", hour, OffStory, false, Heavy},

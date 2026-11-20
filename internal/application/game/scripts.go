@@ -5,22 +5,29 @@ package game
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/cadence"
+	"rimworld-go/internal/application/game/idindex"
 	"rimworld-go/internal/application/scripting"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/incident"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 // scriptRun is the game's side of the plugins' scripts (PLG-060,
-// application/scripting): the host the run's plugins run in (nil: none)
-// and the run's item keys. Nothing here is saved: scripts keep no state.
+// application/scripting): the host the run's plugins run in (nil: none),
+// the run's item keys and the cadence hooks' colonist index. Nothing here
+// is saved: scripts keep no state, and the index rebuilds on first use.
 type scriptRun struct {
 	host  scripting.Host
 	kinds map[string]item.Kind // item key -> kind, built on first use
+	pawns idindex.Buckets      // home colonists by cadence bucket (pawnIndex)
 }
 
 // UseScripts sets the scripts g runs (nil: none). The composition root
@@ -30,6 +37,58 @@ func UseScripts(g *Game, h scripting.Host) { g.scripts.host = h }
 
 // scriptsOn gates the scripts' clock system (phases.go).
 func scriptsOn(g *Game) bool { return g.scripts.host != nil }
+
+// pawnScriptsOn gates the cadence hooks' system (phases.go): a live
+// script defines on_pawns or on_pawn.
+func pawnScriptsOn(g *Game) bool {
+	h := g.scripts.host
+	return h != nil && (h.Uses(scripting.OnPawns) || h.Uses(scripting.OnPawn))
+}
+
+// scriptPawns runs on_pawns, then on_pawn, for the colonists due at now
+// (each once every scripting.PawnEvery ticks), when anyone is due.
+func scriptPawns(g *Game, now uint64) {
+	if !pawnScriptsOn(g) {
+		return
+	}
+	due, _ := duePawns(g, now)
+	for _, h := range [2]scripting.Hook{scripting.OnPawns, scripting.OnPawn} {
+		if len(due) > 0 && g.scripts.host.Uses(h) {
+			fireScripts(g, scripting.Event{Hook: h, Tick: now, Pawns: due})
+		}
+	}
+}
+
+// duePawns is the home colonists due at now, id ascending, read from the
+// index's bucket and verified (homeColonist); visited is the bucket's size.
+func duePawns(g *Game, now uint64) (due []scripting.Pawn, visited int) {
+	cur := g.mapState
+	g.mapState = g.maps[0]
+	defer func() { g.mapState = cur }()
+	ids := pawnIndex(g).Due(now, cadence.OffPawnScripts)
+	due = make([]scripting.Pawn, 0, len(ids))
+	for _, id := range ids {
+		if homeColonist(g, id) {
+			due = append(due, scriptPawn(g, id))
+		}
+	}
+	return due, len(ids)
+}
+
+// pawnIndex is the cadence hooks' colonist index, (re)built from the home
+// map's pawnIDs when it was built from another map or not at all. It only
+// grows (notePawn): a visit verifies each id, so a departure needs no
+// bookkeeping.
+func pawnIndex(g *Game) *idindex.Buckets {
+	b, home := &g.scripts.pawns, g.maps[0]
+	if !b.From(home) {
+		b.Reset(scripting.PawnEvery, home)
+		for _, id := range home.pawnIDs {
+			b.Add(id)
+		}
+	}
+	return b
+}
 
 // scriptClock runs on_day at 00:00 and on_hour every hour (phases.go: a
 // colony system at each hour's first tick).
@@ -135,14 +194,52 @@ func scriptKind(g *Game, key string) (item.Kind, bool) {
 // addPawnID adds a colonist that arrives on the home map to g.pawnIDs, in
 // id order, and notes it for the scripts' cadence (PLG-060): the one path
 // by which a colonist joins pawnIDs.
+// A new colonist's id is the newest, so it appends in place.
 func addPawnID(g *Game, id entity.EntityID) {
-	g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go
+	if n := len(g.pawnIDs); n == 0 || id > g.pawnIDs[n-1] {
+		g.pawnIDs = append(g.pawnIDs, id)
+	} else {
+		g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go
+	}
 	notePawn(g, id)
 }
 
-// notePawn puts colonist id in the scripts' cadence index. Wave 0 stub
-// (PLG-060): the index lands with the cadence hooks.
-func notePawn(_ *Game, _ entity.EntityID) {}
+// notePawn puts colonist id in the scripts' cadence index when it was
+// built from the current map (the home map); before a build it does
+// nothing, as the build reads pawnIDs.
+func notePawn(g *Game, id entity.EntityID) {
+	if g.scripts.pawns.From(g.mapState) {
+		g.scripts.pawns.Add(id)
+	}
+}
+
+// homeColonist reports id is a living colonist of the current map: in
+// pawnIDs (ascending) and here (colonistHere). The cadence hooks and
+// ctx.pawn decide by it alone.
+func homeColonist(g *Game, id entity.EntityID) bool {
+	_, in := slices.BinarySearch(g.pawnIDs, id)
+	return in && colonistHere(g, id)
+}
+
+// scriptPawn is colonist id as a script reads it: the HUD's bars, mood
+// (the smoothed one; its target only when there is none yet) and flags.
+func scriptPawn(g *Game, id entity.EntityID) scripting.Pawn {
+	pos, _ := g.positions.Get(id)
+	name, _ := g.names.Get(id)
+	n, _ := g.need.Get(id)
+	v, _ := g.vital.Get(id)
+	md, smoothed := 0, false
+	if g.soc != nil {
+		_, smoothed = g.soc.moodM[id]
+	}
+	if smoothed {
+		md = g.smoothedMood(id, 0)
+	} else {
+		md = g.thoughtLevel(id)
+	}
+	return scripting.Pawn{ID: uint64(id), Name: name, X: pos.X, Y: pos.Y, Food: needs.Percent(n.Hunger), Rest: needs.Percent(n.Rest),
+		Mood: md, Downed: v.Status == health.Downed, Drafted: g.draft[id]}
+}
 
 // scriptWorld is what a script reads (scripting.World), on the home map;
 // the item counts are tallied once per call, so a script asking often
@@ -151,6 +248,8 @@ type scriptWorld struct {
 	g      *Game
 	now    uint64
 	counts map[item.Kind]int
+	pawns  []scripting.Pawn // built on first use
+	listed bool
 }
 
 func (w *scriptWorld) Day() int       { return w.g.relDay(w.now) }
@@ -175,10 +274,22 @@ func (w *scriptWorld) ItemCount(key string) (int, bool) {
 	return w.counts[k], true
 }
 
-// Pawns is every living home colonist (scripting.PawnReader). Wave 0 stub
-// (PLG-060): none yet.
-func (w *scriptWorld) Pawns() []scripting.Pawn { return nil }
+// Pawns is every living home colonist, id ascending (scripting.PawnReader),
+// built once per reader.
+func (w *scriptWorld) Pawns() []scripting.Pawn {
+	if !w.listed {
+		for _, id := range w.g.homeColonists() {
+			w.pawns = append(w.pawns, scriptPawn(w.g, id))
+		}
+		w.listed = true
+	}
+	return w.pawns
+}
 
-// Pawn is home colonist id (scripting.PawnReader). Wave 0 stub (PLG-060):
-// never found yet.
-func (w *scriptWorld) Pawn(uint64) (scripting.Pawn, bool) { return scripting.Pawn{}, false }
+// Pawn is home colonist id (scripting.PawnReader).
+func (w *scriptWorld) Pawn(id uint64) (scripting.Pawn, bool) {
+	if !homeColonist(w.g, entity.EntityID(id)) {
+		return scripting.Pawn{}, false
+	}
+	return scriptPawn(w.g, entity.EntityID(id)), true
+}

@@ -264,7 +264,7 @@ func (g *Game) unstashPawn(id entity.EntityID, x, y int) bool {
 		}
 		g.raiderIDs = withID(g.raiderIDs, id)
 	} else {
-		g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go: ascending, as movers needs
+		addPawnID(g, id) // scripts.go: ascending, as movers needs, and the cadence index (PLG-060)
 	}
 	if p := g.personOf(id); p != nil && p.Where == whereCaravan {
 		p.Where = whereColony

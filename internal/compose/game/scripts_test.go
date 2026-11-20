@@ -61,6 +61,29 @@ func TestScriptedColonyIsDeterministic(t *testing.T) {
 	}
 }
 
+// pawnSpawner drops wood from the cadence hook, one roll per colonist visit.
+const pawnSpawner = `
+def on_pawn(ctx, pawn):
+    if ctx.rand(4) == 0:
+        ctx.spawn("core.wood", 1 + pawn.id % 3)
+`
+
+// The cadence hook runs through the real host and game, and the same seed
+// gives the same colony (PLG-060 AC-3).
+func TestPawnHooksDeterministic(t *testing.T) {
+	t.Parallel()
+	script := starlarkhost.File{Path: "scripts/pawns.star", Src: []byte(pawnSpawner)}
+	h1, wood1 := runColony(t, 11, 2, script)
+	h2, wood2 := runColony(t, 11, 2, script)
+	if h1 != h2 || wood1 != wood2 {
+		t.Fatalf("two runs differ: hash %x/%x, wood %d/%d", h1, h2, wood1, wood2)
+	}
+	plain, woodPlain := runColony(t, 11, 2)
+	if plain == h1 || wood1 <= woodPlain {
+		t.Fatalf("on_pawn did not change the colony: wood %d scripted, %d plain", wood1, woodPlain)
+	}
+}
+
 func TestScriptHostFromLoadedPlugins(t *testing.T) {
 	t.Parallel()
 	src := modloader.New(filepath.Join("..", "..", "..", "mods"))
