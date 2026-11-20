@@ -1,0 +1,17 @@
+[package]
+name = "golden"
+version = "0.1.0"
+edition = "2018"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+debug = false
+codegen-units = 1

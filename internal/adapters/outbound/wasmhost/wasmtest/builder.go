@@ -7,7 +7,12 @@
 // wasmrewrite's encoder and imports nothing else of this repo.
 package wasmtest
 
-import "rimworld-go/internal/adapters/outbound/wasmhost/wasmrewrite"
+import (
+	"bytes"
+	"slices"
+
+	"rimworld-go/internal/adapters/outbound/wasmhost/wasmrewrite"
+)
 
 // Value types and block types.
 const (
@@ -139,46 +144,212 @@ const (
 
 // Builder assembles a module. Add every import before the first Func, so
 // the function indices it returns stay valid. The zero value is ready.
+// It does not validate: tests build invalid modules on purpose.
 type Builder struct {
-	m wasmrewrite.Module
+	m        wasmrewrite.Module
+	memory   []byte   // raw memory section body, empty when none
+	table    []byte   // raw table section body
+	elems    [][]byte // raw element segments
+	datas    [][]byte // raw data segments
+	dataCnt  bool
+	nImports uint32 // function imports
+}
+
+// Type adds (or reuses) the function type params -> results and returns
+// its type index.
+func (b *Builder) Type(params, results []byte) uint32 {
+	for i, t := range b.m.Types {
+		if bytes.Equal(t.Params, params) && bytes.Equal(t.Results, results) {
+			return uint32(i)
+		}
+	}
+	return b.m.AddType(params, results)
 }
 
 // Func adds a function of type params -> results with the given locals
 // (one valtype byte per local) and body code, the final OpEnd included,
 // and returns its function index (imports first).
 func (b *Builder) Func(params, results []byte, locals []byte, code ...byte) uint32 {
-	return 0 // W0 stub
+	var runs []wasmrewrite.LocalRun
+	for _, t := range locals {
+		if n := len(runs); n > 0 && runs[n-1].Type == t {
+			runs[n-1].Count++
+		} else {
+			runs = append(runs, wasmrewrite.LocalRun{Count: 1, Type: t})
+		}
+	}
+	b.m.Funcs = append(b.m.Funcs, b.Type(params, results))
+	b.m.Bodies = append(b.m.Bodies, wasmrewrite.Body{Locals: runs, Code: slices.Clone(code)})
+	return b.nImports + uint32(len(b.m.Funcs)-1)
 }
 
 // Import adds a function import module.name of type params -> results
 // and returns its function index.
 func (b *Builder) Import(module, name string, params, results []byte) uint32 {
-	return 0 // W0 stub
+	b.m.Imports = append(b.m.Imports, wasmrewrite.Import{
+		Module: module, Name: name, Kind: KindFunc, Index: b.Type(params, results),
+	})
+	b.nImports++
+	return b.nImports - 1
+}
+
+// ImportRaw adds a non-function import (kind and raw descriptor bytes),
+// for tests that must see it rejected.
+func (b *Builder) ImportRaw(module, name string, kind byte, desc ...byte) {
+	b.m.Imports = append(b.m.Imports, wasmrewrite.Import{
+		Module: module, Name: name, Kind: kind, Desc: slices.Clone(desc),
+	})
 }
 
 // Export exports the item of the given kind and index as name.
 func (b *Builder) Export(name string, kind byte, index uint32) {
-	// W0 stub
+	b.m.AddExport(wasmrewrite.Export{Name: name, Kind: kind, Index: index})
+}
+
+// Start sets the start function.
+func (b *Builder) Start(fn uint32) {
+	b.m.Start, b.m.HasStart = fn, true
+}
+
+func limitsBytes(flags byte, min, max uint64) []byte {
+	out := []byte{flags}
+	out = leb(out, min)
+	if flags&1 != 0 {
+		out = leb(out, max)
+	}
+	return out
+}
+
+func leb(b []byte, v uint64) []byte {
+	for v >= 0x80 {
+		b = append(b, byte(v)|0x80)
+		v >>= 7
+	}
+	return append(b, byte(v))
 }
 
 // Memory adds the module's memory with minPages and maxPages; maxPages 0
 // means no maximum.
 func (b *Builder) Memory(minPages, maxPages uint32) {
-	// W0 stub
+	if maxPages == 0 {
+		b.MemoryFlags(0, uint64(minPages), 0)
+		return
+	}
+	b.MemoryFlags(1, uint64(minPages), uint64(maxPages))
+}
+
+// MemoryFlags adds the memory with raw limits flags (bit 0 max, bit 1
+// shared, bit 2 64-bit), for tests that must see it rejected.
+func (b *Builder) MemoryFlags(flags byte, min, max uint64) {
+	b.memory = append([]byte{1}, limitsBytes(flags, min, max)...)
+}
+
+// Table adds a funcref table of minSize entries (no maximum).
+func (b *Builder) Table(minSize uint32) {
+	b.table = append([]byte{1, FuncRef}, limitsBytes(0, uint64(minSize), 0)...)
+}
+
+// Elem adds an active element segment at offset 0 of table 0 holding the
+// given functions.
+func (b *Builder) Elem(funcs ...uint32) {
+	seg := []byte{0, OpI32Const, 0, OpEnd}
+	b.elems = append(b.elems, funcVec(seg, funcs))
+}
+
+// ElemRaw adds an element segment from raw bytes, for tests that need a
+// malformed or out-of-range one.
+func (b *Builder) ElemRaw(seg ...byte) {
+	b.elems = append(b.elems, slices.Clone(seg))
+}
+
+// DataRaw adds a data segment from raw bytes (flag, optional memory
+// index, offset expression, length, bytes).
+func (b *Builder) DataRaw(seg ...byte) {
+	b.datas = append(b.datas, slices.Clone(seg))
+}
+
+// ElemPassive adds a passive element segment (for elem.drop).
+func (b *Builder) ElemPassive(funcs ...uint32) {
+	b.elems = append(b.elems, funcVec([]byte{1, 0x00}, funcs))
+}
+
+// ElemDeclare adds a declarative element segment, which declares the
+// functions so ref.func may name them.
+func (b *Builder) ElemDeclare(funcs ...uint32) {
+	b.elems = append(b.elems, funcVec([]byte{3, 0x00}, funcs))
+}
+
+func funcVec(seg []byte, funcs []uint32) []byte {
+	seg = leb(seg, uint64(len(funcs)))
+	for _, f := range funcs {
+		seg = leb(seg, uint64(f))
+	}
+	return seg
 }
 
 // Global adds a defined global with its constant init expression (the
 // final OpEnd included) and returns its global index.
 func (b *Builder) Global(valtype byte, mutable bool, init ...byte) uint32 {
-	return 0 // W0 stub
+	return b.m.AddGlobal(wasmrewrite.Global{Type: valtype, Mutable: mutable, Init: slices.Clone(init)})
 }
 
 // Data adds an active data segment for memory 0 at the i32 offset.
 func (b *Builder) Data(offset uint32, data []byte) {
-	// W0 stub
+	seg := []byte{0, OpI32Const}
+	// i32.const takes a signed LEB: emit offset as unsigned 5-byte safe form.
+	seg = appendS32(seg, int32(offset))
+	seg = append(seg, OpEnd)
+	seg = leb(seg, uint64(len(data)))
+	b.datas = append(b.datas, append(seg, data...))
+}
+
+// DataPassive adds a passive data segment (for memory.init) and writes
+// the datacount section.
+func (b *Builder) DataPassive(data []byte) {
+	seg := leb([]byte{1}, uint64(len(data)))
+	b.datas = append(b.datas, append(seg, data...))
+	b.dataCnt = true
+}
+
+func appendS32(b []byte, v int32) []byte {
+	x := int64(v)
+	for {
+		c := byte(x) & 0x7f
+		x >>= 7
+		if (x == 0 && c&0x40 == 0) || (x == -1 && c&0x40 != 0) {
+			return append(b, c)
+		}
+		b = append(b, c|0x80)
+	}
+}
+
+func vecSection(id byte, items [][]byte) wasmrewrite.Section {
+	body := leb(nil, uint64(len(items)))
+	for _, it := range items {
+		body = append(body, it...)
+	}
+	return wasmrewrite.Section{ID: id, Body: body}
 }
 
 // Bytes encodes the module.
 func (b *Builder) Bytes() []byte {
-	return b.m.Encode()
+	m := b.m
+	m.Sections = nil
+	add := func(s wasmrewrite.Section) { m.Sections = append(m.Sections, s) }
+	if b.table != nil {
+		add(wasmrewrite.Section{ID: 4, Body: b.table})
+	}
+	if b.memory != nil {
+		add(wasmrewrite.Section{ID: 5, Body: b.memory})
+	}
+	if len(b.elems) > 0 {
+		add(vecSection(9, b.elems))
+	}
+	if b.dataCnt {
+		add(wasmrewrite.Section{ID: 12, Body: leb(nil, uint64(len(b.datas)))})
+	}
+	if len(b.datas) > 0 {
+		add(vecSection(11, b.datas))
+	}
+	return m.Encode()
 }
