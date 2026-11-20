@@ -135,6 +135,10 @@ animal-audio:  ## process approved ElevenLabs animal takes to OGG (cmd/sfxgen; n
 normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spritefusion-sprite-normals)
 	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)
 
+.PHONY: wasm-fixtures
+wasm-fixtures:  ## rebuild the Rust Wasm test fixtures (needs the pinned rustc and wasm32-unknown-unknown)
+	scripts/wasm_fixtures.sh
+
 .PHONY: art-check
 art-check:  ## validate generated sprites against metadata, orphans and plant outlines
 	python3 assets/source/tools/validate_assets.py

@@ -193,7 +193,7 @@ Scripting port: batched colonist reads, 60-tick cadence hooks, Starlark vs gophe
 - Open: per-mod script cost in developer diagnostics (§49); a memory budget per script; reads beyond colonists (animals, visitors); the turned-off set is still not saved.
 
 ## PLG-7-wasm-second-runtime-candidate
-Second scripting runtime: WebAssembly on wazero named as the candidate · 2026-11-20
+Second scripting runtime: WebAssembly on wazero named as the candidate · 2026-11-20 · cdb16a849
 - Changed: docs only. `MASTER_SPEC` §49 names Wasm on wazero as the second-runtime candidate for mods that keep their own state and touch many entities; Starlark stays the default. New gap PLG-063 and backlog item 38.3 "Second runtime spike" hold the six spike criteria.
 - Decisions (user 2026-11-20): from a contributor benchmark (100 pawns, hourly work review: Rust/TinyGo Wasm with fuel ~1.1-1.2x native Go per pawn decision, Luau 1.2-1.9x, Starlark ~7x, 11.3 vs 1.66 µs). Wasm on wazero meets the §49 criteria on paper (pure Go, deterministic fuel, memory cap from max pages, one instance per mod). gopher-lua (no deterministic budget, slower than Starlark in `scriptbench`) and CGo Luau are dropped as candidates.
 - Spike gate: host-inserted fuel; same state hash on amd64 and arm64; per-mod fuel and memory; versioned size-capped save hook (PLG-051); same port with batched data; harness in `scriptbench`.

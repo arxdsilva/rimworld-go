@@ -8,6 +8,7 @@ require (
 	github.com/cli/browser v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/hajimehoshi/ebiten/v2 v2.10.6
+	github.com/tetratelabs/wazero v1.9.0
 	github.com/yuin/gopher-lua v1.1.2
 	go.starlark.net v0.0.0-20261021141710-4f4267fb140d
 	golang.org/x/mod v0.42.0

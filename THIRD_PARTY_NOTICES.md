@@ -56,6 +56,7 @@ The game's binary links these modules. Their license files, with any NOTICE file
 | `github.com/jfreymuth/vorbis` | MIT | all |
 | `github.com/rivo/uniseg` | MIT | all |
 | `github.com/yuin/gopher-lua` | MIT | none: benchmark only (`internal/adapters/outbound/scriptbench` tests), not in the binary |
+| `github.com/tetratelabs/wazero` | Apache-2.0 | none: spike (`internal/adapters/outbound/wasmhost`, PLG-063), not wired, not in the binary |
 | `github.com/srwiley/rasterx` | BSD-3-Clause | all (Ebitengine `text/v2` glyph rasterising) |
 | `go.starlark.net` | BSD-3-Clause | all (plugin scripts, PLG-060) |
 | `golang.org/x/image` | BSD-3-Clause | all |
