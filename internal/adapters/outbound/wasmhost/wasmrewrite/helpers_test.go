@@ -57,6 +57,10 @@ func tryRun(e testEngine, wasm []byte, export string, args ...uint64) ([]uint64,
 	if err != nil {
 		return nil, err
 	}
+	// Metered output starts with 0 fuel; give it a budget no test exhausts.
+	if g, ok := mod.ExportedGlobal("__rimworld_fuel").(api.MutableGlobal); ok {
+		g.Set(1 << 62)
+	}
 	return mod.ExportedFunction(export).Call(ctx, args...)
 }
 
@@ -74,5 +78,6 @@ func testConfig() wasmrewrite.Config {
 	return wasmrewrite.Config{
 		Namespace: "rimworld", FuelExport: "__rimworld_fuel", DepthExport: "__rimworld_depth",
 		MaxDepth: 1000, MaxLocals: 4096, MaxBody: 64 << 10, MaxArity: 64, StackBudget: 1 << 22,
+		MaxWeight: 1 << 17,
 	}
 }

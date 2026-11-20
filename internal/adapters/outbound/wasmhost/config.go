@@ -22,6 +22,7 @@ const (
 	MaxArity        = 64        // params, and results, per type
 	MaxLocals       = 4096      // params plus locals per function
 	MaxBody         = 64 << 10  // bytes per function body
+	MaxWeight       = 1 << 17   // w(f) per function, after metering
 
 	fuelExport  = "__rimworld_fuel"
 	depthExport = "__rimworld_depth"
@@ -84,5 +85,6 @@ func rewriteConfig() wasmrewrite.Config {
 		MaxBody:     MaxBody,
 		MaxArity:    MaxArity,
 		StackBudget: StackBudget,
+		MaxWeight:   MaxWeight,
 	}
 }

@@ -5,8 +5,10 @@ package wasmhost
 
 import (
 	"context"
+	"sync"
 
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 
 	"rimworld-go/internal/adapters/outbound/wasmhost/wasmrewrite"
 	"rimworld-go/internal/application/scripting"
@@ -25,38 +27,111 @@ type File struct {
 	Wasm []byte
 }
 
+// module is one live file: its instance, the reserved globals and the
+// exports the host calls.
+type module struct {
+	plugin, path string
+	key          uint64 // fnv64a(plugin + "\x00" + path), the rand stage
+	inst         api.Module
+	mem          api.Memory
+	fuel, depth  api.MutableGlobal
+	hooks        [hookSlots]api.Function // by scripting.Hook; nil when not exported
+	buf, bufSize uint32                  // the event buffer inside mem
+	save, load   api.Function            // nil when the module has no state
+	version      uint32                  // state_version(), read at load
+	off          bool
+	calls, spent uint64 // for Stats
+}
+
+const hookSlots = int(scripting.OnPawn) + 1
+
 // Host runs the modules. Fire is called by the simulation owner only;
-// Problems may be read from any goroutine.
+// Problems may be read from any goroutine. Methods after Close are not
+// supported. The host starts no goroutine.
 type Host struct {
 	ctx  context.Context // the one context.Background()
 	rt   wazero.Runtime
 	opts Options // defaults filled
 	rw   wasmrewrite.Config
+
+	mods    []*module // load order
+	nameSeq int       // unique wazero module names
+	cur     *callState
+	scratch []byte // event encoding, reused
+
+	mu     sync.Mutex
+	probs  []scripting.Problem
+	unsent []scripting.Problem // load failures not yet in a Result
 }
 
 var _ scripting.Host = (*Host)(nil)
 
-// New compiles, rewrites and instantiates every plugin's files. A file
-// that fails is a problem and stays off; the rest run.
-func New(ps []Plugin, o Options) *Host {
-	h := &Host{ctx: context.Background(), opts: o.withDefaults(), rw: rewriteConfig()}
-	h.rt = wazero.NewRuntimeWithConfig(h.ctx, runtimeConfig(h.opts))
-	return h // W0 stub: ps is not loaded yet
+// runtimeMu serialises wazero.NewRuntimeWithConfig: v1.9.0 races on
+// internal/version when runtimes are made concurrently.
+var runtimeMu sync.Mutex
+
+func newRuntime(ctx context.Context, c wazero.RuntimeConfig) wazero.Runtime {
+	runtimeMu.Lock()
+	defer runtimeMu.Unlock()
+	return wazero.NewRuntimeWithConfig(ctx, c)
 }
 
-// Fire runs every live module's hook for ev, plugins in load order.
-func (h *Host) Fire(ev scripting.Event, w scripting.World, p scripting.PawnReader) scripting.Result {
-	return scripting.Result{} // W0 stub
+// New compiles, rewrites and instantiates every plugin's files. A file that
+// fails is a problem and stays off; the rest run.
+func New(ps []Plugin, o Options) *Host {
+	h := &Host{ctx: context.Background(), opts: o.withDefaults(), rw: rewriteConfig()}
+	h.rt = newRuntime(h.ctx, runtimeConfig(h.opts))
+	err := h.registerImports()
+	for _, p := range ps {
+		for _, f := range p.Files {
+			if err != nil {
+				h.unsent = append(h.unsent, h.fail(p.ID, f.Path, "internal: imports: "+err.Error()))
+				continue
+			}
+			m, msg := h.loadFile(p.ID, f)
+			if msg != "" {
+				h.unsent = append(h.unsent, h.fail(p.ID, f.Path, msg))
+				continue
+			}
+			h.mods = append(h.mods, m)
+		}
+	}
+	return h
 }
 
 // Uses reports that a live module exports hook hk. It does not allocate.
 func (h *Host) Uses(hk scripting.Hook) bool {
-	return false // W0 stub
+	if int(hk) >= hookSlots {
+		return false
+	}
+	for _, m := range h.mods {
+		if !m.off && m.hooks[hk] != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // Problems are the modules disabled so far, in order.
 func (h *Host) Problems() []scripting.Problem {
-	return nil // W0 stub
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return append([]scripting.Problem(nil), h.probs...)
+}
+
+// fail records a problem for a file that never loaded.
+func (h *Host) fail(plugin, path, msg string) scripting.Problem {
+	p := scripting.Problem{Plugin: plugin, File: path, Msg: msg}
+	h.mu.Lock()
+	h.probs = append(h.probs, p)
+	h.mu.Unlock()
+	return p
+}
+
+// disable turns m off with msg as its problem.
+func (h *Host) disable(m *module, msg string) scripting.Problem {
+	m.off = true
+	return h.fail(m.plugin, m.path, msg)
 }
 
 // Close releases the runtime and every module.

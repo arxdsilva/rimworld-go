@@ -3,11 +3,6 @@
 
 package wasmrewrite
 
-import "errors"
-
-// errNotYet marks a wave-0 stub; it is gone once every stub is replaced.
-var errNotYet = errors.New("wasmrewrite: not implemented")
-
 // Config is what the rewriter needs from the host; wasmhost fills it from
 // its constants.
 type Config struct {
@@ -28,6 +23,12 @@ type Config struct {
 	MaxArity uint32
 	// StackBudget is the weighted call-depth budget in units.
 	StackBudget uint64
+	// MaxWeight bounds one function's weight w(f) after metering; Meter
+	// rejects a heavier function (RuleWeight). It keeps every accepted
+	// body within wazevo arm64's 16 MiB machine-code cap per function, so
+	// no engine or arch refuses a module another one loads. Zero means
+	// DefaultMaxWeight.
+	MaxWeight uint64
 }
 
 // Prepare checks wasm and returns the rewritten module: Decode, Check,

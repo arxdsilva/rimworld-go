@@ -217,18 +217,16 @@ func (c *cursor) limits() Limits {
 	l.HasMax = flag&1 != 0
 	l.Shared = flag&2 != 0
 	l.Mem64 = flag&4 != 0
-	read := c.u32
 	if l.Mem64 {
-		read = func() uint32 { return 0 }
 		l.Min = c.u64()
 		if l.HasMax {
 			l.Max = c.u64()
 		}
 		return l
 	}
-	l.Min = uint64(read())
+	l.Min = uint64(c.u32())
 	if l.HasMax {
-		l.Max = uint64(read())
+		l.Max = uint64(c.u32())
 	}
 	return l
 }

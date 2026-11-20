@@ -33,8 +33,10 @@
 // Wasm instruction does less than a Starlark step, so this is 5x
 // scripting.MaxSteps. DefaultMaxPages 256 (16 MiB). MaxState 64 KiB.
 // MaxArity 64 params and 64 results per type. MaxLocals 4096 (params plus
-// locals) per function. MaxBody 64 KiB per body. The call stack is bounded
-// by MaxDepth (1000) floor-weight frames in StackBudget (1<<22) units.
+// locals) per function. MaxBody 64 KiB per body. MaxWeight 1<<17: a
+// function whose weight w(f) is over it is rejected after metering
+// (wasmrewrite.RuleWeight). The call stack is bounded by MaxDepth (1000)
+// floor-weight frames in StackBudget (1<<22) units.
 //
 // # Allow-list (wasmrewrite.Check)
 //
@@ -159,13 +161,18 @@
 //	          pawn_name(id i64,p,cap) -> i32   the length, or -1
 //
 // Each import charges the fuel global 4, plus 1 per record or per 32 bytes
-// moved; a charge that drives fuel below 0 stops the call at once with
+// moved (rounded up); bounds are checked before the charge, so a bad
+// pointer reports its own message, not out of fuel; a charge that drives fuel below 0 stops the call at once with
 // "out of fuel in <hook>" and the import does nothing. Every guest pointer
 // and length is bounds-checked. A bad argument or failed check fails the
 // whole call with the import's own message, the same strings as
 // starlarkhost (including "more than %d commands in %s"). Host functions
 // never panic on guest input except through the one internal stop the
 // host recovers.
+//
+// During save, load and the load-time calls there is no event and no
+// world: message, letter and spawn fail the call with "<name>: not available
+// outside a hook" (a Problem; the file turns off), as do the world reads.
 //
 // # Save blob
 //

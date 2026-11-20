@@ -6,13 +6,22 @@ package wasmhost
 // Stat is one loaded file's counters.
 type Stat struct {
 	Plugin, File string
-	Fuel         uint64 // fuel spent, all calls
-	Calls        uint64 // top-level calls made
+	Fuel         uint64 // fuel spent by hook, save and load calls (not the load-time setup)
+	Calls        uint64 // guest calls made: hook (one per on_pawn pawn), save and load
 	Pages        uint32 // memory size now, in 64 KiB pages
 	Off          bool   // disabled
 }
 
-// Stats lists every loaded file's counters, in load order.
+// Stats lists every loaded file's counters, in load order. A file that
+// failed to load is a Problem, not a Stat.
 func (h *Host) Stats() []Stat {
-	return nil // W0 stub
+	out := make([]Stat, 0, len(h.mods))
+	for _, m := range h.mods {
+		out = append(out, Stat{
+			Plugin: m.plugin, File: m.path,
+			Fuel: m.spent, Calls: m.calls,
+			Pages: m.mem.Size() / 65536, Off: m.off,
+		})
+	}
+	return out
 }

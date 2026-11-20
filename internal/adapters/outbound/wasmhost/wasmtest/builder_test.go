@@ -111,7 +111,8 @@ func TestBuilderBytesIsRepeatable(t *testing.T) {
 	b.Memory(1, 0)
 	b.Data(70000, nil)
 	b.Func(nil, nil, nil, OpEnd)
-	if string(b.Bytes()) != string(b.Bytes()) {
+	first, second := b.Bytes(), b.Bytes()
+	if string(first) != string(second) {
 		t.Error("Bytes changes between calls")
 	}
 }
