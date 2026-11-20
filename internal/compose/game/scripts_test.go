@@ -37,6 +37,13 @@ func runColony(t *testing.T, seed uint64, hours int, scripts ...starlarkhost.Fil
 		}
 		host = h
 	}
+	return runColonyHost(t, seed, hours, host)
+}
+
+// runColonyHost plays a start-kit colony for hours under host (nil: no
+// scripts) and returns its state hash and wood stock.
+func runColonyHost(t *testing.T, seed uint64, hours int, host scripting.Host) (uint64, int) {
+	t.Helper()
 	g := appgame.New(appgame.Config{Seed: seed, Width: 32, Height: 32, Scripts: host})
 	if err := g.LoadStartKit(); err != nil {
 		t.Fatal(err)

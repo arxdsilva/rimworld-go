@@ -32,6 +32,38 @@ func firstLine(err error) string {
 	return strings.TrimSpace(s)
 }
 
+// compile is wazero's CompileModule with a panic turned into an error:
+// v1.9.0's validator panics on some malformed function bodies, and a bad
+// file must only turn itself off.
+func (h *Host) compile(wasm []byte) (cm wazero.CompiledModule, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			cm, err = nil, fmt.Errorf("wazero panicked while compiling: %v", r)
+		}
+	}()
+	return h.rt.CompileModule(h.ctx, wasm)
+}
+
+// memoryOver is the rejection of a declared memory whose min or max is over
+// Options.MaxPages ("" when fine). A memory with no declared max stays
+// allowed: the runtime's limit caps it.
+func (h *Host) memoryOver(wasm []byte) string {
+	m, err := wasmrewrite.Decode(wasm)
+	if err != nil {
+		return "" // Prepare already accepted these bytes
+	}
+	limit := uint64(h.opts.MaxPages)
+	for _, l := range m.Memories {
+		if l.Min > limit || (l.HasMax && l.Max > limit) {
+			if !l.HasMax {
+				return fmt.Sprintf("rejected: memory declares min %d pages, over the host's %d", l.Min, limit)
+			}
+			return fmt.Sprintf("rejected: memory declares min %d, max %d pages, over the host's %d", l.Min, l.Max, limit)
+		}
+	}
+	return ""
+}
+
 // loadFile turns f into a live module, or returns the problem's message.
 // Prepare runs first so Check's typed rejection names a rule; the original
 // is still compiled by wazero (validity) before the output is trusted.
@@ -40,12 +72,15 @@ func (h *Host) loadFile(plugin string, f File) (*module, string) {
 	if err != nil {
 		return nil, "rejected: " + firstLine(err)
 	}
-	orig, err := h.rt.CompileModule(h.ctx, f.Wasm)
+	if msg := h.memoryOver(f.Wasm); msg != "" {
+		return nil, msg
+	}
+	orig, err := h.compile(f.Wasm)
 	if err != nil {
 		return nil, "invalid module: " + firstLine(err)
 	}
 	_ = orig.Close(h.ctx)
-	cm, err := h.rt.CompileModule(h.ctx, out)
+	cm, err := h.compile(out)
 	if err != nil {
 		return nil, "internal: rewritten module does not compile: " + firstLine(err)
 	}

@@ -21,7 +21,7 @@ func want(c *colony) string {
 	return fmt.Sprintf("%d %d", low, mood)
 }
 
-// TestWorkloadsAgree: the four variants queue the same one message.
+// TestWorkloadsAgree: every variant (starlark, lua, wasm on both engines) queue the same one message.
 func TestWorkloadsAgree(t *testing.T) {
 	t.Parallel()
 	for _, n := range []int{50, 500} {
@@ -34,6 +34,11 @@ func TestWorkloadsAgree(t *testing.T) {
 			"lua-lazy/percall":  append([]string(nil), newLuaRun(t, luaPerCall, c, true).fire(t)...),
 			"lua-eager/batched": append([]string(nil), newLuaRun(t, luaBatched, c, false).fire(t)...),
 			"lua-eager/percall": append([]string(nil), newLuaRun(t, luaPerCall, c, false).fire(t)...),
+		}
+		for _, e := range wasmEngines {
+			for _, v := range []string{"batched", "percall"} {
+				got[e.name+"/"+v] = wasmFire(t, wasmHost(t, "bench_"+v, e.engine), c)
+			}
 		}
 		for name, g := range got {
 			if !reflect.DeepEqual(g, exp) {

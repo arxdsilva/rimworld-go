@@ -8,6 +8,9 @@ import (
 	"testing"
 
 	lua "github.com/yuin/gopher-lua"
+
+	"rimworld-go/internal/adapters/outbound/starlarkhost"
+	"rimworld-go/internal/adapters/outbound/wasmhost"
 )
 
 // TestLuaLinks opens and closes a bare Lua state: gopher-lua links into
@@ -38,18 +41,30 @@ func BenchmarkPawnReads(b *testing.B) {
 			c := newColony(n)
 			b.Run(fmt.Sprintf("starlark/%s/n=%d", v.name, n), func(b *testing.B) {
 				h := starHost(b, v.star)
+				starFire(b, h, c) // warm
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					starFire(b, h, c)
 				}
 			})
+			for _, e := range wasmEngines {
+				b.Run(fmt.Sprintf("%s/%s/n=%d", e.name, v.name, n), func(b *testing.B) {
+					h := wasmHost(b, "bench_"+v.name, e.engine)
+					b.ReportAllocs()
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						wasmFire(b, h, c)
+					}
+				})
+			}
 			for _, rt := range []struct {
 				name string
 				lazy bool
 			}{{"lua-lazy", true}, {"lua-eager", false}} {
 				b.Run(fmt.Sprintf("%s/%s/n=%d", rt.name, v.name, n), func(b *testing.B) {
 					r := newLuaRun(b, v.lua, c, rt.lazy)
+					r.fire(b) // warm
 					b.ReportAllocs()
 					b.ResetTimer()
 					for i := 0; i < b.N; i++ {
@@ -62,18 +77,58 @@ func BenchmarkPawnReads(b *testing.B) {
 	c := newColony(50)
 	b.Run("starlark/noop/n=50", func(b *testing.B) {
 		h := starHost(b, starNoop)
+		starFire(b, h, c) // warm
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			starFire(b, h, c)
 		}
 	})
+	b.Run("wasm/noop/n=50", func(b *testing.B) {
+		h := wasmHost(b, "bench_noop", wasmhost.Compiler)
+		wasmFire(b, h, c) // warm
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			wasmFire(b, h, c)
+		}
+	})
 	b.Run("lua/noop/n=50", func(b *testing.B) {
 		r := newLuaRun(b, luaNoop, c, true)
+		r.fire(b) // warm
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			r.fire(b)
 		}
 	})
+}
+
+// BenchmarkCompile measures building a host from source or bytes per
+// iteration: parse and compile (Starlark) or decode, check, rewrite, compile,
+// Prepare and instantiate (Wasm), on the batched fixture, with the runtime
+// torn down inside the timer so engines are compared whole.
+func BenchmarkCompile(b *testing.B) {
+	b.Run("starlark", func(b *testing.B) {
+		plug := []starlarkhost.Plugin{{ID: "bench", Files: []starlarkhost.File{{Path: "scripts/bench.star", Src: []byte(starBatched)}}}}
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			if p := starlarkhost.New(plug).Problems(); len(p) != 0 {
+				b.Fatalf("problems: %v", p)
+			}
+		}
+	})
+	for _, e := range wasmEngines {
+		b.Run(e.name, func(b *testing.B) {
+			plug := []wasmhost.Plugin{wasmPlugin(b, "bench_batched")}
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				h := wasmhost.New(plug, wasmhost.Options{Engine: e.engine})
+				if p := h.Problems(); len(p) != 0 {
+					b.Fatalf("problems: %v", p)
+				}
+				_ = h.Close()
+			}
+		})
+	}
 }

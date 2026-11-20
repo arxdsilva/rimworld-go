@@ -20,6 +20,25 @@
 // not symmetric: Starlark's is a full host Fire (result, rand key, step
 // budget), Lua's a bare protected call.
 //
+// PLG-063 adds the Wasm case (wasm_test.go): the same workload through the
+// real wasmhost adapter on both wazero engines (wasm-compiler is the shipping
+// one, wasm-interp the portable fallback), fuel metering on at DefaultFuel.
+// The guests are the Rust fixtures wasmhost/testdata/bench_{batched,percall,
+// noop}.wasm (17680, 1569 and 229 bytes; batched reserves a 16 KiB event
+// buffer). Records are 32 bytes per colonist, read at the same fields
+// (food, mood) the Starlark and Lua scripts read; batched copies all N
+// records in one pawns() import, percall one pawn() import per id. The noop
+// case is a full host Fire, like Starlark's. BenchmarkCompile builds a host
+// per iteration (Starlark parse and compile; Wasm decode, check, rewrite,
+// compile, instantiate, and Close).
+//
+// Every PawnReads case (all runtimes, noop included) makes one untimed warm
+// call before ResetTimer, so first-call costs are excluded symmetrically.
+//
+// Measured numbers (medians and ranges of -count=10, no -race) are recorded
+// in the PLG-063 run report; run: go test -run '^$' -bench 'PawnReads|Compile'
+// -benchtime 300x -count=10 ./internal/adapters/outbound/scriptbench/
+//
 // The game's cadence bucket is about N/60 colonists per call (assumption
 // A8), so the 50 and 500 sizes measure the reads, not the cadence.
 //

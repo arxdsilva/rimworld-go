@@ -31,7 +31,7 @@
 //
 // DefaultFuel (1,000,000) per call, or per file per tick for on_pawn; a
 // Wasm instruction does less than a Starlark step, so this is 5x
-// scripting.MaxSteps. DefaultMaxPages 256 (16 MiB). MaxState 64 KiB.
+// scripting.MaxSteps. DefaultMaxPages 256 (16 MiB): a module whose declared memory min or max is over Options.MaxPages is rejected at load; one with no declared max is allowed and capped by the runtime limit. MaxState 64 KiB.
 // MaxArity 64 params and 64 results per type. MaxLocals 4096 (params plus
 // locals) per function. MaxBody 64 KiB per body. MaxWeight 1<<17: a
 // function whose weight w(f) is over it is rejected after metering
