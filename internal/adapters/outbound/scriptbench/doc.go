@@ -35,9 +35,20 @@
 // Every PawnReads case (all runtimes, noop included) makes one untimed warm
 // call before ResetTimer, so first-call costs are excluded symmetrically.
 //
-// Measured numbers (medians and ranges of -count=10, no -race) are recorded
-// in the PLG-063 run report; run: go test -run '^$' -bench 'PawnReads|Compile'
-// -benchtime 300x -count=10 ./internal/adapters/outbound/scriptbench/
+// Measured 2026-11-20 on an Apple M2 Max, idle, no -race, median ns/op of
+// -count=10 (go test -run '^$' -bench 'PawnReads|Compile' -benchtime 300x
+// -count=10 ./internal/adapters/outbound/scriptbench/):
+//
+//	case               starlark  wasm-compiler  wasm-interp  lua-lazy  lua-eager
+//	batched n=50          6.5k        1.0k          11.2k      14.4k      51.9k
+//	batched n=500          57k        5.7k            85k       130k       612k
+//	percall n=50          10.9k       3.5k          13.9k      16.2k      57.8k
+//	percall n=500          107k        30k            105k       159k       557k
+//	empty hook             357         252 (wasm)       -       166 (lua)    -
+//	compile (per host)     9.1k        786k            175k        -          -
+//
+// Fuel per call against DefaultFuel 1,000,000: batched n=500 15,304 (1.5%),
+// percall n=500 18,301 (1.8%) (TestWasmFuelHeadroom).
 //
 // The game's cadence bucket is about N/60 colonists per call (assumption
 // A8), so the 50 and 500 sizes measure the reads, not the cadence.
