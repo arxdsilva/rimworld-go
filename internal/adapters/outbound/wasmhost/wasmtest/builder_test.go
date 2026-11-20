@@ -116,3 +116,22 @@ func TestBuilderBytesIsRepeatable(t *testing.T) {
 		t.Error("Bytes changes between calls")
 	}
 }
+
+func TestBuilderRawHelpers(t *testing.T) {
+	var b Builder
+	b.ImportRaw("m", "t", KindTable, FuncRef, 0, 1)
+	b.Memory(1, 0)
+	b.Table(1)
+	b.Func(nil, nil, nil, OpEnd)
+	b.ElemRaw(0, OpI32Const, 0, OpEnd, 1, 0)
+	b.DataRaw(0, OpI32Const, 0, OpEnd, 1, 9)
+	wasm := b.Bytes()
+	ctx := context.Background()
+	for name, cfg := range configs() {
+		r := wazero.NewRuntimeWithConfig(ctx, cfg)
+		if _, err := r.CompileModule(ctx, wasm); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+		r.Close(ctx)
+	}
+}

@@ -150,3 +150,33 @@ func TestCursorSticky(t *testing.T) {
 		t.Fatal("oversize vector accepted")
 	}
 }
+
+// Each read method's own error path (not the sticky one), on a fresh
+// cursor.
+func TestCursorFirstErrorPaths(t *testing.T) {
+	over := []byte{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00}
+	reads := map[string]func(*cursor){
+		"u32": func(c *cursor) { c.u32() },
+		"u64": func(c *cursor) { c.u64() },
+		"s32": func(c *cursor) { c.s32() },
+		"s33": func(c *cursor) { c.s33() },
+		"s64": func(c *cursor) { c.s64() },
+	}
+	for name, read := range reads {
+		for kind, in := range map[string][]byte{"truncated": {0x80}, "empty": nil, "overlong": over} {
+			c := &cursor{b: in}
+			read(c)
+			if c.err == nil {
+				t.Errorf("%s %s: no error", name, kind)
+			}
+		}
+	}
+	c := &cursor{}
+	if c.byte() != 0 || c.err == nil {
+		t.Error("byte on empty input")
+	}
+	c = &cursor{b: []byte{1}}
+	if c.take(2) != nil || c.err == nil {
+		t.Error("take past end")
+	}
+}

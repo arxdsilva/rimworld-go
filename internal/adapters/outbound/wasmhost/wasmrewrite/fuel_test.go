@@ -480,3 +480,37 @@ func TestFuelPrepareMetersThePipeline(t *testing.T) {
 		}
 	}
 }
+
+// Meter is safe on input that skipped Check: each out-of-range index or
+// undecodable body is an error naming the function, never a panic.
+func TestMeterErrorsOnUncheckedInput(t *testing.T) {
+	cases := []struct {
+		name string
+		edit func(m *wasmrewrite.Module)
+		want string
+	}{
+		{"function type", func(m *wasmrewrite.Module) { m.Funcs[0] = 99 }, "type index out of range"},
+		{"undecodable body", func(m *wasmrewrite.Module) { m.Bodies[0].Code = []byte{0xFF, OpEnd} }, "unknown opcode"},
+		{"call target", func(m *wasmrewrite.Module) { m.Bodies[0].Code = []byte{OpCall, 99, OpEnd} }, "function 99 out of range"},
+		{"call_indirect type", func(m *wasmrewrite.Module) {
+			m.Bodies[0].Code = []byte{OpI32Const, 0, OpCallIndirect, 99, 0, OpEnd}
+		}, "type 99 out of range"},
+		{"blocktype", func(m *wasmrewrite.Module) { m.Bodies[0].Code = []byte{OpBlock, 0xE3, 0x00, OpEnd, OpEnd} }, "type 99 out of range"},
+	}
+	for _, c := range cases {
+		var b Builder
+		b.Func(nil, nil, nil, OpEnd)
+		m, err := wasmrewrite.Decode(b.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := wasmrewrite.Reserve(m, testConfig()); err != nil {
+			t.Fatal(err)
+		}
+		c.edit(m)
+		err = wasmrewrite.Meter(m, testConfig())
+		if err == nil || !strings.Contains(err.Error(), "meter: function 0: ") || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: err %v, want %q for function 0", c.name, err, c.want)
+		}
+	}
+}
