@@ -22,14 +22,24 @@ type call struct {
 	w    scripting.World
 	rng  randx.Keyed
 	cmds []command.Command
+	pr   scripting.PawnReader
+	all  starlark.Tuple // ctx.pawns(), built on first use
+	what string         // names the command budget in an overrun
 }
 
 // newCall keys the call's rand stream on (seed, tick, plugin and file,
 // hook, the event's own argument): the same call draws the same numbers,
 // whatever ran before it.
-func newCall(m *module, ev scripting.Event, w scripting.World) *call {
-	sub := key(ev.Incident.Key + "\x00" + ev.Name)
-	return &call{ev: ev, w: w, rng: randx.NewKeyed(ev.Seed, ev.Tick, key(m.plugin+"\x00"+m.path), uint64(ev.Hook), sub)}
+func newCall(m *module, ev scripting.Event, w scripting.World, pr scripting.PawnReader) *call {
+	c := &call{ev: ev, w: w, pr: pr, what: "one call"}
+	c.rekey(m, key(ev.Incident.Key+"\x00"+ev.Name))
+	return c
+}
+
+// rekey restarts the rand stream under sub. on_pawn keys it by the pawn's
+// id, so each pawn draws its own numbers.
+func (c *call) rekey(m *module, sub uint64) {
+	c.rng = randx.NewKeyed(c.ev.Seed, c.ev.Tick, key(m.plugin+"\x00"+m.path), uint64(c.ev.Hook), sub)
 }
 
 // args are the hook's arguments: ctx, then the incident or the name.
@@ -43,6 +53,8 @@ func (c *call) args(ev scripting.Event) starlark.Tuple {
 		return starlark.Tuple{ctx, inc}
 	case scripting.OnColonistDied:
 		return starlark.Tuple{ctx, starlark.String(ev.Name)}
+	case scripting.OnPawns:
+		return starlark.Tuple{ctx, pawnTuple(ev.Pawns)}
 	}
 	return starlark.Tuple{ctx}
 }
@@ -58,7 +70,7 @@ func (v *ctxValue) Freeze()               {}
 func (v *ctxValue) Truth() starlark.Bool  { return starlark.True }
 func (v *ctxValue) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable: ctx") }
 
-var ctxAttrs = []string{"colonists", "count", "day", "hour", "letter", "message", "rand", "season", "spawn", "tick", "wealth"}
+var ctxAttrs = []string{"colonists", "count", "day", "hour", "letter", "message", "pawn", "pawns", "rand", "season", "spawn", "tick", "wealth"}
 
 func (v *ctxValue) AttrNames() []string { return append([]string(nil), ctxAttrs...) }
 
@@ -87,6 +99,10 @@ func (v *ctxValue) Attr(name string) (starlark.Value, error) {
 		return starlark.NewBuiltin("letter", c.letter), nil
 	case "spawn":
 		return starlark.NewBuiltin("spawn", c.spawn), nil
+	case "pawns":
+		return starlark.NewBuiltin("pawns", c.pawns), nil
+	case "pawn":
+		return starlark.NewBuiltin("pawn", c.pawn), nil
 	}
 	return nil, nil // no such attribute
 }
@@ -160,7 +176,7 @@ func (c *call) spawn(_ *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 // queue adds a command within the call's budget.
 func (c *call) queue(cmd command.Command) error {
 	if len(c.cmds) >= scripting.MaxCommands {
-		return fmt.Errorf("more than %d commands in one call", scripting.MaxCommands)
+		return fmt.Errorf("more than %d commands in %s", scripting.MaxCommands, c.what)
 	}
 	c.cmds = append(c.cmds, cmd)
 	return nil

@@ -96,21 +96,34 @@ func (h *Host) Problems() []scripting.Problem {
 }
 
 // Fire runs every live module's hook for ev. The first call also returns
-// the files that failed their first run, so the game reports them.
-// The colonist reads (p) are not wired yet (PLG-060 wave 0 stub).
-func (h *Host) Fire(ev scripting.Event, w scripting.World, _ scripting.PawnReader) scripting.Result {
+// the files that failed their first run, so the game reports them. p
+// answers ctx.pawns() and ctx.pawn(id) during this call only; it may be
+// nil.
+//
+// on_pawn runs on one thread per file per tick, so the step limit and the
+// command budget are shared by all the pawns of the tick.
+func (h *Host) Fire(ev scripting.Event, w scripting.World, p scripting.PawnReader) scripting.Result {
 	var res scripting.Result
 	res.Disabled, h.unsent = h.unsent, nil
+	if len(ev.Pawns) == 0 && (ev.Hook == scripting.OnPawns || ev.Hook == scripting.OnPawn) {
+		return res // nobody is due: no call
+	}
 	name := ev.Hook.String()
 	for _, m := range h.mods {
 		fn, ok := m.globals[name].(starlark.Callable)
 		if m.off || !ok {
 			continue
 		}
-		c := newCall(m, ev, w)
+		c := newCall(m, ev, w, p)
 		th := &starlark.Thread{Name: m.plugin + "/" + m.path, Print: func(*starlark.Thread, string) {}}
 		th.SetMaxExecutionSteps(h.stepCap)
-		_, err := starlark.Call(th, fn, c.args(ev), nil)
+		var err error
+		if ev.Hook == scripting.OnPawn {
+			c.what = "on_pawn's per-tick budget"
+			err = c.eachPawn(th, m, fn)
+		} else {
+			_, err = starlark.Call(th, fn, c.args(ev), nil)
+		}
 		if err != nil {
 			res.Disabled = append(res.Disabled, h.disable(m, err))
 			continue
@@ -120,9 +133,32 @@ func (h *Host) Fire(ev scripting.Event, w scripting.World, _ scripting.PawnReade
 	return res
 }
 
-// Uses reports that a live module defines hook h. Wave 0 stub (PLG-060):
-// always false, so the cadence hooks never fire yet.
-func (h *Host) Uses(scripting.Hook) bool { return false }
+// eachPawn calls fn(ctx, pawn) for every due colonist on th, so the steps
+// and the commands add up; the first error stops the calls.
+func (c *call) eachPawn(th *starlark.Thread, m *module, fn starlark.Callable) error {
+	ctx := &ctxValue{c: c}
+	for _, p := range c.ev.Pawns {
+		c.rekey(m, key(fmt.Sprint(p.ID)))
+		if _, err := starlark.Call(th, fn, starlark.Tuple{ctx, pawnValue{p}}, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Uses reports that a live module defines hook h.
+func (h *Host) Uses(hook scripting.Hook) bool {
+	name := hook.String()
+	for _, m := range h.mods {
+		if m.off {
+			continue
+		}
+		if _, ok := m.globals[name].(starlark.Callable); ok {
+			return true
+		}
+	}
+	return false
+}
 
 // disable turns m off with err as its problem.
 func (h *Host) disable(m *module, err error) scripting.Problem {
