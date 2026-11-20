@@ -64,3 +64,16 @@ func TestScriptOptionsMatchTheHost(t *testing.T) {
 		t.Fatalf("contentlint compiles scripts with %+v, the game with %+v", scriptOptions(), starlarkhost.Options())
 	}
 }
+
+func TestScriptPawnHooksLintClean(t *testing.T) {
+	t.Parallel()
+	src := "def on_pawns(ctx, pawns):\n    ctx.message(str(len(pawns)))\n\n" +
+		"def on_pawn(ctx, pawn):\n    first = ctx.pawns()\n    other = ctx.pawn(1)\n    if other != None and len(first) > 0:\n        ctx.message(pawn.name)\n"
+	var out, errOut bytes.Buffer
+	code := Main([]string{"-q", "-game", "0.1.0"}, &out, &errOut, scripted(
+		modding.Blob{Path: "scripts/pawns.star", Data: []byte(src)},
+	), nil, "dev")
+	if code != 0 || strings.Contains(out.String(), ".star") {
+		t.Fatalf("exit %d, want 0 and no problems:\n%s%s", code, out.String(), errOut.String())
+	}
+}

@@ -21,3 +21,11 @@ def on_incident(ctx, incident):
     # A short, calm note after a threat; nature events pass in silence.
     if incident.category == "threat":
         ctx.message("The frontier is never quiet for long. Stay close to the walls (%d colonists hold the line)." % ctx.colonists)
+
+def on_pawn(ctx, pawn):
+    # A calm nudge for a hungry colonist. on_pawn visits each colonist once
+    # per 60 ticks, so only the visit inside the first 60 ticks of hour 12
+    # speaks: at most once per colonist per day. It queues one message and
+    # changes nothing in the colony.
+    if ctx.hour == 12 and ctx.tick % 2500 < 60 and pawn.food < 20 and not pawn.downed:
+        ctx.message("%s looks hungry; noon is a good time for a meal." % pawn.name)
