@@ -167,3 +167,12 @@ Flaky-test audit of every package; root-cause fixes; the scale golden runs under
 - Not a flake: release run 42669968005 (v0.1.34) failed with its test job green and no build job; the 15 historical 10-minute timeouts ended 2026-11-08 (CI-005).
 - Limits: min-of-single-calls hides an intermittent (not per-call) allocation, as the old truncated average did; the globe fix rests on reasoning (never reproduced). `TestDayTickUnderBudget` is wall-clock and opt-in (`RIMWORLD_TIMING=1`).
 - Open: the first linux run of the `golden` job is the check that the pins hold on linux/amd64 (amd64 under Rosetta agrees).
+
+## DOCS-004-spec-backlog-issues
+Every item left in the specs filed as GitHub issues by priority; v0.1.41 tagged · 2026-11-20 · 5a8f2640f
+- Changed: nothing in the tree. 1254 items parsed (two backlog checklists, screens and art specs: `[ ]`/`[-]`/`[!]` boxes; gap-table rows open, partial, blocked or deferred), each checked against the code by 10 read-only agents (loops run `20261121-0243-spec-backlog-to-github-issues-by-priorit`: `manifest.jsonl`, `verify/`, `tools/issues.py`).
+- Filed: 258 issues, #7-#264, one per section with a task list (user's choice), labels `priority: P0`..`P3` and `spec-backlog`; #7 is the PLG-063 Wasm wiring (the only P1), then 68 P2 and 189 P3, no P0. Each body holds a hidden `spec-backlog-key`, so `tools/issues.py create` skips what exists.
+- Not filed: 427 items already done in code, duplicates, the Definition-of-Done and asset-acceptance checklists (standing review rules), RHUD-479 (excluded by design). Milestone roll-up boxes and the phases 1-17 gate are P3; they close with their chapters.
+- Release: v0.1.41 (lightweight, like earlier tags) on 5a8f2640f after test run 44857437062 passed.
+- HUD: none; no in-game behaviour changed.
+- Open: tick the 427 stale boxes (the run's `verify/*.jsonl` lists each `done` item with evidence; some rest on file existence only); 62 `unclear` items are filed with "check first".
