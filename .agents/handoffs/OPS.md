@@ -175,4 +175,5 @@ Every item left in the specs filed as GitHub issues by priority; v0.1.41 tagged 
 - Not filed: 427 items already done in code, duplicates, the Definition-of-Done and asset-acceptance checklists (standing review rules), RHUD-479 (excluded by design). Milestone roll-up boxes and the phases 1-17 gate are P3; they close with their chapters.
 - Release: v0.1.41 (lightweight, like earlier tags) on 5a8f2640f after test run 44857437062 passed.
 - HUD: none; no in-game behaviour changed.
+- Boxes: none: this task filed issues only; the stale boxes it found are ticked by DOCS-005.
 - Open: tick the 427 stale boxes (the run's `verify/*.jsonl` lists each `done` item with evidence; some rest on file existence only); 62 `unclear` items are filed with "check first".

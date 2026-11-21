@@ -234,8 +234,27 @@ func readAgentsBudget(t *testing.T, path string) int {
 	return 0
 }
 
+// boxesSince is the first ledger date whose sections must say which
+// checklist, spec and gap items they ticked (`- Boxes:`).
+const boxesSince = "2026-11-20"
+
+// hasBoxes reports whether the section starting at lines (up to the next
+// `## ` heading) has its `- Boxes:` bullet.
+func hasBoxes(lines []string) bool {
+	for _, l := range lines {
+		if strings.HasPrefix(l, "## ") {
+			return false
+		}
+		if strings.HasPrefix(l, "- Boxes:") {
+			return true
+		}
+	}
+	return false
+}
+
 // Every ledger section has its title line, appears once across all ledgers
-// and has a row in INDEX.md; every INDEX row names a real section.
+// and has a row in INDEX.md; every INDEX row names a real section. Sections
+// dated boxesSince or later also have their `- Boxes:` line.
 func TestLedgersAndIndex(t *testing.T) {
 	t.Parallel()
 	root := moduleRoot(t)
@@ -274,6 +293,10 @@ func TestLedgersAndIndex(t *testing.T) {
 			where[h] = name
 			if i+1 >= len(lines) || !ledgerTitle.MatchString(lines[i+1]) {
 				t.Errorf("%s: section %s needs the line `<Title> · <YYYY-MM-DD> · <commit>` under its heading (.agents/templates/HANDOFF.md)", name, h)
+				continue
+			}
+			if d := ledgerTitle.FindString(lines[i+1]); d[3:13] >= boxesSince && !hasBoxes(lines[i+2:]) {
+				t.Errorf("%s: section %s needs a `- Boxes:` line naming the checklist, spec and gap items it ticked, or `none: <why>` (.agents/templates/HANDOFF.md)", name, h)
 			}
 		}
 	}

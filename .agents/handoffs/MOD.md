@@ -190,6 +190,7 @@ Scripting port: batched colonist reads, 60-tick cadence hooks, Starlark vs gophe
 - Limits: `game` lines 52628 → 52769 (user rule: raises OK while perf holds); no new `game` file, `Game` field or method.
 - HUD: none new. The hooks act only through the existing message, letter and spawn commands, which already show; a turned-off script still lands in Problems.
 - Saves: schema unchanged (the index is not saved). Determinism: `TestPawnScriptsSaveLoadSameVisits`, `TestPawnHooksDeterministic`.
+- Boxes: feature checklist 38.3 **Choose scripting runtime** `[x]`, **Read-only world query API** and **Event subscription** `[-]`; MODDING gap row PLG-060 `[-]`. No `spec-backlog` issues existed yet.
 - Open: per-mod script cost in developer diagnostics (§49); a memory budget per script; reads beyond colonists (animals, visitors); the turned-off set is still not saved.
 
 ## PLG-7-wasm-second-runtime-candidate
@@ -197,6 +198,7 @@ Second scripting runtime: WebAssembly on wazero named as the candidate · 2026-1
 - Changed: docs only. `MASTER_SPEC` §49 names Wasm on wazero as the second-runtime candidate for mods that keep their own state and touch many entities; Starlark stays the default. New gap PLG-063 and backlog item 38.3 "Second runtime spike" hold the six spike criteria.
 - Decisions (user 2026-11-20): from a contributor benchmark (100 pawns, hourly work review: Rust/TinyGo Wasm with fuel ~1.1-1.2x native Go per pawn decision, Luau 1.2-1.9x, Starlark ~7x, 11.3 vs 1.66 µs). Wasm on wazero meets the §49 criteria on paper (pure Go, deterministic fuel, memory cap from max pages, one instance per mod). gopher-lua (no deterministic budget, slower than Starlark in `scriptbench`) and CGo Luau are dropped as candidates.
 - Spike gate: host-inserted fuel; same state hash on amd64 and arm64; per-mod fuel and memory; versioned size-capped save hook (PLG-051); same port with batched data; harness in `scriptbench`.
+- Boxes: none ticked; added the MODDING gap row PLG-063 and the feature checklist 38.3 spike item, both open.
 - Open: PLG-063 spike; ask the contributor what the projectile column (~96 ms for every runtime) measures and which tool inserted fuel.
 
 ## PLG-8-wasm-wazero-spike
@@ -208,4 +210,5 @@ WebAssembly on wazero spike: second scripting runtime behind the same port, not 
 - Limits: no SOLID budget change; new packages well under the limits.
 - HUD: none. The spike is not wired, so no player can load a Wasm mod yet.
 - Saves: none (the blob format is adapter-local; the save file is PLG-051's).
+- Boxes: feature checklist 38.3 **Second runtime spike: WebAssembly on wazero** `[x]`; MODDING gap row PLG-063 `[-]` (spike done, wiring open, now issue #7).
 - Open: wiring (manifest field, mod loader, save-file blob, per-mod cost in diagnostics) as a follow-up to PLG-063; report the wazero `NewRuntime` race and the validator panic upstream; rebuild fixtures with a current Rust when available; the contributor's harness.
