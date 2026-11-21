@@ -4,19 +4,43 @@
 // Package wasmhost runs plugins' WebAssembly modules on wazero behind
 // application/scripting.Host, beside starlarkhost (PLG-063).
 //
-// Spike: not wired. No composition root, game or binary builds a Host;
-// only tests do. The scripting port is unchanged; per-file stats, save and
-// load, and Close live on the concrete Host.
+// The scripting port is unchanged; per-file stats, save and load, Reset,
+// the per-plugin views and Close live on the concrete Host, which the
+// composition root wires.
 //
 // # Loading
 //
 // New compiles every plugin's files in load order. For each file the host
 // compiles the original bytes with wazero (validity), runs
-// wasmrewrite.Prepare (Decode, Check, Reserve, CanonicaliseNaN, Meter,
-// Encode), compiles the output and instantiates it with no start
-// functions. A file that fails any step is a Problem and never enters the
-// host's module list; a failure on the rewritten output is an internal
-// error, but the file still only turns off.
+// wasmrewrite.Prepare (Decode, Check, Reserve, the saved-global exports,
+// CanonicaliseNaN, Meter, Encode), compiles the output and instantiates it
+// with no start functions. A file that fails any step is a Problem and
+// never enters the host's module list; a failure on the rewritten output is
+// an internal error, but the file still only turns off. The rewritten
+// CompiledModule is kept: Reset and the save copy instantiate it again and
+// never compile.
+//
+// # Games (Reset)
+//
+// Reset starts a new game. Every file's instance is closed and a fresh one
+// is made from the kept CompiledModule under the same wazero name: initial
+// memory and globals, on again, Fuel and Calls 0. The load-time Problems
+// stay; the previous game's are dropped. A load failure is sent in one
+// Result per host: still queued if no Result carried it yet, never again
+// after one did. A file whose instance cannot be made again turns off with
+// an "instantiate: ..." Problem, sent in the next Result. A loaded game is
+// Reset, then Load per file.
+//
+// # Views (Plugin)
+//
+// Plugin(id) is a scripting.Host over that plugin's files only (they are
+// contiguous in load order), so the composition root can interleave Wasm
+// and Starlark per plugin: its Fire is Fire over the files, its Uses
+// covers them without allocating, and the host's unsent load failures go
+// out in the first Result of any view or of the host. An unknown id has no
+// files. Views stay valid across Reset. StatsInto copies the counters into
+// the caller's buffer without allocating; Stat.State marks the files with
+// save and load.
 //
 // # Engine
 //
@@ -55,7 +79,13 @@
 //   - Memory: at most one, not shared, not memory64.
 //   - No start section.
 //   - No original export name starts with "__rimworld". The rewriter adds
-//     "__rimworld_fuel" and "__rimworld_depth" (i64 mutable globals).
+//     "__rimworld_fuel" and "__rimworld_depth" (i64 mutable globals), and
+//     exports every defined mutable numeric global (i32, i64, f32, f64) as
+//     "__rimworld_g<index>" (wasmrewrite.SavedGlobals, GlobalName); no
+//     index moves. The save copy reads and writes them.
+//   - No mutable reference (funcref, externref) global ("mutable
+//     reference global"): its value points into its own instance, so the
+//     save copy could not carry it.
 //   - Every type (function and block types alike) has at most MaxArity
 //     params and MaxArity results ("arity over 64").
 //   - A body has at most MaxLocals locals and MaxBody bytes.
@@ -173,7 +203,8 @@
 //
 // During save, load and the load-time calls there is no event and no
 // world: message, letter and spawn fail the call with "<name>: not available
-// outside a hook" (a Problem; the file turns off), as do the world reads.
+// outside a hook", as do the world reads (in load, a Problem that turns the
+// file off; in save, the caller's error).
 //
 // # Save blob
 //
@@ -182,6 +213,24 @@
 // len <= MaxState and len <= rw_buf_size. Load rejects a bad magic, ABI,
 // version (it must equal state_version()) or size before it calls the
 // guest; a non-zero return from load is an error.
+//
+// Save never changes the run, so an autosave cannot change a game. save
+// runs on a save copy: an anonymous instance of the kept CompiledModule,
+// its memory grown to the live page count and filled with
+// the live bytes, every "__rimworld_g" global set to the live value, the
+// live buffer and version, and its own Options.Fuel budget. The copy is
+// closed after the blob is read. A trap, out of fuel, oversize or
+// outside-memory result is Save's error only: the live file stays on with
+// its memory, globals, Stats and Problems, and the caller (compose)
+// reports the Problem. A trapping load still turns the file off.
+//
+// The copy carries memory and every mutable global (all are numeric:
+// Check rejects a mutable reference global). Tables cannot change at run
+// time (table.set, table.grow and table.init are rejected). One caveat of
+// ABI v1: save must not depend on data.drop state. The copy starts with
+// every passive data segment undropped, so a save that runs memory.init on
+// a segment the live instance dropped succeeds on the copy where it would
+// trap live.
 //
 // # Rand key
 //

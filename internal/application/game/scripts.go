@@ -10,6 +10,7 @@ import (
 
 	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/idindex"
+	"rimworld-go/internal/application/game/modstate"
 	"rimworld-go/internal/application/scripting"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/incident"
@@ -22,18 +23,35 @@ import (
 
 // scriptRun is the game's side of the plugins' scripts (PLG-060,
 // application/scripting): the host the run's plugins run in (nil: none),
-// the run's item keys and the cadence hooks' colonist index. Nothing here
-// is saved: scripts keep no state, and the index rebuilds on first use.
+// the run's item keys, the cadence hooks' colonist index and the Wasm mods'
+// state (PLG-063): its source for a real save, and the loaded save's until
+// compose takes it. Starlark keeps no state; the index rebuilds on use.
 type scriptRun struct {
-	host  scripting.Host
-	kinds map[string]item.Kind // item key -> kind, built on first use
-	pawns idindex.Buckets      // home colonists by cadence bucket (pawnIndex)
+	host   scripting.Host
+	kinds  map[string]item.Kind // item key -> kind, built on first use
+	pawns  idindex.Buckets      // home colonists by cadence bucket (pawnIndex)
+	state  modstate.Source      // nil: no Wasm mod state to save
+	loaded []modstate.Blob      // the loaded save's kept blobs, until taken
+	notes  []modstate.Note      // what checking them dropped, until taken
 }
 
 // UseScripts sets the scripts g runs (nil: none). The composition root
 // sets it on a loaded save; a new game takes Config.Scripts. A function,
 // not a method: Game is over its method budget.
 func UseScripts(g *Game, h scripting.Host) { g.scripts.host = h }
+
+// UseModState sets where a real save reads the Wasm mods' state (nil:
+// none). StateHash never asks it.
+func UseModState(g *Game, s modstate.Source) { g.scripts.state = s }
+
+// TakeLoadedModState hands over the mod state the loaded save held and the
+// notes checking it, and every save since, left; once: a second call gives
+// nothing, so a blob the mods dropped is never written again.
+func TakeLoadedModState(g *Game) ([]modstate.Blob, []modstate.Note) {
+	bs, ns := g.scripts.loaded, g.scripts.notes
+	g.scripts.loaded, g.scripts.notes = nil, nil
+	return bs, ns
+}
 
 // scriptsOn gates the scripts' clock system (phases.go).
 func scriptsOn(g *Game) bool { return g.scripts.host != nil }

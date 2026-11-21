@@ -42,16 +42,31 @@ func (h *Host) stateModule(plugin, path string) (*module, error) {
 
 // Save returns the save blob of the plugin's file at path:
 // "RWMS" | u32 ABIVersion | u32 state_version | u32 len | data.
-// A trap turns the file off and is the error.
+// save runs on a throwaway copy of the live instance (saveCopy) with its
+// own fuel budget, so saving never changes the run: the live memory,
+// globals, counters, off-state and Problems stay as they were. Any failure
+// (trap, out of fuel, oversize, outside memory) is the error only; the
+// caller reports it.
 func (h *Host) Save(plugin, path string) ([]byte, error) {
 	m, err := h.stateModule(plugin, path)
 	if err != nil {
 		return nil, err
 	}
-	r, msg := h.once(m, "save", m.save)
-	if msg != "" {
-		return nil, h.stateFailed(m, msg)
+	c, err := h.saveCopy(m)
+	if err != nil {
+		return nil, err
 	}
+	defer func() { _ = c.inst.Close(h.ctx) }()
+	r, msg := h.once(c, "save", c.save)
+	if msg != "" {
+		return nil, errors.New("wasmhost: " + msg)
+	}
+	return c.blob(r)
+}
+
+// blob reads the n = r[0] bytes save left in m's buffer and returns them
+// under the blob header.
+func (m *module) blob(r []uint64) ([]byte, error) {
 	n := uint32(api.DecodeI32(r[0]))
 	if n > MaxState || n > m.bufSize {
 		return nil, fmt.Errorf("wasmhost: save returned %d bytes (limit %d, buffer %d)", int32(n), MaxState, m.bufSize)
@@ -115,8 +130,8 @@ func (m *module) checkBlob(blob []byte) ([]byte, error) {
 	return blob[blobHeader:], nil
 }
 
-// stateFailed turns m off; the problem also goes to the next Fire's
-// Disabled, and the error is returned to the caller.
+// stateFailed turns m off after a failed load; the problem also goes to
+// the next Fire's Disabled, and the error is returned to the caller.
 func (h *Host) stateFailed(m *module, msg string) error {
 	h.unsent = append(h.unsent, h.disable(m, msg))
 	return errors.New("wasmhost: " + msg)

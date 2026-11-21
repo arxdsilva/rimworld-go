@@ -5,6 +5,7 @@ package plugins
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -133,7 +134,11 @@ func (s *Screen) declareList(sw, sh int) {
 		s.drawRow(dst, v, i, row, hover, selected, on)
 	}})
 	detail := gfx.Rect{X: list.Right() + gap, Y: body.Y, W: body.Right() - list.Right() - gap, H: body.H}
-	s.declareDetail(v, v.Rows[s.sel], detail, on)
+	var stats []ModStat
+	if v.Stats != nil {
+		stats = v.Stats() // once per frame (PLG-063)
+	}
+	s.declareDetail(v, v.Rows[s.sel], detail, on, stats)
 }
 
 // declareChecks declares the checkbox of every list row fully in view,
@@ -245,7 +250,7 @@ func (s *Screen) listOr(list []string) string {
 
 // detailLines are the selected plugin's facts: what it is, what it needs,
 // where it loads and why (§46), and its problems.
-func (s *Screen) detailLines(v View, r Row, on map[string]bool) []line {
+func (s *Screen) detailLines(v View, r Row, on map[string]bool, stats []ModStat) []line {
 	dim := gfx.WithColor(gfx.Body, uikit.TextDim)
 	out := []line{{text: r.Name, st: gfx.WithColor(gfx.Large, uikit.Heading)}}
 	out = append(out, line{text: s.sh.Tf("%s · version %s · by %s", r.ID, r.Version, s.listOr(r.Authors)), st: dim})
@@ -269,6 +274,13 @@ func (s *Screen) detailLines(v View, r Row, on map[string]bool) []line {
 		out = append(out, line{text: s.sh.T("Not in this run's load order."), st: dim})
 	}
 	out = append(out, line{text: s.sh.Tf("State: %s", state), st: gfx.WithColor(gfx.Body, st.Color)})
+	if r.Loaded {
+		for _, m := range stats {
+			if m.Plugin == r.ID {
+				out = append(out, s.statLine(m, dim))
+			}
+		}
+	}
 	for _, p := range v.Problems {
 		if p.Plugin != r.ID {
 			continue
@@ -276,6 +288,28 @@ func (s *Screen) detailLines(v View, r Row, on map[string]bool) []line {
 		out = append(out, problemLine(s.sh, p))
 	}
 	return out
+}
+
+// statLine is one Wasm file's counters (PLG-063): fuel, calls and memory
+// (64 KiB pages as MiB); dim when the file was turned off.
+func (s *Screen) statLine(m ModStat, dim gfx.TextStyle) line {
+	mem := s.sh.Tf("%.1f MiB", float64(m.Pages)/16)
+	text := s.sh.Tf("%s: fuel %s, %d calls, memory %s", m.File, groupDigits(m.Fuel), m.Calls, mem)
+	st := gfx.Body
+	if m.Off {
+		text += s.sh.T(", off")
+		st = dim
+	}
+	return line{text: text, st: st}
+}
+
+// groupDigits is n with a comma between thousands.
+func groupDigits(n uint64) string {
+	d := strconv.FormatUint(n, 10)
+	for i := len(d) - 3; i > 0; i -= 3 {
+		d = d[:i] + "," + d[i:]
+	}
+	return d
 }
 
 // line is one line of wrapped text in a style.
@@ -299,11 +333,11 @@ func problemLine(sh Shell, p Problem) line {
 
 // declareDetail paints the selected plugin's detail, wrapped, cut at the
 // panel's foot.
-func (s *Screen) declareDetail(v View, r Row, box gfx.Rect, on map[string]bool) {
+func (s *Screen) declareDetail(v View, r Row, box gfx.Rect, on map[string]bool, stats []ModStat) {
 	if r.Name == "" {
 		r.Name = r.ID
 	}
-	lines := s.detailLines(v, r, on)
+	lines := s.detailLines(v, r, on, stats)
 	k := s.sh.Kit()
 	k.Panel(box)
 	paintLines(k, box, lines)

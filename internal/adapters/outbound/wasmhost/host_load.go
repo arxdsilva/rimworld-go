@@ -41,17 +41,14 @@ func (h *Host) compile(wasm []byte) (cm wazero.CompiledModule, err error) {
 			cm, err = nil, fmt.Errorf("wazero panicked while compiling: %v", r)
 		}
 	}()
+	h.compiles++
 	return h.rt.CompileModule(h.ctx, wasm)
 }
 
 // memoryOver is the rejection of a declared memory whose min or max is over
 // Options.MaxPages ("" when fine). A memory with no declared max stays
 // allowed: the runtime's limit caps it.
-func (h *Host) memoryOver(wasm []byte) string {
-	m, err := wasmrewrite.Decode(wasm)
-	if err != nil {
-		return "" // Prepare already accepted these bytes
-	}
+func (h *Host) memoryOver(m *wasmrewrite.Module) string {
 	limit := uint64(h.opts.MaxPages)
 	for _, l := range m.Memories {
 		if l.Min > limit || (l.HasMax && l.Max > limit) {
@@ -64,9 +61,20 @@ func (h *Host) memoryOver(wasm []byte) string {
 	return ""
 }
 
+// savedGlobalNames are the export names Prepare gave orig's saved globals.
+func savedGlobalNames(orig *wasmrewrite.Module) []string {
+	idx := wasmrewrite.SavedGlobals(orig)
+	names := make([]string, len(idx))
+	for i, g := range idx {
+		names[i] = wasmrewrite.GlobalName(g)
+	}
+	return names
+}
+
 // loadFile turns f into a live module, or returns the problem's message.
 // Prepare runs first so Check's typed rejection names a rule; the original
-// is still compiled by wazero (validity) before the output is trusted.
+// is still compiled by wazero (validity) before the output is trusted. The
+// rewritten CompiledModule stays on the module for Reset and the save copy.
 func (h *Host) loadFile(plugin string, f File) (*module, string) {
 	if len(f.Wasm) > MaxWasmBytes {
 		return nil, fmt.Sprintf("rejected: module is %d bytes, at most %d", len(f.Wasm), MaxWasmBytes)
@@ -75,7 +83,11 @@ func (h *Host) loadFile(plugin string, f File) (*module, string) {
 	if err != nil {
 		return nil, "rejected: " + firstLine(err)
 	}
-	if msg := h.memoryOver(f.Wasm); msg != "" {
+	dec, err := wasmrewrite.Decode(f.Wasm) // Prepare already decoded these bytes
+	if err != nil {
+		return nil, "rejected: " + firstLine(err)
+	}
+	if msg := h.memoryOver(dec); msg != "" {
 		return nil, msg
 	}
 	orig, err := h.compile(f.Wasm)
@@ -88,18 +100,44 @@ func (h *Host) loadFile(plugin string, f File) (*module, string) {
 		return nil, "internal: rewritten module does not compile: " + firstLine(err)
 	}
 	h.nameSeq++
-	cfg := wazero.NewModuleConfig().WithName(fmt.Sprintf("m%d", h.nameSeq)).WithStartFunctions()
-	inst, err := h.rt.InstantiateModule(h.ctx, cm, cfg)
-	if err != nil {
-		return nil, "instantiate: " + firstLine(err)
-	}
-	m := &module{plugin: plugin, path: f.Path, key: fnv64a(plugin + "\x00" + f.Path), inst: inst}
-	if msg := h.bind(m); msg != "" {
-		_ = inst.Close(h.ctx)
+	m := &module{plugin: plugin, path: f.Path, key: fnv64a(plugin + "\x00" + f.Path),
+		cm: cm, name: fmt.Sprintf("m%d", h.nameSeq), gnames: savedGlobalNames(dec)}
+	if msg := h.instantiate(m); msg != "" {
+		_ = cm.Close(h.ctx)
 		return nil, msg
 	}
-	m.calls, m.spent = 0, 0 // the load-time calls are not the hooks' counters
 	return m, ""
+}
+
+// instantiate makes m's live instance from m.cm under m.name and binds it.
+// On failure m has no instance. The load-time calls are not the hooks'
+// counters, so calls and spent restart at 0.
+func (h *Host) instantiate(m *module) string {
+	cfg := wazero.NewModuleConfig().WithName(m.name).WithStartFunctions()
+	inst, err := h.rt.InstantiateModule(h.ctx, m.cm, cfg)
+	if err != nil {
+		return "instantiate: " + firstLine(err)
+	}
+	m.inst = inst
+	if msg := h.bind(m); msg != "" {
+		_ = inst.Close(h.ctx)
+		m.inst, m.mem = nil, nil
+		return msg
+	}
+	m.calls, m.spent = 0, 0
+	return ""
+}
+
+// savedGlobals appends inst's saved globals, by names, to dst.
+func savedGlobals(inst api.Module, names []string, dst []api.MutableGlobal) ([]api.MutableGlobal, bool) {
+	for _, n := range names {
+		g, ok := inst.ExportedGlobal(n).(api.MutableGlobal)
+		if !ok {
+			return dst, false
+		}
+		dst = append(dst, g)
+	}
+	return dst, true
 }
 
 var i32 = []api.ValueType{api.ValueTypeI32}
@@ -132,6 +170,9 @@ func (h *Host) bind(m *module) string {
 	}
 	if m.depth, ok = m.inst.ExportedGlobal(depthExport).(api.MutableGlobal); !ok {
 		return "internal: no depth global"
+	}
+	if m.globals, ok = savedGlobals(m.inst, m.gnames, m.globals[:0]); !ok {
+		return "internal: a saved global is not exported"
 	}
 	for _, name := range []string{"rw_buf", "rw_buf_size"} {
 		if d, has := defs[name]; !has || !sigEq(d, nil, i32) {

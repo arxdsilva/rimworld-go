@@ -20,6 +20,7 @@ import (
 	"rimworld-go/internal/application/game/industry"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/mind"
+	"rimworld-go/internal/application/game/modstate"
 	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/application/game/outfit"
 	"rimworld-go/internal/application/game/postpone"
@@ -113,11 +114,12 @@ import (
 // (savefmt.Info); an older header gets one from its name on reading. v17
 // (EAI-0) adds each map's wealth tracker (game/wealth) and the factions'
 // wars (Faction.Enemies): an older save's first map is counted once, and
-// no faction is at war with another yet.
+// no faction is at war with another yet. v18 (PLG-063) adds the Wasm
+// mods' state (ModState, PLG-051): older saves have none; mods start fresh.
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 17
+const SaveVersion = 18
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -429,6 +431,9 @@ type saveState struct {
 	// order, and View the map viewed; nil and 0 with one map.
 	ExtraMaps []mapSave
 	View      uint32
+	// ModState (v18, PLG-063): the Wasm mods' state, one checked blob per
+	// file; nil without one, first map only, never in StateHash.
+	ModState []modstate.Blob
 }
 
 // mapSave is one extra map: only State's map fields are written
@@ -507,6 +512,11 @@ func EncodeSave(g *Game, w io.Writer, name string) error {
 // EncodeSaveAs is EncodeSave with the client's stamp in the header: the
 // slot, the colony and the build (SAV-003).
 func EncodeSaveAs(g *Game, w io.Writer, stamp savefmt.Stamp) error {
+	return encodeSave(g, w, stamp, g.scripts.state)
+}
+
+// encodeSave is EncodeSaveAs with src's mod state (StateHash: nil, no mod code).
+func encodeSave(g *Game, w io.Writer, stamp savefmt.Stamp, src modstate.Source) error {
 	cur := g.mapState
 	defer func() { g.mapState = cur }()
 	g.mapState = g.maps[0]
@@ -586,6 +596,11 @@ func EncodeSaveAs(g *Game, w io.Writer, stamp savefmt.Stamp) error {
 	g.mapState = g.maps[0] // Info describes the first map
 	if g.view != nil {
 		s.View = g.view.id
+	}
+	if src != nil { // what the save drops waits for TakeLoadedModState (not saved, not hashed)
+		var dropped []modstate.Note
+		s.ModState, dropped = modstate.Check(src.SaveBlobs())
+		g.scripts.notes = modstate.AppendNotes(g.scripts.notes, dropped)
 	}
 	info := g.Info(stamp.Name)
 	stamp.Apply(&info)
@@ -693,6 +708,9 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 		return nil, info, fmt.Errorf("read save state: %w", err)
 	}
 	g := New(Config{Width: s.W, Height: s.H, Content: c})
+	if info.Version >= 18 { // PLG-063: an older save has no mod state
+		g.scripts.loaded, g.scripts.notes = modstate.Check(s.ModState)
+	}
 	if err := g.rng.UnmarshalBinary(s.RNG); err != nil {
 		return nil, info, fmt.Errorf("restore rng: %w", err)
 	}
@@ -969,6 +987,8 @@ func (g *Game) migrateSave(v int) {
 		fallthrough
 	case v < 17: // EAI-015: an older world gets its factions' wars from the same seeded rule a new one does (the wealth tracker counts on its own)
 		faction.SetEnemies(g.ng.factions)
+		fallthrough
+	case v < 18: // PLG-063: an older save has no mod state, and its mods start fresh
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

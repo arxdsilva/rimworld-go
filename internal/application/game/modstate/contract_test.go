@@ -24,6 +24,7 @@ func TestContractLimits(t *testing.T) {
 		{"MaxData", modstate.MaxData, 64<<10 + 16},
 		{"MaxBlobs", modstate.MaxBlobs, 256},
 		{"MaxName", modstate.MaxName, 256},
+		{"MaxNotes", modstate.MaxNotes, 16},
 	} {
 		if c.got != c.want {
 			t.Errorf("%s = %d, want %d", c.name, c.got, c.want)

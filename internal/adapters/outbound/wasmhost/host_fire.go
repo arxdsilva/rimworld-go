@@ -20,15 +20,21 @@ import (
 // on_pawn runs one fuel budget and one command budget per file per tick,
 // shared by all the pawns of the tick.
 func (h *Host) Fire(ev scripting.Event, w scripting.World, p scripting.PawnReader) scripting.Result {
+	return h.fire(h.mods, ev, w, p)
+}
+
+// fire is Fire over mods (all files, or one plugin's view); the unsent
+// problems go out in whichever Result comes first.
+func (h *Host) fire(mods []*module, ev scripting.Event, w scripting.World, p scripting.PawnReader) scripting.Result {
 	var res scripting.Result
-	res.Disabled, h.unsent = h.unsent, nil
+	res.Disabled, h.unsent, h.loadUnsent = h.unsent, nil, 0
 	if len(ev.Pawns) == 0 && (ev.Hook == scripting.OnPawns || ev.Hook == scripting.OnPawn) {
 		return res // nobody is due: no call
 	}
 	if int(ev.Hook) >= hookSlots {
 		return res
 	}
-	for _, m := range h.mods {
+	for _, m := range mods {
 		fn := m.hooks[ev.Hook]
 		if m.off || fn == nil {
 			continue

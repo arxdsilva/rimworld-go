@@ -21,6 +21,7 @@ import (
 var fixtureHooks = []string{"on_hour", "on_day", "on_incident", "on_colonist_died", "on_pawns", "on_pawn"}
 
 // fixtureWant lists, per committed fixture, the hooks it must export.
+// stateFixtures also export state_version, save and load.
 var fixtureWant = map[string][]string{
 	"bench_batched": {"on_hour"},
 	"bench_percall": {"on_hour"},
@@ -28,8 +29,12 @@ var fixtureWant = map[string][]string{
 	"dice":          {"on_hour", "on_pawn"},
 	"hooks":         fixtureHooks,
 	"state":         {"on_hour"},
+	"tally":         {"on_hour"},
 	"golden":        fixtureHooks,
 }
+
+// stateFixtures are the fixtures that keep state (save and load).
+var stateFixtures = map[string]bool{"state": true, "tally": true}
 
 // fixtureRuntime is a wazero runtime with the contract's features (doc.go).
 func fixtureRuntime(ctx context.Context) wazero.Runtime {
@@ -42,7 +47,7 @@ func fixtureRuntime(ctx context.Context) wazero.Runtime {
 
 // readFixture returns the committed testdata/<name>.wasm (name without the
 // extension, e.g. "dice"); the other wasmhost tests load fixtures with it.
-func readFixture(t *testing.T, name string) []byte {
+func readFixture(t testing.TB, name string) []byte {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join("testdata", name+".wasm"))
 	if err != nil {
@@ -135,11 +140,11 @@ func TestFixturesValid(t *testing.T) {
 			if hasVer != hasSave || hasSave != hasLoad {
 				t.Errorf("save/load exports are not all-or-none: %v %v %v", hasVer, hasSave, hasLoad)
 			}
-			if name == "state" {
+			if stateFixtures[name] {
 				if !hasVer || !sigIs(fx["state_version"], nil, []api.ValueType{api.ValueTypeI32}) ||
 					!sigIs(fx["save"], nil, []api.ValueType{api.ValueTypeI32}) ||
 					!sigIs(fx["load"], []api.ValueType{api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}) {
-					t.Error("state: state_version/save/load missing or wrong signature")
+					t.Errorf("%s: state_version/save/load missing or wrong signature", name)
 				}
 			} else if hasVer {
 				t.Errorf("%s exports save/load", name)

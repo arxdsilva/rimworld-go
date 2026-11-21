@@ -27,12 +27,16 @@ type File struct {
 	Wasm []byte
 }
 
-// module is one live file: its instance, the reserved globals and the
-// exports the host calls.
+// module is one live file: its compiled module, its instance, the reserved
+// and saved globals and the exports the host calls.
 type module struct {
 	plugin, path string
-	key          uint64 // fnv64a(plugin + "\x00" + path), the rand stage
-	inst         api.Module
+	key          uint64                // fnv64a(plugin + "\x00" + path), the rand stage
+	cm           wazero.CompiledModule // the rewritten module, kept for Reset and the save copy
+	name         string                // the instance's wazero name, the same after Reset
+	gnames       []string              // the saved globals' export names (wasmrewrite.SavedGlobals)
+	globals      []api.MutableGlobal   // the live instance's saved globals, by gnames
+	inst         api.Module            // nil after a failed Reset
 	mem          api.Memory
 	fuel, depth  api.MutableGlobal
 	hooks        [hookSlots]api.Function // by scripting.Hook; nil when not exported
@@ -59,9 +63,14 @@ type Host struct {
 	cur     *callState
 	scratch []byte // event encoding, reused
 
+	compiles int // CompileModule calls, read by tests: Reset never compiles
+
 	mu     sync.Mutex
-	probs  []scripting.Problem
-	unsent []scripting.Problem // load failures not yet in a Result
+	probs  []scripting.Problem // load-time first, then this game's
+	unsent []scripting.Problem // problems not yet in a Result, load failures first
+	// loadProbs is how many of probs are load failures; loadUnsent how
+	// many of unsent are (0 once a Result carried them).
+	loadProbs, loadUnsent int
 }
 
 var _ scripting.Host = (*Host)(nil)
@@ -96,15 +105,19 @@ func New(ps []Plugin, o Options) *Host {
 			h.mods = append(h.mods, m)
 		}
 	}
+	h.loadProbs, h.loadUnsent = len(h.probs), len(h.unsent)
 	return h
 }
 
 // Uses reports that a live module exports hook hk. It does not allocate.
-func (h *Host) Uses(hk scripting.Hook) bool {
+func (h *Host) Uses(hk scripting.Hook) bool { return uses(h.mods, hk) }
+
+// uses reports that a live module of mods exports hook hk.
+func uses(mods []*module, hk scripting.Hook) bool {
 	if int(hk) >= hookSlots {
 		return false
 	}
-	for _, m := range h.mods {
+	for _, m := range mods {
 		if !m.off && m.hooks[hk] != nil {
 			return true
 		}

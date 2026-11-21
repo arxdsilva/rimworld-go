@@ -736,6 +736,12 @@ saveState.Mines map[[2]int]bool
 saveState.Mines{key} [2]int
 saveState.Mines{key}[] int
 saveState.Mines{} bool
+saveState.ModState []rimworld-go/internal/application/game/modstate.Blob
+saveState.ModState[] rimworld-go/internal/application/game/modstate.Blob
+saveState.ModState[].Data []uint8
+saveState.ModState[].Data[] uint8
+saveState.ModState[].File string
+saveState.ModState[].Plugin string
 saveState.Motion []rimworld-go/internal/application/game.entry[rimworld-go/internal/application/game.motionRec]
 saveState.Motion[] rimworld-go/internal/application/game.entry[rimworld-go/internal/application/game.motionRec]
 saveState.Motion[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64

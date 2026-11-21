@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/modding"
+	"rimworld-go/internal/application/scripting"
 )
 
 const (
@@ -99,8 +100,9 @@ func readPlugin(dir, name string) modding.Plugin {
 	patches := r.collect("patches")
 	lang := r.lang()
 	scripts := r.collectExt("scripts", ".star")
+	wasm := r.collectExt("scripts", ".wasm")
 	textures := r.collectExt("textures", ".png")
-	total := len(defs) + len(patches) + len(lang) + len(scripts) + len(textures)
+	total := len(defs) + len(patches) + len(lang) + len(scripts) + len(wasm) + len(textures)
 	if total > maxDataFiles {
 		r.problem("", "", fmt.Sprintf("too many data files (%d, at most %d): the rest are skipped", total, maxDataFiles), false)
 		budget := maxDataFiles
@@ -108,12 +110,14 @@ func readPlugin(dir, name string) modding.Plugin {
 		patches, budget = trim(patches, budget)
 		lang, budget = trim(lang, budget)
 		scripts, budget = trim(scripts, budget)
+		wasm, budget = trim(wasm, budget)
 		textures, _ = trim(textures, budget)
 	}
 	pl.Defs = r.decodeAll(defs)
 	pl.Patches = r.decodeAll(patches)
 	pl.Lang = r.decodeAll(lang)
 	pl.Scripts = r.rawAll(scripts, maxScriptBytes)
+	pl.Wasm = r.rawAll(wasm, scripting.MaxWasmBytes)
 	pl.Textures = r.rawAll(textures, maxTextureBytes)
 	return pl
 }

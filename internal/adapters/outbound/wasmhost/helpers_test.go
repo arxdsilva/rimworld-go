@@ -113,10 +113,13 @@ var impIdx = map[string]byte{
 	"hour": 6, "colonists": 7, "wealth": 8, "season": 9, "pawns": 10, "pawn": 11, "pawn_name": 12,
 }
 
-func newGuest() *guest {
+func newGuest() *guest { return newGuestPages(1, 2) }
+
+// newGuestPages is newGuest with a memory of min to max pages.
+func newGuestPages(min, max uint32) *guest {
 	g := &guest{next: strAt, hooks: map[string][]byte{}, extra: map[string][]byte{}, sigs: map[string][2][]byte{}}
 	i, l := wasmtest.I32, wasmtest.I64
-	g.b.Memory(1, 2)
+	g.b.Memory(min, max)
 	g.b.Import("rimworld", "message", []byte{i, i}, nil)
 	g.b.Import("rimworld", "letter", []byte{i, i, i, i}, nil)
 	g.b.Import("rimworld", "spawn", []byte{i, i, i}, nil)

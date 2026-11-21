@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"slices"
 
+	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/domain/sim/statehash"
 	"rimworld-go/internal/domain/world/temperature"
 )
@@ -25,7 +26,7 @@ import (
 // behaviour does. It reads the state only.
 func (g *Game) StateHash() uint64 {
 	var buf bytes.Buffer
-	if err := EncodeSave(g, &buf, "statehash"); err != nil { // raw gob: no compression to undo
+	if err := encodeSave(g, &buf, savefmt.Stamp{Name: "statehash"}, nil); err != nil { // raw gob; no mod state (never runs mod code)
 		panic(fmt.Errorf("state hash: %w", err))
 	}
 	dec := gob.NewDecoder(&buf)

@@ -139,32 +139,22 @@ func stateGuest(save, load []byte) []byte {
 	return g.bytes()
 }
 
-func TestStateTrapTurnsTheFileOffAndIsReported(t *testing.T) {
+// A trapping load turns the file off: the error, then the next Fire's
+// Disabled. (A trapping save leaves it on: TestSaveTrapLeavesTheFileOn.)
+func TestLoadTrapTurnsTheFileOffAndIsReported(t *testing.T) {
 	eachEngine(t, func(t *testing.T, o Options) {
 		trap := []byte{0x00, 0x41, 0x00} // unreachable; i32.const 0
-		for _, c := range []struct {
-			name       string
-			wasm       []byte
-			do         func(h *Host) error
-			wantInFire string
-		}{
-			{"save traps", stateGuest(trap, i32c(0)), func(h *Host) error { _, err := h.Save("p", "scripts/x.wasm"); return err }, "trap in save: "},
-			{"load traps", stateGuest(i32c(0), trap), func(h *Host) error {
-				blob := append([]byte("RWMS"), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0)
-				return h.Load("p", "scripts/x.wasm", blob)
-			}, "trap in load: "},
-		} {
-			h := newHost(t, o, plug("p", "scripts/x.wasm", c.wasm))
-			err := c.do(h)
-			if err == nil || !strings.Contains(err.Error(), c.wantInFire) {
-				t.Fatalf("%s: err = %v", c.name, err)
-			}
-			if !h.Stats()[0].Off {
-				t.Errorf("%s: file still on", c.name)
-			}
-			if res := fire(h, event(scripting.OnHour)); len(res.Disabled) != 1 || !strings.HasPrefix(res.Disabled[0].Msg, c.wantInFire) {
-				t.Errorf("%s: next Fire's Disabled = %+v", c.name, res.Disabled)
-			}
+		h := newHost(t, o, plug("p", "scripts/x.wasm", stateGuest(i32c(0), trap)))
+		blob := append([]byte("RWMS"), 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0)
+		const want = "trap in load: "
+		if err := h.Load("p", "scripts/x.wasm", blob); err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("err = %v", err)
+		}
+		if !h.Stats()[0].Off {
+			t.Error("file still on")
+		}
+		if res := fire(h, event(scripting.OnHour)); len(res.Disabled) != 1 || !strings.HasPrefix(res.Disabled[0].Msg, want) {
+			t.Errorf("next Fire's Disabled = %+v", res.Disabled)
 		}
 	})
 }

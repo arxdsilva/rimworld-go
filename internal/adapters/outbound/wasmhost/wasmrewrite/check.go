@@ -47,6 +47,7 @@ const (
 	RuleArity       = "arity"
 	RuleIndex       = "index out of range"
 	RuleImmutable   = "immutable global"
+	RuleRefGlobal   = "mutable reference global"
 	RuleBlockType   = "bad blocktype"
 	RuleSelectTypes = "bad select types"
 )
@@ -128,6 +129,9 @@ func checkSpaces(m *Module, c Config, sp spaces) error {
 	for i, g := range m.Globals {
 		if err := checkInit(g.Init, sp); err != nil {
 			return reject(RuleIndex, -1, "global %d init: %v", i, err)
+		}
+		if g.Mutable && !numeric(g.Type) { // the save copy could not carry it
+			return reject(RuleRefGlobal, -1, "global %d", i)
 		}
 	}
 	if err := checkSections(m, sp); err != nil {

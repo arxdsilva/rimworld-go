@@ -32,8 +32,9 @@ type Config struct {
 }
 
 // Prepare checks wasm and returns the rewritten module: Decode, Check,
-// Reserve, CanonicaliseNaN, Meter, Encode. Check runs before any rewrite,
-// so an invalid module is rejected, never repaired.
+// Reserve, the saved-global exports (SavedGlobals, GlobalName),
+// CanonicaliseNaN, Meter, Encode. Check runs before any rewrite, so an
+// invalid module is rejected, never repaired.
 func Prepare(wasm []byte, c Config) ([]byte, error) {
 	m, err := Decode(wasm)
 	if err != nil {
@@ -42,9 +43,11 @@ func Prepare(wasm []byte, c Config) ([]byte, error) {
 	if err := Check(m, c); err != nil {
 		return nil, err
 	}
+	saved := SavedGlobals(m)
 	if err := Reserve(m, c); err != nil {
 		return nil, err
 	}
+	exportGlobals(m, saved)
 	if err := CanonicaliseNaN(m); err != nil {
 		return nil, err
 	}

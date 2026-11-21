@@ -5,6 +5,7 @@ package plugins
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"strings"
 
 	"fmt"
 	"slices"
@@ -305,7 +306,7 @@ func TestDetailExplainsThePosition(t *testing.T) {
 	s := New(&fakeShell{})
 	v := twoPlugins()
 	var texts []string
-	for _, l := range s.detailLines(v, v.Rows[0], map[string]bool{"beta": true}) {
+	for _, l := range s.detailLines(v, v.Rows[0], map[string]bool{"beta": true}, nil) {
 		texts = append(texts, l.text)
 	}
 	for _, want := range []string{"Position 1: alphabetical", "Error: defs/x.json › backstory/beta.x › title: is empty",
@@ -327,11 +328,84 @@ func TestDetailListsTranslatedLocales(t *testing.T) {
 			r.Locales = []string{"pt-BR", "de"}
 		}
 		var texts []string
-		for _, l := range s.detailLines(v, r, nil) {
+		for _, l := range s.detailLines(v, r, nil, nil) {
 			texts = append(texts, l.text)
 		}
 		if !slices.Contains(texts, want[0]) {
 			t.Errorf("detail lacks %q: %q", want[0], texts)
 		}
+	}
+}
+
+func statTexts(s *Screen, v View, r Row, stats []ModStat) []string {
+	var out []string
+	for _, l := range s.detailLines(v, r, nil, stats) {
+		out = append(out, l.text)
+	}
+	return out
+}
+
+// The detail lists the plugin's own Wasm files, with the off marker.
+func TestDetailShowsWasmStats(t *testing.T) {
+	t.Parallel()
+	s := New(&fakeShell{})
+	v := twoPlugins()
+	stats := []ModStat{
+		{Plugin: "beta", File: "scripts/a.wasm", Fuel: 1234567, Calls: 42, Pages: 24},
+		{Plugin: "alpha", File: "scripts/other.wasm", Fuel: 1, Calls: 1, Pages: 1},
+		{Plugin: "beta", File: "scripts/b.wasm", Fuel: 999, Calls: 0, Pages: 1, Off: true},
+	}
+	got := statTexts(s, v, v.Rows[0], stats)
+	a := "scripts/a.wasm: fuel 1,234,567, 42 calls, memory 1.5 MiB"
+	b := "scripts/b.wasm: fuel 999, 0 calls, memory 0.1 MiB, off"
+	i, j, st := slices.Index(got, a), slices.Index(got, b), slices.Index(got, "State: loaded")
+	if st < 0 {
+		for k, x := range got {
+			if strings.HasPrefix(x, "State:") {
+				st = k
+			}
+		}
+	}
+	if i < 0 || j != i+1 || i != st+1 {
+		t.Fatalf("stats lines wrong (a=%d b=%d state=%d): %q", i, j, st, got)
+	}
+	if slices.ContainsFunc(got, func(x string) bool { return strings.Contains(x, "other.wasm") }) {
+		t.Fatalf("another plugin's row shown: %q", got)
+	}
+}
+
+// No stats lines for nil stats, another plugin's rows, or a row not loaded.
+func TestDetailHidesStatsWhenNone(t *testing.T) {
+	t.Parallel()
+	s := New(&fakeShell{})
+	v := twoPlugins()
+	other := []ModStat{{Plugin: "alpha", File: "x.wasm"}}
+	mine := []ModStat{{Plugin: "alpha", File: "x.wasm"}, {Plugin: "beta", File: "y.wasm"}}
+	for name, c := range map[string]struct {
+		r     Row
+		stats []ModStat
+	}{
+		"nil":        {v.Rows[0], nil},
+		"other":      {v.Rows[0], other},
+		"not loaded": {v.Rows[1], mine},
+	} {
+		for _, x := range statTexts(s, v, c.r, c.stats) {
+			if strings.Contains(x, ".wasm") {
+				t.Errorf("%s: stats line %q", name, x)
+			}
+		}
+	}
+}
+
+// Stats is read once per frame.
+func TestDetailReadsStatsOnce(t *testing.T) {
+	t.Parallel()
+	v := twoPlugins()
+	n := 0
+	v.Stats = func() []ModStat { n++; return nil }
+	h := newHarness(v, "beta")
+	h.idle()
+	if n != 1 {
+		t.Fatalf("Stats called %d times in one frame", n)
 	}
 }
