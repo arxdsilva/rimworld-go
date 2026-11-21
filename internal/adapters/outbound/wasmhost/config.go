@@ -8,6 +8,7 @@ import (
 	"github.com/tetratelabs/wazero/api"
 
 	"rimworld-go/internal/adapters/outbound/wasmhost/wasmrewrite"
+	"rimworld-go/internal/application/scripting"
 )
 
 // Limits and names of ABI v1 (doc.go).
@@ -23,11 +24,14 @@ const (
 	MaxLocals       = 4096      // params plus locals per function
 	MaxBody         = 64 << 10  // bytes per function body
 	MaxWeight       = 1 << 17   // w(f) per function, after metering
-	MaxWasmBytes    = 1 << 20   // bytes of one module, checked before Prepare
 
 	fuelExport  = "__rimworld_fuel"
 	depthExport = "__rimworld_depth"
 )
+
+// MaxWasmBytes is the bytes of one module, checked before Prepare: the
+// one cap the loader shares (scripting.MaxWasmBytes).
+const MaxWasmBytes = scripting.MaxWasmBytes
 
 // Engine picks wazero's engine.
 type Engine uint8

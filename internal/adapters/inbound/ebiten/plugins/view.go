@@ -30,6 +30,18 @@ type View struct {
 	// Late are the problems found while playing (a script the game turned
 	// off, PLG-060), read each time the screens ask (Live); nil: none.
 	Late func() []Problem
+	// Stats are the Wasm files' counters from the last game, a copy; nil:
+	// none. Filled by the composition root (W2-compose), shown by W1-ui.
+	Stats func() []ModStat
+}
+
+// ModStat is one Wasm file's counters as the plugin detail shows them
+// (PLG-063): plain values mapped from wasmhost.Stat.
+type ModStat struct {
+	Plugin, File string
+	Fuel, Calls  uint64
+	Pages        uint32
+	Off          bool
 }
 
 // Live is v with the problems found while playing after the ones from

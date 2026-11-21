@@ -10,6 +10,7 @@ type Stat struct {
 	Calls        uint64 // guest calls made: hook (one per on_pawn pawn), save and load
 	Pages        uint32 // memory size now, in 64 KiB pages
 	Off          bool   // disabled
+	State        bool   // exports state_version, save and load (set by W1-wasmhost)
 }
 
 // Stats lists every loaded file's counters, in load order. A file that

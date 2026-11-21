@@ -97,6 +97,11 @@ const (
 	MaxSpawn    = 500     // items one spawn may drop
 )
 
+// MaxWasmBytes is the one cap on a Wasm module's size (PLG-063): the
+// loader (W1-loader) and wasmhost both check it. A module is compiled
+// binary, so it is not held to the 256 KiB cap on Starlark source.
+const MaxWasmBytes = 1 << 20
+
 // PawnEvery is the ticks between two cadence visits (on_pawns, on_pawn)
 // of one colonist.
 const PawnEvery = 60

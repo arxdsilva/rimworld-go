@@ -58,6 +58,7 @@ type Plugin struct {
 	Patches  []File    // patches/*.json
 	Lang     []File    // lang/<locale>.json
 	Scripts  []Blob    // scripts/**.star (PLG-060), as written
+	Wasm     []Blob    // scripts/**.wasm (PLG-063), as written; filled by modloader (W1-loader)
 	Textures []Blob    // textures/**.png (PLG-026 items), as written
 	Problems []Problem // what the adapter could not read (bad JSON, unsafe path)
 }
