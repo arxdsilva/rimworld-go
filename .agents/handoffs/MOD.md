@@ -212,3 +212,14 @@ WebAssembly on wazero spike: second scripting runtime behind the same port, not 
 - Saves: none (the blob format is adapter-local; the save file is PLG-051's).
 - Boxes: feature checklist 38.3 **Second runtime spike: WebAssembly on wazero** `[x]`; MODDING gap row PLG-063 `[-]` (spike done, wiring open, now issue #7).
 - Open: wiring (manifest field, mod loader, save-file blob, per-mod cost in diagnostics) as a follow-up to PLG-063; report the wazero `NewRuntime` race and the validator panic upstream; rebuild fixtures with a current Rust when available; the contributor's harness.
+
+## PLG-063-wasm-wiring
+Wasm mods run in real games · 2026-11-21 · a9e028551, bab189b41, b7cff43f1
+- Changed: `scripts/**.wasm` in a plugin loads through the mod loader (runtime by extension, no manifest field; one 1 MiB module cap); hooks interleave per plugin in load order across Starlark and Wasm with shared limits; a Wasm file turned off is on again after load (R5, as Starlark); mutable reference globals are rejected at load; a rustc 1.39 `tally` module runs through the loader in a colony test.
+- Decisions: saving runs on a throwaway copy of the host, so it never changes a run (save-time notes only in the Plugins problems list); `StateHash` never runs guest code and excludes the blobs; blob cap 64 KiB, `MaxBlobs` 256, notes capped at 16.
+- Limits: `application/game` line budget +39 (`solid_budget.txt`); A/B vs 010444d84: ColonyHour 196.2 to 194.8 ms (p=0.39, noise).
+- HUD: the Plugins detail shows per-file fuel, calls and memory.
+- Saves: `ModState` in the save, SaveVersion 18 (read for v18+; older saves load with no mod state).
+- Determinism: same state hash with Starlark or Wasm twins; no wall clock or global RNG in the wiring.
+- Boxes: MODDING gap row PLG-063 `[x]`; PLG-051 `[-]` (Wasm blobs shipped; Starlark has no state, general plugin blobs open); MASTER_SPEC §49 shipping note; THIRD_PARTY_NOTICES wazero row (wired); feature checklist 38.3 **Second runtime spike: WebAssembly on wazero** stays `[x]` (note updated); issue #7: Closes #7 in the docs commit.
+- Open: the contributor's own Rust/TinyGo harness; Starlark plugin state and general plugin blobs (PLG-051); `contentlint` does not lint `.wasm` files; gob decodes `ModState` before its bounds apply (savefmt decompressed-size cap unaudited, as for every save field).

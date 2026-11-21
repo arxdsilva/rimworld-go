@@ -281,6 +281,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PLG-6-cadence-hooks-batched-reads | Scripting port: batched colonist reads, 60-tick cadence hooks, Starlark vs gopher-lua baseline | 2026-11-20 | [MOD.md](MOD.md#plg-6-cadence-hooks-batched-reads) |
 | PLG-7-wasm-second-runtime-candidate | Second scripting runtime: WebAssembly on wazero named as the candidate | 2026-11-20 | [MOD.md](MOD.md#plg-7-wasm-second-runtime-candidate) |
 | PLG-8-wasm-wazero-spike | WebAssembly on wazero spike: second scripting runtime behind the same port, not wired | 2026-11-20 | [MOD.md](MOD.md#plg-8-wasm-wazero-spike) |
+| PLG-063-wasm-wiring | Wasm mods run in real games | 2026-11-21 | [MOD.md](MOD.md#plg-063-wasm-wiring) |
 | PRD-0-craft-package | The craft package and the quality domain | 2026-10-29 | [BASE.md](BASE.md#prd-0-craft-package) |
 | PRD-1-bill-settings | Bill settings, multi-ingredient recipes, gathering | 2026-10-29 | [BASE.md](BASE.md#prd-1-bill-settings) |
 | PRD-2-quality-stuff-condition | Quality, stuff, condition, inspiration | 2026-10-29 | [BASE.md](BASE.md#prd-2-quality-stuff-condition) |

@@ -2777,7 +2777,7 @@ Hooks must have documented ordering.
     -   Starlark (decided 2026-11-18; `MASTER_SPEC` §49 has the criteria for any second runtime behind the same port).
     -   No arbitrary native Go plugin loading for untrusted community
         mods.
--   [x] **Second runtime spike: WebAssembly on wazero** (PLG-063, `MASTER_SPEC` §49; candidate chosen 2026-11-20; spike done 2026-11-20 in `internal/adapters/outbound/wasmhost`, not wired: shipping is a separate item)
+-   [x] **Second runtime spike: WebAssembly on wazero** (PLG-063, `MASTER_SPEC` §49; candidate chosen 2026-11-20; spike done 2026-11-20 in `internal/adapters/outbound/wasmhost`; wired 2026-11-21: `.wasm` mods run in real games, state in the save v18)
     -   Fuel inserted by the host at load, not by the mod's toolchain.
     -   Same state hash on amd64 and arm64 (no threads, no relaxed SIMD, canonical NaNs, no WASI clock/random/filesystem/network).
     -   Memory cap from max pages; fuel and memory reported per mod.
