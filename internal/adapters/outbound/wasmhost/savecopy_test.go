@@ -9,6 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tetratelabs/wazero"
+
+	"rimworld-go/internal/adapters/outbound/wasmhost/wasmrewrite"
+	"rimworld-go/internal/adapters/outbound/wasmhost/wasmtest"
 	"rimworld-go/internal/application/scripting"
 )
 
@@ -252,5 +256,79 @@ func BenchmarkSaveCopy(b *testing.B) {
 			}
 			b.ReportMetric(float64(h.mods[0].mem.Size()/65536), "pages")
 		})
+	}
+}
+
+// rawInstance instantiates wasm as it is (no Prepare) in h's runtime, or
+// the Prepare output when prepare is set.
+func rawInstance(t *testing.T, h *Host, wasm []byte, prepare bool) *module {
+	t.Helper()
+	if prepare {
+		out, err := wasmrewrite.Prepare(wasm, h.rw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wasm = out
+	}
+	cm, err := h.compile(wasm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inst, err := h.rt.InstantiateModule(h.ctx, cm, wazero.NewModuleConfig().WithName("").WithStartFunctions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = inst.Close(h.ctx) })
+	return &module{inst: inst}
+}
+
+// C15: bindGlobals names each missing handle; a module the rewriter never
+// saw has none of the reserved globals.
+func TestBindGlobalsFailures(t *testing.T) {
+	h := newHost(t, Options{Engine: Interpreter})
+	var noMem, fuelOnly wasmtest.Builder
+	fuelOnly.Memory(1, 1)
+	fuelOnly.Export("memory", wasmtest.KindMemory, 0)
+	fuelOnly.Export(fuelExport, wasmtest.KindGlobal, fuelOnly.Global(wasmtest.I64, true, cat(i64c(0), []byte{0x0B})...))
+	missing := rawInstance(t, h, newGuest().bytes(), true)
+	missing.gnames = []string{wasmrewrite.GlobalName(9)}
+	for want, m := range map[string]*module{
+		"missing export memory":                    rawInstance(t, h, noMem.Bytes(), false),
+		"internal: no fuel global":                 rawInstance(t, h, newGuest().bytes(), false),
+		"internal: no depth global":                rawInstance(t, h, fuelOnly.Bytes(), false),
+		"internal: a saved global is not exported": missing,
+	} {
+		if got := m.bindGlobals(); got != want {
+			t.Errorf("bindGlobals = %q, want %q", got, want)
+		}
+	}
+}
+
+// C14: copyFrom fails, never panics, on a copy without save or one whose
+// memory cannot grow to the live size.
+func TestCopyFromFailures(t *testing.T) {
+	h := newHost(t, Options{Engine: Interpreter})
+	stateful := func(min, max uint32) []byte {
+		g := newGuestPages(min, max)
+		g.export("state_version", nil, []byte{0x7F}, i32c(1))
+		g.export("save", nil, []byte{0x7F}, i32c(0))
+		g.export("load", []byte{0x7F}, []byte{0x7F}, i32c(0))
+		return g.bytes()
+	}
+	live := rawInstance(t, h, stateful(2, 2), true)
+	if msg := live.bindGlobals(); msg != "" {
+		t.Fatal(msg)
+	}
+	for want, c := range map[string]*module{
+		"no save export":                        rawInstance(t, h, newGuest().bytes(), true),
+		"memory does not grow to the live size": rawInstance(t, h, stateful(1, 1), true),
+	} {
+		if got := c.copyFrom(live); got != want {
+			t.Errorf("copyFrom = %q, want %q", got, want)
+		}
+	}
+	ok := rawInstance(t, h, stateful(1, 2), true)
+	if got := ok.copyFrom(live); got != "" || ok.mem.Size() != live.mem.Size() {
+		t.Errorf("copyFrom = %q, pages %d", got, ok.mem.Size()/65536)
 	}
 }

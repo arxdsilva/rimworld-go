@@ -211,20 +211,9 @@ func (r *reader) walk(dir, ext string, depth int, out *[]string, top bool) {
 	}
 	for _, e := range entries {
 		p := path.Join(dir, e.Name())
-		isDir := e.IsDir()
-		if e.Type()&fs.ModeSymlink != 0 {
-			st, err := r.root.Stat(p)
-			if err != nil {
-				if isEscape(err) {
-					r.problem(p, "", "points outside the plugin folder", false)
-				} else if !errors.Is(err, fs.ErrNotExist) {
-					r.problem(p, "", "cannot stat: "+err.Error(), false)
-				} else {
-					r.problem(p, "", "dangling link", false)
-				}
-				continue
-			}
-			isDir = st.IsDir()
+		isDir, ok := r.entryIsDir(p, e)
+		if !ok {
+			continue
 		}
 		switch {
 		case isDir:
@@ -233,6 +222,26 @@ func (r *reader) walk(dir, ext string, depth int, out *[]string, top bool) {
 			*out = append(*out, p)
 		}
 	}
+}
+
+// entryIsDir tells whether e is a folder, following a link inside the
+// plugin; a broken or escaping link is a problem and ok is false.
+func (r *reader) entryIsDir(p string, e fs.DirEntry) (isDir, ok bool) {
+	if e.Type()&fs.ModeSymlink == 0 {
+		return e.IsDir(), true
+	}
+	st, err := r.root.Stat(p)
+	switch {
+	case err == nil:
+		return st.IsDir(), true
+	case isEscape(err):
+		r.problem(p, "", "points outside the plugin folder", false)
+	case errors.Is(err, fs.ErrNotExist):
+		r.problem(p, "", "dangling link", false)
+	default:
+		r.problem(p, "", "cannot stat: "+err.Error(), false)
+	}
+	return false, false
 }
 
 func (r *reader) lang() []string {

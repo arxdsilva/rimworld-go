@@ -128,6 +128,25 @@ func (h *Host) instantiate(m *module) string {
 	return ""
 }
 
+// bindGlobals reads the memory, the reserved globals and the saved globals
+// from m's instance (a live one, or a save copy).
+func (m *module) bindGlobals() string {
+	if m.mem = m.inst.ExportedMemory("memory"); m.mem == nil {
+		return "missing export memory"
+	}
+	var ok bool
+	if m.fuel, ok = m.inst.ExportedGlobal(fuelExport).(api.MutableGlobal); !ok {
+		return "internal: no fuel global"
+	}
+	if m.depth, ok = m.inst.ExportedGlobal(depthExport).(api.MutableGlobal); !ok {
+		return "internal: no depth global"
+	}
+	if m.globals, ok = savedGlobals(m.inst, m.gnames, m.globals[:0]); !ok {
+		return "internal: a saved global is not exported"
+	}
+	return ""
+}
+
 // savedGlobals appends inst's saved globals, by names, to dst.
 func savedGlobals(inst api.Module, names []string, dst []api.MutableGlobal) ([]api.MutableGlobal, bool) {
 	for _, n := range names {
@@ -160,25 +179,26 @@ func sigEq(def api.FunctionDefinition, params, results []api.ValueType) bool {
 // bind checks the exports against ABI v1 and reads the buffer and state
 // version, each guest call with its own fuel.
 func (h *Host) bind(m *module) string {
+	if msg := m.bindGlobals(); msg != "" {
+		return msg
+	}
 	defs := m.inst.ExportedFunctionDefinitions()
-	if m.mem = m.inst.ExportedMemory("memory"); m.mem == nil {
-		return "missing export memory"
-	}
-	var ok bool
-	if m.fuel, ok = m.inst.ExportedGlobal(fuelExport).(api.MutableGlobal); !ok {
-		return "internal: no fuel global"
-	}
-	if m.depth, ok = m.inst.ExportedGlobal(depthExport).(api.MutableGlobal); !ok {
-		return "internal: no depth global"
-	}
-	if m.globals, ok = savedGlobals(m.inst, m.gnames, m.globals[:0]); !ok {
-		return "internal: a saved global is not exported"
-	}
 	for _, name := range []string{"rw_buf", "rw_buf_size"} {
 		if d, has := defs[name]; !has || !sigEq(d, nil, i32) {
 			return "export " + name + " is missing or not () -> i32"
 		}
 	}
+	if msg := m.bindHooks(defs); msg != "" {
+		return msg
+	}
+	if msg := h.bindState(m, defs); msg != "" {
+		return msg
+	}
+	return h.readBuffer(m)
+}
+
+// bindHooks binds the exported hooks, each () -> ().
+func (m *module) bindHooks(defs map[string]api.FunctionDefinition) string {
 	for _, hk := range scripting.Hooks() {
 		d, has := defs[hk.String()]
 		if !has {
@@ -189,10 +209,7 @@ func (h *Host) bind(m *module) string {
 		}
 		m.hooks[hk] = m.inst.ExportedFunction(hk.String())
 	}
-	if msg := h.bindState(m, defs); msg != "" {
-		return msg
-	}
-	return h.readBuffer(m)
+	return ""
 }
 
 // bindState checks the all-or-none save/load exports.

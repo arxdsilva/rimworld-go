@@ -7,7 +7,6 @@ import (
 	"errors"
 
 	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 )
 
 // saveCopy makes the throwaway instance Save runs on: an anonymous
@@ -33,20 +32,11 @@ func (h *Host) saveCopy(m *module) (*module, error) {
 // copyFrom binds c's handles on its instance and copies live's memory and
 // saved globals into it.
 func (c *module) copyFrom(live *module) string {
-	var ok bool
-	c.mem = c.inst.ExportedMemory("memory")
-	c.fuel, ok = c.inst.ExportedGlobal(fuelExport).(api.MutableGlobal)
-	if !ok || c.mem == nil {
-		return "no memory or fuel global"
-	}
-	if c.depth, ok = c.inst.ExportedGlobal(depthExport).(api.MutableGlobal); !ok {
-		return "no depth global"
+	if msg := c.bindGlobals(); msg != "" {
+		return msg
 	}
 	if c.save = c.inst.ExportedFunction("save"); c.save == nil {
 		return "no save export"
-	}
-	if c.globals, ok = savedGlobals(c.inst, c.gnames, nil); !ok {
-		return "a saved global is not exported"
 	}
 	size := live.mem.Size()
 	if have := c.mem.Size(); have < size {
@@ -54,10 +44,9 @@ func (c *module) copyFrom(live *module) string {
 			return "memory does not grow to the live size"
 		}
 	}
-	data, ok := live.mem.Read(0, size)
-	if !ok || !c.mem.Write(0, data) {
-		return "memory does not copy"
-	}
+	// [0, size) is inside both memories now, so Read and Write succeed.
+	data, _ := live.mem.Read(0, size)
+	_ = c.mem.Write(0, data)
 	for i, g := range live.globals {
 		c.globals[i].Set(g.Get())
 	}

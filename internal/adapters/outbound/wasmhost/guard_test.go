@@ -15,7 +15,8 @@ import (
 	"testing"
 )
 
-// The guard keeps wazero inside the adapter and the adapter unwired (AC-8),
+// The guard keeps wazero inside the adapter (AC-8) and lets only the wiring
+// roots (internal/compose/**, cmd/**) import the adapter (PLG-063 wiring),
 // in the pattern of scriptbench/guard_test.go (copied, not imported).
 
 const (
@@ -72,9 +73,14 @@ func guardImports(t *testing.T, root string) []guardImport {
 	return out
 }
 
+// guardWiring are the wiring roots: the only places outside wasmhost that
+// may build a Host (HEXAGONAL_ARCHITECTURE.md §6, §28).
+var guardWiring = []string{"internal/compose", "cmd"}
+
 // guardViolations applies the two rules: wazero only under wasmhost and
 // not in wasmrewrite or wasmtest; wasmhost imported only from inside
-// wasmhost. It also returns the files allowed to import wazero.
+// wasmhost, or, the root package itself and none of its sub-packages, from
+// a wiring root. It also returns the files allowed to import wazero.
 func guardViolations(ims []guardImport) (bad []string, wazeroUsers []string) {
 	for _, im := range ims {
 		dir := filepath.ToSlash(filepath.Dir(im.file))
@@ -88,11 +94,23 @@ func guardViolations(ims []guardImport) (bad []string, wazeroUsers []string) {
 				wazeroUsers = append(wazeroUsers, im.file)
 			}
 		case guardUnder(im.path, guardHostPkg) && !guardUnder(dir, guardHostDir):
-			bad = append(bad, im.file+" imports "+im.path)
+			if im.path != guardHostPkg || !guardWires(dir) {
+				bad = append(bad, im.file+" imports "+im.path)
+			}
 		}
 	}
 	slices.Sort(bad)
 	return bad, wazeroUsers
+}
+
+// guardWires reports whether slash dir is in a wiring root.
+func guardWires(dir string) bool {
+	for _, w := range guardWiring {
+		if guardUnder(dir, w) {
+			return true
+		}
+	}
+	return false
 }
 
 func guardRoot(t *testing.T) string {
@@ -113,10 +131,10 @@ func guardRoot(t *testing.T) string {
 	}
 }
 
-// C7: in the repo, wazero is imported only by wasmhost's own non-test
-// files (and some are found, so the scan is not vacuous), and nothing
-// outside wasmhost imports it.
-func TestGuardWazeroStaysInTheAdapterAndNothingWiresIt(t *testing.T) {
+// C7, C13: in the repo, wazero is imported only by wasmhost's own non-test
+// files (and some are found, so the scan is not vacuous), and outside
+// wasmhost only a wiring root imports it.
+func TestGuardWazeroStaysInTheAdapterAndOnlyWiringImportsIt(t *testing.T) {
 	bad, users := guardViolations(guardImports(t, guardRoot(t)))
 	if len(bad) != 0 {
 		t.Errorf("guard violations:\n%s", strings.Join(bad, "\n"))
@@ -148,8 +166,12 @@ func TestGuardSelfTestFlagsPlantedImports(t *testing.T) {
 	plant(guardHostDir+"/wasmtest/bad.go", guardWazero)
 	plant("internal/adapters/outbound/wasmhostx/bad.go", guardWazero)
 	plant("cmd/game/bad.go", guardWazero+"/experimental")
-	plant("internal/compose/game/bad.go", guardHostPkg)
+	plant("internal/compose/game/ok.go", guardHostPkg)
+	plant("cmd/game/ok.go", guardHostPkg)
 	plant("internal/compose/game/bad2.go", guardHostPkg+"/wasmtest")
+	plant("cmd/game/bad3.go", guardHostPkg+"/wasmrewrite")
+	plant("internal/application/game/bad.go", guardHostPkg)
+	plant("internal/composex/bad.go", guardHostPkg)
 	plant("internal/compose/game/ok_test.go", guardHostPkg)
 	plant("internal/x/testdata/ok.go", guardWazero)
 	plant(".loops/scratch/ok.go", guardWazero)
@@ -161,8 +183,10 @@ func TestGuardSelfTestFlagsPlantedImports(t *testing.T) {
 		guardHostDir + "/wasmrewrite/bad.go imports " + guardWazero + "/api",
 		guardHostDir + "/wasmtest/bad.go imports " + guardWazero,
 		"internal/adapters/outbound/wasmhostx/bad.go imports " + guardWazero,
-		"internal/compose/game/bad.go imports " + guardHostPkg,
 		"internal/compose/game/bad2.go imports " + guardHostPkg + "/wasmtest",
+		"cmd/game/bad3.go imports " + guardHostPkg + "/wasmrewrite",
+		"internal/application/game/bad.go imports " + guardHostPkg,
+		"internal/composex/bad.go imports " + guardHostPkg,
 	}
 	slices.Sort(want)
 	if !slices.Equal(bad, want) {
