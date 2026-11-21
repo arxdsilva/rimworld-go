@@ -7,54 +7,49 @@ import (
 	"strconv"
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
-	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
-	"rimworld-go/internal/adapters/outbound/starlarkhost"
+	"rimworld-go/internal/adapters/outbound/wasmhost"
 	appgame "rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/modding"
 )
 
-// scriptHost is the run's script host (PLG-060): the loaded plugins'
-// scripts/**.star, plugins in load order. Nil when no loaded plugin has a
-// script, and always for captures, so a capture never depends on one.
-func scriptHost(c runContent, capturing bool) *starlarkhost.Host {
+// scriptHost is the run's scripts (PLG-060, PLG-063): the loaded plugins'
+// scripts/**.star and scripts/**.wasm, plugins in load order, through one
+// mux. Nil only for captures, so a capture never depends on one; any other
+// run gets a mux, with no segment when no loaded plugin has a script.
+func scriptHost(c runContent, capturing bool) *scriptMux {
 	if capturing {
 		return nil
 	}
-	ps := scriptPlugins(c)
-	if len(ps) == 0 {
-		return nil
-	}
-	return starlarkhost.New(ps)
+	return newScriptMux(scriptPlugins(c), wasmhost.Options{})
 }
 
-// scriptPlugins are the loaded plugins' scripts in load order (core has
-// none).
-func scriptPlugins(c runContent) []starlarkhost.Plugin {
+// scriptPlugins are the loaded plugins with a Starlark or Wasm script, in
+// load order (core has none).
+func scriptPlugins(c runContent) []modding.Plugin {
 	byID := map[string]modding.Plugin{}
 	for _, p := range c.found {
 		byID[p.Manifest.ID] = p
 	}
-	var out []starlarkhost.Plugin
+	var out []modding.Plugin
 	for _, pl := range c.catalog.Order.Loaded {
 		p, ok := byID[pl.ID]
-		if !ok || pl.ID == modding.Core || len(p.Scripts) == 0 {
+		if !ok || pl.ID == modding.Core || len(p.Scripts)+len(p.Wasm) == 0 {
 			continue
 		}
-		sp := starlarkhost.Plugin{ID: pl.ID}
-		for _, b := range p.Scripts {
-			sp.Files = append(sp.Files, starlarkhost.File{Path: b.Path, Src: b.Data})
-		}
-		out = append(out, sp)
+		out = append(out, p)
 	}
 	return out
 }
 
-// withScripts gives h to the games the player starts (wizard colonies)
-// and loads, and shows the scripts it turned off on the Plugins screens.
-// The dev scenes (cfg.NewSim) get none. A nil h leaves cfg as it is.
-func withScripts(cfg uiadapter.AppConfig, h *starlarkhost.Host) uiadapter.AppConfig {
-	if h == nil {
+// withScripts gives m to the games the player starts (wizard colonies)
+// and loads, restores a loaded save's mod state, reports what a save
+// dropped from it, and feeds the Plugins screens (the problems found while
+// playing, the Wasm counters). The dev scenes (cfg.NewSim) get none. A nil m (captures) leaves cfg as it is.
+// A failed build or load leaves the mux, and the running game, as they
+// were.
+func withScripts(cfg uiadapter.AppConfig, m *scriptMux) uiadapter.AppConfig {
+	if m == nil {
 		return cfg
 	}
 	if nb := cfg.NewSimBuilder; nb != nil {
@@ -63,47 +58,55 @@ func withScripts(cfg uiadapter.AppConfig, h *starlarkhost.Host) uiadapter.AppCon
 			if err != nil || b == nil {
 				return b, err
 			}
-			return scriptedBuilder{SimBuilder: b, h: h}, nil
+			return scriptedBuilder{SimBuilder: b, m: m}, nil
 		}
 	}
 	if load := cfg.Saves.Load; load != nil {
 		cfg.Saves.Load = func(path string) (uiadapter.Simulation, ports.SaveMeta, error) {
 			sim, meta, err := load(path)
-			useScripts(sim, h)
+			if g := gameOf(sim, err); g != nil {
+				m.start(g)
+				m.restore(g)
+			}
 			return sim, meta, err
 		}
 	}
-	cfg.Plugins.Late = func() []plugins.Problem { return scriptProblems(h) }
+	if save := cfg.Saves.Save; save != nil {
+		cfg.Saves.Save = func(sim uiadapter.Simulation, meta ports.SaveMeta) error {
+			err := save(sim, meta) // encodes before it returns (filesave.Queue.SaveAs)
+			if g, ok := sim.(*appgame.Game); ok && g != nil {
+				m.saveNotes(g)
+			}
+			return err
+		}
+	}
+	cfg.Plugins.Late = m.Late
+	if m.wasm != nil {
+		cfg.Plugins.Stats = m.Stats
+	}
 	return cfg
 }
 
-// scriptedBuilder hands the built colony the script host.
+// scriptedBuilder hands the built colony a fresh run of the scripts.
 type scriptedBuilder struct {
 	uiadapter.SimBuilder
-	h *starlarkhost.Host
+	m *scriptMux
 }
 
 func (b scriptedBuilder) Sim() (uiadapter.Simulation, error) {
 	sim, err := b.SimBuilder.Sim()
-	useScripts(sim, b.h)
+	if g := gameOf(sim, err); g != nil {
+		b.m.start(g)
+	}
 	return sim, err
 }
 
-// useScripts sets h on sim when it is a game.
-func useScripts(sim uiadapter.Simulation, h *starlarkhost.Host) {
-	if g, ok := sim.(*appgame.Game); ok && g != nil {
-		appgame.UseScripts(g, h)
+// gameOf is sim when it is a game and err is nil; else nil.
+func gameOf(sim uiadapter.Simulation, err error) *appgame.Game {
+	if g, ok := sim.(*appgame.Game); ok && g != nil && err == nil {
+		return g
 	}
-}
-
-// scriptProblems are h's turned-off scripts as Plugins screen problems.
-func scriptProblems(h *starlarkhost.Host) []plugins.Problem {
-	var out []plugins.Problem
-	for _, p := range h.Problems() {
-		out = append(out, plugins.Problem{Plugin: p.Plugin, File: p.File, Field: lineOf(p.Line),
-			Msg: "script turned off for this run: " + p.Msg})
-	}
-	return out
+	return nil
 }
 
 // lineOf is "line N" (empty for 0).

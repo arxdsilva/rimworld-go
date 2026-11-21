@@ -98,14 +98,14 @@ func TestScriptHostFromLoadedPlugins(t *testing.T) {
 	if scriptHost(on, true) != nil {
 		t.Fatal("a capture runs no script")
 	}
-	if scriptHost(buildContent(src, nil, "0.1.35"), false) != nil {
-		t.Fatal("no loaded plugin with scripts: no host")
+	if m := scriptHost(buildContent(src, nil, "0.1.35"), false); m == nil || m.host() != nil || m.source() != nil {
+		t.Fatal("no loaded plugin with scripts: a mux with no segment and no mod state")
 	}
 	h := scriptHost(on, false)
-	if h == nil || len(h.Problems()) != 0 {
+	if h == nil || len(h.Late()) != 0 {
 		t.Fatalf("the example's scripts: %v", h)
 	}
-	if ps := scriptPlugins(on); len(ps) != 1 || ps[0].ID != "example_frontier" || len(ps[0].Files) == 0 {
+	if ps := scriptPlugins(on); len(ps) != 1 || ps[0].Manifest.ID != "example_frontier" || len(ps[0].Scripts) == 0 {
 		t.Fatalf("plugins: %+v", ps)
 	}
 	day5 := h.Fire(scripting.Event{Hook: scripting.OnDay, Tick: 5 * clock.TicksPerDay, Seed: 1}, fixedWorld{day: 5}, nil)
@@ -113,8 +113,8 @@ func TestScriptHostFromLoadedPlugins(t *testing.T) {
 	raid := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.rival_raid", Category: "threat"}}, fixedWorld{}, nil)
 	herd := h.Fire(scripting.Event{Hook: scripting.OnIncident, Tick: 9, Incident: scripting.Incident{Key: "core.herd_crossing", Category: "nature"}}, fixedWorld{}, nil)
 	if len(day5.Commands) != 1 || !strings.Contains(day5.Commands[0].Name, "Frontier wisdom") || len(day4.Commands) != 0 ||
-		len(raid.Commands) != 1 || len(herd.Commands) != 0 || len(h.Problems()) != 0 {
-		t.Fatalf("example: day 5 %+v, day 4 %+v, raid %+v, herd %+v, problems %+v", day5, day4, raid, herd, h.Problems())
+		len(raid.Commands) != 1 || len(herd.Commands) != 0 || len(h.Late()) != 0 {
+		t.Fatalf("example: day 5 %+v, day 4 %+v, raid %+v, herd %+v, problems %+v", day5, day4, raid, herd, h.Late())
 	}
 }
 
@@ -123,7 +123,7 @@ func TestWithScriptsWiresStartsLoadsAndProblems(t *testing.T) {
 	if cfg := withScripts(uiadapter.AppConfig{}, nil); cfg.Plugins.Late != nil {
 		t.Fatal("no host: nothing wired")
 	}
-	h := starlarkhost.New([]starlarkhost.Plugin{{ID: "p", Files: []starlarkhost.File{{Path: "scripts/x.star", Src: []byte("x = 1 // 0\n")}}}})
+	h := testMux(t, starPlugin("p", "scripts/x.star", "x = 1 // 0\n"))
 	g := appgame.New(appgame.Config{Seed: 1, Width: 8, Height: 8})
 	cfg := withScripts(uiadapter.AppConfig{Saves: uiadapter.SaveHooks{Load: func(string) (uiadapter.Simulation, ports.SaveMeta, error) {
 		return g, ports.SaveMeta{}, nil
@@ -162,8 +162,7 @@ func (b stubBuilder) Sim() (uiadapter.Simulation, error) { return b.g, nil }
 // A wizard colony (the path players take) gets the host too.
 func TestWithScriptsGivesWizardColoniesTheHost(t *testing.T) {
 	t.Parallel()
-	h := starlarkhost.New([]starlarkhost.Plugin{{ID: "p", Files: []starlarkhost.File{{Path: "scripts/x.star",
-		Src: []byte("def on_hour(ctx):\n    ctx.message(\"hello from p\")\n")}}}})
+	h := testMux(t, starPlugin("p", "scripts/x.star", "def on_hour(ctx):\n    ctx.message(\"hello from p\")\n"))
 	g := appgame.New(appgame.Config{Seed: 1, Width: 8, Height: 8})
 	cfg := withScripts(uiadapter.AppConfig{NewSimBuilder: func(uiadapter.NewGame) (uiadapter.SimBuilder, error) {
 		return stubBuilder{g}, nil

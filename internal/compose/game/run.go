@@ -87,7 +87,7 @@ func Run(opts cligame.Options, version string, d Display) {
 		Hardware:      hardware(shot != nil), // PLAY-019: graphics tier and the low-memory notice
 		NewSim:        scenes.newSim,
 	}
-	cfg = withScripts(cfg, scriptHost(content, shot != nil)) // scripts.go (PLG-060): new colonies and loaded saves run the loaded plugins' scripts; dev scenes and captures none
+	cfg = withScripts(cfg, scriptHost(content, shot != nil)) // scripts.go, scriptmux.go (PLG-060, PLG-063): new colonies and loaded saves run the loaded plugins' Starlark and Wasm scripts in load order, Wasm state saved and restored; dev scenes and captures none
 	// only a live engine: a nil *Engine in the interface would not be nil
 	if snd := openSound(shot != nil || opts.NoAudio || os.Getenv("RIMWORLD_GO_NOAUDIO") == "1"); snd != nil {
 		cfg.Sound = snd
