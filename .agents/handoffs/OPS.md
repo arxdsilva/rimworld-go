@@ -177,3 +177,12 @@ Every item left in the specs filed as GitHub issues by priority; v0.1.41 tagged 
 - HUD: none; no in-game behaviour changed.
 - Boxes: none: this task filed issues only; the stale boxes it found are ticked by DOCS-005.
 - Open: tick the 427 stale boxes (the run's `verify/*.jsonl` lists each `done` item with evidence; some rest on file existence only); 62 `unclear` items are filed with "check first".
+
+## DOCS-005-stale-boxes-and-tick-rule
+Stale spec boxes ticked; every task now ticks its boxes and names them · 2026-11-20 · 90a9c46a5, 948d0f6cc
+- Changed: 400 boxes and gap rows the code already meets are ticked, each with a `(2026-11-20 audit: <evidence>)` note. Of the 427 DOCS-004 called done, 184 had path and symbol evidence a script confirmed by grep; the other 243 got a stricter pass over every sub-bullet: 219 held, 24 were open after all.
+- Rule (user 2026-11-20: ticking is standing practice, pushing stays on request): AGENTS.md's checkbox line covers gap rows and the `spec-backlog` issue; `.agents/templates/HANDOFF.md` says how (search backlog, specs and gaps for every item met; tick the issue's task line; `Closes #N` with the last one). `TestLedgersAndIndex` fails a section dated 2026-11-20 or later with no `- Boxes:` line; the line declares, it does not prove.
+- Decisions: Definition-of-Done and asset-acceptance boxes stay unticked (standing review rules). Roll-ups are ticked only when all their children are. The PRODUCTION phase-plan table keeps the states it quoted at plan time.
+- Limits: AGENTS.md budget 5198 → 5193 bytes.
+- Boxes: 400 ticked (features 209, ui 132, screens 37, art 8, gap rows 14) by 948d0f6cc; the 24 still open are on `spec-backlog` issues (11 edited, new #265, #266).
+- Open: the audit notes rest on code reading, not on running each feature; a wrong tick is undone by reopening its box and filing it.

@@ -129,6 +129,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | DOCS-002-readme-media-refresh | README "See it move" media re-captured | 2026-10-26 | [OPS.md](OPS.md#docs-002-readme-media-refresh) |
 | DOCS-003-readme-rework | README that shows the game first | 2026-11-05 | [OPS.md](OPS.md#docs-003-readme-rework) |
 | DOCS-004-spec-backlog-issues | Every item left in the specs filed as GitHub issues by priority; v0.1.41 tagged | 2026-11-20 | [OPS.md](OPS.md#docs-004-spec-backlog-issues) |
+| DOCS-005-stale-boxes-and-tick-rule | Stale spec boxes ticked; every task now ticks its boxes and names them | 2026-11-20 | [OPS.md](OPS.md#docs-005-stale-boxes-and-tick-rule) |
 | DOS-0A-art | Colonist card colours and icons | 2026-11-03 | [DOS.md](DOS.md#dos-0a-art) |
 | DOS-1-card | The pawn card's data | 2026-11-03 | [DOS.md](DOS.md#dos-1-card) |
 | DOS-2-sheet | `sheet`, the card's pure logic | 2026-11-03 | [DOS.md](DOS.md#dos-2-sheet) |
