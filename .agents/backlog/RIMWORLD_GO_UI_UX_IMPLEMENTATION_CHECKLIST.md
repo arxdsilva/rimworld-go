@@ -73,7 +73,7 @@ use these primitives.
 
 ## 1.1 Presentation architecture
 
--   [-] **Read-only presentation snapshot** (colony PawnView snapshots; menus are headless)
+-   [x] **Read-only presentation snapshot** (colony PawnView snapshots; menus are headless) (2026-11-20 audit: game.PawnView and World() read models consumed through ebiten ports; BenchmarkReadModel in scale_bench_test.go)
     -   Create a compact presentation model published by the
         application/simulation boundary.
     -   UI reads entities, map state, alerts, jobs, needs, selections,
@@ -82,14 +82,14 @@ use these primitives.
         stores.
     -   Snapshot IDs must remain stable enough for selection and
         inspector continuity.
--   [-] **Typed UI command gateway** (session intents plus `Enqueue` MovePawn/designations/SetWorkEnabled; no draft/bills/trade/caravan)
+-   [x] **Typed UI command gateway** (session intents plus `Enqueue` MovePawn/designations/SetWorkEnabled; no draft/bills/trade/caravan) (2026-11-20 audit: domain/sim/command has AddBill, SetBill, FormCaravan, draft and trade commands; Game.Enqueue in application/game/game.go)
     -   Every gameplay mutation becomes a typed command: move, draft,
         designate, build, assign work, change policy, set bill, trade,
         form caravan, etc.
     -   Commands carry enough information for domain-side validation.
     -   UI may optimistically preview actions but authoritative success
         comes from simulation state.
--   [-] **Presentation-only state store** (screen stack, pause, camera, selection and groups, hover/hint, Architect/Work overlays, bindings, search (UI-016))
+-   [x] **Presentation-only state store** (screen stack, pause, camera, selection and groups, hover/hint, Architect/Work overlays, bindings, search (UI-016)) (2026-11-20 audit: ebiten/ui_state.go; uikit.Kit (Scroll, tip, Focus); ui_scale.go; hotkeys.go; selection pkg; hud/resources collapse)
     -   Camera.
     -   current selection.
     -   hovered tile/entity.
@@ -151,33 +151,33 @@ use these primitives.
     -   Normal, hover, pressed, disabled, selected/toggled states. (hover/disabled/selected; no pressed-frame or shortcut label)
     -   Tooltip and shortcut label. (disabled-reason line only)
 -   [ ] **Icon button**
--   [ ] **Checkbox**
--   [ ] **Radio/select option**
--   [ ] **Slider**
--   [ ] **Dropdown**
--   [ ] **Text input**
+-   [x] **Checkbox** (2026-11-20 audit: uikit/check.go Check; uikit/kit_test.go TestKitCheckRadioTabs; used in options/habits_tab.go, plugins/screen.go)
+-   [x] **Radio/select option** (2026-11-20 audit: uikit/check.go Radio; TestKitCheckRadioTabs; used in inspector/cmds_pawn.go, dossier/setup_presets.go)
+-   [x] **Slider** (2026-11-20 audit: uikit/slider.go Slider/SliderInt)
+-   [x] **Dropdown** (2026-11-20 audit: uikit/dropdown.go DropList)
+-   [x] **Text input** (2026-11-20 audit: uikit/textfield.go TextField with TextBuf editing)
 -   [-] **Search input** (UI-016: the Z search box; no shared widget yet)
--   [ ] **Numeric input/stepper**
--   [ ] **Scrollable panel**
--   [ ] **Virtualized list**
+-   [x] **Numeric input/stepper** (2026-11-20 audit: uikit/form.go Stepper, QtyStep (stepper_qty_test.go))
+-   [x] **Scrollable panel** (2026-11-20 audit: uikit/scroll.go ScrollArea)
+-   [x] **Virtualized list** (2026-11-20 audit: uikit/scroll.go List and ListVisible (rows culled to the viewport))
     -   Required for pawn/item/plugin/definition lists at scale.
--   [ ] **Virtualized table/grid**
+-   [x] **Virtualized table/grid** (2026-11-20 audit: uikit/table.go Table with TableOrder sort and ListVisible row culling)
     -   Required for Work, Schedule, Assign, Animals, History and debug
         data.
--   [ ] **Tree/filter control**
+-   [x] **Tree/filter control** (2026-11-20 audit: windows/storage.go, foodpolicy.go, apparel_policy_editor.go filter trees over game.StockpileFilterRows)
     -   Used by storage, food, apparel, ingredient and plugin definition
         filters.
--   [ ] **Tabs**
--   [-] **Progress bar** (ART-027: in-world work progress bar under the worked tile for bills, construction, mining, sowing, harvest, tending and cleaning; no shared UI progress widget)
+-   [x] **Tabs** (2026-11-20 audit: uikit/tabs.go Kit.Tabs/TabRects; TestKitCheckRadioTabs; windows_compat.go uses)
+-   [x] **Progress bar** (ART-027: in-world work progress bar under the worked tile for bills, construction, mining, sowing, harvest, tending and cleaning; no shared UI progress widget) (2026-11-20 audit: uikit/progress.go DrawProgress, a shared progress bar)
 -   [ ] **Stat bar**
--   [ ] **Context menu**
--   [ ] **Confirmation dialog**
--   [ ] **Modal window**
--   [-] **Toast/message** (PLAY-018: messages fade under the colonist bar; toasts stack just above the command buttons or the pane; no shared toast widget)
+-   [x] **Context menu** (2026-11-20 audit: uikit/modal.go Modal.RowActions menus used by right-click menus (CTL-008/009))
+-   [x] **Confirmation dialog** (2026-11-20 audit: uikit/modal.go Kit.Confirm; windows/confirm_test.go)
+-   [x] **Modal window** (2026-11-20 audit: uikit/modal.go Modal, Push, RunWindow)
+-   [x] **Toast/message** (PLAY-018: messages fade under the colonist bar; toasts stack just above the command buttons or the pane; no shared toast widget) (2026-11-20 audit: hud/toast.go Chrome.Toast/Alarm/DrawToasts; hosts in options_compat.go, perf_compat.go, devtools_compat.go; toast_test.go)
 -   [x] **Persistent alert card**
--   [ ] **Tooltip**
+-   [x] **Tooltip** (2026-11-20 audit: uikit/tooltip.go Tip, TipLayout)
 -   [-] **Rich tooltip/stat breakdown** (RHUD: every line of the colonist card has a tooltip, with the stat's factors where a formula exists; other panels have none yet)
--   [ ] **Drag painting tool**
+-   [x] **Drag painting tool** (2026-11-20 audit: windows/paint.go painter (Arm/Entered); used by windows/deps.go, assign.go, schedule.go Drag; assign_paint_test.go)
     -   For zones, schedules and priorities.
 -   [ ] **Resizable/repositionable developer window primitive**
 
@@ -208,7 +208,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012 / STK-SH: by user decision (2026-11-01) only colonists standing on unroofed tiles cast a shadow, a soft sun- or moon-directed blob under the feet; buildings, rock, plants, items, roofs, bridges, animals, prisoners, visitors and raiders cast none; MAPGEN-2: fog of war over unexplored tiles, black on the minimap; PLAY-022: animals drawn at their body's area and picked by any tile of it, walking with planted feet)
+-   [x] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012 / STK-SH: by user decision (2026-11-01) only colonists standing on unroofed tiles cast a shadow, a soft sun- or moon-directed blob under the feet; buildings, rock, plants, items, roofs, bridges, animals, prisoners, visitors and raiders cast none; MAPGEN-2: fog of war over unexplored tiles, black on the minimap; PLAY-022: animals drawn at their body's area and picked by any tile of it, walking with planted feet) (2026-11-20 audit: ebiten/render/view.go LODTile tiers, chunk bakes; BenchmarkWorldView; fog (MAPGEN-2), sprite lighting)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
@@ -219,7 +219,7 @@ This is the minimum UI required to interact with a running simulation.
     -   Mouse edge/drag and keyboard movement.
     -   Smooth presentation movement.
     -   Camera position is presentation-only.
--   [-] **Camera zoom** (keyboard/wheel zoom clamped, eased toward the target and anchored at the cursor; far-zoom detail simplification not implemented)
+-   [x] **Camera zoom** (keyboard/wheel zoom clamped, eased toward the target and anchored at the cursor; far-zoom detail simplification not implemented) (2026-11-20 audit: render/view.go LODTile; lod_test.go TestLODSwitchesByZoom (live/chunk/map tiers); zoom clamp/eased in camera pkg)
     -   Multiple useful zoom levels from tactical detail to colony
         overview.
     -   At far zoom, simplify sprites/details rather than drawing
@@ -245,7 +245,7 @@ This is the minimum UI required to interact with a running simulation.
 -   [x] **Double-click same-type selection** (UI-016: visible colonists, animals of the species, stacks of the item; CTL-001..004: furniture, blueprints, zones, and a zone's plant takes the zones)
     -   Select visible entities of the same relevant type, useful for
         pawns/animals/items.
--   [-] **Selection markers** (yellow outline on the selected pawn; every group member outlined and its colonist-bar slot lit (UI-016); no hostile/friendly differentiation yet)
+-   [x] **Selection markers** (yellow outline on the selected pawn; every group member outlined and its colonist-bar slot lit (UI-016); no hostile/friendly differentiation yet) (2026-11-20 audit: ebiten/render/world/labels.go DrawHostileMarker plus group outlines)
     -   Clear original visual indicator.
     -   Differentiate single/multiple selection and hostile/friendly if
         needed.
@@ -287,13 +287,13 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line; PLAY-018: one lower-left inspect pane for every kind (header, compact status bars, chips, scrolling lines) with its tabs opening a panel upward; AX-7: a book's pane is titled by its generated title and quality and lists what it teaches and what its quality gives, with a Read button; a bookcase's pane lists its books and the room's reading bonus; a colonist's pane says what it reads) (RHUD: the card's pane head adds the faction emblem with goodwill and a rename button)
+-   [x] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line; PLAY-018: one lower-left inspect pane for every kind (header, compact status bars, chips, scrolling lines) with its tabs opening a panel upward; AX-7: a book's pane is titled by its generated title and quality and lists what it teaches and what its quality gives, with a Read button; a bookcase's pane lists its books and the room's reading bonus; a colonist's pane says what it reads) (RHUD: the card's pane head adds the faction emblem with goodwill and a rename button) (2026-11-20 audit: inspector/pane_body.go h.CardBadge (faction emblem); pane_header.go declareHeader; pawn_state_ui.go guestFaction; building_inspector.go…)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
     -   health/condition summary.
     -   concise current state.
--   [-] **Entity portrait/icon** (vendor idle frame when pack loaded; otherwise empty)
+-   [x] **Entity portrait/icon** (vendor idle frame when pack loaded; otherwise empty) (2026-11-20 audit: ebiten/portrait.go drawPortrait / drawLookPortrait render pawn portraits from the Look)
     -   Original presentation.
     -   For pawns, portrait or representative pawn rendering.
 -   [ ] **Description**
@@ -308,7 +308,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; forbid on items, doors and beds (UI-016, CBT-5, STK-AL); PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too; SIM-062: rescue, capture, arrest and prioritize tending on the clicked pawn from the right-click menu; AX-1: Uninstall on a building, Reinstall on its crate (a ghost placement), Open on a filled grave, Strip on a downed person)
+-   [x] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; forbid on items, doors and beds (UI-016, CBT-5, STK-AL); PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too; SIM-062: rescue, capture, arrest and prioritize tending on the clicked pawn from the right-click menu; AX-1: Uninstall on a building, Reinstall on its crate (a ghost placement), Open on a filled grave, Strip on a downed person) (2026-11-20 audit: inspector/cmds_pawn.go, cmds_thing.go, cmds_build.go, cmds_orders.go (Uninstall/Reinstall), building_inspector.go AssignBedOwner…)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -374,14 +374,14 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.2 Pawn summary
 
--   [-] **Current activity/job** (inspector job line + schedule activity + tile; no draft)
+-   [x] **Current activity/job** (inspector job line + schedule activity + tile; no draft) (2026-11-20 audit: inspector/cmds_pawn.go:306 'Job: ' line, :224 'Schedule: ' chip, Draft toggle ID ids.PawnDraft)
 -   [x] **Draft state** (inspector status + Draft/Undraft button)
 -   [x] **Walking path** (every colonist's remaining route and destination on the map; drafted brighter; a haul's drop point marked (UI-013))
 -   [x] **Event log** (inspector Log tab: what happened to the colonist, newest first, 30 kept; animal inspector: Recent + Log (LOG-001))
--   [ ] **Faction**
--   [-] **Immediate health state** (alive/downed/dead + reason; no injury tree)
+-   [x] **Faction** (2026-11-20 audit: inspector/pawn_state_ui.go guestLine/guestFaction; card pane head faction emblem (RHUD))
+-   [x] **Immediate health state** (alive/downed/dead + reason; no injury tree) (2026-11-20 audit: ebiten/inspector/health_ui.go hurtParts lists wounded body parts with status)
 -   [x] **Immediate mood state**
--   [ ] **Current need warnings**
+-   [x] **Current need warnings** (2026-11-20 audit: hud/alerts.go group('starving'/'collapsed'/'unhappy'); need bars in inspector)
 
 ------------------------------------------------------------------------
 
@@ -423,7 +423,7 @@ the player's primary world-editing command surface.
     -   Reasons: occupied, impassable, unsupported, missing research,
         wrong terrain, blocked interaction cell, roof/support
         constraint.
--   [ ] **Material/stuff selector**
+-   [x] **Material/stuff selector** (2026-11-20 audit: ebiten/architect/panel.go stuff picker (ids.PrefixArchStuff); game.CanPlaceAt takes stuff)
     -   For buildings that can be made from different materials.
     -   Show available amount and relevant stat differences.
 -   [x] **Rotation** (Q/E for bed and chair; facing reaches the blueprint and building)
@@ -437,7 +437,7 @@ the player's primary world-editing command surface.
 
 ## 5.3 Orders
 
--   [ ] **Mine**
+-   [x] **Mine** (2026-11-20 audit: architect/catalog.go 'mine' tool Cmd command.DesignateMine)
 -   [x] **Cut plants** (trees, bushes and grass (UI-011))
 -   [x] **Harvest** (wild plants via Architect; ripe zone crops get the mark automatically (PLAY-017))
 -   [x] **Hunt**
@@ -510,7 +510,7 @@ the player's primary world-editing command surface.
 
 -   [x] **Home area overlay** (SIM-021: blue tint, HUD toggle, held on while a Home tool is in hand)
 -   [x] **Expand/shrink home area** (Architect > Zones > Home / Clear home)
--   [-] **Automatic home-area expansion setting** (Home always grows around new buildings; no setting to turn it off)
+-   [x] **Automatic home-area expansion setting** (Home always grows around new buildings; no setting to turn it off) (2026-11-20 audit: architect/marks.go ToggleHomeAuto sends command.SetHomeAuto; application/game/home.go off flag)
     -   If implemented.
 -   [ ] **Explain effects**
     -   Firefighting, cleaning and repair relevance.
@@ -549,7 +549,7 @@ interfaces.
     -   Tooltip explains work category.
 -   [-] **Simple priorities mode** (superseded by manual priorities; `SetWorkEnabled` still maps on/off to 3/off)
     -   Toggle work type on/off.
--   [-] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency; CTL-013..015: right click lowers, Shift on a column's name changes all, dragging paints; the simple checkbox mode is WRK-103)
+-   [x] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency; CTL-013..015: right click lowers, Shift on a column's name changes all, dragging paints; the simple checkbox mode is WRK-103) (2026-11-20 audit: windows/work.go NextPriority/PrevPriority/WorkPriority, SetWorkPriority, Incapable check; painter drag)
     -   Priority values equivalent to 1--4.
     -   Click cycles values.
     -   Drag paints a priority across cells.
@@ -576,8 +576,8 @@ interfaces.
 
 ## 8.1 Schedule grid
 
--   [ ] **24-hour columns**
--   [ ] **Pawn rows**
+-   [x] **24-hour columns** (2026-11-20 audit: windows/schedule.go draw: 24 hour cells per row; Paint/Drag)
+-   [x] **Pawn rows** (2026-11-20 audit: windows/schedule.go one row per colonist plus 'Everyone' (pawn 0))
 -   [x] **Schedule modes** (anything, work, recreation, sleep brushes)
     -   Anything.
     -   Work.
@@ -586,15 +586,15 @@ interfaces.
 -   [x] **Paint schedule** (click or drag across hour cells, per colonist or Everyone; current hour outlined)
     -   Select mode then drag cells.
 -   [ ] **Copy schedule**
--   [ ] **Multi-pawn painting**
--   [ ] **Current hour indicator**
+-   [x] **Multi-pawn painting** (2026-11-20 audit: windows/schedule.go Paint with pawn 0 -> command.SetSchedule; Drag via painter.Entered)
+-   [x] **Current hour indicator** (2026-11-20 audit: windows/schedule.go draw: now := w.sh.Date().Hour; h == now highlight)
 
 ## 8.2 Schedule explanations
 
 -   [ ] **Tooltip for each mode**
     -   Explain that schedule influences autonomous intent rather than
         being a hard script in emergencies.
--   [-] **Current pawn schedule in inspector** (selected pawn shows the current hour's activity; no full schedule grid yet) (RHUD: the card's hour selector sets the hour and Manage opens the Schedule window)
+-   [x] **Current pawn schedule in inspector** (selected pawn shows the current hour's activity; no full schedule grid yet) (RHUD: the card's hour selector sets the hour and Manage opens the Schedule window) (2026-11-20 audit: inspector/cmds_pawn.go:224 Schedule chip; windows/schedule.go Schedule window (Manage opens it))
 -   [ ] **Group schedule presets**
     -   Later large-colony feature.
 
@@ -612,9 +612,9 @@ interfaces.
     -   beauty.
     -   outdoors.
     -   chemical/addiction needs when applicable.
--   [ ] **Threshold markers**
+-   [x] **Threshold markers** (2026-11-20 audit: internal/adapters/inbound/ebiten/dossier/build.go BreakAt ticks; setup_colours.go bar_tick 'Bar threshold mark')
 -   [ ] **Current value and trend**
--   [ ] **Tooltip**
+-   [x] **Tooltip** (2026-11-20 audit: internal/adapters/inbound/ebiten/dossier/sheet/tips.go FoodTip, RestTip, FunTip)
     -   Explain what raises/lowers the need and current modifiers.
 
 ## 9.2 Mood
@@ -624,7 +624,7 @@ interfaces.
     -   target mood if smoothed.
     -   break-risk thresholds.
 -   [ ] **Mood trend**
--   [ ] **Break-risk severity label**
+-   [x] **Break-risk severity label** (2026-11-20 audit: dossier/sheet/lines.go mentalbreak.TierAt -> 'Near collapse' / 'Near a serious break')
 
 ## 9.3 Thought list
 
@@ -632,17 +632,17 @@ interfaces.
 -   [x] **Negative thoughts**
 -   [x] **Mood contribution**
 -   [ ] **Remaining duration for memories where appropriate**
--   [ ] **Stacking/count**
+-   [x] **Stacking/count** (2026-11-20 audit: internal/adapters/inbound/ebiten/dossier/sheet/tips.go MindTip merges equal thoughts with a count (x N))
 -   [ ] **Situational explanation**
     -   Example: room, environment, hunger, pain, social event.
 
 ## 9.4 Mental state
 
--   [ ] **Active mental state banner**
+-   [x] **Active mental state banner** (2026-11-20 audit: internal/adapters/inbound/ebiten/dossier/sheet/lines.go 'Mental break: X' status; inspector/pawn_state_ui.go mentalBreakLine…)
     -   What the pawn is doing.
     -   whether player control is unavailable.
     -   likely end condition/duration if knowable.
--   [-] **Inspiration indicator** (PRD-2: pawn status line shows the type; time left (InspirationTicks) is in the view but not shown)
+-   [x] **Inspiration indicator** (PRD-2: pawn status line shows the type; time left (InspirationTicks) is in the view but not shown) (2026-11-20 audit: internal/adapters/inbound/ebiten/dossier/sheet/lines.go and tips.go 'Inspired: %s, %s left' (InspirationTicks))
     -   Type.
     -   effect.
     -   expiration/use state.
@@ -656,7 +656,7 @@ understandable.
 
 ## 10.1 Health overview
 
--   [-] **Overall state** (MED-01: Health-tab state line, e.g. "Bleeding 140%/day · death in 9h"; no summary of diseases or conditions yet)
+-   [x] **Overall state** (MED-01: Health-tab state line, e.g. "Bleeding 140%/day · death in 9h"; no summary of diseases or conditions yet) (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/health_ui.go HealthStateColor/healthStateTip, healthConds (conditions section, infection…)
     -   Healthy/injured/sick/downed/dead.
 -   [x] **Pain** (UI-022: Health tab)
 -   [x] **Blood loss** (MED-01: blood-loss row with a bar in the Health tab)
@@ -720,25 +720,25 @@ understandable.
 
 ## 11.1 Character tab
 
--   [ ] **Name**
--   [ ] **Age**
--   [ ] **Childhood**
--   [ ] **Adulthood**
--   [ ] **Traits**
--   [ ] **Work incapabilities**
+-   [x] **Name** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go BioName)
+-   [x] **Age** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go bioInfoLine (age))
+-   [x] **Childhood** (2026-11-20 audit: inspector/bio_ui.go a.shell.Backstory 'Childhood')
+-   [x] **Adulthood** (2026-11-20 audit: inspector/bio_ui.go a.shell.Backstory 'Adulthood')
+-   [x] **Traits** (2026-11-20 audit: inspector/bio_ui.go a.shell.Traits)
+-   [x] **Work incapabilities** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go BioIncapable 'Incapable of:')
 -   [ ] **Faction/origin**
 -   [x] **Relationship summary** (UI-022: Bio tab relationship summary)
 
 ## 11.2 Skills
 
--   [ ] **Skill list**
+-   [x] **Skill list** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go bioSkills table over BioView.Skills)
     -   All core skills.
--   [ ] **Level**
--   [ ] **XP progress**
--   [ ] **Passion indicator**
+-   [x] **Level** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go bioSkills Lvl column)
+-   [x] **XP progress** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go bioSkills Experience bar, SkillView.XPPct)
+-   [x] **Passion indicator** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go Tabs.DrawPassion (passion_minor/major icons))
 -   [ ] **Learning rate**
--   [ ] **Relevant disabled work**
--   [ ] **Skill tooltip**
+-   [x] **Relevant disabled work** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bio_ui.go bioSkills draws 'incapable' per skill row; SkillTipIn 'Incapable.')
+-   [x] **Skill tooltip** (2026-11-20 audit: internal/adapters/inbound/ebiten/wizard/screen_pawns.go SkillTipIn (Affects, work speed, passion); bioSkillTip)
     -   Explain gameplay effects at current level.
 
 ## 11.3 Rename/customization
@@ -869,7 +869,7 @@ understandable.
 -   [x] **Do forever**
 -   [x] **Do until X**
 -   [x] **Target count** (-/+ buttons)
--   [ ] **Pause/resume thresholds if supported**
+-   [x] **Pause/resume thresholds if supported** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/bill_config.go 'Resume below' stepper (UnpauseAt))
 -   [-] **Ingredient filter tree** (PRD-1: a flat allow/forbid per ingredient kind the recipe accepts; no category tree)
 -   [x] **Ingredient search radius** (PRD-1)
 -   [x] **Allowed material/stuff** (PRD-2: the ingredient filter allows or forbids each material; the bill's Material picker pins one, sent with every ConfigureBill)
@@ -930,7 +930,7 @@ understandable.
 -   [x] **Dynamic graph layout** (RSCH-2: layered layout computed from the prerequisite DAG and tech levels, barycentre ordering to avoid crossings, cached per research-list change; no hardcoded coordinates)
     -   Plugin projects must integrate without hardcoded coordinates
         where possible.
--   [ ] **Namespaced provenance in developer mode**
+-   [x] **Namespaced provenance in developer mode** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/research_panel.go sourceNote 'Added by/Changed by' (PLG-072))
 
 ------------------------------------------------------------------------
 
@@ -974,7 +974,7 @@ understandable.
 ## 16.6 Beauty overlay
 
 -   [ ] **Beauty values**
--   [ ] **Selected pawn perceived beauty**
+-   [x] **Selected pawn perceived beauty** (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/inspector.go drawNeedsTab 'beauty' bar (PawnView.Beauty))
 -   [x] **Room beauty/impressiveness**
 
 ## 16.7 Room overlay
@@ -995,21 +995,21 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 17.1 Assign table
 
--   [ ] **Pawn rows**
--   [ ] **Food restriction**
+-   [x] **Pawn rows** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/assign.go assignRow per colonist)
+-   [x] **Food restriction** (2026-11-20 audit: windows/assign.go Food column, AssignFoodID; windows/foodpolicy.go foodButton/foodBody)
 -   [x] **Apparel policy** (OUT-003/005, GEAR-3: an Apparel column on the Assign tab, click to cycle and drag to paint, a default for new colonists, Clear forced per row)
 -   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy manager)
--   [ ] **Medical care**
+-   [x] **Medical care** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/assign.go Medical column careButton)
 -   [x] **Allowed area where chosen UX places it** (SIM-046: Assign tab)
 -   [x] **Bed ownership shortcut where useful** (SIM-042: bed owner assignment UI)
 
 ## 17.2 Policy manager
 
--   [ ] **Create policy**
--   [ ] **Rename**
--   [ ] **Duplicate**
--   [ ] **Delete**
--   [ ] **Assign to multiple pawns**
+-   [x] **Create policy** (2026-11-20 audit: windows/foodpolicy.go FoodNewID 'Copy' + Delete; apparel_policy_editor.go ApparelNewID 'New'/Copy/Delete)
+-   [x] **Rename** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/foodpolicy.go rename field; apparel_policy_editor.go ApparelPolicyRename)
+-   [x] **Duplicate** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/foodpolicy.go Copy; apparel_policy_editor.go ApparelCopyID)
+-   [x] **Delete** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/foodpolicy.go FoodDeleteID; apparel_policy_editor.go ApparelDeleteID)
+-   [x] **Assign to multiple pawns** (2026-11-20 audit: windows/assign.go paintFood/paintOutfit painters; assign_paint_test.go TestAssignDragPaintsFoodPolicy)
 
 ## 17.3 Food policy editor
 
@@ -1038,7 +1038,7 @@ This screen centralizes per-pawn behavioral policies.
 ## 17.6 Medical policy
 
 -   [x] **Care tier selector** (MED-03: per pawn in the Health tab and Assign screen; "Default medical care" row per group on the Assign screen)
--   [-] **Clear icon/tooltip for medicine level** (MED-03: text buttons with tooltips; icons still to come)
+-   [x] **Clear icon/tooltip for medicine level** (MED-03: text buttons with tooltips; icons still to come) (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/health_ui.go careIcon (ui_icon/care_*) drawn on care buttons)
 
 ------------------------------------------------------------------------
 
@@ -1115,7 +1115,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [x] **Enclosure validity** (PLAY-015: pen outline when selected; open pens dashed red "Not enclosed")
 -   [x] **Assigned species** (PLAY-015: per-species and per-sex filters)
 -   [x] **Nutrition/grazing capacity** (PLAY-015: grazing per day vs herd demand in the pen inspector)
--   [-] **Animal count vs food capacity** (UI-014: pen full alert only; no capacity ratio)
+-   [x] **Animal count vs food capacity** (UI-014: pen full alert only; no capacity ratio) (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/pen_ui.go penFoodLines (grazing vs herd demand per day, verdict))
 -   [x] **Missing gate/breach warning** (PLAY-015: "Pen N is open" alert)
 
 ## 19.4 Wildlife tab
@@ -1208,7 +1208,7 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 22.1 Factions screen
 
--   [ ] **Faction list**
+-   [x] **Faction list** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/factions.go drawRow (name, icon, tech, relation, goodwill, settlements))
     -   Name.
     -   icon.
     -   tech level.
@@ -1224,9 +1224,9 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 22.2 Goodwill explanation
 
--   [ ] **Current goodwill**
+-   [x] **Current goodwill** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/factions.go goodwillText, header standing)
 -   [x] **Hostile/neutral/ally thresholds** (hostile <= -75, neutral >= 0, ally >= +75 until 0, wiki: Factions; shown in the faction window tooltip and wizard tips)
--   [ ] **Recent modifiers/history**
+-   [x] **Recent modifiers/history** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/factions.go drawGoodwillChart and last five goodwill events)
 -   [ ] **Permanent hostility explanation**
 
 ## 22.3 Communication
@@ -1251,7 +1251,7 @@ the player what just happened and what requires attention.
     -   non-blocking.
     -   severity.
     -   optional world target.
--   [ ] **Rate limiting/coalescing**
+-   [x] **Rate limiting/coalescing** (2026-11-20 audit: hud/messages.go:336 m.Repeat -> '×N' counter (EAI-032); messages_ui_test.go)
     -   Repeated identical events do not spam the player.
 
 ## 23.2 Letters
@@ -1294,7 +1294,7 @@ the player what just happened and what requires attention.
 -   [x] **Aggregate repeated alerts**
     -   "27 colonists need treatment" rather than 27 cards.
 -   [ ] **Search/group in large colonies**
--   [ ] **Do not recompute expensive alert queries in UI every frame**
+-   [x] **Do not recompute expensive alert queries in UI every frame** (2026-11-20 audit: internal/adapters/inbound/ebiten/hud/alerts.go alertsMemo/AlertsKey caches current alerts)
 
 ------------------------------------------------------------------------
 
@@ -1313,7 +1313,7 @@ the player what just happened and what requires attention.
     -   disasters.
     -   ship events.
 -   [ ] **Filter event categories**
--   [ ] **Jump to surviving entity/location where valid**
+-   [x] **Jump to surviving entity/location where valid** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/history.go focusPawn selects and centres the colonist an entry names)
 
 ## 24.2 Graphs
 
@@ -1328,7 +1328,7 @@ the player what just happened and what requires attention.
 ## 24.3 Pawn records
 
 -   [-] **Combat records** (wave E U5: the colony-wide combat log; CBT-5: History window Records tab with kills and damage per colonist; missing: explosions do not count toward records)
--   [ ] **Kills**
+-   [x] **Kills** (2026-11-20 audit: windows/records.go recordRow.Kills (PawnView.Kills) Records table)
 -   [ ] **Damage dealt/taken**
 -   [ ] **Work/production records**
 -   [ ] **Medical/social/research records where useful**
@@ -1351,22 +1351,22 @@ the player what just happened and what requires attention.
 ## 25.2 World tile inspector
 
 -   [x] **Biome** (NG-1: shown on the landing screen's tile panel (`worldinfo.BuildTileInfo`); the colony top bar names it; the world view shows the same tile panel, skipping razed bases)
--   [-] **Terrain/hilliness** (landing screen only)
--   [-] **Elevation** (landing screen only)
--   [-] **Temperature** (landing screen only: mean, summer high, winter low)
--   [-] **Rainfall** (landing screen only)
--   [-] **Growing period** (landing screen only)
--   [-] **Movement difficulty** (landing screen only, the wiki value from `planet.MoveDifficulty` with travel by season (WG-1); caravans now use it (MAP-09))
--   [-] **Road/river** (landing screen only)
--   [-] **Forage** (landing screen only; wiki percentage, WG-04; also disease, time zone and a quadrum temperature table)
--   [-] **Settlement/faction if occupied** (landing screen only: nearest settlement and the Factions dialog; an occupied tile cannot be chosen)
+-   [x] **Terrain/hilliness** (landing screen only) (2026-11-20 audit: worldview/inspector.go inspectTile uses worldinfo.BuildTileInfoWith; worldinfo/info.go 'Terrain' Hills row)
+-   [x] **Elevation** (landing screen only) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldinfo/info.go BuildTileInfoWith shared by worldview/inspector.go (terrain, elevation, temp, rain…)
+-   [x] **Temperature** (landing screen only: mean, summer high, winter low) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldinfo/info.go BuildTileInfoWith shared by worldview/inspector.go (terrain, elevation, temp, rain…)
+-   [x] **Rainfall** (landing screen only) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldinfo/info.go BuildTileInfoWith shared by worldview/inspector.go (terrain, elevation, temp, rain…)
+-   [x] **Growing period** (landing screen only) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldinfo/info.go BuildTileInfoWith shared by worldview/inspector.go (terrain, elevation, temp, rain…)
+-   [x] **Movement difficulty** (landing screen only, the wiki value from `planet.MoveDifficulty` with travel by season (WG-1); caravans now use it (MAP-09)) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldinfo/info.go BuildTileInfoWith shared by worldview/inspector.go (terrain, elevation, temp, rain…)
+-   [x] **Road/river** (landing screen only) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldinfo/info.go BuildTileInfoWith shared by worldview/inspector.go (terrain, elevation, temp, rain…)
+-   [x] **Forage** (landing screen only; wiki percentage, WG-04; also disease, time zone and a quadrum temperature table) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldinfo/info.go BuildTileInfoWith shared by worldview/inspector.go (terrain, elevation, temp, rain…)
+-   [x] **Settlement/faction if occupied** (landing screen only: nearest settlement and the Factions dialog; an occupied tile cannot be chosen) (2026-11-20 audit: worldview/inspector.go inspectSettlement: Faction, Relation, Goodwill, travel time; journey_world_test.go)
 -   [x] **Distance/travel estimate when route context exists** (`Game.TravelEstimate` returns ticks and a reason; the world view shows the ETA from the selected caravan)
 
 ## 25.3 World objects
 
 -   [x] **Player colony** (MAP-1: `colony_home` marker in the world view; double-click enters it)
 -   [x] **Faction settlement** (faction-tinted settlement icons; pickable, the inspector shows faction, relation, distance and ETA; Attack gizmo)
--   [-] **Caravan** (SIM-046: caravan list and globe marker)
+-   [x] **Caravan** (SIM-046: caravan list and globe marker) (2026-11-20 audit: internal/adapters/inbound/ebiten/worldview/inspector.go inspectCaravan; objects.go KindCaravan)
 -   [x] **Quest site** (mineral sites open as site maps (MAP-1); `site_camp` and `site_ruined` markers; there are no quests)
 -   [x] **Temporary encounter** (MAP-3: encounter maps and the `encounter` marker, `map_threat` on a threat)
 -   [ ] **Distant endgame objective**
@@ -1463,7 +1463,7 @@ the player what just happened and what requires attention.
 ## 27.5 Difficulty
 
 -   [x] **Preset difficulties** (NG-1: Wanderer, Gentle, Settled, Seasoned, Grim, Merciless)
--   [-] **Custom difficulty** (NG-1: 19 sliders and toggles in groups with dependent fields; the Disease frequency slider has no effect because disease events do not exist)
+-   [x] **Custom difficulty** (NG-1: 19 sliders and toggles in groups with dependent fields; the Disease frequency slider has no effect because disease events do not exist) (2026-11-20 audit: application/game/disease.go consumes DiseaseFreq; wizard DiseaseFreqTip says diseases now strike (screen_difficulty.go))
     -   Threat scale.
     -   economy.
     -   mood.
@@ -1525,7 +1525,7 @@ the player what just happened and what requires attention.
 
 ## 28.2 Caravan loading status
 
--   [ ] **Gathering indicator**
+-   [x] **Gathering indicator** (2026-11-20 audit: worldview/inspector.go inspectCaravan shows State "Forming" and gizmos explain stillForms)
 -   [ ] **Items remaining**
 -   [ ] **Pawns/animals not ready**
 -   [ ] **Cancel formation**
@@ -1535,20 +1535,20 @@ the player what just happened and what requires attention.
 
 # 29. Caravan World Inspector
 
--   [-] **Caravan member list** (SIM-046: World tab caravan list)
+-   [x] **Caravan member list** (SIM-046: World tab caravan list) (2026-11-20 audit: worldview/inspector.go inspectCaravan lists each member with health; dialogs.CaravanTip/CaravanHealthNote)
 -   [ ] **Inventory**
 -   [ ] **Food remaining**
 -   [ ] **Travel speed**
--   [ ] **Current route**
--   [ ] **Estimated arrival**
+-   [x] **Current route** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'Heading for', router.startRoute; routeview)
+-   [x] **Estimated arrival** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'Arrives in' via v.eta)
 -   [ ] **Health/mood warnings**
 -   [ ] **Rest state**
 -   [ ] **Foraging**
--   [ ] **Reform/enter settlement actions**
+-   [x] **Reform/enter settlement actions** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'enter' gizmo + inspectMap Reform; TestJourneyWorldReformCaravan)
 -   [ ] **Trade**
--   [ ] **Attack**
--   [ ] **Settle**
--   [ ] **Return/change destination**
+-   [x] **Attack** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'attack' gizmo AttackReason; TestJourneyWorldAttackHostileBase)
+-   [x] **Settle** (2026-11-20 audit: worldview/inspector.go 'settle' gizmo command.SettleHere; TestJourneyWorldSettleHere)
+-   [x] **Return/change destination** (2026-11-20 audit: worldview/inspector.go 'travel' and 'return' gizmos; TestJourneyWorldTravelAndReturn)
 
 ------------------------------------------------------------------------
 
@@ -1556,32 +1556,32 @@ the player what just happened and what requires attention.
 
 ## 30.1 Quest list
 
--   [ ] **Available**
--   [ ] **Active**
--   [ ] **Completed/failed history**
--   [ ] **Expiry/deadline**
--   [ ] **Faction/source**
--   [ ] **Search/filter**
+-   [x] **Available** (2026-11-20 audit: windows/quests.go questsAvail tab and list)
+-   [x] **Active** (2026-11-20 audit: windows/quests.go questsActive tab)
+-   [x] **Completed/failed history** (2026-11-20 audit: windows/quests.go questsHistory tab; questTimeLines Completed/Failed/Lapsed)
+-   [x] **Expiry/deadline** (2026-11-20 audit: windows/quests_text.go questTimeLines: "Offer ends in", "Time left")
+-   [x] **Faction/source** (2026-11-20 audit: windows/quests_detail.go layoutFoot "Offered by", goodwill, standing)
+-   [x] **Search/filter** (2026-11-20 audit: windows/quests.go questRows search field)
 
 ## 30.2 Quest detail
 
--   [ ] **Original narrative description**
+-   [x] **Original narrative description** (2026-11-20 audit: windows/quests_detail.go layoutDetail renders q.Detail lines)
 -   [ ] **Objectives**
--   [ ] **World/map targets**
--   [ ] **Time limits**
+-   [x] **World/map targets** (2026-11-20 audit: windows/quests_detail.go layoutLinks "Jump to the site" using q.Tile)
+-   [x] **Time limits** (2026-11-20 audit: windows/quests_text.go questTimeLines, questLeft)
 -   [ ] **Threat information known to player**
--   [ ] **Reward choices**
+-   [x] **Reward choices** (2026-11-20 audit: windows/quests_detail.go layoutRewards with Accept per option; rewardChips)
 -   [ ] **Goodwill consequences**
--   [ ] **Accept/decline**
--   [ ] **Jump to world target**
+-   [x] **Accept/decline** (2026-11-20 audit: windows/quests_detail.go addAccept and Dismiss/Restore buttons (command.DismissQuest))
+-   [x] **Jump to world target** (2026-11-20 audit: windows/quests_detail.go layoutLinks jump to site)
 
 ## 30.3 Active quest tracker
 
 -   [ ] **Objective checklist**
 -   [ ] **Countdown**
--   [ ] **State changes**
+-   [x] **State changes** (2026-11-20 audit: application/game/quest_host.go questHost.Post (offer/failed/succeeded letters); windows/quests_text.go states)
 -   [ ] **Failure condition**
--   [ ] **Completion notification**
+-   [x] **Completion notification** (2026-11-20 audit: quest_host.go Post letters.Good 'Quest done' / Caution 'Quest failed'; journey_quest_letters_test.go)
 
 ------------------------------------------------------------------------
 
@@ -1715,8 +1715,8 @@ the player what just happened and what requires attention.
 -   [x] **Reduced flashing/effects** (Reduced motion and the Effects density; OPT-027 screen shake 0–200 %, off with Reduced motion)
 -   [x] **Text size** (text scales with the UI scale (UI-024); OPT-009 Options › Accessibility "Larger small text" raises the small face from 11 to 13)
 -   [x] **Tooltip delay** (OPT-017: Options › Accessibility)
--   [ ] **Pause-friendly interaction**
--   [ ] **Keyboard navigation where practical**
+-   [x] **Pause-friendly interaction** (2026-11-20 audit: paused_test.go TestPausedStockpileShowsAtOnce, TestPausedBlueprintAppears, TestPausedWorkPriorityCycles, TestPausedDraftToggles)
+-   [x] **Keyboard navigation where practical** (2026-11-20 audit: uikit/frame.go TakeTab and Focusable widgets (check.go))
 
 ------------------------------------------------------------------------
 
@@ -1727,16 +1727,16 @@ the player what just happened and what requires attention.
 -   [-] **Contextual lesson cards** (PLAY-018: ten original lessons in a top-right learning helper; the next three show, each with a detail card; not triggered by first contact with a mechanic)
     -   Trigger when player first encounters a mechanic.
 -   [-] **Lesson queue/history** (PLAY-018: lessons queue in order and finished ones drop out; no history view)
--   [ ] **Dismiss**
+-   [x] **Dismiss** (2026-11-20 audit: learn/helper.go 'Got it'; options/screen_options.go learningHelperRow; learn_test.go TestGotItFinishes...)
 -   [x] **Mark learned** (PLAY-018: done by doing it, or "Got it"; saved in the settings)
--   [ ] **Reopen help**
+-   [x] **Reopen help** (2026-11-20 audit: learn/helper.go collapsible panel and options/screen_options.go learningHelperRow re-enables and resets)
 -   [x] **Do not repeatedly interrupt experienced players** (PLAY-018: the helper never pops up; it collapses, hides when everything is learned, and can be switched off)
 
 ## 35.2 Tutorial highlights
 
 -   [ ] **Highlight UI control**
 -   [ ] **Highlight map cell/entity**
--   [ ] **Wait for required action**
+-   [x] **Wait for required action** (2026-11-20 audit: learn/helper.go completes lessons from observed commands (Host.Chain))
 -   [ ] **Explain failure**
 -   [ ] **Skip tutorial step**
 
@@ -1783,7 +1783,7 @@ first-class interface rather than relying on manual file editing.
 -   [x] **Resolved load-order list** (PLG-071: loaded plugins listed in load order with their position)
 -   [ ] **Dependency visualization**
 -   [x] **Manual ordering only where permitted** (PLG-071: never; the order is computed from requires/after/before)
--   [ ] **Load-before/load-after hints**
+-   [x] **Load-before/load-after hints** (2026-11-20 audit: plugins/screen.go detailLines "Loads after:" and "Loads before:")
 -   [-] **Cycle/conflict error** (PLG-071: shown as the plugin's problems and its "not loaded" state; no dedicated dialog)
 -   [x] **Explain why plugin appears at position** (PLG-071: "Position N: after x (requires it)" in the detail)
 -   [ ] **Reset automatic order**
@@ -1795,7 +1795,7 @@ first-class interface rather than relying on manual file editing.
 -   [ ] **Duplicate plugin ID**
 -   [ ] **Declared incompatibility**
 -   [ ] **Unsafe capability warning**
--   [ ] **Save requires missing plugin warning**
+-   [x] **Save requires missing plugin warning** (2026-11-20 audit: compose/game/files.go slotNotice via savefmt.MissingPlugins ("Played with plugins this game does not have"))
 
 ## 36.4 Plugin settings
 
@@ -1840,7 +1840,7 @@ first-class interface rather than relying on manual file editing.
 ## 37.3 Plugin performance
 
 -   [ ] **Per-plugin hook timings**
--   [ ] **Script budget violations**
+-   [x] **Script budget violations** (2026-11-20 audit: plugins/view.go View.Late: scripts the game turned off appear as problems (PLG-060))
 -   [ ] **Event hook counts**
 -   [ ] **Plugin memory/state size where measurable**
 -   [ ] **Disable offending plugin recommendation without silently doing
@@ -1860,7 +1860,7 @@ source and intended for AI-assisted development.
 -   [-] **Debug overlays** (MAPGEN-2: "Map fields" cycles 12 layers over the map with a legend: elevation, fertility, wetness, rock types, caves, river distance, terrain classes, vegetation density, start score, roofs, fog, regions; no path/region-cost or temperature overlays)
 -   [-] **Inspector** (UI-016: `'` raw id, position, job and flags of the selection)
 -   [ ] **Profiler**
--   [ ] **Incident/storyteller tools**
+-   [x] **Incident/storyteller tools** (2026-11-20 audit: devtools/story.go story panel; debug menu fires incidents via Tools.FireIncident)
 -   [ ] **Content/plugin tools**
 
 ## 38.2 Entity debug inspector
@@ -1895,7 +1895,7 @@ source and intended for AI-assisted development.
 -   [ ] **Light**
 -   [ ] **Beauty**
 -   [ ] **Cover**
--   [ ] **Roof**
+-   [x] **Roof** (2026-11-20 audit: application/game/mapfields/mapfields.go Roofs layer; roof_ui_test.go)
 -   [x] **Fire active set** (PLAY-015: per-chunk fire lists; flames, smoke, light and sound only for burning cells)
 
 ## 38.4 Debug actions
@@ -1988,7 +1988,7 @@ manageable beyond vanilla-scale colonies.
 -   [x] **Animal search** (name or species)
 -   [-] **Item/storage search** (items by kind on the map; buildings, plants and blueprints too; no storage contents yet)
 -   [x] **Research search** (RSCH-2: the Research tab's search field matches labels and unlocks)
--   [ ] **Build menu search**
+-   [x] **Build menu search** (2026-11-20 audit: architect/desc_box.go (Panel.Query, matches) with test architect_hud_test.go SetQuery("Wall"))
 -   [ ] **Quest search**
 -   [ ] **Plugin search**
 -   [ ] **Debug entity search**
@@ -2000,7 +2000,7 @@ manageable beyond vanilla-scale colonies.
 -   [ ] **Set work priority in bulk**
 -   [ ] **Set schedule in bulk**
 -   [ ] **Set area in bulk**
--   [ ] **Draft/undraft group**
+-   [x] **Draft/undraft group** (2026-11-20 audit: hud_group_test.go TestPawnGroupDraftAndUndraft: group pane Draft all/Undraft all)
 
 ## 40.5 Aggregation
 
@@ -2038,7 +2038,7 @@ manageable beyond vanilla-scale colonies.
 
 -   [ ] Missing assets show safe placeholder.
 -   [ ] Missing plugin definition does not crash UI.
--   [ ] Stale selected EntityID clears gracefully.
+-   [x] Stale selected EntityID clears gracefully. (2026-11-20 audit: dossier_compat_test.go TestDossierStaleSelection (pawn, animal); TestItemPanelClosesWhenItemGone; TestPlantPanelClosesWhenPlantGone…)
 -   [ ] Command rejection produces useful feedback.
 -   [ ] Save/load errors are readable.
 -   [ ] Invalid caravan/trade/build commands explain corrective action.
@@ -2050,7 +2050,7 @@ manageable beyond vanilla-scale colonies.
 -   [ ] No rebuilding large tables every frame.
 -   [ ] Text/layout caches are bounded.
 -   [ ] Tooltips do not trigger expensive domain queries.
--   [ ] Far zoom reduces rendering cost.
+-   [x] Far zoom reduces rendering cost. (2026-11-20 audit: internal/adapters/inbound/ebiten/lod_test.go TestLODSwitchesByZoom; checklist line 1682 Far-zoom detail (OPT-016) is [x])
 -   [ ] Overlays use cached/dirty data.
 -   [ ] Large management screens virtualize.
 
@@ -2074,8 +2074,8 @@ Complete:
 
 -   [ ] Core UI framework.
 -   [ ] Map viewport.
--   [ ] Camera.
--   [ ] Time controls.
+-   [x] Camera. (2026-11-20 audit: camera pkg + render/view.go LODTile + lod_test.go TestLODSwitchesByZoom; checklist 2.1 pan/jump [x], zoom now met)
+-   [x] Time controls. (2026-11-20 audit: journey_time_test.go TestJourneyTimeSpaceAndSpeeds; checklist 2.3 all 7 children [x])
 -   [ ] Selection.
 -   [ ] Generic inspector.
 -   [ ] Colonist bar.
@@ -2109,7 +2109,7 @@ Complete:
 -   [ ] Health.
 -   [ ] Character/skills.
 -   [x] Gear. (GEAR-001…012: see 12.1–12.3)
--   [ ] Social.
+-   [x] Social. (2026-11-20 audit: checklist ch.18 all 12 children [x]; social_ui_test.go TestSocialTabRowsAndEmpty, social_tabs_ui_test.go)
 -   [x] Prisoner basics. (SIM-045)
 -   [ ] Alerts/messages.
 
@@ -2125,7 +2125,7 @@ Complete:
 -   [x] Power overlay. (PLAY-021)
 -   [x] Temperature/roof overlays. (SIM-018: roof overlay; TEMP-5: Shift+T temperature overlay)
 -   [ ] Drafted combat.
--   [ ] Hit/cover feedback.
+-   [x] Hit/cover feedback. (2026-11-20 audit: combat_overlay_cover.go, draw_combat.go; checklist 13 Cover visualization and Damage indicators both [x])
 -   [ ] Assign/policies.
 
 **Player outcome:** Can run an industrial colony and tactically defend
@@ -2155,7 +2155,7 @@ Complete:
 -   [-] Caravan formation. (SIM-046: colonists and destination only)
 -   [-] Caravan inspector. (SIM-046: caravan list in the World tab)
 -   [ ] Quests.
--   [-] Transport pods. (AX-9: load dialog, pod pane, World tab target picker, pods in flight; no range ring, attack or founding)
+-   [x] Transport pods. (AX-9: load dialog, pod pane, World tab target picker, pods in flight; no range ring, attack or founding) (2026-11-20 audit: checklist ch.31 all 9 children [x]; worldview/pods.go range ring; TestJourneyWorldPodFound, TestJourneyWorldPodsAttackNeutralBase)
 
 **Player outcome:** Colony participates in the generated world rather
 than existing only on one map.
@@ -2275,7 +2275,7 @@ These do not belong in authoritative simulation state.
 -   [ ] The player can determine **why a job/path/order is invalid**.
 -   [ ] The player can determine **where colony resources are going**.
 -   [ ] The player can determine **what an alert expects them to fix**.
--   [ ] The player can inspect the modifiers behind important stats.
+-   [x] The player can inspect the modifiers behind important stats. (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/pane_header.go head button 'Stats: every figure this one is judged by' (CardStats)…)
 -   [ ] Important information is available without developer mode.
 -   [ ] Developer mode exposes substantially deeper diagnostics.
 

@@ -184,7 +184,7 @@ Limits: 40 methods per type, 25 fields per type with behaviour, 8 methods per in
 | `TestEveryNeatStorageRowHasACard` | `architect/neat_test.go` | Parses this file like `TestEveryGapRowHasACard` (`catalog_test.go:246`): column 1 is `NST-nnn`, column 2 ends with the build name in backticks; the card exists with that `Build`, in category `storage`, status `done`/`partial` means not `Planned`; the count table equals 27; every card with a neat build name has a row. |
 | `TestNeatStorageResearchGates` | `research/neat_test.go` | The 4 Machining and 2 Smithing keys are unlocked by `MachineTools` and `Metalworking`; the other 21 by nothing. |
 | `TestNeatArtCoverage` | `render/world` and `art-check` | Every piece has a sprite in each facing it declares, `slot0..slotN-1` in its metadata (N = per-cell capacity; 12 corpse slots become the heap points), an icon, and `make art-check` reports no orphan. |
-| `TestJourneyNeatStorage` | `ebiten/journey_neat_test.go` | Open the Architect's Storage category, arm a crate, place it, a hauler fills it, the inspector shows `n/m stacks`, the Storage button opens the filter window. Plus a journey for Admire: a colonist with low joy admires a stocked display case. |
+| `TestJourneyNeatStorage` | `ebiten/journey_neat_test.go` | done (2026-11-20 audit: ebiten/journey_neat_test.go TestJourneyNeatStorage and TestJourneyNeatAdmire) |
 | Benchmarks | `store` and root | `BenchmarkSearchManyShelves` (300 zones, mixed priorities) must not exceed shelf-only time per search by more than the zone count scales; `BenchmarkDrawArt500` A/B within noise. |
 
 ## Checklists and docs to update in the implementing changes

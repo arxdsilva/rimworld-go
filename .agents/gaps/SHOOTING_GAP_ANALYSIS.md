@@ -83,7 +83,7 @@ State: `done` shipped; `open` owed to a later change; `kept` differs on purpose.
 | SHT-301 | Cover of gates and small objects | Summary only: fence gate 75 %, fence 25 %, lamp 20 %, torch 15 %, plant pot 20 % | Gate counts as fence 25 %, `cover/of.go:20`; lamps none | open, re-read Cover first |
 | SHT-302 | Skill decay and the daily cap | Summary only: soft cap then 20 % ([Clarify] on the page); decay from 30 XP a day at level 10 to 3,600 at 20 | Hard stop at 4,000, `skills.go:43`, `:414-416`; `500*(L-9)` above level 10, `skill/skill.go:167-173` | open, all skills, not only Shooting |
 | SHT-303 | Sterile tiles | Summary only | None in `domain/difficulty` or `game/combat` | open, needs the building |
-| SHT-304 | Passion XP | Summary only: 35 / 100 / 150 % | 100 and 150 confirmed, `roster/bio.go:187-193`; check the no-passion case | open, check first |
+| SHT-304 | Passion XP | Summary only: 35 / 100 / 150 % | 100 and 150 confirmed, `roster/bio.go:187-193`; check the no-passion case | done (2026-11-20 audit: game/roster/bio.go PassionPct: 35/100/150) |
 
 ## Proposed phases
 

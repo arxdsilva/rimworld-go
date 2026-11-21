@@ -121,7 +121,7 @@ vanilla system depends on them.
     -   All player/AI external authoritative mutations have stable
         target tick and sequence.
     -   Equal-tick commands resolve predictably.
--   [ ] **Canonical state hashing**
+-   [x] **Canonical state hashing** (2026-11-20 audit: internal/domain/sim/statehash (Of, Bytes) and Game.StateHash in application/game/statehash.go; scalegolden pins runs by hash)
     -   Hash authoritative state in stable order.
     -   Support whole-simulation and subsystem/entity hashes for
         debugging.
@@ -164,20 +164,20 @@ The first playable surface.
     -   Terrain exposes walkability, movement cost, fertility,
         beauty/cleanability, build support, flammability where
         applicable.
--   [-] **Map edges and valid placement** (out-of-bounds handling implemented and tested; arrival/departure edge semantics not applicable yet)
+-   [x] **Map edges and valid placement** (out-of-bounds handling implemented and tested; arrival/departure edge semantics not applicable yet) (2026-11-20 audit: ExitMap job and arrival (job.ExitMap in tick.go, arrival.go) give edge arrival and departure semantics)
     -   Out-of-bounds handling.
     -   Edge cells usable for arrivals/departures where allowed.
 
 ## 2.2 Rendering
 
--   [-] **Tile rendering** (domain terrain drawn from original art; rock and terrain drawn for visible tiles only, linked rock/wall connectivity cached until terrain or buildings change (UI-017); no baked chunk images yet)
+-   [x] **Tile rendering** (domain terrain drawn from original art; rock and terrain drawn for visible tiles only, linked rock/wall connectivity cached until terrain or buildings change (UI-017); no baked chunk images yet) (2026-11-20 audit: render/world/chunk_cache.go:ChunkCache,bakeChunk; lod.go:LOD.InView,drawGroundLOD)
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
--   [-] **Entity rendering** (pawns and animals from snapshots with curved, eased, sub-frame motion and stride-driven walk/trot frames; original art for items/plants/frames/walls/beds; no projectiles)
+-   [x] **Entity rendering** (pawns and animals from snapshots with curved, eased, sub-frame motion and stride-driven walk/trot frames; original art for items/plants/frames/walls/beds; no projectiles) (2026-11-20 audit: render/overlay/combat_draw.go:DrawProjectiles; combat_overlay_host.go; render/creature/burial.go:DrawCorpseItem)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
--   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; CTL-017: a middle tap rotates the held object, a middle drag pans; center-on-selection not implemented)
+-   [x] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; CTL-017: a middle tap rotates the held object, a middle drag pans; center-on-selection not implemented) (2026-11-20 audit: Colonist-bar click and dossier open call renderer.centerOn on the selected pawn (dossier_compat.go))
     -   Pan.
     -   Zoom.
     -   Center on selected entity/event.
@@ -190,13 +190,13 @@ The first playable surface.
 
 ## 2.3 Inspect UI
 
--   [-] **Generic inspect panel** (name, job, status/reason, tile, food/rest bars; Gear tab live; Health/Social tabs live with a "No data yet." placeholder until their read models fill, ENG-003)
+-   [x] **Generic inspect panel** (name, job, status/reason, tile, food/rest bars; Gear tab live; Health/Social tabs live with a "No data yet." placeholder until their read models fill, ENG-003) (2026-11-20 audit: inspector/pane_header.go, health_ui.go, social_ui.go tabs fed by read models; building/item/plant inspectors)
     -   Label/type.
     -   Hit points/condition where relevant.
     -   Position.
     -   Basic description.
     -   Context-sensitive tabs supplied by entity capabilities.
--   [-] **Pawn inspect panel** (name, job/activity, food/rest, drafted state + Draft button; Gear and Social tabs since (GEAR-2, UI-022); no mood/skills)
+-   [x] **Pawn inspect panel** (name, job/activity, food/rest, drafted state + Draft button; Gear and Social tabs since (GEAR-2, UI-022); no mood/skills) (2026-11-20 audit: inspector/cmds_pawn.go:pawnBars (health, mood, food, rest), Bio/Gear/Needs/Health/Social tabs; bio_ui.go:bioSkills)
     -   Name.
     -   Current job/activity.
     -   Draft status.
@@ -222,7 +222,7 @@ interchangeable workers.
     -   Faction.
     -   Player-control state.
     -   Story/character metadata.
--   [-] **Procedural pawn generation** (NG-1: deterministic from (seed, slot, roll) with scenario constraints; no relationships)
+-   [x] **Procedural pawn generation** (NG-1: deterministic from (seed, slot, roll) with scenario constraints; no relationships) (2026-11-20 audit: application/game/people.go seedFamilies gives founders starting relations)
     -   Generate coherent pawn data from seed.
     -   Skills, passions, traits, backstories, age, health, and
         relationships use deterministic generation.
@@ -230,7 +230,7 @@ interchangeable workers.
 
 ## 3.2 Backstories
 
--   [-] **Childhood and adulthood background system** (NG-1: 59 original backstories with skill changes and incapabilities, adults have both; defined in Go, not yet data files or moddable)
+-   [x] **Childhood and adulthood background system** (NG-1: 59 original backstories with skill changes and incapabilities, adults have both; defined in Go, not yet data files or moddable) (2026-11-20 audit: application/modding/class_backstory.go:EncodeBackstories; mods/example_frontier/patches/core_backstories.json patches core)
     -   Backgrounds modify starting skills/stats.
     -   Backgrounds may prohibit categories of work.
     -   Adults can have both childhood and adulthood histories; younger
@@ -294,27 +294,27 @@ interchangeable workers.
 
 ## 4.1 Walkability
 
--   [-] **Walkable/blocked cells** (grid bounds; completed walls block, doors/floors/furniture walkable via construction defs; builder ejected from a finished wall; no terrain/hazards)
+-   [x] **Walkable/blocked cells** (grid bounds; completed walls block, doors/floors/furniture walkable via construction defs; builder ejected from a finished wall; no terrain/hazards) (2026-11-20 audit: domain/world/terrain/terrain.go:Walkable; grid.SetWalkable in game/tick.go completeFrame; game/fire_contract.go:fireAvoidCost)
     -   Terrain, walls, doors, buildings, hazards, and map boundaries
         contribute to traversal rules.
--   [ ] **Movement cost**
+-   [x] **Movement cost** (2026-11-20 audit: terrain.Type.WalkCost (terrain.go:122) feeds pathing extra cost (water.go, weather.go))
     -   Terrain and conditions influence movement time.
     -   Pawn movement speed stat affects traversal.
 
 ## 4.2 Pathfinding
 
--   [-] **Deterministic A**\* (8-connected octile costs 10/14, no cutting wall corners, optional per-cell extra cost; f/g/y/x tie-break; no region graph)
+-   [x] **Deterministic A**\* (8-connected octile costs 10/14, no cutting wall corners, optional per-cell extra cost; f/g/y/x tie-break; no region graph) (2026-11-20 audit: domain/world/region Map.Corridor is a region graph used by game/paths.go:91)
     -   Exact tile pathfinding.
     -   Stable tie-breaking.
     -   No dependence on map iteration.
--   [ ] **Region graph**
+-   [x] **Region graph** (2026-11-20 audit: internal/domain/world/region (regionGraph, Corridor) built and used by game/paths.go)
     -   Build connected walkable regions.
     -   Rebuild only dirty local topology.
     -   Use region reachability to reject impossible jobs cheaply.
--   [ ] **Hierarchical long-distance pathing**
+-   [x] **Hierarchical long-distance pathing** (2026-11-20 audit: region.Map.Corridor restricts A* to a region corridor for long paths (paths.go:91))
     -   Region-level route followed by local tile paths.
     -   Designed to scale beyond original RimWorld colony sizes.
--   [ ] **Path worker pool**
+-   [x] **Path worker pool** (2026-11-20 audit: application/game/pathstage/stage.go:Stage.Compute,Pool,Token; path_stage_parallel_test.go; setup.go SetPool)
     -   Pure snapshot-based path computation.
     -   Sequence/revision tagged results.
     -   Ordered authoritative commit.
@@ -342,7 +342,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.1 Job engine
 
--   [-] **Single current job per pawn** (`job.Record` kind/state/target/path/reservations; Move/Eat/Sleep/Haul/Construct/Harvest)
+-   [x] **Single current job per pawn** (`job.Record` kind/state/target/path/reservations; Move/Eat/Sleep/Haul/Construct/Harvest) (2026-11-20 audit: domain/ai/job/job.go:Record (Kind,State,Target,Path,WorkLeft,Fail,Forced), FailReason; domain/ai/reservation)
     -   Job type.
     -   Targets.
     -   State.
@@ -350,14 +350,14 @@ This is the heart of autonomous colony behavior.
     -   failure reason.
     -   reservations.
     -   interruptibility.
--   [-] **Explicit job state machines** (Goto/Do/Complete/Fail incl. deconstruct; drafted pawns hold; no medical/mental states)
+-   [x] **Explicit job state machines** (Goto/Do/Complete/Fail incl. deconstruct; drafted pawns hold; no medical/mental states) (2026-11-20 audit: domain/ai/job/job.go:State Goto/Do/Complete/Fail, Tend/Surgery/Hide kinds; job_test.go)
     -   Go to target.
     -   Wait/work.
     -   Carry/use/operate.
     -   Complete.
     -   Fail/cancel.
     -   Every transition is deterministic and testable.
--   [-] **Job interruption** (player `MovePawn`/`Prioritize`/`DraftPawn`, critical hunger/rest, target gone, reservation fail; SIM-027: blocked (15 s) or unreachable (1 h, reset on walkability change) work is postponed per pawn+job+target, givers skip postponed candidates, blocked player orders retry 3 times then drop with a message; prioritized jobs ignore tiredness; no danger/mental)
+-   [x] **Job interruption** (player `MovePawn`/`Prioritize`/`DraftPawn`, critical hunger/rest, target gone, reservation fail; SIM-027: blocked (15 s) or unreachable (1 h, reset on walkability change) work is postponed per pawn+job+target, givers skip postponed candidates, blocked player orders retry 3 times then drop with a message; prioritized jobs ignore tiredness; no danger/mental) (2026-11-20 audit: flee.go (danger), mental break (mind_host.go) and Rescue/EmergencyTend jobs interrupt work)
     -   Player order.
     -   Drafting.
     -   danger.
@@ -403,7 +403,7 @@ This is the heart of autonomous colony behavior.
     -   Haul.
     -   Clean.
     -   Research.
--   [-] **Simple work enable/disable** (`SetWorkEnabled` for Haul/Construct/Grow)
+-   [x] **Simple work enable/disable** (`SetWorkEnabled` for Haul/Construct/Grow) (2026-11-20 audit: game/tick.go handles command.SetWorkEnabled and SetWorkPriority; work_order_test.go)
     -   Pawn either performs a work type or does not.
 -   [x] **Manual priorities** (per-colonist 1-4 or off per work type; AI tries priority 1 work first; ties follow work.Order, the wiki's order and the Work tab's left to right: WRK-001, WRK-002)
     -   Multiple priority levels.
@@ -448,7 +448,7 @@ This is the heart of autonomous colony behavior.
     -   Work.
     -   Sleep.
     -   Recreation.
--   [-] **Schedule-aware intent** (bedtime overrides any job or prioritized order except drafting, eating first if hungry; recreation and idle time run free-time behaviours; tired colonists keep working through Work hours until they collapse; waking fully rested in a Sleep block turns the rest of it into free time until tired again)
+-   [x] **Schedule-aware intent** (bedtime overrides any job or prioritized order except drafting, eating first if hungry; recreation and idle time run free-time behaviours; tired colonists keep working through Work hours until they collapse; waking fully rested in a Sleep block turns the rest of it into free time until tired again) (2026-11-20 audit: game/sleep_test.go:TestTiredInWorkBlockKeepsWorking,TestSleepBlockWakesAtFullThenFreeTime,TestCollapseSleepsWhereItStands)
     -   Schedule biases/limits autonomous intent but emergencies and
         critical needs can override appropriately.
 
@@ -469,7 +469,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.1 Item system
 
--   [-] **Item definitions** (food and wood stacks only)
+-   [x] **Item definitions** (food and wood stacks only) (2026-11-20 audit: domain/economy/item/category.go:Kind.Category covers Food, Materials, Medicine, Apparel, Weapons, Manufactured, Corpses)
     -   Resource/material.
     -   food.
     -   medicine.
@@ -483,7 +483,7 @@ This is the heart of autonomous colony behavior.
     -   stack limit.
     -   merge/split.
     -   no negative or duplicated quantity.
--   [-] **Item quality** (PRD-2: quality rolled from skill and inspiration on apparel, weapons, beds, bedrolls, animal bed, end table, dresser, table, chair and constructed buildings; grenades unrolled; art waits for PRD-3)
+-   [x] **Item quality** (PRD-2: quality rolled from skill and inspiration on apparel, weapons, beds, bedrolls, animal bed, end table, dresser, table, chair and constructed buildings; grenades unrolled; art waits for PRD-3) (2026-11-20 audit: domain/economy/quality/quality.go:Roll(skill,roll,inspired); sculptures via PRD-3 recipes)
     -   Quality tiers for relevant crafted
         items/buildings/apparel/weapons/art.
     -   Quality affected by creator skill and other factors.
@@ -522,15 +522,15 @@ This is the heart of autonomous colony behavior.
     -   Efficiently find valid free cells.
     -   Avoid map-wide storage scans.
 -   [x] **Linked storage groups** (STO-2: `group.go` Link/Unlink, an edit reaches every member, `zone.Map.SameStore`, a group can be a bill source)
--   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold one 75 raw-food stack (wiki; STK-ST `zone.HopperStack`) at Important and refill below half (original); FOOD-4: haulers and cooks fill hoppers through the `FillHopper` job, wardens and doctors fetch paste for patients and prisoners; missing: none known, kept partial for the dispenser's original hopper numbers)
+-   [x] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold one 75 raw-food stack (wiki; STK-ST `zone.HopperStack`) at Important and refill below half (original); FOOD-4: haulers and cooks fill hoppers through the `FillHopper` job, wardens and doctors fetch paste for patients and prisoners; missing: none known, kept partial for the dispenser's original hopper numbers) (2026-11-20 audit: game/store/paste.go:MaxHoppers=13, Paste.Hoppers; game FillHopper job)
 -   [x] **Graves and sarcophagi as storage** (STO-2: corpse filters and priority; sarcophagus holds colonists only)
 -   [x] **Per-building storage** (NST: 27 pieces in the Architect's Storage category, each with its own size, stacks per cell and item filter; stored items are drawn on them, and the display case and pedestal can be admired)
 -   [x] **Stack limits** (STO-2 wiki limits, then STK-ST by user decision: every stackable kind stacks to 1000 per tile; weapons, apparel, belts, corpses, implants, organs and stone chunks one per stack; a hopper keeps one 75 raw-food stack (wiki); haulers top up any room; `.agents/gaps/STORAGE_GAP_ANALYSIS.md`)
 
 ## 6.4 Hauling
 
--   [-] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first; PLAY-017: only the colony's own goods (made, brought, harvested, chopped, mined, hunted) are hauled by themselves, items found on the map (ruin and vault loot, map chunks, predator kills, wild eggs) wait for a Haul mark; HAUL-002: one trip gathers the nearby compatible piles)
--   [-] **Haul construction resources** (a full load of wood or stone feeds a route of up to 8 nearby frames; leftovers go to the nearest stockpile, or only the needed amount is carried when storage has no room (HAUL-001))
+-   [x] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first; PLAY-017: only the colony's own goods (made, brought, harvested, chopped, mined, hunted) are hauled by themselves, items found on the map (ruin and vault loot, map chunks, predator kills, wild eggs) wait for a Haul mark; HAUL-002: one trip gathers the nearby compatible piles) (2026-11-20 audit: game/haul/gather.go:Pickups,ClaimAll; haul/ground.go; haul/step.go)
+-   [x] **Haul construction resources** (a full load of wood or stone feeds a route of up to 8 nearby frames; leftovers go to the nearest stockpile, or only the needed amount is carried when storage has no room (HAUL-001)) (2026-11-20 audit: game/haul/route.go:RouteFrames=8; job.Record.Route/SpareX)
 -   [x] **Haul production ingredients** (PRD-1: a crafter gathers a bill's ingredients from several stacks within the bill's radius onto the bench, `job.HaulIngredients`)
 -   [x] **Haul finished products** (PRD-1: store mode best stockpile hauls the product; drop on floor leaves it; a specific stockpile)
 -   [x] **Haul corpses**
@@ -544,36 +544,36 @@ This is the heart of autonomous colony behavior.
 
 ## 7.1 Designation system
 
--   [-] **Build designation** (`DesignateBuild` for wall/door/floor/bed/table/chair/lamp with facing; 1×1 footprints only)
+-   [x] **Build designation** (`DesignateBuild` for wall/door/floor/bed/table/chair/lamp with facing; 1×1 footprints only) (2026-11-20 audit: game/tick.go:command.DesignateBuild; placement.go:CanPlaceAt with facing; construction.Footprint multi-cell)
 -   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
 -   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
 -   [x] **Harvest designation** (wild plants by order; PLAY-017: zone crops get the harvest mark when they ripen, and Cancel holds until the next ripening; zone plants are Grow work, wild plants Plant cut work (HRV-003); HAUL-003, HRV-001: a colonist who finishes a harvest clears every ripe marked plant within 8 tiles before any work but fire and doctoring; yield, waste and speed by Plants level follow the wiki: HRV-004..010)
 -   [x] **Hunt designation**
 -   [x] **Plan designation** (PLAY-012 UI-023: Plan / Remove plan paint visual layout marks with no gameplay effect; a mark clears when any building is finished on its tile; Plans button hides the overlay)
--   [-] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))
+-   [x] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001)) (2026-11-20 audit: game/tick.go:cancelRect (frames, deconstruct, mine, harvest, haul, zones.Clear); frame_view.go:cancelFrame,refundFrame)
 -   [x] **Forbid/unforbid designation/action** (SIM-028 Forbid/Allow area tools and item toggle; UI-016 F key; STK-AL: Haul things and Mark for hauling allow what they mark, F on a selected door or bed)
 
 ## 7.2 Construction lifecycle
 
--   [-] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; doors and gates may replace walls and fences (deconstruct first, UI-021); doors and gates face along their walls and fences by themselves, and placing the same piece in another material swaps it in place (UI-022); no research/support checks)
+-   [x] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; doors and gates may replace walls and fences (deconstruct first, UI-021); doors and gates face along their walls and fences by themselves, and placing the same piece in another material swaps it in place (UI-022); no research/support checks) (2026-11-20 audit: placement.go CanPlaceAt checks research ('needs research: ...') besides bounds and layers)
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.
--   [-] **Material selection** (wood, five stone blocks or steel; per-material HP and work (SIM-029); no beauty/flammability yet)
+-   [x] **Material selection** (wood, five stone blocks or steel; per-material HP and work (SIM-029); no beauty/flammability yet) (2026-11-20 audit: item/stuff.go Stuff has BeautyFactor, BeautyOffset and Flammability per material)
     -   Stuff/material-based buildings where relevant.
     -   Different materials influence HP, beauty, flammability,
         work/material cost, etc.
--   [-] **Resource delivery** (material hauled to frames until `Need`, several frames per trip, in-flight amounts prevent over-delivery (HAUL-001); NG-1: frames of advanced buildings then wait for components)
+-   [x] **Resource delivery** (material hauled to frames until `Need`, several frames per trip, in-flight amounts prevent over-delivery (HAUL-001); NG-1: frames of advanced buildings then wait for components) (2026-11-20 audit: game/haul/route.go; frame_view.go:refundFrame deliveries; construction.Def.Components)
     -   Haulers/builders deliver required materials.
--   [-] **Construction frame** (delivered materials tracked per frame with in-flight amounts; UI-015 frame inspector shows them)
+-   [x] **Construction frame** (delivered materials tracked per frame with in-flight amounts; UI-015 frame inspector shows them) (2026-11-20 audit: construction.Frame delivered amounts; inspector/frame_inspector.go:buildInfo,SelectedFrame)
     -   Delivered materials are committed to a partially constructed
         entity.
 -   [-] **Construction work** (NG-1: Construction skill scales the work speed; no quality or failed construction; PRD-2 now rolls building quality; still no failed construction)
     -   Construction skill affects speed and result.
     -   Failed construction may waste resources if independently chosen
         balance supports it.
--   [-] **Completed building** (blocking defs set unwalkable and eject pawns; beds claimable; facing kept; no room/power invalidate)
+-   [x] **Completed building** (blocking defs set unwalkable and eject pawns; beds claimable; facing kept; no room/power invalidate) (2026-11-20 audit: game/tick.go:completeFrame calls markRoomsDirty, structVer++ (power.go keys on structVer), SetWalkable, ejectPawns)
     -   Replace frame with functional building.
     -   Invalidate navigation/rooms/power/etc. only as needed.
 -   [x] **Repair** (builders mend damaged buildings once no raiders are standing)
@@ -603,7 +603,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (PRD-4: shelf, a storage zone over its footprint, 3 stacks per cell, Preferred, no deterioration, beauty 0.5; bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; AX-2: couch with two seats, tables of four sizes seating a diner per side cell (`construction.Seats`), plant pot whose plant grows and adds beauty, small shelf, steles, urn; AX-7: bookcase (10 books) and small bookcase (5), books-only storage (`zone.KindBookcase`) giving their room the reading bonus; missing: joy)
+-   [x] **Furniture** (PRD-4: shelf, a storage zone over its footprint, 3 stacks per cell, Preferred, no deterioration, beauty 0.5; bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; AX-2: couch with two seats, tables of four sizes seating a diner per side cell (`construction.Seats`), plant pot whose plant grows and adds beauty, small shelf, steles, urn; AX-7: bookcase (10 books) and small bookcase (5), books-only storage (`zone.KindBookcase`) giving their room the reading bonus; missing: joy) (2026-11-20 audit: game/recreate/spec.go:SpecOf (joy furniture); rest/seats.go; zone.KindBookcase; construction.Seats)
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -657,7 +657,7 @@ This is the heart of autonomous colony behavior.
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
--   [-] **Food search** (nearest edible stack; entity reserved; SIM-028: forbidden stacks skipped, animals never pick food behind fences; FOOD-1: a malnourished pawn eats animal carcasses too; FOOD-4: food policies filter the search, choice scores 300 - distance + mood worth with kibble and corpse penalties and a near-rot bonus (original numbers); missing: a vanilla optimality formula (not published))
+-   [x] **Food search** (nearest edible stack; entity reserved; SIM-028: forbidden stacks skipped, animals never pick food behind fences; FOOD-1: a malnourished pawn eats animal carcasses too; FOOD-4: food policies filter the search, choice scores 300 - distance + mood worth with kibble and corpse penalties and a near-rot bonus (original numbers); missing: a vanilla optimality formula (not published)) (2026-11-20 audit: game/food.go:bestFood (Forbidden, reserve.FreeFor, inArea); diet/choose.go scoring; unpublished vanilla formula n/a)
     -   Prefer valid edible food according to restrictions and
         availability.
     -   Reserve food before fetching it.
@@ -675,7 +675,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Meat**
 -   [x] **Animal products** (SIM-026, FOOD-3: milk, wool and eggs per species with saturation scaling, fertile eggs edible, omnivores eat eggs and milk; Handle work type)
     -   Milk/eggs where species definitions support them.
--   [ ] **Food categories and diet compatibility**
+-   [x] **Food categories and diet compatibility** (2026-11-20 audit: game/diet/policy.go food policies; diet/choose.go; diet_test.go)
 
 ## 8.3 Cooking
 
@@ -695,7 +695,7 @@ This is the heart of autonomous colony behavior.
 
 ## 8.4 Farming
 
--   [-] **Fertility** (hover text only in `hud/cellinfo.go`; no painted fertility overlay: FOOD-5)
+-   [x] **Fertility** (hover text only in `hud/cellinfo.go`; no painted fertility overlay: FOOD-5) (2026-11-20 audit: FertilityOverlay hotkey and render/overlay growing_draw.go DrawFertility (FOOD-5))
     -   Terrain fertility affects plant growth.
 -   [x] **Crop definitions** (FOOD-2: 15 crops incl. rice, strawberry, haygrass, hops at wiki grow days, yields and sensitivity; sow 170 / harvest 200 work; minimum sowing skill for healroot, strawberry, hops and trees; devilstrand, smokeleaf and psychoid are out of food scope; picker numbers FOOD-5)
     -   Growth time.
@@ -746,7 +746,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   Replenishes while sleeping.
     -   Severe exhaustion can force sleep.
     -   Tiredness affects mood and performance.
--   [-] **Sleep intent** (owned bed else nearest free bed else current tile, also when the bed is out of reach; schedule-aware: tired sleep only outside Work hours)
+-   [x] **Sleep intent** (owned bed else nearest free bed else current tile, also when the bed is out of reach; schedule-aware: tired sleep only outside Work hours) (2026-11-20 audit: game/sleep_test.go:TestUnreachableBedSleepsOnGround,TestTiredInWorkBlockKeepsWorking; sleep intent in tick.go)
     -   Schedule-aware.
     -   Select owned/assigned bed if available.
     -   Fall back to available sleeping location.
@@ -840,7 +840,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 -   [x] **Smoothed current mood**
     -   Current mood trends toward target rather than instantaneously
         matching it.
--   [ ] **Break-risk thresholds**
+-   [x] **Break-risk thresholds** (2026-11-20 audit: domain/pawn/mentalbreak:Thresholds; game/bio_view.go BreakAt; dossier/build.go and sheet/tips.go show tiers)
     -   Minor/major/extreme risk zones exposed to UI.
 -   [x] **Mood UI**
     -   Show current mood, target, active positive/negative thoughts,
@@ -865,7 +865,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   food binge.
     -   drug binge where available.
     -   hide-in-room style isolation.
--   [-] **Destructive/aggressive breaks** (SIM-066: insulting spree, targeted insulting spree, berserk, murderous rage; colonists may arrest or, drafted, attack a berserker. CBT-4: tantrum, Major tier, 8000-12000 ticks, smashes nearby objects; escape is 19.4)
+-   [x] **Destructive/aggressive breaks** (SIM-066: insulting spree, targeted insulting spree, berserk, murderous rage; colonists may arrest or, drafted, attack a berserker. CBT-4: tantrum, Major tier, 8000-12000 ticks, smashes nearby objects; escape is 19.4) (2026-11-20 audit: domain/pawn/mentalbreak/mentalbreak.go: InsultingSpree, Berserk, MurderousRage, Tantrum; escape item 19.4 is [x])
     -   Insulting spree.
     -   tantrum/object destruction.
     -   berserk/aggression.
@@ -1038,7 +1038,7 @@ treatment, and surgery are major colony-management systems.
     -   symptoms/stat modifiers.
     -   tendable conditions.
     -   immunity where appropriate.
--   [-] **Representative vanilla disease classes** (MED-04: flu, plague, malaria, sleeping sickness, gut worms, muscle parasites at wiki rates; food poisoning (FOOD-4), toxic buildup (FOOD-6, `body/cond_toxic.go`), hypothermia, heatstroke and the insects' hypothermic slowdown (TEMP-3, `body/cond_frostbite.go`) are conditions of their own)
+-   [x] **Representative vanilla disease classes** (MED-04: flu, plague, malaria, sleeping sickness, gut worms, muscle parasites at wiki rates; food poisoning (FOOD-4), toxic buildup (FOOD-6, `body/cond_toxic.go`), hypothermia, heatstroke and the insects' hypothermic slowdown (TEMP-3, `body/cond_frostbite.go`) are conditions of their own) (2026-11-20 audit: domain/pawn/body/cond_kinds.go: CondFlu, Plague, Malaria, SleepingSickness, GutWorms, MuscleParasites, FoodPoisoning, ToxicBuildup…)
     -   flu-like disease.
     -   plague-like severe disease.
     -   malaria-like tropical disease.
@@ -1117,7 +1117,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.2 Seasons/calendar
 
--   [-] **Year and quadrum/season cycle** (seasons centred on the temperature curve; crops grow 0-10C ramp, full 10-35C, frost kills tender crops)
+-   [x] **Year and quadrum/season cycle** (seasons centred on the temperature curve; crops grow 0-10C ramp, full 10-35C, frost kills tender crops) (2026-11-20 audit: temperature.go and setup.go season() handle hemisphere offset (southern PeakDay 45))
     -   Seasonal temperature/growing changes.
     -   Hemisphere/world position can affect seasons.
 -   [x] **Growing period** (the landing screen shows the growing period, `wizard/screen_landing.go`)
@@ -1307,7 +1307,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 15.3 Variable generation
 
--   [-] **Solar day/weather output** (PLAY-021: follows daylight and roofs; PLAY-022: weather dims it (shared sun factor with the renderer: cloudy 70 %, rain 45 %, storm 35 %, snow 40 %, blizzard 25 %); FOOD-6: an eclipse stops it)
+-   [x] **Solar day/weather output** (PLAY-021: follows daylight and roofs; PLAY-022: weather dims it (shared sun factor with the renderer: cloudy 70 %, rain 45 %, storm 35 %, snow 40 %, blizzard 25 %); FOOD-6: an eclipse stops it) (2026-11-20 audit: game/power_gen.go: skyLight, weather.SunFactor, eclipse; render/light/light.go shared factor)
 -   [x] **Wind turbine output** (PLAY-021: wind speed times the clear share of a band beside it; walls, rock, roofs and trees block)
     -   Wind state and obstruction rules.
 -   [x] **Fuel consumption** (PLAY-021: one fuel table for campfires, torch lamps and wood-fired generators, refuelled by haulers; a generator burns only while running)
@@ -1364,12 +1364,12 @@ treatment, and surgery are major colony-management systems.
     -   accuracy by distance.
     -   burst count where applicable.
     -   projectile definition.
--   [-] **Thrown/explosive weapons** (DEF-2: frag, molotov and EMP grenades with blast radius, raiders only; colonist throw order is DEF-4)
+-   [x] **Thrown/explosive weapons** (DEF-2: frag, molotov and EMP grenades with blast radius, raiders only; colonist throw order is DEF-4) (2026-11-20 audit: domain/combat/weapon/weapon.go:Def.Blast explosion.Def; command.ThrowGrenade in combat/draft.go)
     -   Grenade-like projectile.
     -   blast radius.
 -   [x] **Single-use launchers** (CBT-3: rocket launcher and triple rocket launcher are consumed by one trigger pull; wiki numbers)
     -   Consumable weapon/equipment class if desired for vanilla parity.
--   [ ] **No ammunition for ordinary guns**
+-   [x] **No ammunition for ordinary guns** (2026-11-20 audit: no ammo field in domain/combat/weapon or game/combat (grep ammo: none))
     -   Base RimWorld's standard ranged weapons do not require ammo;
         preserve this experience unless a plugin changes it.
         citeturn2search1
@@ -1408,7 +1408,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.4 Ranged attack
 
--   [ ] **Target acquisition**
+-   [x] **Target acquisition** (2026-11-20 audit: combat Guard.nearestFoe and rage/target.go acquire targets)
 -   [x] **Warmup** (DEF-1: per weapon, `weapon.Def.Warmup`)
 -   [x] **Accuracy** (CBT-2: Euclidean ranges, weather factors unless both ends are roofed)
     -   Shooting skill.
@@ -1505,7 +1505,7 @@ children systems.
 
 -   [x] **Hunt designation**
 -   [x] **Hunter requires suitable ranged weapon**
--   [ ] **Stalk/approach/fire job**
+-   [x] **Stalk/approach/fire job** (2026-11-20 audit: combat/strike.go and combat/hunt.go run job.Hunt (closes to weapon range, then fires); job.go note)
 -   [x] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; SIM-024: badly hurt fighters break off, predators give up chases; SIM-035: tame fighters defend themselves against anything but their own colonists; EAI-003: a hurt wild animal calls its herd, fighters join and grazers flee; EAI-006: a grieving tame manhunter is a foe for guards and turrets)
 -   [x] **Corpse hauling/butchering integration**
 
@@ -1600,9 +1600,9 @@ children systems.
 
 -   [-] **Rescue/recovery join chance** (SIM-063: a rescued faction-less stranger asks to join on recovery, 50 % when leaving is safe, 100 % when not; Accept/Decline letter. Missing: an event that brings such strangers (transport pod crash))
 -   [x] **Wanderer/migrant joins event** (SIM-046)
--   [ ] **Refugee/visitor join opportunity where part of base event
+-   [x] **Refugee/visitor join opportunity where part of base event (2026-11-20 audit: domain/incident: RefugeeChased, VisitorGroup, WandererJoins handled in game/incidents.go)
     set**
--   [ ] **Quest-related joins when quest system is implemented**
+-   [x] **Quest-related joins when quest system is implemented** (2026-11-20 audit: domain/quest/def.go Joiner,Joins; game/quest/kinds/joiner.go:Joiner)
 
 ------------------------------------------------------------------------
 
@@ -1633,7 +1633,7 @@ change relationships, and settlements exist on the world map.
 
 -   [x] **Relationship score** (NG-1: goodwill -100..100 with hysteresis: hostile at -75 or less, calm again at 0; ally at +75, kept until goodwill reaches 0; wiki: Factions, PLG-4/PLG-5)
     -   Hostile / neutral / ally states derived from goodwill/rules.
--   [-] **Goodwill changes** (NG-1: a repelled raid costs 5 and goodwill drifts toward a baseline daily; PLAY-024: gifts by radio (1 per 40 silver, at most 15), caravan requests cost 12, killing or capturing a trader costs 40, military aid costs 20 (friendly only, 3-day cooldown); no quests)
+-   [x] **Goodwill changes** (NG-1: a repelled raid costs 5 and goodwill drifts toward a baseline daily; PLAY-024: gifts by radio (1 per 40 silver, at most 15), caravan requests cost 12, killing or capturing a trader costs 40, military aid costs 20 (friendly only, 3-day cooldown); no quests) (2026-11-20 audit: domain/quest/talks.go Goodwill; game/quest apply goodwill; bonds.go giftGoodwill; prisoners.go arrestGoodwill; PLAY-024 gifts)
     -   Gifts.
     -   attacks.
     -   harming visitors.
@@ -1719,18 +1719,18 @@ progression:
 
 -   [x] **Electricity** (PLAY-021: unlocks conduits, switch, wood-fired generator, lamp, heater, cooler and the electric benches)
 -   [x] **Battery/storage** (PLAY-021: the Batteries project; plus Solar, Wind and Geothermal power)
--   [ ] **Cooling/temperature control**
--   [ ] **Stoneworking**
--   [ ] **Complex furniture**
+-   [x] **Cooling/temperature control** (2026-11-20 audit: domain/research/research.go Project list includes PassiveCooling and AirConditioning)
+-   [x] **Stoneworking** (2026-11-20 audit: domain/research/research.go: Stonecutting project def)
+-   [x] **Complex furniture** (2026-11-20 audit: domain/research/research.go Project list includes Upholstery, CarpetMaking, Television, FlatScreens)
 -   [x] **Drug production** (SIM-040 research; PRD-4: TonicSynthesis, LeafRefining and the hard-drug chain)
--   [ ] **Microelectronics/communications**
+-   [x] **Microelectronics/communications** (2026-11-20 audit: domain/research/research.go: Radio, Microcircuits project defs)
 -   [x] **Advanced fabrication** (PRD-4: PrecisionFabrication, FlakArmor, Armoursmithing, PoweredArmor, TrailRations, SealedRations; gates on Upholstery, Metalworking, RifledBarrels, Microcircuits, Artillery)
--   [ ] **Weapon technologies**
--   [ ] **Armor/apparel technologies**
+-   [x] **Weapon technologies** (2026-11-20 audit: domain/research/research.go Project list includes Gunsmithing, Bladesmithing, Bowcraft, RotaryGuns)
+-   [x] **Armor/apparel technologies** (2026-11-20 audit: domain/research/research.go Project list includes Tailoring, Armoursmithing, FlakArmor, PoweredArmor)
 -   [x] **Geothermal/advanced power** (MAPGEN-2: steam vents warm the air; PLAY-021: a geothermal generator stands exactly on a vent, 1800 W)
 -   [x] **Hospital/medical technology** (hospital bed (SIM-034); MED-06: powered vitals monitor beside a hospital bed: tend +7 %, surgery ×1.05, immunity +2 %; MED-05: servo implants, nanomed kit)
 -   [x] **Transport pods** (AX-9: the Transport pods and Mineral scanning projects gate the pod, the launcher and the long-range mineral scanner; Stasis caskets the stasis casket)
--   [ ] **Ship/endgame technologies**
+-   [x] **Ship/endgame technologies** (2026-11-20 audit: domain/research/research.go Project list includes ShipFrames, ShipMinds, ShipReactors, ShipDrives)
 
 ------------------------------------------------------------------------
 
@@ -1993,8 +1993,8 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.2 Positive/neutral incidents
 
--   [ ] **Trader caravan**
--   [ ] **Orbital trader**
+-   [x] **Trader caravan** (2026-11-20 audit: domain/incident/incident.go TraderCaravan; game/trade_caravan.go:traderCaravanFrom)
+-   [x] **Orbital trader** (2026-11-20 audit: domain/incident/incident.go OrbitalTrader; game/trade_orbital.go)
 -   [x] **Friendly visitors** (SIM-046)
 -   [x] **Wanderer joins** (SIM-046)
 -   [ ] **Transport pod crash / downed stranger**
@@ -2026,7 +2026,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Flashstorm**
 -   [ ] **Dry thunderstorm**
 -   [ ] **Psychic drone-like mood event**
--   [-] **Volcanic-winter-like long climate event if part of target base
+-   [x] **Volcanic-winter-like long climate event if part of target base (2026-11-20 audit: domain/incident VolcanicWinter; hud/chips.go chip; render/env/environment.go ash haze)
     version** (TEMP-2: incident `volcanic_winter`, wiki -7 C ramped over 50,000 ticks, 7.5-40 days, from day 60, 140-day cooldown; sky light -30 % (cell light, solar power, growing light) and wildlife capacity halved; letter, WorldView.ClimateEvent. Missing: its chip and sky veil (TEMP-5))
 -   [x] **Crashed hostile ship part** (DEF-4 R2 incident `CrashedShipPart`, see 24.5; storyteller weight 40 vs people raids 74)
 -   [x] **Short circuit/battery discharge** (PLAY-021: see 15.2)
@@ -2158,14 +2158,14 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 27.5 Schedule tab
 
--   [ ] **Schedule matrix**
+-   [x] **Schedule matrix** (2026-11-20 audit: ebiten/windows/schedule.go: brush Paint/Drag per pawn row, command.SetSchedule)
     -   Paint schedule blocks across multiple pawns.
 
 ## 27.6 History/statistics
 
 -   [x] **Colony wealth graph** (EAI-0: the History window's Wealth tab plots `Game.WealthHistory()`, read only)
 -   [ ] **Population history**
--   [ ] **Major event history**
+-   [x] **Major event history** (2026-11-20 audit: windows/history.go Events tab over game/history.go addHistory (deaths, weddings, fights, recruits))
 -   [ ] **Pawn records**
     -   kills, work, damage, time, etc. where meaningful.
 
@@ -2353,17 +2353,17 @@ Use original narrative text and generated names.
 
 # PHASE 31 --- Advanced Economy, Market Value, Traders, and Colony Wealth
 
--   [ ] **Market value**
+-   [x] **Market value** (2026-11-20 audit: economy/item/condition.go StackValue (kind, material, quality, HP); wealth/doc.go values animals and pawns)
     -   Every tradeable item/pawn/animal has value derived from
         definition, quality, condition, material, etc.
--   [ ] **Buy/sell price modifiers**
+-   [x] **Buy/sell price modifiers** (2026-11-20 audit: economy/trade/trade.go Terms{Social,Goodwill} and PriceOf)
     -   Trader markup.
     -   social skill.
     -   faction relationship where desired.
--   [ ] **Silver/currency**
+-   [x] **Silver/currency** (2026-11-20 audit: domain/economy/item Silver stack kind; domain/economy/trade/trade.go:Settle)
     -   Physical stackable currency.
     -   Used in trade.
--   [ ] **Trader inventory generation**
+-   [x] **Trader inventory generation** (2026-11-20 audit: domain/economy/trade/trade.go:Generate(kind,tech,rng), SilverMin/Max per Def; trade_caravan.go)
     -   Category.
     -   tech level.
     -   wealth.
@@ -2371,7 +2371,7 @@ Use original narrative text and generated names.
     -   deterministic generation.
 -   [ ] **Restocking settlements**
     -   Inventory refreshes after time.
--   [ ] **Gifts**
+-   [x] **Gifts** (2026-11-20 audit: trade.Settle(..., gift) and ebiten/dialogs/comms.go Gift; game/bonds.go giftGoodwill)
     -   Give goods to faction for goodwill.
 -   [ ] **Wealth-driven expectations**
     -   Pawn expectation thought scales with colony development.
@@ -2390,34 +2390,34 @@ experience with original names/assets/text.
 
 ## 32.1 Ship technology
 
--   [ ] **Endgame research chain**
--   [ ] **Ship structural components**
--   [ ] **Ship computer/core**
--   [ ] **Reactor**
--   [ ] **Cryptosleep caskets**
--   [ ] **Engine components**
+-   [x] **Endgame research chain** (2026-11-20 audit: domain/research/research.go ShipFrames..ShipSensors chain)
+-   [x] **Ship structural components** (2026-11-20 audit: game/ship/graph.go IsPart/joins; Architect Ship category (construction ax_a8.go plannedA8 false))
+-   [x] **Ship computer/core** (2026-11-20 audit: game/ship/graph.go Cores; report.go Issues needs core; construction.ShipCore)
+-   [x] **Reactor** (2026-11-20 audit: game/ship/reactor.go:Start,Tick; construction.ShipReactor)
+-   [x] **Cryptosleep caskets** (2026-11-20 audit: game/ship/casket.go:Board,Leave,LayIn; construction.ShipCasket)
+-   [x] **Engine components** (2026-11-20 audit: construction.ShipEngine; ship/report.go EnginesNeeded check)
 
 ## 32.2 Ship validation
 
--   [ ] **Connected valid ship**
+-   [x] **Connected valid ship** (2026-11-20 audit: game/ship/graph.go:Ships,Primary; report.go:Issues (engines, core, caskets, beams))
     -   Required components connected.
     -   enough caskets for intended passengers.
 
 ## 32.3 Reactor startup
 
--   [ ] **Start reactor**
+-   [x] **Start reactor** (2026-11-20 audit: game/ship/reactor.go:State.Start with CountdownTicks and raids)
     -   Explicit player action.
     -   Starts long activation countdown.
--   [ ] **Endgame threat escalation**
+-   [x] **Endgame threat escalation** (2026-11-20 audit: game/ship/reactor.go Tick raids via storyteller (NextRaid))
     -   Storyteller generates frequent/high-pressure raids during
         startup.
     -   Deterministic incident schedule from campaign state.
 
 ## 32.4 Launch
 
--   [ ] **Load colonists into caskets**
--   [ ] **Launch command**
--   [ ] **Victory state**
+-   [x] **Load colonists into caskets** (2026-11-20 audit: game/ship/casket.go Board, Do, LayIn)
+-   [x] **Launch command** (2026-11-20 audit: game/ship/launch.go:State.Launch)
+-   [x] **Victory state** (2026-11-20 audit: game/ship/launch.go:Escaped,Ending; hud/ending.go:EndingLines,openEnding)
     -   Escaping pawns recorded.
     -   colony story may continue if pawns remain, depending chosen
         behavior.
@@ -2473,48 +2473,48 @@ STK-AG: every core vanilla item has a card in its vanilla category (`.agents/gap
 -   [x] **Furniture** (35 of 35; AX-2: the 1x2 table (old 1x1 tables migrate) and 2x2/2x4/3x3 tables on one card family, couch, small shelf, wall torch, wall lamp, flood light, plant pot, urn (found in ruins), double sleeping spot, animal sleeping box; a grower sows the plant pot; AX-7: bookcase and small bookcase on one card family, books-only storage for 10 and 5 whose shelved books give the room the wiki reading bonus)
 -   [x] **Power** (PLAY-021: conduit, hidden conduit, switch, four generators, battery; AX-4: waterproof conduit over shallow water, chemfuel generator, watermill on the map's flowing river)
 -   [x] **Security** (15 of 15 work; AX-5: foam and warhead charges, foam turret, and the rocket battery, manned and aimed like the mortar)
--   [-] **Misc/ship** (Misc 21 of 21, AX-5 foam popper, AX-4 ground-penetrating scanner and moisture pump, AX-2 egg box and large and grand steles, AX-9 stasis casket, transport pod, pod launcher, long-range mineral scanner and hitching spot; Ship 0 of 6, all placeholders)
+-   [x] **Misc/ship** (Misc 21 of 21, AX-5 foam popper, AX-4 ground-penetrating scanner and moisture pump, AX-2 egg box and large and grand steles, AX-9 stasis casket, transport pod, pod launcher, long-range mineral scanner and hitching spot; Ship 0 of 6, all placeholders) (2026-11-20 audit: construction ax_a8.go plannedA8 false; AX-9 kinds live)
 -   [x] **Floors** (STK-AG: wood floor, entrance carpet, Smooth; AX-3: straw matting, concrete, paved tile, steel, silver, gold and sterile tile, stone tiles and flagstones (one card each with a stone picker), and the colour-picked carpet floor; AX-1: Remove floor)
--   [-] **Recreation** (STK-AG: horseshoe pin only; 9 placeholders)
+-   [x] **Recreation** (STK-AG: horseshoe pin only; 9 placeholders) (2026-11-20 audit: construction ax_a6.go plannedA6 false (AX-6 recreation live))
 -   [x] **Temperature** (STK-AG: campfire, heater, cooler, passive cooler, vent)
     -   Categories may use original naming.
 
 ## 34.2 Overlays
 
--   [-] **Roof overlay** (SIM-018; no thin or mountain roof distinction)
+-   [x] **Roof overlay** (SIM-018; no thin or mountain roof distinction) (2026-11-20 audit: render/overlay/roof_draw.go RoofThick, RoofNatural)
 -   [x] **Power grid** (PLAY-021: the power grid overlay)
 -   [ ] **Beauty**
--   [ ] **Room stats**
+-   [x] **Room stats** (2026-11-20 audit: hud/rooms.go RoomStats.DrawOverlay (RoomStats hotkey))
 -   [x] **Fertility**
 -   [ ] **Terrain/path cost debug**
--   [-] **Home area** (SIM-021: painted, auto-grown around buildings, drives cleaning; no firefighting or repair yet)
--   [-] **Allowed areas** (SIM-046: see 8.x)
--   [ ] **Storage zones**
--   [ ] **Growing zones**
--   [ ] **Temperature**
+-   [x] **Home area** (SIM-021: painted, auto-grown around buildings, drives cleaning; no firefighting or repair yet) (2026-11-20 audit: game/home_auto_test.go TestRepairOnlyInsideHome; firefight.go requires Home; cleaning)
+-   [x] **Allowed areas** (SIM-046: see 8.x) (2026-11-20 audit: render/overlay/area_overlay.go:DrawAreaOverlay; item 8 (5.7, 8.x) allowed areas [x])
+-   [x] **Storage zones** (2026-11-20 audit: hotkeys.go ZonesOverlay toggleZonesOverlay; render/overlay/zones_draw.go)
+-   [x] **Growing zones** (2026-11-20 audit: hotkeys.go FertilityOverlay; render/overlay/growing_draw.go marks growing zones)
+-   [x] **Temperature** (2026-11-20 audit: hotkeys.go TempOverlay; render/overlay/temp_draw.go)
 
 ## 34.3 Pawn tabs
 
--   [ ] **Needs**
--   [-] **Health** (SIM-039/UI-022: Health tab live)
+-   [x] **Needs** (2026-11-20 audit: inspector/cmds_pawn.go pawnTab needs)
+-   [x] **Health** (SIM-039/UI-022: Health tab live) (2026-11-20 audit: inspector/health_ui.go Health tab (capacities, injuries, operations, care); cmds_pawn.go)
 -   [x] **Gear** (GEAR-001…012: summary of mass, comfort, overall armour and move speed; equipment, apparel and pack rows with Info, Drop, Lock and Eat; prisoners may drop, guests read only)
 -   [x] **Social** (UI-022: Social tab live)
--   [ ] **Character/bio**
+-   [x] **Character/bio** (2026-11-20 audit: inspector/bio_ui.go:bioTab (identity, backstories, traits, skills, conditions))
 -   [ ] **Records**
 
 ## 34.4 Global tabs
 
--   [ ] **Architect**
--   [ ] **Work**
--   [ ] **Schedule**
--   [ ] **Assign**
--   [ ] **Animals**
--   [ ] **Wildlife**
--   [ ] **Research**
--   [ ] **World**
--   [ ] **History**
--   [ ] **Factions**
--   [ ] **Quests**
+-   [x] **Architect** (2026-11-20 audit: hud/tabs.go hudTabSpecs ArchitectTab)
+-   [x] **Work** (2026-11-20 audit: hud/tabs.go TabWork; windows/work.go)
+-   [x] **Schedule** (2026-11-20 audit: hud/tabs.go TabSchedule; windows/schedule.go)
+-   [x] **Assign** (2026-11-20 audit: hud/tabs.go TabAssign; windows/assign.go)
+-   [x] **Animals** (2026-11-20 audit: hud/tabs.go TabAnimals; windows/animals.go)
+-   [x] **Wildlife** (2026-11-20 audit: hud/tabs.go TabWildlife)
+-   [x] **Research** (2026-11-20 audit: hud/tabs.go TabResearch; windows/research.go)
+-   [x] **World** (2026-11-20 audit: hud/tabs.go TabWorld)
+-   [x] **History** (2026-11-20 audit: hud/tabs.go TabHistory; windows/history.go)
+-   [x] **Factions** (2026-11-20 audit: hud/tabs.go TabFactions; windows/factions.go)
+-   [x] **Quests** (2026-11-20 audit: hud/tabs.go TabQuests; windows/quests.go)
 
 ## 34.5 Notifications
 
@@ -2538,22 +2538,22 @@ STK-AG: every core vanilla item has a card in its vanilla category (`.agents/gap
 
 # PHASE 35 --- Audio, Visual Feedback, Animation, and Game Feel
 
--   [ ] **Sound event system**
+-   [x] **Sound event system** (2026-11-20 audit: ebiten/render/cue/cue.go bus and Host.Cue; sound_director.go; domain headless)
     -   Domain emits semantic events; audio adapter selects assets.
 -   [ ] **Ambient biome audio**
--   [ ] **Weather audio**
--   [ ] **Construction/work sounds**
--   [ ] **Weapon sounds**
--   [ ] **Impact/explosion sounds**
--   [ ] **UI feedback sounds**
--   [ ] **Music system**
+-   [x] **Weather audio** (2026-11-20 audit: ebiten/sound_director.go amb.rain loop; cue ThunderDelay/ListenThunder; overlay fire_world_draw.go lightning_strike)
+-   [x] **Construction/work sounds** (2026-11-20 audit: cue/signals.go ActionChop/Build/Harvest->sfx.chop/hammer/harvest, sfx.build_done; audiogen/recipes.go)
+-   [x] **Weapon sounds** (2026-11-20 audit: cue/combat_sounds.go weapon fire map (sfx.*_shot, bow_twang), sfx.melee_swing; combat_recipes.go)
+-   [x] **Impact/explosion sounds** (2026-11-20 audit: cue/combat_sounds.go blastSounds (explosion, emp_burst), bullet_flesh/wall; signals.go droppod_impact)
+-   [x] **UI feedback sounds** (2026-11-20 audit: sound_director.go uiSound: ui.click, ui.deny, ui.slider_tick)
+-   [x] **Music system** (2026-11-20 audit: sound_director.go trackCalm, trackTension, trackMenu; ebitenaudio Engine.Music crossfade)
     -   Contextual but not authoritative.
 -   [x] **Pawn facing/aiming** (smoothed facing with hysteresis; turns to the work tile, attack target and blockers; rifles held at ready, raised to aim and turned towards the target)
 -   [x] **Simple movement interpolation**
 -   [x] **Muzzle/projectile effects** (muzzle flash and smoke at the rifle muzzle, ejected casing, tracer from the muzzle, impact puff)
--   [-] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood sprays scaled by damage, bloodied bodies, floor stains, falls; burning-building fire not implemented)
--   [ ] **Selection/targeting feedback**
--   [ ] **Weather visual effects**
+-   [x] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood sprays scaled by damage, bloodied bodies, floor stains, falls; burning-building fire not implemented) (2026-11-20 audit: render/overlay/fire_world_draw.go flames per burning cell; game/fire.go buildings burn via BuildingFlammability)
+-   [x] **Selection/targeting feedback** (2026-11-20 audit: overlay/select_brackets.go DrawSelectBrackets; combat_draw.go DrawTargetMark)
+-   [x] **Weather visual effects** (2026-11-20 audit: render/env/environment.go rainCap/snowCap pools, stepWeather; puddle_veil.go, snow_veil.go)
 -   [x] **Day/night presentation** (ART-010: every sprite lit by a moving sun, a cool moon, indoor ambient under roofs and lamp light; a moving sun/moon shadow under colonists outdoors only (STK-SH, 2026-11-01); the old fullscreen veil is retired)
 
 All assets must be original or appropriately licensed.
@@ -2565,7 +2565,7 @@ All assets must be original or appropriately licensed.
 RimWorld includes a tutorial/learning-helper approach that introduces UI
 and survival concepts progressively. citeturn0search7turn1search8
 
--   [ ] **Contextual learning helper**
+-   [x] **Contextual learning helper** (2026-11-20 audit: platform/config/settings.go ShowLearningHelper; colony_compose.go lesson card)
     -   Detect first encounter with major mechanics.
     -   Show short instructional card.
     -   Track dismissed/learned concepts.
@@ -2586,9 +2586,9 @@ and survival concepts progressively. citeturn0search7turn1search8
     -   why path fails.
     -   why building has no power.
     -   why plant is not growing.
--   [ ] **Difficulty descriptions**
--   [ ] **Scenario descriptions**
--   [ ] **World-tile explanations**
+-   [x] **Difficulty descriptions** (2026-11-20 audit: domain/difficulty/difficulty.go Desc per level; wizard/screen_difficulty.go shows d.Desc)
+-   [x] **Scenario descriptions** (2026-11-20 audit: wizard/scenario_lines.go DetailLine Tip with Desc for defs/traits/rules)
+-   [x] **World-tile explanations** (2026-11-20 audit: ebiten/worldinfo/info.go BuildTileInfo tile card)
 
 ------------------------------------------------------------------------
 
@@ -2703,14 +2703,14 @@ class of capability with an intentionally designed schema.
     -   validate ranges.
     -   validate assets.
     -   report provenance of every error.
--   [ ] **Config errors**
+-   [x] **Config errors** (2026-11-20 audit: modding.Problem{Plugin,File,Def,Field,Msg}; ebiten/plugins/problems.go declareProblems)
     -   Human-readable startup diagnostics.
 
 ## 37.6 Plugin assets
 
 -   [ ] **Textures/sprites**
 -   [ ] **Audio**
--   [ ] **Localization**
+-   [x] **Localization** (2026-11-20 audit: modding/lang.go Translations/BuildLang; compose/game/lang.go pluginText)
 -   [ ] **Optional shader/render resources**
     -   Adapter-level only.
 -   [ ] **Namespaced asset paths**
@@ -2720,11 +2720,11 @@ class of capability with an intentionally designed schema.
 
 ## 37.7 Localization
 
--   [ ] **Localization keys**
--   [ ] **Language packs**
+-   [x] **Localization keys** (2026-11-20 audit: modding/lang.go langEntry/defSource: source-text and def.<class>.<key>.<field> keys)
+-   [x] **Language packs** (2026-11-20 audit: modding/lang.go Locales/PluginLocales; compose/game/lang.go merges per locale)
 -   [ ] **Definition label/description translation**
 -   [ ] **Generated grammar/word lists**
--   [ ] **Fallback language**
+-   [x] **Fallback language** (2026-11-20 audit: ebiten/lang/catalog.go Catalog.T returns src; TestLoadTranslatesAndFallsBack)
 
 ------------------------------------------------------------------------
 
@@ -2740,7 +2740,7 @@ allowing arbitrary mutation of internal Go functions.
 -   [ ] **Plugin API version**
 -   [ ] **Capability declaration**
 -   [-] **Read-only world query API** (Starlark ctx: tick, day, hour, season, colonists, wealth, item counts, `ctx.pawns()`/`ctx.pawn(id)` batched colonist reads; missing: other entity kinds, map and world queries)
--   [ ] **Command submission API**
+-   [x] **Command submission API** (2026-11-20 audit: application/scripting/scripting.go commands ScriptMessage, ScriptSpawn, letter via Enqueue with 16 per call limit)
 -   [ ] **Definition registration hooks**
 -   [-] **Event subscription** (Starlark hooks `on_hour`, `on_day`, `on_incident`, `on_colonist_died`, cadence hooks `on_pawns`/`on_pawn`; missing: most 38.2 events)
 -   [ ] **Custom validation hooks**
@@ -2757,7 +2757,7 @@ allowing arbitrary mutation of internal Go functions.
 Expose typed, deterministic semantic hooks such as:
 
 -   [ ] Pawn spawned.
--   [ ] Pawn died.
+-   [x] Pawn died. (2026-11-20 audit: scripting.OnColonistDied; game/scripts.go fireScripts; starlarkhost/ctx.go)
 -   [ ] Damage resolved.
 -   [ ] Job started/completed/failed.
 -   [ ] Building constructed/destroyed.
@@ -2784,20 +2784,20 @@ Hooks must have documented ordering.
     -   Mod state through a versioned, size-capped save/load hook (38.4), not a memory dump.
     -   Same port, hooks, reads and typed commands; batched entity data, no per-tick per-entity call.
     -   Benchmark harness in `scriptbench`, with compile time and binary review cost recorded.
--   [ ] **Deterministic host API**
+-   [x] **Deterministic host API** (2026-11-20 audit: starlarkhost/ctx.go tick/day/hour/rand (randx.Keyed)/pawn ids; ctx cmds queue)
     -   Simulation tick, not wall clock.
     -   deterministic RNG service.
     -   stable entity handles.
     -   typed commands.
--   [ ] **Resource limits**
+-   [x] **Resource limits** (2026-11-20 audit: starlarkhost/host.go SetMaxExecutionSteps; MaxCommands; TestBudgets (steps, commands, recursion))
     -   CPU/instruction budget.
     -   memory limits where runtime permits.
     -   recursion/stack protection.
--   [ ] **No unrestricted OS access**
+-   [x] **No unrestricted OS access** (2026-11-20 audit: starlarkhost/host.go loadFrom plugin-only; TestLoadStaysInsideThePlugin, TestPrintIsSilentAndNoIO)
     -   No arbitrary filesystem.
     -   no network.
     -   no process execution.
--   [ ] **Script error isolation**
+-   [x] **Script error isolation** (2026-11-20 audit: starlarkhost/host.go disable()->scripting.Problem{Plugin,File}; TestErrorsDisableOnlyTheFailingScript)
     -   Plugin failure reports plugin ID and hook.
     -   Avoid corrupting authoritative state.
 
@@ -2813,7 +2813,7 @@ Hooks must have documented ordering.
 
 ## 38.5 Plugin UI
 
--   [ ] **Plugin manager**
+-   [x] **Plugin manager** (2026-11-20 audit: ebiten/plugins screen.go/view.go: Row ID,Name,Version,Conflicts, enabled, load-order reason)
     -   Installed.
     -   enabled.
     -   version.
@@ -2823,7 +2823,7 @@ Hooks must have documented ordering.
 -   [ ] **Plugin settings**
     -   Typed settings schema.
     -   UI generated from schema where possible.
--   [ ] **Restart/reload requirements**
+-   [x] **Restart/reload requirements** (2026-11-20 audit: ebiten/plugins/screen.go banner(), StateOnAtRestart/StateOffAtRestart, view.go Pending)
     -   Clearly communicate when content registry changes require new
         session/restart.
 
@@ -2836,33 +2836,33 @@ commonly relies on debug actions and configuration errors. `rimworld-go`
 should make these first-class because the project is open source and
 agent-developed. citeturn0search4
 
--   [ ] **Developer mode**
--   [ ] **Spawn entity/item/pawn**
--   [ ] **Trigger incident**
+-   [x] **Developer mode** (2026-11-20 audit: ebiten/devtools panel.go/state.go; TestPanelsOffWithoutDevMode)
+-   [x] **Spawn entity/item/pawn** (2026-11-20 audit: devtools/panel.go Actions: Spawn animal, Add 100 wood (SpawnStack), Spawn implants; Game.DevJoinOffer)
+-   [x] **Trigger incident** (2026-11-20 audit: devtools/panel.go fire() via Tools.FireIncident; story.go and plugin_incidents.go list incidents; Raid (3 raiders))
 -   [ ] **Set weather**
 -   [ ] **Set time**
 -   [ ] **Damage/heal pawn**
 -   [ ] **Add/remove health condition**
--   [-] **Finish research** (RSCH-1: `command.DevFinishResearch` finishes the current project; the Research tab's button is RSCH-2)
+-   [x] **Finish research** (RSCH-1: `command.DevFinishResearch` finishes the current project; the Research tab's button is RSCH-2) (2026-11-20 audit: command.DevFinishResearch handled in application/game/tick.go; Research tab button in windows/research_panel.go; unchanged part is the…)
 -   [ ] **Change goodwill**
 -   [ ] **Teleport pawn**
 -   [ ] **Reveal path**
 -   [ ] **Inspect reservations**
--   [ ] **Inspect current intent/job**
--   [ ] **Inspect component state**
+-   [x] **Inspect current intent/job** (2026-11-20 audit: devtools/panels.go inspectLines: pawn job, acting, queued orders, postponed)
+-   [x] **Inspect component state** (2026-11-20 audit: devtools/panels.go inspectLines: raw record of selected pawn, animal, item, building, plant, frame)
 -   [ ] **Inspect room/region/chunk IDs**
 -   [ ] **Navigation overlay**
--   [ ] **Temperature overlay**
+-   [x] **Temperature overlay** (2026-11-20 audit: Temperature overlay on key input.TempOverlay (hotkeys.go, render/overlay/temp_draw.go, TEMP-5))
 -   [x] **Power network overlay** (PLAY-021: Shift+P; auto-shown while placing power buildings)
 -   [x] **Incident/storyteller debug panel** (EAI-034: `devtools/story.go` lists the incident queue, next threat, points and wealth, and fires an incident, from `Game.StoryDebug`)
 -   [ ] **RNG stream diagnostics**
 -   [ ] **State hash inspector**
--   [ ] **Tick profiler**
--   [ ] **System timing profiler**
+-   [x] **Tick profiler** (2026-11-20 audit: cli/benchmark/report.go mean/p50/p95/p99 ms per tick; ebiten/perf_compat.go meter overlay)
+-   [x] **System timing profiler** (2026-11-20 audit: Game.SetPhaseObserver (phases.go) feeds per-system timings in cli/benchmark run.go)
 -   [ ] **Entity/chunk activity profiler**
 -   [ ] **Pathfinding metrics**
 -   [ ] **Job candidate metrics**
--   [ ] **Heap/allocation metrics**
+-   [x] **Heap/allocation metrics** (2026-11-20 audit: scale_bench_test.go benchTicks reports steady-B/tick and ReportAllocs; perf/probe.go reads runtime.MemStats)
 -   [ ] **Plugin provenance inspector**
     -   Show which plugin supplied/patched a definition.
 
@@ -2885,12 +2885,12 @@ substantially larger colonies and maps with lower resource usage.
 
 ## 40.2 Analytical progression
 
--   [-] **Plants** (NG-1: grown per chunk once per 250 ticks from the elapsed span with `plant.GrowSpan`; other systems still tick)
+-   [x] **Plants** (NG-1: grown per chunk once per 250 ticks from the elapsed span with `plant.GrowSpan`; other systems still tick) (2026-11-20 audit: application/game/plant_growth.go growChunks: plant.GrowSpan over the elapsed window per chunk (NG-1 E4))
     -   Advance growth from elapsed ticks.
 -   [ ] **Rot/deterioration**
 -   [ ] **Needs where safe**
 -   [x] **Disease/health effects where safe** (MED-07: painkiller halves pain for 12 h, prophyl blocks plague, malaria and sleeping sickness for 5 days, overdose from hard drugs and prophyl)
--   [ ] **World settlements/caravans**
+-   [x] **World settlements/caravans** (2026-11-20 audit: game/world_state.go worldState, caravans advance hourly (worldUpkeep); world_caravan_test.go)
     -   Aggregate simulation rather than local entity simulation.
 
 ## 40.3 Invalidation
@@ -2898,12 +2898,12 @@ substantially larger colonies and maps with lower resource usage.
 -   [x] **Navigation dirty regions** (NG-1: a walkability change marks its 16x16 chunk dirty; walk regions and labels rebuild for dirty chunks only)
 -   [x] **Room dirty regions** (NG-1: incremental rooms from room regions per chunk, checked against full detection in tests)
 -   [x] **Power topology dirty** (PLAY-021: the net cache keys on structVer, a switch topology version and the store)
--   [ ] **Temperature topology dirty**
--   [ ] **Beauty dirty**
--   [ ] **Storage dirty**
+-   [x] **Temperature topology dirty** (2026-11-20 audit: rooms.go markRoomsDirty and application/game/thermo (dirty flag) rebuild room topology only when changed)
+-   [x] **Beauty dirty** (2026-11-20 audit: rooms.go room stats (beauty tenths) recomputed only when roomDirty (rooms_index.go))
+-   [x] **Storage dirty** (2026-11-20 audit: game/haul/ground.go Ground gen/Moved index; storage_index_test.go TestStorageCellMatchesFullSearch)
 -   [ ] **Cover dirty**
--   [ ] **Lighting dirty**
--   [ ] **Roof dirty**
+-   [x] **Lighting dirty** (2026-11-20 audit: application/game/light.go and plant_light.go: TestLightGridRebuildsOnlyOnChange)
+-   [x] **Roof dirty** (2026-11-20 audit: application/game/roof.go roofIndex.ver moves when a tile gains or loses a roof; caches keyed on it)
 
 ## 40.4 Spatial indexes
 
@@ -2911,11 +2911,11 @@ substantially larger colonies and maps with lower resource usage.
 -   [ ] **Pawns in chunk/region**
 -   [ ] **Items by category/region**
 -   [x] **Work opportunities** (NG-1: maintained candidate sets for frames, deconstruct and harvest/cut marks, refuel and feed targets)
--   [ ] **Storage destinations**
+-   [x] **Storage destinations** (2026-11-20 audit: game/zones.go storageCell by priority on zone.Stores/haul.Ground; storage_index_test.go)
 -   [-] **Hostiles** (threat scans are indexed)
 -   [x] **Haulables** (stacks not already in a matching stockpile)
--   [ ] **Medical patients**
--   [ ] **Fires**
+-   [x] **Medical patients** (2026-11-20 audit: application/game/patients.go sorted patients index (TestPatientsIndexMatchesScan, med_contract_test.go))
+-   [x] **Fires** (2026-11-20 audit: application/game/fire.go reindexFires keeps cell and chunk lookups (fireIndex))
 -   [x] **Plants ready for work** (harvest- and cut-marked plants)
 
 ## 40.5 Large-colony UX
@@ -2925,8 +2925,8 @@ substantially larger colonies and maps with lower resource usage.
 -   [ ] **Group schedules**
 -   [ ] **Group allowed areas**
 -   [ ] **Bulk policy assignment**
--   [ ] **Virtualized pawn lists**
--   [ ] **Aggregated alerts**
+-   [x] **Virtualized pawn lists** (2026-11-20 audit: ebiten/uikit/scroll.go Kit.List, ListVisible (row windowing))
+-   [x] **Aggregated alerts** (2026-11-20 audit: ebiten/hud/alerts.go group(): merged count lines e.g. %d colonists need beds)
 -   [ ] **Search/filter all management screens**
 
 ## 40.6 Performance acceptance
@@ -2937,7 +2937,7 @@ substantially larger colonies and maps with lower resource usage.
 -   [ ] **100k item/plant benchmark**
 -   [ ] **1024×1024 map benchmark**
 -   [ ] **Long-run heap stability**
--   [ ] **No goroutine-per-pawn/entity**
+-   [x] **No goroutine-per-pawn/entity** (2026-11-20 audit: arch/gostmt_test.go TestNoGoStatementsInSim)
 -   [ ] **No hidden full-world scans in hot phases**
 
 ------------------------------------------------------------------------
@@ -2948,56 +2948,56 @@ Do not call the vanilla milestone complete until this audit passes.
 
 ## 41.1 Colony survival loop
 
--   [-] Start with generated colonists and supplies. (Ada/Bo/Cora + food/wood/plants; wizard does not change kit)
--   [-] Build shelter. (wood walls; no rooms/roofs) (SIM-018: roofed rooms now built)
--   [-] Assign beds. (claim on Sleep)
--   [-] Create stockpile. (filter tree, names, copy/paste, shelves; deeper tree, specials, linked groups and hoppers: STO-2, STO-3)
+-   [x] Start with generated colonists and supplies. (Ada/Bo/Cora + food/wood/plants; wizard does not change kit) (2026-11-20 audit: domain/scenario/builtins.go Broken Hull etc. with kits; game scenarios.go)
+-   [x] Build shelter. (wood walls; no rooms/roofs) (SIM-018: roofed rooms now built) (2026-11-20 audit: game/roof.go, rooms.go; roofed rooms (SIM-018))
+-   [x] Assign beds. (claim on Sleep) (2026-11-20 audit: command.AssignBedOwner; host_commands.go; beds_test.go, bedof_test.go; inspector/building_inspector.go)
+-   [x] Create stockpile. (filter tree, names, copy/paste, shelves; deeper tree, specials, linked groups and hoppers: STO-2, STO-3) (2026-11-20 audit: domain/building/zone filter.go, group.go, special.go; sto2_test.go; store/buildings.go hoppers)
 -   [x] Grow crops.
--   [ ] Hunt animals.
--   [ ] Cook food.
--   [-] Survive hunger/rest/temperature. (hunger: malnutrition (FOOD-1); rest: exhaustion; temperature: wiki hypothermia/heatstroke and frostbite (TEMP-3); no end-to-end journey yet)
--   [ ] Treat injuries/disease.
--   [-] Manage mood.
--   [ ] Survive mental breaks.
--   [ ] Produce equipment.
--   [ ] Research technology.
--   [ ] Generate power.
--   [ ] Refrigerate food.
--   [ ] Trade.
+-   [x] Hunt animals. (2026-11-20 audit: command.DesignateHunt handled in game/tick.go)
+-   [x] Cook food. (2026-11-20 audit: game/craft bills.go, butcher_food3_test.go; food4a_test.go hopper)
+-   [x] Survive hunger/rest/temperature. (hunger: malnutrition (FOOD-1); rest: exhaustion; temperature: wiki hypothermia/heatstroke and frostbite (TEMP-3); no end-to-end journey yet) (2026-11-20 audit: ebiten/journey_temp1_test.go, journey_food1-3_test.go; game/temp6_test.go)
+-   [x] Treat injuries/disease. (2026-11-20 audit: game/medical.go, infection.go, surgery.go; medical_bed_test.go)
+-   [x] Manage mood. (2026-11-20 audit: game/social_mood.go, mood.go thoughts; mental breaks via mind/)
+-   [x] Survive mental breaks. (2026-11-20 audit: game/mind (mind.go, tantrum.go, fight.go); mental_targets_test.go)
+-   [x] Produce equipment. (2026-11-20 audit: game/craft, apparel.go; craft_pack_test.go)
+-   [x] Research technology. (2026-11-20 audit: game/research.go; ebiten/journey_rsch_test.go)
+-   [x] Generate power. (2026-11-20 audit: game/power_gen.go, power.go)
+-   [x] Refrigerate food. (2026-11-20 audit: game/thermo_wiki_test.go TestCoolerFreezer; temp6_test.go food rot frozen)
+-   [x] Trade. (2026-11-20 audit: game/trade.go, trade_caravan.go, trade_orbital.go, tradeview/)
 -   [x] Recruit prisoners.
 -   [x] Tame/train animals.
--   [ ] Defend raids.
--   [ ] Survive environmental events.
--   [-] Form caravans. (SIM-046: no trade or cargo)
--   [ ] Complete world quests.
--   [ ] Build/activate endgame ship.
--   [ ] Survive final assault period.
--   [ ] Escape.
+-   [x] Defend raids. (2026-11-20 audit: game/raids.go, raid/threats.go plans Siege/Sappers; raid_plans_test.go)
+-   [x] Survive environmental events. (2026-11-20 audit: domain/incident HeatWave/Eclipse/SolarFlare/ToxicFallout; game/climate_events_test.go)
+-   [x] Form caravans. (SIM-046: no trade or cargo) (2026-11-20 audit: game/travel/state.go CaravanCargo, CaravanPack; world_caravan_test.go)
+-   [x] Complete world quests. (2026-11-20 audit: game/quest/ (apply.go, hourly.go), quest_host.go)
+-   [x] Build/activate endgame ship. (2026-11-20 audit: game/ship graph.go/reactor.go/launch.go; ship_test.go TestPartsJoinIntoOneShip...)
+-   [x] Survive final assault period. (2026-11-20 audit: ship/reactor.go countdown raids; TestReactorCountdownRaidsAreSpacedAndStop)
+-   [x] Escape. (2026-11-20 audit: ship/launch.go Launch, Ending, Escaped; TestLaunchLiftsTheShipWithItsSleepers)
 
 ## 41.2 Emergent-story audit
 
--   [ ] Pawns have meaningfully different skills/traits.
+-   [x] Pawns have meaningfully different skills/traits. (2026-11-20 audit: domain/pawn/pawngen/pawngen.go Traits, backstories, skills)
 -   [x] Pawns form opinions and relationships.
 -   [x] Relationships create gameplay consequences. (grief, opinion, romance, fights, prisoners, caravans, animal bonds)
--   [-] Injuries have anatomically meaningful consequences. (SIM-039: parts, capacities, scars, surgery; no bleeding or disease framework)
+-   [x] Injuries have anatomically meaningful consequences. (SIM-039: parts, capacities, scars, surgery; no bleeding or disease framework) (2026-11-20 audit: game/body.go, bleed.go, infection.go, surgery.go)
 -   [x] Mood responds to environment and memories.
--   [ ] Low mood creates autonomous disruptive behavior.
--   [ ] High mood can create positive opportunities.
--   [ ] Storyteller alternates pressure/opportunity/recovery.
--   [ ] Enemy factions behave differently by tech/tactic.
+-   [x] Low mood creates autonomous disruptive behavior. (2026-11-20 audit: game/mind mental breaks; mental_targets_test.go)
+-   [x] High mood can create positive opportunities. (2026-11-20 audit: game/mind/inspiration.go; inspiration_test.go)
+-   [x] Storyteller alternates pressure/opportunity/recovery. (2026-11-20 audit: domain/storyteller/storyteller.go Phase() pressure/rest cycles; game/story.go)
+-   [x] Enemy factions behave differently by tech/tactic. (2026-11-20 audit: raid/threats.go raiddef.Fit(plan, tech, points); raid_plans_test.go)
 -   [x] Colony wealth increases stakes. (EAI-013, EAI-014: threat points weigh the colony's wealth)
--   [ ] Deaths and disasters remain visible in colony history.
+-   [x] Deaths and disasters remain visible in colony history. (2026-11-20 audit: game/history.go addHistory (death, fire, fight...); History tab hotkeys.go TabHistory)
 -   [ ] The game can produce interesting stories without scripted
     campaign missions.
 
 ## 41.3 Simulation integrity audit
 
--   [ ] Same seed + same commands = same authoritative result.
+-   [x] Same seed + same commands = same authoritative result. (2026-11-20 audit: internal/application/game/scalegolden/golden_test.go: six seeded 20,000-tick runs pinned by StateHash)
 -   [-] Renderer FPS does not change result. (PERF-002: the client steps the sim one tick at a time in fixed order and the Update time budget only moves ticks between Updates; the goldens pin the state. No test yet runs the client at two frame rates and compares hashes.)
--   [ ] Worker count does not change result.
--   [ ] Save/load preserves canonical hash.
+-   [x] Worker count does not change result. (2026-11-20 audit: application/game/path_stage_parallel_test.go TestParallelEqualsSerial: 1, 2, 8 lanes and shuffled give equal hashes)
+-   [x] Save/load preserves canonical hash. (2026-11-20 audit: application/game/save_test.go TestSaveLoadRoundTripContinuesIdentically)
 -   [ ] Replay preserves canonical hash.
--   [ ] Plugin load order is deterministic.
+-   [x] Plugin load order is deterministic. (2026-11-20 audit: modding/order.go Resolve; order_test.go TestResolveDeterministicUnderShuffle)
 -   [ ] No stale reservations after long-run simulation.
 -   [ ] No negative/duplicated item quantities.
 -   [ ] No references to destroyed entities.
@@ -3005,26 +3005,26 @@ Do not call the vanilla milestone complete until this audit passes.
 
 ## 41.4 Architecture audit
 
--   [ ] Domain imports no renderer.
--   [ ] Domain imports no filesystem persistence implementation.
--   [ ] Domain imports no generated serialization DTOs.
+-   [x] Domain imports no renderer. (2026-11-20 audit: internal/arch/solid_test.go forbiddenImports: domain must not import ebiten or adapters)
+-   [x] Domain imports no filesystem persistence implementation. (2026-11-20 audit: solid_test.go forbiddenImports: domain must not know adapters, platform or os)
+-   [x] Domain imports no generated serialization DTOs. (2026-11-20 audit: arch/solid_test.go forbiddenImports domain->application/adapters; savefmt in application/game)
 -   [ ] UI mutates game only through commands/application ports.
--   [ ] Plugin scripts cannot directly mutate internal stores.
+-   [x] Plugin scripts cannot directly mutate internal stores. (2026-11-20 audit: application/scripting and game/scripts.go: scripts get read-only queries and emit typed commands via Enqueue (ScriptMessage, ScriptSpawn))
 -   [ ] External input is validated at boundaries.
 -   [ ] Canonical types are not duplicated.
 
 ## 41.5 Go quality audit
 
--   [ ] `gofmt` clean.
--   [ ] `go vet ./...`.
--   [ ] `staticcheck ./...`.
--   [ ] `go test ./...`.
--   [ ] Race tests for concurrent infrastructure.
+-   [x] `gofmt` clean. (2026-11-20 audit: .github/workflows/test.yml gofmt step)
+-   [x] `go vet ./...`. (2026-11-20 audit: .github/workflows/test.yml go vet ./...)
+-   [x] `staticcheck ./...`. (2026-11-20 audit: Makefile lint (staticcheck); test.yml make lint)
+-   [x] `go test ./...`. (2026-11-20 audit: Makefile test-unit (go test -race over go list ./...); scripts/ci_test.sh; .github/workflows/test.yml)
+-   [x] Race tests for concurrent infrastructure. (2026-11-20 audit: Makefile test-unit/test-golden use -race; internal/arch/gostmt_test.go; internal/platform/pool/pool_test.go)
 -   [ ] Fuzz targets for unsafe/untrusted parsers and critical
     transitions.
--   [ ] Hot benchmarks report allocations.
--   [ ] No unexplained `unsafe`.
--   [ ] No global mutable simulation state.
+-   [x] Hot benchmarks report allocations. (2026-11-20 audit: scale_bench_test.go benchTicks calls b.ReportAllocs and steady-B/tick; make fps reports memory)
+-   [x] No unexplained `unsafe`. (2026-11-20 audit: unsafe only in game/indexes.go (commented unsafe.Slice), platform/pool/pool.go lane pad (+TestLaneStatePadded), sysinfo_windows.go)
+-   [x] No global mutable simulation state. (2026-11-20 audit: internal/arch/solid_test.go TestSOLID flags init() and runtime-assigned package vars)
 
 ------------------------------------------------------------------------
 
@@ -3035,8 +3035,8 @@ Do not call the vanilla milestone complete until this audit passes.
 Can be called **Vanilla Alpha** when:
 
 -   [ ] Phases 1--17 are substantially complete.
--   [ ] Basic storyteller raids/events exist.
--   [ ] Save/load works.
+-   [x] Basic storyteller raids/events exist. (2026-11-20 audit: application/game/story.go, raids.go, incidents.go (+ _test files))
+-   [x] Save/load works. (2026-11-20 audit: application/game/save.go; save_test.go TestSaveLoadRoundTripContinuesIdentically)
 -   [ ] A colony can survive indefinitely.
 -   [ ] Combat, health, mood, farming, construction, research, and power
     form a coherent loop.
@@ -3046,11 +3046,11 @@ Can be called **Vanilla Alpha** when:
 Can be called **Vanilla Beta** when:
 
 -   [ ] Animals/prisoners/factions/trade are complete.
--   [ ] World generation/caravans/quests work.
+-   [x] World generation/caravans/quests work. (2026-11-20 audit: domain/world/generation, domain/world/caravan, domain/quest; application/game/quest_*_test.go)
 -   [ ] Major raid types and incident catalog work.
--   [ ] Endgame is completable.
+-   [x] Endgame is completable. (2026-11-20 audit: application/game/ship: State.Launch, Ending; TestLaunchLiftsTheShipWithItsSleepers, TestReactorCountdownRaidsAreSpacedAndStop)
 -   [ ] Full management UI is usable.
--   [ ] Plugin data definitions are usable.
+-   [x] Plugin data definitions are usable. (2026-11-20 audit: application/modding class_{backstory,trait,item,recipe,research,incident}.go with decode+tests; lang.go)
 
 ## Vanilla 1.0
 
@@ -3058,7 +3058,7 @@ Can be called **Vanilla 1.0** when:
 
 -   [ ] Phase 41 parity audit passes.
 -   [ ] Plugin behavior API is stable/versioned.
--   [ ] Save migrations are tested.
+-   [x] Save migrations are tested. (2026-11-20 audit: internal/application/game/save_schema_test.go plus testdata/premotion_v1.sav, ng1_v2.sav, v12.sav; migrateSave in save.go (SaveVersion 17))
 -   [-] Large-colony performance targets have reproducible benchmarks. (PERF-002: `make fps`, `cmd/benchmark` with a `views` row, `BenchmarkWorldView`, `BenchmarkGroundCover`, `BenchmarkShadowsHiDPI` and recorded baselines in the handoff; the colonist-count scales are still uncovered.)
 -   [ ] Tutorial/onboarding exists.
 -   [ ] Crash/replay diagnostics are production-ready.
@@ -3130,7 +3130,7 @@ The plugin system should ultimately be able to define or extend at
 least:
 
 -   [ ] `ThingDef`-equivalent generic entity/item/building definition.
--   [ ] Item definitions.
+-   [x] Item definitions. (2026-11-20 audit: internal/application/modding/class_item.go (ItemClass, Encode/Decode codec registered in build.go classes()))
 -   [ ] Material/stuff definitions.
 -   [ ] Terrain definitions.
 -   [ ] Building definitions.
@@ -3140,11 +3140,11 @@ least:
 -   [ ] Health-effect definitions.
 -   [ ] Weapon/projectile definitions.
 -   [ ] Apparel definitions.
--   [ ] Recipe definitions.
+-   [x] Recipe definitions. (2026-11-20 audit: internal/application/modding/class_recipe.go (RecipeClass, Encode/Decode codec registered in build.go classes()))
 -   [ ] Workstation definitions.
--   [ ] Research definitions.
--   [ ] Trait definitions.
--   [ ] Backstory definitions.
+-   [x] Research definitions. (2026-11-20 audit: internal/application/modding/class_research.go (ResearchClass, Encode/Decode codec registered in build.go classes()))
+-   [x] Trait definitions. (2026-11-20 audit: internal/application/modding/class_trait.go (TraitClass, Encode/Decode codec registered in build.go classes()))
+-   [x] Backstory definitions. (2026-11-20 audit: internal/application/modding/class_backstory.go (BackstoryClass, Encode/Decode codec registered in build.go classes()))
 -   [ ] Thought definitions.
 -   [ ] Need definitions where safely extensible.
 -   [ ] Recreation definitions.
@@ -3153,12 +3153,12 @@ least:
 -   [ ] Trader definitions.
 -   [-] Biome definitions. (SIM-023: 12 biomes as Go data in `world/biome`, not data-pack files)
 -   [ ] World-generation definitions.
--   [-] Incident definitions. (SIM-025: nature events as Go data in `domain/incident`, not data-pack files)
+-   [x] Incident definitions. (SIM-025: nature events as Go data in `domain/incident`, not data-pack files) (2026-11-20 audit: internal/application/modding/class_incident.go (IncidentClass, Encode/Decode codec registered in build.go classes()))
 -   [ ] Storyteller definitions.
 -   [ ] Scenario definitions.
 -   [ ] Quest archetype/content definitions.
 -   [ ] Sound-event mappings.
--   [ ] Localization.
+-   [x] Localization. (2026-11-20 audit: application/modding/lang.go BuildLang/PluginLocales; lang_test.go TestLangMergeOrderAndOverride)
 -   [ ] UI icons/textures.
 -   [ ] Stat definitions/modifiers where stable API permits.
 

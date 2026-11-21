@@ -847,8 +847,8 @@ Create and freeze templates before bulk production:
 
 -   [x] building 1×1
 -   [x] building 1×2
--   [ ] building 2×2
--   [ ] building 3×1 / 3×2
+-   [x] building 2×2 (2026-11-20 audit: assets/metadata/furniture/table_2x2.yaml footprint [2,2], table_3x3; built by families/decor.py _table)
+-   [x] building 3×1 / 3×2 (2026-11-20 audit: assets/metadata/power/radio_console_*.yaml and furniture/electric_crematorium_*.yaml footprint [3,2])
 -   [x] furniture
 -   [x] weapon
 -   [x] pawn body/head/hair/apparel
@@ -1274,18 +1274,18 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 5 --- Combat
 
 -   [x] melee family (knife, spear, club; stab, thrust, swing and punch pose sets)
--   [-] pistol/rifle/shotgun/long-range weapon (rifle carried, aimed and firing, ART-027; no pistol, shotgun or long rifle)
+-   [x] pistol/rifle/shotgun/long-range weapon (rifle carried, aimed and firing, ART-027; no pistol, shotgun or long rifle) (2026-11-20 audit: assets/metadata/weapon autopistol, revolver, pump_shotgun, sniper_rifle, rifle_basic .yaml; art-check orphan guard)
 -   [x] arms additions, belt, effect and hive families (wave 3, CBT-3/CBT-5: `families/arms.py` rocket launcher, triple rocket launcher, smoke launcher, charge rifle, charge lance and ikwa, held and as items; `families/belt.py` shield belt and smokepop pack worn and as items; `families/effect.py` fire_burst, emp_flash, smoke_cloud and shield_bubble; `families/hive.py` hive mound; validator 6020 sprites, 0 errors; 10 procedural sounds in `wave3_recipes.go`)
--   [ ] armor/helmets
+-   [x] armor/helmets (2026-11-20 audit: assets/metadata/pawn advanced_helmet_*, flak_jacket_*; families/armor.py)
 -   [-] projectiles/muzzle flash/impact/explosion (tracer, muzzle flash, smoke, casing, impact puff and blood; no explosions; AX-AR2: `effect/rocket_projectile` and `effect/foam_projectile` east-pointing particles and the `overlay/foam_0..2` stain, waiting for A5's renderer wiring)
--   [ ] fire/smoke
--   [ ] turret/defenses
+-   [x] fire/smoke (2026-11-20 audit: assets/metadata/effect fire_small/medium/large_*, fire_burst, smoke_cloud.yaml)
+-   [x] turret/defenses (2026-11-20 audit: assets/metadata/defense autocannon_*, mortar_*, foam_turret_*, barricade)
 
 ### ART Wave 6 --- Pawn variety
 
 -   [-] body/head variants (NG-1 ART-014 / ART-025: six body builds as capsule widths, shared round head; the sexes read weakly at 1x)
 -   [-] hair/facial hair library (NG-1: eight hair styles, three beards; beards are nearly invisible facing north)
--   [ ] apparel/armor library
+-   [x] apparel/armor library (2026-11-20 audit: families/apparel.py, armor.py; assets/metadata/pawn duster_leather_*, flak_jacket_*)
 -   [ ] tint validation
 -   [x] sleeping/downed/dead presentation
 
@@ -1302,7 +1302,7 @@ resolve metadata conflicts, and update the catalog.
 
 -   [x] faction emblems (`ui_icon/faction_<settlers|clans|drifters|freebooters|swarm|player>`)
 -   [-] settlement/caravan/quest icons (settlement icons for neolithic and industrial factions; the `ui_icon/caravan` globe marker; AX-AR4 §42: world-map markers `ui_icon/pod_flight` and `ui_icon/mining_site` in the caravan badge style, which stay unread until A9 wires them; missing: quest icons)
--   [ ] trade icons
+-   [x] trade icons (2026-11-20 audit: assets/metadata/ui_icon/trade.yaml, trade_beacon.yaml; architect/catalog.go trade_beacon Icon)
 -   [-] world terrain (the globe is vertex-coloured from `assets/palettes/world.yaml` with no sprite terrain; storyteller busts, scenario, skill, passion and trait icons added alongside, ART-014)
 
 ### ART Wave 9 --- Endgame

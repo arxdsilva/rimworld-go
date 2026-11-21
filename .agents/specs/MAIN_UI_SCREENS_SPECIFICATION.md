@@ -109,7 +109,7 @@ loading it blindly.
 
 ## Background
 
--   [-] original colonist bust splash on the left over the existing menu
+-   [x] original colonist bust splash on the left over the existing menu (2026-11-20 audit: internal/adapters/inbound/ebiten/mainmenu/splash.go DefaultMenuSplashRel main_menu_colonist.png, diorama.go)
     backdrop (bust flush to PNG bottom edge); title and actions sit on a
     right rail. No live simulation.
 -   [x] generated colony diorama behind the bust (ART-011): a dusk colony
@@ -1206,7 +1206,7 @@ problems.
     (off by default).
 -   **States:** `ok == false`: no tab; no warden enabled, no prisoner
     bed or no food each show a warning line with the fix.
--   [ ] Not wired yet (M8).
+-   [x] Not wired yet (M8). (2026-11-20 audit: ebiten/inspector/prisoner_ui.go prisonerTabBody, PrisonerWarnings (no warden/bed/food lines), cmds_pawn.go tab)
 
 ------------------------------------------------------------------------
 
@@ -1287,7 +1287,7 @@ Validation handles affordability and stock changes.
     update from the next view). Accept is disabled with a reason when the
     offer is empty, the colony can't afford it, or the trader can't pay.
     `ok == false` closes the window.
--   [ ] Not built yet (PLAY-024 Phase 2, agent U1; the read model and
+-   [x] Not built yet (PLAY-024 Phase 2, agent U1; the read model and (2026-11-20 audit: ebiten/dialogs/trade.go tradeDraft; trade_test.go TestTradeDialogTotals; wired via dialogs_compat.go TradeSource)
     commands exist since Phase 0).
 
 ------------------------------------------------------------------------
@@ -1351,7 +1351,7 @@ Costs and unavailable reasons must be explicit.
     trade beacon", "not enough silver in beacon reach"). Hostile factions
     show only their row and goodwill. With no ship in range the orbital
     row reads "No ship in range". `ok == false` closes the window.
--   [ ] Not built yet (PLAY-024 Phase 2, agent U1; the read model and
+-   [x] Not built yet (PLAY-024 Phase 2, agent U1; the read model and (2026-11-20 audit: ebiten/dialogs/comms.go; comms_test.go; journey_dialogs_test.go opens CommsModalID, CommsGift command)
     commands exist since Phase 0).
 
 ------------------------------------------------------------------------
@@ -1393,7 +1393,7 @@ Long graphs require downsampling rather than rendering every sample.
 -   **Actions:** click a line to select/jump to a pawn named in it
     (when on the map). Read-only; no commands.
 -   **States:** empty: "Nothing worth remembering has happened yet."
--   [ ] Not wired yet (M4).
+-   [x] Not wired yet (M4). (2026-11-20 audit: ebiten/windows/history.go (focusPawn click-to-jump), history_wealth.go; hotkeys.go HistoryModalID)
 
 ------------------------------------------------------------------------
 
@@ -1552,7 +1552,7 @@ Build an expedition and verify it can survive the journey.
     ids, `Count` = destination tile).
 -   **States:** no members picked or no destination: Send disabled with
     the reason; downed or drafted colonists are listed disabled.
--   [ ] Not wired yet (M9); no goods or mass budget in this slice.
+-   [x] Not wired yet (M9); no goods or mass budget in this slice. (2026-11-20 audit: ebiten/dialogs/caravan.go FormTooHeavy, massKg/capKg, goods map; caravan_pack.go; caravan_test.go)
 
 ------------------------------------------------------------------------
 
@@ -1871,7 +1871,7 @@ and Developer tabs below.
     filtering; the HUD, labels and text stay native; never below one
     pixel per point; preset High Full, Medium 3/4 on 2× displays, Low
     Full; cost tooltip, applied live);
--   [ ] far-zoom detail (OPT-016).
+-   [x] far-zoom detail (OPT-016). (2026-11-20 audit: config/prefs.go FarStyle; options/rows_interface.go FarStyle row; render/creature/far.go DrawFarPawns)
 
 ### Audio
 
@@ -1890,8 +1890,8 @@ and Developer tabs below.
 -   [x] camera pan speed;
 -   [x] developer mode (UI-016: ultrafast, tick step, debug actions, log, inspector);
 -   [x] share detailed usage data (on by default; basic data is always sent, see the README);
--   [ ] speed behavior (OPT-020);
--   [ ] confirmations (OPT-019: deconstruct, release an animal);
+-   [x] speed behavior (OPT-020); (2026-11-20 audit: config.UnpauseLast; options/rows_interface.go; ebiten/renderer.go:301 UnpauseLast restores LastSpeed)
+-   [x] confirmations (OPT-019: deconstruct, release an animal); (2026-11-20 audit: uikit/access.go ConfirmIf; inspector/building_inspector.go:333 deconstruct, animal_inspector.go:126 release)
 -   [x] learning helper (switch and Reset lessons).
 
 ### Controls
@@ -2281,11 +2281,11 @@ Agents should implement screens approximately in this dependency order.
 
 ## Wave UI-0 --- Framework
 
--   [-] UI primitives (button/label/panel; no sliders, text fields, virtual lists)
--   [-] input/focus (UI-016: input context stack, shortcut registry with rebinding, text fields swallow keys; no focus ring)
--   [-] window/modal system (full-screen stack + pause overlay)
--   [-] tooltips (disabled-reason line only)
--   [ ] virtual lists/tables
+-   [x] UI primitives (button/label/panel; no sliders, text fields, virtual lists) (2026-11-20 audit: uikit/slider.go, textfield.go, scroll.go (List); button/label/panel in uikit)
+-   [x] input/focus (UI-016: input context stack, shortcut registry with rebinding, text fields swallow keys; no focus ring) (2026-11-20 audit: internal/adapters/inbound/ebiten/uikit/frame.go paintFocusRing; input context stack)
+-   [x] window/modal system (full-screen stack + pause overlay) (2026-11-20 audit: uikit/modal.go, dialog.go; windows/window.go; screen_pause.go)
+-   [x] tooltips (disabled-reason line only) (2026-11-20 audit: internal/adapters/inbound/ebiten/uikit/tooltip.go TipCard (rich tooltips))
+-   [x] virtual lists/tables (2026-11-20 audit: uikit/scroll.go Kit.List, ListVisible (virtualised))
 -   [-] presentation snapshot boundary (colony PawnView; menus are headless)
 -   [-] typed command gateway (session intents plus `Enqueue` gameplay: MovePawn, designations, SetWorkEnabled)
 
@@ -2293,51 +2293,51 @@ Agents should implement screens approximately in this dependency order.
 
 -   [-] Boot (phase list + pack load; no plugin/fatal recovery)
 -   [-] Main Menu (navigation shell; Tutorial disabled; original colonist splash left over the animated colony diorama, actions right rail)
--   [-] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts)
+-   [x] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts) (2026-11-20 audit: ebiten/hud/alerts.go, resources.go, colonistbar.go, letters.go)
 -   [x] camera (WASD/arrows pan with Shift fast pan, edge pan, middle-drag, keyboard/wheel zoom, centre on colonist)
--   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; cursor temperature, biome chip, season, weather and climate event chips present; Shift+T temperature overlay, TEMP-5)
--   [-] selection (click pawn or colonist bar; inspector Character/Needs)
--   [-] Generic Inspector (name, job, status, reason, food/rest bars; Health/Social/Gear disabled)
+-   [x] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; cursor temperature, biome chip, season, weather and climate event chips present; Shift+T temperature overlay, TEMP-5) (2026-11-20 audit: hud/global.go speed buttons incl superfast; clock_text.go; chips.go StatusChips; biome.go SeasonText)
+-   [x] selection (click pawn or colonist bar; inspector Character/Needs) (2026-11-20 audit: ebiten/selection/, hud/colonistbar.go, inspector tabs)
+-   [x] Generic Inspector (name, job, status, reason, food/rest bars; Health/Social/Gear disabled) (2026-11-20 audit: inspector/health_ui.go, social_ui.go, gear/gear_ui.go (tabs live))
 -   [-] colonist bar (snapshot slots, click selects, idle portrait, display name, status marks, double-click centres; MAP-1: a frame per open map with a threat dot, then caravan groups with a caravan status icon; no custom sort)
--   [-] contextual commands (Architect + Work + Menu live; others disabled `not implemented`; no selection command bar)
+-   [x] contextual commands (Architect + Work + Menu live; others disabled `not implemented`; no selection command bar) (2026-11-20 audit: inspector/hud_commands.go, cmds_pawn/build/combat/orders.go gizmos; "not implemented" only on menu Tutorial and pause Help)
 
 ## Wave UI-2 --- Build a colony
 
--   [-] Architect (Wall/Bed/Stockpile/Harvest/Cancel + drag ghosts; no categories/cost cards)
+-   [x] Architect (Wall/Bed/Stockpile/Harvest/Cancel + drag ghosts; no categories/cost cards) (2026-11-20 audit: architect/catalog.go Category groups; architect/locks.go cost/lock cards; panel.go)
 -   [-] placement (drag rect; walls/beds per cell; no rotation/validity colors)
--   [-] zones (stockpile paint food+wood; no grow-zone/home/allowed)
--   [ ] stockpile settings
+-   [x] zones (stockpile paint food+wood; no grow-zone/home/allowed) (2026-11-20 audit: architect/catalog.go grow, home, allowed_area, dump tools; cmds_zone.go; zones_draw_zone_test.go)
+-   [x] stockpile settings (2026-11-20 audit: windows/storage.go; inspector/storage_ui.go; storage_test.go)
 -   [x] growing settings (PLAY-020)
 -   [-] Work (overlay from snapshot; every live work type cycles 1-4 or off, columns left to right in the order a colonist breaks ties: `.agents/gaps/WORK_PRIORITIES_GAP_ANALYSIS.md`; not virtualized)
--   [ ] Schedule
+-   [x] Schedule (2026-11-20 audit: windows/schedule.go; journey_schedule_area_test.go TestScheduleAreaStripMatchesDropdownCommand)
 -   [-] Area Manager (SIM-046: create, rename, paint, assign; no delete or overlay)
 
 ## Wave UI-3 --- Understand pawns
 
--   [-] Character (Bio tab: identity, backstories, traits, skills with passions, incapabilities, conditions; no Social/Gear tabs)
+-   [x] Character (Bio tab: identity, backstories, traits, skills with passions, incapabilities, conditions; no Social/Gear tabs) (2026-11-20 audit: inspector/social_tabs_ui.go, gear/gear_ui.go (Social and Gear tabs exist))
 -   [-] Needs/Mood (food/rest bars; no recreation/mood/thoughts)
 -   [-] Health (capacities, pain, part rows, operations queue; no bleeding or conditions)
 -   [x] Social (relations incl. lovers/spouses/exes, breakdowns with hover tooltip, log, romance, engagement, wedding, breakup, fight and party letters; captured: `-scenario social -capture-ui social`, also health, prisoner, history, world, assign)
--   [ ] Gear
--   [ ] Detailed Stats
+-   [x] Gear (2026-11-20 audit: inspector/gear/gear_ui.go; journey_gear_test.go)
+-   [x] Detailed Stats (2026-11-20 audit: internal/adapters/inbound/ebiten/inspector/pane_header.go CardStats; dossier/stats.go)
 -   [-] Alerts/Letters (alert list and letter windows with Continue; no letter stack or history)
 
 ## Wave UI-4 --- Production and defense
 
--   [ ] Bills
+-   [x] Bills (2026-11-20 audit: inspector/bill_config.go, building_inspector.go (AddBill/SetBill/RemoveBill); bill_config_test.go; orders_ui_test.go)
 -   [x] Research (RSCH-2)
--   [ ] Assign/Policies
--   [ ] combat controls/targeting on Main Colony
+-   [x] Assign/Policies (2026-11-20 audit: windows/assign.go, apparel_policy.go, apparel_policy_editor.go, foodpolicy.go)
+-   [x] combat controls/targeting on Main Colony (2026-11-20 audit: inspector/cmds_combat.go, orders/fire.go, formation.go, mortar_aim.go)
 -   [-] environmental overlays (roof, power, fertility, cover and Shift+T temperature done; AX-4 deep ore shows while a deep drill or scanner is selected or its tool is in hand; beauty and room overlays missing)
 
 ## Wave UI-5 --- Colony ecosystem
 
 -   [-] Animals (SIM-047: master and training columns; no health or area)
--   [ ] Wildlife
+-   [x] Wildlife (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/animals.go wildlife(); hud/tabs.go TabWildlife)
 -   [-] Prisoner (SIM-045: Prisoner tab with modes and resistance; no prison break or chat history)
--   [ ] Trade
+-   [x] Trade (2026-11-20 audit: ebiten/dialogs/trade.go; dialogs_compat.go TradeSource; trade_test.go)
 -   [-] Factions (window with the faction table, 60-day goodwill sparkline and last five events; goodwill only, no trade or communication)
--   [ ] History
+-   [x] History (2026-11-20 audit: ebiten/windows/history.go; history_wealth_test.go)
 
 ## Wave UI-6 --- Complete new-game flow
 
@@ -2353,11 +2353,11 @@ required before a polished external build.
 
 ## Wave UI-7 --- World gameplay
 
--   [-] World Map (SIM-046: World tab F8 with globe and caravan list; no object selection)
--   [-] Caravan Formation (SIM-046: colonists and destination only)
--   [-] Caravan Inspector (SIM-046: caravan list in the World tab)
+-   [x] World Map (SIM-046: World tab F8 with globe and caravan list; no object selection) (2026-11-20 audit: worldview/pick.go placeMarks, objects.go, view.go Selected; view_test.go TestPickingCyclesAndDoubleClickEnters)
+-   [x] Caravan Formation (SIM-046: colonists and destination only) (2026-11-20 audit: dialogs/caravan.go goods + mass budget (FormTooHeavy); caravan_pack.go)
+-   [x] Caravan Inspector (SIM-046: caravan list in the World tab) (2026-11-20 audit: worldview/inspector.go inspectCaravan(o))
 -   [x] Quest (QST-3: the Quests tab (F7) and window per §31: Available/Active/Historical lists, detail with coloured text, reward choice, pawn card, links, Reward preferences; quest letters, the expiring alert and the world-site marker; `.agents/gaps/QUESTS_GAP_ANALYSIS.md`)
--   [-] Transport Pod (AX-9: §36's loading (dialog, pod and launcher panes) and targeting (World tab picker, pods in flight); no range ring, attack or founding)
+-   [x] Transport Pod (AX-9: §36's loading (dialog, pod and launcher panes) and targeting (World tab picker, pods in flight); no range ring, attack or founding) (2026-11-20 audit: worldview/pods.go range ring, PodArriveAttackEdge/Centre, PodArriveFound; journey_gone_test.go TestJourneyWorldPodsAttackNeutralBase)
 
 ## Wave UI-8 --- Campaign completion
 
@@ -2380,7 +2380,7 @@ required before a polished external build.
 
 ## Wave UI-10 --- Developer/scaling
 
--   [ ] Developer Panel
+-   [x] Developer Panel (2026-11-20 audit: internal/adapters/inbound/ebiten/devtools Panel (panel.go, state.go, TestPanelsOffWithoutDevMode))
 -   [ ] Entity Inspector
 -   [ ] Debug Overlays
 -   [ ] Profiler
