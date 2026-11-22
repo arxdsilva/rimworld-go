@@ -64,16 +64,16 @@ State: `done` shipped; `open` owed to a later change; `kept` differs on purpose.
 | Id | Gap | Wiki | Today | State |
 |---|---|---|---|---|
 | SHT-001 | Manipulation in accuracy | Weight 8, capped at 100 % | Only slows work, `body.go:97-99`; only Sight reaches `ShootAcc`, `:100-102` | open [SHT-1] |
-| SHT-002 | How points apply | Summed into the score, then the curve | Flat after range, `attack/shot.go:37`; `10*ShootAcc`, `combat_host.go:136` | open [SHT-1] |
-| SHT-003 | Sight | Weight 12, capped at 200 % | `sightAccPoints = 30` flat, `body.go:37` | open [SHT-1], with SHT-002 |
+| SHT-002 | How points apply | Summed into the score, then the curve | Shipped: `attack.ShootingScore` (`attack/attack.go:102`), then `attack.ShooterPerTile`; `ShotAim` at `combat_host.go:136` | done [SHT-1] |
+| SHT-003 | Sight | Weight 12, capped at 200 % | Shipped: `sightAccPoints = 12` per 100 % of sight, capped at 200 % (`body.go:40`, `:104`); Nearsighted −6 (`pawngen/stats.go:24-25`, original tuning) | done [SHT-1] |
 | SHT-004 | Curve points | The tables above | Only 0, 5, 10, 15, 20 and beyond, `attack/attack.go:92-93`: level 2 reads 91.2, wiki 93; level 1 90.1, wiki 91; score -5 84.5, wiki 84 | open [SHT-1] |
-| SHT-005 | Interception by distance | "impossible at a distance of 5 or fewer tiles", scales to full "at a distance of 12 or more" | No distance term, `attack/shot.go:86-88`, `combat/shot.go:195`. Only allies are safe near the muzzle, `combat/shot.go:192` | open [SHT-1] |
+| SHT-005 | Interception by distance | "impossible at a distance of 5 or fewer tiles", scales to full "at a distance of 12 or more" | Shipped: `attack.InterceptScale` (`attack/intercept.go:17`) of `weapon.Range` (`weapon/weapon.go:438`, Euclidean, rounded), applied per creature in `combat/shot.go:200`; none within 5 tiles, full from 12 | done [SHT-1] |
 | SHT-006 | Downed interceptors | "reduce the chance", no number | A downed pawn never intercepts: `standing`, `combat/shot.go:191` | open [SHT-1], own number |
 | SHT-007 | Friendly Fire difficulty | 0..100 %, multiplies interception when both are colonists | No setting in `domain/difficulty` | open [SHT-1] |
 | SHT-008 | Shooting a downed target | "Shooters beyond 4 tiles have half the chance... Within 3 tiles... +750%" | No term in `Strikes.report`, `combat/strike.go:254-280` | open [SHT-1] |
-| SHT-101 | Trait numbers | Careful: +5, aim +25 %. Trigger-happy: −5, aim −50 % | `DeliberateAim` +12, ×1.2; `QuickDraw` −10, ×0.75, `trait/trait.go:160-165` | open [SHT-2] |
+| SHT-101 | Trait numbers | Careful: +5, aim +25 %. Trigger-happy: −5, aim −50 % | Shipped: `DeliberateAim` +5 score and aim ×1.25; `QuickDraw` −5 score and aim ×0.5 (`trait/trait.go:163-168`) | done [SHT-2] |
 | SHT-102 | First aim on a new target | Aiming Time multiplies every warmup | `AimTicks(d)` ignores the pawn, `combat/strike.go:35`, used at `combat/engage.go:48`, `combat/defend.go:146`, `combat/hunt.go:70`, `orders.go:286`, `:292`, `mind_host.go:224`, `allies.go:98`. The action bar reads the same number, `action_view.go:246`. Repeat shots already scale, `combat/strike.go:395` | open [SHT-2] |
-| SHT-103 | Melee cooldown and aim | Aiming Time names ranged warmup and psycasts only | `AimCooldown` also scales melee cooldown, `combat/strike.go:393`, so `DeliberateAim` slows a knife | open [SHT-2] |
+| SHT-103 | Melee cooldown and aim | Aiming Time names ranged warmup and psycasts only | Shipped: `Strikes.next` (`combat/strike.go:394-404`) scales only a gun's aim; `PunchTicks` (`mind_host.go:270`) is never scaled | done [SHT-2] |
 | SHT-104 | Brawler effect | +4 Melee Hit Chance (published); −10 Shooting, +4 Melee, conflicts (summary) | `attack.Melee.Brawler` works and nothing sets it, `attack/melee.go:13`, `:44`; `skills.go:558` | open [SHT-2], original name |
 | SHT-105 | Nimble effect | +15.0 Melee Dodge Chance | `attack.Melee.Nimble`, same state, `attack/melee.go:103` | open [SHT-2], original name |
 | SHT-201 | Hit card adds up | Not published, ours | Factors omit the band and the offset, `combat_overlay_host.go:189-211`, so they don't sum to the headline | open [SHT-3] |
@@ -95,7 +95,7 @@ SHT-1 ships first: SHT-2's trait numbers are only right on the new score.
 
 ## Already matching
 
-Miss radius table (wired: `attack/shot.go:52`, values match Combat). Stray 50 % (`attack.StrayHit`). Allies safe within 5 tiles of the shooter. Interception body-size rule, 4..80 %. Quality accuracy factors `0.80 .. 1.50` (`quality/quality.go:152`). Weather from the shooter and target's roofs (`combat/combat.go:179-184`). Gun cooldown not scaled by aim (`combat/strike.go:395`). Shooter skill points 0, 5, 10, 15, 20, 30, 40, 60.
+Miss radius table (wired: `attack/shot.go:52`, values match Combat). Stray 50 % (`attack.StrayHit`). Nothing within 5 tiles of the shooter is intercepted, allies included (SHT-005). Interception body-size rule, 4..80 %. Quality accuracy factors `0.80 .. 1.50` (`quality/quality.go:152`). Weather from the shooter and target's roofs (`combat/combat.go:179-184`). Gun cooldown not scaled by aim (`combat/strike.go:404`). Shooter skill points 0, 5, 10, 15, 20, 30, 40, 60.
 
 ## Checklist cross-reference
 
