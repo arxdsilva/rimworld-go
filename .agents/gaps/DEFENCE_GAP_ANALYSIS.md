@@ -36,8 +36,8 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Armor penetration and damage types (sharp, blunt, heat, bomb, burn, EMP). | `Def.DamageType` and `Def.ArmorPen`; `Strikes.armorRoll` feeds `wound` (`combat/strike.go`). | None. | DEF-0 (domain), DEF-1 | done |
 | Hit chance takes shooter skill, target size, lighting and weather into account. | `Strikes.report` (`combat/strike.go`) multiplies band, per-tile shooter accuracy (`attack.ShooterFactor`), `attack.SizeFactor` and cover. Weather is read from the map since CBT-2 (`combat/strike.go:264`). `NoLightPenalty` stays: no core light rule is published. | Corrected 2026-11-05: none here; shooting inputs are in `SHOOTING_GAP_ANALYSIS.md`. | DEF-1 | done |
 | Melee: adjacent attacks with cooldown, hit chance, weapon and body attacks. | Done for fists and animals; DEF-2 adds mace, gladius, longsword and pila beside club, knife and spear. | Melee weapons are not stuff-scaled and a wielded weapon loses its crafted quality on equip. | DEF-2 | done (2026-11-20 audit: domain/combat/weapon/held.go stuffFactor and Quality on held weapons) |
-| Targets are chosen by threat and cover is sought. | DEF-4 raiders: colonist or ally, a powered turret in sight (also with no colonist reachable, wiki: Raid), a rival faction's raider closer, then walls and doors (breach). | Threat weighting; cover seeking for ranged raiders. | DEF-4 | partial |
-| Combat log entries and records. | `logStrike`, `logEvent` (`eventlog.go`); DEF-4 `combat/log.go`: a 64-entry ring of fights and threats (raid arrived, drop pods, colonist struck down, raider downed or killed, retreat, theft, fires, siege), saved, read model `WorldView.CombatLog`. | Combat records and threat history screens (UI 24.3). | DEF-4 | partial |
+| Targets are chosen by threat and cover is sought. | DEF-4 raiders: colonist or ally, a powered turret in sight (also with no colonist reachable, wiki: Raid), a rival faction's raider closer, then walls and doors (breach). Threat: `Raiders.target` (`game/raid/tactics.go:99`) weighs distance less a flat danger bonus for a ranged or melee weapon (`danger`, `tactics.go:148`). Cover: `Raiders.cover` (`tactics.go:161-164`) moves only a ranged raider under fire. Memory: `Raiders.turn` (`game/raid/sight.go:133`). Tests: `TestRaiderPrefersArmedColonist`, `TestRaiderSeeksCoverUnderFire`, `TestRaiderCoverDoesNotFlap` (`game/raid_cbt4_test.go`), `TestRaiderTargetMemoryNoFlap` (`game/raid_eai_test.go`); `-race` PASS 2026-11-21, no targeting or cover change (DEF-3.1 audit). | - | DEF-4 | done (DEF-3.1 audit; finer threat score: §3.10) |
+| Combat log entries and records. | `logStrike`, `logEvent` (`eventlog.go`); DEF-4 `combat/log.go`: a 64-entry ring of fights and threats (raid arrived, drop pods, colonist struck down, raider downed or killed, retreat, theft, fires, siege), saved, read model `WorldView.CombatLog`. DEF-3.1: `LogEntry.Kind` (`LogUnsorted`, `LogFight`, `LogThreat`, `combat/log.go:40-42`; save v19, v18 entries load as `LogUnsorted`); `Log.Fight` and `Log.Alarm` implement `raid.Chronicle`; blast credit (`combat/blast.go:182`: the thrower gets the kill and the damage once); `Kit.DamageTaken` (`combat/gear.go:68`, humanlike only); History Combat and Threats tabs (`windows/history.go:82`); Records Damage taken column (`windows/records.go:76`). | - | DEF-4, DEF-3.1 | done (DEF-3.1) |
 
 ### 3.2 Armor and apparel
 
@@ -125,6 +125,8 @@ Draft and move orders, attack orders, melee combat, line of sight, building dama
 | Raiders avoid walking into grenade range. | A grenade in flight endangers the tiles its blast reaches and raiders step out (`game/combat/tactics.go`, `TestDangerFromGrenade`); EAI-012 does the same for a sparking turret (`combat/turret_step.go`). | - | CBT-4, EAI-012 (`c334e2e9e`) | done |
 | Threat-weighted targeting and cover seeking (row 3.1). | CBT-4 threat-weighted choice and cover seeking (`game/combat/tactics.go`); EAI-010 limits raiders to foes they have seen; EAI-002 gives manhunters a ring search with a lock and switch margin. | - | CBT-4, EAI-002, EAI-010 | done |
 | Weapon quality kept on equip; `Wealth()` shared value functions. | See `PRODUCTION_GAP_ANALYSIS.md` 3.7. | Shared with PRD. | later | open |
+| Threat score by damage per second and range. | `Raiders.target` (`game/raid/tactics.go:99`) takes distance less a flat danger bonus, ranged or melee (`danger`, `tactics.go:148`); no damage or range term. | A finer DPS/range threat score (moves golden hashes; raid `Host` at 8 methods). | DEF-3.1 follow-up | open |
+| Raiders that escape alive keep their kit's damage and last attacker. | `Gear.Count` sets `LastBy` and `Kit.DamageTaken` on a living target (`combat/gear.go:346`, `:349`); only `Gear.Died` clears them (`gear.go:367`). | Kits of raiders that escape alive keep DamageTaken and LastBy forever (existing debt, N5). | DEF-3.1 follow-up | open |
 
 ## 4. Wiki constants
 
@@ -192,7 +194,7 @@ Each phase ticks these items when its acceptance criteria are met. Titles are qu
 | 13.2 Tactical orders | **Fire-at-will toggle**, **Hold position behavior if implemented** (`[ ]`) | DEF-4 |
 | 13.3 Targeting feedback | **Weapon range overlay**, **Line-of-sight line**, **Cover visualization**, **Hit-chance tooltip**, **Invalid shot explanation** (`[ ]`) | DEF-1 |
 | 13.4 Combat feedback | **Projectile/impact feedback** (`[x]`; note projectile flight) | DEF-1 |
-| 24.3 Pawn records | **Combat records**, **Kills**, **Damage dealt/taken** (`[ ]`) | DEF-4 |
+| 24.3 Pawn records | **Combat records**, **Kills**, **Damage dealt/taken** (`[x]`, DEF-3.1: Records columns, `windows/records.go:76`) | DEF-4 |
 
 ## 7. Out of scope
 

@@ -1320,16 +1320,16 @@ the player what just happened and what requires attention.
 -   [x] **Wealth graph** (EAI-0: the History window's Wealth tab plots the daily wealth samples, read only; `windows/history_wealth.go`)
 -   [ ] **Population graph**
 -   [ ] **Colonist/animal counts**
--   [ ] **Threat/event history**
+-   [-] **Threat/event history** (DEF 3.1: the History window's Threats tab lists the combat log's threat entries; missing: a graph, time-range control, infestations/manhunters not logged)
 -   [ ] **Time-range controls**
 -   [ ] **Efficient downsampling**
     -   Long games should not render millions of points.
 
 ## 24.3 Pawn records
 
--   [-] **Combat records** (wave E U5: the colony-wide combat log; CBT-5: History window Records tab with kills and damage per colonist; missing: explosions do not count toward records)
+-   [x] **Combat records** (wave E U5: the colony-wide combat log; CBT-5: History window Records tab with kills and damage per colonist; DEF 3.1: explosions count toward records, blast credit at combat/blast.go:182)
 -   [x] **Kills** (2026-11-20 audit: windows/records.go recordRow.Kills (PawnView.Kills) Records table)
--   [ ] **Damage dealt/taken**
+-   [x] **Damage dealt/taken** (DEF 3.1: Records tab Damage taken column, windows/records.go:76; taken counts humanlike only)
 -   [ ] **Work/production records**
 -   [ ] **Medical/social/research records where useful**
 -   [ ] **Time as colonist**

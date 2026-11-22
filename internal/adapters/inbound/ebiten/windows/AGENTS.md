@@ -9,6 +9,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - Interfaces: `Reader` (`Wildlife`, `History`, `IncapableReason`), `Labels` (8, at the cap: `PawnLabel`, `AnimalLabel`, `AnimalHealth`, `CareShort`, `Factions`, `FactionName`, `DrawAnimalIcon`, `DrawPassion`), `Host` (7: `Env`, `WindowRect`, `CenterOnMap`, `AreaDropdown`, `ManageAreas`, `Float`, `DrawPortrait`).
 - `Shell` = `Chrome (Sizer + Dispatcher + Texts) + Commands + World + PawnSel + Widgets + Labels + Host`. Every label goes through `Shell.T`/`lang.Tf` (OPT-001); the exported text helpers (`AnimalDoing`, `FollowCell`, `DrawGoodwillChart`, ...) keep their English signatures and wrap an unexported `tr lang.Tr` variant; the Work header texts live in `Work.help`/`colName` (`WorkHelp`/`WorkColumns` stay the English reference).
 - Mouse painting (CTL-013..015, 019), `paint.go`: one `painter` on `Set` (one window is open at a time): a first click arms it with its value, and `Drag` spreads that value over the cells the held mouse enters, once each. Schedule, Work and Assign use it; `Assign.Drag` covers Drugs, Medical and Food. Work: `RightClick` lowers a cell or runs a header with the right button, `HeadClick` needs Shift, incapable colonists are skipped silently. `Animals.WildArrow` is the arrow to a hovered wild row; it needs the shell's `WorldToScreenF` through the consumer-owned `mapProjector`.
+- History (`history.go`, `combat_log.go`, `records.go`): five tabs in the order Events, Combat, Threats, Records, Wealth (`history.go:82`). Combat and Threats are typed rows from `CombatRows` and `ThreatRows` (`combat_log.go:22`, `:27`; no reflection); Records has a Damage taken column (`records.go:76`).
 
 ## Depends on
 - Leaves: `art`, `gfx`, `ids`, `inputframe`, `ports`, `uikit`.
@@ -28,6 +29,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - Quests (QST-3): the window reads only `World().Quests` and `NoGoodwill`; Accept, Dismiss, Restore and the preference checks leave as commands; links leave as `JumpTo`/`OpenWorld` intents; quest text is never parsed back (runs come from the typed args).
 - Every window declares its widgets once per `Update` (`TestKitWindowOpensTogglesAndCloses`).
 - Animal columns drop to fit the width (`TestAnimalColumnsDropToFit`); presets cycle (`TestNextPresetCycles`).
+- History Threats (DEF 3.1): the tab lists only `Threat` entries, newest first (`TestThreatRowsOnlyThreatsNewestFirst`); the Combat and Threats tabs share one list drawer (`eventList`).
 
 ## Hot paths
 - `Draw` paints the open window per frame from read models. Widget declaration runs once per `Update`. No allocation claim.

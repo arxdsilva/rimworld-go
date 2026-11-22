@@ -142,3 +142,13 @@ Incident queue, letter choices, message merge, positive bias, story panel, infes
 - Changed: saved incident queue (EAI-030); letter choices and the refugee-chased event (EAI-031); repeated plain notices merge into xN within 600 ticks (EAI-032); positive-event bias on setup colonies (EAI-033); `devtools/story.go` story panel (EAI-034); infestations search the whole map for hive spots, or the story sends a raid (EAI-035); raid alerts name the plan (EAI-016).
 - Limits: game-package ceilings raised in 812c036fb (user-approved, perf holds): Grown/250 +6 %, Raid/500 -34 %.
 - Open: the legacy storyteller keeps its old draws and pack rolls.
+
+## DEF-3.1-threat-weighted-raider-targeting
+Threat-weighted targets audit, combat log kinds, History Threats tab and Damage taken · 2026-11-21 · 768e72901
+- Changed: the History window has five tabs (Events, Combat, Threats, Records, Wealth); Threats lists the threat entries. Records has a Damage taken column (humanlike only; dropped on death). A blast's kill and damage credit its thrower once and set `LastBy`, so a raider shot by a grenadier turns on it.
+- Decisions: `LogKind` (LogUnsorted, LogFight, LogThreat) with save v19; v18 entries load as LogUnsorted. `Gear.Count` skips the target side on a killing blow (`Died` runs first). Animals and mechanoids never reach `Died`, so they carry no taken damage. Row 39 closes by audit: no targeting or cover change; the four AC-1 tests pass under -race (2026-11-21).
+- Save impact: SaveVersion 18 to 19 (`save.go:123`); v18 saves load with zero DamageTaken (`TestDef31SaveV18Loads`). Pins moved, each with a DEF 3.1 comment: 48x40 seed 42, 120x120 seed 1, sense_joy seed 2, scenario grown. `saveV12Hash` unchanged.
+- Perf: BenchmarkTickRaid, interleaved n=6: 3.185 ms to 3.167 ms (p=1.000), allocs 8 to 8.
+- HUD/UI: History Combat and Threats tabs; Records Damage taken column; en.json adds "Damage taken" and "No threats lately.".
+- Boxes: DEFENCE gap row 39 `partial` to `done`; row 40 `partial` to `done`; row 197 Combat records, Kills and Damage dealt/taken `[x]`; §3.10 gains two open rows (finer DPS/range threat score; kits of escaped raiders keep DamageTaken and LastBy, N5). UI checklist 24.3 Combat records `[-]` to `[x]`, Damage dealt/taken `[ ]` to `[x]`, Threat/event history `[ ]` to `[-]`. `spec-backlog` #66 stays open until the lead's last commit closes it.
+- Open: DEF-3.1 follow-ups: the finer DPS/range threat score (§3.10); N5 (kits of escaped raiders). Threat/event history still lacks a graph, a time-range control, and infestation or manhunter entries.

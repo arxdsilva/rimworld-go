@@ -122,6 +122,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | DEF-1-projectiles-armor | Projectiles, burst, armor, combat overlays | 2026-10-29 | [DEF.md](DEF.md#def-1-projectiles-armor) |
 | DEF-2-weapons-armor-explosions | Weapons, armor, explosions | 2026-10-29 | [DEF.md](DEF.md#def-2-weapons-armor-explosions) |
 | DEF-3-cover-traps-turrets-mortars-doors | Cover, traps, turrets, mortars and doors | 2026-10-29 | [DEF.md](DEF.md#def-3-cover-traps-turrets-mortars-doors) |
+| DEF-3.1-threat-weighted-raider-targeting | Threat-weighted targets audit, combat log kinds, History Threats tab and Damage taken | 2026-11-21 | [DEF.md](DEF.md#def-3.1-threat-weighted-raider-targeting) |
 | DEF-4-R1-raids-drafted-control | Raids, drafted control, IED leftovers, combat log | 2026-10-29 | [DEF.md](DEF.md#def-4-r1-raids-drafted-control) |
 | DEF-4-R2-mechanoids-ship-part | Mechanoids and the crashed ship part | 2026-10-29 | [DEF.md](DEF.md#def-4-r2-mechanoids-ship-part) |
 | DEPS-001-libraries-and-rules | Libraries at the edge, and cleaning up what we wrote by hand | 2026-11-03 | [OPS.md](OPS.md#deps-001-libraries-and-rules) |
