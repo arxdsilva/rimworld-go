@@ -186,3 +186,11 @@ Stale spec boxes ticked; every task now ticks its boxes and names them · 2026-1
 - Limits: AGENTS.md budget 5198 → 5193 bytes.
 - Boxes: 400 ticked (features 209, ui 132, screens 37, art 8, gap rows 14) by 948d0f6cc; the 24 still open are on `spec-backlog` issues (11 edited, new #265, #266).
 - Open: the audit notes rest on code reading, not on running each feature; a wrong tick is undone by reopening its box and filing it.
+
+## QA-002-ui-visual-checks-filed
+Two UI visual-check items added to the Definition of Done and filed · 2026-11-22 · 6e04f7857
+- Changed: UI checklist Appendix C gains QA-002 (every declared table column is drawn: pure layout functions plus a per-window test and a meta-test, no pixels) and QA-003 (about eight key screens compared with checked-in references through `-capture -capture-ui` and `render/pixeldiff`, Linux CI only). Filed as #267 (P2) and #268 (P3).
+- Decisions: Playwright was considered and rejected: the game draws to one canvas, so it could only click coordinates and compare screenshots, and it would bring a Node toolchain; the journeys (QA-001) already drive the real input path. QA-002 comes first because it caught the DEF 3.1 Damage taken miss at the lowest cost. Unlike the standing Definition-of-Done boxes (DOCS-005), these two are concrete tasks and are ticked when built.
+- HUD: none; no in-game behaviour changed.
+- Boxes: none ticked; two open boxes added (Appendix C, QA-002 and QA-003) on new `spec-backlog` issues #267 and #268.
+- Open: QA-002 (#267), QA-003 (#268).

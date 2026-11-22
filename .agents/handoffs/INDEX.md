@@ -290,6 +290,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PRD-4-catalogue-stockpiles-shelves | Recipe catalogue, stockpile filters, shelves, barrel | 2026-10-29 | [BASE.md](BASE.md#prd-4-catalogue-stockpiles-shelves) |
 | PWR-power-wires | Visible power wires and Reconnect | 2026-11-03 | [BASE.md](BASE.md#pwr-power-wires) |
 | QA-001-player-journeys | Player-journey tests, CI on every push, real-path clicks | 2026-10-27 | [OPS.md](OPS.md#qa-001-player-journeys) |
+| QA-002-ui-visual-checks-filed | Two UI visual-check items added to the Definition of Done and filed | 2026-11-22 | [OPS.md](OPS.md#qa-002-ui-visual-checks-filed) |
 | QST-1-quests-contract | Quests contract: domain, root, glue | 2026-11-07 | [WORLD.md](WORLD.md#qst-1-quests-contract) |
 | QST-2a-quest-kinds-without-sites | Joiner, ore lump, trade request, peace talks; the wanderer letter | 2026-11-07 | [WORLD.md](WORLD.md#qst-2a-quest-kinds-without-sites) |
 | QST-2b-quest-sites | Site maps for quests; stash, refugee, camp and rescue kinds; ore-site threats | 2026-11-07 | [WORLD.md](WORLD.md#qst-2b-quest-sites) |
