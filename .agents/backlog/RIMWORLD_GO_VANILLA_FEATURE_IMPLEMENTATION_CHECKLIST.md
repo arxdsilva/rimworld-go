@@ -2166,7 +2166,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Colony wealth graph** (EAI-0: the History window's Wealth tab plots `Game.WealthHistory()`, read only)
 -   [ ] **Population history**
 -   [x] **Major event history** (2026-11-20 audit: windows/history.go Events tab over game/history.go addHistory (deaths, weddings, fights, recruits))
--   [ ] **Pawn records**
+-   [-] **Pawn records** (DEF 3.1, 768e72901: the History Records tab lists kills, damage dealt and damage taken per colonist, saved; explosions count. Missing: work, time-as-colonist and other non-combat records)
     -   kills, work, damage, time, etc. where meaningful.
 
 ------------------------------------------------------------------------
