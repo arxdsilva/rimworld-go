@@ -58,9 +58,11 @@ type SiegeWorks interface {
 	Man(id, m entity.EntityID) bool
 }
 
-// Chronicle is the combat log (fights and threats, for the UI).
+// Chronicle is the combat log (for the UI): Fight a blow's outcome,
+// Alarm a threat to the colony (DEF 3.1: the History Threats tab).
 type Chronicle interface {
-	Log(text string)
+	Fight(text string)
+	Alarm(text string)
 }
 
 // Senses is what raiders perceive (EAI-010: sight.go).

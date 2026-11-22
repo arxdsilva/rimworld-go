@@ -154,15 +154,15 @@ func TestCombatLogRing(t *testing.T) {
 	f := newFake(10, 10)
 	c := f.combat()
 	l := c.Log
-	l.Add("")
+	l.Add(LogFight, "")
 	if len(l.Entries()) != 0 || l.export() != nil {
 		t.Fatal("empty lines are dropped")
 	}
 	for i := 0; i < LogSize+10; i++ {
 		f.now++
-		l.Add("x")
+		l.Add(LogUnsorted, "x")
 	}
-	l.Add("last")
+	l.Add(LogUnsorted, "last")
 	e := l.Entries()
 	if len(e) != LogSize || e[len(e)-1].Text != "last" || e[0].Tick != f.now-LogSize+2 {
 		t.Fatalf("bounded ring: %d, %+v", len(e), e[0])
@@ -188,6 +188,39 @@ func TestCombatLogRing(t *testing.T) {
 	c2.Log.importLog(make([]LogEntry, LogSize+5))
 	if len(c2.Log.Entries()) != LogSize {
 		t.Fatal("an oversized saved log is cut")
+	}
+}
+
+// TestCombatLogKinds (DEF 3.1): a blow's outcome is a fight entry, an
+// alarm a threat entry, and the kind rides the defence save.
+func TestCombatLogKinds(t *testing.T) {
+	t.Parallel()
+	f := newFake(10, 10)
+	c := f.combat()
+	l := c.Log
+	f.pawn(5, 1, 1, weapon.Club)
+	delete(f.pawns, 5)
+	l.Down(5, true)
+	l.Fight("Raider r was killed.")
+	l.Alarm("Hostile drop pods are landing.")
+	l.Alarm("")
+	want := []LogKind{LogFight, LogFight, LogThreat}
+	e := l.Entries()
+	if len(e) != len(want) {
+		t.Fatalf("entries %+v", e)
+	}
+	for i, k := range want {
+		if e[i].Kind != k {
+			t.Fatalf("entry %d %q: kind %d, want %d", i, e[i].Text, e[i].Kind, k)
+		}
+	}
+	c2 := newFake(10, 10).combat()
+	c2.Turrets.Import(c.Turrets.Export())
+	if got := c2.Log.Entries(); len(got) != 3 || got[0].Kind != LogFight || got[2].Kind != LogThreat || got[2].Text != e[2].Text {
+		t.Fatalf("kinds after the save: %+v", got)
+	}
+	if LogUnsorted != 0 {
+		t.Fatal("a v18 entry (no kind) reads as unsorted")
 	}
 }
 

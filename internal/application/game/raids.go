@@ -162,7 +162,7 @@ func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
 		g.raidGroups[group].Over = f != nil // nothing to repel: no goodwill lost
 		return
 	}
-	g.combat.Log.Add(fmt.Sprintf("A raid of %d came: %s.", spawned, grp.Plan)) // combat/log.go (DEF-4)
+	g.combat.Log.Alarm(fmt.Sprintf("A raid of %d came: %s.", spawned, grp.Plan)) // combat/log.go (DEF-4)
 	if f != nil {
 		if kin != 0 { // relative_world.go: before the raid alert, which stays the latest message
 			g.relativeLetter(letters.Caution, "Relative among the raiders", kin, "raiders")
@@ -222,7 +222,7 @@ func podRaid(g *Game, grp raid.Group, kit []item.Kind, f *faction.Faction) {
 		who = f.Name
 	}
 	text := raid.Announce(grp.Arrival, n, who)
-	g.combat.Log.Add(text)
+	g.combat.Log.Alarm(text)
 	g.threat("Drop pods", x, y, "%s", text)
 }
 
@@ -539,20 +539,17 @@ func (h raidSiege) BuildMortar(x, y int) entity.EntityID {
 func (h raidSiege) Crew(m entity.EntityID) (entity.EntityID, bool) { return h.g.combat.Mortars.Crew(m) }
 func (h raidSiege) Man(id, m entity.EntityID) bool                 { return h.g.combat.Mortars.Man(id, m) }
 
-type raidChronicle struct{ g *Game }
-
-func (h raidChronicle) Log(text string) { h.g.combat.Log.Add(text) }
-
 // CombatEventView is one combat log line (WorldView.CombatLog, DEF-4).
 type CombatEventView struct {
-	Tick int
-	Text string
+	Tick   int
+	Text   string
+	Threat bool // DEF 3.1: a threat entry (History Threats tab)
 }
 
 // fillRaidView adds the combat log and the hostile drop pods to the view.
 func fillRaidView(g *Game, w *WorldView) {
 	for _, e := range g.combat.Log.Entries() {
-		w.CombatLog = append(w.CombatLog, CombatEventView{Tick: int(e.Tick), Text: e.Text})
+		w.CombatLog = append(w.CombatLog, CombatEventView{Tick: int(e.Tick), Text: e.Text, Threat: e.Kind == combat.LogThreat})
 	}
 	for _, p := range g.raid.Pods.Views(nil) {
 		w.Arrivals = append(w.Arrivals, ArrivalView{X: p.X, Y: p.Y, Tick: p.Land, Landed: p.Landed, Hostile: true})

@@ -153,7 +153,7 @@ type Set struct {
 	// storage is the Storage settings window's state (storage.go).
 	storage *storageState
 
-	histTab int // the History window's tab: 0 events, 1 combat, 2 records
+	histTab int // the History window's tab: 0 events, 1 combat, 2 threats, 3 records, 4 wealth
 
 	// food is the Food policies window's state (foodpolicy.go).
 	food *foodState

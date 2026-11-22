@@ -177,11 +177,13 @@ import (
 // -race on arm64, and amd64 (Rosetta) gives the same at bd41e9500 and
 // cb5e5abbb. The test moved here from package game and runs under -race in
 // its own CI job.
+// Re-pinned (DEF 3.1, 2026-11-21): Kit.DamageTaken, LogEntry.Kind, blast
+// credit and LastBy moved 48x40/seed42 and 120x120/seed1.
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0x1707819a25f6bfbe,
 	"48x40/seed7":    0x69290a3b511b9f6f,
-	"48x40/seed42":   0x26a30ef43a063dce,
-	"120x120/seed1":  0x36565b9589226867,
+	"48x40/seed42":   0x8a144716f9d0ed01,
+	"120x120/seed1":  0xe9064309a3858bfd,
 	"120x120/seed7":  0x20c22928576d1297,
 	"120x120/seed42": 0xa70fa11a6ea2ce50,
 }

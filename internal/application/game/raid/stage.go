@@ -84,12 +84,21 @@ func (rs *Raiders) storm(gi, x, y int, now uint64, text string) {
 		}
 	}
 	rs.h.Threat(title, x, y, "%s", text)
-	rs.log(text)
+	rs.alarm(text)
 }
 
-// log adds text to the combat log (nil in unit tests without one).
+// log adds a fight entry to the combat log (nil in unit tests without
+// one): a raider downed or killed.
 func (rs *Raiders) log(text string) {
 	if rs.ch != nil {
-		rs.ch.Log(text)
+		rs.ch.Fight(text)
+	}
+}
+
+// alarm adds a threat entry to the combat log (DEF 3.1: the History
+// Threats tab): an assault, a theft, a retreat, a supply pod.
+func (rs *Raiders) alarm(text string) {
+	if rs.ch != nil {
+		rs.ch.Alarm(text)
 	}
 }

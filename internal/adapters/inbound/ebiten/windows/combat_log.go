@@ -4,55 +4,58 @@
 package windows
 
 import (
-	"reflect"
-
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/application/game"
 )
 
-// The History window's Combat tab (DEF-4): the recent combat events from
-// WorldView.CombatLog, newest first, read-only.
+// The History window's Combat and Threats tabs (DEF-4, DEF 3.1): the
+// recent combat events from WorldView.CombatLog, newest first, read-only.
+// Combat lists every entry; Threats lists the entries flagged Threat.
 
 // combatRow is one displayed combat event.
 type combatRow struct{ When, Text string }
 
-// CombatRows reads WorldView.CombatLog ([]CombatEventView{Tick, Text}) by
-// reflection so the window builds before and after the field exists; the
-// newest event comes first. A missing field is an empty log.
-func CombatRows(world any) []combatRow {
-	v := reflect.ValueOf(world)
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
-	}
-	if v.Kind() != reflect.Struct {
-		return nil
-	}
-	log := v.FieldByName("CombatLog")
-	if !log.IsValid() || log.Kind() != reflect.Slice {
-		return nil
-	}
-	out := make([]combatRow, 0, log.Len())
-	for i := log.Len() - 1; i >= 0; i-- {
-		e := log.Index(i)
-		t, txt := e.FieldByName("Tick"), e.FieldByName("Text")
-		if !t.IsValid() || !txt.IsValid() {
+// CombatRows lists every combat log entry, newest first.
+func CombatRows(log []game.CombatEventView) []combatRow {
+	return logRows(log, false)
+}
+
+// ThreatRows lists the threat entries only, newest first.
+func ThreatRows(log []game.CombatEventView) []combatRow {
+	return logRows(log, true)
+}
+
+func logRows(log []game.CombatEventView, threatsOnly bool) []combatRow {
+	out := make([]combatRow, 0, len(log))
+	for i := len(log) - 1; i >= 0; i-- {
+		if threatsOnly && !log[i].Threat {
 			continue
 		}
-		out = append(out, combatRow{When: historyDate(t.Convert(reflect.TypeOf(uint64(0))).Uint()), Text: txt.String()})
+		out = append(out, combatRow{When: historyDate(uint64(log[i].Tick)), Text: log[i].Text})
 	}
 	return out
 }
 
-// combatList declares the combat events' scrolling list in body.
+// combatList declares the Combat tab's scrolling list in body.
 func (w History) combatList(body gfx.Rect) {
-	rows := CombatRows(w.sh.World())
+	w.eventList(body, "history.combat", CombatRows(w.sh.World().CombatLog), w.sh.T("No fighting lately."))
+}
+
+// threatList declares the Threats tab's scrolling list in body.
+func (w History) threatList(body gfx.Rect) {
+	w.eventList(body, "history.threats", ThreatRows(w.sh.World().CombatLog), w.sh.T("No threats lately."))
+}
+
+// eventList is the one virtualised list drawer both tabs share.
+func (w History) eventList(body gfx.Rect, id string, rows []combatRow, empty string) {
 	if len(rows) == 0 {
-		w.kit().Label(body.X, body.Y, w.sh.T("No fighting lately."), uikit.DimText())
+		w.kit().Label(body.X, body.Y, empty, uikit.DimText())
 		return
 	}
-	area := w.kit().ScrollArea("history.combat", body, float32(len(rows))*historyRowH, uikit.ScrollOpts{Step: historyRowH * 2, Focusable: true})
+	area := w.kit().ScrollArea(id, body, float32(len(rows))*historyRowH, uikit.ScrollOpts{Step: historyRowH * 2, Focusable: true})
 	first := max(0, int(area.Off/historyRowH))
 	w.kit().Queue(func(dst *ebiten.Image) {
 		sub := gfx.ClipTo(dst, area.View)

@@ -672,7 +672,7 @@ func TestHabitsOffKeepTheHash(t *testing.T) {
 	for _, c := range []struct {
 		seed uint64
 		want uint64
-	}{{1, 0xe086929139a977ff}, {2, 0xaf29a560ac26f664}} {
+	}{{1, 0xe086929139a977ff}, {2, 0xe2ad9f9b7c8407ae}} { // seed 2 re-pinned (DEF 3.1, 2026-11-21): Kit.DamageTaken, LogEntry.Kind, blast credit and LastBy
 		h, g := joyOffHash(c.seed, 30000)
 		if h != c.want {
 			t.Errorf("seed %d: hash %#x, want %#x", c.seed, h, c.want)

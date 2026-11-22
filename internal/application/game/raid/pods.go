@@ -152,7 +152,7 @@ func (p *Pods) Step(now uint64) {
 			pod := &grp.Pods[i]
 			if !pod.Landed && now >= pod.Land {
 				if podsLeft(grp.Pods) == len(grp.Pods) {
-					p.ch.Log("Hostile drop pods are landing.")
+					p.ch.Alarm("Hostile drop pods are landing.")
 				}
 				pod.Landed = true
 				if grp.Faction == 0 && grp.PodFaction != 0 {

@@ -112,7 +112,7 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 	w, ht := h.Size()
 	if x == 0 || y == 0 || x == w-1 || y == ht-1 {
 		if r.LootQty > 0 {
-			rs.log(fmt.Sprintf("%s got away with %d %s.", h.Name(id), r.LootQty, r.Loot))
+			rs.alarm(fmt.Sprintf("%s got away with %d %s.", h.Name(id), r.LootQty, r.Loot))
 		}
 		h.RemoveRaider(id) // gone home
 		return
@@ -258,7 +258,7 @@ func (rs *Raiders) broken(group int, now uint64) bool {
 	}
 	if !grp.Fled {
 		grp.Fled = true
-		rs.log("The raiders have lost heart and are retreating.")
+		rs.alarm("The raiders have lost heart and are retreating.")
 	}
 	return true
 }
@@ -377,7 +377,7 @@ func (rs *Raiders) digIn(gi int, now uint64) {
 	}
 	text := "The raiders have dug in for a siege and are setting up mortars. They will storm the colony within a few days."
 	h.Threat("Siege", grp.CampX, grp.CampY, "%s", text)
-	rs.log(text)
+	rs.alarm(text)
 }
 
 // mortarNear builds a raiders' mortar on the first free tile within four

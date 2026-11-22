@@ -520,9 +520,9 @@ func TestCombatLogBoundedAndSaved(t *testing.T) {
 	t.Parallel()
 	g, ada := def4Game(t, 30, 20, 15, 10)
 	for i := 0; i < 100; i++ {
-		g.combat.Log.Add("line")
+		g.combat.Log.Fight("line")
 	}
-	g.combat.Log.Add("last")
+	g.combat.Log.Fight("last")
 	l := g.World().CombatLog
 	if len(l) != 64 || l[len(l)-1].Text != "last" {
 		t.Fatalf("bounded, newest last: %d", len(l))

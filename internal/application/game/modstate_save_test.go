@@ -144,8 +144,8 @@ func TestOldSavesLoadWithoutModState(t *testing.T) {
 	}
 	g := NewColony(Config{Seed: 3, Width: 32, Height: 32})
 	UseModState(g, &countingSource{blobs: twoBlobs()})
-	if blobs, notes := TakeLoadedModState(loadAsVersion(t, g, SaveVersion-1)); blobs != nil || notes != nil {
-		t.Errorf("v%d: mod state %v, notes %v; want none", SaveVersion-1, blobs, notes)
+	if blobs, notes := TakeLoadedModState(loadAsVersion(t, g, 17)); blobs != nil || notes != nil {
+		t.Errorf("v%d: mod state %v, notes %v; want none", 17, blobs, notes)
 	}
 }
 

@@ -75,7 +75,7 @@ func (rs *Raiders) steal(id entity.EntityID, r Raider, j job.Record, x, y int, n
 	h.Interrupt(id, job.Cancelled)
 	text := fmt.Sprintf("%s stole %d %s and is running off with it.", h.Name(id), n, k)
 	h.Message(x, y, "%s", text)
-	rs.log(text)
+	rs.alarm(text)
 	return true
 }
 
@@ -118,7 +118,7 @@ func (rs *Raiders) burn(id entity.EntityID, r Raider, j job.Record, x, y int, no
 	if r.Deeds == 1 {
 		text := fmt.Sprintf("%s is setting the colony on fire!", h.Name(id))
 		h.Message(tx, ty, "%s", text)
-		rs.log(text)
+		rs.alarm(text)
 	}
 	return true
 }

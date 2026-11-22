@@ -28,25 +28,43 @@ const LogSize = 64
 type LogEntry struct {
 	Tick uint64
 	Text string
+	Kind LogKind // DEF 3.1 (save v19)
 }
 
-// Add appends text at the current tick, dropping the oldest entry past
-// LogSize.
-func (l *Log) Add(text string) {
+// LogKind sorts a log entry for the History tabs (DEF 3.1).
+type LogKind uint8
+
+// The log kinds: LogUnsorted is every entry of a v18 save (the Combat
+// tab only); LogFight a blow's outcome; LogThreat a threat to the colony.
+const (
+	LogUnsorted LogKind = iota
+	LogFight
+	LogThreat
+)
+
+// Add appends text of kind k at the current tick, dropping the oldest
+// entry past LogSize.
+func (l *Log) Add(k LogKind, text string) {
 	if text == "" {
 		return
 	}
 	if len(l.entries) >= LogSize {
 		l.entries = slices.Delete(l.entries, 0, len(l.entries)-LogSize+1)
 	}
-	l.entries = append(l.entries, LogEntry{Tick: l.h.Now(), Text: text})
+	l.entries = append(l.entries, LogEntry{Tick: l.h.Now(), Text: text, Kind: k})
 	l.viewsOK = false
 }
+
+// Fight logs a blow's outcome (raid.Chronicle).
+func (l *Log) Fight(text string) { l.Add(LogFight, text) }
+
+// Alarm logs a threat to the colony (raid.Chronicle).
+func (l *Log) Alarm(text string) { l.Add(LogThreat, text) }
 
 // Down logs colonist target struck down by a blow (up: it stood before).
 func (l *Log) Down(target entity.EntityID, up bool) {
 	if up && !l.h.StandingPawn(target) {
-		l.Add(l.h.Name(target) + " was struck down.")
+		l.Fight(l.h.Name(target) + " was struck down.")
 	}
 }
 

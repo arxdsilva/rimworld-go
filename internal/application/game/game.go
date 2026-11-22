@@ -217,9 +217,9 @@ type PawnView struct {
 	Weapon      string // wielded weapon name ("fists" when unarmed)
 	// CBT-3: the weapon's quality (stored, quality.Level+1) and stuff ("": the def's own), combat records, the spare weapon ("": none),
 	// shield belt charge (percent, 0 without one) and smokepop uses left.
-	WeaponQuality                            uint8
-	WeaponStuff, Spare, ThreatResponse       string // CBT-4: ThreatResponse is "default", "flee", "attack" or "ignore"
-	Kills, DamageDealt, ShieldPct, Smokepops int
+	WeaponQuality                                         uint8
+	WeaponStuff, Spare, ThreatResponse                    string // CBT-4: ThreatResponse is "default", "flee", "attack" or "ignore"
+	Kills, DamageDealt, DamageTaken, ShieldPct, Smokepops int
 	// WeaponStats are its numbers and ApparelArmor each Apparel entry's
 	// armor by its stuff and quality, permille (DEF-2: the gear tab).
 	WeaponStats  weapon.View
@@ -1433,7 +1433,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.OverdosePct, pv.OverdoseStage = doseOf(g).Overdose(id)                  // game/dose (MED-07)
 		pv.Weapon, pv.WeaponStats = weaponDefOf(g, id).Name, weapon.Stats(weaponOf(g, id))
 		gv := g.combat.Gear.View(id) // combat/gear.go (CBT-3)
-		pv.WeaponQuality, pv.WeaponStuff, pv.Spare, pv.ShieldPct, pv.Smokepops, pv.Kills, pv.DamageDealt = gv.Quality, gv.Stuff, gv.Spare, gv.ShieldPct, gv.Smokepops, gv.Kills, gv.Damage
+		pv.WeaponQuality, pv.WeaponStuff, pv.Spare, pv.ShieldPct, pv.Smokepops, pv.Kills, pv.DamageDealt, pv.DamageTaken = gv.Quality, gv.Stuff, gv.Spare, gv.ShieldPct, gv.Smokepops, gv.Kills, gv.Damage, gv.Taken
 		pv.ThreatResponse = g.combat.Drafts.Response(id).String()
 		pv.Pack, pv.PackGrams, pv.PackLimitGrams = packView(g, id) // sense_gear_host.go (CSE-036)
 		pv.Gear = outfitView(g, id, gearFacts(g, id))              // body.go: game/gearfacts (GEAR-1); apparel.go: game/outfit (GEAR-3)

@@ -292,7 +292,7 @@ func (rs *Raiders) grab(id entity.EntityID, r Raider, j job.Record, x, y int, no
 	h.Interrupt(id, job.Cancelled)
 	text := fmt.Sprintf("%s grabbed %d %s on the way out.", h.Name(id), n, k)
 	h.Message(x, y, "%s", text)
-	rs.log(text)
+	rs.alarm(text)
 	return true
 }
 
@@ -346,5 +346,5 @@ func (rs *Raiders) resupply(grp *Group, now uint64) {
 		rs.t.Restock(m)
 	}
 	rs.h.Message(x, y, "A drop pod brings the besiegers supplies.")
-	rs.log("A drop pod brought the besiegers supplies.")
+	rs.alarm("A drop pod brought the besiegers supplies.")
 }

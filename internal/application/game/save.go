@@ -116,10 +116,11 @@ import (
 // wars (Faction.Enemies): an older save's first map is counted once, and
 // no faction is at war with another yet. v18 (PLG-063) adds the Wasm
 // mods' state (ModState, PLG-051): older saves have none; mods start fresh.
+// v19 (DEF 3.1) adds Kit.DamageTaken and LogEntry.Kind: older saves read 0.
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 18
+const SaveVersion = 19
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -988,7 +989,7 @@ func (g *Game) migrateSave(v int) {
 	case v < 17: // EAI-015: an older world gets its factions' wars from the same seeded rule a new one does (the wealth tracker counts on its own)
 		faction.SetEnemies(g.ng.factions)
 		fallthrough
-	case v < 18: // PLG-063: an older save has no mod state, and its mods start fresh
+	case v < 19: // PLG-063 (v18): no mod state, mods start fresh; DEF 3.1 (v19): damage taken and log kinds start at zero
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

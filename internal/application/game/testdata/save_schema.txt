@@ -1926,6 +1926,7 @@ saveState.Turrets.Gear[] rimworld-go/internal/application/game/combat.KitSave
 saveState.Turrets.Gear[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Turrets.Gear[].K rimworld-go/internal/application/game/combat.Kit
 saveState.Turrets.Gear[].K.Damage int
+saveState.Turrets.Gear[].K.DamageTaken int
 saveState.Turrets.Gear[].K.Held rimworld-go/internal/domain/economy/item.Stack
 saveState.Turrets.Gear[].K.Held.Animal uint8
 saveState.Turrets.Gear[].K.Held.Book uint32
@@ -1963,6 +1964,7 @@ saveState.Turrets.Gear[].K.Shield.Live bool
 saveState.Turrets.Gear[].K.Shield.ResetAt uint64
 saveState.Turrets.Log []rimworld-go/internal/application/game/combat.LogEntry
 saveState.Turrets.Log[] rimworld-go/internal/application/game/combat.LogEntry
+saveState.Turrets.Log[].Kind rimworld-go/internal/application/game/combat.LogKind = uint8
 saveState.Turrets.Log[].Text string
 saveState.Turrets.Log[].Tick uint64
 saveState.Turrets.Mortars []rimworld-go/internal/application/game/combat.MortarSave

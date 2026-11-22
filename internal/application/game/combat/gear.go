@@ -63,6 +63,9 @@ type Kit struct {
 	Shield Charge
 	// Pops is the smokepop uses spent; Kills and Damage the records.
 	Pops, Kills, Damage int
+	// DamageTaken is the damage a humanlike took after armor from
+	// strikes, shots and blasts (DEF 3.1; dropped when it dies).
+	DamageTaken int
 	// LastBy is who last wounded this fighter: a death of its wounds
 	// later (blood loss) is that attacker's kill.
 	LastBy entity.EntityID
@@ -317,21 +320,35 @@ func (g *Gear) Pop(id entity.EntityID) bool {
 }
 
 // Count records a hit by by on target that dealt dmg; killed: it was
-// the killing blow. A target left alive remembers its attacker (Died).
+// the killing blow. A target left alive remembers its attacker (Died)
+// and, if humanlike, the damage it took (DEF 3.1). A hit with no
+// attacker or on oneself (an IED, one's own grenade) credits no one.
 func (g *Gear) Count(by, target entity.EntityID, dmg int, killed bool) {
-	if by == 0 || dmg <= 0 && !killed {
+	if by == target {
+		by = 0
+	}
+	if dmg <= 0 && !killed {
 		return
 	}
-	k := g.set[by]
-	k.Damage += max(dmg, 0)
-	if killed {
-		k.Kills++
+	if by != 0 {
+		k := g.set[by]
+		k.Damage += max(dmg, 0)
+		if killed {
+			k.Kills++
+		}
+		g.put(by, k)
 	}
-	g.put(by, k)
-	if t := g.set[target]; !killed && target != 0 {
+	if target == 0 || killed { // the dead's kit went in Died, before this count
+		return
+	}
+	t := g.set[target]
+	if by != 0 {
 		t.LastBy = by
-		g.put(target, t)
 	}
+	if _, beast := g.h.Animal(target); !beast { // animals and mechanoids never reach Died
+		t.DamageTaken += max(dmg, 0)
+	}
+	g.put(target, t)
 }
 
 // LastBy is who last wounded fighter id and left it alive (0: no one);
@@ -343,13 +360,13 @@ func (g *Gear) LastBy(id entity.EntityID) entity.EntityID { return g.set[id].Las
 // killing blow was counted by Count.
 func (g *Gear) Died(id, killer entity.EntityID) {
 	t, ok := g.set[id]
-	if !ok || t.LastBy == 0 {
+	if !ok {
 		return
 	}
 	by := t.LastBy
-	t.LastBy = 0
+	t.LastBy, t.DamageTaken = 0, 0
 	g.put(id, t)
-	if killer == 0 {
+	if by != 0 && killer == 0 {
 		k := g.set[by]
 		k.Kills++
 		g.put(by, k)
@@ -359,19 +376,19 @@ func (g *Gear) Died(id, killer entity.EntityID) {
 // GearView is a fighter's gear and records for its PawnView: the
 // wielded weapon's stored quality and stuff ("" for none or the def's
 // own), the spare weapon's name ("": none), shield charge percent,
-// smokepop uses left, kills and damage dealt.
+// smokepop uses left, kills, damage dealt and damage taken.
 type GearView struct {
-	Quality       uint8
-	Stuff, Spare  string
-	ShieldPct     int
-	Smokepops     int
-	Kills, Damage int
+	Quality              uint8
+	Stuff, Spare         string
+	ShieldPct            int
+	Smokepops            int
+	Kills, Damage, Taken int
 }
 
 // View is id's GearView.
 func (g *Gear) View(id entity.EntityID) GearView {
 	st, k := g.held(id), g.set[id]
-	v := GearView{Quality: st.Quality, ShieldPct: g.ShieldPct(id), Smokepops: g.Smokepops(id), Kills: k.Kills, Damage: k.Damage}
+	v := GearView{Quality: st.Quality, ShieldPct: g.ShieldPct(id), Smokepops: g.Smokepops(id), Kills: k.Kills, Damage: k.Damage, Taken: k.DamageTaken}
 	if st.Stuff != 0 {
 		v.Stuff = st.Stuff.String()
 	}

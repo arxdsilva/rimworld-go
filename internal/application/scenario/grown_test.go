@@ -253,7 +253,10 @@ func TestGrownGolden(t *testing.T) {
 	// bashing) moved it to 0xaec676f00f802a1c, then cc8ba7a0d's wealth
 	// tracker (its cursor, hour and partial sum are saved state); the
 	// manhunter search bounds (25bfd0d6e, 4db4d03c4) keep it.
-	const want uint64 = 0x7cda45764f4a449f
+	//
+	// Re-pinned (DEF 3.1, 2026-11-21): Kit.DamageTaken, LogEntry.Kind, blast
+	// credit and LastBy.
+	const want uint64 = 0xbace7519d533d57e
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

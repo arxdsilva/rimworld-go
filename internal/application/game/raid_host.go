@@ -39,7 +39,7 @@ var _ raid.Host = raidHost{}
 func newRaid(g *Game) *raid.Raid {
 	h := raidHost{raidRoster{g}, raidCaptives{g}, raidBodies{g}, combatJobs{g}, raidFight{g}, raidGround{g}, raidEvents{g}, combatDice{g}}
 	return raid.New(h, raid.Roles{Wild: raidWild{g}, Story: raidStory{g}, Mech: raidMech{g}, Arrive: raidArrive{g},
-		Mischief: raidMischief{g: g, wood: &woodIndex{}}, Siege: raidSiege{g}, Chronicle: raidChronicle{g}, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}, Senses: raidSenses{g}})
+		Mischief: raidMischief{g: g, wood: &woodIndex{}}, Siege: raidSiege{g}, Chronicle: g.combat.Log, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}, Senses: raidSenses{g}})
 }
 
 // raidSenses is raid.Senses (EAI-010, raid/sight.go): sight lines are

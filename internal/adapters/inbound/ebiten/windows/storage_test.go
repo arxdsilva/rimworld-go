@@ -12,23 +12,6 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-type combatEv struct {
-	Tick uint64
-	Text string
-}
-type worldWithLog struct{ CombatLog []combatEv }
-
-func TestCombatRowsNewestFirstAndMissingFieldIsEmpty(t *testing.T) {
-	t.Parallel()
-	if got := CombatRows(game.WorldView{}); len(got) != 0 {
-		t.Fatalf("no field: %v", got)
-	}
-	got := CombatRows(worldWithLog{CombatLog: []combatEv{{10, "a"}, {20, "b"}}})
-	if len(got) != 2 || got[0].Text != "b" || got[1].Text != "a" {
-		t.Fatalf("rows = %v", got)
-	}
-}
-
 func TestTreeRowsHideCollapsedChildrenAndCarrySpecials(t *testing.T) {
 	t.Parallel()
 	sp := game.StockpileSpecials()

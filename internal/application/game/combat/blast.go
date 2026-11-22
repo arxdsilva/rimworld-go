@@ -168,7 +168,8 @@ func (b *Blasts) alive(id entity.EntityID) bool {
 }
 
 // wound applies what got through armor (CBT-1: the hit's form picks the
-// wound: shrapnel cuts, flame burns).
+// wound: shrapnel cuts, flame burns), counted in the records as a
+// strike's is (DEF 3.1: Gear.Count).
 func (b *Blasts) wound(by, target entity.EntityID, x, y, tx, ty int, l armor.Landed) {
 	h := b.h
 	if l.Stopped() {
@@ -176,7 +177,9 @@ func (b *Blasts) wound(by, target entity.EntityID, x, y, tx, ty int, l armor.Lan
 	}
 	h.Hit(target, h.Now(), x, y, l.Amount)
 	h.Stain(target, x, y, tx, ty, l.Amount)
+	was := b.st.alive(target)
 	h.HurtHit(target, l, by)
+	b.st.gear.Count(by, target, l.Amount, was && !b.st.alive(target))
 }
 
 // buildings damages (or, for an EMP, stuns) the object-layer buildings
