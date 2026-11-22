@@ -577,7 +577,7 @@ func (g *Game) meleeOf(id entity.EntityID) attack.Melee {
 	return m
 }
 
-// aimTicksFor scales an aim or cooldown time by the AimCooldown stat.
+// aimTicksFor scales a ranged aim (warmup) time by AimCooldown; melee is never scaled (SHT-103).
 func (g *Game) aimTicksFor(id entity.EntityID, ticks int) int {
 	if r := g.statOf(id, stat.AimCooldown); r != 1000 {
 		return max(1, ticks*int(r)/1000)

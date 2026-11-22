@@ -160,14 +160,16 @@ type Skills interface {
 	// Melee is id's melee numbers (CBT-2): what its melee hit and dodge
 	// chances are read from (attack.HitChanceOf, attack.DodgeChanceOf).
 	Melee(id entity.EntityID) attack.Melee
-	// ShotAim is id's shooting accuracy per tile (ppm, from its Shooting
-	// skill) and its Shooting accuracy stat offset (permille).
-	ShotAim(id entity.EntityID) (perTilePPM, offset int)
+	// ShotAim is id's shooting accuracy per tile (ppm) from its shooting
+	// score (the Shooting level plus its Shooting accuracy points, through
+	// attack.ShootingScore; SHT-002) and its pure Shooting level.
+	ShotAim(id entity.EntityID) (perTilePPM, level int)
 	// Learn gives id xp of Shooting (ranged) or Melee experience for an
 	// attack (attack.CombatXP).
 	Learn(id entity.EntityID, ranged bool, xp int)
-	// AimTicks is cooldown adjusted for id's aiming.
-	AimTicks(id entity.EntityID, cooldown int) int
+	// AimTicks is a ranged warmup (aim time, ticks) adjusted for id's aim
+	// time; melee is never scaled (SHT-103).
+	AimTicks(id entity.EntityID, ticks int) int
 	CanViolence(id entity.EntityID) bool
 	// FightsBack: armed and capable of violence.
 	FightsBack(id entity.EntityID) bool

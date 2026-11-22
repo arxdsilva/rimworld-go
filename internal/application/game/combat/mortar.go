@@ -9,7 +9,6 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -330,17 +329,10 @@ func MissRadius(level int) int {
 	return weapon.MortarForcedMiss * f / 1000
 }
 
-// crewLevel is crewman c's Shooting level, read back from its accuracy
-// per tile (the highest level whose accuracy it reaches).
+// crewLevel is crewman c's Shooting level, clamped to 0..20.
 func (m *Mortars) crewLevel(c entity.EntityID) int {
-	pt, _ := m.h.ShotAim(c)
-	lvl := 0
-	for l := 0; l <= 20; l++ {
-		if attack.ShooterPerTile(l) <= pt {
-			lvl = l
-		}
-	}
-	return lvl
+	_, l := m.h.ShotAim(c)
+	return min(max(l, 0), 20)
 }
 
 // scatter is a cell within rad (thousandths of a tile) of (x, y),

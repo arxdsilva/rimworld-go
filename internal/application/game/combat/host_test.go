@@ -47,6 +47,7 @@ type fakeHost struct {
 	noPath  bool
 
 	rolls  []int
+	rolled int // Roll draws, counted
 	droll  []int
 	hurts  []string
 	damage map[entity.EntityID]int
@@ -93,8 +94,9 @@ type fakeHost struct {
 	putDown   []string
 	undrafted []entity.EntityID
 
-	worn map[entity.EntityID][]armor.Layer
-	aims map[entity.EntityID][2]int // per-tile ppm and offset; default a perfect shooter
+	worn   map[entity.EntityID][]armor.Layer
+	aims   map[entity.EntityID][2]int // per-tile ppm and Shooting level; default a perfect shooter at 20
+	aimMul map[entity.EntityID]int    // AimCooldown (permille) per id; unset is the identity
 
 	// DEF-3: natural cover, the stock and the hunt reads
 	plants   map[[2]int]plant.Species
@@ -119,7 +121,7 @@ func newFake(w, h int) *fakeHost {
 		jobs: map[entity.EntityID]job.Record{}, damage: map[entity.EntityID]int{},
 		struck: map[entity.EntityID]entity.EntityID{}, hits: map[entity.EntityID]int{},
 		powered: map[entity.EntityID]bool{}, calm: map[entity.EntityID]uint64{}, blocked: map[[2]int]bool{},
-		worn: map[entity.EntityID][]armor.Layer{}, aims: map[entity.EntityID][2]int{},
+		worn: map[entity.EntityID][]armor.Layer{}, aims: map[entity.EntityID][2]int{}, aimMul: map[entity.EntityID]int{},
 		plants: map[[2]int]plant.Species{}, stock: map[entity.EntityID]item.Stack{}, nextID: 9000,
 		reserved: map[entity.EntityID]bool{}, postpone: map[entity.EntityID]bool{}, free: map[item.Kind][3]int{},
 		melee: map[entity.EntityID]attack.Melee{}, lying: map[entity.EntityID]bool{}, roofed: map[[2]int]bool{},
@@ -239,11 +241,16 @@ func (f *fakeHost) ShotAim(id entity.EntityID) (int, int) {
 	if a, ok := f.aims[id]; ok {
 		return a[0], a[1]
 	}
-	return attack.PerfectShooter, 0
+	return attack.PerfectShooter, 20
 }
-func (f *fakeHost) Learn(_ entity.EntityID, _ bool, xp int)      { f.learn++; f.xp = append(f.xp, xp) }
-func (f *fakeHost) AimTicks(_ entity.EntityID, cooldown int) int { return cooldown }
-func (f *fakeHost) CanViolence(id entity.EntityID) bool          { return !f.pacific[id] }
+func (f *fakeHost) Learn(_ entity.EntityID, _ bool, xp int) { f.learn++; f.xp = append(f.xp, xp) }
+func (f *fakeHost) AimTicks(id entity.EntityID, ticks int) int {
+	if m, ok := f.aimMul[id]; ok {
+		return ticks * m / 1000
+	}
+	return ticks
+}
+func (f *fakeHost) CanViolence(id entity.EntityID) bool { return !f.pacific[id] }
 func (f *fakeHost) FightsBack(id entity.EntityID) bool {
 	return f.weapons[id] != weapon.Fists && !f.pacific[id]
 }
@@ -305,6 +312,7 @@ func (f *fakeHost) Ignite(int, int) { f.fires++ }
 
 // Dice: queued rolls, 0 once they run out (a sure hit).
 func (f *fakeHost) Roll(int) int {
+	f.rolled++
 	if len(f.rolls) == 0 {
 		return 0
 	}

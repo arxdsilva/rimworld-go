@@ -146,7 +146,7 @@ func TestFriendlyFireInTheGame(t *testing.T) {
 	g := New(Config{Seed: 9, Width: 40, Height: 10})
 	att, _ := g.SpawnNamedPawn(2, 5, "Ada")
 	g.Arm(att, item.Rifle)
-	ally := sleeper(g, 2+attack.FriendlySafe+3, 5, "Cy")
+	ally := sleeper(g, 2+attack.InterceptNear+3, 5, "Cy") // SHT-005: 8 tiles out, 171 permille
 	tgt := sleeper(g, 20, 5, "Bo")
 	struck := false
 	for i := 0; i < 100 && !struck; i++ {

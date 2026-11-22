@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
@@ -168,33 +169,34 @@ func TestHostileTurretIsNotARaiderTarget(t *testing.T) {
 	}
 }
 
-// TestHostileTurretShotSides: its round spares a defender near the muzzle
-// (the raiders' side) and can strike a colonist in the line; ours spares
-// the colonist and strikes the raider.
+// TestHostileTurretShotSides: its round is on the raiders' side and ours
+// on ours; interception goes by the distance from the muzzle, not by side
+// (SHT-005): a defender 2 tiles out is spared, a colonist 12 tiles out in
+// the line can be struck.
 func TestHostileTurretShotSides(t *testing.T) {
 	t.Parallel()
 	f, c := hostileRig(t)
-	f.pawn(1, 10, 12, weapon.Rifle)
+	f.pawn(1, 10, 20, weapon.Rifle)
 	f.raider(2, 10, 7, weapon.Rifle)
-	c.Shots.Turret(50, weapon.SentryGun, 10, 5, 1, 10, 12)
+	c.Shots.Turret(50, weapon.SentryGun, 10, 5, 1, 10, 20)
 	if !c.Shots.Export()[0].Raider {
 		t.Fatal("a settlement's round is on the raiders' side")
 	}
 	fly(c)
 	if len(f.hurts) != 1 || f.hits[2] != 0 {
-		t.Fatalf("the defender in the line is spared: %v %v", f.hurts, f.logs)
+		t.Fatalf("the defender near the muzzle is spared: %v %v", f.hurts, f.logs)
 	}
 	f.hurts, f.logs = nil, nil
-	f.pos[2] = [2]int{10, 20} // the raider steps away; a second colonist in the line
-	f.pawn(3, 10, 7, weapon.Rifle)
-	c.Shots.Turret(50, weapon.SentryGun, 10, 5, 1, 10, 12)
+	f.pos[2] = [2]int{20, 20} // the raider steps away; a second colonist in the line
+	f.pawn(3, 10, 5+attack.InterceptFull, weapon.Rifle)
+	c.Shots.Turret(50, weapon.SentryGun, 10, 5, 1, 10, 20)
 	fly(c)
 	if len(f.logs) == 0 || f.logs[0] != "shot 3 true "+TurretLogName {
 		t.Fatalf("a colonist in the line is no friend of it: %v", f.logs)
 	}
 	f.logs = nil
 	f.build(51, construction.SentryTurret, 30, 5)
-	c.Shots.Turret(51, weapon.SentryGun, 30, 5, 2, 10, 20)
+	c.Shots.Turret(51, weapon.SentryGun, 30, 5, 2, 20, 20)
 	if c.Shots.Export()[0].Raider {
 		t.Fatal("our round stays on our side")
 	}

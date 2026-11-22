@@ -267,9 +267,7 @@ func (h mindBrawls) Fighter(id entity.EntityID) bool { return h.g.standingPawn(i
 func (h mindBrawls) Punch(id, foe entity.EntityID) {
 	h.g.combat.Strikes.StrikeRoll(id, foe, weapon.Fists, h.g.stream(streamSocial).IntN) // combat/strike.go
 }
-func (h mindBrawls) PunchTicks(id entity.EntityID) int {
-	return h.g.aimTicksFor(id, weapon.DefOf(weapon.Fists).Cooldown)
-}
+func (h mindBrawls) PunchTicks(entity.EntityID) int { return weapon.DefOf(weapon.Fists).Cooldown } // SHT-103: melee is never scaled
 func (h mindBrawls) StopBrawl(id entity.EntityID) {
 	if j, _ := h.g.jobs.Get(id); j.Kind == job.Brawl {
 		h.g.interrupt(id, job.Cancelled)

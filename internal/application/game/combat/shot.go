@@ -89,8 +89,8 @@ func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk we
 // band at the straight-line distance (a turret aims as a perfect
 // shooter: weapon.HitPermille), the target's size, the weather and
 // smoke; then the target's cover may take it. It flies, may stray or
-// strike a colonist in its way beyond attack.FriendlySafe, and its hit
-// goes through armor. The muzzle rolls on the defence stream.
+// strike a creature in its way (by its distance from the muzzle: none
+// within attack.InterceptNear), and its hit goes through armor. The muzzle rolls on the defence stream.
 func (s *Shots) Turret(id entity.EntityID, wk weapon.Kind, fx, fy int, target entity.EntityID, tx, ty int) {
 	d := weapon.DefOf(wk)
 	r := attack.Report{Dist: weapon.Range(fx, fy, tx, ty), InRange: true, InSight: true, Shooter: 1000, Size: 1000,
@@ -179,8 +179,10 @@ func (s *Shots) fly(sh *projectile.Shot) bool {
 
 // through is sh entering a cell on its way (x, y): it reports whether the
 // shot stopped there, on rock, a wall or a door (which it damages), or in
-// a creature it struck. The shooter's allies within attack.FriendlySafe of
-// the muzzle are never struck.
+// a creature it struck. A creature in the line, ally or not, is struck at
+// its interception chance scaled by its distance from the muzzle
+// (weapon.Range): never within attack.InterceptNear tiles, where no roll
+// is drawn, and fully from attack.InterceptFull (SHT-005).
 func (s *Shots) through(sh *projectile.Shot, x, y int) bool {
 	h := s.h
 	if !h.InBounds(x, y) { // it left the map
@@ -192,10 +194,11 @@ func (s *Shots) through(sh *projectile.Shot, x, y int) bool {
 		return true
 	}
 	v, ok := s.standing(x, y, sh.Owner)
-	if !ok || s.friendly(sh, v) && weapon.Distance(sh.FromX, sh.FromY, x, y) <= attack.FriendlySafe {
+	if !ok {
 		return false
 	}
-	if h.Roll(1000) >= attack.InterceptChance(s.st.bodySize(v)) {
+	c := attack.InterceptChance(s.st.bodySize(v)) * attack.InterceptScale(weapon.Range(sh.FromX, sh.FromY, x, y)) / 1000
+	if c == 0 || h.Roll(1000) >= c {
 		return false
 	}
 	s.flesh(sh, v, x, y)
@@ -333,15 +336,6 @@ func (s *Shots) raidersSide(attacker entity.EntityID, building bool) bool {
 		return ok && b.Hostile
 	}
 	return s.h.StandingRaider(attacker)
-}
-
-// friendly: v fights on sh's owner's side (raiders with raiders, the
-// colony's people with each other; animals are nobody's ally).
-func (s *Shots) friendly(sh *projectile.Shot, v entity.EntityID) bool {
-	if _, beast := s.h.Animal(v); beast {
-		return false
-	}
-	return s.h.StandingRaider(v) == sh.Raider
 }
 
 // Views is every shot in flight for presentation, oldest first (a fresh

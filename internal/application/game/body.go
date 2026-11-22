@@ -37,9 +37,7 @@ const (
 	// consciousRecover is the consciousness (permille) a pawn needs to be
 	// awake enough to talk to (a warden's visit).
 	consciousRecover = 300
-	// sightAccPoints is the shooting accuracy (points) total blindness
-	// costs; one eye costs half.
-	sightAccPoints = 30
+	sightAccPoints   = 12 // shooting score points per 100 % of sight, capped at 200 % (SHT-003)
 )
 
 // ensureBody is humanlike id's body, made on first use, with v's injury
@@ -103,7 +101,7 @@ func bodyMods(k bodyKey) []stat.Mod {
 		ms = append(ms, stat.Mod{Stat: stat.WorkSpeed, Mul: max(k[1], 1)})
 	}
 	if k[2] != 1000 {
-		ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: (k[2] - 1000) * sightAccPoints / 1000})
+		ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: (min(k[2], 2000) - 1000) * sightAccPoints / 1000})
 	}
 	return ms
 }

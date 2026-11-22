@@ -230,3 +230,23 @@ func TestAutoEngagePicksNearestHostile(t *testing.T) {
 		t.Fatal("a pacifist never engages")
 	}
 }
+
+// TestMeleeCooldownUnscaled: aim time (AimCooldown) scales only a gun's
+// warmup; a melee cooldown is the weapon's whatever the trait (SHT-103).
+func TestMeleeCooldownUnscaled(t *testing.T) {
+	t.Parallel()
+	f := newFake(10, 10)
+	s := f.combat().Strikes
+	for _, mul := range []int{500, 1250} {
+		f.aimMul[1] = mul
+		fists, rifle := weapon.DefOf(weapon.Fists), weapon.DefOf(weapon.Rifle)
+		j := job.Record{Count: 1}
+		if got := s.next(1, fists, &j); got != fists.Cooldown || got != 90 {
+			t.Fatalf("aim x%d: melee waits %d, want the fists' cooldown 90", mul, got)
+		}
+		j = job.Record{Count: 1}
+		if got, want := s.next(1, rifle, &j), rifle.Cooldown+rifle.Warmup*mul/1000; got != want {
+			t.Fatalf("aim x%d: rifle waits %d, want %d", mul, got, want)
+		}
+	}
+}

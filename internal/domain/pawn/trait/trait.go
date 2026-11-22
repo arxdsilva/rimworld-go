@@ -162,10 +162,10 @@ var defs = [NumTraits]Def{
 			mood.SleptInBedroom: 150}}, // BED-2: the bedroom ladder, both ways, replaces the nice-room bonus
 	DeliberateAim: {Key: "deliberate_aim", Label: "Deliberate aim", Group: GroupTrigger, Needs: backstory.Violence,
 		Desc: "{name} lines up every shot as if it were the last one {they} had.",
-		Mods: []stat.Mod{{Stat: stat.ShootAcc, Add: 12}, {Stat: stat.AimCooldown, Mul: 1200}}},
+		Mods: []stat.Mod{{Stat: stat.ShootAcc, Add: 5}, {Stat: stat.AimCooldown, Mul: 1250}}}, // SHT-101: wiki numbers
 	QuickDraw: {Key: "quick_draw", Label: "Quick draw", Group: GroupTrigger, Needs: backstory.Violence,
 		Desc: "{name} shoots first and aims somewhere around the second shot.",
-		Mods: []stat.Mod{{Stat: stat.AimCooldown, Mul: 750}, {Stat: stat.ShootAcc, Add: -10}}},
+		Mods: []stat.Mod{{Stat: stat.AimCooldown, Mul: 500}, {Stat: stat.ShootAcc, Add: -5}}}, // SHT-101: wiki numbers
 	GreenThumb: {Key: "green_thumb", Label: "Green thumb", Needs: backstory.Plants,
 		Desc:      "Seedlings seem to grow faster just because {name} is watching.",
 		WorkSpeed: map[skill.ID]int16{skill.Plants: 25}},

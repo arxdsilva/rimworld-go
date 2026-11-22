@@ -135,13 +135,14 @@ type combatSkills struct{ g *Game }
 func (h combatSkills) Melee(id entity.EntityID) attack.Melee { return h.g.meleeOf(id) } // skills.go (CBT-2)
 func (h combatSkills) ShotAim(id entity.EntityID) (int, int) {
 	if a, ok := h.g.animals.Get(id); ok && animal.IsMech(a.Species) {
-		return attack.ShooterPerTile(animal.MechShootingSkill), 0 // DEF-4: wiki: Lancer (96 %)
+		return attack.ShooterPerTile(animal.MechShootingSkill), animal.MechShootingSkill // DEF-4: wiki: Lancer (96 %)
 	}
-	return attack.ShooterPerTile(int(h.g.skillOf(id, skill.Shooting).Level)), 10 * int(h.g.statOf(id, stat.ShootAcc))
+	l := int(h.g.skillOf(id, skill.Shooting).Level)
+	return attack.ShooterPerTile(attack.ShootingScore(l, int(h.g.statOf(id, stat.ShootAcc)))), l // SHT-002
 }
 func (h combatSkills) Learn(id entity.EntityID, ranged bool, xp int) { h.g.combatLearn(id, ranged, xp) }
-func (h combatSkills) AimTicks(id entity.EntityID, cooldown int) int {
-	return h.g.aimTicksFor(id, cooldown)
+func (h combatSkills) AimTicks(id entity.EntityID, ticks int) int {
+	return h.g.aimTicksFor(id, ticks)
 }
 func (h combatSkills) CanViolence(id entity.EntityID) bool { return h.g.canViolence(id) }
 func (h combatSkills) FightsBack(id entity.EntityID) bool  { return h.g.fightsBack(id) }

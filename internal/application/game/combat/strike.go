@@ -272,8 +272,8 @@ func (s *Strikes) report(attacker entity.EntityID, ax, ay int, target entity.Ent
 	case d.Legacy():
 		r.Band = weapon.HitChance(d, dist) * 10
 	default:
-		pt, off := h.ShotAim(attacker)
-		r.Band, r.Shooter, r.Offset = d.Bands.Accuracy(dist), attack.ShooterFactor(pt, dist), off
+		pt, _ := h.ShotAim(attacker) // SHT-002: the points are in pt
+		r.Band, r.Shooter = d.Bands.Accuracy(dist), attack.ShooterFactor(pt, dist)
 		if !building {
 			r.Size = attack.SizeFactor(s.bodySize(target))
 		}
@@ -388,8 +388,9 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 
 // next is the wait after an attack with d: BurstTicks to the burst's next
 // shot (j.Count holds the shots left in the burst), else the cooldown and,
-// for a gun, the aim before the next burst. A melee cooldown and a gun's
-// aim scale with the attacker's aiming (Skills.AimTicks).
+// for a gun, the aim before the next burst. Only a gun's aim scales with
+// the attacker's aim time (Skills.AimTicks); a melee cooldown is never
+// scaled (SHT-103).
 func (s *Strikes) next(id entity.EntityID, d weapon.Def, j *job.Record) int {
 	if j.Count == 0 {
 		j.Count = attack.Burst{Shots: d.Burst}.Count()
@@ -398,7 +399,7 @@ func (s *Strikes) next(id entity.EntityID, d weapon.Def, j *job.Record) int {
 		return max(d.BurstTicks, 1)
 	}
 	if !d.Ranged {
-		return s.h.AimTicks(id, d.Cooldown)
+		return d.Cooldown
 	}
 	return d.Cooldown + s.h.AimTicks(id, d.Warmup)
 }

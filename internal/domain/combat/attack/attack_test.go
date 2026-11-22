@@ -97,3 +97,23 @@ func TestBurstAndCycle(t *testing.T) {
 		t.Fatal("cycle")
 	}
 }
+
+func TestShootingScore(t *testing.T) {
+	levels := []int{0, 10, 20}
+	points := []int{-5, 0, 5}
+	want := [3][3]int{
+		{845_000, 890_000, 945_000},
+		{945_000, 970_000, 981_667},
+		{981_667, 990_000, 993_250},
+	}
+	for i, l := range levels {
+		for j, p := range points {
+			if got := ShooterPerTile(ShootingScore(l, p)); got != want[i][j] {
+				t.Errorf("level %d points %d: got %d, want %d", l, p, got, want[i][j])
+			}
+		}
+	}
+	if s := ShootingScore(0, -30); s != -30 || ShooterPerTile(s) != 700_000 {
+		t.Errorf("score -30: %d -> %d", s, ShooterPerTile(s))
+	}
+}

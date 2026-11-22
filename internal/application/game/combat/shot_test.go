@@ -79,17 +79,20 @@ func TestAccuracyAtBandDistances(t *testing.T) {
 			t.Errorf("perfect shooter at %d: %+v want %d", dist, r, want)
 		}
 	}
-	f.aims[1] = [2]int{attack.ShooterPerTile(10), 0}
+	f.aims[1] = [2]int{attack.ShooterPerTile(10), 10}
 	f.pos[2] = [2]int{12, 5}
 	r, _ := s.Report(1, 2)
 	if want := 800 * attack.ShooterFactor(attack.ShooterPerTile(10), 12) / 1000; r.Chance != want || r.Shooter < 692 || r.Shooter > 694 {
 		t.Fatalf("skill 10 at 12: %+v want %d", r, want)
 	}
-	f.aims[1] = [2]int{attack.PerfectShooter, 120} // Deliberate aim +12 points
-	if r, _ := s.Report(1, 2); r.Chance != 920 || r.Offset != 120 {
-		t.Fatalf("stat offset: %+v", r)
+	// SHT-002: Deliberate aim's +5 points join the score before the
+	// per-tile curve; the shooter factor carries them, no flat term after range
+	f.aims[1] = [2]int{attack.ShooterPerTile(attack.ShootingScore(10, 5)), 10}
+	if r5, _ := s.Report(1, 2); r5.Shooter != attack.ShooterFactor(attack.ShooterPerTile(attack.ShootingScore(10, 5)), 12) ||
+		r5.Shooter <= r.Shooter || r5.Chance != r5.Total() {
+		t.Fatalf("score points: %+v (level 10 alone %+v)", r5, r)
 	}
-	f.aims[1] = [2]int{attack.PerfectShooter, 0}
+	f.aims[1] = [2]int{attack.PerfectShooter, 20}
 	f.beast(3, 12, 6, animal.State{Species: animal.Squirrel})
 	if r, _ := s.Report(1, 3); r.Size != 500 || r.Chance != 800*r.Size/1000 {
 		t.Fatalf("a small target: %+v", r)
@@ -197,6 +200,10 @@ func TestStrayHitAndMiss(t *testing.T) {
 	}
 }
 
+// TestFriendlyFire: a creature in the line, ally or not, is struck at its
+// interception chance scaled by its distance from the muzzle (SHT-005):
+// none and no roll within InterceptNear, linear to the full chance at
+// InterceptFull.
 func TestFriendlyFire(t *testing.T) {
 	t.Parallel()
 	f := newFake(40, 10)
@@ -204,34 +211,62 @@ func TestFriendlyFire(t *testing.T) {
 	f.pawn(1, 2, 5, weapon.Rifle)
 	f.raider(2, 20, 5, weapon.Fists)
 	f.pawn(3, 10, 5, weapon.Fists) // an ally 8 tiles down the line
-	f.rolls = []int{0, attack.InterceptChance(1000) - 1}
+	at8 := attack.InterceptChance(1000) * attack.InterceptScale(8) / 1000
+	if at8 != 171 {
+		t.Fatalf("chance at 8 tiles %d, want 171", at8)
+	}
+	f.rolls = []int{0, at8 - 1}
 	c.Strikes.Strike(1, 2, weapon.Rifle)
 	settle(c)
 	if l := landed(f); len(f.hurts) != 1 || f.hits[3] == 0 || f.hits[2] != 0 || l.Target != 3 || l.ToX != 10 {
 		t.Fatalf("the ally takes it: %+v %v", l, f.hurts)
 	}
-	f.rolls = []int{0, attack.InterceptChance(1000)} // the ally is missed, the raider hit
+	f.rolls = []int{0, at8} // the ally is missed, the raider hit
 	c.Strikes.Strike(1, 2, weapon.Rifle)
 	settle(c)
 	if f.hits[2] == 0 {
 		t.Fatal("past the ally")
 	}
-	// allies within FriendlySafe of the muzzle are never struck: no roll
-	f.pos[3] = [2]int{2 + attack.FriendlySafe, 5}
-	f.rolls = []int{0}
+	// a clear line: the draws of a shot with nobody in the way
+	f.pos[3] = [2]int{10, 8}
+	f.rolls, f.rolled = nil, 0
+	c.Strikes.Strike(1, 2, weapon.Rifle)
+	settle(c)
+	clear := f.rolled
+	// within InterceptNear of the muzzle nobody is struck, ally or hostile,
+	// and no roll is drawn
+	f.pos[3] = [2]int{2 + attack.InterceptNear, 5} // the ally 5 tiles out
+	f.rolls, f.rolled = nil, 0
 	before := f.hits[2]
 	c.Strikes.Strike(1, 2, weapon.Rifle)
 	settle(c)
-	if f.hits[2] != 2*before || f.hits[3] != weapon.DefOf(weapon.Rifle).Damage {
-		t.Fatalf("a close ally is safe: %v", f.hits)
+	if f.hits[3] != weapon.DefOf(weapon.Rifle).Damage || f.hits[2] == before || f.rolled != clear {
+		t.Fatalf("a close ally: hits %v, %d draws vs %d on a clear line", f.hits, f.rolled, clear)
 	}
-	// a hostile close to the muzzle can still take it
-	f.raider(4, 4, 5, weapon.Fists)
-	f.rolls = []int{0, 0}
+	f.pos[3] = [2]int{10, 8}
+	f.raider(4, 4, 5, weapon.Fists) // a raider 2 tiles from the muzzle
+	f.rolls, f.rolled = nil, 0
+	before = f.hits[2]
 	c.Strikes.Strike(1, 2, weapon.Rifle)
 	settle(c)
-	if f.hits[4] == 0 {
-		t.Fatal("a raider in the way is struck")
+	if f.hits[4] != 0 || f.hits[2] == before || f.rolled != clear {
+		t.Fatalf("a close raider: hits %v, %d draws vs %d on a clear line", f.hits, f.rolled, clear)
+	}
+	// from InterceptFull on, the full chance
+	f.pos[4] = [2]int{4, 8}
+	f.raider(5, 2+attack.InterceptFull, 5, weapon.Fists)
+	f.rolls = []int{0, attack.InterceptChance(1000) - 1}
+	c.Strikes.Strike(1, 2, weapon.Rifle)
+	settle(c)
+	if f.hits[5] == 0 {
+		t.Fatal("a raider 12 tiles out is struck at the full chance")
+	}
+	before, five := f.hits[2], f.hits[5]
+	f.rolls = []int{0, attack.InterceptChance(1000)}
+	c.Strikes.Strike(1, 2, weapon.Rifle)
+	settle(c)
+	if f.hits[5] != five || f.hits[2] == before {
+		t.Fatalf("past the raider at the full chance: %v", f.hits)
 	}
 }
 

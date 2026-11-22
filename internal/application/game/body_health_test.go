@@ -186,7 +186,7 @@ func TestCapacitiesFeedStatsOnlyOnChange(t *testing.T) {
 	}
 	b.Missing |= 1<<body.EyeL | 1<<body.EyeR
 	g.bodyChanged(p, b, &v)
-	if acc := g.statOf(p, stat.ShootAcc); acc != -sightAccPoints {
+	if acc := g.statOf(p, stat.ShootAcc); acc != -12 { // SHT-003: blind is -12 score points
 		t.Fatalf("blind shooting accuracy %d", acc)
 	}
 	fx := g.sk.stats[p]

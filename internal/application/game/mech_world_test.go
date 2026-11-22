@@ -84,8 +84,8 @@ func TestMechEMPAndWreck(t *testing.T) {
 	if l := (combatHarm{g}).Absorb(id, cut, func(int) int { return 400 }); l.Amount != 10 {
 		t.Fatalf("and passes from 400: %+v", l)
 	}
-	if aim, _ := (combatSkills{g}).ShotAim(id); aim <= 950_000 {
-		t.Fatalf("a mechanoid aims at 96 %% a tile, got %d ppm", aim)
+	if aim, l := (combatSkills{g}).ShotAim(id); aim <= 950_000 || l != animal.MechShootingSkill {
+		t.Fatalf("a mechanoid aims at 96 %% a tile at level 8, got %d ppm at %d", aim, l)
 	}
 	p, _ := g.positions.Get(id)
 	g.hurt(id, 10, 0)

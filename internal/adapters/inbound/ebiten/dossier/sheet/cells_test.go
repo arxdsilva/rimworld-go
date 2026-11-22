@@ -167,6 +167,9 @@ func TestSkillTipLines(t *testing.T) {
 	md := SkillTip(en, game.SkillView{Key: "medicine", Label: "Medicine", Level: 8}, c, "")
 	has(md, "Tend quality without medicine")
 	has(md, "Doctoring speed: 106%") // no SpeedPct: from the level (neutral is 7: 1060)
+	// CBT-3.2 (SHT-101): a Careful shooter's points read as score points
+	careful := cardWith(func(c *dossierview.Card) { c.Stats[stat.ShootAcc] = 5 })
+	has(SkillTip(en, game.SkillView{Key: "shooting", Label: "Shooting", Level: 10}, careful, ""), "Shooting accuracy: +5")
 }
 
 func TestTrainCell(t *testing.T) {

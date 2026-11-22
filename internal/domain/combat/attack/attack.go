@@ -97,18 +97,22 @@ var skillPoints = [...]struct{ skill, ppm int }{
 	{40, 998_000}, {60, 999_000},
 }
 
+// ShootingScore is the Shooting level plus accuracy points (traits, sight,
+// conditions), joined before the per-tile curve. wiki: Shooting accuracy
+func ShootingScore(level, points int) int { return level + points }
+
 // ShooterPerTile is the accuracy per tile of distance (ppm, 1_000_000 =
-// 100 percent) for an effective shooting skill; careful and trigger-
-// happy shooters pass skill +5 and -5. wiki: Shooting
-func ShooterPerTile(skill int) int {
+// 100 percent) for a shooting score (see ShootingScore); careful and
+// trigger-happy shooters add +5 and -5. wiki: Shooting
+func ShooterPerTile(score int) int {
 	p := skillPoints[:]
-	if skill <= p[0].skill {
+	if score <= p[0].skill {
 		return p[0].ppm
 	}
 	for i := 1; i < len(p); i++ {
-		if skill <= p[i].skill {
+		if score <= p[i].skill {
 			a, c := p[i-1], p[i]
-			return a.ppm + (c.ppm-a.ppm)*(skill-a.skill)/(c.skill-a.skill)
+			return a.ppm + (c.ppm-a.ppm)*(score-a.skill)/(c.skill-a.skill)
 		}
 	}
 	return p[len(p)-1].ppm

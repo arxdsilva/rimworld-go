@@ -20,7 +20,7 @@ const (
 	BreakThreshold           // mood points added to the break threshold
 	ColdComfort              // tenths of a degree C added to the comfort floor
 	HeatComfort              // tenths of a degree C added to the comfort ceiling
-	ShootAcc                 // percentage points
+	ShootAcc                 // score points (summed with Shooting before the per-tile curve)
 	MeleeAcc                 // percentage points
 	AimCooldown              // permille
 	PainTolerance            // percent

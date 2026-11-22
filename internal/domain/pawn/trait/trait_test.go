@@ -111,6 +111,13 @@ func TestTraitStatMods(t *testing.T) {
 	if s[stat.WorkSpeed] != 1200 || s[stat.MoveSpeed] != 1150 || s[stat.MoodOffset] != 8 {
 		t.Fatalf("%v", s)
 	}
+	// SHT-101: the trigger traits' wiki numbers, as score points and aim time
+	for id, want := range map[ID][2]int{DeliberateAim: {5, 1250}, QuickDraw: {-5, 500}} {
+		s := stat.Build(stat.Base(), Core().DefOf(id).Mods)
+		if int(s[stat.ShootAcc]) != want[0] || int(s[stat.AimCooldown]) != want[1] {
+			t.Fatalf("%s: shoot_acc %d aim %d, want %v", Core().DefOf(id).Label, s[stat.ShootAcc], s[stat.AimCooldown], want)
+		}
+	}
 }
 
 // TestGenerated: legacy rules roll only the original 19 traits (old seeds

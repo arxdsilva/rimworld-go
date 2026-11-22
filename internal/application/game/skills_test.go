@@ -154,8 +154,8 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	if m := g.meleeOf(happy); m.Offset != 0 || m.Sight != 1000 || m.Manip != 1000 || m.Moving != 1000 || !m.Skilled || m.Down {
 		t.Errorf("melee numbers moved for a neutral pawn: %+v", m)
 	}
-	if _, off := (combatSkills{g}).ShotAim(happy); off != 0 {
-		t.Error("shooting offset moved for a neutral pawn")
+	if pt, l := (combatSkills{g}).ShotAim(happy); pt != attack.ShooterPerTile(l) || l != int(g.skillOf(happy, skill.Shooting).Level) { // SHT-002: no points
+		t.Errorf("shooting score moved for a neutral pawn: %d at level %d", pt, l)
 	}
 	if g.paceStep(happy, 17) != 17 || g.aimTicksFor(happy, 90) != 90 {
 		t.Error("step or aim time moved for a neutral pawn")
@@ -377,8 +377,8 @@ func TestAccuracyRisesWithSkill(t *testing.T) {
 	hits := func(id entity.EntityID) int {
 		r := randx.New(42)
 		n := 0
-		pt, off := (combatSkills{g}).ShotAim(id) // CBT-2: the banded aim at 10 tiles
-		c := attack.Report{Band: 550, Shooter: attack.ShooterFactor(pt, 10), Offset: off, Size: 1000, Weather: 1000, Light: 1000}.Aim()
+		pt, _ := (combatSkills{g}).ShotAim(id) // CBT-2: the banded aim at 10 tiles; SHT-002: the points are in pt
+		c := attack.Report{Band: 550, Shooter: attack.ShooterFactor(pt, 10), Size: 1000, Weather: 1000, Light: 1000}.Aim()
 		for range 400 {
 			if r.IntN(1000) < c {
 				n++
@@ -393,9 +393,12 @@ func TestAccuracyRisesWithSkill(t *testing.T) {
 	if hits(shooter("D", 7, trait.DeliberateAim)) <= h7 || hits(shooter("E", 7, trait.QuickDraw)) >= h7 {
 		t.Error("trigger traits")
 	}
-	q := shooter("F", 7, trait.QuickDraw)
-	if g.aimTicksFor(q, 100) != 75 {
+	q := shooter("F", 7, trait.QuickDraw) // SHT-101: aim x0.5 and x1.25
+	if g.aimTicksFor(q, 100) != 50 {
 		t.Errorf("quick draw aim %d", g.aimTicksFor(q, 100))
+	}
+	if d := shooter("G", 7, trait.DeliberateAim); g.aimTicksFor(d, 100) != 125 {
+		t.Errorf("deliberate aim %d", g.aimTicksFor(d, 100))
 	}
 }
 

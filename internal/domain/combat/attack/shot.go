@@ -17,27 +17,28 @@ func SizeFactor(bodySize Permille) Permille { return min(max(bodySize, 500), 200
 
 // Report is a hit chance with its factors (permille, 1000 neutral), for a
 // shooter at Dist tiles from its target: Chance = clamp(Band × Shooter ×
-// Weather × Size × Light + Offset) × (1000 − Cover). InRange and InSight
-// say whether the shot can be taken at all; Melee reports a melee weapon,
-// whose Chance is its flat skill-adjusted accuracy (Band).
+// Weather × Size × Light) × (1000 − Cover), a pure product with no flat
+// term (Shooting accuracy points are in Shooter, through ShootingScore;
+// SHT-002). InRange and InSight say whether the shot can be taken at all;
+// Melee reports a melee weapon, whose Chance is its flat skill-adjusted
+// accuracy (Band).
 type Report struct {
 	Chance                              Permille
 	Band, Shooter, Weather, Size, Light Permille
 	Cover                               Permille
-	Offset                              Permille // stat offset (Shooting accuracy points)
 	Dist                                int
 	InRange, InSight, Melee             bool
 }
 
 // Aim is the chance that the aim holds, before cover: Band × Shooter ×
-// weather × size × light (in that order, each division truncating) plus
-// the offset, clamped to [0, 1000].
+// weather × size × light (in that order, each division truncating),
+// clamped to [0, 1000].
 func (r Report) Aim() Permille {
 	c := int64(r.Band) * int64(r.Shooter) / one
 	for _, f := range [...]int64{int64(r.Weather), int64(r.Size), int64(r.Light)} {
 		c = c * max(f, 0) / one
 	}
-	return clamp(Permille(c) + r.Offset)
+	return clamp(Permille(c))
 }
 
 // Total is the chance to hit the target: the aim, then cover letting the
@@ -72,20 +73,15 @@ func MissRadius(aim Permille) int {
 	return p[len(p)-1].r / one
 }
 
-// Stray shots and interception. wiki: Combat
-const (
-	// StrayHit: a shot landing off target strikes something in the cell
-	// it lands on this often (permille); otherwise it hits nothing.
-	StrayHit Permille = 500
-	// FriendlySafe: a shot never strikes the shooter's allies within this
-	// many tiles of the muzzle.
-	FriendlySafe = 5
-)
+// StrayHit: a shot landing off target strikes something in the cell it
+// lands on this often (permille); otherwise it hits nothing. wiki: Combat
+const StrayHit Permille = 500
 
 // InterceptChance is the chance (permille) that a shot flying through a
 // standing creature's cell strikes it: 40 percent of its body size,
 // clamped to 4..80 percent. wiki: Combat (the published formula is
-// garbled; this is its plain reading)
+// garbled; this is its plain reading). The caller scales it by
+// InterceptScale of the distance from the muzzle (SHT-005).
 func InterceptChance(bodySize Permille) Permille {
 	return min(max(bodySize*400/one, 40), 800)
 }

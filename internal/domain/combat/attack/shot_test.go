@@ -35,13 +35,15 @@ func TestReportAimAndTotal(t *testing.T) {
 	if r.Aim() != 200 {
 		t.Fatalf("fog and size %d", r.Aim())
 	}
-	r.Offset = 900
-	if r.Aim() != 1000 {
-		t.Fatal("offset clamps high")
+	// SHT-002: Aim is the pure product, clamped; no flat term after range
+	if hi := (Report{Band: 1000, Shooter: 1000, Weather: 2000, Size: 2000, Light: 1000}); hi.Aim() != 1000 {
+		t.Fatalf("product clamps high: %d", hi.Aim())
 	}
-	r.Offset = -900
-	if r.Aim() != 0 {
-		t.Fatal("offset clamps low")
+	if lo := (Report{Band: 800, Shooter: 1000, Weather: -500, Size: 1000, Light: 1000}); lo.Aim() != 0 {
+		t.Fatalf("negative factor clamps low: %d", lo.Aim())
+	}
+	if p := (Report{Band: 900, Shooter: 800, Weather: 500, Size: 1500, Light: 800}); p.Aim() != 900*800/1000*500/1000*1500/1000*800/1000 {
+		t.Fatalf("pure product: %d", p.Aim())
 	}
 	if m := (Report{Melee: true, Band: 850, Cover: 900}); m.Total() != 850 {
 		t.Fatal("melee ignores cover")
