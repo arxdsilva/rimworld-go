@@ -176,3 +176,11 @@ Multi-part cuts, inner blunt strikes and wiki pain constants · 2026-11-22 · 83
 - HUD/UI: the Health tab already lists wounds per part, so extra cut and inner wounds show there; no new UI.
 - Boxes: COMBAT_GAP rows 78 (multi-part cuts, blunt inner strike) and 81 (pain constants) `partial` to `done`; MEDICAL_GAP row 49 and backlog Pain line reworded to the new rates (state unchanged). MEDICAL_GAP row 72 Today column refreshed. `spec-backlog` #65: both boxes met; closed by this change.
 - Open: #269 animal Injury and body drift: tend and natural heal lower Injury while lost parts stay (`animal_health.go:165`, `:212`), so the animal body-dead rule can stop a split early on a healed animal. #270 Scratch, Stab, Bite and projectile multi-hit rules from the wiki. #271 A crack wound kind (1.0 %/HP) does not exist. #272 `lossDamage` duplicates the `Damage()` loop; kept for the Body method budget.
+
+## CBT-272-dedupe-loss-damage
+One loop for body damage and the animal death rule · 2026-11-23 · 772b349e6
+- Changed: `Body.Damage()` (`internal/domain/pawn/body/wound.go:222`) now calls `lossDamage` and only adds the vital-loss floor; `lossDamage` moved beside it from `split.go`. Values are unchanged for every caller.
+- Decisions: `lossDamage` stays a free function so `body.Body` gains no method.
+- Limits: `body.Body` stays at 99 methods (`internal/arch/solid_budget.txt:20` untouched); `make arch` green.
+- Boxes: none: no backlog, spec or gap row names this cleanup; issue #272 (not `spec-backlog`) closes with this change.
+- Save impact: none. HUD/UI: none (internal refactor, no player-visible change).
