@@ -136,10 +136,10 @@ func TestDamageMapping(t *testing.T) {
 
 func TestTendAndPain(t *testing.T) {
 	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 10, Kind: Cut}, {Part: Torso, Dmg: 5, Kind: Cut, Permanent: true}}}
-	if b.Pain() != 130 { // 12.5 per open HP, 1 per scar HP (MED-01)
+	if b.Pain() != 156 { // 12.5 per open HP, 6.25 per scar HP (MED-01; CBT 3.4: was 1 per scar HP, 130)
 		t.Fatalf("pain %d", b.Pain())
 	}
-	if b.TendAll(0, 0) != 1 || b.TendAll(0, 0) != 0 || b.Pain() != 130 { // tending stops bleeding, not pain
+	if b.TendAll(0, 0) != 1 || b.TendAll(0, 0) != 0 || b.Pain() != 156 { // tending stops bleeding, not pain
 		t.Fatalf("tended pain %d", b.Pain())
 	}
 	b.Wounds = []Wound{{Part: Torso, Dmg: 500, Kind: Cut}}

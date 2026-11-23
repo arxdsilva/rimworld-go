@@ -70,7 +70,7 @@ func (g *Game) harm(target entity.EntityID, bl hit.Blow, by entity.EntityID, cau
 	now, dmg, kind := uint64(g.clock.Now()), bl.Dmg, bl.Kind
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
-		g.woundAnimal(target, &a, dmg, kind, by, now) // animal_health.go (MED-09): a wound on its body
+		g.woundAnimal(target, &a, dmg, kind, bl.Split, by, now) // animal_health.go (MED-09): a wound on its body
 		a.Attacker = by
 		was := rageOf(g).ChaseTarget(a)
 		g.wakeDormant(&a) // vault.go: a hurt vault sleeper wakes

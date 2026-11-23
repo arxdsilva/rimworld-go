@@ -256,7 +256,10 @@ func TestGrownGolden(t *testing.T) {
 	//
 	// Re-pinned (DEF 3.1, 2026-11-21): Kit.DamageTaken, LogEntry.Kind, blast
 	// credit and LastBy.
-	const want uint64 = 0xbace7519d533d57e
+	//
+	// Re-pinned (CBT 3.4, 2026-11-22): multi-part cuts, blunt internal strike and pain per kind add body and medical stream draws
+	// (with hit.Blow.Split left at SplitNone the previous pin 0xbace7519d533d57e holds: the split alone moves it, pain per kind does not).
+	const want uint64 = 0x787620b960ac426d
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

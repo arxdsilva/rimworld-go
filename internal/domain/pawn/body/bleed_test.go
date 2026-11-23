@@ -122,7 +122,7 @@ func TestPainPerHP(t *testing.T) {
 		t.Fatalf("64 HP pain %d", bruise.Pain())
 	}
 	scar := Body{Wounds: []Wound{{Part: Torso, Dmg: 3, Kind: Cut, Permanent: true}}}
-	if scar.Pain() != 3 {
+	if scar.Pain() != 18 { // CBT 3.4: a scar hurts 6.25 permille per HP (was 1), 3 HP -> 18
 		t.Fatalf("scar pain %d", scar.Pain())
 	}
 }

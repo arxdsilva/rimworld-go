@@ -223,30 +223,24 @@ func min32(a, b int32) int32 {
 	return b
 }
 
-// Pain per point of wound damage, in tenths of a permille: 12.5 ‰ per HP
-// whether the wound is open or tended (tending stops bleeding, not pain).
-// wiki: Injury. A fresh stump hurts as a wound of the part's MaxHP until
-// tended (original tuning on the wiki's fresh missing part); a scar keeps
-// 1 ‰ per HP (original tuning).
-const (
-	painPerHPx10  = 125
-	scarPainPerHP = 1
-)
-
-// Pain is the body's pain in permille: 12.5 per point of open or tended
-// wound damage, 1 per point of scar; conditions add their current stage's
+// Pain is the body's pain in permille: per point of open or tended wound
+// damage 12.5 (burn 18.75), per point of scar 6.25 (pain.go; wiki: Injury,
+// Pain); conditions add their current stage's
 // pain, and an acting painkiller halves the sum (MED-07).
 func (b *Body) Pain() int32 { return b.pain(DefOfCond) }
 
 // pain is Pain with condition definitions from look.
 func (b *Body) pain(look condLookup) int32 {
-	var hurt, scars int32
+	var hurt, burns, scars int32
 	for _, w := range b.Wounds {
-		if w.Permanent {
+		switch {
+		case w.Permanent:
 			scars += int32(w.Dmg)
-			continue
+		case painRate(w.Kind) == painBurn:
+			burns += int32(w.Dmg)
+		default:
+			hurt += int32(w.Dmg)
 		}
-		hurt += int32(w.Dmg)
 	}
 	if b.Fresh != 0 {
 		for p := Part(0); p < b.numParts(); p++ {
@@ -256,9 +250,9 @@ func (b *Body) pain(look condLookup) int32 {
 		}
 	}
 	if s := b.Scale; s > 0 && s != 1000 { // MED-13: damage against the body's size
-		hurt, scars = hurt*1000/s, scars*1000/s
+		hurt, burns, scars = hurt*1000/s, burns*1000/s, scars*1000/s
 	}
-	n := hurt*painPerHPx10/10 + scars*scarPainPerHP
+	n := (hurt*painStd + burns*painBurn + scars*painScar) / 100
 	n += b.condPain(look)
 	n = b.painkilled(n) // cond_drug.go (MED-07): a painkiller halves it
 	if n > 1000 {

@@ -68,7 +68,11 @@ func humanFingerprint() string {
 
 // humanFingerprintHash was pinned before MED-13 split the anatomy into
 // per-plan tables: the humanlike body must read exactly as it did.
-const humanFingerprintHash = 0x3bdbc554b1763654
+// CBT 3.4 moved it from 0x3bdbc554b1763654: fixture #52's 20 HP Spine scar
+// now hurts 6.25 permille per HP (was 1), so only its pain (520 to 625) and
+// the consciousness-derived figures (capacities, factor rows) differ; the
+// part tables and every other fixture are unchanged.
+const humanFingerprintHash = 0x55011ab9b54b818d
 
 // MED-13: the humanlike tables and capacities are byte-identical to
 // before the per-anatomy split.

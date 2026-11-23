@@ -85,6 +85,7 @@ type Blow struct {
 	Part   body.Part
 	Placed bool
 	Lo, Hi int
+	Split  body.Split // the form's split (body.SplitOf: a cut wounds several parts, a blunt blow an inner one; CBT 3.4)
 }
 
 // Shields may stop a hit before it reaches the body (CBT-3: a shield
@@ -176,7 +177,7 @@ func (w Wounds) HurtHit(target entity.EntityID, l armor.Landed, by entity.Entity
 	}
 	lo, hi := l.Form.Overkill()
 	p := body.Part(l.Part)
-	w.H.Wound(target, Blow{Dmg: l.Amount, Kind: body.WoundOf(l.Form), Part: p, Placed: l.Placed, Lo: lo, Hi: hi}, by)
+	w.H.Wound(target, Blow{Dmg: l.Amount, Kind: body.WoundOf(l.Form), Part: p, Placed: l.Placed, Lo: lo, Hi: hi, Split: body.SplitOf(l.Form)}, by)
 	if l.Placed && l.Form == damage.FormBlunt && w.bluntStuns(p, l.Amount) {
 		w.H.Hold(target, now+BluntStunTicks)
 	}
