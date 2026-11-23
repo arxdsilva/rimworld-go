@@ -50,12 +50,18 @@ var legacySpeed = [...]struct {
 
 // MigrateDifficulty is s from a save of before RSCH-1: a preset whose
 // research speed was moved reads the preset again; custom settings stay.
+// Fields added after v9 (QST-1 quest settings, SHT-007 friendly fire) are
+// not in such a save, so they are left out of the match and keep s's value
+// for the later migration steps to fill.
 func MigrateDifficulty(s difficulty.Settings) difficulty.Settings {
 	for _, l := range legacySpeed {
 		was := difficulty.Of(l.p)
 		was.ResearchSpeed = l.old
+		was.QuestRewardPct, was.QuestThreats, was.FriendlyFirePct = s.QuestRewardPct, s.QuestThreats, s.FriendlyFirePct
 		if s == was {
-			return difficulty.Of(l.p)
+			now := difficulty.Of(l.p)
+			now.QuestRewardPct, now.QuestThreats, now.FriendlyFirePct = s.QuestRewardPct, s.QuestThreats, s.FriendlyFirePct
+			return now
 		}
 	}
 	return s

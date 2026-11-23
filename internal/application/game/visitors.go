@@ -461,7 +461,7 @@ func (h visitTurning) ShootBack(id entity.EntityID, now uint64) {
 	}
 	if t, tp, ok := g.nearestColonist(pos); ok && g.combat.Sight.CanHit(pos.X, pos.Y, d, tp.X, tp.Y) {
 		g.reserve.ReleaseOwner(id)
-		g.jobs.Set(id, job.Record{Kind: job.Attack, Target: t, TX: tp.X, TY: tp.Y, State: job.Do, WorkLeft: combat.AimTicks(d)})
+		g.jobs.Set(id, job.Record{Kind: job.Attack, Target: t, TX: tp.X, TY: tp.Y, State: job.Do, WorkLeft: combat.AimTicks(combatSkills{g}, id, d)})
 	}
 }
 

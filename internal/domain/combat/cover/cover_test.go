@@ -55,7 +55,7 @@ func TestBestOnShooterSide(t *testing.T) {
 
 func TestDefenceKinds(t *testing.T) {
 	t.Parallel()
-	want := map[Kind]int{Door: 750, Cactus: 350, Fence: 250, Bush: 200, Stool: 200, Table: 400, Chair: 350, Turret: 400, HeavyTurret: 500}
+	want := map[Kind]int{Door: 750, Cactus: 350, Fence: 250, Bush: 200, Stool: 200, Table: 400, Chair: 350, Turret: 400, HeavyTurret: 500, Gate: 750, Lamp: 200, Torch: 150}
 	for k, p := range want {
 		if Permille(k) != p {
 			t.Errorf("kind %d: %d, want %d", k, Permille(k), p)

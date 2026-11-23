@@ -26,20 +26,17 @@ type Report struct {
 	Chance                              Permille
 	Band, Shooter, Weather, Size, Light Permille
 	Cover                               Permille
-	Dist                                int
-	InRange, InSight, Melee             bool
+	// Downed is the factor for a downed target by distance (SHT-008,
+	// DownedFactor); zero is neutral.
+	Downed                  Permille
+	Dist                    int
+	InRange, InSight, Melee bool
 }
 
 // Aim is the chance that the aim holds, before cover: Band × Shooter ×
 // weather × size × light (in that order, each division truncating),
 // clamped to [0, 1000].
-func (r Report) Aim() Permille {
-	c := int64(r.Band) * int64(r.Shooter) / one
-	for _, f := range [...]int64{int64(r.Weather), int64(r.Size), int64(r.Light)} {
-		c = c * max(f, 0) / one
-	}
-	return clamp(Permille(c))
-}
+func (r Report) Aim() Permille { return r.ranged()[StepClamp] }
 
 // Total is the chance to hit the target: the aim, then cover letting the
 // shot through.
@@ -47,7 +44,7 @@ func (r Report) Total() Permille {
 	if r.Melee {
 		return clamp(r.Band)
 	}
-	return r.Aim() * (one - clamp(r.Cover)) / one
+	return r.ranged()[StepCover]
 }
 
 // missPoints is the miss radius (thousandths of a tile) by aim chance

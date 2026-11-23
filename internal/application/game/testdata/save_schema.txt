@@ -858,6 +858,7 @@ saveState.NG1.Setup.Difficulty.CropYield int
 saveState.NG1.Setup.Difficulty.DiseaseFreq int
 saveState.NG1.Setup.Difficulty.EscPerYear int
 saveState.NG1.Setup.Difficulty.ExtremeWeather bool
+saveState.NG1.Setup.Difficulty.FriendlyFirePct int
 saveState.NG1.Setup.Difficulty.IgnoreWealth bool
 saveState.NG1.Setup.Difficulty.Infection int
 saveState.NG1.Setup.Difficulty.MineYield int

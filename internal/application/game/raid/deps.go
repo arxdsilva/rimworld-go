@@ -109,7 +109,7 @@ type Fight interface {
 	Strike(id entity.EntityID, j job.Record, now uint64)
 	Weapon(id entity.EntityID) weapon.Def
 	CanHit(x, y int, d weapon.Def, tx, ty int) bool
-	AimTicks(d weapon.Def) int
+	AimTicks(id entity.EntityID, d weapon.Def) int
 	// Breach runs a breach job; StartBreach plans one through the walls.
 	Breach(id entity.EntityID, j job.Record)
 	StartBreach(id entity.EntityID, tx, ty int) bool

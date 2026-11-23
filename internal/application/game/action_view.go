@@ -195,7 +195,7 @@ func (g *Game) attackCycleOf(id entity.EntityID, j job.Record) float64 {
 			return 0
 		}
 		d := weaponDefOf(g, id)
-		total := combat.AimTicks(d)
+		total := combat.AimTicks(combatSkills{g}, id, d)
 		// Past the first aim the countdown is the cooldown (and a gun's aim).
 		if c := combat.CycleTicks(d); j.WorkLeft > total || struck && rec.Target == j.Target && now-rec.Tick <= uint64(c) {
 			total = c

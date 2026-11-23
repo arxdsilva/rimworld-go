@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/difficulty"
@@ -68,13 +69,15 @@ func TestShotInfoShowsShootingScore(t *testing.T) {
 	careful, plain := ids[0], ids[1] // spawned in Setup order
 	g.Arm(careful, item.Rifle)
 	g.Arm(plain, item.Rifle)
+	var band int
 	shooterLine := func(from, to entity.EntityID) (int, int) {
 		t.Helper()
 		rep, ok := g.HitChance(from, to)
 		if !ok || rep.Melee || rep.Dist < 2 || rep.Chance != rep.Total() {
 			t.Fatalf("report %d -> %d: %+v (ok %v)", from, to, rep, ok)
 		}
-		info := shotInfo(nil, rep, 0, 0, 1, 1)
+		band = int(rep.Band)
+		info := overlay.ShotInfoOf(nil, rep, 0, 0, 1, 1)
 		if info.Chance != int(rep.Total())/10 {
 			t.Fatalf("card chance %d, report total %d", info.Chance, rep.Total())
 		}
@@ -92,8 +95,47 @@ func TestShotInfoShowsShootingScore(t *testing.T) {
 	if cd != pd || c <= p {
 		t.Fatalf("shooter lines: deliberate aim %d%% at %d, no trait %d%% at %d; want higher at the same distance", c, cd, p, pd)
 	}
-	line := func(score int) int { return (int(attack.ShooterFactor(attack.ShooterPerTile(score), cd)) - 1000) / 10 }
-	if c != line(15) || p != line(10) {
-		t.Fatalf("shooter lines %d / %d, want score 15 -> %d and 10 -> %d", c, p, line(15), line(10))
+	// The shooter line is the step's own effect on the chain (SHT-201).
+	chainLine := func(score int) int {
+		f := attack.ShooterFactor(attack.ShooterPerTile(score), cd)
+		return (band*int(f)/1000)/10 - band/10
+	}
+	if c != chainLine(15) || p != chainLine(10) {
+		t.Fatalf("shooter lines %d / %d, want score 15 -> %d and 10 -> %d", c, p, chainLine(15), chainLine(10))
+	}
+}
+
+// fakeOdds is a hitChancer with one fixed report.
+type fakeOdds struct {
+	rep attack.Report
+	ok  bool
+}
+
+func (f fakeOdds) HitChance(entity.EntityID, entity.EntityID) (attack.Report, bool) {
+	return f.rep, f.ok
+}
+
+// TestShotOverlayUndrafted (SHT-202): the card is built for a selected
+// colonist whether or not drafted, and is the same card either way; with no
+// report (no weapon, no target) there is none.
+func TestShotOverlayUndrafted(t *testing.T) {
+	t.Parallel()
+	rep := attack.Report{Band: 800, Shooter: 1100, Weather: 1000, Size: 900, Light: 1000, Cover: 250,
+		InRange: true, InSight: true}
+	o := fakeOdds{rep: rep, ok: true}
+	var drafted, undrafted overlay.Combat
+	sel := game.PawnView{ID: 1, X: 2, Y: 3}
+	hover := game.PawnView{ID: 9, X: 7, Y: 3}
+	un, ok := shotCard(o, &undrafted, sel, hover)
+	if !ok || len(undrafted.Factors) == 0 {
+		t.Fatalf("an undrafted colonist gets a card: ok %v factors %v", ok, undrafted.Factors)
+	}
+	sel.Drafted = true
+	dr, ok := shotCard(o, &drafted, sel, hover)
+	if !ok || un.Chance != dr.Chance || !slices.Equal(undrafted.Factors, drafted.Factors) || un.Chance != int(rep.Total())/10 {
+		t.Fatalf("drafted card %+v, undrafted %+v", dr, un)
+	}
+	if _, ok := shotCard(fakeOdds{}, &undrafted, sel, hover); ok {
+		t.Fatal("no report, no card")
 	}
 }

@@ -259,7 +259,11 @@ func TestGrownGolden(t *testing.T) {
 	//
 	// Re-pinned (CBT 3.4, 2026-11-22): multi-part cuts, blunt internal strike and pain per kind add body and medical stream draws
 	// (with hit.Blow.Split left at SplitNone the previous pin 0xbace7519d533d57e holds: the split alone moves it, pain per kind does not).
-	const want uint64 = 0x787620b960ac426d
+	//
+	// Re-pinned (SHT, #75, 2026-11-23): Scrapper trait draws, FriendlyFirePct 100 in the
+	// presets, the 21-point curve, manipulation points, downed interception and
+	// targets, the soft XP cap and the decay table.
+	const want uint64 = 0xd184896f98be7431
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

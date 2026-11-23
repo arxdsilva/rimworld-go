@@ -48,7 +48,7 @@ func (s *Strikes) AutoEngage(id entity.EntityID) {
 	if s.drafts != nil && s.drafts.tac != nil && s.drafts.tac.TakeCover(id, best, px, py, d, bx, by) {
 		return // CBT-4: fire at will steps into adjacent cover first
 	}
-	rec := job.Record{Kind: job.Attack, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(d)}
+	rec := job.Record{Kind: job.Attack, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(s.h, id, d)}
 	if s.drafts != nil && s.drafts.Holding(id) {
 		rec.State = job.Do // in reach from its tile: no step towards it
 		h.SetJob(id, rec)

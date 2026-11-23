@@ -33,9 +33,21 @@ type Strikes struct {
 	seen []Seen
 }
 
-// AimTicks is the warm-up before a first attack on a new target: the
-// weapon's warmup (none for the wiki's melee weapons).
-func AimTicks(d weapon.Def) int { return d.Warmup }
+// Aimer scales a ranged warmup (ticks) by id's aim (Skills.AimTicks).
+type Aimer interface {
+	AimTicks(id entity.EntityID, ticks int) int
+}
+
+// AimTicks is the warm-up before id's first attack with d on a new target:
+// the weapon's warmup (none for the wiki's melee weapons), a gun's scaled
+// by id's aiming time (a.AimTicks, SHT-102); melee is never scaled
+// (SHT-103).
+func AimTicks(a Aimer, id entity.EntityID, d weapon.Def) int {
+	if !d.Ranged {
+		return d.Warmup
+	}
+	return a.AimTicks(id, d.Warmup)
+}
 
 // CycleTicks is the wait after an attack with d for an attacker with
 // neutral aiming: the cooldown and, for a gun, the next aim (bursts aside).
@@ -68,6 +80,15 @@ func (s *Strikes) target(id entity.EntityID, downed bool) (x, y int, ok bool) {
 		return b.X, b.Y, true
 	}
 	return 0, 0, false
+}
+
+// downedAt: id is a creature lying downed and alive (SHT-006, SHT-008): a
+// humanlike lying, or an animal down and not dead.
+func (s *Strikes) downedAt(id entity.EntityID) bool {
+	if a, ok := s.h.Animal(id); ok {
+		return a.Downed && !a.Dead()
+	}
+	return s.h.Lying(id)
 }
 
 // Strike resolves one attack, rolled on the main stream, and records its
@@ -227,13 +248,14 @@ func (s *Strikes) building(attacker, target entity.EntityID, tx, ty, ax, ay int,
 }
 
 // Report is shooter's hit chance on target from where both stand, with
-// its factors (the hit-chance tooltip); ok false when either has no tile.
+// its factors (the hit-chance tooltip); ok false when either has no tile
+// or the target can't be attacked (a humanlike lying downed can: SHT-008).
 func (s *Strikes) Report(shooter, target entity.EntityID) (attack.Report, bool) {
 	ax, ay, ok := s.h.Pos(shooter)
 	if !ok {
 		return attack.Report{}, false
 	}
-	tx, ty, ok := s.Target(target)
+	tx, ty, ok := s.target(target, true)
 	if !ok {
 		return attack.Report{}, false
 	}
@@ -252,8 +274,9 @@ func (s *Strikes) Report(shooter, target entity.EntityID) (attack.Report, bool) 
 // legacy gun at its flat accuracy; a banded gun multiplies its band at the
 // straight-line distance, the shooter's accuracy per tile to the power of
 // that distance, the target's size, light, the weather under the open sky
-// and smoke, and what the target's cover lets through (none for a
-// building: it is its own cover).
+// and smoke, a downed target's factor (attack.DownedFactor, SHT-008) and
+// what the target's cover lets through (none for a building: it is its
+// own cover).
 func (s *Strikes) report(attacker entity.EntityID, ax, ay int, target entity.EntityID, tx, ty int, d weapon.Def, building bool) attack.Report {
 	h := s.h
 	dist := weapon.Range(ax, ay, tx, ty)
@@ -277,6 +300,9 @@ func (s *Strikes) report(attacker entity.EntityID, ax, ay int, target entity.Ent
 		if !building {
 			r.Size = attack.SizeFactor(s.bodySize(target))
 		}
+	}
+	if d.Ranged && !building && s.downedAt(target) {
+		r.Downed = attack.DownedFactor(dist)
 	}
 	r.Chance = r.Total()
 	return r
@@ -401,5 +427,5 @@ func (s *Strikes) next(id entity.EntityID, d weapon.Def, j *job.Record) int {
 	if !d.Ranged {
 		return d.Cooldown
 	}
-	return d.Cooldown + s.h.AimTicks(id, d.Warmup)
+	return d.Cooldown + AimTicks(s.h, id, d)
 }

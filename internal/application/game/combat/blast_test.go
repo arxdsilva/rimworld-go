@@ -272,7 +272,7 @@ func TestBurstWeaponFiresSeveralShots(t *testing.T) {
 	f.pawn(1, 2, 5, weapon.AssaultRifle)
 	f.raider(2, 12, 5, weapon.Fists)
 	d := weapon.DefOf(weapon.AssaultRifle)
-	f.jobs[1] = job.Record{Kind: job.Attack, Target: 2, WorkLeft: AimTicks(d)}
+	f.jobs[1] = job.Record{Kind: job.Attack, Target: 2, WorkLeft: AimTicks(f, 1, d)}
 	var fired []uint64
 	for i := 0; i < d.Warmup+d.Cooldown+40; i++ {
 		f.now++

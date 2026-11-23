@@ -33,6 +33,7 @@ type Shots struct {
 	blasts *Blasts
 	live   []projectile.Shot
 	seen   []Seen // Near's reused buffer
+	rules  Rules  // SHT-007: friendly fire (nil: 100 %, no colonists)
 	// traps: a bullet landing on a buried charge lights it (DEF-4);
 	// drafts: a colonist's thrown grenade comes off its belt.
 	traps  *Traps
@@ -93,6 +94,16 @@ func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk we
 // within attack.InterceptNear), and its hit goes through armor. The muzzle rolls on the defence stream.
 func (s *Shots) Turret(id entity.EntityID, wk weapon.Kind, fx, fy int, target entity.EntityID, tx, ty int) {
 	d := weapon.DefOf(wk)
+	r := s.turretReport(d, fx, fy, target, tx, ty)
+	if d.Speed == 0 {
+		d.Speed = 1000 // a tile a tick: every turret's round flies
+	}
+	s.fire(id, target, fx, fy, tx, ty, wk, d, r, true, s.h.DefenseRoll)
+}
+
+// turretReport is a turret's hit chance with gun d from (fx, fy) on target
+// at (tx, ty) (Turret).
+func (s *Shots) turretReport(d weapon.Def, fx, fy int, target entity.EntityID, tx, ty int) attack.Report {
 	r := attack.Report{Dist: weapon.Range(fx, fy, tx, ty), InRange: true, InSight: true, Shooter: 1000, Size: 1000,
 		Light: attack.NoLightPenalty, Weather: s.st.sight.Weather(fx, fy, tx, ty) * s.blasts.SmokeFactor(fx, fy, tx, ty) / 1000,
 		Cover: attack.Permille(s.st.sight.Cover(fx, fy, tx, ty))}
@@ -100,11 +111,11 @@ func (s *Shots) Turret(id entity.EntityID, wk weapon.Kind, fx, fy int, target en
 	if !d.Legacy() {
 		r.Size = attack.SizeFactor(s.st.bodySize(target))
 	}
-	r.Chance = r.Total()
-	if d.Speed == 0 {
-		d.Speed = 1000 // a tile a tick: every turret's round flies
+	if s.st.downedAt(target) {
+		r.Downed = attack.DownedFactor(r.Dist) // SHT-008
 	}
-	s.fire(id, target, fx, fy, tx, ty, wk, d, r, true, s.h.DefenseRoll)
+	r.Chance = r.Total()
+	return r
 }
 
 // log records sh striking (or missing) v for the logs: a pawn's strike,
@@ -180,9 +191,11 @@ func (s *Shots) fly(sh *projectile.Shot) bool {
 // through is sh entering a cell on its way (x, y): it reports whether the
 // shot stopped there, on rock, a wall or a door (which it damages), or in
 // a creature it struck. A creature in the line, ally or not, is struck at
-// its interception chance scaled by its distance from the muzzle
-// (weapon.Range): never within attack.InterceptNear tiles, where no roll
-// is drawn, and fully from attack.InterceptFull (SHT-005).
+// its interception chance (attack.DownedIntercept of it lying downed,
+// SHT-006) scaled by its distance from the muzzle (weapon.Range): never
+// within attack.InterceptNear tiles, and fully from attack.InterceptFull
+// (SHT-005); then by the friendly-fire share (ffPct, SHT-007). Each step
+// truncates; no roll is drawn at a chance of 0.
 func (s *Shots) through(sh *projectile.Shot, x, y int) bool {
 	h := s.h
 	if !h.InBounds(x, y) { // it left the map
@@ -193,11 +206,18 @@ func (s *Shots) through(sh *projectile.Shot, x, y int) bool {
 		s.building(sh, x, y)
 		return true
 	}
-	v, ok := s.standing(x, y, sh.Owner)
+	v, downed, ok := s.interceptor(x, y, sh.Owner)
 	if !ok {
 		return false
 	}
-	c := attack.InterceptChance(s.st.bodySize(v)) * attack.InterceptScale(weapon.Range(sh.FromX, sh.FromY, x, y)) / 1000
+	c := attack.InterceptChance(s.st.bodySize(v))
+	if downed {
+		c = c * attack.DownedIntercept / 1000
+	}
+	c = c * attack.InterceptScale(weapon.Range(sh.FromX, sh.FromY, x, y)) / 1000
+	if c > 0 {
+		c = c * attack.Permille(s.ffPct(sh, v)) / 100
+	}
 	if c == 0 || h.Roll(1000) >= c {
 		return false
 	}
@@ -207,7 +227,10 @@ func (s *Shots) through(sh *projectile.Shot, x, y int) bool {
 
 // land is sh arriving on (x, y): the cover it was caught by, its target if
 // it was aimed and the target still stands there, else (attack.StrayHit
-// of the time) a creature or building in the cell; otherwise a miss.
+// of the time) a creature or building in the cell; otherwise a miss. Only
+// a standing creature takes a stray, at the friendly-fire share (ffPct;
+// at 0 nothing strays, not even into a building there); one lying downed
+// leaves the cell's building to it (SHT-006).
 func (s *Shots) land(sh *projectile.Shot, x, y int) {
 	h := s.h
 	if !h.InBounds(x, y) {
@@ -239,16 +262,30 @@ func (s *Shots) land(sh *projectile.Shot, x, y int) {
 			return
 		}
 	}
-	if v, ok := s.standing(x, y, sh.Owner); ok {
-		if h.Roll(1000) < attack.StrayHit {
-			s.flesh(sh, v, x, y)
-			return
-		}
-	} else if id, _ := h.Object(x, y); id != 0 && h.Roll(1000) < attack.StrayHit {
-		s.building(sh, x, y)
-		return
+	if !s.stray(sh, x, y) {
+		s.miss(sh, x, y)
 	}
-	s.miss(sh, x, y)
+}
+
+// stray is sh, off its target, striking what is in its landing cell (x, y)
+// attack.StrayHit of the time: a standing creature (at the friendly-fire
+// share, ffPct; at 0 nothing is rolled and nothing strays) or, when none
+// stands there (one lying downed included), the cell's building. It
+// reports whether it struck.
+func (s *Shots) stray(sh *projectile.Shot, x, y int) bool {
+	h := s.h
+	if v, downed, ok := s.interceptor(x, y, sh.Owner); ok && !downed {
+		if c := attack.StrayHit * attack.Permille(s.ffPct(sh, v)) / 100; c > 0 && h.Roll(1000) < c {
+			s.flesh(sh, v, x, y)
+			return true
+		}
+		return false
+	}
+	if id, _ := h.Object(x, y); id != 0 && h.Roll(1000) < attack.StrayHit {
+		s.building(sh, x, y)
+		return true
+	}
+	return false
 }
 
 // flesh is sh striking creature v on (x, y) with the hit it was fired
@@ -308,23 +345,86 @@ func (s *Shots) trace(sh *projectile.Shot, x, y int, hit, building bool, dmg int
 		Weapon: weapon.DefOf(sh.Weapon).Name, Stage: projectile.Landed, FromBuilding: sh.FromBuilding})
 }
 
-// standing is the creature a shot can strike on (x, y), never owner: a
-// living animal or a standing humanlike, the lowest id when several share
-// the cell (Near's order is not fixed).
-func (s *Shots) standing(x, y int, owner entity.EntityID) (entity.EntityID, bool) {
+// interceptor is the creature a shot can strike on (x, y), never owner
+// nor a turret: a standing one (a living animal on its feet or a standing
+// humanlike) before one lying downed (SHT-006: downed reports which), the
+// lowest id of either when several share the cell (Near's order is not
+// fixed: lowest).
+func (s *Shots) interceptor(x, y int, owner entity.EntityID) (v entity.EntityID, downed, ok bool) {
 	s.seen = s.h.Near(x, y, 0, Everyone, s.seen[:0])
-	best := entity.EntityID(0)
+	var lo lowest
 	for _, c := range s.seen {
-		if c.ID == owner || best != 0 && c.ID > best {
-			continue
-		}
-		if _, _, ok := s.st.Target(c.ID); ok {
-			if _, turret := s.st.turrets.At(c.ID); !turret {
-				best = c.ID
-			}
+		if c.ID != owner {
+			lo.add(c.ID, s.reachOf(c.ID))
 		}
 	}
-	return best, best != 0
+	return lo.pick()
+}
+
+// reach is how a shot in flight can strike a creature: not at all (a
+// turret, the dead, nothing attackable), standing, or lying downed.
+type reach uint8
+
+const (
+	reachNone reach = iota
+	reachStanding
+	reachDowned
+)
+
+// reachOf is how a shot in flight can strike id (interceptor).
+func (s *Shots) reachOf(id entity.EntityID) reach {
+	if _, turret := s.st.turrets.At(id); turret {
+		return reachNone
+	}
+	if s.st.downedAt(id) {
+		return reachDowned
+	}
+	if _, _, ok := s.st.Target(id); ok {
+		return reachStanding
+	}
+	return reachNone
+}
+
+// lowest is a cell's choice of interceptor: the lowest standing and the
+// lowest downed id seen (0: none), whatever order they are added in.
+type lowest struct{ up, down entity.EntityID }
+
+// add counts id, reached as r.
+func (l *lowest) add(id entity.EntityID, r reach) {
+	switch r {
+	case reachStanding:
+		l.up = lowerID(l.up, id)
+	case reachDowned:
+		l.down = lowerID(l.down, id)
+	}
+}
+
+// pick is the standing one if any, else the downed one (downed true).
+func (l lowest) pick() (v entity.EntityID, downed, ok bool) {
+	if l.up != 0 {
+		return l.up, false, true
+	}
+	return l.down, l.down != 0, l.down != 0
+}
+
+// lowerID is the lower of cur (0: none yet) and id.
+func lowerID(cur, id entity.EntityID) entity.EntityID {
+	if cur == 0 || id < cur {
+		return id
+	}
+	return cur
+}
+
+// ffPct is the percent of a strike chance sh keeps on creature v (SHT-007):
+// the difficulty's FriendlyFirePct, clamped to 0..100, for an aimed shot a
+// colonist fired crossing a colonist; 100 for anything else (a wild shot,
+// a turret's round, a raider's) or without rules.
+func (s *Shots) ffPct(sh *projectile.Shot, v entity.EntityID) int {
+	r := s.rules
+	if r == nil || !sh.Aimed || sh.FromBuilding || !r.Colonist(sh.Owner) || !r.Colonist(v) {
+		return 100
+	}
+	return min(max(r.FriendlyFirePct(), 0), 100)
 }
 
 // raidersSide reports the shooter on the raiders' side: a raider on its

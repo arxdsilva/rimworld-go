@@ -40,6 +40,13 @@ const MaxLevel = 20
 // Neutral is the level of a legacy/neutral pawn: exactly 1000‰ speed.
 const Neutral = 7
 
+// SoftCapDay is the gain (XP) per skill per day past which learning slows
+// to SoftCapRate percent (SHT-302).
+const SoftCapDay = 4000
+
+// SoftCapRate is the share (percent) of gain kept past SoftCapDay.
+const SoftCapRate = 20
+
 // Skill is one skill's state. XP is progress toward the next level and
 // may go negative (decay band, see DecayDay). Carry holds the hundredths
 // of an XP point that passion scaling left over, so single units of work
@@ -154,6 +161,30 @@ func Learn(s *Skill, xp int) {
 	add(s, total/100)
 }
 
+// LearnCapped is Learn with the daily soft cap (SHT-302). today is the whole
+// XP this skill has already gained today; the result is the whole XP gained
+// by this call, which the caller adds to today. Work is in hundredths of an
+// XP (xp*passion% plus Carry, the unit Learn already keeps), so the share
+// past SoftCapDay, kept at SoftCapRate percent, loses nothing: a 1 xp call
+// past the cap leaves its 20 % in Carry until it rounds up. xp <= 0 gains
+// nothing.
+func LearnCapped(s *Skill, xp, today int) int {
+	if xp <= 0 {
+		return 0
+	}
+	pct := 100
+	if int(s.Passion) < len(passionPct) {
+		pct = passionPct[s.Passion]
+	}
+	raw := int64(xp) * int64(pct)
+	room := max(0, (int64(SoftCapDay-today))*100-int64(s.Carry))
+	full := min(raw, room)
+	h := full + (raw-full)*SoftCapRate/100 + int64(s.Carry)
+	s.Carry = int16(h % 100)
+	add(s, h/100)
+	return int(h / 100)
+}
+
 // Grant adds xp as it stands: no passion multiplier and no carry (a fixed
 // award such as a quest's, QST-076). The level-up and the MaxLevel bank are
 // Learn's.
@@ -178,18 +209,23 @@ func add(s *Skill, gain int64) {
 }
 
 // DecayFloor is the level at and below which skills never decay.
-const DecayFloor = 10
+const DecayFloor = 9
 
-// DecayDay applies one day of decay above level 10: 500*(L-9) XP. The
+// decayXP is the daily XP lost per level 10..20 (wiki: Skills, Decay); the
+// index is the level.
+var decayXP = [MaxLevel + 1]int32{10: 30, 11: 60, 12: 120, 13: 180, 14: 300, 15: 540,
+	16: 840, 17: 1200, 18: 1800, 19: 2400, 20: 3600}
+
+// DecayDay applies one day of decay above level 9: the decayXP table. The
 // no-flap band: XP may go negative and the level only drops once XP is
 // below -Cost(L-1)/2; after a drop XP restarts at 75% of Cost(L-1), so a
 // pawn hovering at a boundary needs a whole quarter level of learning to
 // climb back and half a level of neglect to fall again.
 func DecayDay(s *Skill) {
-	if s.Level <= DecayFloor {
+	if s.Level <= DecayFloor || s.Level > MaxLevel {
 		return
 	}
-	s.XP -= 500 * int32(s.Level-9)
+	s.XP -= decayXP[s.Level]
 	below := Cost(s.Level - 1)
 	if s.XP < -below/2 {
 		s.Level--

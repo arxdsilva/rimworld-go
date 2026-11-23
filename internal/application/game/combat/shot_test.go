@@ -62,7 +62,7 @@ func TestBurstTiming(t *testing.T) {
 		t.Fatalf("a melee blow waits its cooldown, no aim: %d", got)
 	}
 	// the warm-up of a first attack is the weapon's
-	if AimTicks(weapon.DefOf(weapon.Rifle)) != 102 || AimTicks(weapon.DefOf(weapon.Spear)) != 0 {
+	if AimTicks(f, 1, weapon.DefOf(weapon.Rifle)) != 102 || AimTicks(f, 1, weapon.DefOf(weapon.Spear)) != 0 {
 		t.Fatal("warmup")
 	}
 }

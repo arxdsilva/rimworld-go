@@ -86,7 +86,7 @@ func (h visitFighters) Engage(id entity.EntityID, x, y, r int, now uint64) bool 
 	}
 	g.reserve.ReleaseOwner(id)
 	d := weaponDefOf(g, id)
-	rec := job.Record{Kind: job.Attack, Target: foe, TX: fp.X, TY: fp.Y, WorkLeft: combat.AimTicks(d)}
+	rec := job.Record{Kind: job.Attack, Target: foe, TX: fp.X, TY: fp.Y, WorkLeft: combat.AimTicks(combatSkills{g}, id, d)}
 	if g.combat.Sight.CanHit(x, y, d, fp.X, fp.Y) { // already in reach: no walking needed
 		rec.State = job.Do
 		g.jobs.Set(id, rec)

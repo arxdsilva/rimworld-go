@@ -209,8 +209,9 @@ func TestSkillSpeedRatio(t *testing.T) {
 	}
 }
 
-// TestLearningSaturation: one skill learns at most learnCapDay a day; the
-// next day it learns again. Incapable skills never learn.
+// TestLearningSaturation: one skill learns in full up to skill.SoftCapDay a
+// day and at 20 % past it (SHT-302, no hard stop); the next day it learns
+// in full again. Incapable skills never learn.
 func TestLearningSaturation(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
@@ -223,8 +224,9 @@ func TestLearningSaturation(t *testing.T) {
 		g.learn(id, skill.Mining, 1)
 	}
 	day1 := roster.TotalXP(g.skillOf(id, skill.Mining)) - before
-	if day1 > learnCapDay || day1 < learnCapDay-1 {
-		t.Fatalf("learned %d in a day, cap %d", day1, learnCapDay)
+	// 20000 calls at 1.5 xp (major passion) = 30000; 4000 in full, then 20 % of 26000 (re-pinned from a hard stop at 4000)
+	if day1 < 9199 || day1 > 9201 {
+		t.Fatalf("learned %d in a day, want 9200", day1)
 	}
 	g.clock.Advance(24 * 2500)
 	g.learn(id, skill.Mining, 100)

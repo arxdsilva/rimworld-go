@@ -42,9 +42,6 @@ import (
 
 // Learning and work constants (NG-1 §5.4).
 const (
-	// learnCapDay is the most experience one skill can gain per day
-	// (saturation), so fast game speeds can't over-level.
-	learnCapDay = 4000
 	// chatXP is the Social experience of one finished chat.
 	chatXP = 40
 	// workingTicks: a pawn counts as doing skilled work (passion joy)
@@ -404,7 +401,7 @@ func (g *Game) workProgressPct(id entity.EntityID, sk skill.ID, hasSkill bool, p
 
 // learn trains id's skill sk by xp points of raw experience (× LearnRate
 // × trait learning factor; the passion multiplier is skill.Learn's),
-// capped at learnCapDay per skill per day. Incapable skills never learn;
+// past skill.SoftCapDay a day it counts at skill.SoftCapRate %. Incapable skills never learn;
 // pawns without a skill set (animals, plain raiders) learn nothing.
 func (g *Game) learn(id entity.EntityID, sk skill.ID, xp int) {
 	set := g.sk.skills[id]
@@ -422,20 +419,9 @@ func (g *Game) learn(id entity.EntityID, sk skill.ID, xp int) {
 		}
 	}
 	s := &set[sk]
-	pct := int64(roster.PassionPct(s.Passion))
-	left := int64(learnCapDay - lg.today[sk])
-	if left <= 0 {
-		return
-	}
-	if (int64(xp)*pct+int64(s.Carry))/100 > left { // skill.Learn's exact gain
-		xp = int(((left+1)*100 - 1 - int64(s.Carry)) / pct)
-		if xp <= 0 {
-			return
-		}
-	}
 	before, lv := roster.TotalXP(*s), s.Level
-	skill.Learn(s, xp)
-	gain := int32(roster.TotalXP(*s) - before)
+	skill.LearnCapped(s, xp, int(lg.today[sk]))
+	gain := int32(roster.TotalXP(*s) - before) // what was banked: a maxed skill clamps
 	lg.today[sk] += gain
 	lg.week[lg.day%7][sk] += gain
 	if s.Level != lv {
@@ -462,16 +448,14 @@ func (g *Game) learnLogOf(id entity.EntityID) *learnLog {
 	return lg
 }
 
-// saturated is which skills have hit today's learning cap. learn stops a
-// passionate pawn a point short when a whole point more would pass the cap,
-// so that counts as well.
+// saturated is which skills have reached today's soft cap (skill.SoftCapDay).
 func (lg *learnLog) saturated(day int32) [skill.NumSkills]bool {
 	var out [skill.NumSkills]bool
 	if lg.day != day {
 		return out // a new day, not rolled over yet
 	}
 	for sk := range out {
-		out[sk] = lg.today[sk] >= learnCapDay-1
+		out[sk] = lg.today[sk] >= skill.SoftCapDay
 	}
 	return out
 }
@@ -567,12 +551,14 @@ const ReasonSkill = "not skilled enough"
 // meleeOf is id's melee numbers for the wiki's hit and dodge curves
 // (CBT-2): its Melee level (a creature has none), Sight, Manipulation and
 // Moving, the MeleeAcc stat as a points offset after the curve (original
-// tuning), downed. The game has no Brawler or Nimble trait yet.
+// tuning), downed, Brawler from the Scrapper trait. The game has no Nimble trait yet.
 func (g *Game) meleeOf(id entity.EntityID) attack.Melee {
 	k := keyOf(g.bodies[id]) // body.go: Moving, Manipulation, Sight (healthy without a body)
 	m := attack.Melee{Moving: int(k[0]), Manip: int(k[1]), Sight: int(k[2])}
 	if v, ok := g.vital.Get(id); ok {
 		m.Skill, m.Skilled, m.Offset, m.Down = int(g.skillOf(id, skill.Melee).Level), true, 10*int(g.statOf(id, stat.MeleeAcc)), v.Status != health.Alive
+		bio, _ := g.personBio(id)
+		m.Brawler = slices.Contains(bio.Traits, trait.Scrapper)
 	}
 	return m
 }

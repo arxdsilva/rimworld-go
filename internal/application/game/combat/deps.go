@@ -59,6 +59,17 @@ type Roles struct {
 	// Foam (AX-5, foam.go): the fires a foam burst puts out and the foam
 	// it leaves (nil: foam smothers nothing, tests).
 	Foam Foamer
+	// Rules (SHT-007) are the game's friendly-fire rules (nil: 100 %,
+	// no colonists, tests).
+	Rules Rules
+}
+
+// Rules are the difficulty's friendly-fire share and who is a colonist
+// (SHT-007): a colonist's shot crossing a colonist keeps FriendlyFirePct
+// percent of its interception chance. Consumer-owned; values only.
+type Rules interface {
+	FriendlyFirePct() int
+	Colonist(id entity.EntityID) bool
 }
 
 // Foamer is the map's fires as fire foam sees them (AX-5): which cells

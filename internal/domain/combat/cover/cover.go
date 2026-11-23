@@ -20,11 +20,15 @@ const (
 	Cactus
 	Fence
 	Bush
-	Stool // a stool or a plant pot
+	Stool // a stool or a plant pot (a pot gives the stool's cover)
 	Table // a table or a bed
 	Chair // a dining chair
 	Turret
 	HeavyTurret
+	// SHT-005 (append only): a fence gate, a standing lamp, a torch lamp.
+	Gate
+	Lamp
+	Torch
 	numKinds
 )
 
@@ -51,6 +55,10 @@ var block = [numKinds]int{
 	// effectiveness)
 	Turret:      400,
 	HeavyTurret: 500,
+	// wiki: Cover (fence gate, standing lamp, torch lamp)
+	Gate:  750,
+	Lamp:  200,
+	Torch: 150,
 }
 
 // Permille returns what share of shots k absorbs (0 for unknown kinds).

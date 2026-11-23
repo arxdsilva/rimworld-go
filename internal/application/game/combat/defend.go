@@ -158,7 +158,7 @@ func (gd *Guard) Defend(id entity.EntityID, j job.Record) bool {
 			return true // CBT-4: a step into cover first
 		}
 		h.Interrupt(id, job.Interrupted)
-		h.StartJob(id, job.Record{Kind: job.Attack, Target: threat, TX: tx, TY: ty, WorkLeft: AimTicks(d)})
+		h.StartJob(id, job.Record{Kind: job.Attack, Target: threat, TX: tx, TY: ty, WorkLeft: AimTicks(h, id, d)})
 		return true
 	}
 	if !calm {

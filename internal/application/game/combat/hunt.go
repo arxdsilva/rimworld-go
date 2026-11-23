@@ -70,7 +70,7 @@ func (hn *Hunting) Assign(id entity.EntityID) bool {
 		if !Hunter(h.Weapon(id)) { // DEF-2: never hunt with explosives
 			return hn.Equip(id, huntArm)
 		}
-		if h.StartJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(weapon.DefOf(h.Weapon(id)))}) {
+		if h.StartJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(h, id, weapon.DefOf(h.Weapon(id)))}) {
 			return true
 		}
 		tried = append(tried, best)

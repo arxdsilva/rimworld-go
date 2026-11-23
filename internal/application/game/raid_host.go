@@ -125,7 +125,9 @@ func (h raidFight) Weapon(id entity.EntityID) weapon.Def { return weaponDefOf(h.
 func (h raidFight) CanHit(x, y int, d weapon.Def, tx, ty int) bool {
 	return h.g.combat.Sight.CanHit(x, y, d, tx, ty)
 }
-func (h raidFight) AimTicks(d weapon.Def) int               { return combat.AimTicks(d) }
+func (h raidFight) AimTicks(id entity.EntityID, d weapon.Def) int {
+	return combat.AimTicks(combatSkills(h), id, d)
+}
 func (h raidFight) Breach(id entity.EntityID, j job.Record) { h.g.combat.Breach.Do(id, j) }
 func (h raidFight) StartBreach(id entity.EntityID, tx, ty int) bool {
 	return h.g.combat.Breach.Start(id, tx, ty)

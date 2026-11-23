@@ -332,6 +332,13 @@ func TestMigrate(t *testing.T) {
 	if MigrateDifficulty(old) != difficulty.Of(difficulty.Settled) {
 		t.Fatal("old Settled reads Settled")
 	}
+	v8 := old // a pre-v9 save holds no quest or friendly-fire settings
+	v8.QuestRewardPct, v8.QuestThreats, v8.FriendlyFirePct = 0, false, 0
+	want := difficulty.Of(difficulty.Settled)
+	want.QuestRewardPct, want.QuestThreats, want.FriendlyFirePct = 0, false, 0
+	if MigrateDifficulty(v8) != want {
+		t.Fatal("a pre-v9 Settled save reads Settled; later fields wait for their own step")
+	}
 	custom := old
 	custom.ThreatScale++
 	if MigrateDifficulty(custom) != custom {

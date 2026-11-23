@@ -94,6 +94,7 @@ func (w storyPage) customDifficultyBody(body gfx.Rect) {
 	left.Stepper(w.sh, "pd", w.sh.T("Peaceful start (days)"), &s.PeacefulDays, 0, 30, w.sh.T("Peaceful start\nDays at the start with no big threat."))
 	left.Check(w.sh, "ph", w.sh.T("Predators hunt colonists"), &s.PredatorsHuntColonists, "", w.sh.T("Predators\nWild predators may attack colonists, not only prey."))
 	w.diffSlider(left, "ar", w.sh.T("Hostile wildlife revenge"), &s.AnimalRevenge, "ar", PctText, "", w.sh.T("Revenge\nHow fiercely wild animals fight back when hurt."))
+	w.diffSlider(left, "ff", w.sh.T("Friendly fire"), &s.FriendlyFirePct, "ff", PctText, "", w.sh.T("Friendly fire\nHow often a colonist's shot can strike another colonist in its path, as a share of the normal chance."))
 	left.Check(w.sh, "qt", w.sh.T("Quest threats"), &s.QuestThreats, "", w.sh.T("Quest threats\nQuests may bring raids and other dangers. Off offers only quests without fighting."))
 	left.Gap(8)
 

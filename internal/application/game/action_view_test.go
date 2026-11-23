@@ -18,6 +18,8 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/pawngen"
+	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -267,7 +269,7 @@ func attackSetup(t *testing.T, w item.Kind, dist int) (g *Game, att, tgt entity.
 	g.Arm(att, w)
 	g.jobs.Set(tgt, job.Record{Kind: job.Sleep, State: job.Do, WorkLeft: 1 << 20, TX: 5 + dist, TY: 5})
 	d := weapon.DefOf(weapon.ForItem(w))
-	g.startJob(att, job.Record{Kind: job.Attack, Target: tgt, TX: 5 + dist, TY: 5, WorkLeft: combat.AimTicks(d)})
+	g.startJob(att, job.Record{Kind: job.Attack, Target: tgt, TX: 5 + dist, TY: 5, WorkLeft: combat.AimTicks(combatSkills{g}, att, d)})
 	return
 }
 
@@ -633,4 +635,32 @@ func TestRaidKitCanRollKnifeSpear(t *testing.T) {
 
 func commandAddBill(x, y int, r recipe.ID) command.Command {
 	return command.Command{Kind: command.AddBill, X: x, Y: y, Recipe: uint8(r), Mode: uint8(recipe.DoCount), Count: 1}
+}
+
+// TestActionViewFirstAim (SHT-102): a quick-draw shooter's first aim is
+// half the rifle's warmup, and the action bar counts down that same total
+// (no jump when the shot goes off).
+func TestActionViewFirstAim(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 4, Width: 30, Height: 12})
+	att := spawnGen(t, g, 5, 5, genPawn("Quick", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.QuickDraw} }))
+	tgt := sleeper(g, 15, 5, "Bo")
+	g.Arm(att, item.Rifle)
+	d := weapon.DefOf(weapon.Rifle)
+	first := combat.AimTicks(combatSkills{g}, att, d)
+	if first != d.Warmup/2 || first == d.Warmup {
+		t.Fatalf("quick draw first aim %d, want %d", first, d.Warmup/2)
+	}
+	g.startJob(att, job.Record{Kind: job.Attack, Target: tgt, TX: 15, TY: 5, WorkLeft: first})
+	for i := 0; i < first/2; i++ {
+		g.Step(1)
+	}
+	j, _ := g.jobs.Get(att)
+	if j.Kind != job.Attack || j.WorkLeft <= 0 || j.WorkLeft >= first {
+		t.Fatalf("mid-aim job %+v", j)
+	}
+	want := 1 - float64(j.WorkLeft)/float64(first)
+	if pv := pawnView(g, att); math.Abs(pv.AttackCycle-want) > 1e-9 {
+		t.Fatalf("action bar %v, want %v (WorkLeft %d of %d)", pv.AttackCycle, want, j.WorkLeft, first)
+	}
 }

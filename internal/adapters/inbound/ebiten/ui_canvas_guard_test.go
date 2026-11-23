@@ -94,6 +94,7 @@ var canvasExempt = map[string]string{
 	"render/creature/anim.go:DrawParticles":            "world: particles",
 	"render/creature/anim.go:DrawSpritePose":           "world: posed sprite blit",
 	"render/creature/anim.go:DrawWorkGlow":             "world: work glow on tiles",
+	"render/creature/aim_ring.go:DrawAimRings":         "world: warmup ring on the shooter (SHT-204)",
 	"render/creature/animal.go:DrawAnimalFigure":       "world: animal figures",
 	"render/creature/pawn.go:DrawSnoreFor":             "world: snore marks over sleepers",
 	"render/creature/burial.go:DrawCorpseItem":         "world: corpses, graves, pyres",

@@ -279,6 +279,7 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 	a.diffStepper(left, "pd", a.shell.T("Peaceful start (days)"), &s.PeacefulDays, 0, 30, a.shell.T("Peaceful start\nDays at the start with no big threat."))
 	a.diffCheck(left, "ph", a.shell.T("Predators hunt colonists"), &s.PredatorsHuntColonists, "", a.shell.T("Predators\nWild predators may attack colonists, not only prey."))
 	a.diffSlider(left, "ar", a.shell.T("Hostile wildlife revenge"), &s.AnimalRevenge, "ar", wizardpkg.PctText, "", a.shell.T("Revenge\nHow fiercely wild animals fight back when hurt."))
+	a.diffSlider(left, "ff", a.shell.T("Friendly fire"), &s.FriendlyFirePct, "ff", wizardpkg.PctText, "", a.shell.T("Friendly fire\nHow often a colonist's shot can strike another colonist in its path, as a share of the normal chance."))
 	a.diffCheck(left, "qt", a.shell.T("Quest threats"), &s.QuestThreats, "", a.shell.T("Quest threats\nQuests may bring raids and other dangers. Off offers only quests without fighting."))
 	left.Gap(8)
 

@@ -226,7 +226,7 @@ func (h mindAggro) Assault(id, target entity.EntityID) bool {
 		if j.Kind == job.Attack && j.Target == target && j.Active() {
 			return true
 		}
-		return g.startJob(id, job.Record{Kind: job.Attack, Target: target, TX: tx, TY: ty, WorkLeft: combat.AimTicks(weaponDefOf(g, id))})
+		return g.startJob(id, job.Record{Kind: job.Attack, Target: target, TX: tx, TY: ty, WorkLeft: combat.AimTicks(combatSkills{g}, id, weaponDefOf(g, id))})
 	}
 	var tp Position
 	if tp, ok = g.positions.Get(target); !ok || !g.onMap(target) {
@@ -257,7 +257,7 @@ func (h mindBrawls) Job(id entity.EntityID) job.Record { j, _ := h.g.jobs.Get(id
 func (h mindBrawls) Brawl(id, foe entity.EntityID) {
 	fp, _ := h.g.positions.Get(foe)
 	h.g.jobs.Set(id, job.Record{Kind: job.Brawl, State: job.Goto, Target: foe, TX: fp.X, TY: fp.Y,
-		WorkLeft: combat.AimTicks(weapon.DefOf(weapon.Fists))})
+		WorkLeft: combat.AimTicks(combatSkills(h), id, weapon.DefOf(weapon.Fists))})
 }
 func (h mindBrawls) SetJob(id entity.EntityID, j job.Record) { h.g.jobs.Set(id, j) }
 func (h mindBrawls) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {

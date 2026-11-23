@@ -60,18 +60,31 @@ func drawCombatOverlay(a *App, dst *ebiten.Image) {
 	} else if tgt, ok := targetedHostile(w.Traces, r.hostiles(), sel.ID); ok {
 		set.DrawTargetMark(v, dst, tgt.X, tgt.Y)
 	}
-	if !sel.Drafted {
-		return
+	if sel.Drafted {
+		set.DrawWeaponRange(v, dst, sel.X, sel.Y, weaponReach(sel.Weapon))
 	}
-	set.DrawWeaponRange(v, dst, sel.X, sel.Y, weaponReach(sel.Weapon))
 	if hovered {
-		h := hover
-		if rep, ok := r.game.HitChance(sel.ID, h.ID); ok {
-			info := shotInfo(set.Factors[:0], rep, sel.X, sel.Y, h.X, h.Y)
-			set.Factors = info.Factors
+		if info, ok := shotCard(r.game, set, sel, hover); ok {
 			set.DrawShotFeedback(v, dst, &info, mx, my)
 		}
 	}
+}
+
+// hitChancer is the read model of a shot's odds.
+type hitChancer interface {
+	HitChance(from, to entity.EntityID) (attack.Report, bool)
+}
+
+// shotCard is the hit-chance card of the selected colonist (drafted or not,
+// SHT-202) aiming at the hovered hostile; its lines refill set.Factors.
+func shotCard(g hitChancer, set *overlay.Combat, sel, hover game.PawnView) (overlay.ShotInfo, bool) {
+	rep, ok := g.HitChance(sel.ID, hover.ID)
+	if !ok {
+		return overlay.ShotInfo{}, false
+	}
+	info := overlay.ShotInfoOf(set.Factors[:0], rep, sel.X, sel.Y, hover.X, hover.Y)
+	set.Factors = info.Factors
+	return info, true
 }
 
 // hostileAt is the hostile standing on (x, y).
@@ -185,30 +198,4 @@ func coverCells(out []overlay.CoverCell, bs []game.BuildingView, x, y int) []ove
 		}
 	}
 	return out
-}
-
-// shotInfo is the hit-chance card of a report: the chance with each
-// factor's effect, or why the shot is blocked.
-func shotInfo(factors []overlay.ShotFactor, rep attack.Report, fx, fy, tx, ty int) overlay.ShotInfo {
-	s := overlay.ShotInfo{FromX: fx, FromY: fy, ToX: tx, ToY: ty, Chance: int(rep.Total()) / 10, Factors: factors}
-	switch {
-	case !rep.InRange:
-		s.Blocked, s.Reason = true, "out of range"
-	case !rep.InSight:
-		s.Blocked, s.Reason = true, "no line of sight"
-	}
-	if rep.Melee {
-		return s
-	}
-	add := func(label string, permille int) {
-		if p := permille / 10; p != 0 {
-			s.Factors = append(s.Factors, overlay.ShotFactor{Label: label, Pct: p})
-		}
-	}
-	add("shooter", int(rep.Shooter)-1000)
-	add("target size", int(rep.Size)-1000)
-	add("light", int(rep.Light)-1000)
-	add("weather", int(rep.Weather)-1000)
-	add("cover", -int(rep.Cover))
-	return s
 }

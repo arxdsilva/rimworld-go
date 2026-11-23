@@ -4,6 +4,7 @@
 package trait
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -14,8 +15,8 @@ import (
 
 func TestCatalogue(t *testing.T) {
 	all := Core().All()
-	if len(all) != 41 { // FOOD-4: Cannibal
-		t.Fatalf("%d traits, want 41", len(all))
+	if len(all) != 42 { // SHT-104: Scrapper
+		t.Fatalf("%d traits, want 42", len(all))
 	}
 	keys, labels := map[string]bool{}, map[string]bool{}
 	for i, d := range all {
@@ -127,7 +128,7 @@ func TestGenerated(t *testing.T) {
 	if len(legacy) != 19 || legacy[0] != Tireless || legacy[18] != Sturdy {
 		t.Fatalf("legacy = %v", legacy)
 	}
-	if len(all) != int(NumTraits)-1 || all[len(all)-1] != Cannibal {
+	if len(all) != int(NumTraits)-1 || all[len(all)-1] != Scrapper {
 		t.Fatalf("all = %v", all)
 	}
 	for i, id := range all {
@@ -198,5 +199,26 @@ func TestBook(t *testing.T) {
 	}
 	if !b.Conflicts(id, id) || b.Conflicts(id, Sunny) {
 		t.Fatal("conflicts")
+	}
+}
+
+// TestScrapperTrait (SHT-104): the brawler numbers, the Bio-tab strings and
+// the generation and conflict rules.
+func TestScrapperTrait(t *testing.T) {
+	d := Core().DefOf(Scrapper)
+	if d.Key != "scrapper" || d.Label != "Scrapper" || d.Note == "" || d.Desc == "" || d.Needs != backstory.Violence {
+		t.Fatalf("def = %+v", d)
+	}
+	if d.SkillBonus[skill.Melee] != 4 || d.SkillBonus[skill.Shooting] != -10 {
+		t.Fatalf("skill bonus = %v", d.SkillBonus)
+	}
+	if id, ok := Core().Parse("scrapper"); !ok || id != Scrapper {
+		t.Fatalf("Parse = %d %v", id, ok)
+	}
+	if !slices.Contains(Core().Generated(false), Scrapper) || slices.Contains(Core().Generated(true), Scrapper) {
+		t.Fatal("Scrapper is generated outside Legacy rules only")
+	}
+	if !Core().Conflicts(Scrapper, DeliberateAim) || !Core().Conflicts(Scrapper, QuickDraw) {
+		t.Fatal("Scrapper conflicts with the trigger group")
 	}
 }

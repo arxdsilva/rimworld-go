@@ -68,6 +68,9 @@ const (
 	// Cannibal (FOOD-4, append only): delights in human flesh (game/diet
 	// flips the human meat thoughts) and is untroubled by butchering.
 	Cannibal
+	// Scrapper (SHT-104, append only): a brawler who prefers a fistfight to
+	// a firefight; original name, wiki numbers.
+	Scrapper
 	NumTraits
 )
 
@@ -232,6 +235,12 @@ var defs = [NumTraits]Def{
 	// thoughts).
 	Cannibal: {Key: "cannibal", Label: "Cannibal", Rarity: 2, Note: "Enjoys human flesh; untroubled by butchering people",
 		Desc: "{name} sees no reason to waste good meat just because it once had a name."},
+	// SHT-104: wiki numbers (Brawler: melee +4, shooting -10); Scrapper is
+	// the original name. GroupTrigger is original tuning: a brawler is
+	// neither careful nor trigger-happy (CLEAN_ROOM).
+	Scrapper: {Key: "scrapper", Label: "Scrapper", Group: GroupTrigger, Needs: backstory.Violence, Note: "Melee hit +4",
+		Desc:       "{name} would rather close the distance and settle it with {their} fists than trade shots across a field.",
+		SkillBonus: map[skill.ID]int8{skill.Melee: 4, skill.Shooting: -10}},
 }
 
 func init() {

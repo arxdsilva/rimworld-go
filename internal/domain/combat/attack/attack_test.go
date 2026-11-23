@@ -30,8 +30,9 @@ func TestShooterPerTile(t *testing.T) {
 	t.Parallel()
 	for skill, want := range map[int]int{
 		-30: 700_000, -20: 700_000, -10: 800_000, 0: 890_000, 5: 945_000, 10: 970_000,
-		15: 981_667, 20: 990_000, 30: 996_500, 40: 998_000, 60: 999_000, 99: 999_000,
-		2: 890_000 + 55_000*2/5,
+		15: 981_666, 20: 990_000, 30: 996_500, 40: 998_000, 60: 999_000, 99: 999_000,
+		// SHT-004: the full published points; 2 is 93 (was interpolated to 91.2).
+		2: 930_000,
 	} {
 		if got := ShooterPerTile(skill); got != want {
 			t.Errorf("skill %d: %d want %d", skill, got, want)
@@ -102,9 +103,12 @@ func TestShootingScore(t *testing.T) {
 	levels := []int{0, 10, 20}
 	points := []int{-5, 0, 5}
 	want := [3][3]int{
-		{845_000, 890_000, 945_000},
-		{945_000, 970_000, 981_667},
-		{981_667, 990_000, 993_250},
+		// Re-pinned for the full published curve (SHT-004): -5 is 84.0 (was
+		// 84.5), 15 is 981_666 (integer interpolation 14..16) and 25 is
+		// 994_375 (22..26).
+		{840_000, 890_000, 945_000},
+		{945_000, 970_000, 981_666},
+		{981_666, 990_000, 994_375},
 	}
 	for i, l := range levels {
 		for j, p := range points {

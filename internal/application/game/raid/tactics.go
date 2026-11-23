@@ -311,7 +311,7 @@ func (rs *Raiders) escape(id entity.EntityID, j job.Record, x, y int, now uint64
 	}
 	if t, tx, ty, ok := h.NearestColonist(x, y); ok && weapon.Distance(x, y, tx, ty) <= 1 {
 		h.ReleaseOwner(id)
-		h.SetJob(id, job.Record{Kind: job.Attack, Target: t, TX: tx, TY: ty, State: job.Do, WorkLeft: h.AimTicks(h.Weapon(id))})
+		h.SetJob(id, job.Record{Kind: job.Attack, Target: t, TX: tx, TY: ty, State: job.Do, WorkLeft: h.AimTicks(id, h.Weapon(id))})
 		return true
 	}
 	if rs.unreachable(id) {

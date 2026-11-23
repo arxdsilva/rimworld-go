@@ -50,7 +50,7 @@ var _ combat.Host = combatHost{}
 func newCombat(g *Game) *combat.Combat {
 	h := combatHost{combatCreatures{g}, combatRosters{g}, combatGround{g}, combatSkills{g}, combatJobs{g}, combatHarm{g}, combatEvents{g}, combatDice{g}}
 	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g},
-		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}, Belts: combatArms{g}, Debris: combatDebris{g}, Foam: combatFoam{g}})
+		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}, Belts: combatArms{g}, Debris: combatDebris{g}, Foam: combatFoam{g}, Rules: combatRosters{g}})
 }
 
 type combatCreatures struct{ g *Game }
@@ -72,6 +72,11 @@ func (h combatRosters) AnimalIDs() []entity.EntityID    { return h.g.animalIDs }
 func (h combatRosters) RaiderIDs() []entity.EntityID    { return h.g.raiderIDs }
 func (h combatRosters) Drafted(id entity.EntityID) bool { return h.g.drafted(id) }
 func (h combatRosters) Name(id entity.EntityID) string  { return h.g.name(id) }
+func (h combatRosters) FriendlyFirePct() int            { return h.g.diff().FriendlyFirePct } // SHT-007, Rules
+func (h combatRosters) Colonist(id entity.EntityID) bool { // a pawn not in raiders: no visitor or leaving raider
+	_, r := h.g.raiders[id]
+	return h.g.isPawn(id) && !r
+}
 func (h combatRosters) Lying(id entity.EntityID) bool { // vital records are humanlikes'
 	return h.g.vital.Has(id) && h.g.vital.Ref(id).Status == health.Downed
 }

@@ -179,13 +179,18 @@ import (
 // its own CI job.
 // Re-pinned (DEF 3.1, 2026-11-21): Kit.DamageTaken, LogEntry.Kind, blast
 // credit and LastBy moved 48x40/seed42 and 120x120/seed1.
+// Re-pinned (SHT, #75, 2026-11-23): the new Scrapper trait shifts new-game
+// trait draws, presets now hold FriendlyFirePct 100 (a hashed field), the
+// 21-point accuracy curve, manipulation points and downed interceptors/targets
+// move every shot, and the soft daily XP cap and per-level decay table move
+// skills. All six seeds move.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x1707819a25f6bfbe,
-	"48x40/seed7":    0x69290a3b511b9f6f,
-	"48x40/seed42":   0x8a144716f9d0ed01,
-	"120x120/seed1":  0xe9064309a3858bfd,
-	"120x120/seed7":  0x20c22928576d1297,
-	"120x120/seed42": 0xa70fa11a6ea2ce50,
+	"48x40/seed1":    0x4c0442b8090a2e0c,
+	"48x40/seed7":    0x408ae14ed8f82600,
+	"48x40/seed42":   0xbde998be94577c83,
+	"120x120/seed1":  0xd98331cd4d373f4,
+	"120x120/seed7":  0xc6a20957c3d8cdc3,
+	"120x120/seed42": 0xd3415cf2f5606139,
 }
 
 const scaleGoldenTicks = 20000

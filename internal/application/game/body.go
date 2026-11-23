@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -37,7 +38,6 @@ const (
 	// consciousRecover is the consciousness (permille) a pawn needs to be
 	// awake enough to talk to (a warden's visit).
 	consciousRecover = 300
-	sightAccPoints   = 12 // shooting score points per 100 % of sight, capped at 200 % (SHT-003)
 )
 
 // ensureBody is humanlike id's body, made on first use, with v's injury
@@ -87,7 +87,7 @@ func keyOf(b *body.Body) bodyKey {
 }
 
 // bodyMods is the body's step of id's stat sheet: Moving scales MoveSpeed,
-// Manipulation WorkSpeed, and Sight costs shooting accuracy (nil when
+// Manipulation WorkSpeed and shooting accuracy, and Sight costs shooting accuracy (nil when
 // healthy).
 func bodyMods(k bodyKey) []stat.Mod {
 	if k == healthyKey {
@@ -99,9 +99,12 @@ func bodyMods(k bodyKey) []stat.Mod {
 	}
 	if k[1] != 1000 {
 		ms = append(ms, stat.Mod{Stat: stat.WorkSpeed, Mul: max(k[1], 1)})
+		if p := attack.ManipPoints(int(k[1])); p != 0 {
+			ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: int32(p)})
+		}
 	}
 	if k[2] != 1000 {
-		ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: (min(k[2], 2000) - 1000) * sightAccPoints / 1000})
+		ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: int32(attack.SightPoints(int(k[2])))})
 	}
 	return ms
 }

@@ -20,9 +20,15 @@ func OfBuilding(k construction.Kind) Kind {
 		return Wall
 	case construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap: // A2: every door
 		return Door
-	case construction.Fence, construction.FenceGate:
+	case construction.Fence:
 		return Fence
-	case construction.Stool:
+	case construction.FenceGate: // SHT-005: a gate is as solid as a door, not a fence
+		return Gate
+	case construction.Lamp:
+		return Lamp
+	case construction.TorchLamp:
+		return Torch
+	case construction.Stool, construction.PlantPot:
 		return Stool
 	case construction.Table, construction.Table2x2, construction.Table2x4, construction.Table3x3, // A2: every table
 		construction.Bed, construction.DoubleBed, construction.HospitalBed:

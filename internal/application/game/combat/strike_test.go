@@ -213,7 +213,7 @@ func TestAutoEngagePicksNearestHostile(t *testing.T) {
 	f.raider(5, 11, 10, weapon.Fists)
 	f.raiders[5] = false // downed
 	s.AutoEngage(1)
-	if len(f.started) != 1 || f.started[0].Target != 4 || f.started[0].WorkLeft != AimTicks(weapon.DefOf(weapon.Rifle)) {
+	if len(f.started) != 1 || f.started[0].Target != 4 || f.started[0].WorkLeft != AimTicks(f, 1, weapon.DefOf(weapon.Rifle)) {
 		t.Fatalf("started %+v", f.started)
 	}
 	f.raider(6, 47, 10, weapon.Fists) // 37 tiles: one past the rifle's range

@@ -125,18 +125,18 @@ func TestGrantIgnoresPassion(t *testing.T) {
 }
 
 func TestDecay(t *testing.T) {
-	s := Skill{Level: 10, XP: 5}
+	s := Skill{Level: 9, XP: 5}
 	DecayDay(&s)
-	if s != (Skill{Level: 10, XP: 5}) {
-		t.Fatal("level 10 decayed")
+	if s != (Skill{Level: 9, XP: 5}) {
+		t.Fatal("level 9 decayed")
 	}
 	s = Skill{Level: 12}
 	DecayDay(&s)
-	if s.XP != -1500 || s.Level != 12 {
+	if s.XP != -120 || s.Level != 12 {
 		t.Fatalf("decay at 12: %+v", s)
 	}
 	// Falls only below -Cost(L-1)/2, then restarts at 75% of Cost(L-1).
-	s = Skill{Level: 11, XP: -Cost(10)/2 + 1000}
+	s = Skill{Level: 11, XP: -Cost(10)/2 + 100}
 	DecayDay(&s)
 	if s.Level != 11 {
 		t.Fatalf("dropped inside the band: %+v", s)
@@ -147,9 +147,9 @@ func TestDecay(t *testing.T) {
 	}
 }
 
-// TestSkillXPAndDecayNoFlap: a pawn that alternates a day of learning with
+// TestDecayNoFlap: a pawn that alternates a day of learning with
 // days of decay right at a level boundary must not bounce between levels.
-func TestSkillXPAndDecayNoFlap(t *testing.T) {
+func TestDecayNoFlap(t *testing.T) {
 	cases := []struct {
 		name  string
 		start Skill
@@ -210,6 +210,71 @@ func TestNeutralSet(t *testing.T) {
 		}
 		if SpeedPermil(s.Level) != 1000 {
 			t.Fatal("neutral speed")
+		}
+	}
+}
+
+// TestDecayTable (SHT-302): each level 10..20 loses exactly its table XP in
+// one day (wiki: Skills), and levels 0..9 lose nothing.
+func TestDecayTable(t *testing.T) {
+	want := map[uint8]int32{10: 30, 11: 60, 12: 120, 13: 180, 14: 300, 15: 540,
+		16: 840, 17: 1200, 18: 1800, 19: 2400, 20: 3600}
+	for l := uint8(0); l <= MaxLevel; l++ {
+		s := Skill{Level: l, XP: 7}
+		DecayDay(&s)
+		if s.Level != l || s.XP != 7-want[l] {
+			t.Fatalf("level %d: %+v, want XP %d", l, s, 7-want[l])
+		}
+	}
+}
+
+// TestLearnCappedSoftCap (SHT-302): full gain up to SoftCapDay, SoftCapRate %
+// past it, whatever the call size; the sub-unit remainder rides in Carry.
+func TestLearnCappedSoftCap(t *testing.T) {
+	cases := []struct {
+		name      string
+		pass      Passion
+		xp, today int
+		want, tol int
+	}{
+		{"below the cap", Minor, 100, 0, 100, 0},
+		{"straddles the cap", Minor, 100, 3990, 28, 1},
+		{"past the cap", Minor, 500, 4000, 100, 0},
+		{"far past the cap", Minor, 500, 9000, 100, 0},
+		{"burning below", Major, 100, 0, 150, 0},
+		{"burning straddle", Major, 100, 3900, 100 + 20*(150-100)/100, 2},
+		{"none passion past", NoPassion, 500, 4000, 35, 1},
+		{"exactly fills", Minor, 100, 3900, 100, 0},
+	}
+	for _, c := range cases {
+		s := Skill{Passion: c.pass}
+		g := LearnCapped(&s, c.xp, c.today)
+		if d := g - c.want; d < -c.tol || d > c.tol {
+			t.Errorf("%s: gain %d, want %d +-%d", c.name, g, c.want, c.tol)
+		}
+	}
+	for _, c := range [][2]int{{0, 0}, {-5, 0}, {50, 99999}} {
+		s := Skill{Passion: Minor}
+		if g := LearnCapped(&s, c[0], c[1]); g < 0 {
+			t.Errorf("LearnCapped%v = %d", c, g)
+		}
+	}
+}
+
+// TestLearnCappedSmallGrants: 1 xp or 4 xp per call past the cap still gains
+// 20 % of the input (no hard stop), for every passion.
+func TestLearnCappedSmallGrants(t *testing.T) {
+	for _, pass := range []Passion{NoPassion, Minor, Major} {
+		for _, per := range []int{1, 4} {
+			s := Skill{Passion: pass}
+			gained := 0
+			for range 1000 {
+				gained += LearnCapped(&s, per, SoftCapDay+gained)
+			}
+			want := 1000 * per * passionPct[pass] * SoftCapRate / 10000
+			if d := gained - want; d < -1 || d > 1 {
+				t.Errorf("passion %d, %d xp/call: gain %d, want %d", pass, per, gained, want)
+			}
 		}
 	}
 }

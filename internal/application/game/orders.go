@@ -291,13 +291,13 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if r := g.busyBy(id, aid); r != "" {
 			return job.Record{}, r
 		}
-		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}, ""
+		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(combatSkills{g}, id, weaponDefOf(g, id))}, ""
 	case command.OrderAttack:
 		aid := g.combat.Strikes.OrderedAt(g.animalAt(x, y), g.raiderAt(x, y), x, y) // CBT-2: a downed raider too; MAP-13, MAP-17: a settlement's turret or door
 		if aid == 0 {
 			return job.Record{}, ReasonGone
 		}
-		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}, ""
+		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(combatSkills{g}, id, weaponDefOf(g, id))}, ""
 	case command.OrderExtinguish:
 		return g.extinguishJob(id, x, y) // firefight.go
 	case command.OrderFlick:

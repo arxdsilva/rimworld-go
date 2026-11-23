@@ -208,7 +208,7 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 	r.Mode = Assaulting
 	h.SetRaider(id, r)
 	d := h.Weapon(id)
-	rec := job.Record{Kind: job.Attack, Target: target, TX: tx, TY: ty, WorkLeft: h.AimTicks(d)}
+	rec := job.Record{Kind: job.Attack, Target: target, TX: tx, TY: ty, WorkLeft: h.AimTicks(id, d)}
 	if rs.cover(id, &r, hurt, target, x, y, tx, ty, now) {
 		return // tactics.go: into cover before it shoots
 	}
@@ -348,7 +348,7 @@ func (rs *Raiders) siege(id entity.EntityID, r Raider, hurt int, now uint64) boo
 	if t, tx, ty, ok := h.NearestColonist(x, y); ok && h.CanHit(x, y, h.Weapon(id), tx, ty) {
 		h.ReleaseOwner(id)
 		h.SetJob(id, job.Record{Kind: job.Attack, Target: t, TX: tx, TY: ty, State: job.Do,
-			WorkLeft: h.AimTicks(h.Weapon(id))})
+			WorkLeft: h.AimTicks(id, h.Weapon(id))})
 	}
 	return true
 }

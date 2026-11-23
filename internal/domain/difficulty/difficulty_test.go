@@ -368,3 +368,57 @@ func TestColonistPointsByWealth(t *testing.T) {
 		t.Fatalf("wealth ignored: %d and %d, want both %d", a, b, 4*25+80)
 	}
 }
+
+func TestFriendlyFirePresetsAndCodec(t *testing.T) {
+	for _, n := range Presets() {
+		if n.Settings.FriendlyFirePct != 100 {
+			t.Errorf("%s: FriendlyFirePct=%d, want 100", n.Preset, n.Settings.FriendlyFirePct)
+		}
+	}
+	for _, v := range []int{0, 37, 100} {
+		s := Of(Seasoned)
+		s.FriendlyFirePct = v
+		got, err := Decode(Encode(s))
+		if err != nil || got.FriendlyFirePct != v {
+			t.Errorf("round trip %d: got %d, err %v", v, got.FriendlyFirePct, err)
+		}
+	}
+	old := strings.Join(strings.Split(Encode(Of(Seasoned)), ",ff=")[:1], "")
+	if strings.Contains(old, "ff=") {
+		t.Fatalf("ff must be the last key: %q", old)
+	}
+	got, err := Decode(old)
+	if err != nil || got.FriendlyFirePct != 100 {
+		t.Errorf("pre-change string: got %d, err %v", got.FriendlyFirePct, err)
+	}
+	for _, bad := range []string{"ff=101", "ff=-1"} {
+		if _, err := Decode(bad); err == nil {
+			t.Errorf("Decode(%q) want error", bad)
+		}
+	}
+}
+
+func TestClampFriendlyFire(t *testing.T) {
+	s := Of(Seasoned)
+	s.FriendlyFirePct = 250
+	if got := Clamp(s).FriendlyFirePct; got != 100 {
+		t.Errorf("250 -> %d", got)
+	}
+	s.FriendlyFirePct = -5
+	if got := Clamp(s).FriendlyFirePct; got != 0 {
+		t.Errorf("-5 -> %d", got)
+	}
+}
+
+func TestMatchWithFriendlyFire(t *testing.T) {
+	for _, n := range Presets() {
+		if got := Match(Of(n.Preset)); got != n.Preset {
+			t.Errorf("Match(Of(%v)) = %v", n.Preset, got)
+		}
+	}
+	s := Of(Seasoned)
+	s.FriendlyFirePct = 50
+	if got := Match(s); got != Custom {
+		t.Errorf("FF 50 -> %v, want Custom", got)
+	}
+}

@@ -330,6 +330,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	p.Lb.drawBuildingDamage(screen, w, tile)
 	clW := p.CreatureCull()
 	p.Creatures.DrawWorkProgress(v, &clW, screen, v.Pawns, tile) // bars over the work spots
+	creature.DrawAimRings(v, &clW, screen, v.Pawns, tile)        // SHT-204: the aim and cooldown sweep
 	chB := p.OverlayChunks()
 	p.Overlays.Wiring.DrawNoPowerBadges(v, &chB, screen, &w, tile)
 	p.Lb.DrawChatBubbles(screen, tile)
