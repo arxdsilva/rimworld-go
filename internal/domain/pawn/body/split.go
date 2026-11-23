@@ -69,26 +69,6 @@ func bodyDead(b *Body) bool {
 	return lossDamage(b) >= killAt(b)
 }
 
-// lossDamage is Damage without its vital-loss floor: the wound damage plus
-// the hit points of the lost parts not counted with a lost parent.
-func lossDamage(b *Body) int {
-	n := 0
-	for _, w := range b.Wounds {
-		n += w.Dmg
-	}
-	t := b.table()
-	for p := Part(0); p < Part(len(t)); p++ {
-		if !b.isMissing(p) || b.replaced(p) {
-			continue
-		}
-		if q := t[p].Parent; q != p && b.isMissing(q) {
-			continue
-		}
-		n += b.maxHP(p)
-	}
-	return n
-}
-
 func (sh *shares) add(p Part, dmg int) {
 	if sh.n < len(sh.s) {
 		sh.s[sh.n] = share{p, dmg}

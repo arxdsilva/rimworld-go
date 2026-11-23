@@ -220,6 +220,17 @@ func (b *Body) replaced(p Part) bool {
 // health.Record.Injury, 0..100, downed at 70). Losing a vital part reports
 // at least KillDamage.
 func (b *Body) Damage() int {
+	n := lossDamage(b)
+	if b.VitalLost() && n < KillDamage {
+		return KillDamage
+	}
+	return n
+}
+
+// lossDamage is Damage without its vital-loss floor: the wound damage plus
+// the hit points of the lost parts not counted with a lost parent. It is a
+// free function so Body gains no method (internal/arch/solid_budget.txt).
+func lossDamage(b *Body) int {
 	n := 0
 	for _, w := range b.Wounds {
 		n += w.Dmg
@@ -233,9 +244,6 @@ func (b *Body) Damage() int {
 			continue // counted with its parent
 		}
 		n += b.maxHP(p)
-	}
-	if b.VitalLost() && n < KillDamage {
-		return KillDamage
 	}
 	return n
 }
