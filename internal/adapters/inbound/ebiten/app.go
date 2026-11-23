@@ -639,8 +639,8 @@ func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 		if b.Tip != "" { // a small card by the cursor, clear of the tab strip
 			tw, _ := gfx.Measure(b.Tip, gfx.Body)
 			w := int(tw) + 16
-			ch := int(gfx.LineH(gfx.Body)) + 6
-			x, y := min(mx+14, sw-w-4), my+20
+			ch := int(gfx.LineH(gfx.Body))*len(gfx.WrapPx(b.Tip, gfx.Body, 1e9)) + 6 // a tip may hold several lines
+			x, y := max(min(mx+14, sw-w-4), 4), my+20
 			if y+ch+2 > sh {
 				y = my - ch - 8
 			}

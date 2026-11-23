@@ -24,6 +24,7 @@ SaveInfo.Name string
 SaveInfo.Season string
 SaveInfo.Storyteller string
 SaveInfo.Version int
+SaveInfo.WorldSeed string
 saveState rimworld-go/internal/application/game.saveState
 saveState.AX4 rimworld-go/internal/application/game/industry.Save
 saveState.AX4.Finds int

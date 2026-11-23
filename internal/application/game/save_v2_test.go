@@ -256,3 +256,68 @@ func TestNG1V2Fixture(t *testing.T) {
 		t.Fatal("the fixture does not continue identically after a re-save")
 	}
 }
+
+// #120: the header records the planet seed phrase, so the Load list can show it.
+func TestSaveHeaderWorldSeedRoundTrips(t *testing.T) {
+	t.Parallel()
+	for _, phrase := range []string{"amber-hollow", "Amber hollow_1"} {
+		g := buildSetup(t, setupFor(t, "broken_hull", func(s *Setup) {
+			s.MapSize = 60
+			s.World.SeedText = phrase
+		}))
+		var buf bytes.Buffer
+		if err := g.Save(&buf, "seeded"); err != nil {
+			t.Fatal(err)
+		}
+		raw := buf.Bytes()
+		head, err := ReadSaveInfo(bytes.NewReader(raw))
+		if err != nil || head.WorldSeed != phrase {
+			t.Fatalf("header seed %q (%v), want %q", head.WorldSeed, err, phrase)
+		}
+		_, loaded, err := Load(bytes.NewReader(raw))
+		if err != nil || loaded.WorldSeed != phrase {
+			t.Fatalf("Load header seed %q (%v), want %q", loaded.WorldSeed, err, phrase)
+		}
+	}
+}
+
+func TestSaveHeaderWorldSeedLegacyEmpty(t *testing.T) {
+	t.Parallel()
+	g := NewColony(Config{Seed: 4, Width: 40, Height: 30})
+	var buf bytes.Buffer
+	if err := g.Save(&buf, "legacy"); err != nil {
+		t.Fatal(err)
+	}
+	head, err := ReadSaveInfo(&buf)
+	if err != nil || head.WorldSeed != "" {
+		t.Fatalf("legacy header seed %q (%v), want empty", head.WorldSeed, err)
+	}
+}
+
+// An older header has no WorldSeed: it reads "" and the save still loads; a
+// re-save writes the setup's phrase.
+func TestSaveHeaderWorldSeedOldHeaders(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{"testdata/premotion_v1.sav", saveV12Fixture, ng1V2Fixture} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		head, err := ReadSaveInfo(bytes.NewReader(data))
+		if err != nil || head.WorldSeed != "" {
+			t.Fatalf("%s: header seed %q (%v), want empty", path, head.WorldSeed, err)
+		}
+		g, info, err := Load(bytes.NewReader(data))
+		if err != nil || info.WorldSeed != "" {
+			t.Fatalf("%s: load: %v (seed %q)", path, err, info.WorldSeed)
+		}
+		if path != ng1V2Fixture {
+			continue
+		}
+		g.ng.setup.World.SeedText = "amber-hollow" // the fixture's setup has none
+		_, again := saveLoadInfo(t, g)
+		if again.WorldSeed != "amber-hollow" {
+			t.Fatalf("re-saved header seed %q, want the setup's phrase", again.WorldSeed)
+		}
+	}
+}

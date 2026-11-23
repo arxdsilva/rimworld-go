@@ -79,7 +79,7 @@ func TestSaveHeaderRoundTripsThroughTheHooks(t *testing.T) {
 		case "New-Hope-2":
 			if s.Err != "" || s.Colony != "col-1" || s.ColonyName != "New Hope" || s.Base != "New Hope" || s.Autosave ||
 				s.Season != "Aprimay" || s.Build != "v1.2.3" || s.Version != appgame.SaveVersion || s.MapSize != 40 ||
-				s.Biome == "" || s.Colonists != 3 || s.Title != "New Hope 2" || s.Compat != int(savefmt.CompatOK) || s.Notice != "" {
+				s.Biome == "" || s.WorldSeed != "" || s.Colonists != 3 || s.Title != "New Hope 2" || s.Compat != int(savefmt.CompatOK) || s.Notice != "" {
 				t.Fatalf("new slot %+v", s)
 			}
 			_, got, err := h.Load(s.Path)
@@ -124,6 +124,16 @@ func TestSlotOfSaysWhyASaveCannotLoad(t *testing.T) {
 	}
 	if s := slotOf(filesave.Slot{Name: "Later", Info: newer, Err: appgame.ErrSaveVersion}, rt); s.Title != "Later" || s.Colony != "c" || s.Version != newer.Version {
 		t.Fatalf("a newer save keeps its header: %+v", s)
+	}
+}
+
+// #120: slotOf carries the header's planet seed phrase to the row.
+func TestSlotOfCopiesTheWorldSeed(t *testing.T) {
+	t.Parallel()
+	rt := saveRuntime("v2", savefmt.Content{})
+	got := slotOf(filesave.Slot{Info: savefmt.Info{Version: appgame.SaveVersion, WorldSeed: "amber-hollow"}}, rt)
+	if got.WorldSeed != "amber-hollow" {
+		t.Fatalf("WorldSeed %q, want amber-hollow", got.WorldSeed)
 	}
 }
 

@@ -368,12 +368,13 @@ type SaveSlot struct {
 	Autosave   bool   // written by the game, not the player
 	Day        int    // in-game days since landing
 	Season     string
-	// Storyteller, Difficulty, Biome and MapSize describe the colony's
-	// start (the List mapping in internal/compose/game).
+	// Storyteller, Difficulty, Biome, MapSize and WorldSeed describe the
+	// colony's start (the List mapping in internal/compose/game).
 	Storyteller string
 	Difficulty  string
 	Biome       string
 	MapSize     int
+	WorldSeed   string // the planet seed phrase ("": none, #120)
 	Build       string // the game build that wrote the save
 	Version     int    // the save format version
 	Compat      int    // how this build reads the save (savefmt.Compat; 0 fine)

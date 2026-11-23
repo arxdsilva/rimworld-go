@@ -2446,7 +2446,7 @@ the player-facing system.
 
 -   [x] **Manual save** (SAV-001: pause > Save opens a dialog with a name field, the saves on disk as a list, and Enter or the Save button; SAV-002 asks before replacing; SAV-010 deletes after a question)
 -   [x] **Load game** (pause > Load and main menu Load/Continue)
--   [-] **Save metadata** (SAV-003, SAV-011, SAV-020, SAV-025: the v16 header holds slot name, colony id and name, base slot, autosave flag, date, season, day, colonists, version, build, commitment, storyteller, difficulty, map size, biome and a content hash with the plugin load order (PLG-050); missing: the world seed)
+-   [x] **Save metadata** (SAV-003, SAV-011, SAV-020, SAV-025: the v16 header holds slot name, colony id and name, base slot, autosave flag, date, season, day, colonists, version, build, commitment, storyteller, difficulty, map size, biome and a content hash with the plugin load order (PLG-050); #120: the world seed phrase, shown in the Load row's card)
     -   Colony.
     -   world seed.
     -   tick/date.
