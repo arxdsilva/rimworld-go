@@ -280,3 +280,13 @@ Load rows, sort and filter, Save & Quit, unsaved progress · 2026-11-09 · f4eac
 - Changed: two-line Load rows with tags for older, newer and damaged saves (SAV-011, 021, 022); Sort Newest/Name and a colony filter (SAV-012); Save & Quit to Menu and to Desktop in the pause menu, leaving only after the file is written (SAV-005); an "Unsaved progress" confirm and a "Saved N in-game hours ago" line in the pause panel (SAV-013).
 - Decisions: a colony is unsaved from a save's encode tick until that save succeeds; Load and `NewColony` reset it. A commitment colony's Save row is shown off (the game saves itself).
 - Open: the commitment daily save is written with `Autosave:false` (`Book.SaveNow`), harmless while that colony has one slot. The `Book` struct comment still says its fields are "declared for the named-saves work".
+
+## SAV-4-header-world-seed
+The save header records the world seed; the Load card shows it · 2026-11-23 · 041f740a2
+- Changed: `savefmt.Info.WorldSeed` holds the planet seed phrase the colony's world was made from (`Setup.World.SeedText`), filled in `Game.Info` and carried to `ports.SaveSlot` by compose `slotOf`. A Load row's hover card is three lines (title and file; colony; map, seed and format) and names `seed <phrase>`; nothing when the header has none (older saves, legacy colonies). Capture modes `load` and `load-old` (`-capture-ui`) park the cursor on a row so the card shows.
+- Decisions: no SaveVersion bump: gob matches fields by name, so an older header reads "" and an older build ignores the field (`TestSaveSchema`'s note; `Ending` was added at v11 the same way). The world seed is the typed phrase, not `Setup.Seed`. The card shows at most 32 runes of it, without control or format runes, since a hand-edited save can hold anything.
+- Limits: `internal/application/game` +1 line (52804 of 52808), no new file; ebiten root `capture.go` +6 lines and `app.go` 2 changed lines (net 0), 60 files; `ports.SaveSlot` 24 of 25 fields.
+- Save impact: `testdata/save_schema.txt` gains `SaveInfo.WorldSeed string`; fixtures and state hashes unchanged.
+- HUD/UI: the Load row card; `drawHoverHint` sizes a multi-line tip by its line count and keeps the card on screen (screenshots in PR #274).
+- Boxes: vanilla checklist PHASE 33 **Save metadata** `[-]` to `[x]`; SAVES_GAP SAV-011 and MAIN_UI Load line name the seed. `spec-backlog` #120: its one box met; closed by this change.
+- Open: none.
