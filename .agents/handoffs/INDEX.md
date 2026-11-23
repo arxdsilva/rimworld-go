@@ -100,6 +100,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | CBT-2-attack-mechanics | Attack mechanics | 2026-10-30 | [DEF.md](DEF.md#cbt-2-attack-mechanics) |
 | CBT-3-weapons-gear-structures | Weapons, gear and structures | 2026-10-30 | [DEF.md](DEF.md#cbt-3-weapons-gear-structures) |
 | CBT-3.2-ranged-hit-chance | Ranged hit chance, aim traits and interception by distance | 2026-11-22 | [DEF.md](DEF.md#cbt-3.2-ranged-hit-chance) |
+| CBT-3.4-multi-part-cuts-and-pain | Multi-part cuts, inner blunt strikes and wiki pain constants | 2026-11-22 | [DEF.md](DEF.md#cbt-3.4-multi-part-cuts-and-pain) |
 | CBT-4-combat-ai | Combat AI | 2026-10-30 | [DEF.md](DEF.md#cbt-4-combat-ai) |
 | CBT-5-explosions-and-combat-ui | Explosions and combat UI | 2026-10-30 | [DEF.md](DEF.md#cbt-5-explosions-and-combat-ui) |
 | CI-001-race-budget-and-memory | The `-race` suite within CI's time and memory | 2026-11-02 | [OPS.md](OPS.md#ci-001-race-budget-and-memory) |

@@ -977,7 +977,7 @@ treatment, and surgery are major colony-management systems.
     -   Blood loss accumulation.
     -   severe blood loss -\> downing/death.
     -   tending reduces/stops bleeding.
--   [x] **Pain** (SIM-039: derived from wounds, feeds consciousness; MED-01: 1.25 % per HP open or tended, pain shock at 80 % scaled by pain tolerance)
+-   [x] **Pain** (SIM-039: derived from wounds, feeds consciousness; MED-01, CBT 3.4: 12.5 permille per HP open or tended, 18.75 for burns, 6.25 for scars, pain shock at 80 % scaled by pain tolerance)
     -   Derived from injuries/conditions.
     -   affects consciousness/mood/performance.
     -   extreme pain can down pawn.
