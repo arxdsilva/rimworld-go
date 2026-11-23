@@ -71,6 +71,9 @@ const (
 	// Scrapper (SHT-104, append only): a brawler who prefers a fistfight to
 	// a firefight; original name, wiki numbers.
 	Scrapper
+	// LightFooted (SHT-105, append only): quick on the feet in a melee;
+	// original name, wiki numbers.
+	LightFooted
 	NumTraits
 )
 
@@ -241,6 +244,10 @@ var defs = [NumTraits]Def{
 	Scrapper: {Key: "scrapper", Label: "Scrapper", Group: GroupTrigger, Needs: backstory.Violence, Note: "Melee hit +4",
 		Desc:       "{name} would rather close the distance and settle it with {their} fists than trade shots across a field.",
 		SkillBonus: map[skill.ID]int8{skill.Melee: 4, skill.Shooting: -10}},
+	// wiki: Nimble (melee dodge +15); LightFooted is the original name; no
+	// group, needs or skill bonus (CLEAN_ROOM, K3).
+	LightFooted: {Key: "light_footed", Label: "Light-footed", Note: "Melee dodge +15",
+		Desc: "{name} keeps weight on the toes and slips out of the way of a swing before it lands."},
 }
 
 func init() {

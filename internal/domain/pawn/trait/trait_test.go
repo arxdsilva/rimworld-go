@@ -15,8 +15,8 @@ import (
 
 func TestCatalogue(t *testing.T) {
 	all := Core().All()
-	if len(all) != 42 { // SHT-104: Scrapper
-		t.Fatalf("%d traits, want 42", len(all))
+	if len(all) != 43 { // SHT-105: LightFooted
+		t.Fatalf("%d traits, want 43", len(all))
 	}
 	keys, labels := map[string]bool{}, map[string]bool{}
 	for i, d := range all {
@@ -128,7 +128,7 @@ func TestGenerated(t *testing.T) {
 	if len(legacy) != 19 || legacy[0] != Tireless || legacy[18] != Sturdy {
 		t.Fatalf("legacy = %v", legacy)
 	}
-	if len(all) != int(NumTraits)-1 || all[len(all)-1] != Scrapper {
+	if len(all) != int(NumTraits)-1 || all[len(all)-1] != LightFooted {
 		t.Fatalf("all = %v", all)
 	}
 	for i, id := range all {
@@ -220,5 +220,31 @@ func TestScrapperTrait(t *testing.T) {
 	}
 	if !Core().Conflicts(Scrapper, DeliberateAim) || !Core().Conflicts(Scrapper, QuickDraw) {
 		t.Fatal("Scrapper conflicts with the trigger group")
+	}
+}
+
+// TestLightFootedTrait (SHT-105): the dodge note, the generation rule and
+// the absence of any conflict or requirement.
+func TestLightFootedTrait(t *testing.T) {
+	d := Core().DefOf(LightFooted)
+	if d.Key != "light_footed" || d.Label != "Light-footed" || d.Note != "Melee dodge +15" || d.Desc == "" {
+		t.Fatalf("def = %+v", d)
+	}
+	if d.Needs != 0 || d.Group != 0 || len(d.SkillBonus) != 0 {
+		t.Fatalf("needs/group/bonus = %v %v %v", d.Needs, d.Group, d.SkillBonus)
+	}
+	if len(d.Effects()) == 0 {
+		t.Fatal("no effects")
+	}
+	if id, ok := Core().Parse("light_footed"); !ok || id != LightFooted {
+		t.Fatalf("Parse = %d %v", id, ok)
+	}
+	if !slices.Contains(Core().Generated(false), LightFooted) || slices.Contains(Core().Generated(true), LightFooted) {
+		t.Fatal("LightFooted is generated outside Legacy rules only")
+	}
+	for id := ID(1); id < NumTraits; id++ {
+		if id != LightFooted && Core().Conflicts(LightFooted, id) {
+			t.Fatalf("conflicts with %d", id)
+		}
 	}
 }

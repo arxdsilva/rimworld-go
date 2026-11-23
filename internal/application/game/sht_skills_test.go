@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/pawn/trait"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // TestManipulationCostsShootingScore: manipulation adds 8 shooting score
@@ -122,6 +123,44 @@ func TestScrapperBrawler(t *testing.T) {
 	}
 	if a, b := attack.HitChanceOf(s), attack.HitChanceOf(n); a <= b {
 		t.Fatalf("hit chance %d vs %d", a, b)
+	}
+}
+
+// TestLightFootedNimble: the LightFooted trait sets Melee.Nimble, adding
+// exactly 15 000 to the dodge score, and the dossier dodge line shows it (SHT-105).
+func TestLightFootedNimble(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	mk := func(name string, tr ...trait.ID) entity.EntityID {
+		return spawnGen(t, g, 2, 2, genPawn(name, func(p *pawngen.Pawn) {
+			p.Traits = tr
+			p.Skills[skill.Melee].Level = 4
+		}))
+	}
+	b, n := mk("Bea", trait.LightFooted), mk("Nan")
+	mb, mn := g.meleeOf(b), g.meleeOf(n)
+	if !mb.Nimble || mn.Nimble {
+		t.Fatalf("nimble %v / %v", mb.Nimble, mn.Nimble)
+	}
+	same := mb
+	same.Nimble = false
+	if same != mn {
+		t.Fatalf("other melee numbers differ: %+v vs %+v", same, mn)
+	}
+	if d := attack.DodgeScore(mb) - attack.DodgeScore(mn); d != 15_000 {
+		t.Fatalf("dodge score delta %d, want 15000", d)
+	}
+	dodge := func(id entity.EntityID) int {
+		for _, l := range card(t, g, id).ExtraLines[skill.Melee] {
+			if l.Label == "Melee dodge chance" {
+				return l.Pct
+			}
+		}
+		t.Fatal("no dodge line")
+		return 0
+	}
+	if db, dn := dodge(b), dodge(n); db <= dn || db != attack.DodgeChanceOf(mb)/10 {
+		t.Fatalf("dodge lines %d vs %d, chance %d", db, dn, attack.DodgeChanceOf(mb)/10)
 	}
 }
 

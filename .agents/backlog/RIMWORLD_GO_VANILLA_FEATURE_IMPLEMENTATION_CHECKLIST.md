@@ -1439,6 +1439,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Weapon/body attacks** (CBT-2: wiki tools per melee weapon; humans fist, head, teeth; animals a second attack at original tuning)
 -   [x] **Melee cooldown**
 -   [x] **Brawler effect** (SHT-104: original-named trait Scrapper, melee +4, shooting −10)
+-   [x] **Nimble effect** (SHT-105: original-named trait Light-footed, melee dodge +15)
 
 ## 17.6 Armor
 

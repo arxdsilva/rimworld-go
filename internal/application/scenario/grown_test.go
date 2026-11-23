@@ -263,7 +263,10 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (SHT, #75, 2026-11-23): Scrapper trait draws, FriendlyFirePct 100 in the
 	// presets, the 21-point curve, manipulation points, downed interception and
 	// targets, the soft XP cap and the decay table.
-	const want uint64 = 0xd184896f98be7431
+	//
+	// Re-pinned (SHT-105, #273, 2026-11-23): the appended LightFooted trait shifts
+	// new-game trait draws and Nimble moves melee dodges.
+	const want uint64 = 0xb58aab09cdc09002
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

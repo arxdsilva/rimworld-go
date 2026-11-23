@@ -184,13 +184,15 @@ import (
 // 21-point accuracy curve, manipulation points and downed interceptors/targets
 // move every shot, and the soft daily XP cap and per-level decay table move
 // skills. All six seeds move.
+// Re-pinned (SHT-105, #273, 2026-11-23): the appended LightFooted trait shifts
+// new-game trait draws and Nimble moves melee dodges. All six seeds move again.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x4c0442b8090a2e0c,
-	"48x40/seed7":    0x408ae14ed8f82600,
-	"48x40/seed42":   0xbde998be94577c83,
-	"120x120/seed1":  0xd98331cd4d373f4,
-	"120x120/seed7":  0xc6a20957c3d8cdc3,
-	"120x120/seed42": 0xd3415cf2f5606139,
+	"48x40/seed1":    0xa7d602efa9a46d1e,
+	"48x40/seed7":    0x67bd5ef1a52e30f6,
+	"48x40/seed42":   0x2ee993824248e785,
+	"120x120/seed1":  0x753046d8e53f6773,
+	"120x120/seed7":  0xc0d088d53929de1e,
+	"120x120/seed42": 0x3289ef2592a0ea67,
 }
 
 const scaleGoldenTicks = 20000

@@ -551,7 +551,7 @@ const ReasonSkill = "not skilled enough"
 // meleeOf is id's melee numbers for the wiki's hit and dodge curves
 // (CBT-2): its Melee level (a creature has none), Sight, Manipulation and
 // Moving, the MeleeAcc stat as a points offset after the curve (original
-// tuning), downed, Brawler from the Scrapper trait. The game has no Nimble trait yet.
+// tuning), downed, Brawler from Scrapper, Nimble from LightFooted.
 func (g *Game) meleeOf(id entity.EntityID) attack.Melee {
 	k := keyOf(g.bodies[id]) // body.go: Moving, Manipulation, Sight (healthy without a body)
 	m := attack.Melee{Moving: int(k[0]), Manip: int(k[1]), Sight: int(k[2])}
@@ -559,6 +559,7 @@ func (g *Game) meleeOf(id entity.EntityID) attack.Melee {
 		m.Skill, m.Skilled, m.Offset, m.Down = int(g.skillOf(id, skill.Melee).Level), true, 10*int(g.statOf(id, stat.MeleeAcc)), v.Status != health.Alive
 		bio, _ := g.personBio(id)
 		m.Brawler = slices.Contains(bio.Traits, trait.Scrapper)
+		m.Nimble = slices.Contains(bio.Traits, trait.LightFooted)
 	}
 	return m
 }
