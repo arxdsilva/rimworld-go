@@ -274,7 +274,7 @@ interchangeable workers.
     -   No passion / minor passion / major passion equivalents.
     -   Passion changes learning speed and can affect enjoyment/mood
         while performing relevant work.
--   [x] **Skill XP** (NG-1: work, combat and chats grant experience, 4000 per skill per day saturation, decay above level 10 with a no-flap band)
+-   [x] **Skill XP** (NG-1: work, combat and chats grant experience, 4000 per skill per day saturation, decay above level 10 with a no-flap band; SHT-302: the cap is soft, 20 % past 4000, and decay follows the published per-level table, 30 a day at level 10 to 3,600 at 20)
     -   Work and relevant activities grant XP.
     -   Skill progression is deterministic.
     -   Add skill decay only if the chosen vanilla target version
@@ -1405,6 +1405,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Cover calculation** (CBT-2: angle bands, 33/67 % at close range, combined covers; best cover on the cells beside the target facing the shooter; ranged shots only; DEF-3: permille cover from buildings and natural objects in `Sight`)
     -   Relative shooter-target-cover geometry.
     -   Stable deterministic resolution.
+-   [x] **Small-object cover** (SHT-301: fence gate 75 %, lamp 20 %, torch 15 %, plant pot 20 %)
 
 ## 17.4 Ranged attack
 
@@ -1423,6 +1424,11 @@ treatment, and surgery are major colony-management systems.
         where design supports it.
 -   [x] **Burst fire** (DEF-1: the mechanism, shots and ticks between from the weapon; no burst weapon until DEF-2; DEF-2: burst weapons use it)
 -   [x] **Cooldown** (per weapon, `weapon.Def.Cooldown`)
+-   [x] **Shooting score inputs** (SHT-001/004: manipulation weight 8 capped at 100 %, sight 12; all 21 published curve points)
+-   [x] **First aim scales with aiming time** (SHT-102: every first warmup; melee unscaled)
+-   [x] **Downed creatures in combat** (SHT-006/008: a downed creature in the path intercepts at 250 ‰ (original tuning); a downed target is ×8.5 within 3 tiles, ×0.5 from 5)
+-   [x] **Friendly Fire difficulty** (SHT-007: 0..100 %, colonist shots crossing colonists; saved, v20)
+-   [x] **Hit-chance card** (SHT-201/202: lines add up to the headline; any selected colonist) and **warmup ring** on the shooter (SHT-204)
 
 ## 17.5 Melee
 
@@ -1432,6 +1438,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Melee hit chance** (CBT-2: wiki hit curve, wiki dodge, damage x0.8-1.2)
 -   [x] **Weapon/body attacks** (CBT-2: wiki tools per melee weapon; humans fist, head, teeth; animals a second attack at original tuning)
 -   [x] **Melee cooldown**
+-   [x] **Brawler effect** (SHT-104: original-named trait Scrapper, melee +4, shooting −10)
 
 ## 17.6 Armor
 
