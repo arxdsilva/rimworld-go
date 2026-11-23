@@ -9,8 +9,10 @@ Every scoped task appends one section to its family's ledger in `.agents/handoff
 - Decisions: invariants and chosen numbers, each with its reason
 - Limits: SOLID budgets paid or hit, types at a field or method limit
 - Boxes: the checklist, spec and gap items this task ticked or changed, by bold name or row ID with the new state, and the `spec-backlog` issues ticked or closed; or `none: <why>`
-- Open: follow-ups, each with its ID
+- Open: follow-ups, each with its ID or its GitHub issue (`#N`)
 ```
+
+New gaps (since 2026-11-23): a gap, bug or missing rule found while working a ticket that the ticket does not need is not fixed in that change. File it at once as a new GitHub issue (`gh issue create`, a `priority: P0..P3` label, the file:line evidence and the ticket it came from) and cite `#N` in `Open:`.
 
 Boxes (required in every section dated 2026-11-20 or later, `TestLedgersAndIndex`): before writing the section, search `.agents/backlog/`, `.agents/specs/` and `.agents/gaps/` for every item the change completes or advances (grep the feature's names and IDs), not only the one the task started from. Set `[x]` when all its acceptance criteria and sub-bullets are met, `[-]` with what is missing, `[!]` with why; a gap row's state column follows its file's legend. Then the GitHub issue labelled `spec-backlog` for that section: every commit of the task names it in its body (`Refs #N`, or `Closes #N` on the commit that ticks its last line); tick the item's task line, and once its last line is ticked close the issue at once with `gh issue close N --comment "Done in <commits>"` (pushing waits for the user, so a `Closes` keyword alone would leave it open). The `Boxes:` line declares what was ticked; it does not prove it, so review it like code.
 
