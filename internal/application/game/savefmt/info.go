@@ -19,7 +19,8 @@ const InfoVersion = 16
 // after Colonists are v2 (zero in a v1 header); the colony fields are v16
 // (Upgrade fills them for an older header). game.SaveInfo becomes an alias
 // of it (SAV-003), so the names and types of the v1…v15 fields never change:
-// gob matches fields by name.
+// gob matches fields by name. Fields added later (WorldSeed, #120) are
+// additive: an older header reads them as zero.
 type Info struct {
 	Version   int
 	Name      string // the slot written (the file name before SlotKey)
@@ -37,6 +38,9 @@ type Info struct {
 	// Ending (AX-8) is "ship" once the colony's ship has left: the
 	// save's story is complete ("" while it goes on).
 	Ending string
+	// WorldSeed (#120) is the planet seed phrase the colony's world was made
+	// from (Setup.World.SeedText); "" for a legacy colony or an older header.
+	WorldSeed string
 
 	// v16 (SAV-003).
 	Colony     string  // the colony's stable id, shared by all its saves

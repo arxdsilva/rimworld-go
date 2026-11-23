@@ -125,7 +125,7 @@ func slotOf(sl filesave.Slot, rt savefmt.Runtime) uiadapter.SaveSlot {
 	s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Title: i.Name, Date: i.Date,
 		Colonists: i.Colonists, Modified: sl.Modified, Commitment: i.Commitment, Ending: i.Ending,
 		Colony: i.Colony, ColonyName: i.ColonyName, Base: i.Base, Autosave: i.Autosave, Day: i.Day, Season: i.Season,
-		Storyteller: i.Storyteller, Difficulty: i.Difficulty, Biome: i.Biome, MapSize: i.MapSize,
+		Storyteller: i.Storyteller, Difficulty: i.Difficulty, Biome: i.Biome, MapSize: i.MapSize, WorldSeed: i.WorldSeed,
 		Build: i.Build, Version: i.Version}
 	switch {
 	case sl.Err == nil || errors.Is(sl.Err, appgame.ErrSaveVersion):

@@ -2364,7 +2364,7 @@ required before a polished external build.
 -   [-] Endgame Ship (AX-8: the ship parts' inspector pane carries §37's information and actions, with the reactor warning, the launch confirmation and the selected ship's highlight; no dedicated screen)
 -   [-] Victory (AX-8: the ending screen with outcome, escaped and remaining colonists, days and research; Keep watching and Main menu; no credits or full story summary)
 -   [-] Save (pause > Save writes the colony's slot; no name prompt; commitment colonies save themselves and offer Save & Quit)
--   [x] Load (save list from the main menu and pause; corrupt saves listed disabled with the reason; disabled with a reason in commitment mode)
+-   [x] Load (save list from the main menu and pause; corrupt saves listed disabled with the reason; disabled with a reason in commitment mode; a row's card names the world seed, #120)
 -   [-] Pause Menu (Resume/Save/Load/Options/Main Menu/Quit; Help disabled; Save & Quit in commitment mode)
 -   [x] Options (Audio/Graphics/Gameplay/Accessibility/Controls tabs, saved to settings.json; Story tab during play)
 -   [ ] Tutorial

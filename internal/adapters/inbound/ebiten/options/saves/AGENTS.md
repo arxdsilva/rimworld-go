@@ -10,7 +10,7 @@ The client's book of saved games: saving the running colony to its slot (manual 
 - Save dialog (dialog.go, SAV-001, 002, 004): name field, the saves as a table, `nameReason` (from `savefmt.CheckName`), the overwrite question, `submit`, `commitSave`.
 - Delete (delete.go, SAV-010): `DeleteReason`, the confirm, `deleteSlot`.
 - Leaving (leave.go, SAV-005, SAV-013): `Leave`, `SaveAndLeave`, `askUnsaved`, `DrawPauseStatus`. Progress (progress.go): the dirty flag, from a save's encode tick until that save succeeds.
-- Load screen (load_screen.go, rows.go, SAV-011, 012, 021, 022): `LoadButtons`, `DrawLoad`, `LoadSlot`, sort (Newest, Name) and colony filter, `FormatRow` and the compat and damaged tags. `Click` routes every `load.` id.
+- Load screen (load_screen.go, rows.go, SAV-011, 012, 021, 022): `LoadButtons`, `DrawLoad`, `LoadSlot`, sort (Newest, Name) and colony filter, `FormatRow` and the compat and damaged tags; the row card (`rowTip`) names the world seed when the header has one (#120). `Click` routes every `load.` id. `RowCentre` (hover.go) is where a capture parks the cursor over the n-th shown row.
 - `AutosaveHour`, `CommitLoadReason`, `EndingTag`, `NewSlotName`.
 - Interfaces (`deps.go`): `Host` (3: `ports.Texts`, `SaveEnv`, `PaintMenu`), `Saver` (7: `Save`, `List`, `Load`, `Delete`, `Finished`, `Wait`, `SaveFailed`), `Shell` = `Hinter + Settings + World + Widgets + Host + Saver`; `Env`, `SaveResult`.
 

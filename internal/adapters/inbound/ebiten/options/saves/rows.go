@@ -6,6 +6,7 @@ package saves
 import (
 	"image/color"
 	"strings"
+	"unicode"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -144,25 +145,52 @@ func compatTag(tr ports.Texts, sl ports.SaveSlot) (Tag, bool) {
 	return Tag{}, false
 }
 
-// rowTip is the whole row on one line, with what the lines leave out: the
-// file's slot, map size, format version and notice.
+// rowTip is the whole row for the hover card, in three lines so it fits the
+// screen: what and when (title, the file's slot, tags), the colony's
+// summary, then what the lines leave out (map size, world seed (none: no
+// part), format version, notice, why it cannot load).
 func rowTip(tr ports.Texts, sl ports.SaveSlot, r Row) string {
-	parts := []string{r.Title}
+	who := []string{r.Title}
 	if sl.Name != r.Title {
-		parts = append(parts, tr.Tf("file %s", sl.Name))
+		who = append(who, tr.Tf("file %s", sl.Name))
 	}
 	for i := len(r.Tags) - 1; i >= 0; i-- {
-		parts = append(parts, r.Tags[i].Text)
+		who = append(who, r.Tags[i].Text)
 	}
-	parts = append(parts, r.Sub)
+	var rest []string
 	if sl.MapSize > 0 {
-		parts = append(parts, tr.Tf("map %d", sl.MapSize))
+		rest = append(rest, tr.Tf("map %d", sl.MapSize))
+	}
+	if seed := shownSeed(sl.WorldSeed); seed != "" {
+		rest = append(rest, tr.Tf("seed %s", seed))
 	}
 	if sl.Version > 0 {
-		parts = append(parts, tr.Tf("format %d", sl.Version))
+		rest = append(rest, tr.Tf("format %d", sl.Version))
 	}
-	parts = append(parts, sl.Notice, r.Bad)
-	return joinNonEmpty(sep, parts...)
+	rest = append(rest, sl.Notice, r.Bad)
+	return joinNonEmpty("\n", joinNonEmpty(sep, who...), r.Sub, joinNonEmpty(sep, rest...))
+}
+
+// maxShownSeed is the new-game seed field's limit (wizard.MaxSeedText); a
+// feature package cannot import it.
+const maxShownSeed = 32
+
+// shownSeed is a header's world seed made safe to print: control and
+// format runes (bidi overrides, zero-width marks) dropped, at most
+// maxShownSeed runes with a "…" when cut. "" when nothing remains. The
+// header is file data, so it is not trusted to be what the field allowed.
+func shownSeed(s string) string {
+	var out []rune
+	for _, r := range s {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			continue
+		}
+		if len(out) == maxShownSeed {
+			return string(out) + "…"
+		}
+		out = append(out, r)
+	}
+	return string(out)
 }
 
 func joinNonEmpty(by string, parts ...string) string {

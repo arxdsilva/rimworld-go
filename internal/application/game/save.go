@@ -488,6 +488,7 @@ func (g *Game) Info(name string) SaveInfo {
 		info.Commitment = s.SaveMode == difficulty.Commitment
 		info.Storyteller = g.storyProfile().Name
 		info.Difficulty = s.Preset.String()
+		info.WorldSeed = s.World.SeedText
 	}
 	info.Ending = g.worldS().ship.Ending() // game/ship (AX-8)
 	return info

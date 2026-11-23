@@ -257,6 +257,8 @@ var menuCaptures = map[string][]string{
 	"landing-factions":        append(append([]string(nil), capLanding...), "land.factions"),
 	"pawns":                   append(append([]string(nil), capLanding...), "wizard.next"),
 	"pawns-reroll":            append(append([]string(nil), capLanding...), "wizard.next", "pawns.reroll"),
+	"load":                    {"menu.load", "@load-row-0"},
+	"load-old":                {"menu.load", "@load-row-1"},
 }
 
 // The click scripts that reach Create World and Select Landing Site. A
@@ -286,6 +288,10 @@ func (a *App) captureStep(step string) {
 			if ng.Tile >= 0 {
 				ng.LandRolls = 1
 			}
+		}
+	case "@load-row-0", "@load-row-1": // hover the n-th shown Load row: its card opens
+		if x, y, ok := a.opt.Saves.RowCentre(int(step[len(step)-1]-'0'), a.sw, a.sh); ok {
+			a.cursor = &[2]int{x, y}
 		}
 	case "@worldgen-progress":
 		ng.GenHold = 0.4

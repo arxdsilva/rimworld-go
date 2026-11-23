@@ -315,6 +315,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SAV-1-header-and-store | Save header v16, names, delete, compat, damage, content id | 2026-11-09 | [UI.md](UI.md#sav-1-header-and-store) |
 | SAV-2-save-dialog | Save dialog, overwrite and delete questions | 2026-11-09 | [UI.md](UI.md#sav-2-save-dialog) |
 | SAV-3-load-and-leave | Load rows, sort and filter, Save & Quit, unsaved progress | 2026-11-09 | [UI.md](UI.md#sav-3-load-and-leave) |
+| SAV-4-header-world-seed | The save header records the world seed; the Load card shows it | 2026-11-23 | [UI.md](UI.md#sav-4-header-world-seed) |
 | SHADOW-creatures-cast-none | Creatures cast no shadow (agent SH) | 2026-11-01 | [ART.md](ART.md#shadow-creatures-cast-none) |
 | SHT-75-shooting-gaps | Shooting gaps: accuracy inputs, downed creatures, friendly fire, aim, hit card | 2026-11-23 | [DEF.md](DEF.md#sht-75-shooting-gaps) |
 | SHT-MIN-RSC-0-gap-analyses | Gap analyses of shooting, mining and rescue | 2026-11-05 | [DEF.md](DEF.md#sht-min-rsc-0-gap-analyses) |

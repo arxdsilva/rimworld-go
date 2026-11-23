@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -200,5 +201,115 @@ func TestJourneySavesCorruptDisabled(t *testing.T) {
 	}
 	if j.clickID(ids.PrefixLoadSlot+"1") || len(*loaded) != 1 {
 		t.Fatalf("a damaged save was tried again: %v", *loaded)
+	}
+}
+
+// TestJourneySavesLoadRowShowsSeed: a row's card names the world seed its
+// header holds, and a save without one shows no seed part.
+func TestJourneySavesLoadRowShowsSeed(t *testing.T) {
+	t.Parallel()
+	j, _ := listedJourney(t, []ports.SaveSlot{
+		{Name: "ridge", Path: "ridge", MapSize: 60, WorldSeed: "amber-hollow", Modified: time.Unix(1_700_000_100, 0)},
+		{Name: "old", Path: "old", MapSize: 60, Modified: time.Unix(1_700_000_000, 0)},
+	}, nil)
+	j.key("Escape", 0)
+	j.clickID("pause.load")
+	if got := loadRow(j, 0).Tip; !strings.Contains(got, "map 60 · seed amber-hollow") {
+		t.Fatalf("seeded row card %q", got)
+	}
+	if got := loadRow(j, 1).Tip; strings.Contains(got, "seed") {
+		t.Fatalf("old row card %q shows a seed", got)
+	}
+}
+
+// TestCaptureLoadHoversARow: the load and load-old captures rest the
+// cursor over the first and the second shown row, so the row's hover card
+// (the seed, on the first) is what the shot shows.
+func TestCaptureLoadHoversARow(t *testing.T) {
+	for i, ui := range []string{"load", "load-old"} {
+		t.Run(ui, func(t *testing.T) {
+			t.Parallel()
+			a := testApp(&stubSim{w: 8, h: 8})
+			a.cfg.Saves.List = func() ([]ports.SaveSlot, error) {
+				return []ports.SaveSlot{
+					{Name: "a", Path: "a", WorldSeed: "amber-hollow", Modified: time.Unix(1_700_000_100, 0)},
+					{Name: "b", Path: "b", Modified: time.Unix(1_700_000_000, 0)},
+				}, nil
+			}
+			a.cfg.Saves.Load = noLoad
+			a.cfg.Capture = &Capture{UI: ui}
+			a.sw, a.sh = 1280, 720
+			f := fakeOn(a)
+			captureSettle(t, a, f)
+			if a.nav.screen() != ports.ScreenLoad || a.cursor == nil {
+				t.Fatalf("screen %s, cursor %v", a.nav.screen(), a.cursor)
+			}
+			// The Load rows are layout buttons: the hover card is drawn from
+			// the button under the cursor (drawHoverHint), with no delay.
+			hit, ok := uikit.HitButton(a.layoutHits(a.sw, a.sh), a.cursor[0], a.cursor[1])
+			if !ok || hit.ID != fmt.Sprintf("%s%d", ids.PrefixLoadSlot, i) {
+				t.Fatalf("cursor %v is over %+v, want row %d", a.cursor, hit, i)
+			}
+			if seeded := strings.Contains(hit.Tip, "seed amber-hollow"); seeded != (i == 0) {
+				t.Fatalf("row %d card %q", i, hit.Tip)
+			}
+		})
+	}
+}
+
+// With one save the second capture leaves the cursor parked: no card.
+func TestCaptureLoadOldWithOneRow(t *testing.T) {
+	t.Parallel()
+	a := testApp(&stubSim{w: 8, h: 8})
+	a.cfg.Saves.List = func() ([]ports.SaveSlot, error) { return []ports.SaveSlot{{Name: "a", Path: "a"}}, nil }
+	a.cfg.Saves.Load = noLoad
+	a.cfg.Capture = &Capture{UI: "load-old"}
+	a.sw, a.sh = 1280, 720
+	f := fakeOn(a)
+	captureSettle(t, a, f)
+	if hit, ok := uikit.HitButton(a.layoutHits(a.sw, a.sh), a.cursor[0], a.cursor[1]); ok {
+		t.Fatalf("the parked cursor is over %+v", hit)
+	}
+}
+
+// captureSettle runs the capture's click script, then (with the capture
+// off, so nothing reads pixels) the 30 settle frames before the shot.
+func captureSettle(t *testing.T, a *App, f *fakeInput) {
+	t.Helper()
+	for n := 0; n < 10 && !a.capture.started; n++ {
+		f.Frame(t, a)
+	}
+	if !a.capture.started {
+		t.Fatal("the capture's script did not finish")
+	}
+	a.cfg.Capture = nil
+	for n := 0; n < 30; n++ {
+		drawFrame(t, a, f)
+	}
+}
+
+// noLoad makes a capture's Load screen readable; the shot never loads.
+func noLoad(string) (Simulation, ports.SaveMeta, error) {
+	return nil, ports.SaveMeta{}, errors.New("not loaded")
+}
+
+// TestJourneySavesLoadCardFitsTheScreen: with a 32-rune seed and a long
+// colony name the card's widest line, in its panel, lies inside a 1280 px
+// screen wherever the cursor is.
+func TestJourneySavesLoadCardFitsTheScreen(t *testing.T) {
+	t.Parallel()
+	j, _ := listedJourney(t, []ports.SaveSlot{{Name: "ridge-autosave", Path: "ridge", Title: "Ridge before winter",
+		ColonyName: "Ridge of the long winter", Autosave: true, Commitment: true, Day: 14, Season: "Fall", Colonists: 12,
+		Storyteller: "Calm", Difficulty: "Rough", Biome: "Boreal forest", Build: "0.9.3", MapSize: 250, Version: 16,
+		Compat: int(savefmt.CompatOlder), WorldSeed: strings.Repeat("w", 32), Modified: time.Unix(1_700_000_000, 0)}}, nil)
+	j.key("Escape", 0)
+	j.clickID("pause.load")
+	tip := loadRow(j, 0).Tip
+	lines := strings.Split(tip, "\n")
+	if len(lines) != 3 {
+		t.Fatalf("card %q", tip)
+	}
+	if w, _ := gfx.Measure(tip, gfx.Body); int(w)+16+8 > 1280 {
+		t.Fatalf("card is %d px wide: %q", int(w)+16, tip)
 	}
 }
