@@ -114,13 +114,13 @@ func (b Book) Parse(key string) (ID, bool) {
 // legacy rules only the original set (so existing seeds keep their pawns),
 // otherwise every trait, plugins' included.
 func (b Book) Generated(legacy bool) []ID {
-	n := ID(b.Len() + 1)
-	if legacy && n > legacyTraits {
-		n = legacyTraits
+	n := min(max(b.Len(), 0), MaxBook)
+	if legacy {
+		n = min(n, int(legacyTraits)-1)
 	}
 	out := make([]ID, 0, n)
-	for t := ID(1); t < n; t++ {
-		out = append(out, t)
+	for i := 1; i <= n; i++ {
+		out = append(out, ID(min(i, MaxBook)))
 	}
 	return out
 }

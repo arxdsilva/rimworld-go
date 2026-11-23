@@ -181,3 +181,28 @@ func TestMaxedSkillLogsBankedGain(t *testing.T) {
 		t.Fatalf("logged %d, banked %d of 50000 fed, want 100 at most", got, banked)
 	}
 }
+
+// TestRaiderLightFootedNimble: a raider's Nimble comes from its registry
+// bio, the path the trap step (tick.go) reads: Light-footed makes it Nimble,
+// so it springs traps only 10 % of the time (SHT-105 follow-up).
+func TestRaiderLightFootedNimble(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 40, Height: 30})
+	g.Raid(1)
+	if len(g.raiderIDs) == 0 {
+		t.Fatal("no raider spawned")
+	}
+	rid := g.raiderIDs[0]
+	p := g.personOf(rid)
+	if p == nil || !p.HasBio {
+		t.Fatalf("raider %d has no registry bio", rid)
+	}
+	p.Bio.Traits = []trait.ID{trait.LightFooted}
+	if !g.meleeOf(rid).Nimble {
+		t.Fatal("a Light-footed raider is Nimble")
+	}
+	p.Bio.Traits = nil
+	if g.meleeOf(rid).Nimble {
+		t.Fatal("a raider without the trait is not Nimble")
+	}
+}

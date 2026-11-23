@@ -489,7 +489,7 @@ func shareLayer[T ~uint8](c *layerCache, src []T) []uint8 {
 	}
 	// T's underlying type is uint8: the same bytes, so memcmp and memmove
 	// serve every layer type (roof cells, grass, ...), not only []uint8.
-	raw := unsafe.Slice((*uint8)(unsafe.Pointer(unsafe.SliceData(src))), len(src))
+	raw := unsafe.Slice((*uint8)(unsafe.Pointer(unsafe.SliceData(src))), len(src)) // #nosec G103 -- T is ~uint8: same bytes, bounds from len(src); memcmp/memmove avoid a per-cell copy
 	if c.ok && bytes.Equal(c.cells, raw) {
 		return c.cells
 	}

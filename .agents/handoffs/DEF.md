@@ -199,11 +199,22 @@ Shooting gaps: accuracy inputs, downed creatures, friendly fire, aim, hit card �
 
 ## SHT-105-light-footed-trait
 Light-footed trait: the Nimble melee dodge · 2026-11-23 · #273
-- Changed: the trait Light-footed (original name `LightFooted`, `trait/trait.go:76`) sets the Nimble melee dodge; its Bio-tab note reads "Melee dodge +15" (`trait/trait.go:249`); the skill sheet "Melee dodge chance" line rises by the curve (`dossierview/build.go:107`).
-- Decisions: original name; no group, needs or rarity; score not percentage (+15 dodge score at `attack/melee.go:106`); trap-spring left out.
-- Decisions also records: the published trap-spring effect is out of scope (charter).
+- Changed: the trait Light-footed (original name `LightFooted`, `trait/trait.go:76`) sets the Nimble melee dodge; its Bio-tab note reads "Melee dodge +15" (`trait/trait.go:250`); the skill sheet "Melee dodge chance" line rises by the curve (`dossierview/build.go:107`).
+- Decisions: original name; no group, needs or rarity; score not percentage (+15 dodge score at `attack/melee.go:106`); trap-spring moved to `SHT-105-nimble-trap-spring`.
+- Decisions also records: the trap-spring ×10 % shipped in `SHT-105-nimble-trap-spring`.
 - Limits: `game` non-test lines 52805 of 52808 after the change, 176 files; `solid_budget.txt` untouched.
 - Save impact: none, append-only ID remapped by key.
 - Re-pins: `TestScaleGolden` 48x40 seed 1 0x4c0442b8090a2e0c to 0xa7d602efa9a46d1e, seed 7 0x408ae14ed8f82600 to 0x67bd5ef1a52e30f6, seed 42 0xbde998be94577c83 to 0x2ee993824248e785; 120x120 seed 1 0xd98331cd4d373f4 to 0x753046d8e53f6773, seed 7 0xc6a20957c3d8cdc3 to 0xc0d088d53929de1e, seed 42 0xd3415cf2f5606139 to 0x3289ef2592a0ea67. `TestGrownGolden` 0xd184896f98be7431 to 0xb58aab09cdc09002. `TestHabitsOffKeepTheHash` seed 1 0x2caa5c32e507bb85 to 0x9c7aa34af35f45ff, seed 2 0xe4fd24b373892f01 to 0x063e5c9daeead1f9. New games shift with the new trait; Legacy-rule seeds do not.
 - HUD/UI: the existing Bio-tab trait note and the skill sheet "Melee dodge chance" line; no new screen.
 - Boxes: gap SHT-105 `done`, checklist 17.5 **Nimble effect** `[x]`, no `spec-backlog` issue.
+
+## SHT-105-nimble-trap-spring
+Nimble trap spring chance, gosec notes, pinned tools · 2026-11-23 · #273
+- Changed: a Nimble victim (Light-footed) springs any trap, IEDs included, only 10 % of the time; a miss leaves the trap set and shows no message. The Bio-tab note reads "Melee dodge +15; rarely springs traps" (`trait/trait.go:250`). A full 255-trait book now rolls all 255 traits (before: none).
+- Decisions: the chance is `trapNimblePct` = 10 of 100, the wiki's Nimble ×10 % (`combat/defense.go:41`); the roll is drawn only for a Nimble victim on a trap, before the IED branch so charges count, on the main stream (`h.Roll`, `defense.go:87`); a book of ≤254 traits generates the same pawns as before (`Generated` bounded by min/max, `trait/book.go:116`).
+- Limits: `game` 52805 of 52808 non-test lines, 176 files; `solid_budget.txt` untouched.
+- Save impact: none. Re-pins: none; `make test-golden` and the Golden and HabitsOff tests pass unchanged.
+- Tooling: `#nosec G103` on the unsafe memcmp view (`game/indexes.go:492`); the plant sprout result is discarded with `_, _ =` (`game/plant_light.go:214`); staticcheck 2026.2.2, gosec v2.30.0 and govulncheck v1.9.0 are pinned, and the loops gate's staticcheck step runs (0 findings).
+- HUD/UI: the Bio-tab Note only; no new screen.
+- Boxes: gap SHT-105 `done` and checklist **Nimble effect** `[x]`, both reworded; no `spec-backlog` issue.
+- Open: #275 repo-wide gosec v2.30.0 baseline (915 issues).

@@ -211,5 +211,5 @@ func (g *Game) sproutWild(cg chunk.Grid, c, wild int, now uint64) {
 	if _, zoned := g.zones.At(x, y); zoned || !plant.DefOf(s).Ground && g.inHome(y*g.grid.Width()+x) {
 		return
 	}
-	g.spawnPlant(s, x, y, 0) //nolint:errcheck // a plant already there: no sprout
+	_, _ = g.spawnPlant(s, x, y, 0) // a plant already there: no sprout
 }

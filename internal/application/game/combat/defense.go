@@ -35,6 +35,10 @@ const (
 	// manhunting springs a trap it walks over; raiders and manhunters
 	// always do. wiki: Spike trap
 	trapWildPct = 20
+	// trapNimblePct is the percent chance a Nimble victim (the Light-footed
+	// trait) springs any trap it steps on: the wiki's Nimble x10 % spring
+	// chance. wiki: Trap Spring Chance (Nimble ×10 %)
+	trapNimblePct = 10
 	// buttDamage is a gun's blow on a door or wall (rifle butt).
 	buttDamage = 7
 	// digMin is a sapper's least blow on rock.
@@ -68,14 +72,20 @@ func (t *Traps) Has() bool { return t.h.AnyBuilt(isTrap) }
 // Spring: a raider or a wild animal stepped on (x, y); a spike trap there
 // catches a raider or a manhunter always and any other wild animal
 // trapWildPct of the time (main stream), then is re-laid as a blueprint;
-// a charge lights its fuse (ied.go). The spikes deal TrapSpikes stab hits
-// of TrapDamage × the trap's sharp factor × 0.8..1.2 (rolled once)
-// shared out, each with the calculated penetration. wiki: Spike trap
+// a charge lights its fuse (ied.go). A Nimble victim (Light-footed)
+// springs any trap only trapNimblePct of the time, rolled first on the
+// same stream and only for a Nimble victim on a trap; a miss changes
+// nothing. The spikes deal TrapSpikes stab hits of TrapDamage × the trap's
+// sharp factor × 0.8..1.2 (rolled once) shared out, each with the
+// calculated penetration. wiki: Spike trap
 func (t *Traps) Spring(victim entity.EntityID, x, y int) {
 	h := t.h
 	tid := t.At(x, y)
 	if tid == 0 {
 		return
+	}
+	if h.Melee(victim).Nimble && h.Roll(100) >= trapNimblePct {
+		return // a nimble step misses the trigger
 	}
 	if _, k := h.Object(x, y); isIED(k) {
 		t.light(tid, k, x, y)

@@ -4,6 +4,7 @@
 package trait
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -227,7 +228,7 @@ func TestScrapperTrait(t *testing.T) {
 // the absence of any conflict or requirement.
 func TestLightFootedTrait(t *testing.T) {
 	d := Core().DefOf(LightFooted)
-	if d.Key != "light_footed" || d.Label != "Light-footed" || d.Note != "Melee dodge +15" || d.Desc == "" {
+	if d.Key != "light_footed" || d.Label != "Light-footed" || d.Note != "Melee dodge +15; rarely springs traps" || d.Desc == "" {
 		t.Fatalf("def = %+v", d)
 	}
 	if d.Needs != 0 || d.Group != 0 || len(d.SkillBonus) != 0 {
@@ -246,5 +247,23 @@ func TestLightFootedTrait(t *testing.T) {
 		if id != LightFooted && Core().Conflicts(LightFooted, id) {
 			t.Fatalf("conflicts with %d", id)
 		}
+	}
+}
+
+// TestBookGeneratedFull: a book at MaxBook rolls all 255 IDs (no uint8 wrap)
+// and legacy rules still roll only the original set.
+func TestBookGeneratedFull(t *testing.T) {
+	list := make([]Def, MaxBook)
+	keys := make([]string, MaxBook)
+	for i := range list {
+		keys[i] = fmt.Sprintf("x.t%d", i)
+	}
+	b := NewBook(list, keys)
+	g := b.Generated(false)
+	if len(g) != MaxBook || g[0] != 1 || g[len(g)-1] != MaxBook {
+		t.Fatalf("full book generated %d ids", len(g))
+	}
+	if l := b.Generated(true); len(l) != int(legacyTraits)-1 || l[len(l)-1] != legacyTraits-1 {
+		t.Fatalf("legacy = %v", l)
 	}
 }

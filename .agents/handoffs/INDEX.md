@@ -319,6 +319,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SHADOW-creatures-cast-none | Creatures cast no shadow (agent SH) | 2026-11-01 | [ART.md](ART.md#shadow-creatures-cast-none) |
 | SHT-75-shooting-gaps | Shooting gaps: accuracy inputs, downed creatures, friendly fire, aim, hit card | 2026-11-23 | [DEF.md](DEF.md#sht-75-shooting-gaps) |
 | SHT-105-light-footed-trait | Light-footed trait: the Nimble melee dodge | 2026-11-23 | [DEF.md](DEF.md#sht-105-light-footed-trait) |
+| SHT-105-nimble-trap-spring | Nimble trap spring chance, gosec notes, pinned tools | 2026-11-23 | [DEF.md](DEF.md#sht-105-nimble-trap-spring) |
 | SHT-MIN-RSC-0-gap-analyses | Gap analyses of shooting, mining and rescue | 2026-11-05 | [DEF.md](DEF.md#sht-min-rsc-0-gap-analyses) |
 | SIM-001-climate-and-spoilage | Climate, seasons, spoilage and frost | 2026-10-06 | [SIM.md](SIM.md#sim-001-climate-and-spoilage) |
 | SIM-002-drying-rack | Drying rack: dried food that never rots | 2026-10-06 | [SIM.md](SIM.md#sim-002-drying-rack) |

@@ -244,9 +244,10 @@ var defs = [NumTraits]Def{
 	Scrapper: {Key: "scrapper", Label: "Scrapper", Group: GroupTrigger, Needs: backstory.Violence, Note: "Melee hit +4",
 		Desc:       "{name} would rather close the distance and settle it with {their} fists than trade shots across a field.",
 		SkillBonus: map[skill.ID]int8{skill.Melee: 4, skill.Shooting: -10}},
-	// wiki: Nimble (melee dodge +15); LightFooted is the original name; no
-	// group, needs or skill bonus (CLEAN_ROOM, K3).
-	LightFooted: {Key: "light_footed", Label: "Light-footed", Note: "Melee dodge +15",
+	// wiki: Nimble (melee dodge +15), Trap Spring Chance (Nimble x10 %);
+	// LightFooted is the original name; no group, needs or skill bonus
+	// (CLEAN_ROOM, K3).
+	LightFooted: {Key: "light_footed", Label: "Light-footed", Note: "Melee dodge +15; rarely springs traps",
 		Desc: "{name} keeps weight on the toes and slips out of the way of a swing before it lands."},
 }
 

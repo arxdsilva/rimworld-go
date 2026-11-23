@@ -29,7 +29,7 @@ Scope: how a colonist's shot is decided and shown: accuracy inputs, aim time, th
 | [Downed](https://rimworldwiki.com/wiki/Downed) | Half chance past 4 tiles, +750 % within 3 (stub) |
 | [Ranged Cooldown Multiplier](https://rimworldwiki.com/wiki/Ranged_Cooldown_Multiplier) | Base 100 %; only factor read is a Biotech bandolier |
 | [Melee Hit Chance](https://rimworldwiki.com/wiki/Melee_Hit_Chance), [Melee Dodge Chance](https://rimworldwiki.com/wiki/Melee_Dodge_Chance) | Brawler +4, Nimble +15, as published |
-| [Traits](https://rimworldwiki.com/wiki/Traits) | **Summary only**, the rows fell past the verbatim cutoff: Careful and Trigger-happy descriptions; Brawler -10 Shooting, +4 Melee, conflicts; Nimble trap rule (garbled, re-read before use) |
+| [Traits](https://rimworldwiki.com/wiki/Traits) | **Summary only**, the rows fell past the verbatim cutoff: Careful and Trigger-happy descriptions; Brawler -10 Shooting, +4 Melee, conflicts; Nimble trap rule (Nimble ×10 %: re-read from Trap Spring Chance, rev 174982) |
 
 **Not on any page read:** warmup cancelled by moving or being hit, XP per shot, stance, shots past 40 tiles, a hit tooltip, the scale between distance 5 and 12 in interception ("scales up"), and two of interception's "four factors".
 
@@ -75,7 +75,7 @@ State: `done` shipped; `open` owed to a later change; `kept` differs on purpose.
 | SHT-102 | First aim on a new target | Aiming Time multiplies every warmup | Shipped: `combat.AimTicks(a, id, d)` (`combat/strike.go:45`) scales every first aim by the shooter's aiming time at every combat, raid and order call site; 1.0 for a creature without the stat; melee unscaled; the action bar reads the same number | done [SHT-2] |
 | SHT-103 | Melee cooldown and aim | Aiming Time names ranged warmup and psycasts only | Shipped: `Strikes.next` (`combat/strike.go:394-404`) scales only a gun's aim; `PunchTicks` (`mind_host.go:270`) is never scaled | done [SHT-2] |
 | SHT-104 | Brawler effect | +4 Melee Hit Chance (published); −10 Shooting, +4 Melee, conflicts (summary) | Shipped: original-named trait `Scrapper` (`trait/trait.go:73`, Melee +4, Shooting −10, needs Violence, trigger group) sets `attack.Melee.Brawler` in `meleeOf` (`skills.go:561`) | done [SHT-2], original name |
-| SHT-105 | Nimble effect | +15.0 Melee Dodge Chance | Shipped: original-named trait `LightFooted` (`trait/trait.go:76`, no group or needs) sets `attack.Melee.Nimble` in `meleeOf` (`skills.go:562`); +15 dodge score at `attack/melee.go:106` | done [SHT-2], original name, #273 |
+| SHT-105 | Nimble effect | +15.0 Melee Dodge Chance | Shipped: original-named trait `LightFooted` (`trait/trait.go:76`, no group or needs) sets `attack.Melee.Nimble` in `meleeOf` (`skills.go:562`); +15 dodge score at `attack/melee.go:106`; trap spring ×10 % for a Nimble victim (`combat/defense.go` `trapNimblePct`) | done [SHT-2], original name, #273 |
 | SHT-201 | Hit card adds up | Not published, ours | Shipped: card lines are successive differences of `attack.Report.Chain()` (`attack/contract.go:33`, `overlay/shot_card.go:27`), so band + factors equal the headline exactly | done [SHT-3] |
 | SHT-202 | Hit card when undrafted | Not published, ours | Shipped: `shotCard` (`combat_overlay_host.go:80`) for any selected colonist; the range ring stays drafted-only | done [SHT-3] |
 | SHT-203 | Bands and burst in the Gear tab | Weapons publish four bands and burst | Already shown: `inspector/gear/facts.go:89-105` (bands) and `:99` (burst); proven by `TestSHT203WeaponTooltip` | done [SHT-3] |
