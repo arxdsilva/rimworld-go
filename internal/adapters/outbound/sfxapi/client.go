@@ -81,7 +81,7 @@ func (a *Client) do(ctx context.Context, method, url string, body []byte, accept
 			continue
 		}
 		data, rerr := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		switch {
 		case resp.StatusCode == http.StatusOK && rerr == nil:
 			return data, nil

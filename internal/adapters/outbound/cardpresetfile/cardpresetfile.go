@@ -90,7 +90,7 @@ func (s Store) Load(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(p)
+	f, err := os.Open(filepath.Clean(p))
 	if err != nil {
 		return nil, fmt.Errorf("open preset: %w", err)
 	}

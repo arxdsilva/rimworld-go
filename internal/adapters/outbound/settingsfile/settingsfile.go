@@ -42,7 +42,7 @@ func (s Store) Load() (config.Settings, error) {
 		return config.Defaults(), fmt.Errorf("open settings: %w", err)
 	}
 	set, err := config.Decode(f)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		if rerr := os.Rename(s.Path, s.Path+".bad"); rerr != nil {
 			return config.Defaults(), fmt.Errorf("%w (and could not set it aside: %v)", err, rerr)

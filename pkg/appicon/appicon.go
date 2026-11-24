@@ -29,7 +29,7 @@ import (
 // the runtime window-icon dir.
 func Write(pack, rt string) error {
 	for _, d := range []string{pack, rt, filepath.Join(pack, "rimworld-go.iconset")} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
+		if err := os.MkdirAll(d, 0o755); err != nil { // #nosec G301 -- release asset
 			return err
 		}
 	}
@@ -66,7 +66,7 @@ func Write(pack, rt string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(pack, "rimworld-go.ico"), ico, 0o644)
+	return os.WriteFile(filepath.Join(pack, "rimworld-go.ico"), ico, 0o644) // #nosec G306 -- release asset
 }
 
 func writePNG(path string, img image.Image) error {
@@ -74,14 +74,14 @@ func writePNG(path string, img image.Image) error {
 	if err := png.Encode(&b, img); err != nil {
 		return err
 	}
-	return os.WriteFile(path, b.Bytes(), 0o644)
+	return os.WriteFile(path, b.Bytes(), 0o644) // #nosec G306 -- release asset
 }
 
 // EncodeICO packs square images (each at most 256 px) as PNG-compressed
 // entries of a Windows icon file.
 func EncodeICO(imgs []*image.RGBA) ([]byte, error) {
 	var head, data bytes.Buffer
-	binary.Write(&head, binary.LittleEndian, [3]uint16{0, 1, uint16(len(imgs))})
+	_ = binary.Write(&head, binary.LittleEndian, [3]uint16{0, 1, uint16(len(imgs))})
 	offset := 6 + 16*len(imgs)
 	for _, im := range imgs {
 		var p bytes.Buffer
@@ -94,8 +94,8 @@ func EncodeICO(imgs []*image.RGBA) ([]byte, error) {
 		}
 		w := byte(n) // 256 is stored as 0
 		head.Write([]byte{w, w, 0, 0})
-		binary.Write(&head, binary.LittleEndian, [2]uint16{1, 32})
-		binary.Write(&head, binary.LittleEndian, [2]uint32{uint32(p.Len()), uint32(offset)})
+		_ = binary.Write(&head, binary.LittleEndian, [2]uint16{1, 32})
+		_ = binary.Write(&head, binary.LittleEndian, [2]uint32{uint32(p.Len()), uint32(offset)})
 		offset += p.Len()
 		data.Write(p.Bytes())
 	}

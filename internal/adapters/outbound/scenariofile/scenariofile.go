@@ -100,7 +100,7 @@ func (s Store) Load(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	b, err := os.ReadFile(p)
+	b, err := os.ReadFile(filepath.Clean(p))
 	if err != nil {
 		return nil, fmt.Errorf("read scenario: %w", err)
 	}

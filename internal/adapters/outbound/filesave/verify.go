@@ -6,6 +6,7 @@ package filesave
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -75,7 +76,7 @@ func (v *Verifier) Verify(slots []Slot) {
 
 // verifyFile decompresses path to its end.
 func verifyFile(path string) error {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return err
 	}

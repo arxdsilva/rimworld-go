@@ -106,7 +106,7 @@ func (s Store) List() ([]Slot, error) {
 			sl.Err = err
 		} else {
 			sl.Info, sl.Err = game.ReadSaveInfo(f)
-			f.Close()
+			_ = f.Close()
 			if sl.Err == nil && !game.SupportedSaveVersion(sl.Info.Version) {
 				sl.Err = fmt.Errorf("%w (file v%d, game v%d)", game.ErrSaveVersion, sl.Info.Version, game.SaveVersion)
 			}
@@ -119,7 +119,7 @@ func (s Store) List() ([]Slot, error) {
 
 // Load reads a save file.
 func (s Store) Load(path string) (*game.Game, game.SaveInfo, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return nil, game.SaveInfo{}, fmt.Errorf("open save: %w", err)
 	}

@@ -30,7 +30,7 @@ func LocateAudio() (string, error) {
 // or at another rate is logged and skipped; only a bad sound list is an
 // error. Variants keep their manifest order per kind.
 func load(root string) (audiomanifest.Manifest, map[string][][]int16, map[string][][]byte, error) {
-	f, err := os.Open(filepath.Join(root, filepath.FromSlash(audiomanifest.Rel)))
+	f, err := os.Open(filepath.Clean(filepath.Join(root, filepath.FromSlash(audiomanifest.Rel))))
 	if err != nil {
 		return audiomanifest.Manifest{}, nil, nil, err
 	}
@@ -54,7 +54,7 @@ func load(root string) (audiomanifest.Manifest, map[string][][]int16, map[string
 				}
 				pcm[e.ID] = append(pcm[e.ID], samples)
 			case ".ogg":
-				data, err := os.ReadFile(path)
+				data, err := os.ReadFile(filepath.Clean(path))
 				if err == nil {
 					_, _, err = decodeOGG(data)
 				}
@@ -72,7 +72,7 @@ func load(root string) (audiomanifest.Manifest, map[string][][]int16, map[string
 }
 
 func readWAV(path string) ([]int16, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, err
 	}

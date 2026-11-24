@@ -18,7 +18,7 @@ type Rand struct {
 // always produces the same sequence.
 func New(seed uint64) *Rand {
 	p := rand.NewPCG(seed, seed)
-	return &Rand{pcg: p, src: rand.New(p)}
+	return &Rand{pcg: p, src: rand.New(p)} // #nosec G404 -- explicitly seeded PCG: the deterministic sim stream
 }
 
 // MarshalBinary captures the generator state (saved games).
@@ -29,7 +29,7 @@ func (r *Rand) MarshalBinary() ([]byte, error) { return r.pcg.MarshalBinary() }
 func (r *Rand) UnmarshalBinary(b []byte) error {
 	if r.pcg == nil {
 		r.pcg = rand.NewPCG(0, 0)
-		r.src = rand.New(r.pcg)
+		r.src = rand.New(r.pcg) // #nosec G404 -- explicitly seeded PCG: the deterministic sim stream
 	}
 	return r.pcg.UnmarshalBinary(b)
 }
