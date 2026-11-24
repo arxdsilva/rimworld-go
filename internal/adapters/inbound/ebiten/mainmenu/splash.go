@@ -47,7 +47,7 @@ func LocateMenuSplash() (string, error) {
 
 // LoadPNG reads a PNG file as an image.
 func LoadPNG(path string) (*ebiten.Image, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 G703 -- asset path: the menu splash or diorama manifest under the asset root
 	if err != nil {
 		return nil, err
 	}

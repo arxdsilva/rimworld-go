@@ -381,8 +381,8 @@ func (d *Deflater) deflate(b []byte) []byte {
 	} else {
 		d.zw.Reset(&d.buf)
 	}
-	d.zw.Write(b)
-	d.zw.Close()
+	_, _ = d.zw.Write(b) // flate into a bytes.Buffer: the sink never fails
+	_ = d.zw.Close()
 	return bytes.Clone(d.buf.Bytes())
 }
 
@@ -457,7 +457,7 @@ func (a *Atlas) inflateAll(z []byte, n int) []byte {
 	if a.zr == nil {
 		a.zr = flate.NewReader(&a.zsrc)
 	} else {
-		a.zr.(flate.Resetter).Reset(&a.zsrc, nil)
+		_ = a.zr.(flate.Resetter).Reset(&a.zsrc, nil) // flate Reset always returns nil (inflate.go)
 	}
 	if _, err := io.ReadFull(a.zr, out); err != nil {
 		return nil
@@ -467,7 +467,7 @@ func (a *Atlas) inflateAll(z []byte, n int) []byte {
 
 // decodeGray reads an 8-bit grey PNG (a tint-mask page), nil on failure.
 func decodeGray(path string) *image.Gray {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return nil
 	}
@@ -567,7 +567,7 @@ func (s *atlasSrc) NormalImage(sp *Sprite) *image.NRGBA {
 // and hold their sprites' rectangles.
 func (c *Catalog) loadAtlas(root, family string) error {
 	path := filepath.Join(root, MetadataRel, AtlasMetaDir, family+".yaml")
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return err
 	}
@@ -580,12 +580,12 @@ func (c *Catalog) loadAtlas(root, family string) error {
 	}
 	sizes := make([]image.Point, pages)
 	for p := range sizes {
-		f, err := os.Open(filepath.Join(root, "generated", "atlas", fmt.Sprintf("%s_%d.png", family, p)))
+		f, err := os.Open(filepath.Clean(filepath.Join(root, "generated", "atlas", fmt.Sprintf("%s_%d.png", family, p))))
 		if err != nil {
 			return fmt.Errorf("atlas %s: %w; run make art", family, err)
 		}
 		cfg, err := png.DecodeConfig(f)
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return fmt.Errorf("atlas %s page %d: %w", family, p, err)
 		}

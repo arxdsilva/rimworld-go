@@ -58,7 +58,7 @@ type Diorama struct {
 // LoadDiorama reads the diorama metadata and images under root (the
 // assets directory).
 func LoadDiorama(root string) (*Diorama, error) {
-	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(DioramaMetaRel)))
+	raw, err := os.ReadFile(filepath.Clean(filepath.Join(root, filepath.FromSlash(DioramaMetaRel))))
 	if err != nil {
 		return nil, err
 	}

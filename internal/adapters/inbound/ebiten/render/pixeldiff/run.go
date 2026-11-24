@@ -5,6 +5,7 @@ package pixeldiff
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
@@ -37,7 +38,7 @@ func Run(dir string, pol Policy, render func(variant int) *image.RGBA) (Result, 
 	}
 	res.Report = Compare(a, b, EdgeMask(a, 48, b))
 	res.Pass, res.Reason = res.Report.Pass(pol)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return res, err
 	}
 	imgs := map[string]*image.RGBA{"A.png": a, "B.png": b, "heat.png": HeatMap(a, b)}
@@ -45,18 +46,17 @@ func Run(dir string, pol Policy, render func(variant int) *image.RGBA) (Result, 
 		imgs["drift.png"] = HeatMap(a, a2) // where A and A' disagree
 	}
 	for name, img := range imgs {
-		f, err := os.Create(filepath.Join(dir, name))
+		f, err := os.Create(filepath.Clean(filepath.Join(dir, name)))
 		if err != nil {
 			return res, err
 		}
-		err = png.Encode(f, img)
-		f.Close()
+		err = errors.Join(png.Encode(f, img), f.Close())
 		if err != nil {
 			return res, err
 		}
 	}
 	js, _ := json.MarshalIndent(res, "", "  ")
-	if err := os.WriteFile(filepath.Join(dir, "report.json"), js, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "report.json"), js, 0o600); err != nil {
 		return res, err
 	}
 	switch {

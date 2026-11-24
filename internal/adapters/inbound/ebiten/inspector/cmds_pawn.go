@@ -86,7 +86,7 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 }
 
 // DropWeaponID is the Gear tab's Drop weapon button (journeys press it).
-const DropWeaponID = "cmd.pawn.dropweapon"
+const DropWeaponID = "cmd.pawn.dropweapon" // #nosec G101 -- UI command id constant, not a credential
 
 // dropWeaponCommand is Drop weapon: the colonist puts the weapon down where
 // they stand (DropWeapon), to be picked up again by anyone.

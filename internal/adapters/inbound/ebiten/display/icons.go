@@ -32,12 +32,12 @@ func LoadIcons() ([]image.Image, error) {
 func loadIconsFrom(dir string) ([]image.Image, error) {
 	out := make([]image.Image, 0, len(iconSizes))
 	for _, n := range iconSizes {
-		f, err := os.Open(filepath.Join(dir, fmt.Sprintf("icon_%d.png", n)))
+		f, err := os.Open(filepath.Clean(filepath.Join(dir, fmt.Sprintf("icon_%d.png", n))))
 		if err != nil {
 			return nil, err
 		}
 		img, err := png.Decode(f)
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return nil, fmt.Errorf("icon_%d.png: %w", n, err)
 		}

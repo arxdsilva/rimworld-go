@@ -506,7 +506,7 @@ func (c *Catalog) DecodeFiles() error {
 func Index(root string, preferFiles bool) (*Catalog, error) {
 	c := &Catalog{Sprites: map[string]*Sprite{}, Tinted: map[TintKey]*ebiten.Image{},
 		Normals: map[*ebiten.Image]*ebiten.Image{}, mem: &artMem{}}
-	base, err := os.ReadFile(filepath.Join(root, "palettes", "base.yaml"))
+	base, err := os.ReadFile(filepath.Clean(filepath.Join(root, "palettes", "base.yaml")))
 	if err != nil {
 		return nil, err
 	}
@@ -543,7 +543,7 @@ func Index(root string, preferFiles bool) (*Catalog, error) {
 			if !strings.HasSuffix(f.Name(), ".yaml") {
 				continue
 			}
-			raw, err := os.ReadFile(filepath.Join(metaRoot, fam.Name(), f.Name()))
+			raw, err := os.ReadFile(filepath.Clean(filepath.Join(metaRoot, fam.Name(), f.Name())))
 			if err != nil {
 				return nil, err
 			}
@@ -575,7 +575,7 @@ func Index(root string, preferFiles bool) (*Catalog, error) {
 }
 
 func DecodeNRGBA(path string) (*image.NRGBA, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return nil, err
 	}

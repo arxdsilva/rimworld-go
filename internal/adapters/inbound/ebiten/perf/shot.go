@@ -65,16 +65,16 @@ func (m *Meter) write(img image.Image) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
 	path := filepath.Join(dir, m.name())
-	f, err := os.Create(path)
+	f, err := os.Create(filepath.Clean(path))
 	if err != nil {
 		return "", err
 	}
 	if err := png.Encode(f, img); err != nil {
-		f.Close()
+		_ = f.Close()
 		return "", err
 	}
 	return path, f.Close()

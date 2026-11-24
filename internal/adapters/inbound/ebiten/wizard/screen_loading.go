@@ -35,7 +35,7 @@ type loadState struct {
 // Fnv64a hashes text.
 func Fnv64a(s string) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(s))
+	_, _ = h.Write([]byte(s))
 	return h.Sum64()
 }
 

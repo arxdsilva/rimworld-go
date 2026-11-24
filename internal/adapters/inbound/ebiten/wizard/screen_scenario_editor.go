@@ -71,7 +71,7 @@ func newScenarioDef() scenario.Def {
 	d, _ := scenario.Builtin("broken_hull")
 	d.Key, d.Builtin, d.Hardness = "", false, 0
 	d.Name, d.Summary, d.Desc = "New scenario", "", ""
-	d.Seed = rand.Uint64N(1<<32) + 1
+	d.Seed = rand.Uint64N(1<<32) + 1 // #nosec G404 -- UI picks a new-game seed once; the sim consumes it deterministically
 	d.Parts = []scenario.Part{scenario.NewPart(scenario.PartStartItem)}
 	return d
 }
@@ -249,7 +249,7 @@ func (w editorPage) editorUI(sw, sh int) {
 		ed.reveal = -1
 	})
 	uikit.StyledButton(w.kit(), "sced.seed", rects[3], w.sh.T("Randomize seed"), uikit.BtnOpts{Tip: w.sh.Tf("Randomize seed\nThe scenario's own seed (now %d) only drives its random parts, such as a random pet. It is not the planet seed.", ed.Def.Seed)}, func() {
-		ed.Def.Seed = rand.Uint64N(1<<32) + 1
+		ed.Def.Seed = rand.Uint64N(1<<32) + 1 // #nosec G404 -- UI picks a new-game seed once; the sim consumes it deterministically
 	})
 
 	w.editorForm(ng, ed, L.form, probs)

@@ -172,7 +172,7 @@ func CropUnits(x, y, n int, vertical bool, out []CropUnit) []CropUnit {
 		across := b[1] + (f(16)*2-1)*CropJitterAcross
 		rank := 0
 		for j := 0; j < n; j++ {
-			if keys[j] < keys[k] || keys[j] == keys[k] && j < k {
+			if keys[j] < keys[k] || keys[j] == keys[k] && j < k { // #nosec G602 -- j, k < n <= len(keys)
 				rank++
 			}
 		}

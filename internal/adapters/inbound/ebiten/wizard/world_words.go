@@ -41,7 +41,7 @@ func worldPhrase(n func(k int) int) string {
 func RandomWorldPhrase() string { return worldPhrase(rand.IntN) }
 
 // RandomSeed is a fresh non-zero numeric seed (legacy starts).
-func RandomSeed() uint64 { return rand.Uint64N(1_000_000_000) + 1 }
+func RandomSeed() uint64 { return rand.Uint64N(1_000_000_000) + 1 } // #nosec G404 -- UI picks a new-game seed once; the sim consumes it deterministically
 
 // Seed text limits (NG-1 §2.6).
 const MaxSeedText = 32

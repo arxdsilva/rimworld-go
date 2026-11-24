@@ -821,17 +821,20 @@ func (a *App) drawCapture(screen *ebiten.Image) {
 	b := screen.Bounds()
 	img := image.NewRGBA(b)
 	screen.ReadPixels(img.Pix)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		a.capture.err = err
-		return
+	a.capture.err = writeShot(path, img)
+}
+
+// writeShot saves img as a PNG at path, creating its (player-owned) dir 0o750.
+func writeShot(path string, img image.Image) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return err
 	}
-	f, err := os.Create(path)
+	f, err := os.Create(filepath.Clean(path))
 	if err != nil {
-		a.capture.err = err
-		return
+		return err
 	}
 	defer f.Close()
-	a.capture.err = png.Encode(f, img)
+	return png.Encode(f, img)
 }
 
 // captureDiff draws the settled frame old, new, old (pixeldiff.Run) and

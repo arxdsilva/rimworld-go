@@ -44,7 +44,7 @@ func (b *Bus) shipPartHum(rv *render.View, want map[string]Loop, w game.WorldVie
 		k := n
 		if n < len(hs) {
 			n++
-		} else if vol <= hs[n-1].vol {
+		} else if vol <= hs[n-1].vol { // #nosec G602 -- else-branch: n == len(hs) == MaxMachineLoops > 0
 			continue
 		} else {
 			k = n - 1

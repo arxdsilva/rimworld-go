@@ -118,7 +118,7 @@ func parseFile(path, code string) (Catalog, error) {
 			return p.c, p.err
 		}
 	}
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return Catalog{}, fmt.Errorf("lang: %w", err)
 	}
