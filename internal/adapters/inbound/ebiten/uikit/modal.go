@@ -103,9 +103,10 @@ func ModalFooterHeight(m Modal) float32 {
 	return float32(len(m.Buttons))*hudlayout.MenuRowH + hudlayout.WindowPad
 }
 
-// layout is where m sits this frame: on its anchor when it has one (cut
-// to the screen), else centred.
-func layout(sw, sh int, m Modal) (frame, title, body, footer gfx.Rect) {
+// ModalLayout is where m sits this frame: on its anchor when it has one (cut
+// to the screen), else centred. RunModals and RunWindow place every kit
+// window through it, so a column test reads the production rect (QA-002).
+func ModalLayout(sw, sh int, m Modal) (frame, title, body, footer gfx.Rect) {
 	if m.Anchor != nil {
 		if r := m.Anchor().Intersect(gfx.WinRect(sw, sh)); !r.Empty() {
 			return modalParts(r, m)
@@ -179,7 +180,7 @@ func (k *Kit) RunModals(closeModal func(id string)) {
 	for i := 0; i < len(k.Modals); i++ {
 		m := k.Modals[i]
 		k.Layer = i + 1
-		frame, titleR, body, footer := layout(sw, sh, m)
+		frame, titleR, body, footer := ModalLayout(sw, sh, m)
 		if !m.Popup {
 			k.Queue(func(dst *ebiten.Image) { FillRect(dst, gfx.WinRect(sw, sh), ModalDim) })
 		}
@@ -233,7 +234,7 @@ func popupMissed(k *Kit, frame gfx.Rect) bool {
 // while the window is open.
 func (k *Kit) RunWindow(m Modal, closeX, dismiss func()) {
 	sw, sh := k.host.Size()
-	frame, titleR, body, footer := layout(sw, sh, m)
+	frame, titleR, body, footer := ModalLayout(sw, sh, m)
 	k.modalChrome(m, frame, titleR)
 	if !m.Frameless && k.Button("modal."+m.ID+".close", modalCloseRect(titleR), "X", BtnOpts{Tip: tk(k).T("Close")}) {
 		closeX()

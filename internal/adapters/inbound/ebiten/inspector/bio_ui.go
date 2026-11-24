@@ -194,11 +194,8 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 	if in.Bottom()-condH-relH-top < bioHdrH+bioScrollRows*bioRowMin {
 		rel, relH = nil, 0 // too tight for a useful table: the relations go first (the Social tab has them)
 	}
-	avail := in.Bottom() - condH - relH - top - bioHdrH
-	rowH := min(float32(bioRowMax), max(float32(bioRowMin), avail/float32(max(len(b.Skills), 1))))
-	// the table scrolls when the room is less than its rows; never beyond the bottom blocks
-	tableH := min(bioHdrH+rowH*float32(len(b.Skills)), max(in.Bottom()-condH-relH-top, bioHdrH))
-	a.bioSkills(gfx.Rect{X: in.X, Y: top, W: in.W, H: tableH}, b, week, rowH)
+	r, rowH := bioSkillsRect(in, top, condH, relH, len(b.Skills))
+	a.bioSkills(r, b, week, rowH)
 
 	if len(rel) > 0 {
 		ry := in.Bottom() - condH - relH + 2
@@ -228,6 +225,57 @@ func bioRelationsH(n int) float32 {
 	return 21 + float32(n-1)*14 // the 14 px label's glyphs, then a 14 px pitch of Small lines
 }
 
+// bioSkillsRect is the skill table's rect in the tab's inner rect in, from
+// top, above a Health block of condH and a Relations block of relH, and the
+// height of one of its n rows. The table scrolls when its rows are taller
+// than the room, and never reaches into the bottom blocks (QA-002).
+func bioSkillsRect(in gfx.Rect, top, condH, relH float32, n int) (r gfx.Rect, rowH float32) {
+	avail := in.Bottom() - condH - relH - top - bioHdrH
+	rowH = min(float32(bioRowMax), max(float32(bioRowMin), avail/float32(max(n, 1))))
+	tableH := min(bioHdrH+rowH*float32(n), max(in.Bottom()-condH-relH-top, bioHdrH))
+	return gfx.Rect{X: in.X, Y: top, W: in.W, H: tableH}, rowH
+}
+
+// The skill table's columns (QA-002) and their x offsets in a row.
+const (
+	bioPassX = 108 // the passion glyph
+	bioLvlX  = 150 // the level's right edge is bioLvlX+10
+	bioBarX  = 164 // the experience bar
+)
+
+// bioColumns declares the skill table's columns and their header titles.
+func bioColumns(sh interface{ T(string) string }) [5]uikit.TableCol {
+	return [5]uikit.TableCol{
+		{ID: "skill", Title: sh.T("Skill")}, {ID: "passion", Title: sh.T("Passion")},
+		{ID: "level", Title: sh.T("Lvl")}, {ID: "xp", Title: sh.T("Experience")},
+		{ID: "week", Title: sh.T("This week")},
+	}
+}
+
+// bioHeaderRow is the header's row for cells: the table's x from the view the
+// rows are laid in, so a scrollbar narrows both alike.
+func bioHeaderRow(r, view gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: view.X, Y: r.Y, W: view.W, H: bioHdrH}
+}
+
+// bioSkillCells appends the five cells of a skill row (or the header) row, in
+// bioColumns order: the name up to the passion header, the 12 px passion
+// glyph, the level right-anchored at bioLvlX+10, the experience bar and
+// This week from the bar's end to 6 px short of the row's right edge.
+func bioSkillCells(dst []uikit.TableCell, row gfx.Rect) []uikit.TableCell {
+	const lvlW, weekPad = 24, 6
+	barR := row.X + bioBarX + max(0, row.W-bioBarX-52)
+	at := func(id string, x, w float32) uikit.TableCell {
+		return uikit.TableCell{Col: id, R: gfx.Rect{X: x, Y: row.Y, W: w, H: row.H}}
+	}
+	return append(dst,
+		at("skill", row.X+22, bioPassX-14-22),
+		at("passion", row.X+bioPassX, 12),
+		at("level", row.X+bioLvlX+10-lvlW, lvlW),
+		at("xp", row.X+bioBarX, barR-row.X-bioBarX),
+		at("week", barR, row.Right()-weekPad-barR))
+}
+
 // bioSkills draws the skill table of the Bio tab in r: a header, then the
 // rows (icon and name, passion, level, experience bar, this week's
 // learning). When the rows are taller than the room under the header the
@@ -248,66 +296,72 @@ func (a Tabs) bioSkills(r gfx.Rect, b game.BioView, week [skill.NumSkills]int, r
 			a.kit().Tip(fmt.Sprintf("bio.skill.%d", i), row, bioSkillTip(a.shell, a.skillTip(b.Skills[i]), b.Skills[i], week[i]))
 		}
 	}
-	const (
-		passX = 108
-		lvlX  = 150
-		barX  = 164
-	)
-	barW := view.W - barX - 52
 	u.Queue(func(dst *ebiten.Image) {
+		var buf [5]uikit.TableCell
 		hs := gfx.Small
 		hs.Color = uikit.Heading
 		hr := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: bioHdrH}
+		hc := bioSkillCells(buf[:0], bioHeaderRow(r, view))
 		uikit.FillRect(dst, hr, uikit.Btn)
 		uikit.StrokeRect(dst, hr, uikit.BtnBorder)
 		hy := gfx.CenterTop(float64(r.Y), bioHdrH, hs)
-		gfx.Text(dst, a.shell.T("Skill"), float64(r.X+8), hy, hs)
-		gfx.Text(dst, a.shell.T("Passion"), float64(r.X+passX-14), hy, hs)
+		cols := bioColumns(a.shell)
 		lh := hs
 		lh.Align = gfx.AlignRight
-		gfx.Text(dst, a.shell.T("Lvl"), float64(r.X+lvlX+10), hy, lh)
-		gfx.Text(dst, a.shell.T("Experience"), float64(r.X+barX), hy, hs)
-		gfx.Text(dst, a.shell.T("This week"), float64(view.Right()-6), hy, lh)
+		gfx.Text(dst, cols[0].Title, float64(hc[0].R.X-14), hy, hs)
+		gfx.Text(dst, cols[1].Title, float64(hc[1].R.X-14), hy, hs)
+		gfx.Text(dst, cols[2].Title, float64(hc[2].R.Right()), hy, lh)
+		gfx.Text(dst, cols[3].Title, float64(hc[3].R.X), hy, hs)
+		gfx.Text(dst, cols[4].Title, float64(hc[4].R.Right()), hy, lh)
 		body := gfx.ClipTo(dst, view)
 		for i, s := range b.Skills {
 			row := rowAt(i)
 			if row.Bottom() < view.Y || row.Y > view.Bottom() {
 				continue
 			}
-			uikit.RowStripe(body, row, i)
-			st := gfx.Small
-			if s.Incapable {
-				st.Color = uikit.TextDisabled
-			}
-			ty := gfx.CenterTop(float64(row.Y), float64(row.H), st)
-			if img := a.env().Art.Image("ui_icon/skill_"+s.Key, color.NRGBA{}); img != nil {
-				gfx.Icon(body, img, float64(row.X+6), float64(row.Y)+(float64(row.H)-12)/2, 12)
-			}
-			gfx.Text(body, s.Label, float64(row.X+22), ty, st)
-			if !s.Incapable && s.Passion > 0 {
-				a.DrawPassion(body, s.Passion, float64(row.X+passX), float64(row.Y)+(float64(row.H)-12)/2, 12, st, ty)
-			}
-			lt := st
-			lt.Align = gfx.AlignRight
-			gfx.Text(body, a.skillLevel(s), float64(row.X+lvlX+10), ty, lt)
-			if s.Incapable {
-				gfx.Text(body, a.shell.T("incapable"), float64(row.X+barX), ty, st)
-				continue
-			}
-			bar := gfx.Rect{X: row.X + barX, Y: row.Y + (row.H-6)/2, W: barW, H: 6}
-			uikit.FillRect(body, bar, uikit.SliderTrack)
-			uikit.FillRect(body, gfx.Rect{X: bar.X, Y: bar.Y, W: bar.W * float32(s.XPPct) / 100, H: bar.H}, uikit.SliderFill)
-			uikit.StrokeRect(body, bar, uikit.PanelBorder)
-			wt := st
-			wt.Align = gfx.AlignRight
-			if week[i] <= 0 {
-				wt.Color = uikit.TextDim
-			} else {
-				wt.Color = uikit.Good
-			}
-			gfx.Text(body, WeekText(week[i]), float64(row.Right()-6), ty, wt)
+			a.bioRow(body, row, i, s, week[i])
 		}
 	})
+}
+
+// bioRow draws skill s's row i in row on body: the stripe, the icon and
+// name, the passion, the level, then the experience bar and this week's
+// learning, or "incapable" for an incapable skill. Every x is its cell's.
+func (a Tabs) bioRow(body *ebiten.Image, row gfx.Rect, i int, s game.SkillView, week int) {
+	uikit.RowStripe(body, row, i)
+	var buf [5]uikit.TableCell
+	rc := bioSkillCells(buf[:0], row)
+	st := gfx.Small
+	if s.Incapable {
+		st.Color = uikit.TextDisabled
+	}
+	ty := gfx.CenterTop(float64(row.Y), float64(row.H), st)
+	if img := a.env().Art.Image("ui_icon/skill_"+s.Key, color.NRGBA{}); img != nil {
+		gfx.Icon(body, img, float64(row.X+6), float64(row.Y)+(float64(row.H)-12)/2, 12)
+	}
+	gfx.Text(body, s.Label, float64(rc[0].R.X), ty, st)
+	if !s.Incapable && s.Passion > 0 {
+		a.DrawPassion(body, s.Passion, float64(rc[1].R.X), float64(row.Y)+(float64(row.H)-12)/2, 12, st, ty)
+	}
+	lt := st
+	lt.Align = gfx.AlignRight
+	gfx.Text(body, a.skillLevel(s), float64(rc[2].R.Right()), ty, lt)
+	if s.Incapable {
+		gfx.Text(body, a.shell.T("incapable"), float64(rc[3].R.X), ty, st)
+		return
+	}
+	bar := gfx.Rect{X: rc[3].R.X, Y: row.Y + (row.H-6)/2, W: rc[3].R.W, H: 6}
+	uikit.FillRect(body, bar, uikit.SliderTrack)
+	uikit.FillRect(body, gfx.Rect{X: bar.X, Y: bar.Y, W: bar.W * float32(s.XPPct) / 100, H: bar.H}, uikit.SliderFill)
+	uikit.StrokeRect(body, bar, uikit.PanelBorder)
+	wt := st
+	wt.Align = gfx.AlignRight
+	if week <= 0 {
+		wt.Color = uikit.TextDim
+	} else {
+		wt.Color = uikit.Good
+	}
+	gfx.Text(body, WeekText(week), float64(rc[4].R.Right()), ty, wt)
 }
 
 // drawPassion draws the passion glyph of level p (1 minor, 2 major) at

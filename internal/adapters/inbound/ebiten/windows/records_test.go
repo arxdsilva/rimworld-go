@@ -6,6 +6,8 @@ package windows
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 )
 
@@ -36,21 +38,36 @@ func TestRecordRows(t *testing.T) {
 	}
 }
 
+// TestRecordCellsDrawFourColumns is the DEF 3.1 guard: all four columns are
+// routed, ordered, apart and inside the list.
 func TestRecordCellsDrawFourColumns(t *testing.T) {
 	t.Parallel()
-	cells := recordCells(10, 700, [4]string{"Ada", "3", "40", "12"})
-	if cells[3].Text != "12" || cells[2].Text != "40" {
+	list := gfx.Rect{X: 10, Y: 0, W: 700, H: 22}
+	texts := recordTexts(recordRow{Name: "Ada", Kills: 3, Damage: 40, Taken: 12})
+	var buf [4]uikit.TableCell
+	cells := recordCells(buf[:0], list)
+	if len(cells) != 4 {
 		t.Fatalf("cells = %+v", cells)
 	}
+	// routing: Damage dealt is value index 2, Damage taken index 3
+	if texts[3] != "12" || texts[2] != "40" || texts[1] != "3" || texts[0] != "Ada" {
+		t.Fatalf("texts = %+v", texts)
+	}
+	if cells[2].Col != "dealt" || cells[3].Col != "taken" {
+		t.Fatalf("cells = %+v", cells)
+	}
+	// order: each cell is right of the previous one
 	for i := 1; i < 4; i++ {
-		if cells[i].X <= cells[i-1].X {
+		if cells[i].R.X <= cells[i-1].R.X {
 			t.Fatalf("column %d not right of column %d: %+v", i, i-1, cells)
 		}
 	}
-	if cells[0].X+cells[0].Fit > cells[1].X {
+	// no overlap: the name column stops before Kills
+	if cells[0].R.Right() > cells[1].R.X {
 		t.Fatalf("name column overlaps Kills: %+v", cells)
 	}
-	if cells[3].X+60 > 10+700 {
+	// inside the list: Damage taken does not run off it
+	if cells[3].R.Right() > list.Right() {
 		t.Fatalf("Damage taken column runs off the list: %+v", cells)
 	}
 }

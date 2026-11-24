@@ -424,12 +424,7 @@ func (w scenarioPage) openScenarioFiles() {
 	if err != nil {
 		msg = w.sh.Tf("Can't read the scenarios folder: %s", err.Error())
 	}
-	cols := []uikit.TableCol{
-		{ID: "name", Title: w.sh.T("Name"), Cell: func(i int) string { return files[i].Name },
-			Less: func(x, y int) bool { return strings.ToLower(files[x].Name) < strings.ToLower(files[y].Name) }},
-		{ID: "mod", Title: w.sh.T("Modified"), W: 150, Cell: func(i int) string { return files[i].Modified },
-			Less: func(x, y int) bool { return files[x].Modified < files[y].Modified }},
-	}
+	cols := scenarioFileColumns(w.sh, files)
 	w.kit().Push(uikit.Modal{
 		ID: "scen.load", Title: w.sh.T("Load scenario file"), W: 560, H: 420,
 		Draw: func(body gfx.Rect) {
@@ -454,4 +449,15 @@ func (w scenarioPage) openScenarioFiles() {
 		},
 		Buttons: []uikit.ModalButton{{ID: "cancel", Label: w.sh.T("Cancel"), Closes: true}},
 	})
+}
+
+// scenarioFileColumns are the columns of a scenario file list (the Load
+// scenario file and editor Load modals): name, then when it was modified.
+func scenarioFileColumns(sh interface{ T(string) string }, files []ScenarioFile) []uikit.TableCol {
+	return []uikit.TableCol{
+		{ID: "name", Title: sh.T("Name"), Cell: func(i int) string { return files[i].Name },
+			Less: func(x, y int) bool { return strings.ToLower(files[x].Name) < strings.ToLower(files[y].Name) }},
+		{ID: "mod", Title: sh.T("Modified"), W: 150, Cell: func(i int) string { return files[i].Modified },
+			Less: func(x, y int) bool { return files[x].Modified < files[y].Modified }},
+	}
 }

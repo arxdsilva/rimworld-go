@@ -90,19 +90,17 @@ func drawDialog(b *Book, k *uikit.Kit, body gfx.Rect, picked *string, done func(
 		return
 	}
 	k.Label(body.X, body.Y, b.sh.T("Save name"), uikit.DimText())
-	field := gfx.Rect{X: body.X, Y: body.Y + 22, W: body.W, H: fieldH}
+	field := dialogField(body)
 	typing := k.Edit.ID == nameFieldID // the field reads its keys after this declare
 	_, committed := k.TextField(nameFieldID, field, &b.dialog.name, uikit.TextFieldSpec{MaxLen: savefmt.NameMax})
 	if (typing || committed) && enter(k) {
 		submit(b, done) // a name the rules refuse is kept, its note shown
 		return
 	}
-	lh := float32(gfx.LineH(gfx.Small))
 	if note, c := nameNote(b, b.dialog.name); note != "" {
 		k.Label(field.X, field.Bottom()+3, note, gfx.WithColor(gfx.Small, c))
 	}
-	top := field.Bottom() + 3 + lh + 8
-	list := gfx.Rect{X: body.X, Y: top, W: body.W - deleteColW, H: body.Bottom() - top}
+	list := dialogList(body)
 	if len(b.Slots) == 0 {
 		k.Label(list.X, list.Y, b.sh.T("No saves yet."), uikit.DimText())
 		return
@@ -114,6 +112,19 @@ func drawDialog(b *Book, k *uikit.Kit, body gfx.Rect, picked *string, done func(
 		*picked = b.Slots[sel].Name
 		b.dialog.name = slotTitle(b.Slots[sel])
 	}
+}
+
+// dialogField is the name field in the dialog's body, under its label.
+func dialogField(body gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: body.X, Y: body.Y + 22, W: body.W, H: fieldH}
+}
+
+// dialogList is the saves table's rect in the dialog's body: under the name
+// field and its note line, leaving the delete column on the right.
+func dialogList(body gfx.Rect) gfx.Rect {
+	field := dialogField(body)
+	top := field.Bottom() + 3 + float32(gfx.LineH(gfx.Small)) + 8
+	return gfx.Rect{X: body.X, Y: top, W: body.W - deleteColW, H: body.Bottom() - top}
 }
 
 // dialogCols are the list's columns: name, colony, in-game date, when saved.

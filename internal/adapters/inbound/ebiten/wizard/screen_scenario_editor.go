@@ -838,12 +838,7 @@ func (w editorPage) editorLoad() {
 			ng.Ed.LoadErr = "Can't read the scenarios folder: " + err.Error()
 		}
 	}
-	cols := []uikit.TableCol{
-		{ID: "name", Title: w.sh.T("Name"), Cell: func(i int) string { return files[i].Name },
-			Less: func(x, y int) bool { return strings.ToLower(files[x].Name) < strings.ToLower(files[y].Name) }},
-		{ID: "mod", Title: w.sh.T("Modified"), W: 150, Cell: func(i int) string { return files[i].Modified },
-			Less: func(x, y int) bool { return files[x].Modified < files[y].Modified }},
-	}
+	cols := scenarioFileColumns(w.sh, files)
 	w.kit().Push(uikit.Modal{
 		ID: "sced.loadfile", Title: w.sh.T("Load scenario"), W: 560, H: 440,
 		Draw: func(body gfx.Rect) {

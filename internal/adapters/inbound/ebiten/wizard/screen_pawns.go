@@ -107,6 +107,16 @@ func (ng *Draft) StartReasonIn(tr lang.Tr) string {
 	return ""
 }
 
+// pawnDetailRect splits the Pawns page's content below the roster into the
+// detail panel (portrait, bio, skills) and the team panel.
+func pawnDetailRect(content gfx.Rect) (detail, team gfx.Rect) {
+	_, rest := content.SplitH(pawnRosterW)
+	rest = gfx.Rect{X: rest.X + uikit.DialogPad, Y: rest.Y, W: rest.W - uikit.DialogPad, H: rest.H}
+	detail, team = rest.SplitH(rest.W - pawnTeamW - uikit.DialogPad)
+	team.X, team.W = team.X+uikit.DialogPad, pawnTeamW
+	return detail, team
+}
+
 func (w pawnsPage) pawnsUI(sw, sh int) {
 	uikit.OnScreenLayer(w.kit())
 	if w.kit().SetupTooSmall(sw, sh) {
@@ -130,10 +140,8 @@ func (w pawnsPage) pawnsUI(sw, sh int) {
 		ng.PawnSel = max(0, len(views)-1)
 	}
 	_, _, content, footer := uikit.DialogFrame(sw, sh)
-	roster, rest := content.SplitH(pawnRosterW)
-	rest = gfx.Rect{X: rest.X + uikit.DialogPad, Y: rest.Y, W: rest.W - uikit.DialogPad, H: rest.H}
-	detail, team := rest.SplitH(rest.W - pawnTeamW - uikit.DialogPad)
-	team.X, team.W = team.X+uikit.DialogPad, pawnTeamW
+	roster, _ := content.SplitH(pawnRosterW)
+	detail, team := pawnDetailRect(content)
 
 	w.pawnsRoster(ng, roster, views, nSel)
 	w.pawnsDetail(ng, detail, views)
@@ -614,6 +622,31 @@ func SkillTipIn(tr lang.Tr, s game.SkillView) string {
 	return t + lang.Tf(tr, "Passion: %s.", passionText(tr, s.Passion))
 }
 
+// pawnSkillColumns declares the skills table's columns and their titles.
+func pawnSkillColumns(sh interface{ T(string) string }) [3]uikit.TableCol {
+	return [3]uikit.TableCol{
+		{ID: "skill", Title: sh.T("Skill")}, {ID: "passion", Title: sh.T("Passion")},
+		{ID: "level", Title: sh.T("Level")},
+	}
+}
+
+// pawnSkillCells appends a skills row's (or the header's) three cells: Skill
+// at x+8 and Passion at x+160, each to the next cell, and Level (the number,
+// then the bar) at x+240 to the row's end (QA-002).
+func pawnSkillCells(dst []uikit.TableCell, row gfx.Rect) []uikit.TableCell {
+	at := func(id string, from, to float32) uikit.TableCell {
+		return uikit.TableCell{Col: id, R: gfx.Rect{X: row.X + from, Y: row.Y, W: max(0, min(to, row.W)-from), H: row.H}}
+	}
+	return append(dst, at("skill", 8, 160), at("passion", 160, 240), at("level", 240, row.W))
+}
+
+// pawnGlyphX, pawnLevelTextX and pawnBarSpan place the content drawn inside
+// the Passion and Level cells: the glyph 6 px in, the level number's centre
+// 10 px in, the bar from 40 px in to 16 px short of the cell's end.
+func pawnGlyphX(c gfx.Rect) float32         { return c.X + 6 }
+func pawnLevelTextX(c gfx.Rect) float32     { return c.X + 10 }
+func pawnBarSpan(c gfx.Rect) (x, w float32) { return c.X + 40, c.W - 56 }
+
 // skillsTable draws the skills with passion glyphs, level numbers and bars.
 func (w pawnsPage) skillsTable(r gfx.Rect, v game.CandidateView, rowH float32) {
 	u := w.kit()
@@ -624,13 +657,17 @@ func (w pawnsPage) skillsTable(r gfx.Rect, v game.CandidateView, rowH float32) {
 	u.Queue(func(dst *ebiten.Image) {
 		hs := gfx.Label
 		hs.Color = uikit.Heading
-		uikit.FillRect(dst, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uikit.Btn)
-		uikit.StrokeRect(dst, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uikit.BtnBorder)
-		gfx.Text(dst, w.sh.T("Skill"), float64(r.X+8), gfx.CenterTop(float64(r.Y), pawnSkillHdrH, hs), hs)
-		gfx.Text(dst, w.sh.T("Passion"), float64(r.X+160), gfx.CenterTop(float64(r.Y), pawnSkillHdrH, hs), hs)
-		gfx.Text(dst, w.sh.T("Level"), float64(r.X+240), gfx.CenterTop(float64(r.Y), pawnSkillHdrH, hs), hs)
+		hr := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}
+		uikit.FillRect(dst, hr, uikit.Btn)
+		uikit.StrokeRect(dst, hr, uikit.BtnBorder)
+		var buf [3]uikit.TableCell
+		hc, cols := pawnSkillCells(buf[:0], hr), pawnSkillColumns(w.sh)
+		for i, c := range hc {
+			gfx.Text(dst, cols[i].Title, float64(c.R.X), gfx.CenterTop(float64(r.Y), pawnSkillHdrH, hs), hs)
+		}
 		for i, s := range v.Skills {
 			row := gfx.Rect{X: r.X, Y: r.Y + pawnSkillHdrH + float32(i)*rowH, W: r.W, H: rowH}
+			rc := pawnSkillCells(buf[:0], row)
 			if i%2 == 1 {
 				uikit.FillRect(dst, row, uikit.Fade(uikit.Field, 0x28)) // premultiplied wash
 			}
@@ -639,23 +676,24 @@ func (w pawnsPage) skillsTable(r gfx.Rect, v game.CandidateView, rowH float32) {
 				st.Color = uikit.TextDisabled
 			}
 			ty := gfx.CenterTop(float64(row.Y), float64(row.H), st)
-			gfx.Text(dst, s.Label, float64(row.X+8), ty, st)
+			gfx.Text(dst, s.Label, float64(rc[0].R.X), ty, st)
 			if !s.Incapable && s.Passion > 0 {
 				key := "ui_icon/passion_minor"
 				if s.Passion == 2 {
 					key = "ui_icon/passion_major"
 				}
 				if img := w.art().Image(key, noTint); img != nil {
-					gfx.Icon(dst, img, float64(row.X+166), float64(row.Y)+(float64(row.H)-14)/2, 14)
+					gfx.Icon(dst, img, float64(pawnGlyphX(rc[1].R)), float64(row.Y)+(float64(row.H)-14)/2, 14)
 				} else {
-					gfx.Text(dst, strings.Repeat("*", s.Passion), float64(row.X+166), ty, st)
+					gfx.Text(dst, strings.Repeat("*", s.Passion), float64(pawnGlyphX(rc[1].R)), ty, st)
 				}
 			}
 			lt := st
 			lt.Align = gfx.AlignCenter
-			gfx.Text(dst, SkillLevelText(s), float64(row.X+250), ty, lt)
+			gfx.Text(dst, SkillLevelText(s), float64(pawnLevelTextX(rc[2].R)), ty, lt)
 			if !s.Incapable {
-				bar := gfx.Rect{X: row.X + 280, Y: row.Y + (row.H-8)/2, W: row.W - 296, H: 8}
+				bx, bw := pawnBarSpan(rc[2].R)
+				bar := gfx.Rect{X: bx, Y: row.Y + (row.H-8)/2, W: bw, H: 8}
 				uikit.FillRect(dst, bar, uikit.SliderTrack)
 				uikit.FillRect(dst, gfx.Rect{X: bar.X, Y: bar.Y, W: bar.W * float32(s.Level) / 20, H: bar.H}, uikit.SliderFill)
 				uikit.StrokeRect(dst, bar, uikit.PanelBorder)

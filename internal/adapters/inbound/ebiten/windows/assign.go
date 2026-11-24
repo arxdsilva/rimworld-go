@@ -156,16 +156,24 @@ func (w Assign) body(body gfx.Rect) {
 		return
 	}
 	head, rest := body.SplitV(assignHeadH)
-	cols := newAssignCols(body.W)
+	cols := assignColumns(w.sh)
+	var hbuf [assignNumCols]uikit.TableCell
+	hc := assignCells(hbuf[:0], head)
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
-	w.kit().Label(head.X, head.Y, w.sh.T("Colonist"), hs)
-	w.kit().Label(head.X+cols.drugX, head.Y, w.sh.T("Drugs"), hs)
-	w.kit().Tip("assign.head.drugs", gfx.Rect{X: head.X + cols.drugX, Y: head.Y, W: 120, H: head.H}, w.drugTip())
-	w.kit().Label(head.X+cols.careX, head.Y, w.sh.T("Medical"), hs)
-	w.kit().Tip("assign.head.care", gfx.Rect{X: head.X + cols.careX, Y: head.Y, W: 120, H: head.H}, w.careTip())
-	w.kit().Label(head.X+cols.foodX, head.Y, w.sh.T("Food"), hs)
-	w.kit().Tip("assign.head.food", gfx.Rect{X: head.X + cols.foodX, Y: head.Y, W: 120, H: head.H}, w.foodTip())
-	if w.outfitHead(head, cols) { // GEAR-3: the Apparel header opens the policy editor
+	tips := [assignNumCols]struct{ id, text string }{
+		assignColDrugs: {"assign.head.drugs", w.drugTip()}, assignColMedical: {"assign.head.care", w.careTip()}, assignColFood: {"assign.head.food", w.foodTip()},
+	}
+	for i := assignColColonist; i <= assignColFood; i++ {
+		r, ok := assignCellRect(hc, cols[i].ID)
+		if !ok {
+			continue
+		}
+		w.kit().Label(r.X, r.Y, cols[i].Title, hs)
+		if tips[i].id != "" {
+			w.kit().Tip(tips[i].id, r, tips[i].text)
+		}
+	}
+	if w.outfitHead(hc, cols[assignColApparel].Title) { // GEAR-3: the Apparel header opens the policy editor
 		return
 	}
 	rest, foot := rest.SplitV(rest.H - 2*AssignRowH) // MED-03: the default care row
@@ -192,11 +200,22 @@ func (w Assign) body(body gfx.Rect) {
 		if rr.Y < area.View.Y || rr.Bottom() > area.View.Bottom() {
 			continue // outside the view: no widgets
 		}
-		w.kit().Label(rr.X, float32(gfx.CenterTop(float64(rr.Y), float64(rr.H), gfx.Body)), gfx.Ellipsize(r.name, gfx.Body, float64(cols.nameW)-12), gfx.Body)
-		w.careButton(r, rr, cols) // MED-03
-		w.foodButton(r.pawn, rr, rr.X+cols.foodX)
-		w.outfitCells(r.pawn, rr, cols) // GEAR-3
-		br := gfx.Rect{X: rr.X + cols.drugX, Y: rr.Y, W: min(cols.drugW, rr.W-cols.drugX), H: rr.H}
+		var rbuf [assignNumCols]uikit.TableCell
+		rc := assignCells(rbuf[:0], rr)
+		if nr, ok := assignCellRect(rc, "colonist"); ok {
+			w.kit().Label(nr.X, float32(gfx.CenterTop(float64(rr.Y), float64(rr.H), gfx.Body)), gfx.Ellipsize(r.name, gfx.Body, float64(nr.W)-12), gfx.Body)
+		}
+		if cr, ok := assignCellRect(rc, "medical"); ok {
+			w.careButton(r, cr) // MED-03
+		}
+		if fr, ok := assignCellRect(rc, "food"); ok {
+			w.foodButton(r.pawn, fr)
+		}
+		w.outfitCells(r.pawn, rc) // GEAR-3
+		br, ok := assignCellRect(rc, "drugs")
+		if !ok {
+			continue
+		}
 		id := AssignDrugID(r.id)
 		if !r.known {
 			w.kit().Button(id, br, "-", uikit.BtnOpts{Disabled: true, Reason: w.sh.T("Drug policies are not available in this game.")})
@@ -211,8 +230,7 @@ func (w Assign) body(body gfx.Rect) {
 }
 
 // careButton is a colonist's medical care button (MED-03).
-func (w Assign) careButton(r assignRow, rr gfx.Rect, cols assignCols) {
-	cr := gfx.Rect{X: rr.X + cols.careX, Y: rr.Y, W: min(cols.careW, rr.W-cols.careX), H: rr.H}
+func (w Assign) careButton(r assignRow, cr gfx.Rect) {
 	if w.kit().Button(AssignCareID(r.id), cr, r.care.Label(), uikit.BtnOpts{Tip: w.careTip()}) {
 		next := NextCare(r.care)
 		w.sh.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(next)})

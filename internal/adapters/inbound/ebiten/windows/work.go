@@ -166,6 +166,44 @@ func WorkCellRect(r uikit.Button, row, col int) gfx.Rect {
 	return gfx.Rect{X: hx + float32(workSlot(col)*workCellW), Y: y, W: workCellW, H: workCellH}
 }
 
+// workMaxCells bounds a row: the name cell plus every WorkColumns slot.
+const workMaxCells = 15
+
+// workNameCol is the headerless id of the colonist-name cell in workCells.
+const workNameCol = "name"
+
+// workDeclared lists the ids a Work row declares: the name, then WorkColumns.
+func workDeclared() []string {
+	out := make([]string, 0, len(WorkColumns)+1)
+	out = append(out, workNameCol)
+	return append(out, WorkColumns...)
+}
+
+// workCells places colonist row's cells in the window rect r: the name cell
+// (headerless, as drawn) then one slot per live WorkColumns index, in column
+// order. A column absent from WorkLive has no cell.
+func workCells(dst []uikit.TableCell, r uikit.Button, row int) []uikit.TableCell {
+	// The name text sits on the whole-pixel row top, as it always drew.
+	y := float32(int(r.Y) + workTop + row*workRowH)
+	dst = append(dst, uikit.TableCell{Col: workNameCol, R: gfx.Rect{X: r.X + hudlayout.WindowPad, Y: y, W: WorkNameW - 8, H: workCellH}})
+	for i, id := range WorkColumns {
+		if _, live := WorkLive[i]; live {
+			dst = append(dst, uikit.TableCell{Col: id, R: WorkCellRect(r, row, i)})
+		}
+	}
+	return dst
+}
+
+// workColIndex is the WorkColumns index of a cell id (-1 for the name cell).
+func workColIndex(id string) int {
+	for i, c := range WorkColumns {
+		if c == id {
+			return i
+		}
+	}
+	return -1
+}
+
 // workHeadRect is the header button of column col: one slot wide, centred on
 // the box so the column name (drawn centred on the box) stays inside it.
 func workHeadRect(r uikit.Button, col int) gfx.Rect {
@@ -384,11 +422,16 @@ func (w Work) cellButtons() []uikit.Button {
 		if !workRowShown(r, row) {
 			break
 		}
-		for col := range WorkColumns {
+		var buf [workMaxCells]uikit.TableCell
+		for _, c := range workCells(buf[:0], r, row) {
+			col := workColIndex(c.Col)
+			if col < 0 {
+				continue
+			}
 			if _, ok := WorkTypeForCol(col); !ok {
 				continue
 			}
-			cr := WorkCellRect(r, row, col)
+			cr := c.R
 			b := uikit.Button{
 				ID:    ids.PrefixWorkCell + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
 				Label: "",
@@ -424,29 +467,33 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 	hintX := float64(r.X) + pad + float64(gfx.TextW(title, gfx.Label)) + 16
 	gfx.Text(screen, gfx.Ellipsize(w.hint(), gfx.Small, float64(r.X+r.W)-pad-hintX),
 		hintX, gfx.CenterTop(float64(r.Y)+pad, gfx.LineH(gfx.Label), gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
-	for i := range WorkColumns {
-		slot := workSlot(i)
+	var buf [workMaxCells]uikit.TableCell
+	for _, c := range workCells(buf[:0], r, 0) {
+		i := workColIndex(c.Col)
+		if i < 0 {
+			continue
+		}
 		st := gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter}
 		band := float64(workHeadH) / 2 // staggered rows, each centred in half the header
-		y := gfx.CenterTop(float64(r.Y)+workHeadY+float64(slot%2)*band, band, st)
-		gfx.Text(screen, w.colName(i), float64(workBoxRect(WorkCellRect(r, 0, i)).X)+float64(hudlayout.WorkBox)/2, y, st)
+		y := gfx.CenterTop(float64(r.Y)+workHeadY+float64(workSlot(i)%2)*band, band, st)
+		gfx.Text(screen, w.colName(i), float64(workBoxRect(c.R).X)+float64(hudlayout.WorkBox)/2, y, st)
 	}
 	pawns := w.sh.Pawns()
 	for row, p := range pawns {
 		if !workRowShown(w.Rect(), row) {
 			break
 		}
-		y := int(r.Y) + workTop + row*workRowH
-		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, WorkNameW-8), float64(r.X)+pad, gfx.CenterTop(float64(y), workCellH, gfx.Body), gfx.Body)
+		name := workCells(buf[:0], r, row)[0].R
+		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, float64(name.W)), float64(name.X), gfx.CenterTop(float64(name.Y), float64(name.H), gfx.Body), gfx.Body)
 	}
 	mx, my := w.sh.Cursor()
 	for row, p := range pawns {
 		if !workRowShown(w.Rect(), row) {
 			break
 		}
-		for col := range WorkColumns {
-			if _, live := WorkLive[col]; live {
-				w.drawCell(screen, p, WorkCellRect(w.Rect(), row, col), col, mx, my)
+		for _, c := range workCells(buf[:0], r, row) {
+			if col := workColIndex(c.Col); col >= 0 {
+				w.drawCell(screen, p, c.R, col, mx, my)
 			}
 		}
 	}

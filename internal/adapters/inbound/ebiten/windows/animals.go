@@ -74,14 +74,17 @@ const (
 // animalCol is a column of the Colony or Wild list that is left out when
 // the window is narrow: its x in the full layout (the constants above) and
 // its width.
-type animalCol struct{ x, w int }
+type animalCol struct {
+	id   string
+	x, w int
+}
 
 // The columns left out first when the window is narrower than the full
 // layout, in that order, and the full layouts' widths (right padding
 // included). The ones kept are the ones the buttons need.
 var (
-	colonyDrops = []animalCol{{colDoing, colBtn - colDoing}, {colTrain, colDoing - colTrain}, {colPreg, colHealth - colPreg},
-		{colProduct, colPreg - colProduct}, {colAge, colFood - colAge}, {colSex, colAge - colSex}, {colDiet, dietW + 6}}
+	colonyDrops = []animalCol{{cDoing, colDoing, colBtn - colDoing}, {cTrain, colTrain, colDoing - colTrain}, {cPreg, colPreg, colHealth - colPreg},
+		{cProduct, colProduct, colPreg - colProduct}, {cAge, colAge, colFood - colAge}, {cSex, colSex, colAge - colSex}, {cDiet, colDiet, dietW + 6}}
 )
 
 const (
@@ -172,6 +175,8 @@ func (w Animals) Buttons() []uikit.Button {
 	r := w.Rect()
 	cols := animalColsFor(r.W, w.Wild)
 	hy := w.headBtnY(r)
+	win := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
+	var buf [colonyColN]uikit.TableCell
 	out := []uikit.Button{
 		{ID: "animals.view.colony", Label: w.sh.T("Colony"), X: r.X + r.W - 192, Y: hy, W: 84, H: 24, Selected: !w.Wild,
 			Tip: w.sh.T("Colony animals\nTame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector.")},
@@ -190,28 +195,29 @@ func (w Animals) Buttons() []uikit.Button {
 		if y+animalRowH > r.Y+r.H {
 			break
 		}
+		cells := colonyCellsFor(buf[:0], win, cols, i)
 		id := strconv.FormatUint(uint64(an.ID), 10)
 		slaughter := w.sh.T("Slaughter")
 		if an.Designated {
 			slaughter = w.sh.T("Spare")
 		}
 		out = append(out,
-			uikit.Button{ID: "animals.master." + id, Label: AnimalMasterCell(an), X: r.X + float32(cols.at(colMaster)) - 2, Y: y, W: 88, H: 24,
+			uikit.Button{ID: "animals.master." + id, Label: AnimalMasterCell(an), X: colonyCell(cells, cMaster).X, Y: y, W: 88, H: 24,
 				Tip: w.sh.T("Master\nPick the colonist who handles this animal.")},
-			uikit.Button{ID: "animals.slaughter." + id, Label: slaughter, X: r.X + float32(cols.at(colBtn)), Y: y, W: 100, H: 24, Selected: an.Designated},
-			uikit.Button{ID: "animals.release." + id, Label: w.sh.T("Release"), X: r.X + float32(cols.at(colBtn)) + 106, Y: y, W: 90, H: 24},
+			uikit.Button{ID: "animals.slaughter." + id, Label: slaughter, X: colonyCell(cells, cActions).X, Y: y, W: 100, H: 24, Selected: an.Designated},
+			uikit.Button{ID: "animals.release." + id, Label: w.sh.T("Release"), X: colonyCell(cells, cActions).X + 106, Y: y, W: 90, H: 24},
 		)
-		if cols.shown(colDiet) {
+		if diet := colonyCell(cells, cDiet); !diet.Empty() {
 			label := an.FoodPolicy
 			if label == "" {
 				label = "-"
 			}
-			out = append(out, uikit.Button{ID: AnimalDietID(an.ID), Label: label, X: r.X + float32(cols.at(colDiet)), Y: y, W: dietW, H: 24,
+			out = append(out, uikit.Button{ID: AnimalDietID(an.ID), Label: label, X: diet.X, Y: y, W: diet.W, H: 24,
 				Tip: w.sh.T("Food policy\nWhat this animal may eat. A click picks the next policy.")})
 		}
 		if an.CanFollow { // PLAY-015: follow the drafted master, on or off
-			out = append(out, uikit.Button{ID: "animals.follow." + id, Label: animalFollowCell(w.sh, an), X: r.X + float32(cols.at(colFollow)) - 2, Y: y,
-				W: colArea - colFollow - 8, H: 24, Selected: an.Follows,
+			out = append(out, uikit.Button{ID: "animals.follow." + id, Label: animalFollowCell(w.sh, an), X: colonyCell(cells, cFollow).X, Y: y,
+				W: colonyCell(cells, cFollow).W, H: 24, Selected: an.Follows,
 				Tip: w.sh.T("Follow drafted\nWhether it follows its master while the master is drafted.")})
 		}
 	}
@@ -369,56 +375,50 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 }
 
 func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
-	x0, y0 := int(r.X), int(r.Y)
+	win := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
 	cols := animalColsFor(r.W, false)
-	head := y0 + animalsRowTop - 18
-	for _, h := range []struct {
-		x int
-		s string
-	}{{colName, w.sh.T("Name")}, {colSpecies, w.sh.T("Species")}, {colSex, w.sh.T("Sex")}, {colAge, w.sh.T("Age")}, {colFood, w.sh.T("Food")},
-		{colProduct, w.sh.T("Product")}, {colPreg, w.sh.T("Preg.")}, {colHealth, w.sh.T("Health")}, {colMaster, w.sh.T("Master")}, {colFollow, w.sh.T("Follow")}, {colArea, w.sh.T("Area / Pen")}, {colTrain, w.sh.T("Training")}, {colDoing, w.sh.T("Doing")}, {colDiet, w.sh.T("Diet")}} {
-		if cols.shown(h.x) {
-			uikit.DrawLabel(screen, x0+cols.at(h.x), head, h.s)
+	var buf [colonyColN]uikit.TableCell
+	head := int(r.Y) + animalsRowTop - 18
+	heads := colonyCellsFor(buf[:0], win, cols, 0)
+	for _, h := range colonyColumns(w.sh) {
+		if c := colonyCell(heads, h.ID); h.Title != "" && !c.Empty() {
+			uikit.DrawLabel(screen, int(c.X)+colonyHeadInset(h.ID), head, h.Title)
 		}
 	}
 	list := w.tame()
 	for i, an := range list {
-		y := y0 + animalsRowTop + i*animalRowH
+		y := int(r.Y) + animalsRowTop + i*animalRowH
 		if y+animalRowH > int(r.Y+r.H) {
 			break
 		}
-		w.sh.DrawAnimalIcon(screen, an, float64(r.X)+16, float64(y), 26)
+		cells := colonyCellsFor(buf[:0], win, cols, i)
+		if ic := colonyCell(cells, cIcon); !ic.Empty() {
+			w.sh.DrawAnimalIcon(screen, an, float64(ic.X), float64(int(ic.Y)), float64(ic.W))
+		}
 		ty := y + 6
-		uikit.DrawLabelClip(screen, x0+cols.at(colName), ty, colSpecies-colName-6, an.Name)
-		uikit.DrawLabelClip(screen, x0+cols.at(colSpecies), ty, colSex-colSpecies-6, w.sh.AnimalLabel(an))
-		if cols.shown(colSex) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colSex), ty, colAge-colSex-4, animalSexLetter(w.sh, an))
+		clip := func(id string, dx, dw int, text string) {
+			if c := colonyCell(cells, id); !c.Empty() {
+				uikit.DrawLabelClip(screen, int(c.X)+dx, ty, int(c.W)+dw, text)
+			}
 		}
-		if cols.shown(colAge) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colAge), ty, colFood-colAge-6, animalAgeText(w.sh, an))
+		clip(cName, 0, 0, an.Name)
+		clip(cSpecies, 0, 0, w.sh.AnimalLabel(an))
+		clip(cSex, 0, 0, animalSexLetter(w.sh, an))
+		clip(cAge, 0, 0, animalAgeText(w.sh, an))
+		if c := colonyCell(cells, cFood); hasNeeds(an) && !c.Empty() {
+			drawMiniBar(screen, int(c.X), y+8, int(c.W), 10, an.Food, an.Food < hungryBelow)
 		}
-		if hasNeeds(an) {
-			drawMiniBar(screen, x0+cols.at(colFood), y+8, 70, 10, an.Food, an.Food < hungryBelow)
-		}
-		if cols.shown(colProduct) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colProduct), ty, colPreg-colProduct-6, AnimalProductText(an))
-		}
-		if cols.shown(colPreg) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colPreg), ty, colHealth-colPreg-6, animalPregCell(w.sh, an))
-		}
-		uikit.DrawLabelClip(screen, x0+cols.at(colHealth), ty, colMaster-colHealth-6, w.sh.AnimalHealth(an))
+		clip(cProduct, 0, 0, AnimalProductText(an))
+		clip(cPreg, 0, 0, animalPregCell(w.sh, an))
+		clip(cHealth, 0, 0, w.sh.AnimalHealth(an))
 		if !an.CanFollow { // trained animals get the on/off toggle button
-			uikit.DrawLabelClip(screen, x0+cols.at(colFollow), ty, colArea-colFollow-6, animalFollowCell(w.sh, an))
+			clip(cFollow, 2, 2, animalFollowCell(w.sh, an))
 		}
 		if an.Penned { // area animals have the dropdown widget (animalsTabUI)
-			uikit.DrawLabelClip(screen, x0+cols.at(colArea), ty, colTrain-colArea-6, animalAreaCell(w.sh, an, ""))
+			clip(cArea, 2, -2, animalAreaCell(w.sh, an, ""))
 		}
-		if cols.shown(colTrain) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colTrain), ty, colDoing-colTrain-6, AnimalTrainingCell(an))
-		}
-		if cols.shown(colDoing) {
-			uikit.DrawLabelClip(screen, x0+cols.at(colDoing), ty, colBtn-colDoing-8, animalDoing(w.sh, an))
-		}
+		clip(cTrain, 0, 0, AnimalTrainingCell(an))
+		clip(cDoing, 0, 0, animalDoing(w.sh, an))
 	}
 	if len(list) == 0 {
 		uikit.DrawLabel(screen, int(r.X)+52, int(r.Y)+animalsRowTop, w.sh.T("No tame animals yet."))
@@ -714,7 +714,9 @@ func (w Animals) Declare(sw, sh int) {
 		return
 	}
 	r := w.Rect()
+	win := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
 	cols := animalColsFor(r.W, false)
+	var buf [colonyColN]uikit.TableCell
 	for i, an := range w.tame() {
 		y := r.Y + animalsRowTop + float32(i*animalRowH)
 		if y+animalRowH > r.Y+r.H {
@@ -724,8 +726,8 @@ func (w Animals) Declare(sw, sh int) {
 			continue
 		}
 		an := an
-		w.sh.AreaDropdown("animals.area."+strconv.FormatUint(uint64(an.ID), 10),
-			gfx.Rect{X: r.X + float32(cols.at(colArea)) - 2, Y: y, W: colTrain - colArea - 4, H: 24}, an.AreaRef,
+		area := colonyCell(colonyCellsFor(buf[:0], win, cols, i), cArea)
+		w.sh.AreaDropdown("animals.area."+strconv.FormatUint(uint64(an.ID), 10), area, an.AreaRef,
 			func(ref int) {
 				w.sh.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(an.ID), Index: ref})
 			})
@@ -745,10 +747,13 @@ func (w Animals) masterMenu(an game.AnimalView) {
 	}
 	opts = append(opts, game.OrderOption{Label: w.sh.T("No master"), Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
 	r := w.Rect()
+	win := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
 	cols := animalColsFor(r.W, false)
+	var buf [colonyColN]uikit.TableCell
 	for i, t := range w.tame() {
 		if t.ID == an.ID {
-			w.sh.Float(r.X+float32(cols.at(colMaster))-2, r.Y+animalsRowTop+float32(i*animalRowH)+26, opts)
+			m := colonyCell(colonyCellsFor(buf[:0], win, cols, i), cMaster)
+			w.sh.Float(m.X, m.Y+26, opts)
 			return
 		}
 	}
@@ -844,4 +849,102 @@ func (w Animals) drawWildArrow(screen *ebiten.Image) {
 		hy := dx*float32(math.Sin(float64(s))) + dy*float32(math.Cos(float64(s)))
 		gfx.Line(screen, x1, y1, x1+hx, y1+hy, 3, uikit.Accent, true)
 	}
+}
+
+// The Colony list's column ids (the declared list of colonyColumns).
+const (
+	cIcon    = "icon"
+	cName    = "name"
+	cSpecies = "species"
+	cSex     = "sex"
+	cAge     = "age"
+	cFood    = "food"
+	cProduct = "product"
+	cPreg    = "preg"
+	cHealth  = "health"
+	cMaster  = "master"
+	cFollow  = "follow"
+	cArea    = "area"
+	cTrain   = "train"
+	cDoing   = "doing"
+	cActions = "actions"
+	cDiet    = "diet"
+
+	colonyColN = 16
+)
+
+// colonyColumns declares the Colony list's columns, in draw order; the
+// header row reads its titles from it. The icon and the actions have none.
+func colonyColumns(sh interface{ T(string) string }) [colonyColN]uikit.TableCol {
+	return [colonyColN]uikit.TableCol{
+		{ID: cIcon}, {ID: cName, Title: sh.T("Name")}, {ID: cSpecies, Title: sh.T("Species")}, {ID: cSex, Title: sh.T("Sex")},
+		{ID: cAge, Title: sh.T("Age")}, {ID: cFood, Title: sh.T("Food")}, {ID: cProduct, Title: sh.T("Product")},
+		{ID: cPreg, Title: sh.T("Preg.")}, {ID: cHealth, Title: sh.T("Health")}, {ID: cMaster, Title: sh.T("Master")},
+		{ID: cFollow, Title: sh.T("Follow")}, {ID: cArea, Title: sh.T("Area / Pen")}, {ID: cTrain, Title: sh.T("Training")},
+		{ID: cDoing, Title: sh.T("Doing")}, {ID: cActions}, {ID: cDiet, Title: sh.T("Diet")},
+	}
+}
+
+// colonyCells places the cells of the Colony list's row (0 the first) in
+// the window r: the one place the draw, the buttons and the area dropdown
+// read their x and w. A column dropped to fit the width has no cell; one
+// whose row has nothing to show still has its cell.
+func colonyCells(dst []uikit.TableCell, r gfx.Rect, row int) []uikit.TableCell {
+	return colonyCellsFor(dst, r, animalColsFor(r.W, false), row)
+}
+
+// colonyCellsFor is colonyCells with the dropped columns already known, so a
+// loop over rows computes them once.
+func colonyCellsFor(dst []uikit.TableCell, r gfx.Rect, cols animalCols, row int) []uikit.TableCell {
+	y := r.Y + animalsRowTop + float32(row*animalRowH)
+	add := func(id string, x, dx, w int, h float32) {
+		if cols.shown(x) {
+			dst = append(dst, uikit.TableCell{Col: id, R: gfx.Rect{X: r.X + float32(cols.at(x)+dx), Y: y, W: float32(w), H: h}})
+		}
+	}
+	dst = append(dst, uikit.TableCell{Col: cIcon, R: gfx.Rect{X: r.X + 16, Y: y, W: 26, H: 26}})
+	add(cName, colName, 0, colSpecies-colName-6, 24)
+	add(cSpecies, colSpecies, 0, colSex-colSpecies-6, 24)
+	add(cSex, colSex, 0, colAge-colSex-4, 24)
+	add(cAge, colAge, 0, colFood-colAge-6, 24)
+	add(cFood, colFood, 0, 70, 24)
+	add(cProduct, colProduct, 0, colPreg-colProduct-6, 24)
+	add(cPreg, colPreg, 0, colHealth-colPreg-6, 24)
+	add(cHealth, colHealth, 0, colMaster-colHealth-6, 24)
+	add(cMaster, colMaster, -2, 88, 24)
+	add(cFollow, colFollow, -2, colArea-colFollow-8, 24)
+	add(cArea, colArea, -2, colTrain-colArea-4, 24)
+	add(cTrain, colTrain, 0, colDoing-colTrain-6, 24)
+	add(cDoing, colDoing, 0, colBtn-colDoing-8, 24)
+	add(cActions, colBtn, 0, 100+6+90, 24)
+	add(cDiet, colDiet, 0, dietW, 24)
+	return dst
+}
+
+// colonyCell is the rect of column id among cells; empty when it has none.
+func colonyCell(cells []uikit.TableCell, id string) gfx.Rect {
+	for _, c := range cells {
+		if c.Col == id {
+			return c.R
+		}
+	}
+	return gfx.Rect{}
+}
+
+// colonyHeadInset is how far right of its cell a column's title starts: the
+// widgets of Master, Follow and Area sit 2 px left of their column's x.
+func colonyHeadInset(id string) int {
+	if id == cMaster || id == cFollow || id == cArea {
+		return 2
+	}
+	return 0
+}
+
+// colonyDropIDs are the ids of the columns the Colony list may leave out.
+func colonyDropIDs() []string {
+	out := make([]string, len(colonyDrops))
+	for i, d := range colonyDrops {
+		out[i] = d.id
+	}
+	return out
 }

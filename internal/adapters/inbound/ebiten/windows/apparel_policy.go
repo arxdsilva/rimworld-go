@@ -64,11 +64,60 @@ func newAssignCols(w float32) assignCols {
 	return c
 }
 
-// cell is the column's rectangle in row rr, cut to the row; ok is false
-// when nothing of it is left.
-func cell(rr gfx.Rect, x, w float32) (gfx.Rect, bool) {
-	r := gfx.Rect{X: rr.X + x, Y: rr.Y, W: min(w, rr.W-x), H: rr.H}
-	return r, r.W >= 24
+// Declared Assign column ids, in order (QA-002).
+const (
+	assignColColonist = iota
+	assignColDrugs
+	assignColMedical
+	assignColFood
+	assignColApparel
+	assignColClear
+	assignNumCols
+)
+
+// assignColumns declares the Assign window's columns: the header reads its
+// titles here, and the column test its ids. Clear forced has no title.
+func assignColumns(sh interface{ T(string) string }) [assignNumCols]uikit.TableCol {
+	return [assignNumCols]uikit.TableCol{
+		{ID: "colonist", Title: sh.T("Colonist")},
+		{ID: "drugs", Title: sh.T("Drugs")},
+		{ID: "medical", Title: sh.T("Medical")},
+		{ID: "food", Title: sh.T("Food")},
+		{ID: "apparel", Title: sh.T("Apparel")},
+		{ID: "clear"},
+	}
+}
+
+// assignCells appends the cells of an Assign row (or of its header) laid in
+// row, in declared order: the one place a column's rectangle is worked out.
+// A column with nothing of it left in the row (under 24 px for Apparel and
+// Clear forced) gets no cell.
+func assignCells(dst []uikit.TableCell, row gfx.Rect) []uikit.TableCell {
+	c := newAssignCols(row.W)
+	place := func(dst []uikit.TableCell, col string, x, w, minW float32) []uikit.TableCell {
+		r := gfx.Rect{X: row.X + x, Y: row.Y, W: min(w, row.W-x), H: row.H}
+		if r.W < minW || r.W <= 0 {
+			return dst
+		}
+		return append(dst, uikit.TableCell{Col: col, R: r})
+	}
+	dst = place(dst, "colonist", 0, c.nameW, 0)
+	dst = place(dst, "drugs", c.drugX, c.drugW, 0)
+	dst = place(dst, "medical", c.careX, c.careW, 0)
+	dst = place(dst, "food", c.foodX, assignFoodW, 0)
+	dst = place(dst, "apparel", c.outX, c.outW, 24)
+	return place(dst, "clear", c.clrX, c.clrW, 24)
+}
+
+// assignCellRect is column col's rectangle among cells; ok is false when the
+// row has no room for it.
+func assignCellRect(cells []uikit.TableCell, col string) (gfx.Rect, bool) {
+	for _, c := range cells {
+		if c.Col == col {
+			return c.R, true
+		}
+	}
+	return gfx.Rect{}, false
 }
 
 // outfitPolicyIndex is policy id's place in ps, or -1.
@@ -95,27 +144,28 @@ func NextApparelPolicy(ps []gearview.Policy, id uint32) (next int, ok bool) {
 	return int(ps[0].ID), true
 }
 
-// outfitHead is the Apparel header: a button that opens the policy editor.
-// It reports the window was replaced.
-func (w Assign) outfitHead(head gfx.Rect, cols assignCols) bool {
-	r, ok := cell(head, cols.outX, cols.outW)
+// outfitHead is the Apparel header: a button that opens the policy editor,
+// on the header cell hc. It reports the window was replaced.
+func (w Assign) outfitHead(hc []uikit.TableCell, title string) bool {
+	r, ok := assignCellRect(hc, "apparel")
 	if !ok {
 		return false
 	}
 	r.Y -= 2
-	if w.kit().Button(AssignApparelEditID, r, w.sh.T("Apparel"), uikit.BtnOpts{Tip: w.sh.T("Apparel policies\nMake and edit which garments, materials, wear and quality each colonist may put on.")}) {
+	if w.kit().Button(AssignApparelEditID, r, title, uikit.BtnOpts{Tip: w.sh.T("Apparel policies\nMake and edit which garments, materials, wear and quality each colonist may put on.")}) {
 		w.OpenApparelPolicies()
 		return true
 	}
 	return false
 }
 
-// outfitCells declares a colonist's Apparel button and Clear forced button.
-func (w Assign) outfitCells(p game.PawnView, rr gfx.Rect, cols assignCols) {
-	if br, ok := cell(rr, cols.outX, cols.outW); ok {
+// outfitCells declares a colonist's Apparel button and Clear forced button
+// on their row cells rc.
+func (w Assign) outfitCells(p game.PawnView, rc []uikit.TableCell) {
+	if br, ok := assignCellRect(rc, "apparel"); ok {
 		w.apparelButton(p, br)
 	}
-	if cr, ok := cell(rr, cols.clrX, cols.clrW); ok {
+	if cr, ok := assignCellRect(rc, "clear"); ok {
 		o := uikit.BtnOpts{Tip: w.sh.T("Clear forced\nLet this colonist choose again what to wear: every garment you picked by hand is released.")}
 		if !anyForced(p.ApparelForced) {
 			o.Disabled, o.Reason = true, w.sh.T("Nothing this colonist wears was picked by hand.")

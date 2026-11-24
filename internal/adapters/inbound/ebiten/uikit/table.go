@@ -6,6 +6,7 @@ package uikit
 import (
 	"image/color"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"slices"
 	"sort"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -40,8 +41,10 @@ type TableCol struct {
 	Tip func(row int) string
 }
 
-// tableColRects splits width w (from x) into the columns' rectangles.
-func tableColRects(x, y, w, h float32, cols []TableCol) []gfx.Rect {
+// TableCells appends row's cells, one per column in order (QA-002): fixed
+// widths first, the rest of row.W shared by the W 0 columns (never below 0),
+// from row.X, with row's Y and H.
+func TableCells(dst []TableCell, row gfx.Rect, cols []TableCol) []TableCell {
 	fixed, flex := float32(0), 0
 	for _, c := range cols {
 		if c.W > 0 {
@@ -52,18 +55,34 @@ func tableColRects(x, y, w, h float32, cols []TableCol) []gfx.Rect {
 	}
 	share := float32(0)
 	if flex > 0 {
-		share = max(0, w-fixed) / float32(flex)
+		share = max(0, row.W-fixed) / float32(flex)
 	}
-	out := make([]gfx.Rect, len(cols))
-	for i, c := range cols {
+	dst = slices.Grow(dst, len(cols))
+	x := row.X
+	for _, c := range cols {
 		cw := c.W
 		if cw <= 0 {
 			cw = share
 		}
-		out[i] = gfx.Rect{X: x, Y: y, W: cw, H: h}
+		dst = append(dst, TableCell{Col: c.ID, R: gfx.Rect{X: x, Y: row.Y, W: cw, H: row.H}})
 		x += cw
 	}
-	return out
+	return dst
+}
+
+// TableBodyRow is the first body row of a Table in r (QA-002): under the
+// header, left of the scroll bar, rowH tall (ListRowH when rowH <= 0).
+func TableBodyRow(r gfx.Rect, rowH float32) gfx.Rect {
+	if rowH <= 0 {
+		rowH = ListRowH
+	}
+	_, body := r.SplitV(TableHeaderH)
+	return gfx.Rect{X: body.X, Y: body.Y, W: body.W - ScrollBarW, H: rowH}
+}
+
+// tableHeadCell is a column's header cell: its body cell's X and W in head.
+func tableHeadCell(head gfx.Rect, c TableCell) gfx.Rect {
+	return gfx.Rect{X: c.R.X, Y: head.Y, W: c.R.W, H: TableHeaderH}
 }
 
 // TableSetSort sets a table's sort (col < 0 clears it).
@@ -116,7 +135,7 @@ func (k *Kit) Table(id string, r gfx.Rect, cols []TableCol, n int, sel *int, row
 		rowH = ListRowH
 	}
 	head, body := r.SplitV(TableHeaderH)
-	cr := tableColRects(head.X, head.Y, head.W-ScrollBarW, TableHeaderH, cols)
+	cells := TableCells(nil, TableBodyRow(r, rowH), cols)
 	for i, c := range cols {
 		if c.Less == nil {
 			continue
@@ -126,7 +145,7 @@ func (k *Kit) Table(id string, r gfx.Rect, cols []TableCol, n int, sel *int, row
 			col, desc := k.TableSort(id)
 			k.TableSetSort(id, i, col == i && !desc)
 		}
-		if k.Add(Widget{ID: id + ".col." + c.ID, R: cr[i], Click: cycle}) && k.Press(cr[i]) {
+		if hr := tableHeadCell(head, cells[i]); k.Add(Widget{ID: id + ".col." + c.ID, R: hr, Click: cycle}) && k.Press(hr) {
 			cycle()
 			k.OK()
 		}
@@ -139,7 +158,6 @@ func (k *Kit) Table(id string, r gfx.Rect, cols []TableCol, n int, sel *int, row
 		}
 	}
 	bodyID := id + ".body"
-	rcols := tableColRects(body.X, 0, body.W-ScrollBarW, rowH, cols)
 	changed := k.List(bodyID, body, n, &disp, ListSpec{
 		RowH: rowH,
 		Draw: func(dst *ebiten.Image, di int, row gfx.Rect, hover, selected bool) {
@@ -154,7 +172,7 @@ func (k *Kit) Table(id string, r gfx.Rect, cols []TableCol, n int, sel *int, row
 				FillRect(dst, row, color.NRGBA{R: PanelBorder.R, G: PanelBorder.G, B: PanelBorder.B, A: 0x28})
 			}
 			for ci, c := range cols {
-				cell := gfx.Rect{X: rcols[ci].X, Y: row.Y, W: rcols[ci].W, H: row.H}
+				cell := gfx.Rect{X: cells[ci].R.X, Y: row.Y, W: cells[ci].R.W, H: row.H}
 				if c.Draw != nil {
 					c.Draw(dst, order[di], cell)
 					continue
@@ -174,7 +192,7 @@ func (k *Kit) Table(id string, r gfx.Rect, cols []TableCol, n int, sel *int, row
 			continue
 		}
 		for di := first; di <= last; di++ {
-			cell := gfx.Rect{X: rcols[ci].X, Y: body.Y + float32(di)*rowH - k.Scroll[bodyID], W: rcols[ci].W, H: rowH}
+			cell := gfx.Rect{X: cells[ci].R.X, Y: body.Y + float32(di)*rowH - k.Scroll[bodyID], W: cells[ci].R.W, H: rowH}
 			k.Add(Widget{ID: id + ".cell." + Num(di) + "." + c.ID, R: cell.Intersect(body), Tip: c.Tip(order[di])})
 		}
 	}
@@ -185,7 +203,7 @@ func (k *Kit) Table(id string, r gfx.Rect, cols []TableCol, n int, sel *int, row
 		for i, c := range cols {
 			st := gfx.Label
 			st.Color = Heading
-			cell := cr[i]
+			cell := tableHeadCell(head, cells[i])
 			if c.Less != nil && k.Hot == id+".col."+c.ID {
 				FillRect(dst, cell, BtnHover)
 			}

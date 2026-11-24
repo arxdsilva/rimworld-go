@@ -81,9 +81,8 @@ func NextFoodPolicy(policies []game.FoodPolicyView, cur string) (id int, ok bool
 	return policies[0].ID, true
 }
 
-// foodButton is a colonist's food policy button in the Assign row.
-func (w Assign) foodButton(p game.PawnView, rr gfx.Rect, x float32) {
-	br := gfx.Rect{X: x, Y: rr.Y, W: min(assignFoodW, rr.Right()-x), H: rr.H}
+// foodButton is a colonist's food policy button on their Food cell br.
+func (w Assign) foodButton(p game.PawnView, br gfx.Rect) {
 	id := AssignFoodID(uint64(p.ID))
 	policies := w.sh.World().FoodPolicies
 	label := p.FoodPolicy

@@ -73,6 +73,12 @@ func (w History) Launch() {
 // size is the window's outer size.
 func (w History) size() (float32, float32) { return historyW, historyH }
 
+// historyListRect is the rect below the tab strip that every History tab
+// lays its list in.
+func historyListRect(body gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: body.X, Y: body.Y + historyTabH + 6, W: body.W, H: body.H - historyTabH - 6}
+}
+
 // body declares the scrolling list of entries.
 func (w History) body(body gfx.Rect) {
 	if !w.live() {
@@ -80,7 +86,7 @@ func (w History) body(body gfx.Rect) {
 	}
 	strip := gfx.Rect{X: body.X, Y: body.Y, W: body.W, H: historyTabH}
 	w.kit().Tabs("history.tabs", strip, []string{w.sh.T("Events"), w.sh.T("Combat"), w.sh.T("Threats"), w.sh.T("Records"), w.sh.T("Wealth")}, &w.histTab, uikit.TabsOpts{})
-	body = gfx.Rect{X: body.X, Y: body.Y + historyTabH + 6, W: body.W, H: body.H - historyTabH - 6}
+	body = historyListRect(body)
 	switch w.histTab {
 	case 1:
 		w.combatList(body)

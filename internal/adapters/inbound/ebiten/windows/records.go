@@ -49,14 +49,6 @@ func RecordRows(pawns []game.PawnView, label func(game.PawnView) string) []recor
 	return out
 }
 
-// recordCell is one drawn cell of a Records row: its text, left x and, for
-// the name column, the width the text is fitted to (0 = not fitted).
-type recordCell struct {
-	Text string
-	X    float32
-	Fit  float32
-}
-
 // Records columns, measured from the right edge of the list.
 const (
 	recordsKillsFromRight = 380
@@ -65,15 +57,39 @@ const (
 	recordsNameReserve    = 400
 )
 
-// recordCells lays one row's four cells (Colonist, Kills, Damage dealt,
-// Damage taken) out in a list starting at x with width w.
-func recordCells(x, w float32, text [4]string) [4]recordCell {
-	return [4]recordCell{
-		{Text: text[0], X: x + 6, Fit: w - recordsNameReserve},
-		{Text: text[1], X: x + w - recordsKillsFromRight},
-		{Text: text[2], X: x + w - recordsDealtFromRight},
-		{Text: text[3], X: x + w - recordsTakenFromRight},
+// recordColumns declares the four Records columns; the header row reads its
+// titles from here and the column test its ids.
+func recordColumns(sh interface{ T(string) string }) [4]uikit.TableCol {
+	return [4]uikit.TableCol{
+		{ID: "colonist", Title: sh.T("Colonist")},
+		{ID: "kills", Title: sh.T("Kills")},
+		{ID: "dealt", Title: sh.T("Damage dealt")},
+		{ID: "taken", Title: sh.T("Damage taken")},
 	}
+}
+
+// recordTexts is one row's cell texts in column order (colonist, kills,
+// damage dealt, damage taken).
+func recordTexts(r recordRow) [4]string {
+	return [4]string{r.Name, fmt.Sprint(r.Kills), fmt.Sprint(r.Damage), fmt.Sprint(r.Taken)}
+}
+
+// recordCells appends the four cells of a Records row in the list rect: the
+// Colonist cell is the width its text is fitted to, the others start at their
+// distance from the list's right edge and run to the next cell (Damage taken
+// to the list's right edge).
+func recordCells(dst []uikit.TableCell, list gfx.Rect) []uikit.TableCell {
+	x, w := list.X, list.W
+	kills, dealt, taken := x+w-recordsKillsFromRight, x+w-recordsDealtFromRight, x+w-recordsTakenFromRight
+	row := func(col string, from, to float32) uikit.TableCell {
+		return uikit.TableCell{Col: col, R: gfx.Rect{X: from, Y: list.Y, W: to - from, H: historyRowH}}
+	}
+	return append(dst,
+		row("colonist", x+6, x+6+w-recordsNameReserve),
+		row("kills", kills, dealt),
+		row("dealt", dealt, taken),
+		row("taken", taken, list.Right()),
+	)
 }
 
 // recordsList declares the combat records list in body.
@@ -87,7 +103,7 @@ func (w History) recordsList(body gfx.Rect) {
 	w.kit().Queue(func(dst *ebiten.Image) {
 		sub := gfx.ClipTo(dst, area.View)
 		dim := gfx.WithColor(gfx.Small, uikit.TextDim)
-		draw := func(i int, a, b, c, d string, st gfx.TextStyle) {
+		draw := func(i int, texts [4]string, st gfx.TextStyle) {
 			y := area.View.Y + float32(i)*historyRowH - area.Off
 			if y+historyRowH < area.View.Y || y > area.View.Bottom() {
 				return
@@ -96,17 +112,22 @@ func (w History) recordsList(body gfx.Rect) {
 				uikit.FillRect(sub, gfx.Rect{X: area.View.X, Y: y, W: area.View.W, H: historyRowH}, rowStripe)
 			}
 			ty := gfx.CenterTop(float64(y), float64(historyRowH), st)
-			for _, c := range recordCells(area.View.X, area.View.W, [4]string{a, b, c, d}) {
-				txt := c.Text
-				if c.Fit > 0 {
-					txt = uikit.FitText(txt, st, c.Fit)
+			var buf [4]uikit.TableCell
+			for k, c := range recordCells(buf[:0], area.View) {
+				txt := texts[k]
+				if k == 0 {
+					txt = uikit.FitText(txt, st, c.R.W)
 				}
-				gfx.Text(sub, txt, float64(c.X), ty, st)
+				gfx.Text(sub, txt, float64(c.R.X), ty, st)
 			}
 		}
-		draw(0, w.sh.T("Colonist"), w.sh.T("Kills"), w.sh.T("Damage dealt"), w.sh.T("Damage taken"), dim)
+		var head [4]string
+		for k, c := range recordColumns(w.sh) {
+			head[k] = c.Title
+		}
+		draw(0, head, dim)
 		for i, r := range rows {
-			draw(i+1, r.Name, fmt.Sprint(r.Kills), fmt.Sprint(r.Damage), fmt.Sprint(r.Taken), gfx.Body)
+			draw(i+1, recordTexts(r), gfx.Body)
 		}
 	})
 }

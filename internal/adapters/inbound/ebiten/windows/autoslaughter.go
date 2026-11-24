@@ -96,9 +96,10 @@ func (w Animals) OpenAutoSlaughter() {
 
 func (w Animals) autoBody(body gfx.Rect) {
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
-	w.kit().Label(body.X, body.Y, w.sh.T("Species"), hs)
-	for i, h := range []string{w.sh.T("Males"), w.sh.T("Females"), w.sh.T("Young")} {
-		w.kit().Label(body.X+autoNameW+float32(i)*autoCellW, body.Y, h, hs)
+	var buf [autoColN]uikit.TableCell
+	list := autoListRect(body)
+	for _, h := range autoColumns(w.sh) {
+		w.kit().Label(autoCell(autoCells(buf[:0], list), h.ID).X, body.Y, h.Title, hs)
 	}
 	if w.kit().Button("autoslaughter.back", gfx.Rect{X: body.Right() - 90, Y: body.Y - 2, W: 90, H: 24}, w.sh.T("Animals"), uikit.BtnOpts{Tip: w.sh.T("Back to the Animals window.")}) {
 		w.CloseQuietly()
@@ -110,16 +111,17 @@ func (w Animals) autoBody(body gfx.Rect) {
 		w.kit().Label(body.X, body.Y+32, w.sh.T("No tame animals yet."), uikit.DimText())
 		return
 	}
-	list := gfx.Rect{X: body.X, Y: body.Y + 28, W: body.W, H: body.H - 28}
 	area := w.kit().ScrollArea("autoslaughter.list", list, float32(len(rows))*autoRowH, uikit.ScrollOpts{Step: autoRowH * 2})
 	for i, row := range rows {
 		y := area.View.Y + float32(i)*autoRowH - area.Off
 		if y < area.View.Y || y+autoRowH > area.View.Bottom() {
 			continue
 		}
-		w.kit().Label(area.View.X, y+5, gfx.Ellipsize(row.label, gfx.Body, autoNameW-8), gfx.Body)
+		cells := autoCells(buf[:0], area.View)
+		sp := autoCell(cells, autoSpecies)
+		w.kit().Label(sp.X, y+5, gfx.Ellipsize(row.label, gfx.Body, float64(sp.W)), gfx.Body)
 		for f := 0; f < 3; f++ {
-			x := area.View.X + autoNameW + float32(f)*autoCellW
+			x := cells[1+f].R.X
 			text := w.sh.T("none")
 			if row.caps[f] >= 0 {
 				text = fmt.Sprint(row.caps[f])
@@ -137,4 +139,47 @@ func (w Animals) autoBody(body gfx.Rect) {
 			w.kit().Label(x+28, y+5, text, gfx.Body)
 		}
 	}
+}
+
+// The auto-slaughter columns' ids.
+const (
+	autoSpecies = "species"
+	autoMales   = "males"
+	autoFemales = "females"
+	autoYoung   = "young"
+
+	autoColN = 4
+)
+
+// autoColumns declares the window's columns; the header reads its titles.
+func autoColumns(sh interface{ T(string) string }) [autoColN]uikit.TableCol {
+	return [autoColN]uikit.TableCol{
+		{ID: autoSpecies, Title: sh.T("Species")}, {ID: autoMales, Title: sh.T("Males")},
+		{ID: autoFemales, Title: sh.T("Females")}, {ID: autoYoung, Title: sh.T("Young")},
+	}
+}
+
+// autoListRect is the rows' list: the body below the 28 px header.
+func autoListRect(body gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: body.X, Y: body.Y + 28, W: body.W, H: body.H - 28}
+}
+
+// autoCells places a row's cells in the list: the species name, then the
+// three cap fields (each holds its two step buttons and the value).
+func autoCells(dst []uikit.TableCell, list gfx.Rect) []uikit.TableCell {
+	dst = append(dst, uikit.TableCell{Col: autoSpecies, R: gfx.Rect{X: list.X, Y: list.Y, W: autoNameW - 8, H: 24}})
+	for f, id := range [3]string{autoMales, autoFemales, autoYoung} {
+		dst = append(dst, uikit.TableCell{Col: id, R: gfx.Rect{X: list.X + autoNameW + float32(f)*autoCellW, Y: list.Y, W: autoCellW, H: 24}})
+	}
+	return dst
+}
+
+// autoCell is the rect of column id among cells.
+func autoCell(cells []uikit.TableCell, id string) gfx.Rect {
+	for _, c := range cells {
+		if c.Col == id {
+			return c.R
+		}
+	}
+	return gfx.Rect{}
 }

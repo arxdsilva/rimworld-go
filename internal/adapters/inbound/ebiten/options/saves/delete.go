@@ -57,6 +57,13 @@ func deleteButton(b *Book, i int, r gfx.Rect) uikit.Button {
 		X: r.X, Y: r.Y, W: r.W, H: r.H, Disabled: reason != "", Reason: reason}
 }
 
+// deleteCell is the delete control of display row di of the list in list,
+// scrolled by off: right of the table, one row high less a pixel each side.
+func deleteCell(list gfx.Rect, di int, off float32) gfx.Rect {
+	bodyY := list.Y + uikit.TableHeaderH
+	return gfx.Rect{X: list.Right() + 6, Y: bodyY + float32(di)*listRowH - off + 1, W: deleteColW - 6, H: listRowH - 2}
+}
+
 // deleteButtons declares the Save dialog's delete controls, one beside
 // each row of list fully in view; order is the rows' data indices in
 // display order (the table's sort).
@@ -65,7 +72,7 @@ func deleteButtons(b *Book, k *uikit.Kit, list gfx.Rect, order []int) {
 	off := k.Scroll[listID+".body"]
 	first, last := uikit.ListVisible(off, body.H, listRowH, len(order))
 	for di := first; di <= last; di++ {
-		r := gfx.Rect{X: list.Right() + 6, Y: body.Y + float32(di)*listRowH - off + 1, W: deleteColW - 6, H: listRowH - 2}
+		r := deleteCell(list, di, off)
 		if r.Y < body.Y || r.Bottom() > body.Bottom() {
 			continue
 		}

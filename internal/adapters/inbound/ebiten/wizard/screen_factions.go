@@ -104,6 +104,9 @@ func (w landingPage) factionsTable(r gfx.Rect, rows []FacRow, sel *int, pick fun
 	}
 }
 
+// factionsSplit cuts the dialog's body into the table's rect and the hint line under it.
+func factionsSplit(body gfx.Rect) (table, hint gfx.Rect) { return body.SplitV(-24) }
+
 // pushFactions opens the setup Factions dialog; a row click closes it and
 // shows the faction's settlements on the globe.
 func (w landingPage) pushFactions(ng *Draft, g *globe.View) {
@@ -112,9 +115,9 @@ func (w landingPage) pushFactions(ng *Draft, g *globe.View) {
 	w.kit().Push(uikit.Modal{
 		ID: FacModalID, Title: w.sh.T("Factions"), W: facModalMaxW, H: facModalH,
 		Draw: func(body gfx.Rect) {
-			tb, hint := body.SplitV(-24)
+			tb, hint := factionsSplit(body)
 			w.kit().Label(hint.X, hint.Y+6, w.sh.T("Click a faction to find its capital on the globe."), uikit.DimText())
-			w.factionsTable(gfx.Rect{X: tb.X, Y: tb.Y, W: tb.W, H: tb.H}, rows, &ng.facSel, func(r FacRow) {
+			w.factionsTable(tb, rows, &ng.facSel, func(r FacRow) {
 				if r.Capital < 0 {
 					return // the Swarm has no settlements
 				}

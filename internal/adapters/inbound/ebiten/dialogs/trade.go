@@ -301,6 +301,58 @@ var tradeSteps = []struct {
 	n     int // 0: all
 }{{"a", "All", 0}, {"10", "10", 10}, {"1", "1", 1}}
 
+// The trade table's columns, left to right.
+const (
+	tcSell = iota
+	tcColony
+	tcGive
+	tcAmount
+	tcTake
+	tcTrader
+	tcBuy
+	tcGoods
+	tradeColN
+)
+
+// tradeHeadDX is each header title's offset inside its cell.
+var tradeHeadDX = [tradeColN]float32{0, 4, 0, 8, 0, 2, 4, 0}
+
+// tradeColumns declares the eight columns; the header reads their titles and
+// tradeCells places them.
+func tradeColumns(sh interface{ T(string) string }) [tradeColN]uikit.TableCol {
+	return [tradeColN]uikit.TableCol{
+		{ID: "sell", Title: sh.T("Sell for")},
+		{ID: "colony", Title: sh.T("Colony")},
+		{ID: "give", Title: sh.T("Give to trader")},
+		{ID: "amount", Title: sh.T("Amount")},
+		{ID: "take", Title: sh.T("Take from trader")},
+		{ID: "trader", Title: sh.T("Trader")},
+		{ID: "buy", Title: sh.T("Buy for")},
+		{ID: "goods", Title: sh.T("Goods")},
+	}
+}
+
+// tradeCells appends the eight cells of a trade row in body, in column
+// order. Goods takes what the others leave, less the scroll bar.
+func tradeCells(dst []uikit.TableCell, body gfx.Rect) []uikit.TableCell {
+	const sw, aw, qw, pw = 40.0, 64.0, 46.0, 62.0
+	const stepsW = 3 * (sw + 2)
+	x := body.X
+	add := func(id string, w float32, gap float32) {
+		dst = append(dst, uikit.TableCell{Col: id, R: gfx.Rect{X: x, W: w}})
+		x += w + gap
+	}
+	add("sell", pw, 0)
+	add("colony", qw, 4)
+	add("give", stepsW, 4)
+	add("amount", aw, 4)
+	add("take", stepsW, 4)
+	add("trader", qw, 0)
+	add("buy", pw, 10)
+	add("goods", body.Right()-x-uikit.ScrollBarW, 0)
+	return dst
+}
+
 // tradeBody declares the header, the table and the summary.
 func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 	v := d.view
@@ -317,34 +369,14 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 	sum := gfx.Rect{X: body.X, Y: body.Bottom() - 84, W: body.W, H: 84}
 	table := gfx.Rect{X: body.X, Y: top + tradeHeadH, W: body.W, H: sum.Y - top - tradeHeadH - 6}
 
-	// column geometry, shared by the headers and the rows
-	const sw, aw, qw, pw = 40.0, 64.0, 46.0, 62.0
-	x := body.X
-	colPrice := gfx.Rect{X: x, Y: 0, W: pw, H: 0}
-	x += pw
-	colQty := gfx.Rect{X: x, Y: 0, W: qw, H: 0}
-	x += qw + 4
-	colSell := gfx.Rect{X: x, Y: 0, W: 3 * (sw + 2), H: 0}
-	x += colSell.W + 4
-	colAmt := gfx.Rect{X: x, Y: 0, W: aw, H: 0}
-	x += aw + 4
-	colBuy := gfx.Rect{X: x, Y: 0, W: 3 * (sw + 2), H: 0}
-	x += colBuy.W + 4
-	colTQty := gfx.Rect{X: x, Y: 0, W: qw, H: 0}
-	x += qw
-	colTPrice := gfx.Rect{X: x, Y: 0, W: pw, H: 0}
-	x += pw + 10
-	colName := gfx.Rect{X: x, Y: 0, W: body.Right() - x - uikit.ScrollBarW, H: 0}
-
+	// the columns, shared by the headers and the rows
+	var cellBuf [tradeColN]uikit.TableCell
+	cells := tradeCells(cellBuf[:0], body)
+	cols := tradeColumns(dl.sh)
 	hd := gfx.WithColor(gfx.Small, uikit.TextDim)
-	dl.kit().Label(colPrice.X, top+4, dl.sh.T("Sell for"), hd)
-	dl.kit().Label(colQty.X+4, top+4, dl.sh.T("Colony"), hd)
-	dl.kit().Label(colSell.X, top+4, dl.sh.T("Give to trader"), hd)
-	dl.kit().Label(colAmt.X+8, top+4, dl.sh.T("Amount"), hd)
-	dl.kit().Label(colBuy.X, top+4, dl.sh.T("Take from trader"), hd)
-	dl.kit().Label(colTQty.X+2, top+4, dl.sh.T("Trader"), hd)
-	dl.kit().Label(colTPrice.X+4, top+4, dl.sh.T("Buy for"), hd)
-	dl.kit().Label(colName.X, top+4, dl.sh.T("Goods"), hd)
+	for i, c := range cols {
+		dl.kit().Label(cells[i].R.X+tradeHeadDX[i], top+4, c.Title, hd)
+	}
 
 	lines := TradeLines(v.Rows)
 	if len(lines) == 0 {
@@ -362,7 +394,7 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 			dl.kit().Label(area.View.X, ry+6, ln.Head, gfx.WithColor(gfx.Label, uikit.Heading))
 			continue
 		}
-		dl.tradeRow(d, ln.Row, ry, colPrice, colQty, colSell, colAmt, colBuy, colTQty, colTPrice, colName)
+		dl.tradeRow(d, ln.Row, ry, cells)
 	}
 
 	// summary
@@ -392,8 +424,9 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 }
 
 // tradeRow declares one goods row.
-func (dl *Dealings) tradeRow(d *tradeDraft, r game.TradeRowView, y float32,
-	cPrice, cQty, cSell, cAmt, cBuy, cTQty, cTPrice, cName gfx.Rect) {
+func (dl *Dealings) tradeRow(d *tradeDraft, r game.TradeRowView, y float32, cells []uikit.TableCell) {
+	cPrice, cQty, cSell, cAmt := cells[tcSell].R, cells[tcColony].R, cells[tcGive].R, cells[tcAmount].R
+	cBuy, cTQty, cTPrice, cName := cells[tcTake].R, cells[tcTrader].R, cells[tcBuy].R, cells[tcGoods].R
 	n := d.net[r.Kind]
 	mid := y + 6
 	dl.kit().Label(cName.X, mid, uikit.FitText(r.Label, gfx.Body, cName.W), gfx.Body)
