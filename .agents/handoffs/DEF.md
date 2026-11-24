@@ -229,3 +229,14 @@ Scratch, Stab and Bullet multi-part rules; Bite and Arrow pinned single-part · 
 - HUD/UI: none; the Health tab already lists wounds per part, so the extra parts show there.
 - Boxes: COMBAT_GAP rows Scratch, Stab, Bite, Bullet, Arrow `done` (new), row 78 "Not done" updated, §4 and §5b lines added; backlog **Damage types** `[x]` kept, annotated. spec-backlog: none (#270 has no spec-backlog issue).
 - Open: #278 Poke and RangedStab (no form in the game).
+
+## CBT-3.4c-poke-rangedstab
+Poke and RangedStab damage forms: Stab variants and their weapons · 2026-11-24 · 142d64e1c
+- Changed: a Poke (club and mace handles, a spear's second shaft, an ikwa's second handle, each bow's limb) is armored as blunt, wounds as a bruise, splits as Stab with a 40 % inner chance, never stuns and never wounds the brain (`internal/domain/pawn/body/stab.go:32`, `internal/domain/combat/weapon/tool.go:44-82`, `internal/application/game/hit/hit.go:181`). A RangedStab (the pila) is sharp for armor and reaches the brain (`stab.go:35`); a shield belt stops it and a smokepop pops on it (`internal/application/game/combat/gear.go:260`, `:274`).
+- Decisions: wiki numbers only (ENG-003): Poke 40 % gate, RangedStab reaches the brain. One `planStab` reads a `stabRule` row (`gate`, `brainBar`) per split, with no flag (`stab.go:20-36`). Original tuning, marked in comments: Poke's Bruise wound and brain bar, the 500/500 bow limbs, and the belt stopping RangedStab as an arrow (K5). The wiki's table says "Affects shields: no" for RangedStab; this does not follow it.
+- Limits: no new `Body` method; `internal/arch/solid_budget.txt` untouched (`Body` stays at 99, line 20); `internal/domain/pawn/body` has 38 non-test files (limit 60).
+- Save impact: none.
+- Re-pins: none (no application or golden test shifted).
+- HUD/UI: none; the Health tab already lists wounds per part, so a Poke or pila wound shows there.
+- Boxes: COMBAT_GAP rows Poke and RangedStab `done` (new); overkill windows (row 77, §4) and the multi-part line (row 78, §4) name them; §5b's #278 line becomes #279; backlog **Damage types** `[x]` kept and annotated. spec-backlog #278: ticked here; the lead closes it.
+- Open: #279 hooves (Kick, `internal/domain/animal/animal.go:187`) are not moved to Poke.

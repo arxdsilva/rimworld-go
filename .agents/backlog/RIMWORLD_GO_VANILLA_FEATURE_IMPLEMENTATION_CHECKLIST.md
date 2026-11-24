@@ -961,7 +961,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.3 Injuries
 
--   [x] **Damage types** (CBT-1: `damage.Hit` carries weapon, form and stopping power from the shot, never the attacker's current weapon; forms Blunt, Cut, Stab, Bullet, Arrow, Scratch, Bite, Crush, Burn, Flame, Bomb, EMP, Stun; Stab and Gunshot wounds bleed; wiki overkill windows destroy parts, brain and heart kill; SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage; DEF-1/DEF-2: armor resolution and bomb, flame and EMP explosion damage; CBT-3.4b: Scratch, Stab and Bullet multi-part rules, Bite and Arrow single-part; Poke and RangedStab have no form in the game, #278)
+-   [x] **Damage types** (CBT-1: `damage.Hit` carries weapon, form and stopping power from the shot, never the attacker's current weapon; forms Blunt, Cut, Stab, Bullet, Arrow, Scratch, Bite, Crush, Burn, Flame, Bomb, EMP, Stun; Stab and Gunshot wounds bleed; wiki overkill windows destroy parts, brain and heart kill; SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage; DEF-1/DEF-2: armor resolution and bomb, flame and EMP explosion damage; CBT-3.4b: Scratch, Stab and Bullet multi-part rules, Bite and Arrow single-part; CBT 3.4c: Poke (40 % inner retarget; club, mace, spear and ikwa handles, bow limbs; no stun) and RangedStab (the pila; reaches the brain) have forms; hooves (Kick) not moved, #279)
     -   Blunt.
     -   sharp.
     -   burn.
