@@ -77,7 +77,7 @@ func parseLoudnorm(out string) (loudness, error) {
 
 // run1 runs a tool and returns its combined output; failures carry its tail.
 func run1(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).CombinedOutput()
+	out, err := exec.Command(name, args...).CombinedOutput() // #nosec G204 -- name is the constant ffmpeg/oggenc (run.go:139)
 	if err != nil {
 		tail := string(out)
 		if len(tail) > 600 {
@@ -94,7 +94,7 @@ func (a *app) ff(args ...string) (string, error) {
 
 // wavSeconds is the length of a PCM WAV, read from its chunks.
 func wavSeconds(file string) (float64, error) {
-	f, err := os.Open(file)
+	f, err := os.Open(filepath.Clean(file))
 	if err != nil {
 		return 0, err
 	}
@@ -180,7 +180,7 @@ func (a *app) finish(in, ogg, id, variant string, target float64) (float64, erro
 	if err != nil {
 		return 0, err
 	}
-	if err := os.MkdirAll(filepath.Dir(ogg), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(ogg), 0o755); err != nil { // #nosec G301 -- generated tracked asset
 		return 0, err
 	}
 	enc := filepath.Join(tmp, "out.ogg")
@@ -189,11 +189,11 @@ func (a *app) finish(in, ogg, id, variant string, target float64) (float64, erro
 	}
 	if err := os.Rename(enc, ogg); err != nil {
 		// different filesystem: copy
-		b, rerr := os.ReadFile(enc)
+		b, rerr := os.ReadFile(filepath.Clean(enc))
 		if rerr != nil {
 			return 0, rerr
 		}
-		if err := os.WriteFile(ogg, b, 0o644); err != nil {
+		if err := os.WriteFile(ogg, b, 0o644); err != nil { // #nosec G306 G703 -- generated tracked asset; path from the sfx manifest
 			return 0, err
 		}
 	}

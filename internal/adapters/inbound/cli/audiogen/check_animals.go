@@ -86,7 +86,7 @@ func checkAnimalCoverage(m audiomanifest.Manifest, groups map[string]string) err
 // assets; with no renderer source beside it (a scratch assets dir) there
 // is no table to check against and it is skipped.
 func checkAnimals(assets string, m audiomanifest.Manifest) error {
-	src, err := os.ReadFile(filepath.Join(assets, "..", filepath.FromSlash(voiceSource)))
+	src, err := os.ReadFile(filepath.Clean(filepath.Join(assets, "..", filepath.FromSlash(voiceSource))))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}

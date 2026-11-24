@@ -43,12 +43,12 @@ func (a *app) approveIDs(list string) error {
 		return err
 	}
 	mpath := filepath.Join(a.cfg.assets, filepath.FromSlash(audiomanifest.Rel))
-	f, err := os.Open(mpath)
+	f, err := os.Open(filepath.Clean(mpath))
 	if err != nil {
 		return err
 	}
 	m, err := audiomanifest.Decode(f)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return fmt.Errorf("%s: %w", mpath, err)
 	}
@@ -106,7 +106,7 @@ func (a *app) approveIDs(list string) error {
 	if err := audiomanifest.Encode(&buf, m); err != nil {
 		return err
 	}
-	if err := os.WriteFile(mpath, buf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(mpath, buf.Bytes(), 0o644); err != nil { // #nosec G306 -- generated tracked asset
 		return err
 	}
 	if err := l.save(a.cfg.ledger); err != nil {

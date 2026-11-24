@@ -29,7 +29,7 @@ type prompt struct {
 }
 
 func readPrompts(assets string) ([]prompt, error) {
-	b, err := os.ReadFile(filepath.Join(assets, filepath.FromSlash(promptsRel)))
+	b, err := os.ReadFile(filepath.Clean(filepath.Join(assets, filepath.FromSlash(promptsRel))))
 	if err != nil {
 		return nil, err
 	}

@@ -295,14 +295,14 @@ func composeAll(assets string) error {
 		if err := sfxsynth.WriteWAVChannels(&buf, pcm, m.Rate, 2); err != nil {
 			return err
 		}
-		if err := os.WriteFile(wav, buf.Bytes(), 0o644); err != nil {
+		if err := os.WriteFile(wav, buf.Bytes(), 0o600); err != nil {
 			return err
 		}
 		out := filepath.Join(assets, filepath.FromSlash(audiomanifest.Dir), filepath.FromSlash(t.file))
-		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil { // #nosec G301 -- generated tracked asset
 			return err
 		}
-		cmd := exec.Command("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", wav,
+		cmd := exec.Command("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", wav, // #nosec G204 -- fixed tool, args from code, no shell
 			"-c:a", "libvorbis", "-q:a", "4", out)
 		if b, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("encode %s: %v: %s", t.file, err, b)

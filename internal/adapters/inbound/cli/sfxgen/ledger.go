@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"rimworld-go/internal/platform/atomicfile"
@@ -73,7 +74,7 @@ func (t Take) state() string {
 }
 
 func loadLedger(file string) (*Ledger, error) {
-	raw, err := os.ReadFile(file)
+	raw, err := os.ReadFile(filepath.Clean(file))
 	if errors.Is(err, fs.ErrNotExist) {
 		return &Ledger{}, nil
 	}

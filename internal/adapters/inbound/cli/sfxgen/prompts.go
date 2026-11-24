@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -53,7 +54,7 @@ var idPattern = regexp.MustCompile(`^animal\.[a-z0-9_]+(\.[a-z]+)?$`)
 // versions are refused so a schema change cannot be spent on silently.
 func loadPrompts(file string) (Prompts, error) {
 	var p Prompts
-	raw, err := os.ReadFile(file)
+	raw, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return p, err
 	}
@@ -151,7 +152,7 @@ func estimate(seconds, rate float64) int {
 // variantRate is the pitch factor of an id's B variant: +4% or -4% by hash.
 func variantRate(id string) float64 {
 	h := fnv.New32a()
-	h.Write([]byte(id))
+	_, _ = h.Write([]byte(id))
 	if h.Sum32()&1 == 0 {
 		return 1.04
 	}
@@ -162,6 +163,6 @@ func variantRate(id string) float64 {
 // picks a random one otherwise, which would make the output vary).
 func serialOf(id, variant string) uint32 {
 	h := fnv.New32a()
-	h.Write([]byte(id + "/" + variant))
+	_, _ = h.Write([]byte(id + "/" + variant))
 	return h.Sum32() & 0x7fffffff
 }

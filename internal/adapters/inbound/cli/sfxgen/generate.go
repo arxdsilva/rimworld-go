@@ -154,10 +154,10 @@ func (a *app) generate() error {
 		}
 		n := l.nextTake(s.ID)
 		raw := filepath.Join(a.cfg.out, fmt.Sprintf("%s_t%d.mp3", s.ID, n))
-		if err := os.MkdirAll(a.cfg.out, 0o755); err != nil {
+		if err := os.MkdirAll(a.cfg.out, 0o750); err != nil {
 			return err
 		}
-		if err := os.WriteFile(raw, audio, 0o644); err != nil {
+		if err := os.WriteFile(raw, audio, 0o600); err != nil {
 			return err
 		}
 		l.Takes = append(l.Takes, Take{ID: s.ID, Take: n, File: a.ledgerPath(raw), Tool: elevenLabsTool, Backend: backendElevenLabs,

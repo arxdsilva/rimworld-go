@@ -107,10 +107,10 @@ func (a *app) writeReview() error {
 		_, err := a.stdout.Write(buf.Bytes())
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(a.cfg.reviewOut), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(a.cfg.reviewOut), 0o750); err != nil {
 		return err
 	}
-	if err := os.WriteFile(a.cfg.reviewOut, buf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(a.cfg.reviewOut, buf.Bytes(), 0o600); err != nil {
 		return err
 	}
 	fmt.Fprintf(a.stdout, "review page: %s (%d clips)\n", a.cfg.reviewOut, len(rows))
@@ -122,14 +122,14 @@ func (a *app) writeReview() error {
 func (a *app) playerSrc(file string) template.URL {
 	abs, err := filepath.Abs(file)
 	if err != nil {
-		return template.URL((&url.URL{Path: filepath.ToSlash(file)}).String())
+		return template.URL((&url.URL{Path: filepath.ToSlash(file)}).String()) // #nosec G203 -- local review page; URL built by net/url from a file path
 	}
 	if a.cfg.reviewOut != "" {
 		if page, err := filepath.Abs(a.cfg.reviewOut); err == nil {
 			if rel, err := filepath.Rel(filepath.Dir(page), abs); err == nil {
-				return template.URL((&url.URL{Path: filepath.ToSlash(rel)}).String())
+				return template.URL((&url.URL{Path: filepath.ToSlash(rel)}).String()) // #nosec G203 -- local review page; URL built by net/url from a file path
 			}
 		}
 	}
-	return template.URL((&url.URL{Scheme: "file", Path: filepath.ToSlash(abs)}).String())
+	return template.URL((&url.URL{Scheme: "file", Path: filepath.ToSlash(abs)}).String()) // #nosec G203 -- local review page; URL built by net/url from a file path
 }

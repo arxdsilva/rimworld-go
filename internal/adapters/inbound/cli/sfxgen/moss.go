@@ -84,7 +84,7 @@ func (a *app) mossSeed(id string, n int) int64 {
 		return a.cfg.moss.seed
 	}
 	h := fnv.New32a()
-	h.Write([]byte(id + "/take" + strconv.Itoa(n)))
+	_, _ = h.Write([]byte(id + "/take" + strconv.Itoa(n)))
 	return int64(h.Sum32() & 0x7fffffff)
 }
 
@@ -106,7 +106,7 @@ func (a *app) mossCommand(text string, seconds float64, seed int64, wav string) 
 // execMoss runs a MOSS command and returns its output (the runner's last
 // line is a JSON report).
 func execMoss(ctx context.Context, argv []string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...) // #nosec G204 -- operator-chosen MOSS python (-moss-python), no shell
 	cmd.Env = append(os.Environ(), "TORCHDYNAMO_DISABLE=1", "HF_HUB_OFFLINE=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -260,7 +260,7 @@ func (a *app) generateMoss(p Prompts, todo []Sound, skips []skip, l *Ledger) err
 		n := l.nextTake(s.ID)
 		seed := a.mossSeed(s.ID, n)
 		raw := filepath.Join(a.cfg.out, fmt.Sprintf("%s_t%d.wav", s.ID, n))
-		if err := os.MkdirAll(a.cfg.out, 0o755); err != nil {
+		if err := os.MkdirAll(a.cfg.out, 0o750); err != nil {
 			return err
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), a.cfg.moss.timeout)

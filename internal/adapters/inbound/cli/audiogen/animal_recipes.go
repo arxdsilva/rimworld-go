@@ -294,7 +294,7 @@ const oggQuality = "3"
 type encoder func(wav, ogg string, seed uint64) error
 
 func oggenc(wav, out string, seed uint64) error {
-	cmd := exec.Command("oggenc", "-Q", "-q", oggQuality, "-s", fmt.Sprint(seed%1_000_000+1), "-o", out, wav)
+	cmd := exec.Command("oggenc", "-Q", "-q", oggQuality, "-s", fmt.Sprint(seed%1_000_000+1), "-o", out, wav) // #nosec G204 -- fixed tool, args from code, no shell
 	if b, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("oggenc %s: %v: %s", filepath.Base(out), err, b)
 	}
@@ -348,11 +348,11 @@ func generateAnimals(assets string, enc encoder) (int, error) {
 				return 0, err
 			}
 			wav := filepath.Join(tmp, fmt.Sprintf("%s_%d.wav", rc.ID, v))
-			if err := os.WriteFile(wav, buf.Bytes(), 0o644); err != nil {
+			if err := os.WriteFile(wav, buf.Bytes(), 0o600); err != nil {
 				return 0, err
 			}
 			out := filepath.Join(root, filepath.FromSlash(rel))
-			if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil { // #nosec G301 -- generated tracked asset
 				return 0, err
 			}
 			if err := enc(wav, out, rc.Seed+uint64(v)); err != nil {

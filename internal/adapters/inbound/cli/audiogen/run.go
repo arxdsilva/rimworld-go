@@ -190,18 +190,18 @@ func generate(assets string) (int, error) {
 }
 
 func writeWAV(path string, pcm []int16) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- generated tracked asset
 		return err
 	}
 	var buf bytes.Buffer
 	if err := sfxsynth.WriteWAV(&buf, pcm, sfxsynth.Rate); err != nil {
 		return err
 	}
-	return os.WriteFile(path, buf.Bytes(), 0o644)
+	return os.WriteFile(path, buf.Bytes(), 0o644) // #nosec G306 -- generated tracked asset
 }
 
 func readManifest(assets string) (audiomanifest.Manifest, error) {
-	f, err := os.Open(filepath.Join(assets, filepath.FromSlash(audiomanifest.Rel)))
+	f, err := os.Open(filepath.Clean(filepath.Join(assets, filepath.FromSlash(audiomanifest.Rel))))
 	if err != nil {
 		return audiomanifest.Manifest{}, err
 	}
@@ -211,14 +211,14 @@ func readManifest(assets string) (audiomanifest.Manifest, error) {
 
 func writeManifest(assets string, m audiomanifest.Manifest) error {
 	path := filepath.Join(assets, filepath.FromSlash(audiomanifest.Rel))
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- generated tracked asset
 		return err
 	}
 	var buf bytes.Buffer
 	if err := audiomanifest.Encode(&buf, m); err != nil {
 		return err
 	}
-	return os.WriteFile(path, buf.Bytes(), 0o644)
+	return os.WriteFile(path, buf.Bytes(), 0o644) // #nosec G306 -- generated tracked asset
 }
 
 // checkAll validates the sound list, that every file exists (WAV files at
@@ -244,12 +244,12 @@ func checkAll(assets string) (int, int64, error) {
 				}
 			}
 			if strings.HasSuffix(rel, ".wav") {
-				f, err := os.Open(path)
+				f, err := os.Open(filepath.Clean(path))
 				if err != nil {
 					return 0, 0, err
 				}
 				_, rate, _, err := sfxsynth.ReadWAV(f)
-				f.Close()
+				_ = f.Close()
 				if err != nil || rate != sfxsynth.Rate {
 					return 0, 0, fmt.Errorf("%s: %s must be 16-bit PCM at %d Hz (%v)", e.ID, rel, sfxsynth.Rate, err)
 				}
@@ -267,7 +267,7 @@ func checkAll(assets string) (int, int64, error) {
 
 // checkOgg decodes an Ogg Vorbis file and wants it to be 48 kHz.
 func checkOgg(path string) error {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return err
 	}
@@ -285,12 +285,12 @@ func checkOgg(path string) error {
 }
 
 func loopFix(in, out string, fade float64) error {
-	f, err := os.Open(in)
+	f, err := os.Open(filepath.Clean(in))
 	if err != nil {
 		return err
 	}
 	pcm, rate, _, err := sfxsynth.ReadWAV(f)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return err
 	}
@@ -299,5 +299,5 @@ func loopFix(in, out string, fade float64) error {
 	if err := sfxsynth.WriteWAV(&buf, fixed, rate); err != nil {
 		return err
 	}
-	return os.WriteFile(out, buf.Bytes(), 0o644)
+	return os.WriteFile(out, buf.Bytes(), 0o600)
 }
