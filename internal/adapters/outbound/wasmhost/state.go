@@ -67,9 +67,9 @@ func (h *Host) Save(plugin, path string) ([]byte, error) {
 // blob reads the n = r[0] bytes save left in m's buffer and returns them
 // under the blob header.
 func (m *module) blob(r []uint64) ([]byte, error) {
-	n := uint32(api.DecodeI32(r[0]))
+	n := uint32(api.DecodeI32(r[0])) // #nosec G115 -- i32 result bits; checked at state.go:71
 	if n > MaxState || n > m.bufSize {
-		return nil, fmt.Errorf("wasmhost: save returned %d bytes (limit %d, buffer %d)", int32(n), MaxState, m.bufSize)
+		return nil, fmt.Errorf("wasmhost: save returned %d bytes (limit %d, buffer %d)", api.DecodeI32(r[0]), MaxState, m.bufSize)
 	}
 	data, ok := m.mem.Read(m.buf, n)
 	if !ok {
@@ -99,7 +99,7 @@ func (h *Host) Load(plugin, path string, blob []byte) error {
 	if !m.mem.Write(m.buf, data) {
 		return errors.New("wasmhost: state does not fit in memory")
 	}
-	r, msg := h.once(m, "load", m.load, uint64(uint32(len(data))))
+	r, msg := h.once(m, "load", m.load, uint64(uint32(len(data)))) // #nosec G115 -- len(data) == n <= MaxState (checkBlob, state.go:125-127)
 	if msg != "" {
 		return h.stateFailed(m, msg)
 	}
@@ -124,7 +124,7 @@ func (m *module) checkBlob(blob []byte) ([]byte, error) {
 	switch {
 	case n > MaxState || n > m.bufSize:
 		return nil, fmt.Errorf("wasmhost: state blob: %d bytes over the limit (%d, buffer %d)", n, MaxState, m.bufSize)
-	case uint64(len(blob)-blobHeader) != uint64(n):
+	case uint64(len(blob)-blobHeader) != uint64(n): // #nosec G115 -- len(blob) >= blobHeader at state.go:116
 		return nil, fmt.Errorf("wasmhost: state blob: %d data bytes, header says %d", len(blob)-blobHeader, n)
 	}
 	return blob[blobHeader:], nil

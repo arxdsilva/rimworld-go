@@ -231,7 +231,7 @@ func (h *Host) bindState(m *module, defs map[string]api.FunctionDefinition) stri
 	if msg != "" {
 		return msg
 	}
-	m.version = uint32(api.DecodeI32(r[0]))
+	m.version = uint32(api.DecodeI32(r[0])) // #nosec G115 -- opaque i32 tag bits; only compared for equality (state.go:120)
 	return ""
 }
 
@@ -245,7 +245,7 @@ func (h *Host) readBuffer(m *module) string {
 	if msg != "" {
 		return msg
 	}
-	m.buf, m.bufSize = uint32(api.DecodeI32(p[0])), uint32(api.DecodeI32(n[0]))
+	m.buf, m.bufSize = uint32(api.DecodeI32(p[0])), uint32(api.DecodeI32(n[0])) // #nosec G115 -- i32 bits; checked at host_load.go:249
 	if m.bufSize < minBufSize || uint64(m.buf)+uint64(m.bufSize) > uint64(m.mem.Size()) {
 		return fmt.Sprintf("rw_buf (%d, %d bytes) is not %d or more bytes inside memory", m.buf, m.bufSize, minBufSize)
 	}

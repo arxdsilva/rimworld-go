@@ -180,7 +180,7 @@ func (b *Builder) Func(params, results []byte, locals []byte, code ...byte) uint
 	}
 	b.m.Funcs = append(b.m.Funcs, b.Type(params, results))
 	b.m.Bodies = append(b.m.Bodies, wasmrewrite.Body{Locals: runs, Code: slices.Clone(code)})
-	return b.nImports + uint32(len(b.m.Funcs)-1)
+	return b.nImports + uint32(len(b.m.Funcs)-1) // #nosec G115 -- test fixture builder: values from test code
 }
 
 // Import adds a function import module.name of type params -> results
@@ -297,7 +297,7 @@ func (b *Builder) Global(valtype byte, mutable bool, init ...byte) uint32 {
 func (b *Builder) Data(offset uint32, data []byte) {
 	seg := []byte{0, OpI32Const}
 	// i32.const takes a signed LEB: emit offset as unsigned 5-byte safe form.
-	seg = appendS32(seg, int32(offset))
+	seg = appendS32(seg, int32(offset)) // #nosec G115 -- test fixture builder: values from test code
 	seg = append(seg, OpEnd)
 	seg = leb(seg, uint64(len(data)))
 	b.datas = append(b.datas, append(seg, data...))
@@ -314,7 +314,7 @@ func (b *Builder) DataPassive(data []byte) {
 func appendS32(b []byte, v int32) []byte {
 	x := int64(v)
 	for {
-		c := byte(x) & 0x7f
+		c := byte(x & 0x7f)
 		x >>= 7
 		if (x == 0 && c&0x40 == 0) || (x == -1 && c&0x40 != 0) {
 			return append(b, c)

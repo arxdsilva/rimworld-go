@@ -73,8 +73,8 @@ func (c *callState) stopf(format string, a ...any) {
 
 // charge takes cost from the fuel global; below 0 the call stops at once.
 func (c *callState) charge(cost uint64) {
-	left := int64(c.m.fuel.Get()) - int64(cost)
-	c.m.fuel.Set(uint64(left))
+	left := int64(c.m.fuel.Get()) - int64(cost) // #nosec G115 -- fuel global holds i64 bits; cost <= 4+2^32 (callers)
+	c.m.fuel.Set(uint64(left))                  // #nosec G115 -- i64 bits back into the u64 fuel global
 	if left < 0 {
 		panic(stopSignal{})
 	}
@@ -186,7 +186,7 @@ func (c *callState) rand(s []uint64) {
 	if n < 1 || n > 1<<30 {
 		c.stopf("rand: n must be 1 to %d, got %d", 1<<30, n)
 	}
-	s[0] = api.EncodeI32(int32(c.rng.IntN(n)))
+	s[0] = api.EncodeI32(int32(c.rng.IntN(n))) // #nosec G115 -- IntN(n) < n <= 1<<30, checked at imports.go:186
 }
 
 func (c *callState) count(s []uint64) {
@@ -229,13 +229,13 @@ func (c *callState) colonists(s []uint64) {
 
 func (c *callState) wealth(s []uint64) {
 	c.charge(importCost)
-	s[0] = uint64(int64(c.world("wealth").Wealth()))
+	s[0] = uint64(int64(c.world("wealth").Wealth())) // #nosec G115 -- i64 result bits for the guest
 }
 
 func (c *callState) season(s []uint64) {
 	p, capacity := api.DecodeU32(s[0]), api.DecodeU32(s[1])
 	str := c.world("season").Season()
-	n := uint32(len(str))
+	n := uint32(len(str)) // #nosec G115 -- fixed season names, <= 6 bytes (temperature.go:131-144)
 	if capacity < n {
 		n = capacity
 	}
@@ -252,7 +252,7 @@ func (c *callState) pawns(s []uint64) {
 	if c.pr != nil {
 		all = c.pr.Pawns()
 	}
-	n := uint32(len(all))
+	n := uint32(min(uint64(len(all)), 1<<32-1))
 	if capacity < n {
 		n = capacity
 	}
@@ -270,7 +270,7 @@ func (c *callState) pawns(s []uint64) {
 
 // pawn writes the colonist's record and returns 1, else returns 0.
 func (c *callState) pawn(s []uint64) {
-	id, p := int64(s[0]), api.DecodeU32(s[1])
+	id, p := int64(s[0]), api.DecodeU32(s[1]) // #nosec G115 -- i64 param bits; lookup rejects id < 1 (imports.go:308)
 	pw, ok := c.lookup(id)
 	if !ok {
 		c.charge(importCost)
@@ -286,14 +286,14 @@ func (c *callState) pawn(s []uint64) {
 // pawnName writes up to cap bytes of the colonist's name and returns its
 // full length, or -1.
 func (c *callState) pawnName(s []uint64) {
-	id, p, capacity := int64(s[0]), api.DecodeU32(s[1]), api.DecodeU32(s[2])
+	id, p, capacity := int64(s[0]), api.DecodeU32(s[1]), api.DecodeU32(s[2]) // #nosec G115 -- i64 param bits; lookup rejects id < 1
 	pw, ok := c.lookup(id)
 	if !ok {
 		c.charge(importCost)
 		s[0] = api.EncodeI32(-1)
 		return
 	}
-	n := uint32(len(pw.Name))
+	n := uint32(min(uint64(len(pw.Name)), 1<<32-1))
 	if capacity < n {
 		n = capacity
 	}

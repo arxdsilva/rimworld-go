@@ -41,12 +41,12 @@ func (h *Host) begin(cs *callState) {
 // end accounts the fuel spent since begin and clears the active call.
 func (h *Host) end(cs *callState) {
 	m := cs.m
-	left := int64(m.fuel.Get())
+	left := int64(m.fuel.Get()) // #nosec G115 -- the fuel global holds i64 bits (wasmrewrite meter)
 	switch {
 	case left < 0: // out of fuel: the whole budget went
 		left = 0
 	case uint64(left) > h.opts.Fuel:
-		left = int64(h.opts.Fuel)
+		left = int64(h.opts.Fuel) // #nosec G115 -- Fuel < uint64(left) <= MaxInt64 by the case at host_call.go:48
 	}
 	m.spent += h.opts.Fuel - uint64(left)
 	h.cur = nil
@@ -80,7 +80,7 @@ func (h *Host) errMsg(cs *callState, err error) string {
 	switch {
 	case cs.fail != "":
 		return cs.fail
-	case int64(cs.m.fuel.Get()) < 0:
+	case int64(cs.m.fuel.Get()) < 0: // #nosec G115 -- the fuel global holds i64 bits (wasmrewrite meter)
 		return fmt.Sprintf("out of fuel in %s (budget %d)", cs.hook, h.opts.Fuel)
 	case cs.m.depth.Get() > StackBudget:
 		return "call stack over budget in " + cs.hook

@@ -36,9 +36,9 @@ func appendEvent(dst []byte, ev scripting.Event, pawns []scripting.Pawn) []byte 
 	dst = le.AppendUint32(dst, ABIVersion)
 	dst = le.AppendUint32(dst, uint32(ev.Hook))
 	dst = le.AppendUint64(dst, ev.Tick)
-	dst = le.AppendUint32(dst, uint32(len(pawns)))
-	dst = le.AppendUint32(dst, uint32(len(t1)))
-	dst = le.AppendUint32(dst, uint32(len(t2)))
+	dst = le.AppendUint32(dst, uint32(len(pawns))) // #nosec G115 -- eventSize <= bufSize (u32) at host_fire.go:88
+	dst = le.AppendUint32(dst, uint32(len(t1)))    // #nosec G115 -- eventSize <= bufSize (u32) at host_fire.go:88
+	dst = le.AppendUint32(dst, uint32(len(t2)))    // #nosec G115 -- eventSize <= bufSize (u32) at host_fire.go:88
 	dst = le.AppendUint32(dst, 0)
 	for _, p := range pawns {
 		dst = appendRecord(dst, p)
@@ -64,10 +64,10 @@ func appendRecord(dst []byte, p scripting.Pawn) []byte {
 		flags |= 2
 	}
 	dst = le.AppendUint64(dst, p.ID)
-	dst = le.AppendUint32(dst, uint32(int32(p.X)))
-	dst = le.AppendUint32(dst, uint32(int32(p.Y)))
-	dst = le.AppendUint32(dst, uint32(int32(p.Food)))
-	dst = le.AppendUint32(dst, uint32(int32(p.Rest)))
-	dst = le.AppendUint32(dst, uint32(int32(p.Mood)))
+	dst = le.AppendUint32(dst, uint32(int32(p.X)))    // #nosec G115 -- i32 ABI bits; host map cell column (game/scripts.go:258)
+	dst = le.AppendUint32(dst, uint32(int32(p.Y)))    // #nosec G115 -- i32 ABI bits; host map cell row (game/scripts.go:258)
+	dst = le.AppendUint32(dst, uint32(int32(p.Food))) // #nosec G115 -- i32 ABI bits; host need bar 0-100 (needs.Percent, game/scripts.go:258)
+	dst = le.AppendUint32(dst, uint32(int32(p.Rest))) // #nosec G115 -- i32 ABI bits; host need bar 0-100 (needs.Percent, game/scripts.go:258)
+	dst = le.AppendUint32(dst, uint32(int32(p.Mood))) // #nosec G115 -- i32 ABI bits; host mood 0-100 (mood.Level or smoothed, scripts.go:258)
 	return le.AppendUint32(dst, flags)
 }
