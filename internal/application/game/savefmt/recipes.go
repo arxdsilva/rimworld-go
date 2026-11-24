@@ -30,7 +30,7 @@ func (k Keys) Recipes(book recipe.Book) RecipeIDs {
 		if j == 0 {
 			return 0, false
 		}
-		return recipe.ID(j - 1), true
+		return recipe.ID(j - 1), true // #nosec G115 -- Remap yields 0, the input, or a current book ID (keys.go:23-40)
 	}
 }
 

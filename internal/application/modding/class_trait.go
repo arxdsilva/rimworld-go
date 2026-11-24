@@ -156,19 +156,19 @@ func (td *trDecoder) field(d *trait.Def, k string, v any) {
 	case "mods":
 		d.Mods = td.mods(v)
 	case "work_speed":
-		d.WorkSpeed = trSkillMap(&td.bsDecoder, k, v, 0, trMaxPct, func(n int) int16 { return int16(n) })
+		d.WorkSpeed = trSkillMap(&td.bsDecoder, k, v, 0, trMaxPct, func(n int) int16 { return int16(n) }) // #nosec G115 -- trSkillMap num bounds [0, trMaxPct=1000] fits int16
 	case "learn_mul":
-		d.LearnMul = trSkillMap(&td.bsDecoder, k, v, 0, trMaxPct, func(n int) int16 { return int16(n) })
+		d.LearnMul = trSkillMap(&td.bsDecoder, k, v, 0, trMaxPct, func(n int) int16 { return int16(n) }) // #nosec G115 -- trSkillMap num bounds [0, trMaxPct=1000] fits int16
 	case "skill_bonus":
-		d.SkillBonus = trSkillMap(&td.bsDecoder, k, v, -trMaxSkill, trMaxSkill, func(n int) int8 { return int8(n) })
+		d.SkillBonus = trSkillMap(&td.bsDecoder, k, v, -trMaxSkill, trMaxSkill, func(n int) int8 { return int8(n) }) // #nosec G115 -- trSkillMap num bounds [-20, 20] (trMaxSkill) fits int8
 	case "incapable":
-		d.Incapable = backstory.Bits(td.keys(k, v, trBit))
+		d.Incapable = backstory.Bits(td.keys(k, v, trBit)) // #nosec G115 -- bits from backstory.BitOfKey, all < numBits=10 <= 16
 	case "needs":
-		d.Needs = backstory.Bits(td.keys(k, v, trBit))
+		d.Needs = backstory.Bits(td.keys(k, v, trBit)) // #nosec G115 -- bits from backstory.BitOfKey, all < numBits=10 <= 16
 	case "rarity":
-		d.Rarity = uint8(td.num(k, v, 0, trMaxRarity))
+		d.Rarity = uint8(td.num(k, v, 0, trMaxRarity)) // #nosec G115 -- num rejects outside [0, trMaxRarity=100], fits uint8
 	case "beauty":
-		d.Beauty = int8(td.num(k, v, -2, 2))
+		d.Beauty = int8(td.num(k, v, -2, 2)) // #nosec G115 -- num rejects outside [-2, 2], fits int8
 	case "note", "thought_scale", "add_thought":
 		td.fail(k, "note, thought_scale and add_thought "+trBehaviourMsg)
 	default:
@@ -201,7 +201,7 @@ func (td *trDecoder) group(v any) uint8 {
 			td.fail("group", "too many conflict groups")
 			return trait.NoGroup
 		}
-		g = trait.FirstPluginGroup + uint8(len(td.groups))
+		g = trait.FirstPluginGroup + uint8(len(td.groups)) // #nosec G115 -- group count <= 255 checked at :200
 		td.groups[s] = g
 	}
 	return g
@@ -242,9 +242,9 @@ func (td *trDecoder) mods(v any) []stat.Mod {
 				}
 				mod.Stat = id
 			case "add":
-				mod.Add = int32(td.num(f, m[k], -trMaxAdd, trMaxAdd))
+				mod.Add = int32(td.num(f, m[k], -trMaxAdd, trMaxAdd)) // #nosec G115 -- num rejects outside [-trMaxAdd, trMaxAdd]=±100000, fits int32
 			case "mul":
-				mod.Mul = int32(td.num(f, m[k], 0, trMaxMul))
+				mod.Mul = int32(td.num(f, m[k], 0, trMaxMul)) // #nosec G115 -- num rejects outside [0, trMaxMul=10000], fits int32
 			default:
 				td.fail(f, "unknown field")
 			}

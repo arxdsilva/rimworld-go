@@ -122,7 +122,7 @@ func (w *walker) walk(v reflect.Value) (drop bool) {
 	}
 	switch {
 	case t == kindType:
-		k := item.Kind(v.Uint())
+		k := item.Kind(v.Uint()) // #nosec G115 -- v's type is item.Kind (uint8), so v.Uint() fits
 		v.SetUint(uint64(w.m.Kind(k)))
 		return w.m.gone(k)
 	case t == filterType:

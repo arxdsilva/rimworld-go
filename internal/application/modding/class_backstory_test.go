@@ -6,6 +6,7 @@ package modding
 import (
 	"encoding/json"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -224,5 +225,20 @@ func TestBackstoryKeysRoundTrip(t *testing.T) {
 	if backstory.BitKey(backstory.Violence|backstory.Caring) != "" || backstory.BitKey(backstory.AllBits+1) != "" ||
 		backstory.TagKey(backstory.AllTags) != "" || backstory.TagKey(backstory.AllTags+1) != "" {
 		t.Fatal("a key for a non-single bit or tag")
+	}
+}
+
+// TestBackstoryBookCap: past bsMaxBook a backstory is refused, not wrapped
+// onto a uint16 ID another backstory holds.
+func TestBackstoryBookCap(t *testing.T) {
+	t.Parallel()
+	defs := EncodeBackstories(backstory.Core())
+	for i := backstory.Core().Len(); i <= bsMaxBook; i++ {
+		defs = append(defs, Def{Class: BackstoryClass, Key: "p.b" + strconv.Itoa(i), Plugin: "p",
+			Body: map[string]any{"slot": "adulthood", "title": "T", "short": "t", "desc": "d"}})
+	}
+	b, probs := DecodeBackstories(defs)
+	if b.Len() != bsMaxBook || len(probs) != 1 || !strings.Contains(probs[0].Msg, "too many backstories") {
+		t.Fatalf("len %d, problems %v", b.Len(), probs)
 	}
 }

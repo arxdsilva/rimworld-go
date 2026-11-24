@@ -787,7 +787,7 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 	g.importSkillLive(s.SkillLive)
 	setMap(&g.troughs, s.Troughs)
 	for id, e := range s.Exposure {
-		g.exposure[id] = bodytemp.Sev{Hypo: int32(e[0]), Heat: int32(e[1])}
+		g.exposure[id] = bodytemp.Sev{Hypo: int32(min(max(e[0], -1<<31), 1<<31-1)), Heat: int32(min(max(e[1], -1<<31), 1<<31-1))}
 	}
 	for id, b := range s.Breaks {
 		g.breaks[id] = breakState{b.Kind, b.Until}

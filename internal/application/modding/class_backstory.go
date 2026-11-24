@@ -24,6 +24,8 @@ const (
 	bsMaxTitle  = 40 // runes
 	bsMaxShort  = 20 // runes
 	bsMaxDesc   = 800
+	// bsMaxBook: IDs are uint16 from 1 and Book.IDOf counts up to Len, so Len stays below 65535.
+	bsMaxBook = math.MaxUint16 - 1
 )
 
 // bsSlots names the slots in a def ("slot": "childhood").
@@ -94,6 +96,9 @@ func DecodeBackstories(defs []Def) (backstory.Book, []Problem) {
 	for _, d := range defs {
 		bd := bsDecoder{def: d}
 		v := bd.decode()
+		if len(bd.probs) == 0 && len(list) >= bsMaxBook {
+			bd.fail("", "too many backstories: a game holds at most %d", bsMaxBook)
+		}
 		if len(bd.probs) > 0 {
 			probs = append(probs, bd.probs...)
 			continue
@@ -140,14 +145,14 @@ func (bd *bsDecoder) decode() backstory.Def {
 		case "skills":
 			d.Skills = bd.skills(v)
 		case "incapable":
-			d.Incapable = backstory.Bits(bd.keys(k, v, func(s string) (uint64, bool) {
+			d.Incapable = backstory.Bits(bd.keys(k, v, func(s string) (uint64, bool) { // #nosec G115 -- bits from backstory.BitOfKey, all < numBits=10 <= 16
 				b, ok := backstory.BitOfKey(s)
 				return uint64(b), ok
 			}))
 		case "weight":
 			d.Weight = bd.num(k, v, 0, bsMaxWeight)
 		case "tags":
-			d.Tags = backstory.Tag(bd.keys(k, v, func(s string) (uint64, bool) {
+			d.Tags = backstory.Tag(bd.keys(k, v, func(s string) (uint64, bool) { // #nosec G115 -- bits from backstory.TagOfKey, 3 tags, all < 8
 				t, ok := backstory.TagOfKey(s)
 				return uint64(t), ok
 			}))
@@ -221,7 +226,7 @@ func (bd *bsDecoder) skills(v any) map[skill.ID]int8 {
 			bd.fail("skills."+k, "unknown skill")
 			continue
 		}
-		out[id] = int8(bd.num("skills."+k, x, -bsMaxSkill, bsMaxSkill))
+		out[id] = int8(bd.num("skills."+k, x, -bsMaxSkill, bsMaxSkill)) // #nosec G115 -- num rejects outside [-bsMaxSkill, bsMaxSkill]=±20, fits int8
 	}
 	return out
 }

@@ -178,9 +178,9 @@ func (id *icDecoder) field(d *incident.Def, k string, v any, isCore bool) {
 	case "disease":
 		d.Disease = id.flag(k, v)
 	case "biomes":
-		d.Biomes = biome.Set(id.keys(k, v, icBiome))
+		d.Biomes = biome.Set(id.keys(k, v, icBiome)) // #nosec G115 -- bits from biome.Parse, ID < NumBiomes=12 <= 16
 	case "not":
-		d.Not = biome.Set(id.keys(k, v, icBiome))
+		d.Not = biome.Set(id.keys(k, v, icBiome)) // #nosec G115 -- bits from biome.Parse, ID < NumBiomes=12 <= 16
 	default:
 		id.fail(k, "unknown field")
 	}

@@ -47,7 +47,7 @@ func (k Keys) RemapBackstories(book backstory.Book, bios map[entity.EntityID]paw
 		id, ok := book.IDOf(key)
 		return int(id), ok
 	})
-	bs := func(id backstory.ID) backstory.ID { return backstory.ID(to(int(id))) }
+	bs := func(id backstory.ID) backstory.ID { return backstory.ID(to(int(id))) } // #nosec G115 -- Remap: 0, input or book ID; book capped at bsMaxBook (class_backstory.go:99)
 	for id, p := range bios {
 		bios[id] = p.Remapped(bs)
 	}

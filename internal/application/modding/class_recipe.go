@@ -255,7 +255,7 @@ func (rd *rcDecoder) field(d *recipe.Def, k string, v any) {
 	case "learn":
 		d.Learn = rcRef(rd, k, v, "skill", skill.Parse)
 	case "min_skill":
-		d.MinSkill = uint8(rd.num(k, v, 0, rcMaxSkill))
+		d.MinSkill = uint8(rd.num(k, v, 0, rcMaxSkill)) // #nosec G115 -- num rejects outside [0, rcMaxSkill=20], fits uint8
 	case "extra":
 		d.Extra = rd.item(k, v)
 	case "extra_qty":
@@ -396,7 +396,7 @@ func (rd *rcDecoder) input(field string, v any) recipe.Input {
 		case "max":
 			in.Max = rd.num(f, x, 1, rcMaxQty)
 		case "stuff":
-			in.Stuff = item.StuffCategory(rd.keys(f, x, func(s string) (uint64, bool) {
+			in.Stuff = item.StuffCategory(rd.keys(f, x, func(s string) (uint64, bool) { // #nosec G115 -- bits from item.ParseStuff, 5 families, all < 8
 				c, ok := item.ParseStuff(s)
 				return uint64(c), ok
 			}))

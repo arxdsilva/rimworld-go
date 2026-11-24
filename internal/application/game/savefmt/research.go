@@ -26,7 +26,7 @@ func (k Keys) Research(book research.Book) ResearchIDs {
 		if j == 0 {
 			return 0, false
 		}
-		return research.Project(j - 1), true
+		return research.Project(j - 1), true // #nosec G115 -- Remap yields 0, the input, or a current book ID (keys.go:23-40)
 	}
 }
 

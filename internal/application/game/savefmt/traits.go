@@ -17,7 +17,7 @@ func (k Keys) TraitIDs(book trait.Book) func(trait.ID) trait.ID {
 		id, ok := book.IDOf(key)
 		return int(id), ok
 	})
-	return func(id trait.ID) trait.ID { return trait.ID(to(int(id))) }
+	return func(id trait.ID) trait.ID { return trait.ID(to(int(id))) } // #nosec G115 -- Remap yields 0, the input, or a current book ID (keys.go:23-40)
 }
 
 // RemapTraits maps the saved trait IDs of bios, colonists and any other
