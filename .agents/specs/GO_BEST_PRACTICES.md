@@ -1028,6 +1028,21 @@ Avoid arbitrary code execution.
 
 ---
 
+# 66a. gosec Policy
+
+`make gosec` (CI, after `make vuln`) runs gosec pinned to master `244f1f6` (`v2.30.1-0.20261113154300-244f1f6f4d1d`) with `-exclude-generated -nosec-require-rules -nosec-require-justification`, and must report nothing. Move the pin to v2.30.1 once it is released.
+
+- **Why not v2.30.0.** v2.30.0 loads a package by its file list. x/tools splits a list longer than about 16 KB into separate `go list` calls, so a large package (the root `internal/application/game`) fails to type-check and is silently skipped (securego/gosec#1828, fixed by PR #1803). The loops security pass still runs an installed v2.30.0, so that package is invisible to it.
+- **G115 (integer narrowing) is excluded repo-wide.** About 949 sites are fixed-width conversions in the deterministic simulation, bounded by map size and content limits. Rewriting them would churn hashed and hot code for no safety gain.
+- **G115 is held at zero where input is untrusted.** The second `make gosec` line runs without the exclusion on `internal/adapters/outbound/wasmhost/...` (guest modules), `internal/application/modding/...` (mod data) and `internal/application/game/savefmt/...` (save bytes). A narrowing there needs a form gosec recognises (a range check in the same function, `min`/`max`, a mask) or a `#nosec G115` that names the bound. A value with no bound gets a rejecting check and a test.
+- **Suppressions** go on the reported line (the first line of a multi-line statement) as `// #nosec G304 -- <bound, guard or origin>`. List several rules as `#nosec G306 G703 -- …`. A bare `#nosec`, a missing reason, or "false positive" as the only reason are refused. `//nolint` has no effect on gosec.
+- **G104.** A Close or Sync after a write is joined into the returned error. A Close on a read path, best-effort cleanup on an error path, and `hash.Hash` or `bytes.Buffer` writes use an explicit `_ =` / `_, _ =`.
+- **G304/G703.** Wrap variable paths in `filepath.Clean`. `Clean` is not a G703 sanitizer, so a `#nosec G703` names where the path comes from.
+- **File modes.** User data (saves, logs, settings, captures, dev output) uses dirs 0o750 and files 0o600. Generated tracked assets and release outputs keep 0o755/0o644 with `#nosec G301`/`G306 -- generated tracked asset`.
+- **Loops security pass baseline.** Outside the three untrusted-input trees, a file's G115 findings are baseline while their count stays at or below that file's G115 count at the run's base commit. A per-file count cannot tell a removed G115 from a new one in the same file, so review new narrowing in the diff too. Any other finding blocks.
+
+---
+
 # 67. Performance-Friendly API Design
 
 Good:

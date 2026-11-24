@@ -37,6 +37,15 @@ lint:
 vuln:  ## known vulnerabilities in the code paths the game reaches
 	go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
+# gosec master 244f1f6 (PR #1803): v2.30.0 cannot load packages with long file lists (securego/gosec#1828); move to v2.30.1 once released.
+GOSEC := github.com/securego/gosec/v2/cmd/gosec@v2.30.1-0.20261113154300-244f1f6f4d1d
+GOSEC_FLAGS := -quiet -exclude-generated -nosec-require-rules -nosec-require-justification
+
+.PHONY: gosec
+gosec:  ## static security scan; G115 excluded except on untrusted-input packages (.agents/specs/GO_BEST_PRACTICES.md §66a)
+	go run $(GOSEC) $(GOSEC_FLAGS) -exclude-dir=.loops -exclude=G115 ./...
+	go run $(GOSEC) $(GOSEC_FLAGS) ./internal/adapters/outbound/wasmhost/... ./internal/application/modding/... ./internal/application/game/savefmt/...
+
 .PHONY: licenses
 licenses:  ## copy license files to third_party/go-modules for every release platform; list new modules in THIRD_PARTY_NOTICES.md, delete a dropped module's folder by hand
 	GOBIN=$(CURDIR)/bin go install github.com/google/go-licenses/v2@v2.0.1
