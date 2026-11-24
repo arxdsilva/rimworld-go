@@ -53,11 +53,12 @@ import (
 // out, so healing draws no random numbers.
 
 // woundAnimal gives animal id (state a, Injury already raised by dmg) dmg of
-// kind and split on parts by coverage (body.SpreadBlow: a part whose loss would
-// kill is never taken off), then sets Injury's rise to what the body took, never
-// below 0 (CBT 3.4). It makes the body, schedules the new wounds' infection
-// roll and adds the animal to the patients. A blow whose dmg kills leaves no
-// wound; one whose split kills draws no infection delay and adds no patient.
+// kind and split on parts by coverage (body.SpreadBlowWithin, stopped at the hit
+// points it had before the blow, #269: a part whose loss would kill is never taken
+// off), then sets Injury's rise to what the body took, never below 0 (CBT 3.4).
+// It makes the body, schedules the new wounds' infection roll and adds the animal
+// to the patients. A blow whose dmg kills leaves no wound; one whose split kills
+// draws no infection delay and adds no patient.
 func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind body.WoundKind, split body.Split, by entity.EntityID, now uint64) {
 	if dmg <= 0 || a.Dead() || animal.IsMech(a.Species) { // DEF-4: a machine takes damage, not wounds
 		return
@@ -66,7 +67,7 @@ func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind bo
 		a.Body = animal.NewBody(a.Species)
 	}
 	b := a.Body
-	a.Injury += max(body.SpreadBlow(b, dmg, kind, split, g.stream(streamMedical).IntN, now), 0) - dmg // the medical stream; never a fall
+	a.Injury += max(body.SpreadBlowWithin(b, dmg, kind, split, a.HP()+dmg, g.stream(streamMedical).IntN, now), 0) - dmg // the medical stream; never a fall
 	if infection.WoundChance(kind, -1, infection.RoomOther) > 0 && !a.Dead() {
 		h := infection.DelayMin + g.stream(streamMedical).IntN(infection.DelaySpan+1)
 		for i := range b.Wounds { // the wounds this hit opened
@@ -95,7 +96,8 @@ func woundDmg(b *body.Body) int {
 // reconcileAnimalBody keeps a's open wounds within its Injury (trimming
 // the smallest when Injury healed another way) and drops the body once
 // nothing on it needs care and no part is lost (a lost leg stays lost:
-// MED-13). Lost parts are not wounds: they do not count against Injury.
+// MED-13). Lost parts are not wounds: they do not count against Injury
+// (nor against a split's stop: woundAnimal).
 func reconcileAnimalBody(a *animal.State) {
 	b := a.Body
 	if b == nil {

@@ -112,3 +112,129 @@ func TestSpreadBlowVitalAndTotal(t *testing.T) {
 		}
 	}
 }
+
+// withinBodies are animal-plan bodies for the SpreadBlowWithin tests, by
+// seed: the animal anatomies at three scales, some with a lost part (one
+// whose loss does not kill), some wounded up to close to killAt.
+func withinBodies(seed uint64) Body {
+	b := Body{Anatomy: Anatomy(1 + seed%uint64(NumAnatomies-1)), Scale: []int32{300, 700, 1700}[seed%3]}
+	if seed%2 == 0 {
+		if p := Part(seed/2) % b.numParts(); p != b.Root() && !b.LossKills(p) {
+			b.Missing |= 1 << p
+		}
+	}
+	if pct := int(seed / 5 % 5); pct > 0 {
+		Spread(&b, killAt(&b)*(10+pct*21)/120, Cut, splitPCG(seed+500), 0)
+	}
+	return b
+}
+
+// cloneBody is a copy of b sharing no slice with it.
+func cloneBody(b Body) Body {
+	b.Wounds = slices.Clone(b.Wounds)
+	b.Conds = slices.Clone(b.Conds)
+	b.Fitted = slices.Clone(b.Fitted)
+	return b
+}
+
+// TestSpreadBlowWithinMatchesBodyRule: with room = killAt - lossDamage,
+// SpreadBlowWithin is SpreadBlow on an animal plan's body: the same
+// return, body and draws, on every split form, the early stops included.
+func TestSpreadBlowWithinMatchesBodyRule(t *testing.T) {
+	t.Parallel()
+	n, stopped, quad := 0, 0, 0
+	for seed := uint64(1); seed <= 200; seed++ {
+		b0 := withinBodies(seed)
+		room := killAt(&b0) - lossDamage(&b0)
+		if room <= 0 {
+			continue // dead by the body's rule already: room must be > 0
+		}
+		for s := SplitCut; s < numSplits; s++ {
+			for _, dmg := range []int{8, 30} {
+				a, b := cloneBody(b0), cloneBody(b0)
+				var na, nb []int
+				want := SpreadBlow(&a, dmg, Cut, s, splitTap(splitPCG(seed), &na), 3)
+				got := SpreadBlowWithin(&b, dmg, Cut, s, room, splitTap(splitPCG(seed), &nb), 3)
+				if got != want || !reflect.DeepEqual(a, b) || !slices.Equal(na, nb) {
+					t.Fatalf("seed %d split %d dmg %d room %d: %d %v %v, SpreadBlow %d %v %v", seed, s, dmg, room, got, b.Wounds, nb, want, a.Wounds, na)
+				}
+				n++
+				if bodyDead(&a) {
+					stopped++
+					if a.Anatomy == Quadruped {
+						quad++
+					}
+				}
+			}
+		}
+	}
+	if n < 1000 || stopped == 0 || quad == 0 {
+		t.Fatalf("%d blows compared, %d stopped by the body rule (%d quadruped)", n, stopped, quad)
+	}
+}
+
+// TestSpreadBlowWithinRoom: a room above the body rule's deals the shares
+// SpreadBlow stops before (and the spill), raising Damage by its return; a
+// room below stops earlier, but never before the first share.
+func TestSpreadBlowWithinRoom(t *testing.T) {
+	t.Parallel()
+	past := 0
+	for seed := uint64(1); seed <= 200; seed++ {
+		b0 := withinBodies(seed)
+		room := killAt(&b0) - lossDamage(&b0)
+		if room <= 0 {
+			continue
+		}
+		for s := SplitCut; s < numSplits; s++ {
+			a, b := cloneBody(b0), cloneBody(b0)
+			stop := SpreadBlow(&a, 30, Cut, s, splitPCG(seed), 3)
+			before := b.Damage()
+			got := SpreadBlowWithin(&b, 30, Cut, s, room+1000, splitPCG(seed), 3)
+			if got < stop || b.Damage()-before > got {
+				t.Fatalf("seed %d split %d: a larger room took %d (Damage +%d), the body rule %d", seed, s, got, b.Damage()-before, stop)
+			}
+			if bodyDead(&a) && got > stop {
+				past++
+			}
+		}
+	}
+	if past == 0 {
+		t.Fatal("no blow dealt past the body rule's stop")
+	}
+	// PickPart 416 is the heart: shares Heart 21, LungL 21, Torso 21 (63)
+	for _, c := range []struct {
+		room, want int
+		dmgs       map[Part]int
+	}{
+		{1, 21, map[Part]int{Heart: 21}}, // the first share is always dealt
+		{21, 21, map[Part]int{Heart: 21}},
+		{22, 42, map[Part]int{Heart: 21, LungL: 21}},
+		{63, 63, map[Part]int{Heart: 21, LungL: 21, Torso: 21}},
+		{1000, 63, map[Part]int{Heart: 21, LungL: 21, Torso: 21}},
+	} {
+		var b Body
+		if got := SpreadBlowWithin(&b, 30, Cut, SplitCut, c.room, (&splitRec{vals: []int{416, 30, 296}}).roll, 1); got != c.want || b.Damage() != c.want || !maps.Equal(splitDmgs(&b), c.dmgs) {
+			t.Errorf("room %d: returned %d, Damage %d, wounds %v; want %d %v", c.room, got, b.Damage(), splitDmgs(&b), c.want, c.dmgs)
+		}
+	}
+	// the dying body SpreadBlow stops at 21 (TestSpreadBlowVitalAndTotal):
+	// with room the arm's share and the spill are dealt too
+	dying := Body{Wounds: []Wound{{Part: LegL, Dmg: 39}, {Part: LegR, Dmg: 39}, {Part: Brain, Dmg: 12}}}
+	if got := SpreadBlowWithin(&dying, 30, Cut, SplitCut, 1000, (&splitRec{vals: []int{120, 30, 150}}).roll, 1); got <= 21 || splitDmgs(&dying)[ArmL] == 0 || dying.Damage() != 90+got {
+		t.Errorf("dying with room: returned %d, Damage %d, wounds %v", got, dying.Damage(), splitDmgs(&dying))
+	}
+	// no split or no damage: Spread exactly, returning dmg
+	for _, dmg := range []int{-3, 0, 17} {
+		for _, s := range []Split{SplitNone, SplitCut} {
+			if s == SplitCut && dmg > 0 {
+				continue
+			}
+			a, b := Body{Anatomy: Quadruped, Scale: 300}, Body{Anatomy: Quadruped, Scale: 300}
+			var na, nb []int
+			Spread(&a, dmg, Cut, splitTap(splitPCG(9), &na), 1)
+			if got := SpreadBlowWithin(&b, dmg, Cut, s, 5, splitTap(splitPCG(9), &nb), 1); got != dmg || !reflect.DeepEqual(a, b) || !slices.Equal(na, nb) {
+				t.Fatalf("split %d dmg %d: %d %v, Spread %v", s, dmg, got, b.Wounds, a.Wounds)
+			}
+		}
+	}
+}
