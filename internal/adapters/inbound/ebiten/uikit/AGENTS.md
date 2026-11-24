@@ -34,7 +34,8 @@ The immediate-mode widget kit (NG-1 §1.4): per-`Update` widget declarations wit
 - Widget declaration runs once per `Update` per widget; the paint list is built during the update and drawn per frame. Text measurement goes through `gfx`.
 
 ## Tests
-- 16 source files, 3 test files, 15 `Test*` functions; `fakeHost` (8 methods).
+- 21 source files, 10 test files, 44 `Test*` functions; `fakeHost` (8 methods).
+- Column contract (QA-002, `columns.go`, `table.go`): `TableCell` (column id + rect), `ColumnScreens()` (logical 1280x768 and 3840x2160), `ColumnGaps` (every declared column has a cell of width > 0 inside the window; droppable ids may be absent), `TableColumnGaps`, `TableColIDs`, `TableCells`, `TableBodyRow`; `ModalLayout` exports the modal frame/title/body/footer split for tests.
 - Coverage 82.5 % (ARCH-003).
 
 ## Notes

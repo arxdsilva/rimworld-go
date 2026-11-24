@@ -205,3 +205,14 @@ Repo-wide gosec baseline triaged (#275); pinned `make gosec` gates CI at zero ·
 - HUD: none. No player-observable behaviour changed, beyond private modes on newly created user dirs and files.
 - Boxes: #275 closed (no checklist, spec or gap row named gosec).
 - Open: move the pin to v2.30.1 and upgrade the local tool (#276); domain `backstory.NewBook` wrap and the `IDOf` loop (#277).
+
+## QA-002-table-columns-drawn
+Every declared table column is drawn: pure cell layouts, a column test per table window and a guard · 2026-11-24 · 8456d254e
+- Changed: 12 table windows place their row cells through one free layout function each, which the header, cell draw and buttons read (one geometry source): Records, Work, Animals Colony, Auto-slaughter, Assign, Bio skills, wizard Pawns skills, Trade, the save list (incl. its Delete column), Factions and both scenario loaders. Each has a column test asserting every declared column gets a cell of width > 0 inside the production window rect at logical 1280x768 and 3840x2160 (`uikit.ColumnScreens`, `uikit.ColumnGaps`); Work, Records, Colony, Auto-slaughter and Bio also have headless draw tests (`gfx.WorldPass` anchors) that fail when a draw leaves its cell.
+- Guard: `TestEveryTableWindowHasAColumnTest` (root `columns_guard_test.go`) scans for column sites (a func returning `[]uikit.TableCell`, a `uikit.TableCol` literal, a `Kit.Table` call) and fails on one with no registered test, or whose test does not call `ColumnScreens` and `ColumnGaps`/`TableColumnGaps` in its own body; 24 sites registered, `columnTestTODO()` empty. It cannot see a column list that is neither of those shapes.
+- Audit (AC-1): headerless lists are out (History Combat/Threats, Wild animals, Schedule, Social, Health, Quests prefs). No declared column was found undrawn; every pixel is pinned to HEAD by `*KeepTheirAnchors` tests with literals worked from the old code (incl. the Work name cell and colony icon whole-pixel Y).
+- Decisions: Animal Colony columns still drop to fit, but only the declared `colonyDrops` ids and only at 1280x768 (K9). "Clear forced" in Assign is a headerless, non-droppable cell. Assign's Drugs/Medical/Food header tooltips now span their header cell instead of a fixed 120 px (the old tip overran neighbours when shrunk). `uikit.ModalLayout` is the old unexported `layout`, exported for tests. `ColumnGaps` stays in `uikit` (shared by six test packages).
+- Limits: no `solid_budget.txt` change; ebiten root non-test code untouched; `uikit.Kit` methods unchanged (new code is free functions); windows 30 non-test files.
+- HUD/UI: no visible change beyond the tooltip hit area above. Save, determinism, mod impact: none.
+- Boxes: UI/UX checklist Appendix C **Every declared table column is drawn** (QA-002) `[x]`; spec-backlog #267 closed on push.
+- Open: none.

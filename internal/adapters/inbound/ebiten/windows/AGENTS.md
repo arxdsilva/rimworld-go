@@ -28,7 +28,8 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - Research tab (RSCH-2): the tree's layout and texts are rebuilt only when `World().Research` hands out a different slice or the projects' set changes (`TestResearchTreeCachesAndDoesNotAllocatePerFrame`); a box click selects (`research.pick.<id>`), only Start research (`research.start`) sends SetResearch; everything draws clipped to the window (`TestResearchTreeDrawsInsideAtEveryOffset`, root).
 - Quests (QST-3): the window reads only `World().Quests` and `NoGoodwill`; Accept, Dismiss, Restore and the preference checks leave as commands; links leave as `JumpTo`/`OpenWorld` intents; quest text is never parsed back (runs come from the typed args).
 - Every window declares its widgets once per `Update` (`TestKitWindowOpensTogglesAndCloses`).
-- Animal columns drop to fit the width (`TestAnimalColumnsDropToFit`); presets cycle (`TestNextPresetCycles`).
+- Animal columns drop to fit only through the declared `colonyDrops` (`TestAnimalColumnsDropToFit`, `TestColonyColumnsDrawn`); presets cycle (`TestNextPresetCycles`).
+- QA-002: a window with column headers places its cells through a free func returning `[]uikit.TableCell` that its draw, header and buttons read (one geometry source), and registers a column test (`uikit.ColumnScreens` + `uikit.ColumnGaps`) in the root `columnTests()`; `columns_helper_test.go` gives the production rects (`windowsMainTabRect`, `windowsKitBody`).
 - History Threats (DEF 3.1): the tab lists only `Threat` entries, newest first (`TestThreatRowsOnlyThreatsNewestFirst`); the Combat and Threats tabs share one list drawer (`eventList`).
 
 ## Hot paths
