@@ -52,7 +52,7 @@ func CanonicaliseNaN(m *Module) error {
 	for fn := range m.Bodies {
 		code, err := nanBody(m, uint32(fn))
 		if err != nil {
-			return fmt.Errorf("wasmrewrite: nan: function %d: %w", uint32(len(m.Imports))+uint32(fn), err)
+			return fmt.Errorf("wasmrewrite: nan: function %d: %w", uint32(len(m.Imports))+uint32(fn), err) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 		}
 		m.Bodies[fn].Code = code
 	}

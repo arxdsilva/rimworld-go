@@ -415,10 +415,10 @@ func (m *Module) importCount(kind byte) uint32 {
 }
 
 // NumFuncs is the size of the function index space.
-func (m *Module) NumFuncs() uint32 { return m.importCount(0) + uint32(len(m.Funcs)) }
+func (m *Module) NumFuncs() uint32 { return m.importCount(0) + uint32(len(m.Funcs)) } // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 
 // NumGlobals is the size of the global index space.
-func (m *Module) NumGlobals() uint32 { return m.importCount(3) + uint32(len(m.Globals)) }
+func (m *Module) NumGlobals() uint32 { return m.importCount(3) + uint32(len(m.Globals)) } // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 
 // AddType appends the function type params -> results and returns its
 // type index. Existing indices do not shift.
@@ -427,7 +427,7 @@ func (m *Module) AddType(params, results []byte) uint32 {
 		Params:  append([]byte(nil), params...),
 		Results: append([]byte(nil), results...),
 	})
-	return uint32(len(m.Types) - 1)
+	return uint32(len(m.Types) - 1) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 }
 
 // AddGlobal appends a defined global and returns its index in the global
@@ -448,7 +448,7 @@ func (m *Module) AddExport(e Export) {
 // its local index (params first).
 func (m *Module) AddLocal(fn uint32, valtype byte) uint32 {
 	b := &m.Bodies[fn]
-	idx := uint32(len(m.Types[m.Funcs[fn]].Params))
+	idx := uint32(len(m.Types[m.Funcs[fn]].Params)) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for _, r := range b.Locals {
 		idx += r.Count
 	}

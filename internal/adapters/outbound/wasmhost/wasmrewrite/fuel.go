@@ -85,7 +85,7 @@ func Meter(m *Module, c Config) error {
 		}
 	}
 	ftypes = append(ftypes, m.Funcs...)
-	imported := uint32(len(ftypes) - len(m.Funcs))
+	imported := uint32(len(ftypes) - len(m.Funcs)) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	mt := &meter{Module: m}
 	for i := range m.Bodies {
 		if err := mt.meterBody(uint32(i), imported+uint32(i), ftypes, c); err != nil {
@@ -104,7 +104,7 @@ type meter struct {
 }
 
 func (m *meter) meterBody(fn, funcIndex uint32, ftypes []uint32, c Config) error {
-	if m.Funcs[fn] >= uint32(len(m.Types)) {
+	if m.Funcs[fn] >= uint32(len(m.Types)) { // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 		return errors.New("type index out of range")
 	}
 	var ins []Instr
@@ -227,7 +227,7 @@ func (m *meter) fuelGlobal(out []byte, op byte, idx uint32) []byte {
 }
 
 func fuelConst(out []byte, v uint64) []byte {
-	return appendS(append(out, fuelOpI64Const), int64(v))
+	return appendS(append(out, fuelOpI64Const), int64(v)) // #nosec G115 -- signed immediate kept as its u64 bit pattern
 }
 
 // fuelCharge is: fuel -= cost; if fuel < 0 { unreachable }.
@@ -313,7 +313,7 @@ func (m *meter) fuelPushes(in Instr, ftypes []uint32) (uint64, error) {
 	op := in.Op
 	switch {
 	case op == opBlock || op == opLoop || op == opIf:
-		switch bt := int64(in.A); {
+		switch bt := int64(in.A); { // #nosec G115 -- signed immediate kept as its u64 bit pattern
 		case bt == fuelEmptyBlockS33:
 			return 0, nil
 		case bt < 0:

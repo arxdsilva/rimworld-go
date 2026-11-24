@@ -20,7 +20,7 @@ func (m *Module) Encode() []byte {
 	}
 	emit := func(id byte, body []byte) {
 		out = append(out, id)
-		out = appendU32(out, uint32(len(body)))
+		out = appendU32(out, uint32(len(body))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 		out = append(out, body...)
 	}
 	for _, id := range encodeOrder {
@@ -63,24 +63,24 @@ func (m *Module) Encode() []byte {
 }
 
 func appendName(b []byte, s string) []byte {
-	b = appendU32(b, uint32(len(s)))
+	b = appendU32(b, uint32(len(s))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	return append(b, s...)
 }
 
 func (m *Module) encodeTypes() []byte {
-	b := appendU32(nil, uint32(len(m.Types)))
+	b := appendU32(nil, uint32(len(m.Types))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for _, t := range m.Types {
 		b = append(b, 0x60)
-		b = appendU32(b, uint32(len(t.Params)))
+		b = appendU32(b, uint32(len(t.Params))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 		b = append(b, t.Params...)
-		b = appendU32(b, uint32(len(t.Results)))
+		b = appendU32(b, uint32(len(t.Results))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 		b = append(b, t.Results...)
 	}
 	return b
 }
 
 func (m *Module) encodeImports() []byte {
-	b := appendU32(nil, uint32(len(m.Imports)))
+	b := appendU32(nil, uint32(len(m.Imports))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for _, im := range m.Imports {
 		b = appendName(b, im.Module)
 		b = appendName(b, im.Name)
@@ -95,7 +95,7 @@ func (m *Module) encodeImports() []byte {
 }
 
 func (m *Module) encodeFuncs() []byte {
-	b := appendU32(nil, uint32(len(m.Funcs)))
+	b := appendU32(nil, uint32(len(m.Funcs))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for _, t := range m.Funcs {
 		b = appendU32(b, t)
 	}
@@ -103,7 +103,7 @@ func (m *Module) encodeFuncs() []byte {
 }
 
 func (m *Module) encodeGlobals() []byte {
-	b := appendU32(nil, uint32(len(m.Globals)))
+	b := appendU32(nil, uint32(len(m.Globals))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for _, g := range m.Globals {
 		b = append(b, g.Type)
 		if g.Mutable {
@@ -117,7 +117,7 @@ func (m *Module) encodeGlobals() []byte {
 }
 
 func (m *Module) encodeExports() []byte {
-	b := appendU32(nil, uint32(len(m.Exports)))
+	b := appendU32(nil, uint32(len(m.Exports))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for _, e := range m.Exports {
 		b = appendName(b, e.Name)
 		b = append(b, e.Kind)
@@ -127,15 +127,15 @@ func (m *Module) encodeExports() []byte {
 }
 
 func (m *Module) encodeCode() []byte {
-	b := appendU32(nil, uint32(len(m.Bodies)))
+	b := appendU32(nil, uint32(len(m.Bodies))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for _, body := range m.Bodies {
-		e := appendU32(nil, uint32(len(body.Locals)))
+		e := appendU32(nil, uint32(len(body.Locals))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 		for _, r := range body.Locals {
 			e = appendU32(e, r.Count)
 			e = append(e, r.Type)
 		}
 		e = append(e, body.Code...)
-		b = appendU32(b, uint32(len(e)))
+		b = appendU32(b, uint32(len(e))) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 		b = append(b, e...)
 	}
 	return b

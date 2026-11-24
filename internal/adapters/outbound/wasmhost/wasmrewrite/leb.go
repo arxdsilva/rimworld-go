@@ -64,24 +64,24 @@ func readLEB(b []byte, bits uint, signed bool) (uint64, int, error) {
 
 func readU32(b []byte) (uint32, int, error) {
 	v, n, err := readLEB(b, 32, false)
-	return uint32(v), n, err
+	return uint32(v), n, err // #nosec G115 -- readLEB bounds v to 32 bits (maxBytes and tail-bit check)
 }
 
 func readU64(b []byte) (uint64, int, error) { return readLEB(b, 64, false) }
 
 func readS32(b []byte) (int32, int, error) {
 	v, n, err := readLEB(b, 32, true)
-	return int32(v), n, err
+	return int32(v), n, err // #nosec G115 -- readLEB bounds v to 32 bits, int32 bit pattern
 }
 
 func readS33(b []byte) (int64, int, error) {
 	v, n, err := readLEB(b, 33, true)
-	return int64(v), n, err
+	return int64(v), n, err // #nosec G115 -- readLEB bounds v to 33 bits; signed bit pattern
 }
 
 func readS64(b []byte) (int64, int, error) {
 	v, n, err := readLEB(b, 64, true)
-	return int64(v), n, err
+	return int64(v), n, err // #nosec G115 -- readLEB reads 64 bits; signed bit pattern
 }
 
 // appendU appends v as the shortest unsigned LEB128.
@@ -99,7 +99,7 @@ func appendU32(b []byte, v uint32) []byte { return appendU(b, uint64(v)) }
 // values all fit in an int64).
 func appendS(b []byte, v int64) []byte {
 	for {
-		c := byte(v) & 0x7f
+		c := byte(v & 0x7f)
 		v >>= 7
 		if (v == 0 && c&0x40 == 0) || (v == -1 && c&0x40 != 0) {
 			return append(b, c)
@@ -211,12 +211,12 @@ func (c *cursor) take(n uint64) []byte {
 	if c.err != nil {
 		return nil
 	}
-	if n > uint64(c.rest()) {
+	if n > uint64(c.rest()) { // #nosec G115 -- rest() = len(b)-pos >= 0
 		c.fail("at byte %d: %d bytes wanted, %d left", c.pos, n, c.rest())
 		return nil
 	}
-	v := c.b[c.pos : c.pos+int(n)]
-	c.pos += int(n)
+	v := c.b[c.pos : c.pos+int(n)] // #nosec G115 -- n <= rest() checked above; rest() = len(b)-pos >= 0
+	c.pos += int(n)                // #nosec G115 -- n <= rest() checked above; rest() = len(b)-pos >= 0
 	return v
 }
 
@@ -224,7 +224,7 @@ func (c *cursor) take(n uint64) []byte {
 // of the input (every element is at least one byte).
 func (c *cursor) count() uint32 {
 	n := c.u32()
-	if c.err == nil && uint64(n) > uint64(c.rest()) {
+	if c.err == nil && uint64(n) > uint64(c.rest()) { // #nosec G115 -- rest() = len(b)-pos is never negative (pos <= len(b))
 		c.fail("at byte %d: vector of %d elements exceeds the %d bytes left", c.pos, n, c.rest())
 		return 0
 	}

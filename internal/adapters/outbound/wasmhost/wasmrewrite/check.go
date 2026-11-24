@@ -77,7 +77,7 @@ func Check(m *Module, c Config) error {
 		if im.Module != c.Namespace {
 			return reject(RuleImportMod, -1, "import %d module %q is not %q", i, im.Module, c.Namespace)
 		}
-		if im.Index >= uint32(len(m.Types)) {
+		if im.Index >= uint32(len(m.Types)) { // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 			return reject(RuleIndex, -1, "import %d type %d of %d", i, im.Index, len(m.Types))
 		}
 	}
@@ -99,8 +99,8 @@ func Check(m *Module, c Config) error {
 		}
 	}
 	sp := spaces{
-		types: uint32(len(m.Types)), funcs: m.NumFuncs(), tables: m.NumTables,
-		mems: uint32(len(m.Memories)), globals: m.NumGlobals(), elems: m.NumElems, datas: m.NumDatas,
+		types: uint32(len(m.Types)), funcs: m.NumFuncs(), tables: m.NumTables, // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
+		mems: uint32(len(m.Memories)), globals: m.NumGlobals(), elems: m.NumElems, datas: m.NumDatas, // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	}
 	if m.HasDataCount {
 		sp.datas = m.DataCount
@@ -111,7 +111,7 @@ func Check(m *Module, c Config) error {
 	if err := checkSpaces(m, c, sp); err != nil {
 		return err
 	}
-	base := m.NumFuncs() - uint32(len(m.Funcs))
+	base := m.NumFuncs() - uint32(len(m.Funcs)) // #nosec G115 -- counts decoded as u32 from <= MaxWasmBytes input (wasmhost/config.go:34)
 	for i := range m.Bodies {
 		if err := checkBody(m, c, sp, i, int(base)+i); err != nil {
 			return err
@@ -326,14 +326,14 @@ func checkBody(m *Module, c Config, sp spaces, i, fn int) error {
 }
 
 func labelOK(in Instr, fn int, l uint64, depth int) error {
-	if l > uint64(depth) {
+	if l > uint64(depth) { // #nosec G115 -- depth counts open blocks, never negative
 		return reject(RuleIndex, fn, "label %d with %d open blocks at byte %d", l, depth, in.Start)
 	}
 	return nil
 }
 
 func checkBlockType(in Instr, fn int, sp spaces) error {
-	bt := int64(in.A)
+	bt := int64(in.A) // #nosec G115 -- signed immediate kept as its u64 bit pattern
 	switch {
 	case bt >= 0:
 		if bt >= int64(sp.types) {

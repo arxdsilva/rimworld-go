@@ -68,7 +68,7 @@ func decodeInstr(code []byte, start int) (Instr, error) {
 	in := Instr{Op: uint32(op), Start: start}
 	switch {
 	case op == opBlock || op == opLoop || op == opIf || op == 0x06:
-		in.A = uint64(c.s33())
+		in.A = uint64(c.s33()) // #nosec G115 -- signed immediate kept as its u64 bit pattern
 	case op == 0x0C || op == 0x0D || op == 0x10 || op == 0x12 || op == 0x07 ||
 		op == 0x08 || op == 0x09 || op == 0x18 || (op >= 0x20 && op <= 0x26) || op == 0xD2:
 		in.A = uint64(c.u32())
@@ -84,7 +84,7 @@ func decodeInstr(code []byte, start int) (Instr, error) {
 		n := c.count()
 		in.Types = append([]byte(nil), c.take(uint64(n))...)
 	case op == 0x1F:
-		in.A = uint64(c.s33())
+		in.A = uint64(c.s33()) // #nosec G115 -- signed immediate kept as its u64 bit pattern
 		n := c.count()
 		for i := uint32(0); i < n && c.err == nil; i++ {
 			if kind := c.byte(); kind < 2 {
@@ -99,9 +99,9 @@ func decodeInstr(code []byte, start int) (Instr, error) {
 	case op == 0x3F || op == 0x40:
 		in.A = uint64(c.u32())
 	case op == 0x41:
-		in.A = uint64(int64(c.s32()))
+		in.A = uint64(int64(c.s32())) // #nosec G115 -- signed immediate kept as its u64 bit pattern
 	case op == 0x42:
-		in.A = uint64(c.s64())
+		in.A = uint64(c.s64()) // #nosec G115 -- signed immediate kept as its u64 bit pattern
 	case op == 0x43:
 		if b := c.take(4); b != nil {
 			in.A = uint64(binary.LittleEndian.Uint32(b))
