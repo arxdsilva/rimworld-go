@@ -238,5 +238,5 @@ Poke and RangedStab damage forms: Stab variants and their weapons · 2026-11-24 
 - Save impact: none.
 - Re-pins: none (no application or golden test shifted).
 - HUD/UI: none; the Health tab already lists wounds per part, so a Poke or pila wound shows there.
-- Boxes: COMBAT_GAP rows Poke and RangedStab `done` (new); overkill windows (row 77, §4) and the multi-part line (row 78, §4) name them; §5b's #278 line becomes #279; backlog **Damage types** `[x]` kept and annotated. spec-backlog #278: ticked here; the lead closes it.
+- Boxes: COMBAT_GAP rows Poke and RangedStab `done` (new); overkill windows (row 77, §4) and the multi-part line (row 78, §4) name them; §5b's #278 line becomes #279; backlog **Damage types** `[x]` kept and annotated. Issue #278 (no checklist): done in 142d64e1c, closed once pushed.
 - Open: #279 hooves (Kick, `internal/domain/animal/animal.go:187`) are not moved to Poke.
