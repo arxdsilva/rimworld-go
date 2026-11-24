@@ -139,12 +139,12 @@ func newer(a, b string) bool {
 }
 
 func one(in, out string, s spritenormals.Settings) error {
-	f, err := os.Open(in)
+	f, err := os.Open(filepath.Clean(in))
 	if err != nil {
 		return err
 	}
 	src, err := png.Decode(f)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return err
 	}
@@ -160,13 +160,13 @@ func one(in, out string, s spritenormals.Settings) error {
 	} else if n, err = normalsFor(nrgba, linkedMask(meta), s); err != nil {
 		return err
 	}
-	w, err := os.Create(out)
+	w, err := os.Create(filepath.Clean(out))
 	if err != nil {
 		return err
 	}
 	enc := png.Encoder{CompressionLevel: png.BestCompression}
 	if err := enc.Encode(w, n); err != nil {
-		w.Close()
+		_ = w.Close()
 		return err
 	}
 	return w.Close()

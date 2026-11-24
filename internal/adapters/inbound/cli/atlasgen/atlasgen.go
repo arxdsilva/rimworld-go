@@ -94,7 +94,7 @@ func pack(root, family string, maxPx int) (result, error) {
 		return result{}, err
 	}
 	outDir := filepath.Join(root, "generated", "atlas")
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, 0o755); err != nil { // #nosec G301 -- generated tracked asset
 		return result{}, err
 	}
 	if err := removeStale(outDir, family); err != nil {
@@ -131,10 +131,10 @@ func pack(root, family string, maxPx int) (result, error) {
 	}
 	yaml := atlasYAML(family, maxPx, len(pageSizes), entries)
 	mp := filepath.Join(root, "metadata", "atlas", family+".yaml")
-	if err := os.MkdirAll(filepath.Dir(mp), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(mp), 0o755); err != nil { // #nosec G301 -- generated tracked asset
 		return result{}, err
 	}
-	if err := os.WriteFile(mp, []byte(yaml), 0o644); err != nil {
+	if err := os.WriteFile(mp, []byte(yaml), 0o644); err != nil { // #nosec G306 -- generated tracked asset
 		return result{}, err
 	}
 	return result{sprites: len(entries), pages: len(pageSizes), bytes: total}, nil
@@ -178,7 +178,7 @@ func collect(root, family string) ([]*entry, error) {
 		if f.IsDir() || !strings.HasSuffix(f.Name(), ".yaml") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(dir, f.Name()))
+		raw, err := os.ReadFile(filepath.Clean(filepath.Join(dir, f.Name())))
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +229,7 @@ func parseSpriteMeta(root, key, src string) (*entry, error) {
 }
 
 func decode(path string) (*image.NRGBA, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return nil, err
 	}
@@ -464,18 +464,18 @@ func writePage(dir, family string, n int, size [2]int, es []*entry) (int64, erro
 }
 
 func writePNG(path string, img image.Image) (int64, error) {
-	f, err := os.Create(path)
+	f, err := os.Create(filepath.Clean(path))
 	if err != nil {
 		return 0, err
 	}
 	enc := png.Encoder{CompressionLevel: png.BestCompression}
 	if err := enc.Encode(f, img); err != nil {
-		f.Close()
+		_ = f.Close()
 		return 0, err
 	}
 	st, err := f.Stat()
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		return 0, err
 	}
 	return st.Size(), f.Close()
@@ -597,7 +597,7 @@ func parseAtlas(src string) (atlasIndex, error) {
 func checkAtlas(root, family string, maxPx int) []error {
 	var errs []error
 	fail := func(format string, a ...any) { errs = append(errs, fmt.Errorf(format, a...)) }
-	raw, err := os.ReadFile(filepath.Join(root, "metadata", "atlas", family+".yaml"))
+	raw, err := os.ReadFile(filepath.Clean(filepath.Join(root, "metadata", "atlas", family+".yaml")))
 	if err != nil {
 		return []error{err}
 	}
@@ -684,7 +684,7 @@ func checkAtlas(root, family string, maxPx int) []error {
 }
 
 func imageSize(path string) (image.Point, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return image.Point{}, err
 	}

@@ -69,12 +69,12 @@ func generate(seed uint64, size int, s site.Site) (mapgen.Result, []StepTime, er
 }
 
 func writePNG(path string, img image.Image) error {
-	f, err := os.Create(path)
+	f, err := os.Create(filepath.Clean(path))
 	if err != nil {
 		return err
 	}
 	if err := png.Encode(f, img); err != nil {
-		f.Close()
+		_ = f.Close()
 		return err
 	}
 	return f.Close()
@@ -110,7 +110,7 @@ func riverLabel(r site.RiverPath) string {
 
 // Run executes the options, writing files under o.Out and a summary to w.
 func Run(o Options, w io.Writer) error {
-	if err := os.MkdirAll(o.Out, 0o755); err != nil {
+	if err := os.MkdirAll(o.Out, 0o750); err != nil {
 		return err
 	}
 	s := o.Site()
@@ -154,11 +154,11 @@ func runSingle(o Options, s site.Site, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(o.Out, "metrics.json"), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(o.Out, "metrics.json"), data, 0o600); err != nil {
 		return err
 	}
 	sum := summary(mf, res)
-	if err := os.WriteFile(filepath.Join(o.Out, "summary.txt"), []byte(sum), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(o.Out, "summary.txt"), []byte(sum), 0o600); err != nil {
 		return err
 	}
 	_, err = io.WriteString(w, sum)
@@ -235,7 +235,7 @@ func writeSheet(o Options, tiles []*image.RGBA, labels []uint64, name string, w 
 		return err
 	}
 	sum := fmt.Sprintf("%s\nwrote %s (%dx%d)\n", what, name, sheet.Bounds().Dx(), sheet.Bounds().Dy())
-	if err := os.WriteFile(filepath.Join(o.Out, "summary.txt"), []byte(sum), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(o.Out, "summary.txt"), []byte(sum), 0o600); err != nil {
 		return err
 	}
 	_, err := io.WriteString(w, sum)
