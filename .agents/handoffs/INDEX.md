@@ -105,6 +105,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | CBT-3.4c-poke-rangedstab | Poke and RangedStab damage forms: Stab variants and their weapons | 2026-11-24 | [DEF.md](DEF.md#cbt-3.4c-poke-rangedstab) |
 | CBT-4-combat-ai | Combat AI | 2026-10-30 | [DEF.md](DEF.md#cbt-4-combat-ai) |
 | CBT-5-explosions-and-combat-ui | Explosions and combat UI | 2026-10-30 | [DEF.md](DEF.md#cbt-5-explosions-and-combat-ui) |
+| CBT-269-animal-split-room | An animal's split blow stops at its own hit points, not the body's lost-part total | 2026-11-24 | [DEF.md](DEF.md#cbt-269-animal-split-room) |
 | CBT-272-dedupe-loss-damage | One loop for body damage and the animal death rule | 2026-11-23 | [DEF.md](DEF.md#cbt-272-dedupe-loss-damage) |
 | CI-001-race-budget-and-memory | The `-race` suite within CI's time and memory | 2026-11-02 | [OPS.md](OPS.md#ci-001-race-budget-and-memory) |
 | CI-002-tint-shader-race | The tint shader's first draw raced | 2026-11-04 | [OPS.md](OPS.md#ci-002-tint-shader-race) |
