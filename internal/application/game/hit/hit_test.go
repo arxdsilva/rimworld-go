@@ -137,6 +137,23 @@ func TestHurtHitForms(t *testing.T) {
 	}
 }
 
+// TestPokeNeverStuns: the wiki's poke has no stun, so a placed poke on the
+// brain at the amount that stuns a blunt blow holds nobody.
+func TestPokeNeverStuns(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	w := f.wounds()
+	brain := body.DefOf(body.Brain).MaxHP
+	w.HurtHit(1, placed(damage.Hit{Form: damage.FormPoke, Amount: (brain + 1) / 2}, body.Brain), 0)
+	if f.held[1] != 0 {
+		t.Fatal("a poke never stuns")
+	}
+	w.HurtHit(2, placed(damage.Hit{Form: damage.FormBlunt, Amount: (brain + 1) / 2}, body.Brain), 0)
+	if f.held[2] != f.now+BluntStunTicks {
+		t.Fatal("the same blunt blow still stuns")
+	}
+}
+
 // TestStaggerNoFlap: stopping power at or over body size staggers; a
 // stagger is not extended while it lasts, so it stays on for the whole
 // window and ends on time; a hit after it staggers again.

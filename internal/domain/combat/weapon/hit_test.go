@@ -18,7 +18,8 @@ func TestHitOf(t *testing.T) {
 		stop int
 	}{
 		Rifle: {damage.FormBullet, 1500}, AssaultRifle: {damage.FormBullet, 500}, PumpShotgun: {damage.FormBullet, 3000},
-		ShortBow: {damage.FormArrow, 500}, Pila: {damage.FormArrow, 2500}, Knife: {damage.FormCut, 0},
+		ShortBow: {damage.FormArrow, 500}, Pila: {damage.FormRangedStab, 2500},
+		RecurveBow: {damage.FormArrow, 1000}, Greatbow: {damage.FormArrow, 1500}, Knife: {damage.FormCut, 0},
 		Spear: {damage.FormStab, 0}, Club: {damage.FormBlunt, 0}, Fists: {damage.FormBlunt, 0}, Bite: {damage.FormBite, 0},
 		Claw: {damage.FormScratch, 0}, Gore: {damage.FormStab, 0}, FragGrenade: {damage.FormBomb, 500},
 		Molotov: {damage.FormFlame, 0}, EMPGrenade: {damage.FormEMP, 0}, SentryGun: {damage.FormBullet, 500},

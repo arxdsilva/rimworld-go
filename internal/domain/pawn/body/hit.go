@@ -7,12 +7,16 @@ import "rimworld-go/internal/domain/combat/damage"
 
 // woundOf is the wound each damage form leaves. wiki: Injury (bullets
 // leave gunshots, points and arrows stabs, blunt blows and crushing
-// bruises; flame and burns burn; a bomb's shrapnel cuts). EMP and stun
+// bruises; flame and burns burn; a bomb's shrapnel cuts; a ranged stab
+// stabs). Damage Types lists Poke as Crush, Bruise, Crack: Bruise is
+// original tuning, the one hediff that fits a light poke. EMP and stun
 // leave none (Bruise is never dealt for them: the caller skips them).
 var woundOf = [damage.NumForms]WoundKind{
 	damage.FormBlunt: Bruise, damage.FormCut: Cut, damage.FormStab: Stab, damage.FormBullet: Gunshot,
 	damage.FormArrow: Stab, damage.FormScratch: Scratch, damage.FormBite: Bite, damage.FormCrush: Bruise,
-	damage.FormBurn: Burn, damage.FormFlame: Burn, damage.FormBomb: Cut, damage.FormEMP: Bruise, damage.FormStun: Bruise,
+	damage.FormBurn: Burn, damage.FormFlame: Burn, damage.FormBomb: Cut,
+	damage.FormPoke: Bruise, damage.FormRangedStab: Stab,
+	damage.FormEMP: Bruise, damage.FormStun: Bruise,
 }
 
 // WoundOf is the wound form f leaves (Bruise for an unknown form).

@@ -8,7 +8,7 @@ import "testing"
 func TestFormsTypesAndWindows(t *testing.T) {
 	t.Parallel()
 	for f, want := range map[Form]Type{FormBullet: Sharp, FormArrow: Sharp, FormStab: Sharp, FormBite: Sharp,
-		FormBlunt: Blunt, FormCrush: Blunt, FormFlame: Heat, FormBurn: Burn, FormBomb: Bomb, FormEMP: EMP, FormStun: Stun, Form(99): Blunt} {
+		FormBlunt: Blunt, FormCrush: Blunt, FormFlame: Heat, FormBurn: Burn, FormBomb: Bomb, FormEMP: EMP, FormStun: Stun, FormPoke: Blunt, FormRangedStab: Sharp, Form(99): Blunt} {
 		if f.Type() != want {
 			t.Errorf("%v is %v", f, f.Type())
 		}
@@ -21,12 +21,15 @@ func TestFormsTypesAndWindows(t *testing.T) {
 	if h := Of(Bomb, 50, 100); h.Form != FormBomb || h.Type() != Bomb || h.Amount != 50 || h.Pen != 100 {
 		t.Fatalf("Of %+v", h)
 	}
+	if FormPoke.String() != "poke" || FormRangedStab.String() != "ranged stab" {
+		t.Fatal("poke names")
+	}
 	if FormBullet.String() != "bullet" || Form(99).String() != "unknown" {
 		t.Fatal("names")
 	}
 	// wiki windows: cut and bite 0-10 %, bullet 0-70 %, blunt and stab 40-100 %
 	for f, want := range map[Form][2]int{FormCut: {0, 100}, FormBite: {0, 100}, FormBullet: {0, 700}, FormArrow: {0, 700},
-		FormScratch: {0, 700}, FormBlunt: {400, 1000}, FormStab: {400, 1000}, FormCrush: {400, 1000}, Form(99): {0, 700}} {
+		FormScratch: {0, 700}, FormBlunt: {400, 1000}, FormStab: {400, 1000}, FormCrush: {400, 1000}, FormPoke: {400, 1000}, FormRangedStab: {400, 1000}, Form(99): {0, 700}} {
 		if lo, hi := f.Overkill(); lo != want[0] || hi != want[1] {
 			t.Errorf("%v window %d-%d", f, lo, hi)
 		}
@@ -37,5 +40,14 @@ func TestFormsTypesAndWindows(t *testing.T) {
 	}
 	if !Staggers(1000, 1000) || Staggers(500, 1000) || Staggers(0, 0) || !Staggers(500, 250) {
 		t.Fatal("Staggers")
+	}
+}
+
+// TestFormValuesAppendOnly pins the form numbers the saves store: new
+// forms only append.
+func TestFormValuesAppendOnly(t *testing.T) {
+	t.Parallel()
+	if FormStun != 12 || FormPoke != 13 || FormRangedStab != 14 || NumForms != 15 {
+		t.Fatalf("form values moved: stun %d poke %d ranged stab %d num %d", FormStun, FormPoke, FormRangedStab, NumForms)
 	}
 }

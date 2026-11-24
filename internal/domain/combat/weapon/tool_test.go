@@ -42,6 +42,44 @@ func TestToolsTables(t *testing.T) {
 	}
 }
 
+// TestPokeTools: the wiki's pokes and the bows' limb pairs.
+// wiki: Club, Mace, Spear, Ikwa, Short bow, Recurve bow, Greatbow
+func TestPokeTools(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		k    Kind
+		i    int
+		form damage.Form
+	}{{Club, 1, damage.FormPoke}, {Mace, 1, damage.FormPoke},
+		{Spear, 1, damage.FormBlunt}, {Spear, 2, damage.FormPoke},
+		{Ikwa, 2, damage.FormBlunt}, {Ikwa, 3, damage.FormPoke},
+		{Knife, 1, damage.FormBlunt}, {Gladius, 2, damage.FormBlunt},
+		{Longsword, 2, damage.FormBlunt}, {Pila, 0, damage.FormBlunt}} {
+		if got := ToolsOf(c.k)[c.i].Form; got != c.form {
+			t.Errorf("%v tool %d is %v, want %v", c.k, c.i, got, c.form)
+		}
+	}
+	for _, k := range []Kind{Club, Mace} {
+		if h := ToolsOf(k)[1]; h.Damage != 9 || h.Pen != 130 || h.Cooldown != 120 || h.Chance != 83 {
+			t.Errorf("%v handle %+v", k, h)
+		}
+	}
+	for _, k := range []Kind{ShortBow, RecurveBow, Greatbow} {
+		ts := ToolsOf(k)
+		if len(ts) != 2 || ts[0].Form != damage.FormBlunt || ts[1].Form != damage.FormPoke {
+			t.Fatalf("%v limbs %+v", k, ts)
+		}
+		for _, l := range ts {
+			if l.Name != "limb" || l.Damage != 9 || l.Pen != 130 || l.Cooldown != 120 || l.Chance != 500 {
+				t.Errorf("%v limb %+v", k, l)
+			}
+		}
+	}
+	if len(ToolsOf(Pila)) != 1 {
+		t.Fatal("the pila keeps one shaft")
+	}
+}
+
 func TestPickAndNatural(t *testing.T) {
 	t.Parallel()
 	k := ToolsOf(Knife)

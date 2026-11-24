@@ -245,11 +245,20 @@ func (g *Gear) ShieldPct(id entity.EntityID) int {
 	return e * 100 / most
 }
 
+// ranged reports a bullet, an arrow or a thrown pila: the hits a raider's
+// smokepop answers (a thrown pila is a ranged hit, K5, original tuning).
+func ranged(f damage.Form) bool {
+	return f == damage.FormBullet || f == damage.FormArrow || f == damage.FormRangedStab
+}
+
 // stops reports a hit a shield belt stops: ranged and explosive damage
 // (EMP is apart: it breaks the belt).
 func stops(f damage.Form) bool {
 	switch f {
-	case damage.FormBullet, damage.FormArrow, damage.FormBomb, damage.FormFlame:
+	// a thrown pila is a ranged hit (K5, original tuning: the wiki ties
+	// shields to projectiles, not forms)
+	case damage.FormBullet, damage.FormArrow, damage.FormRangedStab,
+		damage.FormBomb, damage.FormFlame:
 		return true
 	}
 	return false
@@ -262,7 +271,7 @@ func stops(f damage.Form) bool {
 func (g *Gear) Shield(target entity.EntityID, hit damage.Hit) bool {
 	k, _ := g.belt(target)
 	switch {
-	case k == item.SmokepopPack && (hit.Form == damage.FormBullet || hit.Form == damage.FormArrow) && g.h.StandingRaider(target):
+	case k == item.SmokepopPack && ranged(hit.Form) && g.h.StandingRaider(target):
 		g.Pop(target)
 		return false
 	case k != item.ShieldBelt:

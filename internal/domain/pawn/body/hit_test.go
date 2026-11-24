@@ -13,7 +13,8 @@ func TestWoundOf(t *testing.T) {
 	t.Parallel()
 	for f, want := range map[damage.Form]WoundKind{damage.FormBullet: Gunshot, damage.FormArrow: Stab, damage.FormStab: Stab,
 		damage.FormCut: Cut, damage.FormBlunt: Bruise, damage.FormBite: Bite, damage.FormScratch: Scratch,
-		damage.FormFlame: Burn, damage.FormBomb: Cut, damage.Form(99): Bruise} {
+		damage.FormFlame: Burn, damage.FormBomb: Cut, damage.FormPoke: Bruise, damage.FormRangedStab: Stab,
+		damage.Form(99): Bruise} {
 		if WoundOf(f) != want {
 			t.Errorf("%v leaves %d", f, WoundOf(f))
 		}

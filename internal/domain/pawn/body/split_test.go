@@ -67,7 +67,7 @@ func splitDmgs(b *Body) map[Part]int {
 // points and killAt are x10, so no share of a W1 test blow is capped.
 func splitBigQuad() Body { return Body{Anatomy: Quadruped, Scale: 10000} }
 
-// TestSplitOf: the cut, blunt, scratch, stab and bullet forms each split
+// TestSplitOf: the cut, blunt, scratch, stab, bullet, poke and ranged stab forms each split
 // by their own rule; bite and arrow (the wiki gives them no multi-part
 // rule), every other form and an unknown one do not split.
 func TestSplitOf(t *testing.T) {
@@ -85,6 +85,10 @@ func TestSplitOf(t *testing.T) {
 			want = SplitStab
 		case damage.FormBullet:
 			want = SplitBullet
+		case damage.FormPoke:
+			want = SplitPoke
+		case damage.FormRangedStab:
+			want = SplitRangedStab
 		}
 		if got := SplitOf(f); got != want {
 			t.Errorf("SplitOf(%v) = %d, want %d", f, got, want)
@@ -95,12 +99,13 @@ func TestSplitOf(t *testing.T) {
 	}
 }
 
-// TestSplitsPredicate: splits holds for exactly the five rules, not for no
+// TestSplitsPredicate: splits holds for exactly the seven rules, not for no
 // split, an unknown value or the sentinel.
 func TestSplitsPredicate(t *testing.T) {
 	t.Parallel()
 	for s := Split(0); s < 16; s++ {
-		want := s == SplitCut || s == SplitBlunt || s == SplitScratch || s == SplitStab || s == SplitBullet
+		want := s == SplitCut || s == SplitBlunt || s == SplitScratch || s == SplitStab || s == SplitBullet ||
+			s == SplitPoke || s == SplitRangedStab
 		if got := splits(s); got != want {
 			t.Errorf("splits(%d) = %v, want %v", s, got, want)
 		}

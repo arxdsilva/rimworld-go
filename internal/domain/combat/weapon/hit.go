@@ -19,13 +19,14 @@ type hitTraits struct {
 const defaultStopping = 500
 
 // traits per weapon. wiki: Weapons (stop pwr column; arrow damage for the
-// bows and the pila), Damage types (the natural weapons' forms); the
-// knife cuts with its edge here and the beak scratches (original tuning:
-// one tool per weapon until CBT-2 adds tools).
+// bows; the pila throws a ranged stab), Damage types (the natural
+// weapons' forms); the knife cuts with its edge here and the beak
+// scratches (original tuning: one tool per weapon until CBT-2 adds tools).
 var traits = [numKinds]hitTraits{
 	Bite: {form: damage.FormBite}, Spear: {form: damage.FormStab}, Ikwa: {form: damage.FormStab},
 	Claw: {form: damage.FormScratch}, Gore: {form: damage.FormStab}, Peck: {form: damage.FormScratch},
-	ShortBow: {damage.FormArrow, 500}, RecurveBow: {damage.FormArrow, 1000}, Greatbow: {damage.FormArrow, 1500}, Pila: {damage.FormArrow, 2500},
+	ShortBow: {damage.FormArrow, 500}, RecurveBow: {damage.FormArrow, 1000},
+	Greatbow: {damage.FormArrow, 1500}, Pila: {damage.FormRangedStab, 2500},
 	Revolver: {stopping: 1000}, Rifle: {stopping: 1500}, SniperRifle: {stopping: 1500},
 	PumpShotgun: {stopping: 3000}, ChainShotgun: {stopping: 3000}, LMG: {stopping: 1000}, ChargeLance: {stopping: 1500},
 }

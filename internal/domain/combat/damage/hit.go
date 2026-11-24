@@ -9,28 +9,32 @@ package damage
 type Form uint8
 
 const (
-	FormBlunt   Form = iota // fists, clubs, hooves; a sharp hit armor halved
-	FormCut                 // edges: knives, swords, shrapnel
-	FormStab                // points: spears, horns, spike traps
-	FormBullet              // gunshots
-	FormArrow               // bows and thrown spears
-	FormScratch             // claws and beaks
-	FormBite                // jaws
-	FormCrush               // crushing weight
-	FormBurn                // scorching, not open flame
-	FormFlame               // open flame
-	FormBomb                // blasts
-	FormEMP                 // electromagnetic pulse
-	FormStun                // stuns without wounding
+	FormBlunt      Form = iota // fists, clubs, hooves; a sharp hit armor halved
+	FormCut                    // edges: knives, swords, shrapnel
+	FormStab                   // points: spears, horns, spike traps
+	FormBullet                 // gunshots
+	FormArrow                  // bows
+	FormScratch                // claws and beaks
+	FormBite                   // jaws
+	FormCrush                  // crushing weight
+	FormBurn                   // scorching, not open flame
+	FormFlame                  // open flame
+	FormBomb                   // blasts
+	FormEMP                    // electromagnetic pulse
+	FormStun                   // stuns without wounding
+	FormPoke                   // handles, a spear's shaft, a bow's limb (armored blunt)
+	FormRangedStab             // thrown points: the pila
 	NumForms
 )
 
 // wiki: Damage types (armor category: bullet, arrow, cut, stab, scratch,
-// bite and bomb are sharp; blunt and crush blunt; flame and burn heat).
+// bite, bomb and ranged stab are sharp; blunt, crush and poke blunt;
+// flame and burn heat).
 var formType = [NumForms]Type{
 	FormBlunt: Blunt, FormCut: Sharp, FormStab: Sharp, FormBullet: Sharp,
 	FormArrow: Sharp, FormScratch: Sharp, FormBite: Sharp, FormCrush: Blunt,
 	FormBurn: Burn, FormFlame: Heat, FormBomb: Bomb, FormEMP: EMP, FormStun: Stun,
+	FormPoke: Blunt, FormRangedStab: Sharp,
 }
 
 // Type is the damage type of f (Blunt for an unknown form).
@@ -61,7 +65,13 @@ func FormOf(t Type) Form {
 	return FormBlunt
 }
 
-var formNames = [NumForms]string{"blunt", "cut", "stab", "bullet", "arrow", "scratch", "bite", "crush", "burn", "flame", "bomb", "EMP", "stun"}
+// formNames are the player-facing names. original naming: "poke" and
+// "ranged stab" (the wiki table labels them "blunt" and "stab", which
+// would make log lines ambiguous).
+var formNames = [NumForms]string{
+	"blunt", "cut", "stab", "bullet", "arrow", "scratch", "bite", "crush",
+	"burn", "flame", "bomb", "EMP", "stun", "poke", "ranged stab",
+}
 
 // String is the player-facing name.
 func (f Form) String() string {
@@ -93,13 +103,14 @@ func Of(t Type, amount, pen int) Hit { return Hit{Form: FormOf(t), Amount: amoun
 // overkill is each form's window of overkill (permille of the struck
 // part's max hit points past what it had left) over which the chance to
 // destroy the part rises from none to certain. wiki: Damage types (cut
-// and bite 0-10 %, bullet, arrow and scratch 0-70 %, blunt, crush and
-// stab 40-100 %). original tuning: the forms the wiki gives no window
-// (burns, flame, bombs) use the bullet's.
+// and bite 0-10 %, bullet, arrow and scratch 0-70 %, blunt, crush, stab,
+// poke and ranged stab 40-100 %). original tuning: the forms the wiki
+// gives no window (burns, flame, bombs) use the bullet's.
 var overkill = [NumForms][2]int{
 	FormBlunt: {400, 1000}, FormCut: {0, 100}, FormStab: {400, 1000}, FormBullet: {0, 700},
 	FormArrow: {0, 700}, FormScratch: {0, 700}, FormBite: {0, 100}, FormCrush: {400, 1000},
 	FormBurn: {0, 700}, FormFlame: {0, 700}, FormBomb: {0, 700}, FormEMP: {0, 700}, FormStun: {0, 700},
+	FormPoke: {400, 1000}, FormRangedStab: {400, 1000},
 }
 
 // Overkill is f's destroy window, lo to hi permille of overkill.

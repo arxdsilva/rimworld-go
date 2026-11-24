@@ -375,3 +375,31 @@ func TestRearmMaterialsAndRaiderSmokepop(t *testing.T) {
 		t.Fatal("a colonist pops on order only; a blow pops nothing")
 	}
 }
+
+// TestShieldBeltAndSmokepopKnowRangedStab: a thrown pila is a ranged hit
+// (K5, original tuning): a charged belt stops it and drains its amount, a
+// poke goes through, and a raider's smokepop pops on it.
+func TestShieldBeltAndSmokepopKnowRangedStab(t *testing.T) {
+	t.Parallel()
+	f, c, b := gearRig()
+	g := c.Gear
+	f.pawn(1, 5, 5, weapon.Fists)
+	b[1] = item.ShieldBelt
+	if g.Shield(1, damage.Hit{Form: damage.FormPoke, Amount: 9}) {
+		t.Fatal("a poke is a blow: the belt lets it through")
+	}
+	if e, most := g.charge(1); e != most {
+		t.Fatalf("a poke drains nothing: %d of %d", e, most)
+	}
+	if !g.Shield(1, damage.Hit{Form: damage.FormRangedStab, Amount: 20}) {
+		t.Fatal("a charged belt stops a thrown pila")
+	}
+	if e, most := g.charge(1); e != most-20*shieldPerDamage {
+		t.Fatalf("drained by Amount*shieldPerDamage: %d of %d", e, most)
+	}
+	f.raider(2, 9, 9, weapon.Fists)
+	b[2] = item.SmokepopPack
+	if c.Gear.Shield(2, damage.Hit{Form: damage.FormRangedStab, Amount: 20}) || c.Gear.Smokepops(2) != SmokepopUses-1 {
+		t.Fatalf("a raider pops smoke on a pila and still takes it: %d", c.Gear.Smokepops(2))
+	}
+}

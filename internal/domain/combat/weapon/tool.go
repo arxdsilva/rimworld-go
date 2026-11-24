@@ -26,11 +26,13 @@ func tool(name string, dmg int, f damage.Form, pen, cooldown, chance int) Tool {
 }
 
 // The melee weapons' tools at Normal steel (the club's at steel too): the
-// wiki's damage, form, armor penetration, cooldown and chance; a poke is
-// blunt. The longsword's chances are not published: the gladius's split
-// (original assumption). The wiki's tables also give the wielder's fists
-// a share; a blow here always uses the weapon (their share is spread over
-// its tools). The main attack comes first. wiki: Knife, Club, Spear, Mace, Gladius, Longsword, Ikwa
+// wiki's damage, form, armor penetration, cooldown and chance; the club's
+// and mace's handles, a spear's second shaft and an ikwa's second handle
+// poke (FormPoke, armored as blunt). The longsword's chances are not
+// published: the gladius's split (original assumption). The wiki's tables
+// also give the wielder's fists a share; a blow here always uses the
+// weapon (their share is spread over its tools). The main attack comes
+// first. wiki: Knife, Club, Spear, Mace, Gladius, Longsword, Ikwa
 var (
 	knifeTools = []Tool{
 		tool("blade", 12, damage.FormCut, 18, 90, 750),
@@ -39,16 +41,16 @@ var (
 	}
 	clubTools = []Tool{
 		tool("head", 14, damage.FormBlunt, 21, 120, 750),
-		tool("handle", 9, damage.FormBlunt, 13, 120, 83),
+		tool("handle", 9, damage.FormPoke, 13, 120, 83),
 	}
 	spearTools = []Tool{
 		tool("point", 23, damage.FormStab, 50, 156, 750),
 		tool("shaft", 13, damage.FormBlunt, 20, 156, 63),
-		tool("shaft", 13, damage.FormBlunt, 20, 156, 63),
+		tool("shaft", 13, damage.FormPoke, 20, 156, 63),
 	}
 	maceTools = []Tool{
 		tool("head", 16, damage.FormBlunt, 24, 120, 750),
-		tool("handle", 9, damage.FormBlunt, 13, 120, 83),
+		tool("handle", 9, damage.FormPoke, 13, 120, 83),
 	}
 	gladiusTools = []Tool{
 		tool("point", 16, damage.FormStab, 24, 120, 375),
@@ -61,20 +63,25 @@ var (
 		tool("handle", 9, damage.FormBlunt, 13, 120, 83),
 	}
 	// The ikwa's head and edge (15 stab and cut, 22 %) and its handle
-	// (9 blunt, a blow and a poke). wiki: Ikwa
+	// (9 damage, a blunt blow and a poke). wiki: Ikwa
 	ikwaTools = []Tool{
 		tool("head", 15, damage.FormStab, 22, 120, 375),
 		tool("edge", 15, damage.FormCut, 22, 120, 375),
 		tool("handle", 9, damage.FormBlunt, 13, 120, 63),
-		tool("handle", 9, damage.FormBlunt, 13, 120, 63),
+		tool("handle", 9, damage.FormPoke, 13, 120, 63),
 	}
 	// A gun's stock and barrel, a pistol's grip, a bow's limb, the pila's
 	// shaft: 9 blunt, 13 %, 2 s each, chosen evenly. wiki: Assault rifle
-	// (stock, barrel), the other ranged weapons' pages alike
+	// (stock, barrel), the other ranged weapons' pages alike. A bow's limb is a
+	// blow and a poke (wiki: Short bow, Recurve bow, Greatbow), split evenly
+	// (original tuning, as the guns').
 	gunTools    = []Tool{tool("stock", 9, damage.FormBlunt, 13, 120, 500), tool("barrel", 9, damage.FormBlunt, 13, 120, 500)}
 	pistolTools = []Tool{tool("grip", 9, damage.FormBlunt, 13, 120, 500), tool("barrel", 9, damage.FormBlunt, 13, 120, 500)}
-	bowTools    = []Tool{tool("limb", 9, damage.FormBlunt, 13, 120, 1000)}
-	shaftTools  = []Tool{tool("shaft", 9, damage.FormBlunt, 13, 120, 1000)}
+	bowTools    = []Tool{
+		tool("limb", 9, damage.FormBlunt, 13, 120, 500),
+		tool("limb", 9, damage.FormPoke, 13, 120, 500),
+	}
+	shaftTools = []Tool{tool("shaft", 9, damage.FormBlunt, 13, 120, 1000)}
 	// A human's bare hands: the fists keep their original tuning (the
 	// fists row), the head and teeth the wiki's numbers and chance factors
 	// (a fist 1 each, head 0.2, teeth 0.07). wiki: Human

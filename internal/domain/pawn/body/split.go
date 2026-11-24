@@ -7,7 +7,8 @@ import "rimworld-go/internal/domain/combat/damage"
 
 // Split is the multi-part rule a blow's damage form gives it (CBT 3.4):
 // none, or a plan that spreads the blow over several parts (planSplit:
-// cut.go, blunt.go, scratch.go, stab.go, bullet.go). The zero value
+// cut.go, blunt.go, scratch.go, stab.go, bullet.go; Poke and Ranged stab are
+// stab.go's rules). The zero value
 // splits nothing, so a blow that names no form keeps Strike's and
 // Spread's single-part rule.
 type Split uint8
@@ -19,12 +20,14 @@ const (
 	SplitScratch
 	SplitStab
 	SplitBullet
+	SplitPoke
+	SplitRangedStab
 	numSplits // sentinel: the first value that is not a split
 )
 
 // maxShares bounds a split blow's shares: a cut has up to 4 targets and 4
-// parent bonuses, a blunt hit 2, a scratch 2 or its outward chain, a stab
-// its outward chain, a bullet 2.
+// parent bonuses, a blunt hit 2, a scratch 2 or its outward chain, a stab,
+// poke or ranged stab its outward chain, a bullet 2.
 const maxShares = 8
 
 // splitOf is each form's split. wiki: Damage Types:
@@ -36,16 +39,21 @@ const maxShares = 8
 //   - Stab: a 60 % chance to strike an inner child (never the brain); an
 //     inner target and its inner parents take 40 %, the outer parent 75 %.
 //   - Bullet: an inner target's parent takes the full damage as a bonus.
+//   - Poke: a 40 % chance to strike an inner child, otherwise as Stab
+//     (original tuning: the brain is barred as for Stab).
+//   - Ranged stab: as Stab, but it can reach the brain.
 //
 // Bite and Arrow have no multi-part rule on the wiki and wound one part,
 // as does every other form: a bomb's shrapnel and a crushing weight
 // included, though they cut and bruise (WoundOf).
 var splitOf = [damage.NumForms]Split{
-	damage.FormCut:     SplitCut,
-	damage.FormBlunt:   SplitBlunt,
-	damage.FormScratch: SplitScratch,
-	damage.FormStab:    SplitStab,
-	damage.FormBullet:  SplitBullet,
+	damage.FormCut:        SplitCut,
+	damage.FormBlunt:      SplitBlunt,
+	damage.FormScratch:    SplitScratch,
+	damage.FormStab:       SplitStab,
+	damage.FormBullet:     SplitBullet,
+	damage.FormPoke:       SplitPoke,
+	damage.FormRangedStab: SplitRangedStab,
 }
 
 // share is the damage one part takes from a split blow.
@@ -124,8 +132,8 @@ func planSplit(b *Body, p Part, dmg int, s Split, roll func(int) int) shares {
 		return planBlunt(b, p, dmg, roll)
 	case SplitScratch:
 		return planScratch(b, p, dmg, roll)
-	case SplitStab:
-		return planStab(b, p, dmg, roll)
+	case SplitStab, SplitPoke, SplitRangedStab:
+		return planStab(b, p, dmg, stabRules[s], roll)
 	case SplitBullet:
 		return planBullet(b, p, dmg)
 	}
