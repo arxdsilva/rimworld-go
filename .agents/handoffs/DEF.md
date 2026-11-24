@@ -218,3 +218,14 @@ Nimble trap spring chance, gosec notes, pinned tools · 2026-11-23 · #273
 - HUD/UI: the Bio-tab Note only; no new screen.
 - Boxes: gap SHT-105 `done` and checklist **Nimble effect** `[x]`, both reworded; no `spec-backlog` issue.
 - Open: #275 repo-wide gosec v2.30.0 baseline (915 issues).
+
+## CBT-3.4b-scratch-stab-bullet
+Scratch, Stab and Bullet multi-part rules; Bite and Arrow pinned single-part · 2026-11-24 · 3b7084330
+- Changed: a Scratch splits an outer blow over 2 distinct parts at 67 % each, an inner one over its chain (`internal/domain/pawn/body/scratch.go:73`). A Stab retargets an outer part to an inner child 60 % of the time, never the brain; the chain takes 40 % per inner part and 75 % to the outer parent (`stab.go:24`). A Bullet on an inner part adds the full hit to its parent (`bullet.go:16`). Bite and Arrow stay single-part. Animals (SpreadBlow) get the same plans.
+- Decisions: wiki numbers only (ENG-003); every other choice is marked `original tuning` in its comment (distinct picks, post-armor base for Stab, brain remap, rounding). Spike traps, gore and spears are Stab; claws and pecks are Scratch (`domain/combat/weapon/hit.go:26-27`).
+- Limits: game code changed only in comments (`game/body.go:63-64`, `game/hit/hit.go:88`, same line counts); `solid_budget.txt` untouched.
+- Save impact: none; `Split` is not persisted.
+- Re-pins (new body-stream draws and shares, each with a dated cause comment): `scenario/grown_test.go` state hash, `game/sense_joy_test.go` habits-off hashes (seeds 1, 2), `game/scalegolden/golden_test.go` 48x40/seed42 and 120x120/seed1; `game/wildlife_test.go` reads the blow's trace damage (claw is Scratch: 2 x 67 %); `game/raid_def4_test.go` no-flap loop ends once Ada leaves alive (bullet bonus downs her sooner); `game/combat_test.go` wolf duel seed 5 -> 6 (win rate unchanged over seeds 1-40).
+- HUD/UI: none; the Health tab already lists wounds per part, so the extra parts show there.
+- Boxes: COMBAT_GAP rows Scratch, Stab, Bite, Bullet, Arrow `done` (new), row 78 "Not done" updated, §4 and §5b lines added; backlog **Damage types** `[x]` kept, annotated. spec-backlog: none (#270 has no spec-backlog issue).
+- Open: #278 Poke and RangedStab (no form in the game).
