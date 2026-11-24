@@ -443,8 +443,17 @@ func TestAnimalStrikeScalesBySize(t *testing.T) {
 	}
 	bear, _ := g.SpawnAnimal("grizzly_bear", 4, 5)
 	g.strikeUntilHit(t, bear, p, animal.DefOf(animal.GrizzlyBear).Attack)
-	if got := g.VitalOf(p).Injury - peck; got < 5 || got > 13 {
-		t.Fatalf("a grizzly strikes for 5..13 (11 scaled), got %d", got)
+	// The blow's own amount (the trace's Damage, before the body splits
+	// it) is what scales by size. A claw is a scratch: it wounds two parts
+	// at 67 % each (134 % in all), so the wound total is no longer the
+	// blow (W2-fallout, 2026-11-24).
+	blow := g.traces[len(g.traces)-1].Damage
+	if blow < 5 || blow > 13 {
+		t.Fatalf("a grizzly strikes for 5..13 (11 scaled), got %d", blow)
+	}
+	got := g.VitalOf(p).Injury - peck
+	if want := 2 * (blow * 67 / 100); got != want {
+		t.Fatalf("a claw of %d wounds two parts at 67 %% each (%d), got %d", blow, want, got)
 	}
 }
 

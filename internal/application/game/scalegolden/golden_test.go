@@ -186,11 +186,14 @@ import (
 // skills. All six seeds move.
 // Re-pinned (SHT-105, #273, 2026-11-23): the appended LightFooted trait shifts
 // new-game trait draws and Nimble moves melee dodges. All six seeds move again.
+// Re-pinned (CBT multi-part hits, 2026-11-24): multi-part hit rules for scratch, stab and bullet (W1) and animal blows through PickPart + dealSpread (W0b): they add body-stream draws, which
+// shift every run where a scratch, stab, bullet or animal blow lands.
+// 48x40/seed42 and 120x120/seed1 move; the other four are bit-identical.
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0xa7d602efa9a46d1e,
 	"48x40/seed7":    0x67bd5ef1a52e30f6,
-	"48x40/seed42":   0x2ee993824248e785,
-	"120x120/seed1":  0x753046d8e53f6773,
+	"48x40/seed42":   0xac9b158176fd600f,
+	"120x120/seed1":  0xa13f46ae1f98d661,
 	"120x120/seed7":  0xc0d088d53929de1e,
 	"120x120/seed42": 0x3289ef2592a0ea67,
 }

@@ -63,7 +63,14 @@ func TestHunterFetchesRifleAndBringsDownDustbuck(t *testing.T) {
 
 func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 	t.Parallel()
-	g := New(Config{Seed: 5, Width: 30, Height: 12})
+	// Seed 6, was 5 (W2-fallout, 2026-11-24): the wolf fight is a duel of
+	// dodges and hits, and the new body-stream draws of the multi-part
+	// hit rules (animal blows through PickPart and dealSpread, W0b) move
+	// which side wins on seed 5 (the rifleman is downed at 64 injury, the
+	// wolf survives at 42). Over seeds 1..40 the rifleman kills the wolf in
+	// 28 runs now and 29 before, so the odds did not move; seed 6 is the
+	// nearest one it wins before and after.
+	g := New(Config{Seed: 6, Width: 30, Height: 12})
 	victim, _ := g.SpawnNamedPawn(10, 6, "Bait")
 	shooter, _ := g.SpawnNamedPawn(4, 6, "Shooter")
 	g.equip[shooter] = item.Rifle

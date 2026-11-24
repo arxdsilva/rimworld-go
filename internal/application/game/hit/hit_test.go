@@ -109,7 +109,7 @@ func TestHurtHitForms(t *testing.T) {
 	f := newFake()
 	w := f.wounds()
 	w.HurtHit(1, placed(damage.Hit{Form: damage.FormBullet, Amount: 9}, body.LegL), 7)
-	if len(f.blows) != 1 || f.blows[0] != (Blow{Dmg: 9, Kind: body.Gunshot, Part: body.LegL, Placed: true, Lo: 0, Hi: 700}) {
+	if len(f.blows) != 1 || f.blows[0] != (Blow{Dmg: 9, Kind: body.Gunshot, Part: body.LegL, Placed: true, Lo: 0, Hi: 700, Split: body.SplitBullet}) {
 		t.Fatalf("a bullet's blow %+v", f.blows)
 	}
 	w.HurtHit(1, armor.Landed{Hit: damage.Hit{Form: damage.FormStun, Amount: 2}}, 0)

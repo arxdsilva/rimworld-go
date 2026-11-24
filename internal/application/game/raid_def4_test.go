@@ -247,6 +247,17 @@ func TestFireAtWillNoFlap(t *testing.T) {
 		if j, _ := g.jobs.Get(ada); j.Kind == job.Attack && !j.Forced && j.Active() {
 			t.Fatalf("tick %d: shooting with fire at will off", i)
 		}
+		// Changed (W2-fallout, 2026-11-24): the bullet rule (an inside hit
+		// also wounds its parent for the full damage) downs Ada ~60 ticks
+		// sooner, and the raiders then carry her off the map before tick
+		// 300, where she has no PawnView. A downed colonist cannot shoot, so
+		// the shooting check holds up to the moment she is downed.
+		if g.VitalOf(ada).Status != health.Alive {
+			if i < 100 { // the no-flap window must still cover 100 ticks (she breaks at 119)
+				t.Fatalf("tick %d: Ada downed before the 100-tick no-flap window ran", i)
+			}
+			break
+		}
 	}
 	send(g, command.Command{Kind: command.SetFireAtWill, Pawn: uint64(ada), Enabled: true})
 	if !def4View(g, ada).FireAtWill {

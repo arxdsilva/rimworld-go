@@ -18,17 +18,10 @@ const (
 )
 
 // bluntCandidates is the set of parts a blunt blow on p may strike
-// inside: the present inside, non-bone parts whose parent is p (none for
-// an arm, a hand or the humanlike brain).
+// inside: p's present inside children that are not bone (none for an
+// arm, a hand or the humanlike brain).
 func bluntCandidates(b *Body, p Part) uint32 {
-	t := b.table()
-	var m uint32
-	for q := Part(0); q < Part(len(t)); q++ {
-		if q != p && t[q].Parent == p && !b.isMissing(q) && inside(b, q) && !solid(b, q) {
-			m |= bit(q)
-		}
-	}
-	return m
+	return insideChildren(b, p) &^ solidMask[planIndex(b)]
 }
 
 // planBlunt is a blunt blow of dmg on p (R2). With no candidate under p it

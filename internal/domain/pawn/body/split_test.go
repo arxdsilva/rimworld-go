@@ -63,8 +63,13 @@ func splitDmgs(b *Body) map[Part]int {
 	return out
 }
 
-// TestSplitOf: only a cut form splits as a cut and only a blunt form as a
-// blunt hit; every other form, and an unknown one, does not split.
+// splitBigQuad is a quadruped at 10x a human's scale: every part's hit
+// points and killAt are x10, so no share of a W1 test blow is capped.
+func splitBigQuad() Body { return Body{Anatomy: Quadruped, Scale: 10000} }
+
+// TestSplitOf: the cut, blunt, scratch, stab and bullet forms each split
+// by their own rule; bite and arrow (the wiki gives them no multi-part
+// rule), every other form and an unknown one do not split.
 func TestSplitOf(t *testing.T) {
 	t.Parallel()
 	for f := damage.Form(0); f <= damage.NumForms+1; f++ {
@@ -74,9 +79,94 @@ func TestSplitOf(t *testing.T) {
 			want = SplitCut
 		case damage.FormBlunt:
 			want = SplitBlunt
+		case damage.FormScratch:
+			want = SplitScratch
+		case damage.FormStab:
+			want = SplitStab
+		case damage.FormBullet:
+			want = SplitBullet
 		}
 		if got := SplitOf(f); got != want {
 			t.Errorf("SplitOf(%v) = %d, want %d", f, got, want)
+		}
+	}
+	if SplitOf(damage.FormBite) != SplitNone || SplitOf(damage.FormArrow) != SplitNone {
+		t.Error("bite and arrow wound one part")
+	}
+}
+
+// TestSplitsPredicate: splits holds for exactly the five rules, not for no
+// split, an unknown value or the sentinel.
+func TestSplitsPredicate(t *testing.T) {
+	t.Parallel()
+	for s := Split(0); s < 16; s++ {
+		want := s == SplitCut || s == SplitBlunt || s == SplitScratch || s == SplitStab || s == SplitBullet
+		if got := splits(s); got != want {
+			t.Errorf("splits(%d) = %v, want %v", s, got, want)
+		}
+	}
+	if splits(SplitNone) || splits(Split(9)) || splits(numSplits) {
+		t.Error("none, Split(9) or numSplits splits")
+	}
+}
+
+// TestSplitPctOf: pct % of dmg rounded down, at least 1 for any damage,
+// nothing for none.
+func TestSplitPctOf(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct{ dmg, pct, want int }{
+		{0, 67, 0}, {-4, 67, 0}, {1, 67, 1}, {53, 67, 35}, {100, 40, 40}, {100, 75, 75},
+		{2, 40, 1}, {10, 67, 6}, {100, 67, 67},
+	} {
+		if got := pctOf(c.dmg, c.pct); got != c.want {
+			t.Errorf("pctOf(%d, %d) = %d, want %d", c.dmg, c.pct, got, c.want)
+		}
+	}
+}
+
+// TestSplitBigQuad: the fixture's part hit points and killAt are 10x a
+// quadruped's.
+func TestSplitBigQuad(t *testing.T) {
+	t.Parallel()
+	b, q := splitBigQuad(), Body{Anatomy: Quadruped}
+	if killAt(&b) != 10*KillDamage {
+		t.Fatalf("killAt %d", killAt(&b))
+	}
+	for p := Part(0); p < b.numParts(); p++ {
+		if b.maxHP(p) != 10*q.maxHP(p) {
+			t.Fatalf("%v: maxHP %d, a quadruped's %d", p, b.maxHP(p), q.maxHP(p))
+		}
+	}
+}
+
+// TestSplitPlansInBounds: every split's plan on every part of every
+// anatomy deals 1..maxShares shares, each on a part of the plan and none
+// negative, with at least 1 damage in all (a cut of 1 may leave a share
+// at 0).
+func TestSplitPlansInBounds(t *testing.T) {
+	t.Parallel()
+	roll := splitPCG(11)
+	for a := Anatomy(0); a < NumAnatomies; a++ {
+		b := Body{Anatomy: a}
+		for p := Part(0); p < b.numParts(); p++ {
+			for s := SplitCut; s < numSplits; s++ {
+				for _, dmg := range []int{1, 2, 53, 100} {
+					sh := planSplit(&b, p, dmg, s, roll)
+					if sh.n < 1 || sh.n > maxShares {
+						t.Fatalf("%v %v split %d dmg %d: %d shares", a, p, s, dmg, sh.n)
+					}
+					total := 0
+					for _, x := range sh.s[:sh.n] {
+						if x.part >= b.numParts() || x.dmg < 0 {
+							t.Fatalf("%v %v split %d dmg %d: share %+v", a, p, s, dmg, x)
+						}
+						total += x.dmg
+					}
+					if total < 1 {
+						t.Fatalf("%v %v split %d dmg %d: deals nothing", a, p, s, dmg)
+					}
+				}
+			}
 		}
 	}
 }

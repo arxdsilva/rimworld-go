@@ -61,8 +61,8 @@ func (g *Game) ensureBody(id entity.EntityID, v *health.Record) *body.Body {
 }
 
 // woundBody deals bl to b on the body stream. A placed blow strikes its
-// part, split by its form (body.StrikeBlow, CBT 3.4: a cut wounds 1-4 parts,
-// a blunt blow may hit an inner one; overkill may destroy a part, vital too);
+// part, split by its form (body.StrikeBlow, CBT 3.4: cut, blunt, scratch,
+// stab and bullet rules; overkill may destroy a part, vital too);
 // any other is spread on parts by coverage (body.Spread: death at MaxHP).
 func (g *Game) woundBody(b *body.Body, bl hit.Blow, now uint64) {
 	rng := g.stream(streamBody)

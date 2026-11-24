@@ -3,6 +3,8 @@
 
 package body
 
+import "math/bits"
+
 // insideMask is each plan's inside parts, a bit per Part: the organs a
 // blow reaches through the part over them (CBT 3.4, split.go). On the
 // humanlike plan they are the Inner organs; each animal plan adds its
@@ -57,4 +59,42 @@ func outerOf(b *Body, p Part) Part {
 		p = t[p].Parent
 	}
 	return p
+}
+
+// insideChildren is the set of p's present inside children: the inside
+// parts q != p of b's plan whose parent is p and that are not missing (a
+// head's brain on an animal plan, the torso's organs on a pawn). It walks
+// the plan's inside mask, not the whole table.
+func insideChildren(b *Body, p Part) uint32 {
+	t := b.table()
+	var m uint32
+	for r := insideMask[planIndex(b)] &^ b.Missing &^ bit(p); r != 0; r &= r - 1 {
+		if q := Part(bits.TrailingZeros32(r)); int(q) < len(t) && t[q].Parent == p {
+			m |= bit(q)
+		}
+	}
+	return m
+}
+
+// outwardChain is p's outward chain (a scratch's or a stab's inner split):
+// p, then each parent while the current part is inside, ending with the
+// first outer part, which is included. An outer p gives [p], an invalid p
+// none (n = 0). Missing parts stay in the chain; dealing skips them. Call
+// it as ps, n := outwardChain(b, p) and pass &ps, n on. original tuning:
+// the wiki bounds no chain; it stops at maxShares parts and at the plan's
+// length (every real chain is one inside part and its outer parent).
+func outwardChain(b *Body, p Part) (ps [maxShares]Part, n int) {
+	t := b.table()
+	if p >= Part(len(t)) {
+		return ps, 0
+	}
+	for n < maxShares && n < len(t) {
+		ps[n] = p
+		n++
+		if !inside(b, p) || t[p].Parent == p {
+			break
+		}
+		p = t[p].Parent
+	}
+	return ps, n
 }

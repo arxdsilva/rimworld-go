@@ -85,7 +85,7 @@ type Blow struct {
 	Part   body.Part
 	Placed bool
 	Lo, Hi int
-	Split  body.Split // the form's split (body.SplitOf: a cut wounds several parts, a blunt blow an inner one; CBT 3.4)
+	Split  body.Split // the form's split (body.SplitOf: cut, blunt, scratch, stab and bullet rules; CBT 3.4)
 }
 
 // Shields may stop a hit before it reaches the body (CBT-3: a shield

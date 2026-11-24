@@ -266,7 +266,10 @@ func TestGrownGolden(t *testing.T) {
 	//
 	// Re-pinned (SHT-105, #273, 2026-11-23): the appended LightFooted trait shifts
 	// new-game trait draws and Nimble moves melee dodges.
-	const want uint64 = 0xb58aab09cdc09002
+	//
+	// Re-pinned (CBT multi-part hits, 2026-11-24): multi-part hit rules for scratch, stab and bullet (W1) and animal blows through PickPart + dealSpread (W0b): they add body-stream draws
+	// (scratch 2 parts x 67 %, stab retarget and chain, bullet parent bonus).
+	const want uint64 = 0xf0617391bfc235a2
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

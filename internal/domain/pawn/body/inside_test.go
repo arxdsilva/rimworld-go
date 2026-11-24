@@ -64,3 +64,69 @@ func TestInsideMasks(t *testing.T) {
 		}
 	}
 }
+
+// TestInsideChildren: insideChildren is the brute-force scan's set (the
+// present inside parts other than p whose parent is p) for every part of
+// every plan, with and without missing parts, and empty for an invalid p.
+func TestInsideChildren(t *testing.T) {
+	t.Parallel()
+	for a := Anatomy(0); a <= NumAnatomies; a++ {
+		for _, missing := range []uint32{0, 0x5555_5555, 0xaaaa_aaaa, ^uint32(0)} {
+			b := Body{Anatomy: a, Missing: missing}
+			tab := b.table()
+			for p := Part(0); p <= b.numParts()+1; p++ {
+				var want uint32
+				for q := Part(0); q < b.numParts(); q++ {
+					if q != p && tab[q].Parent == p && !b.isMissing(q) && inside(&b, q) {
+						want |= bit(q)
+					}
+				}
+				if got := insideChildren(&b, p); got != want {
+					t.Errorf("%v missing %x %v: %b, want %b", a, missing, p, got, want)
+				}
+			}
+		}
+	}
+	q := Body{Anatomy: Quadruped}
+	if insideChildren(&q, QHead) != bit(QBrain) || insideChildren(&q, QBrain) != 0 {
+		t.Error("a quadruped's head holds its brain")
+	}
+}
+
+// TestOutwardChain: for every part of every plan the chain is p, then
+// each parent while the part is inside, ending on the first outer part;
+// an invalid part gives no chain.
+func TestOutwardChain(t *testing.T) {
+	t.Parallel()
+	for a := Anatomy(0); a <= NumAnatomies; a++ {
+		b := Body{Anatomy: a}
+		tab := b.table()
+		for p := Part(0); p < b.numParts(); p++ {
+			ps, n := outwardChain(&b, p)
+			if n < 1 || n > maxShares || ps[0] != p || inside(&b, ps[n-1]) {
+				t.Fatalf("%v %v: chain %v", a, p, ps[:n])
+			}
+			for i := range n - 1 {
+				if !inside(&b, ps[i]) || ps[i+1] != tab[ps[i]].Parent {
+					t.Fatalf("%v %v: chain %v at %d", a, p, ps[:n], i)
+				}
+			}
+			if (n == 1) == inside(&b, p) {
+				t.Fatalf("%v %v: chain %v", a, p, ps[:n])
+			}
+		}
+		for _, p := range []Part{b.numParts(), 200} {
+			if _, n := outwardChain(&b, p); n != 0 {
+				t.Fatalf("%v invalid %v: n %d", a, p, n)
+			}
+		}
+	}
+	var h Body
+	if ps, n := outwardChain(&h, Heart); n != 2 || ps[0] != Heart || ps[1] != Torso {
+		t.Fatalf("heart: %v", ps[:n])
+	}
+	q := Body{Anatomy: Quadruped}
+	if ps, n := outwardChain(&q, QBrain); n != 2 || ps[1] != QHead {
+		t.Fatalf("quadruped brain: %v", ps[:n])
+	}
+}

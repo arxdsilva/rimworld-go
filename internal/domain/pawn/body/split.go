@@ -5,23 +5,48 @@ package body
 
 import "rimworld-go/internal/domain/combat/damage"
 
-// Split is the rule a blow's damage form gives it (CBT 3.4): none, a cut
-// spread over several parts (cut.go) or a blunt strike inside (blunt.go).
-// The zero value splits nothing, so a blow that names no form keeps
-// Strike's and Spread's single-part rule.
+// Split is the multi-part rule a blow's damage form gives it (CBT 3.4):
+// none, or a plan that spreads the blow over several parts (planSplit:
+// cut.go, blunt.go, scratch.go, stab.go, bullet.go). The zero value
+// splits nothing, so a blow that names no form keeps Strike's and
+// Spread's single-part rule.
 type Split uint8
 
 const (
 	SplitNone Split = iota
 	SplitCut
 	SplitBlunt
+	SplitScratch
+	SplitStab
+	SplitBullet
+	numSplits // sentinel: the first value that is not a split
 )
 
-// splitOf is each form's split. wiki: Damage Types (the multi-part rule
-// is stated for Cut damage, the inner strike for Blunt damage). Every
-// other form wounds one part: a bomb's shrapnel and a crushing weight
+// maxShares bounds a split blow's shares: a cut has up to 4 targets and 4
+// parent bonuses, a blunt hit 2, a scratch 2 or its outward chain, a stab
+// its outward chain, a bullet 2.
+const maxShares = 8
+
+// splitOf is each form's split. wiki: Damage Types:
+//   - Cut: 1 to 4 adjacent parts, plus a bonus on an inner part's parent.
+//   - Blunt: a 40 % chance of an inner strike under the part.
+//   - Scratch: 2 parts of the target, its children, its parent and the
+//     parent's children, 67 % each; on an inner target, an even split over
+//     it and its parents up to the first outer one.
+//   - Stab: a 60 % chance to strike an inner child (never the brain); an
+//     inner target and its inner parents take 40 %, the outer parent 75 %.
+//   - Bullet: an inner target's parent takes the full damage as a bonus.
+//
+// Bite and Arrow have no multi-part rule on the wiki and wound one part,
+// as does every other form: a bomb's shrapnel and a crushing weight
 // included, though they cut and bruise (WoundOf).
-var splitOf = [damage.NumForms]Split{damage.FormCut: SplitCut, damage.FormBlunt: SplitBlunt}
+var splitOf = [damage.NumForms]Split{
+	damage.FormCut:     SplitCut,
+	damage.FormBlunt:   SplitBlunt,
+	damage.FormScratch: SplitScratch,
+	damage.FormStab:    SplitStab,
+	damage.FormBullet:  SplitBullet,
+}
 
 // share is the damage one part takes from a split blow.
 type share struct {
@@ -29,11 +54,10 @@ type share struct {
 	dmg  int
 }
 
-// shares is a split blow's targets in dealing order, held in place (a cut
-// has up to 4 targets and 4 parent bonuses, a blunt hit 2), so splitting
-// allocates nothing.
+// shares is a split blow's targets in dealing order, held in place (at
+// most maxShares), so splitting allocates nothing.
 type shares struct {
-	s [8]share
+	s [maxShares]share
 	n int
 }
 
@@ -69,6 +93,19 @@ func bodyDead(b *Body) bool {
 	return lossDamage(b) >= killAt(b)
 }
 
+// splits reports s a multi-part rule (planSplit has a plan for it).
+func splits(s Split) bool { return s > SplitNone && s < numSplits }
+
+// pctOf is pct % of dmg, rounded down but at least 1 for any damage, and
+// 0 for none. original tuning: the wiki gives no rounding; the floor
+// matches planBlunt's, and the minimum keeps a small blow's share alive.
+func pctOf(dmg, pct int) int {
+	if dmg <= 0 {
+		return 0
+	}
+	return max(dmg*pct/100, 1)
+}
+
 func (sh *shares) add(p Part, dmg int) {
 	if sh.n < len(sh.s) {
 		sh.s[sh.n] = share{p, dmg}
@@ -85,6 +122,12 @@ func planSplit(b *Body, p Part, dmg int, s Split, roll func(int) int) shares {
 		return planCut(b, p, dmg, roll)
 	case SplitBlunt:
 		return planBlunt(b, p, dmg, roll)
+	case SplitScratch:
+		return planScratch(b, p, dmg, roll)
+	case SplitStab:
+		return planStab(b, p, dmg, roll)
+	case SplitBullet:
+		return planBullet(b, p, dmg)
 	}
 	var sh shares
 	sh.add(p, dmg)
@@ -126,24 +169,26 @@ func dealSpread(b *Body, p Part, dmg int, kind WoundKind, now uint64) int {
 }
 
 // StrikeBlow wounds b's part p with a placed blow of dmg of kind and split
-// s (CBT 3.4). No split is Strike exactly. A cut or blunt blow first draws
-// its split (cut.go, blunt.go), then deals its first target through
-// Strike (overkill in window lo..hi may destroy it, a vital part too, as
+// s (CBT 3.4). No split is Strike exactly. A split blow first draws its
+// plan (planSplit), then deals the plan's first share through Strike
+// (overkill in window lo..hi may destroy its part, a vital part too, as
 // CBT-1 does), and every other share in order by dealPlaced: the
 // overkill draws come last. Once a share leaves the body dead (bodyDead:
 // as the game kills a pawn or an animal) the shares after it are not
-// dealt. An invalid or missing
-// part, or no damage, takes nothing and draws nothing.
+// dealt. An invalid or missing part, or no damage, takes nothing and
+// draws nothing.
 //
-// It reports the first target destroyed by its own share (Strike's
-// report) and nothing else: when a later share destroys an ancestor of
-// the first target (HandL first, ArmL an extra) the first target goes
-// with it, yet the report stays false.
+// It reports the first share's part destroyed by that share (Strike's
+// report) and nothing else. That part is p unless the plan moved the
+// blow (a stab retargeted inside, a scratch that did not pick p). When a
+// later share destroys an ancestor of the first share's part (HandL
+// first, ArmL an extra) the first part goes with it, yet the report stays
+// false.
 func StrikeBlow(b *Body, p Part, dmg int, kind WoundKind, s Split, lo, hi int, roll func(int) int, now uint64) bool {
 	if p >= b.numParts() || b.isMissing(p) || dmg <= 0 {
 		return false
 	}
-	if s != SplitCut && s != SplitBlunt {
+	if !splits(s) {
 		return Strike(b, p, dmg, kind, lo, hi, roll, now)
 	}
 	sh := planSplit(b, p, dmg, s, roll)

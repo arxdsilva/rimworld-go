@@ -672,7 +672,7 @@ func TestHabitsOffKeepTheHash(t *testing.T) {
 	for _, c := range []struct {
 		seed uint64
 		want uint64
-	}{{1, 0x9c7aa34af35f45ff}, {2, 0x063e5c9daeead1f9}} { // Re-pinned (SHT-105, #273, 2026-11-23): LightFooted trait draws and Nimble dodges; both re-pinned (SHT, #75, 2026-11-23): Scrapper trait draws, FriendlyFirePct 100, curve, downed and XP cap; seed 2 before (DEF 3.1)
+	}{{1, 0xfc3e66ea9c32106b}, {2, 0xe49853f47fd8de12}} { // Re-pinned (CBT multi-part hits, 2026-11-24): multi-part hit rules for scratch, stab and bullet (W1) and animal blows through PickPart + dealSpread (W0b): they add body-stream draws (both seeds); before: Re-pinned (SHT-105, #273, 2026-11-23): LightFooted trait draws and Nimble dodges; both re-pinned (SHT, #75, 2026-11-23): Scrapper trait draws, FriendlyFirePct 100, curve, downed and XP cap; seed 2 before (DEF 3.1)
 		h, g := joyOffHash(c.seed, 30000)
 		if h != c.want {
 			t.Errorf("seed %d: hash %#x, want %#x", c.seed, h, c.want)
