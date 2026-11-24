@@ -129,3 +129,24 @@ func TestRemoveDeletesTheFile(t *testing.T) {
 		t.Fatalf("removing a missing file: %v, want ErrNotExist", err)
 	}
 }
+
+func TestWriteMakesNestedFoldersPrivate(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("windows has no unix mode bits")
+	}
+	root := t.TempDir()
+	path := filepath.Join(root, "a", "b", "f.txt")
+	if err := WriteBytes(path, 0o600, []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{filepath.Join(root, "a"), filepath.Join(root, "a", "b")} {
+		fi, err := os.Stat(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := fi.Mode().Perm() & 0o027; got != 0 {
+			t.Errorf("%s mode %v has group-write or other bits", d, fi.Mode().Perm())
+		}
+	}
+}

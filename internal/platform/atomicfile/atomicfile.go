@@ -19,7 +19,7 @@ import (
 // gone. perm is the file's final mode, set exactly: the umask doesn't apply.
 func Write(path string, perm fs.FileMode, write func(io.Writer) error) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(dir, filepath.Base(path)+"-*.tmp")
@@ -27,20 +27,20 @@ func Write(path string, perm fs.FileMode, write func(io.Writer) error) error {
 		return err
 	}
 	if err := fill(tmp, write); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return err
 	}
 	if err := os.Chmod(tmp.Name(), perm); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return err
 	}
 	if err := os.Rename(tmp.Name(), path); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return err
 	}
 	syncDir(dir)
@@ -75,8 +75,8 @@ func fill(f *os.File, write func(io.Writer) error) error {
 // syncDir flushes the folder's entries (the rename) to disk. Best effort: some
 // systems cannot sync a directory, and the file is complete anyway.
 func syncDir(dir string) {
-	if d, err := os.Open(dir); err == nil {
+	if d, err := os.Open(filepath.Clean(dir)); err == nil {
 		_ = d.Sync()
-		d.Close()
+		_ = d.Close()
 	}
 }

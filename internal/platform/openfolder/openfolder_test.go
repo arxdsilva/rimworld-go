@@ -3,7 +3,12 @@
 
 package openfolder
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestCommandPassesThePathAsOneArgument(t *testing.T) {
 	const p = `/a b/c; rm -rf /`
@@ -21,5 +26,18 @@ func TestCommandPassesThePathAsOneArgument(t *testing.T) {
 func TestOpenRefusesEmpty(t *testing.T) {
 	if Open("") == nil {
 		t.Fatal("empty path accepted")
+	}
+}
+
+// With no opener on PATH, Start fails before anything runs, so no window opens.
+func TestOpenReportsAMissingOpener(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	dir := filepath.Join(t.TempDir(), "saves")
+	err := Open(dir)
+	if err == nil || !strings.Contains(err.Error(), "openfolder:") {
+		t.Fatalf("Open = %v, want an openfolder error", err)
+	}
+	if fi, statErr := os.Stat(dir); statErr != nil || !fi.IsDir() {
+		t.Errorf("folder not created: %v", statErr)
 	}
 }

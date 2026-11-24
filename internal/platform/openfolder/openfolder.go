@@ -40,7 +40,7 @@ func Open(path string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(name, args...)
+	cmd := exec.Command(name, args...) // #nosec G204 -- fixed opener per GOOS; the path is one argv element, no shell
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("openfolder: %w", err)
 	}

@@ -94,7 +94,7 @@ func New(o Options) *Pool {
 		p.min = minParallelTasks
 	}
 	if o.Shuffle != 0 {
-		p.rng = rand.New(rand.NewPCG(o.Shuffle, o.Shuffle))
+		p.rng = rand.New(rand.NewPCG(o.Shuffle, o.Shuffle)) // #nosec G404 -- explicitly seeded PCG; Shuffle is a test-only claim order
 	}
 	return p
 }

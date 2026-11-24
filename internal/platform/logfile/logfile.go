@@ -5,6 +5,7 @@ package logfile
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -20,14 +21,14 @@ const (
 // Open makes dir, moves the last run's game.log to game-prev.log and opens
 // a fresh game.log for writing.
 func Open(dir string) (*os.File, error) {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
 	}
 	cur := filepath.Join(dir, name)
 	if err := os.Rename(cur, filepath.Join(dir, prevName)); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
-	return os.OpenFile(cur, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	return os.OpenFile(filepath.Clean(cur), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 }
 
 // Dir is the per-user logs folder ("" when there is no config folder).
@@ -54,5 +55,10 @@ func Start() (stop func()) {
 		return func() {}
 	}
 	log.SetOutput(io.MultiWriter(os.Stderr, f))
-	return func() { f.Close() }
+	return func() {
+		log.SetOutput(os.Stderr)
+		if err := f.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "log file close: %v\n", err)
+		}
+	}
 }
