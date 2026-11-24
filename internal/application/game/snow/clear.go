@@ -144,7 +144,7 @@ func (l Layer) AssignClear(id entity.EntityID) bool {
 	n := 0
 	w, _ := l.h.Size()
 	for _, ch := range chunks {
-		if n == len(best) && ch.d >= best[n-1].d {
+		if n == len(best) && ch.d >= best[n-1].d { // #nosec G602 -- n == len(best) > 0, so n-1 is valid
 			break // no cell of this chunk or a farther one can win
 		}
 		x0, y0, x1, y1 := cg.Bounds(ch.c)

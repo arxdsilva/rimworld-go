@@ -135,9 +135,9 @@ func animalDefs() []animalDef {
 func fingerprintOf(lists []list) uint64 {
 	h := fnv.New64a()
 	put := func(s string) {
-		h.Write(strconv.AppendInt(nil, int64(len(s)), 10))
-		h.Write([]byte{':'})
-		h.Write([]byte(s))
+		_, _ = h.Write(strconv.AppendInt(nil, int64(len(s)), 10))
+		_, _ = h.Write([]byte{':'})
+		_, _ = h.Write([]byte(s))
 	}
 	for _, l := range lists {
 		put(l.name)

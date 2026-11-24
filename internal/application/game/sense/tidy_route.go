@@ -87,7 +87,7 @@ func (t Tidy) list(id entity.EntityID, room, cells, ax, ay, limit int, buf []tid
 		}
 		x, y := k%w, k/w
 		d := pathing.Dist(ax, ay, x, y)
-		if huge && d > hugeRoomReach || n == limit && d >= buf[n-1].d {
+		if huge && d > hugeRoomReach || n == limit && d >= buf[n-1].d { // #nosec G602 -- limit > 0 (forced above); n == limit <= len(buf)
 			continue
 		}
 		if !t.r.CleanFree(id, x, y) {

@@ -61,7 +61,7 @@ func (c Cleaning) Assign(id entity.EntityID) bool {
 		kept = append(kept, i)
 		x, y := int(i)%w, int(i)/w
 		d := pathing.Dist(px, py, x, y)
-		if n == len(best) && d >= best[n-1].d {
+		if n == len(best) && d >= best[n-1].d { // #nosec G602 -- n == len(best) > 0, so n-1 is valid
 			continue // ascending index: an equal distance never wins
 		}
 		if !c.filth.CleanFree(id, x, y) {

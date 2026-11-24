@@ -29,7 +29,7 @@ func FleeCell(q pathing.Query, px, py, tx, ty int) (int, int, bool) {
 	head, tail := 0, 1
 	bx, by, bestD, found := px, py, -1, false
 	for head < tail && head < fleeSearchMax {
-		i := int(queue[head])
+		i := int(queue[head]) // #nosec G602 -- head < tail <= len(queue): each cell enqueued once (seen)
 		head++
 		cx, cy := px+i%side-fleeSearchR, py+i/side-fleeSearchR
 		if cx != px || cy != py {

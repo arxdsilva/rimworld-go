@@ -363,7 +363,7 @@ func mergeSmall[T ~uint8](w, h int, cells []T, small func(T, int) bool, target f
 			}
 			best := -1
 			for v, cnt := range votes {
-				if cnt > 0 && (best < 0 || cnt > votes[best]) {
+				if cnt > 0 && (best < 0 || cnt > votes[best]) { // #nosec G602 -- best is -1 (short-circuited) or a range index of votes
 					best = v
 				}
 			}

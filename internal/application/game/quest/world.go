@@ -100,7 +100,7 @@ func KindName(k qd.KindID) string {
 	if k >= qd.NumKinds {
 		return ""
 	}
-	return names[k]
+	return names[k] // #nosec G602 -- k < qd.NumKinds (guard above), KindID unsigned
 }
 
 // ReasonText is why a quest failed, as a letter phrase (ours).

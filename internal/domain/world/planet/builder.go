@@ -114,7 +114,7 @@ func Build(p Params) *Planet {
 // Seed is the planet seed for p: fnv64a of the seed text xor the version.
 func Seed(p Params) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(p.SeedText))
+	_, _ = h.Write([]byte(p.SeedText))
 	return h.Sum64() ^ uint64(p.Version)
 }
 

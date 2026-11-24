@@ -243,7 +243,7 @@ func searchOpen(q Query, sx, sy, tx, ty int, allow, bits []uint64, sc *scratch, 
 			nx, ny := cx+d[0], cy+d[1]
 			step := StraightCost
 			if k&1 == 1 {
-				if !open8[k-1] || !open8[(k+1)&7] {
+				if !open8[k-1] || !open8[(k+1)&7] { // #nosec G602 -- k odd so k-1 >= 0; (k+1)&7 < 8 == len(open8)
 					continue
 				}
 				step = DiagCost

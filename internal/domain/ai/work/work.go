@@ -105,7 +105,7 @@ func (p Priorities) Set(t Type, v int) Priorities {
 	if t >= NumTypes {
 		return p
 	}
-	p[t] = uint8(max(0, min(Lowest, v)))
+	p[t] = uint8(max(0, min(Lowest, v))) // #nosec G602 -- t < NumTypes (guard above), Type is uint8
 	return p
 }
 
