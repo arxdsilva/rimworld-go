@@ -110,6 +110,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | CI-004-ebiten-test-time | The ebiten root's `-race` test time | 2026-11-06 | [OPS.md](OPS.md#ci-004-ebiten-test-time) |
 | CI-005-heavy-binaries-serial | CI headroom: heavy test binaries alone, catalog parsed once, journeys skip wasted world work | 2026-11-08 | [OPS.md](OPS.md#ci-005-heavy-binaries-serial) |
 | CI-006-flaky-test-audit | Flaky-test audit of every package; root-cause fixes; the scale golden runs under -race in its own job | 2026-11-18 | [OPS.md](OPS.md#ci-006-flaky-test-audit) |
+| CI-007-gosec-baseline | Repo-wide gosec baseline triaged (#275); pinned `make gosec` gates CI at zero | 2026-11-23 | [OPS.md](OPS.md#ci-007-gosec-baseline) |
 | CSE-W1-habits | Options Habits tab (CSE-049, CSE-023) | 2026-11-03 | [MOD.md](MOD.md#cse-w1-habits) |
 | CSE-W2-pack | The pack (CSE-036) | 2026-11-03 | [MOD.md](MOD.md#cse-w2-pack) |
 | CSE-W3-tidy | Tidying a room around a job (CSE-017…027) | 2026-11-04 | [MOD.md](MOD.md#cse-w3-tidy) |

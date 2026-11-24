@@ -194,3 +194,14 @@ Two UI visual-check items added to the Definition of Done and filed · 2026-11-2
 - HUD: none; no in-game behaviour changed.
 - Boxes: none ticked; two open boxes added (Appendix C, QA-002 and QA-003) on new `spec-backlog` issues #267 and #268.
 - Open: QA-002 (#267), QA-003 (#268).
+
+## CI-007-gosec-baseline
+Repo-wide gosec baseline triaged (#275); pinned `make gosec` gates CI at zero · 2026-11-23 · eeacf7852, 6a79b4d21, 0cbd7cf45, 157e6a9a7, 0a0f1a082, 1c2b81c21, 65726adb2, 700fd7f4d, bf90fcd51, ba705d0b1
+- Changed: `make gosec` (after `make vuln` in test.yml) runs gosec master 244f1f6 repo-wide with G115 excluded, then again with G115 on the untrusted-input trees: wasmhost, modding, savefmt. It reports nothing. Every `#nosec` must name a rule and a reason (`-nosec-require-*`). Policy: GO_BEST_PRACTICES §66a.
+- Dispositions: 146 non-G115 findings were fixed or justified on the same line. Close after write is joined; best-effort Close uses `_ =`; variable paths get `filepath.Clean`. User data and untracked dev output are now created 0o750/0o600. Tracked assets keep their modes. 99 untrusted-input G115 were each checked against a cited guard. 949 → 848 G115 repo-wide; the rest is sim-internal baseline.
+- Real fixes: mod backstory books are capped at 65534 entries, so the uint16 IDs no longer wrap and `IDOf` no longer hangs (`TestBackstoryBookCap`). Saved exposure severity is clamped to int32 (`TestSaveExposureClampsOutOfRangeSeverity`). The logfile and profiling Close errors are reported.
+- Decisions: pin master because v2.30.0 silently skips the root `game` package (gosec #1828: file lists over ~16 KB split across `go list` calls). The loops pass baseline is the per-file G115 count at the base commit, not statement text.
+- Limits: edits are line-neutral (same-line comments); `solid_budget.txt` unchanged; ebiten root 12174/12180 lines. Determinism unchanged: hash inputs, RNG streams and wasm output are byte-identical, goldens pass.
+- HUD: none. No player-observable behaviour changed, beyond private modes on newly created user dirs and files.
+- Boxes: #275 closed (no checklist, spec or gap row named gosec).
+- Open: move the pin to v2.30.1 and upgrade the local tool (#276); domain `backstory.NewBook` wrap and the `IDOf` loop (#277).
