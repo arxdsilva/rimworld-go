@@ -8,6 +8,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/commands"
 	"rimworld-go/internal/application/game/aqua"
 	"rimworld-go/internal/application/game/axview"
 	"rimworld-go/internal/application/game/bodytemp"
@@ -801,7 +802,7 @@ type Game struct {
 	joy        map[entity.EntityID]int // recreation need, 0..recreation.Full
 	breaks     map[entity.EntityID]breakState
 	memories   map[entity.EntityID]mood.Memories
-	pending    []command.Command
+	cmds       commands.Queue // pending commands in (Tick, Seq) order (#8)
 
 	ateAt   map[entity.EntityID]bool
 	logs    map[entity.EntityID][]logEntry // per-creature event logs (eventlog.go)
@@ -1309,13 +1310,8 @@ func (g *Game) Width() int { return g.grid.Width() }
 // Height returns the map height in tiles.
 func (g *Game) Height() int { return g.grid.Height() }
 
-// Apply queues a typed gameplay command for the next tick's command phase.
-func (g *Game) Apply(c command.Command) {
-	if c.Kind == command.None {
-		return
-	}
-	g.pending = append(g.pending, c)
-}
+// Apply queues a command for its target tick's command phase, in Seq order.
+func (g *Game) Apply(c command.Command) { g.cmds.Push(c, uint64(g.clock.Now())) }
 
 // Enqueue is the command-gateway alias used by the inbound adapter.
 func (g *Game) Enqueue(c command.Command) { g.Apply(c) }

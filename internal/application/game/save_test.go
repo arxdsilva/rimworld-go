@@ -130,7 +130,7 @@ func TestLegacyStoneMigrates(t *testing.T) {
 	fr.Stuff = item.Stone
 	g.frames.Set(fid, fr)
 	build := command.Command{Kind: command.DesignateBuild, Build: uint8(construction.Wall), Stuff: uint8(item.Stone), X: 9, Y: 5}
-	g.pending = append(g.pending, build)
+	g.cmds.Push(build, uint64(g.clock.Now()))
 	g.orderQueue[id] = append(g.orderQueue[id], queuedOrder{cmd: build, label: "wall"})
 	g.postponed.orders[id] = queuedOrder{cmd: build, label: "wall"}
 	g.geo = geology.Map{} // an older save has no geology
@@ -146,7 +146,7 @@ func TestLegacyStoneMigrates(t *testing.T) {
 		t.Fatalf("frame stuff %s", fr.Stuff)
 	}
 	want := uint8(item.GraniteBlocks)
-	if h.pending[len(h.pending)-1].Stuff != want || h.orderQueue[id][0].cmd.Stuff != want || h.postponed.orders[id].cmd.Stuff != want {
+	if h.cmds.Items()[h.cmds.Len()-1].Stuff != want || h.orderQueue[id][0].cmd.Stuff != want || h.postponed.orders[id].cmd.Stuff != want {
 		t.Fatal("commands keep the legacy stone")
 	}
 	if h.geo.W != 16 || h.geo.H != 10 || len(h.geo.Stone) != 160 {

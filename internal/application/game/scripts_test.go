@@ -79,10 +79,10 @@ func TestScriptCommandsLandThroughEnqueue(t *testing.T) {
 	if len(f.events) != 1 || f.events[0].Hook != scripting.OnHour || f.events[0].Tick != start || f.events[0].Seed != 3 {
 		t.Fatalf("events at the first tick: %+v", f.events)
 	}
-	if len(g.pending) != 4 {
-		t.Fatalf("the commands wait in the queue for the next tick: %+v", g.pending)
+	if g.cmds.Len() != 4 {
+		t.Fatalf("the commands wait in the queue for the next tick: %+v", g.cmds.Items())
 	}
-	for _, c := range g.pending {
+	for _, c := range g.cmds.Items() {
 		if !c.MapSet || c.Map != g.maps[0].id {
 			t.Fatalf("a script command acts on the home map, whatever is viewed: %+v", c)
 		}
@@ -91,7 +91,7 @@ func TestScriptCommandsLandThroughEnqueue(t *testing.T) {
 	if len(f.events) != 3 || f.events[1].Hook != scripting.OnDay || f.events[2].Hook != scripting.OnHour {
 		t.Fatalf("at midnight: %+v", f.events)
 	}
-	g.pending = g.pending[:4]
+	g.cmds.Restore(g.cmds.Items()[:4], g.cmds.Last())
 	before := g.stockOf(item.Wood)
 	g.Step(1)
 	if got := g.stockOf(item.Wood) - before; got != 7 {
@@ -144,8 +144,8 @@ func TestNoScriptsNoClock(t *testing.T) {
 		t.Fatal("a game without scripts runs no script clock")
 	}
 	g.Step(2)
-	if len(g.pending) != 0 {
-		t.Fatalf("%+v", g.pending)
+	if g.cmds.Len() != 0 {
+		t.Fatalf("%+v", g.cmds.Items())
 	}
 }
 
