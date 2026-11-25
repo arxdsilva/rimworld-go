@@ -59,7 +59,7 @@ func verify(path string, limit int64, out, errOut io.Writer) int {
 	}
 	f, err := appreplay.Decode(bytes.NewReader(data))
 	if err != nil {
-		fmt.Fprintf(errOut, "replay: %v\n", err)
+		fmt.Fprintln(errOut, err) // already prefixed "replay:"
 		return 2
 	}
 	err = appreplay.Verify(f, startColony)
@@ -69,7 +69,7 @@ func verify(path string, limit int64, out, errOut io.Writer) int {
 		fmt.Fprintf(out, "replay: checkpoint tick %d: hash %s, want %s\n", m.Tick, m.Got, m.Want)
 		return 1
 	case err != nil:
-		fmt.Fprintf(errOut, "replay: %v\n", err)
+		fmt.Fprintln(errOut, err) // already prefixed "replay:"
 		return 2
 	}
 	tick, hash := f.Ticks, "-"

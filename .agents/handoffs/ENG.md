@@ -83,7 +83,7 @@ Headless state hash and colonist-count benchmark · 2026-11-25 · 3bb8140b1
 - Open: none filed by this lane (findings go to the PR's Open follow-ups).
 
 ## ENG-011-determinism-replay
-Determinism and replay: keyed RNG, command order, replay verify · 2026-11-25 · uncommitted
+Determinism and replay: keyed RNG, command order, replay verify · 2026-11-25 · 8a1d98328
 - Changed: `cmd/simulate -record <file> [-every n]` writes a versioned JSON replay (options, ordered commands, checkpoint hashes); `cmd/replay verify <file>` re-runs it: exit 0 on a match, exit 1 naming the first mismatching checkpoint tick, exit 2 on bad input.
 - Changed: every command entering through `Game.Apply` gets a target tick (clamped to now) and a unique seq in `commands.Queue`, applied in (tick, seq) order; script hooks enqueue and quest orders are commands.
 - Changed: the taming pet name and the revenge roll draw from `randx.NewKeyed` (seed, tick, operation, entity); `TestTameKeyedIgnoresUnrelatedDraws` proves unrelated draws do not move them.
