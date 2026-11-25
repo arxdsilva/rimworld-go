@@ -20,7 +20,7 @@ func TestRaidIndexesMatchScansOnFixture(t *testing.T) {
 	if testing.Short() || os.Getenv("RIMWORLD_FIXTURE_DIR") == "" {
 		t.Skip("needs the cached grown fixture (RIMWORLD_FIXTURE_DIR): building it takes minutes; raid_eai_test.go checks the same on built maps")
 	}
-	g, err := scenario.Load(scenario.GrownColony(benchSeed, 120, 120, true))
+	g, err := scenario.Load(scenario.MustGrownColony(benchSeed, 120, 120, scenario.DefaultColonists, true))
 	if err != nil {
 		t.Fatal(err)
 	}

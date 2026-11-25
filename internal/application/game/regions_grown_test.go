@@ -18,7 +18,7 @@ func TestRegionsGrownSameState(t *testing.T) {
 	if testing.Short() || os.Getenv("RIMWORLD_FIXTURE_DIR") == "" {
 		t.Skip("needs the cached grown fixture (RIMWORLD_FIXTURE_DIR): building it takes minutes")
 	}
-	data := scenario.GrownColony(benchSeed, 120, 120, false)
+	data := scenario.MustGrownColony(benchSeed, 120, 120, scenario.DefaultColonists, false)
 	on, err := scenario.Load(data)
 	if err != nil {
 		t.Fatal(err)

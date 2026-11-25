@@ -36,7 +36,7 @@ func init() {
 func loadFixture(b *testing.B, side int, raid bool) *game.Game {
 	b.Helper()
 	noSelfCheck(b)
-	data := scenario.GrownColony(benchSeed, side, side, raid)
+	data := scenario.MustGrownColony(benchSeed, side, side, scenario.DefaultColonists, raid)
 	g, err := scenario.Load(data)
 	if err != nil {
 		b.Fatal(err)
@@ -264,7 +264,7 @@ func BenchmarkSave500(b *testing.B) {
 // BenchmarkLoad500 loads the grown 500² colony.
 func BenchmarkLoad500(b *testing.B) {
 	noSelfCheck(b)
-	data := scenario.GrownColony(benchSeed, 500, 500, false)
+	data := scenario.MustGrownColony(benchSeed, 500, 500, scenario.DefaultColonists, false)
 	b.SetBytes(int64(len(data)))
 	b.ReportAllocs()
 	b.ResetTimer()

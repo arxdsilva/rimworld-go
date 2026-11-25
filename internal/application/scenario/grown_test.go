@@ -9,7 +9,7 @@ import (
 )
 
 func TestBuildCounts(t *testing.T) {
-	g, n, err := Build(1, 120, 120)
+	g, n, err := Build(1, 120, 120, DefaultColonists)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestBuildCounts(t *testing.T) {
 }
 
 func TestBuildTooSmall(t *testing.T) {
-	if _, _, err := Build(1, 48, 40); err == nil {
+	if _, _, err := Build(1, 48, 40, DefaultColonists); err == nil {
 		t.Fatal("want an error for a small map")
 	}
 }
@@ -49,7 +49,7 @@ func TestBuildTooSmall(t *testing.T) {
 func TestGrownColonyProbe(t *testing.T) {
 	for _, n := range []int{250, 500} {
 		t0 := time.Now()
-		g, _, err := Build(1, n, n)
+		g, _, err := Build(1, n, n, DefaultColonists)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -270,7 +270,7 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (CBT multi-part hits, 2026-11-24): multi-part hit rules for scratch, stab and bullet (W1) and animal blows through PickPart + dealSpread (W0b): they add body-stream draws
 	// (scratch 2 parts x 67 %, stab retarget and chain, bullet parent bonus).
 	const want uint64 = 0xf0617391bfc235a2
-	g, _, err := Build(7, 120, 120)
+	g, _, err := Build(7, 120, 120, DefaultColonists)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -29,7 +29,7 @@ func TestDayTickUnderBudget(t *testing.T) {
 	}
 	game.SetIndexSelfCheck(false)
 	t.Cleanup(func() { game.SetIndexSelfCheck(true) })
-	g, err := scenario.Load(scenario.GrownColony(benchSeed, 500, 500, false))
+	g, err := scenario.Load(scenario.MustGrownColony(benchSeed, 500, 500, scenario.DefaultColonists, false))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,11 +9,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"rimworld-go/internal/application/scenario"
 )
 
 type options struct {
 	seed       uint64
 	sizes      []int
+	colonists  []int
 	speeds     []int
 	fixtures   []string
 	ticks      int
@@ -27,6 +30,7 @@ func parse(args []string) (options, error) {
 	fs := flag.NewFlagSet("benchmark", flag.ContinueOnError)
 	seed := fs.Uint64("seed", 1, "fixture seed")
 	sizes := fs.String("sizes", "120,250,500", "map sides, comma-separated")
+	colonists := fs.String("colonists", strconv.Itoa(scenario.DefaultColonists), "colonists per fixture, comma-separated (each at least the start kit of 3)")
 	speeds := fs.String("speeds", "1,3", "ticks per frame (1 normal, 2 fast, 3 faster), comma-separated")
 	fixtures := fs.String("fixtures", "grown,raid", "fixtures: grown (a grown colony) | raid (the same under a 12-raider assault)")
 	ticks := fs.Int("ticks", 3000, "ticks to time per run")
@@ -41,6 +45,14 @@ func parse(args []string) (options, error) {
 	var err error
 	if o.sizes, err = ints(*sizes); err != nil {
 		return o, fmt.Errorf("-sizes: %w", err)
+	}
+	if o.colonists, err = ints(*colonists); err != nil {
+		return o, fmt.Errorf("-colonists: %w", err)
+	}
+	for _, n := range o.colonists {
+		if n < scenario.MinColonists {
+			return o, fmt.Errorf("-colonists: %d below %d", n, scenario.MinColonists)
+		}
 	}
 	if o.speeds, err = ints(*speeds); err != nil {
 		return o, fmt.Errorf("-speeds: %w", err)
