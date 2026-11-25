@@ -99,6 +99,45 @@ func TestRecordVerifyFake(t *testing.T) {
 	}
 }
 
+// TestRecordCheckpointLimit pins the boundary: checkpointing every tick,
+// 65535 steps give exactly MaxCheckpoints (the initial one included) and
+// pass CheckLimits and Decode; one more step is refused by CheckLimits.
+func TestRecordCheckpointLimit(t *testing.T) {
+	r := replay.NewRecorder(&fakeSim{}, replay.Options{Seed: 1, Width: 1, Height: 1}, 1)
+	r.Step(replay.MaxCheckpoints - 1)
+	f := r.File()
+	if len(f.Checkpoints) != replay.MaxCheckpoints {
+		t.Fatalf("checkpoints %d, want %d", len(f.Checkpoints), replay.MaxCheckpoints)
+	}
+	if err := replay.CheckLimits(f); err != nil {
+		t.Fatalf("at the limit: %v", err)
+	}
+	var buf bytes.Buffer
+	if err := replay.Encode(&buf, f); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := replay.Decode(&buf); err != nil {
+		t.Fatalf("decode at the limit: %v", err)
+	}
+	r.Step(1)
+	if err := replay.CheckLimits(r.File()); err == nil || !strings.Contains(err.Error(), "checkpoints") {
+		t.Fatalf("past the limit: err %v, want a checkpoints error", err)
+	}
+}
+
+func TestCheckOptions(t *testing.T) {
+	for _, o := range []replay.Options{{Width: 1, Height: 1}, {Width: replay.MaxSide, Height: replay.MaxSide}} {
+		if err := replay.CheckOptions(o); err != nil {
+			t.Fatalf("%+v: %v", o, err)
+		}
+	}
+	for _, o := range []replay.Options{{Width: 0, Height: 1}, {Width: replay.MaxSide + 1, Height: 1}, {Width: 1, Height: replay.MaxSide + 1}} {
+		if replay.CheckOptions(o) == nil {
+			t.Fatalf("%+v accepted", o)
+		}
+	}
+}
+
 func TestRecordEntryTicks(t *testing.T) {
 	r := replay.NewRecorder(&fakeSim{}, replay.Options{}, 10)
 	r.Apply(command.Command{Kind: command.MovePawn, X: 1})

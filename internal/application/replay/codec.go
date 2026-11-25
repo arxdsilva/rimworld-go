@@ -28,14 +28,26 @@ const (
 	defaultStartTick = 20000
 )
 
-// checkLimits rejects a File outside the limits above, naming the field.
-func checkLimits(f File) error {
-	o := f.Options
+// CheckOptions rejects a map size outside [1, MaxSide], naming the field. A
+// recorder calls it before building the run, so it never records a size
+// Decode rejects.
+func CheckOptions(o Options) error {
 	if o.Width < 1 || o.Width > MaxSide {
 		return fmt.Errorf("replay: options.width %d outside [1, %d]", o.Width, MaxSide)
 	}
 	if o.Height < 1 || o.Height > MaxSide {
 		return fmt.Errorf("replay: options.height %d outside [1, %d]", o.Height, MaxSide)
+	}
+	return nil
+}
+
+// CheckLimits rejects a File outside the limits above, naming the field. It
+// is the limit check Decode applies, so a recorder calls it before writing a
+// file that could not be read back (for example 65536 ticks checkpointed
+// every tick: 65537 checkpoints).
+func CheckLimits(f File) error {
+	if err := CheckOptions(f.Options); err != nil {
+		return err
 	}
 	if len(f.Commands) > MaxCommands {
 		return fmt.Errorf("replay: commands has %d entries, max %d", len(f.Commands), MaxCommands)
@@ -101,7 +113,7 @@ func Decode(r io.Reader) (File, error) {
 	if f.Version != Version {
 		return File{}, fmt.Errorf("replay: unsupported version %d, want %d", f.Version, Version)
 	}
-	if err := checkLimits(f); err != nil {
+	if err := CheckLimits(f); err != nil {
 		return File{}, err
 	}
 	for i, c := range f.Checkpoints {

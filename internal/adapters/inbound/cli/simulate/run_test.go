@@ -114,3 +114,43 @@ func TestMainRecordErrors(t *testing.T) {
 		t.Fatalf("negative every: exit %d", code)
 	}
 }
+
+// TestMainRecordRejectsOversizedMap: -record refuses a map size the replay
+// decoder would reject, before building the colony or creating the file.
+func TestMainRecordRejectsOversizedMap(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.replay")
+	for _, args := range [][]string{
+		{"-width", fmt.Sprint(replay.MaxSide + 1)},
+		{"-height", fmt.Sprint(replay.MaxSide + 1)},
+		{"-width", "0"},
+	} {
+		var out, errOut bytes.Buffer
+		argv := append([]string{"simulate", "-ticks", "1", "-record", path}, args...)
+		if code := Main(argv, &out, &errOut); code != 2 || !strings.Contains(errOut.String(), "options.") {
+			t.Fatalf("%v: exit %d err %q", args, code, errOut.String())
+		}
+		if out.Len() != 0 {
+			t.Fatalf("%v: colony ran: %q", args, out.String())
+		}
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("%v: replay file created", args)
+		}
+	}
+}
+
+// TestWriteReplayRefusesUndecodable: a recording past the decoder's
+// checkpoint limit is refused and no file is written.
+func TestWriteReplayRefusesUndecodable(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.replay")
+	f := replay.File{Version: replay.Version, Options: replay.Options{Width: 1, Height: 1}, Ticks: replay.MaxCheckpoints}
+	for i := 0; i <= replay.MaxCheckpoints; i++ {
+		f.Checkpoints = append(f.Checkpoints, replay.Checkpoint{Tick: uint64(i), Hash: "0000000000000000"})
+	}
+	var out, errOut bytes.Buffer
+	if code := writeReplay(path, f, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "checkpoints") {
+		t.Fatalf("exit %d err %q", code, errOut.String())
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("replay file created")
+	}
+}

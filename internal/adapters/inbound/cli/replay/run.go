@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"rimworld-go/internal/application/game"
 	appreplay "rimworld-go/internal/application/replay"
@@ -42,7 +43,7 @@ func Main(argv []string, out, errOut io.Writer) int {
 const maxReplayBytes = 64 << 20
 
 func verify(path string, limit int64, out, errOut io.Writer) int {
-	file, err := os.Open(path)
+	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		fmt.Fprintf(errOut, "replay: %v\n", err)
 		return 2

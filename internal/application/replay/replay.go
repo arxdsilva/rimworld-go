@@ -147,7 +147,7 @@ func (m *Mismatch) Error() string {
 // Verify re-runs f on a Sim built by start and returns a *Mismatch at the
 // first checkpoint whose hash differs, or nil when every checkpoint matches.
 func Verify(f File, start Start) error {
-	if err := checkLimits(f); err != nil {
+	if err := CheckLimits(f); err != nil {
 		return err
 	}
 	sim := start(f.Options)

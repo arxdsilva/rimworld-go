@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/replay"
@@ -32,23 +33,34 @@ func Main(argv []string, out, errOut io.Writer) int {
 		return 2
 	}
 	opts := replay.Options{Seed: *seed, Width: *width, Height: *height}
-	g := game.NewColony(game.Config{Seed: opts.Seed, Width: opts.Width, Height: opts.Height})
+	cfg := game.Config{Seed: opts.Seed, Width: opts.Width, Height: opts.Height}
 	if *record == "" {
-		print(out, g, *ticks)
+		print(out, game.NewColony(cfg), *ticks)
 		return 0
 	}
 	if *every < 0 {
 		fmt.Fprintln(errOut, "simulate: -every must not be negative")
 		return 2
 	}
+	if err := replay.CheckOptions(opts); err != nil {
+		fmt.Fprintf(errOut, "simulate: %v\n", err)
+		return 2
+	}
+	g := game.NewColony(cfg)
 	rec := replay.NewRecorder(g, opts, uint64(*every))
 	rec.Step(*ticks)
 	print(out, g, 0)
 	return writeReplay(*record, rec.File(), out, errOut)
 }
 
+// writeReplay writes f to path. A recording outside the limits replay.Decode
+// enforces is refused before the file is created.
 func writeReplay(path string, f replay.File, out, errOut io.Writer) int {
-	file, err := os.Create(path)
+	err := replay.CheckLimits(f)
+	var file *os.File
+	if err == nil {
+		file, err = os.Create(filepath.Clean(path))
+	}
 	if err == nil {
 		err = replay.Encode(file, f)
 		if cerr := file.Close(); err == nil {
