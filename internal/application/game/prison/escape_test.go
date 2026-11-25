@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
 
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -104,6 +106,32 @@ func TestPrisonBreakCalm(t *testing.T) {
 	f.ri, f.rolls = 0, []int{0}
 	if !p.breakOut(8, hourFor(8, now+EscapeCalm)) {
 		t.Fatal("past the calm a break may come again")
+	}
+}
+
+// TestLiveStartsPrisonBreak: a prisoner's tick (Live, run every tick from
+// the raid phase) makes the hourly prison-break roll; a miss, or a downed
+// prisoner, starts nothing.
+func TestLiveStartsPrisonBreak(t *testing.T) {
+	p, f := breakRig(t)
+	f.needs[rid] = needs.Pair{Hunger: needs.Full, Rest: needs.Full}
+	now := hourFor(rid, EscapeGrace)
+	f.rolls = []int{int(clock.TicksPerHour)} // the MTB roll misses
+	p.Live(rid, now)
+	if len(f.breaks) != 0 || !p.Is(rid) {
+		t.Fatalf("a missed roll starts no break: breaks %v", f.breaks)
+	}
+	f.vital[rid] = health.Record{Status: health.Downed}
+	f.ri, f.rolls = 0, []int{0}
+	p.Live(rid, now)
+	if len(f.breaks) != 0 || !p.Is(rid) {
+		t.Fatalf("a downed prisoner starts no break: breaks %v", f.breaks)
+	}
+	f.vital[rid] = health.Record{Status: health.Alive}
+	f.ri, f.rolls = 0, []int{0, 1} // the roll fires; room 2 stays
+	p.Live(rid, now)
+	if len(f.breaks) != 1 || f.breaks[0] != 2 || p.Is(rid) || p.Is(rid2) || !p.Is(7) {
+		t.Fatalf("the roll on its tick starts a break of its room: breaks %v, escaped %v", f.breaks, f.escaped)
 	}
 }
 
