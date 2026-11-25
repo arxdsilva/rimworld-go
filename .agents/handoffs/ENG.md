@@ -81,3 +81,14 @@ Headless state hash and colonist-count benchmark · 2026-11-25 · 3bb8140b1
 - No HUD: developer CLI tools, nothing player-observable. No save or mod impact.
 - Boxes: checklist 1.4 **Headless simulation executable** [x], **Deterministic benchmark runner** [x]; `spec-backlog` issue #9.
 - Open: none filed by this lane (findings go to the PR's Open follow-ups).
+
+## ENG-011-determinism-replay
+Determinism and replay: keyed RNG, command order, replay verify · 2026-11-25 · uncommitted
+- Changed: `cmd/simulate -record <file> [-every n]` writes a versioned JSON replay (options, ordered commands, checkpoint hashes); `cmd/replay verify <file>` re-runs it: exit 0 on a match, exit 1 naming the first mismatching checkpoint tick, exit 2 on bad input.
+- Changed: every command entering through `Game.Apply` gets a target tick (clamped to now) and a unique seq in `commands.Queue`, applied in (tick, seq) order; script hooks enqueue and quest orders are commands.
+- Changed: the taming pet name and the revenge roll draw from `randx.NewKeyed` (seed, tick, operation, entity); `TestTameKeyedIgnoresUnrelatedDraws` proves unrelated draws do not move them.
+- Decisions: save is additive (`Command.Tick`/`Seq`, `saveState.CmdSeq`), no SaveVersion bump; old saves restamp Seq in slice order. Goldens unchanged (`make test-golden` green, no pin edits).
+- Decisions: no HUD, because this is engine infrastructure and not player-observable (MAIN_UI_SCREENS §0). No global `math/rand` in gameplay.
+- Limits: `internal/application/game` stays at its line ceiling (52808 lines); Game methods and fields unchanged.
+- Boxes: §1.3 Deterministic RNG streams `[-]` (left: every other `g.rng` user and the salted streams); §1.3 Stable command ordering `[x]`; §1.3 Replay command stream `[x]`; §1.4 Headless simulation executable `[x]`.
+- Open: #284 (recording replays from the interactive `cmd/game`); keyed-RNG migration of the remaining `g.rng` and salted streams (lane finding, filed by the backlog supervisor).

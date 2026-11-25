@@ -111,13 +111,13 @@ vanilla system depends on them.
 
 ## 1.3 Determinism
 
--   [-] **Deterministic RNG streams** (seeded, non-global RNG implemented; not yet keyed by tick/entity/operation/sequence into separate streams)
+-   [-] **Deterministic RNG streams** (taming pet name and revenge roll draw from `randx.NewKeyed` keyed by seed, tick, operation and entity, `internal/application/game/handling.go`; still open: every other `g.rng` user and the per-system salted streams stay sequential, follow-up issue filed by the backlog supervisor)
     -   RNG keyed by stable inputs such as seed, tick, entity,
         operation, and local sequence.
     -   No global `math/rand` for gameplay.
     -   Unrelated random operations should not unnecessarily perturb
         other systems.
--   [ ] **Stable command ordering**
+-   [x] **Stable command ordering** (every command entering through `Game.Apply` gets a target tick, clamped to now, and a unique sequence in `commands.Queue` (`internal/application/commands`), applied in (tick, sequence) order; the counter is saved as `CmdSeq`)
     -   All player/AI external authoritative mutations have stable
         target tick and sequence.
     -   Equal-tick commands resolve predictably.
@@ -125,13 +125,13 @@ vanilla system depends on them.
     -   Hash authoritative state in stable order.
     -   Support whole-simulation and subsystem/entity hashes for
         debugging.
--   [ ] **Replay command stream**
+-   [x] **Replay command stream** (`cmd/simulate -record <file>` writes a versioned JSON replay of options, ordered commands and checkpoint hashes; `cmd/replay verify <file>` re-runs it: exit 0 on a match, exit 1 naming the first mismatching checkpoint tick, exit 2 on bad input)
     -   Re-run seed/scenario + ordered commands.
     -   Verify state hashes at checkpoints.
 
 ## 1.4 Headless execution
 
--   [x] **Headless simulation executable** (`cmd/simulate` creates a colony, advances N ticks and ends with `hash=0x<16 hex>`, the final `StateHash`; ENG-010)
+-   [x] **Headless simulation executable** (`cmd/simulate` creates a colony, advances N ticks and ends with `hash=0x<16 hex>`, the final `StateHash`; ENG-010. `cmd/simulate -record` also writes a replay file with checkpoint hashes; ENG-011)
     -   Create/start a colony without renderer/audio.
     -   Advance a requested number of ticks.
     -   Emit metrics and final state hash.
