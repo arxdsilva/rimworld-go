@@ -6,6 +6,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/quest"
+	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
@@ -64,10 +65,15 @@ func (g *Game) fireQueue(now uint64) {
 // cooldown and the day checks, as the storyteller already chose it.
 func (g *Game) fireQueued(q incident.Queued, now uint64) {
 	if q.ID == incident.RivalRaid {
-		if q.Faction > 0 && rivalRaid(g, q.Faction-1, q.Points, now) { // factions.go (EAI-015)
+		if q.Faction > 0 && canRivalRaid(g, q.Faction-1) {
+			if rivalRaid(g, q.Faction-1, q.Points, now) {
+				g.incidentFired(q.ID, now)
+			}
 			return
 		}
-		g.queuedRaid(q.Points, now)
+		if g.queuedRaid(q.Points, now) {
+			g.incidentFired(q.ID, now)
+		}
 		return
 	}
 	if g.fireIncident(q.ID, now) {
@@ -77,14 +83,13 @@ func (g *Game) fireQueued(q incident.Queued, now uint64) {
 
 // queuedRaid sends a raid of points threat points (0: today's) from a
 // hostile faction.
-func (g *Game) queuedRaid(points int, now uint64) {
+func (g *Game) queuedRaid(points int, now uint64) bool {
 	day := g.relDay(now)
 	if !g.hasSetup() {
 		if points <= 0 {
 			points = g.raidPoints(day)
 		}
-		g.raidWith(g.raidKit(points), g.raid.Threats.Plan(day))
-		return
+		return g.raidWith(g.raidKit(points), g.raid.Threats.Plan(day))
 	}
 	if points <= 0 {
 		points = g.threatPoints()
@@ -94,11 +99,11 @@ func (g *Game) queuedRaid(points int, now uint64) {
 	if fi >= 0 {
 		d := faction.DefOf(g.ng.factions[fi].Type)
 		if d.PointsPct > 0 {
-			points = points * d.PointsPct / 100
+			points = difficulty.ScaleRaidPoints(points, d.PointsPct)
 		}
 		tech = d.Tech
 	}
-	g.raidFrom(g.raidKitOf(points, tech), g.raid.Threats.Plan(day), fi+1)
+	return g.raidFrom(g.raidKitOf(points, tech), g.raid.Threats.Plan(day), fi+1)
 }
 
 // queuePoints is the threat points a raid queued now carries.
@@ -141,7 +146,7 @@ func (g *Game) refugeeChased(now uint64) bool {
 // letter goes off the stack either way. An unknown letter, or an answer it
 // does not offer, is ignored.
 func (g *Game) answerLetter(id uint64, mode int) {
-	l, ok := g.letters.Get(id)
+	l, ok := g.letters.GetLive(id, uint64(g.clock.Now()))
 	if !ok || mode < 0 || mode >= len(l.Choices) {
 		return
 	}

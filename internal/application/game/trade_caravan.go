@@ -8,10 +8,13 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/tradeview"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -29,10 +32,7 @@ import (
 // people, a non-hostile human faction (a legacy colony has none), and no
 // caravan or visitors already here.
 func (g *Game) caravanFits(now uint64) bool {
-	if g.trade.caravan != nil || len(g.pawnIDs) == 0 || len(g.visitingFactions()) == 0 {
-		return false
-	}
-	return g.worldSt == nil || len(g.worldSt.visitors) == 0
+	return len(caravansOf(&g.trade)) < 4 && len(g.pawnIDs) > 0 && len(g.visitingFactions()) > 0
 }
 
 // caravanArrive sends a trader caravan in; false when it could not come.
@@ -47,78 +47,90 @@ func (g *Game) caravanArrive(now uint64) bool {
 // traderCaravanFrom brings faction ref's (1 + index) trader caravan in
 // from a map edge; requested: it was asked for over the radio.
 func (g *Game) traderCaravanFrom(ref int, now uint64, requested bool) bool {
-	f := g.factionOf(ref)
-	if f == nil || g.trade.caravan != nil {
+	return traderCaravanFromKind(g, ref, now, requested, false)
+}
+
+func smallTraderArrive(g *Game, now uint64) bool {
+	if len(caravansOf(&g.trade)) >= 4 {
 		return false
 	}
-	ex, ey, ok := g.worldEdge()
-	if !ok {
+	facs := g.visitingFactions()
+	if len(facs) == 0 {
+		return false
+	}
+	return traderCaravanFromKind(g, facs[g.stream(streamTrade).IntN(len(facs))], now, false, true)
+}
+
+func traderCaravanFromKind(g *Game, ref int, now uint64, requested, small bool) bool {
+	f := g.factionOf(ref)
+	if f == nil || len(caravansOf(&g.trade)) >= 4 {
 		return false
 	}
 	r := g.stream(streamTrade)
 	n := 2 + r.IntN(3)
 	kind := trade.BulkHauler
-	if r.IntN(2) == 1 {
+	duration := uint64(traderCaravanStay)
+	if small {
+		n = 1 + r.IntN(2)
+		duration = clock.TicksPerDay / 2
+	} else if r.IntN(2) == 1 {
 		kind = trade.Quartermaster
 	}
-	var used [][2]int
-	var ids []entity.EntityID
-	for k := 0; k < n; k++ {
-		x, y, ok := g.insetLandNear(ex, ey, used)
-		if !ok {
-			break
-		}
-		used = append(used, [2]int{x, y})
-		id := g.spawnVisitor(ref, f, x, y, now)
-		g.setVisitorStay(id, now+traderCaravanStay) // visitors.go
-		ids = append(ids, id)
-	}
-	if len(ids) == 0 {
+	arrival, ok := visitsOf(g).ArriveCaravan(ref, f, now, duration, small, n, nil)
+	if !ok {
 		return false
 	}
 	stock := trade.Generate(g.sk.content.Items, kind, faction.DefOf(f.Type).Tech, r)
-	members := slices.Clone(ids)
-	slices.Sort(members)
-	g.trade.caravan = &traderCaravan{Trader: ids[0], Members: members, Faction: f.ID, Kind: kind, Stock: stock,
-		LeaveAt: now + traderCaravanStay}
+	if small {
+		visit.SmallStock(&stock)
+	}
+	c := &traderCaravan{GroupID: arrival.GroupID, Trader: arrival.Trader, Members: arrival.Members,
+		Faction: f.ID, Kind: kind, Stock: stock, LeaveAt: now + duration}
+	gr, _ := visitsOf(g).GroupOf(c.Trader)
+	c.Cargo = visit.AssignCargo(stock, append(slices.Clone(c.Members), visit.CargoOwners(gr, c.Trader, g.animals.Has)...))
+	if g.trade.caravan == nil {
+		g.trade.caravan = c
+	} else {
+		g.trade.others = append(g.trade.others, c)
+	}
+	ids := arrival.Members
 	why := "has come"
 	if requested {
 		why = "has come as you asked"
 	}
-	letterf(g, letters.Info, "Trader caravan", ids[0], "%s, a %s of %s, %s to trade, with %d guards. They will camp near the colony for most of a day. Right-click the trader with a colonist selected to trade.",
-		g.name(ids[0]), lower(trade.DefOf(kind).Label), f.Name, why, len(ids)-1)
-	return true
-}
-
-// lower is s with its first letter in lower case (labels inside a
-// sentence).
-func lower(s string) string {
-	if s == "" || s[0] < 'A' || s[0] > 'Z' {
-		return s
+	if small {
+		letterf(g, letters.Info, "Visitors with goods", ids[0], "%s of %s has come to visit and brought a few things to trade.", g.name(ids[0]), f.Name)
+	} else {
+		letterf(g, letters.Info, "Trader caravan", ids[0], "%s, a %s of %s, %s to trade, with %d guards. They will camp near the colony for most of a day. Right-click the trader with a colonist selected to trade.",
+			g.name(ids[0]), tradeview.LowerLabel(trade.DefOf(kind).Label), f.Name, why, len(ids)-1)
 	}
-	return string(s[0]+'a'-'A') + s[1:]
+	return true
 }
 
 // traderOpen reports trader id is ready to trade now: the caravan's
 // trader, conscious, on the map and not yet leaving.
 func (g *Game) traderOpen(id entity.EntityID) bool {
-	c := g.trade.caravan
-	if c == nil || c.Trader != id || c.Turned || uint64(g.clock.Now()) >= c.LeaveAt || !g.visitor(id) {
+	c := caravanByTrader(&g.trade, id)
+	if c == nil || c.Turned || !g.visitor(id) || uint64(g.clock.Now()) >= c.LeaveAt {
 		return false
 	}
-	v, _ := g.vital.Get(id)
-	return v.Status == health.Alive
+	if !visitsOf(g).Trading(id, uint64(g.clock.Now())) {
+		return false
+	}
+	v, ok := g.vital.Get(id)
+	return ok && v.Status == health.Alive
 }
 
 // traderAt is the trader standing at x, y (0: none). One that turned
 // (MAP-18) still counts, so the order menu says why it won't trade.
 func (g *Game) traderAt(x, y int) entity.EntityID {
-	c := g.trade.caravan
-	if c == nil || !c.Turned && !g.visitor(c.Trader) {
-		return 0
-	}
-	if p, ok := g.positions.Get(c.Trader); ok && p.X == x && p.Y == y {
-		return c.Trader
+	for _, c := range caravansOf(&g.trade) {
+		if !c.Turned && !g.visitor(c.Trader) {
+			continue
+		}
+		if p, ok := g.positions.Get(c.Trader); ok && p.X == x && p.Y == y {
+			return c.Trader
+		}
 	}
 	return 0
 }
@@ -126,8 +138,8 @@ func (g *Game) traderAt(x, y int) entity.EntityID {
 // traderHeld reports visitor id is the trader while a colonist walks up
 // to it or trades with it: it stays put (no new stroll).
 func (g *Game) traderHeld(id entity.EntityID) bool {
-	c := g.trade.caravan
-	if c == nil || c.Trader != id {
+	c := caravanByTrader(&g.trade, id)
+	if c == nil {
 		return false
 	}
 	if s := g.trade.session; s != nil && s.trader == id {
@@ -139,7 +151,7 @@ func (g *Game) traderHeld(id entity.EntityID) bool {
 
 // caravanStrollRange is how far from home() visitor id strolls.
 func (g *Game) caravanStrollRange(id entity.EntityID) int {
-	if c := g.trade.caravan; c != nil {
+	for _, c := range caravansOf(&g.trade) {
 		if _, ok := slices.BinarySearch(c.Members, id); ok {
 			return traderCaravanRange
 		}
@@ -147,44 +159,64 @@ func (g *Game) caravanStrollRange(id entity.EntityID) int {
 	return visitorRange
 }
 
-// traderVisitorGone: visitor id is no longer a visitor on the map
-// (visitorsTick). A trader that walked off takes the caravan with it; one
-// killed or taken prisoner drops its goods and angers its faction.
+// traderVisitorGone processes each carrier once. The trader's departure
+// closes negotiations; surviving guards retain their own cargo until they
+// also depart, are killed or are taken prisoner.
 func (g *Game) traderVisitorGone(id entity.EntityID) {
-	c := g.trade.caravan
+	c := caravanByMember(&g.trade, id)
 	if c == nil {
 		return
 	}
-	if i, ok := slices.BinarySearch(c.Members, id); ok {
-		c.Members = slices.Delete(c.Members, i, i+1)
-	}
-	if id != c.Trader {
+	i, ok := slices.BinarySearch(c.Members, id)
+	if !ok {
 		return
 	}
-	g.trade.caravan = nil
-	if g.trade.session != nil && g.trade.session.trader == id {
-		g.trade.session = nil
+	c.Members = slices.Delete(c.Members, i, i+1)
+	if id == c.Trader {
+		retireCaravan(&g.trade, c)
+		if s := g.trade.session; s != nil && s.trader == id {
+			g.trade.session = nil
+		}
 	}
-	if p := g.personOf(id); p != nil && p.Where == whereOffMap {
-		return // left with its goods
+	departed := false
+	if p := g.personOf(id); p != nil {
+		departed = p.Where == whereOffMap
 	}
-	g.traderLost(c)
+	if id == c.Trader && !departed {
+		g.traderLost(c)
+	} else {
+		carrierGone(g, c, id, !departed)
+	}
+	if c.GroupID == 0 && len(c.Members) == 0 && len(c.Cargo) == 0 {
+		removeCaravan(&g.trade, c)
+	}
 }
 
-// traderLost drops caravan c's goods forbidden where its trader fell and
-// costs the faction traderLostGoodwill, unless the caravan had turned on the
-// colony (MAP-18).
-func (g *Game) traderLost(c *traderCaravan) {
+func carrierGone(g *Game, c *traderCaravan, id entity.EntityID, lost bool) {
+	remaining, lines, silver := visit.LoseCargo(&c.Stock, c.Cargo, id)
+	c.Cargo = remaining
+	if lost {
+		dropCaravanCargo(g, id, lines, silver)
+	}
+}
+
+func dropCaravanCargo(g *Game, id entity.EntityID, lines []trade.Line, silver int) {
 	x, y := g.home()
-	if p, ok := g.positions.Get(c.Trader); ok {
+	if p, ok := g.positions.Get(id); ok {
 		x, y = p.X, p.Y
 	}
-	for _, l := range c.Stock.Lines {
+	for _, l := range lines {
 		g.dropGoods(l, x, y, true)
 	}
-	if c.Stock.Silver > 0 {
-		g.dropGoods(trade.Line{Kind: item.Silver, Qty: c.Stock.Silver}, x, y, true)
+	if silver > 0 {
+		g.dropGoods(trade.Line{Kind: item.Silver, Qty: silver}, x, y, true)
 	}
+}
+
+// traderLost removes the trader's own stock. Remaining carriers' shares
+// stay assigned and can later depart or be lost independently.
+func (g *Game) traderLost(c *traderCaravan) {
+	carrierGone(g, c, c.Trader, true)
 	f := g.factionByID(c.Faction)
 	if f == nil {
 		return
@@ -210,7 +242,7 @@ func (g *Game) requestedCaravanDue(now uint64) {
 	if f == nil || f.Defeated || f.Relation == faction.Hostile {
 		return
 	}
-	busy := t.caravan != nil || g.worldSt != nil && len(g.worldSt.visitors) > 0
+	busy := len(caravansOf(t)) >= 4
 	if !busy && g.traderCaravanFrom(g.factionRef(req.Faction), now, true) {
 		return
 	}
@@ -240,4 +272,90 @@ func (g *Game) requestPending(id int) bool {
 		}
 	}
 	return false
+}
+
+// Trade listings are visited at order, arrival and departure boundaries.
+func caravansOf(t *tradeState) []*traderCaravan {
+	out := make([]*traderCaravan, 0, 1+len(t.others))
+	if t.caravan != nil {
+		out = append(out, t.caravan)
+	}
+	return append(out, t.others...)
+}
+
+func caravanByTrader(t *tradeState, id entity.EntityID) *traderCaravan {
+	for _, c := range caravansOf(t) {
+		if c.Trader == id {
+			return c
+		}
+	}
+	return nil
+}
+
+func findCaravan(t *tradeState, match func(*traderCaravan) bool) *traderCaravan {
+	for _, c := range caravansOf(t) {
+		if match(c) {
+			return c
+		}
+	}
+	if c := t.retired; c != nil && match(c) {
+		return c
+	}
+	for _, c := range t.retiredOthers {
+		if match(c) {
+			return c
+		}
+	}
+	return nil
+}
+
+func caravanByMember(t *tradeState, id entity.EntityID) *traderCaravan {
+	return findCaravan(t, func(c *traderCaravan) bool { _, found := slices.BinarySearch(c.Members, id); return found })
+}
+
+func caravanByGroup(t *tradeState, id uint64) *traderCaravan {
+	return findCaravan(t, func(c *traderCaravan) bool { return c.GroupID == id })
+}
+
+func removeCaravan(t *tradeState, c *traderCaravan) {
+	switch {
+	case t.caravan == c:
+		t.caravan = nil
+		if len(t.others) > 0 {
+			t.caravan = t.others[0]
+			t.others = slices.Delete(t.others, 0, 1)
+		}
+	case t.retired == c:
+		t.retired = nil
+	default:
+		if i := slices.Index(t.others, c); i >= 0 {
+			t.others = slices.Delete(t.others, i, i+1)
+		} else if i := slices.Index(t.retiredOthers, c); i >= 0 {
+			t.retiredOthers = slices.Delete(t.retiredOthers, i, i+1)
+		}
+	}
+}
+
+func retireCaravan(t *tradeState, c *traderCaravan) {
+	if t.caravan == c || slices.Contains(t.others, c) {
+		removeCaravan(t, c)
+		if t.retired == nil {
+			t.retired = c
+		} else {
+			t.retiredOthers = append(t.retiredOthers, c)
+		}
+	}
+}
+
+func packCargoLost(g *Game, id entity.EntityID) {
+	if g.worldSt == nil {
+		return
+	}
+	groupID := visit.CargoLossGroup(g.worldSt.visitGroups, id)
+	if groupID == 0 {
+		return
+	}
+	if c := caravanByGroup(&g.trade, groupID); c != nil {
+		carrierGone(g, c, id, true)
+	}
 }

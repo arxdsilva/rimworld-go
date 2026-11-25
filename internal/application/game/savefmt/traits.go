@@ -14,6 +14,9 @@ import (
 // no longer loaded). A save without trait keys keeps its IDs.
 func (k Keys) TraitIDs(book trait.Book) func(trait.ID) trait.ID {
 	to := k.Remap(trait.Class, func(key string) (int, bool) {
+		if key == "core.brawler" {
+			key = "core.scrapper"
+		}
 		id, ok := book.IDOf(key)
 		return int(id), ok
 	})

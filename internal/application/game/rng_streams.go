@@ -53,6 +53,7 @@ const (
 	streamStory   = "story"
 	streamRoad    = "road"
 	streamQuest   = "quest"
+	streamMining  = "mining"
 )
 
 // streamSeedKey holds the base seed in the RNGStreams save map (8 bytes,
@@ -66,6 +67,7 @@ var streamSalts = map[string]uint64{
 	streamPower: powerSalt, streamMedical: medSalt,
 	streamTrade: tradeSalt, streamDefense: defenseSalt, streamCraft: craftSalt,
 	streamStory: storySalt, streamRoad: roadSalt, streamQuest: questSalt,
+	streamMining: 0x4D1A1,
 }
 
 // rngStreams is the base seed and the streams created so far.

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -32,14 +33,58 @@ func careBed(j *journey, kind string, x, y int) entity.EntityID {
 	return 0
 }
 
-// carePrisonBed marks bed for prisoners and applies the command.
+// carePrisonBed provides a reachable enclosed room, then marks its bed for prisoners.
 func carePrisonBed(j *journey, bed entity.EntityID) {
+	j.t.Helper()
+	careEnclosePrisonBed(j, bed)
+	careMarkPrisonBed(j, bed)
+}
+
+func careEnclosePrisonBed(j *journey, bed entity.EntityID) {
+	j.t.Helper()
+	for _, b := range j.world().Buildings {
+		if b.ID != bed {
+			continue
+		}
+		wcRoom(j, b.X-2, b.Y-1, b.X+2, b.Y+2, b.X, b.Y+2)
+		if _, ok := j.g.RoomInfo(b.X, b.Y); !ok {
+			j.t.Fatal("fixture: the prisoner bed must be enclosed")
+		}
+		return
+	}
+	j.t.Fatalf("fixture: missing prison bed %d", bed)
+}
+
+// careMarkPrisonBed also permits the deliberately invalid outdoor fixture.
+func careMarkPrisonBed(j *journey, bed entity.EntityID) {
 	j.t.Helper()
 	j.g.Enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(bed), Enabled: true})
 	j.g.ApplyPending()
 	if !j.g.BedForPrisoners(bed) {
 		j.t.Fatal("the bed did not become a prisoner bed")
 	}
+}
+
+// careRefusedPrisonOrder checks the live UI row and clicks it: no command
+// may leave the client when the only designated prison bed is outdoors.
+func careRefusedPrisonOrder(j *journey, label string) {
+	j.t.Helper()
+	for _, b := range j.a.ord.FloatButtons() {
+		if !strings.HasPrefix(b.Label, label) {
+			continue
+		}
+		if !b.Disabled || b.Reason != care.ReasonPrisonRoom || !strings.Contains(b.Label, care.ReasonPrisonRoom) {
+			j.t.Fatalf("outdoor prison order not refused with reason: %+v", b)
+		}
+		before := len(j.cmds)
+		j.pick(label)
+		if len(j.cmds) != before {
+			j.t.Fatalf("disabled prison order dispatched: %+v", j.cmds[before:])
+		}
+		j.a.ord.CloseFloat()
+		return
+	}
+	j.t.Fatalf("missing prison order %q", label)
 }
 
 // careDown injures id until it is downed.

@@ -5,6 +5,7 @@ package audiogen
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -21,21 +22,32 @@ func TestComposeAllEncodeFailureAndTempWavMode(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("needs a POSIX shell")
 	}
+	// Resolve the system utility before restricting PATH to the fake encoder.
+	// A POSIX shell does not imply that utilities live in /usr/bin or /bin.
+	find, err := exec.LookPath("find")
+	if err != nil {
+		t.Fatalf("test requires POSIX find: %v", err)
+	}
+	find, err = filepath.Abs(find)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("RGO_TEST_FIND", find)
 	assets := t.TempDir()
 	if err := writeManifest(assets, audiomanifest.Manifest{}); err != nil {
 		t.Fatal(err)
 	}
 	bin, marker := t.TempDir(), filepath.Join(t.TempDir(), "mode-ok")
-	script := "#!/bin/sh\nPATH=/usr/bin:/bin\n" +
+	script := "#!/bin/sh\n" +
 		"while [ $# -gt 0 ]; do [ \"$1\" = -i ] && wav=$2; shift; done\n" +
-		"[ -n \"$(find \"$wav\" -perm 0600)\" ] && : > '" + marker + "'\n" +
+		"[ -n \"$(\"$RGO_TEST_FIND\" \"$wav\" -perm 0600)\" ] && : > '" + marker + "'\n" +
 		"echo boom >&2\nexit 1\n"
 	if err := os.WriteFile(filepath.Join(bin, "ffmpeg"), []byte(script), 0o700); err != nil { // #nosec G306 -- test fake tool must be executable
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin)
 
-	err := composeAll(assets)
+	err = composeAll(assets)
 	if err == nil || !strings.Contains(err.Error(), "encode ") || !strings.Contains(err.Error(), "boom") {
 		t.Fatalf("composeAll error = %v, want an encode failure carrying ffmpeg's output", err)
 	}

@@ -39,7 +39,7 @@ const (
 	// seatReach is how far (tiles) a pawn walks to a seat; tableReach how
 	// far it carries a meal to a table.
 	seatReach  = 30
-	tableReach = 30
+	tableReach = 32
 )
 
 type seatSpot struct{ x, y, score int }
@@ -64,34 +64,32 @@ func (s *Seats) ComfortAt(x, y int) (comfort int, ok bool) {
 // armchair 7.
 func seatBonus(comfort int) int { return max(0, comfort/100-1) }
 
-// AtTable is the best free place for pawn id to eat food lying at
-// (fx, fy): a seat next to a table (any size: a cell along each side of
-// it, construction.SeatCells, so a table seats construction.Seats
-// diners), else any free floor beside one, by distance less the seat's
-// bonus; ties go to the upper-left cell. Only the eight best are tried
-// for reach.
-func (s *Seats) AtTable(id entity.EntityID, fx, fy int) (x, y int, ok bool) {
+// AtTable finds a reachable, permitted and unreserved actual seat directly
+// adjacent to a table. The ingestible's chair-search radius is measured
+// from the eater, never from the food's original stack location.
+func (s *Seats) AtTable(id entity.EntityID, _, _ int) (x, y int, ok bool) {
+	px, py := s.h.Pos(id)
 	spots := s.scratch[:0]
 	for _, bid := range s.h.BuildingIDs() {
-		b, ok := s.h.Building(bid)
-		if !ok || !b.Kind.IsTable() {
+		table, has := s.h.Building(bid)
+		if !has || !table.Kind.IsTable() {
 			continue
 		}
-		for _, c := range construction.SeatCells(b.Kind, b.Facing, b.X, b.Y) {
-			x, y := c[0], c[1]
-			if !s.h.TileFree(id, x, y) {
+		for _, c := range construction.SeatCells(table.Kind, table.Facing, table.X, table.Y) {
+			cx, cy := c[0], c[1]
+			if !s.h.AreaAllows(id, cx, cy) || !s.h.TileFree(id, cx, cy) {
 				continue
 			}
-			score := pathing.Dist(fx, fy, x, y)
-			if score > tableReach {
+			seat, exists := s.h.Building(s.h.ObjectAt(cx, cy))
+			if !exists || !IsSeat(seat.Kind) || seat.Forbidden {
 				continue
 			}
-			if c, seat := s.ComfortAt(x, y); seat {
-				score -= seatBonus(c)
-			} else if s.h.ObjectAt(x, y) != 0 {
-				continue // something else stands there
+			distance := pathing.Dist(px, py, cx, cy)
+			if distance > tableReach {
+				continue
 			}
-			spots = append(spots, seatSpot{x, y, score})
+			score := distance - seatBonus(construction.FurnitureOf(seat.Kind, seat.Stuff, qualityOf(seat)).Comfort)
+			spots = append(spots, seatSpot{cx, cy, score})
 		}
 	}
 	s.scratch = spots
@@ -104,7 +102,7 @@ func (s *Seats) AtTable(id entity.EntityID, fx, fy int) (x, y int, ok bool) {
 		}
 		return a.x - b.x
 	})
-	for _, sp := range spots[:min(8, len(spots))] {
+	for _, sp := range spots {
 		if s.h.Reachable(id, sp.x, sp.y) {
 			return sp.x, sp.y, true
 		}

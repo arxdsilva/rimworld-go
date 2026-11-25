@@ -5,6 +5,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/domain/pawn/skill"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
@@ -88,7 +89,7 @@ func TestCaptureColonyStates(t *testing.T) {
 			if !a.insp.Tabs().BioTabOn() {
 				t.Fatalf("bio tab not showing: tab %q select %v", a.insp.Tab, a.renderer.HasSelect())
 			}
-			if b, ok := a.renderer.game.Bio(a.renderer.Selected()); !ok || len(b.Skills) != 11 {
+			if b, ok := a.renderer.game.Bio(a.renderer.Selected()); !ok || len(b.Skills) != int(skill.NumSkills) {
 				t.Fatalf("bio = %+v %v", b, ok)
 			}
 		}},

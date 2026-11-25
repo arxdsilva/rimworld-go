@@ -468,8 +468,10 @@ func TestBurnRaidSetsFires(t *testing.T) {
 func TestRivalFactionsFight(t *testing.T) {
 	t.Parallel()
 	g, _ := def4Game(t, 50, 30, 45, 25)
-	g.ng.factions = []faction.Faction{{Type: faction.Drifters, Name: "Ash", Relation: faction.Hostile},
-		{Type: faction.Clans, Name: "Fern", Relation: faction.Hostile}}
+	g.ng.factions = []faction.Faction{
+		{ID: 0, Type: faction.Drifters, Name: "Ash", Relation: faction.Hostile, Enemies: []int{1}},
+		{ID: 1, Type: faction.Clans, Name: "Fern", Relation: faction.Hostile, Enemies: []int{0}},
+	}
 	g.raidFrom([]item.Kind{item.Club}, raid.Assault, 1)
 	g.raidFrom([]item.Kind{item.Club}, raid.Assault, 2)
 	if len(g.raiderIDs) != 2 {

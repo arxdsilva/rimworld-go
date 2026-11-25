@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/combat/damage"
+	"rimworld-go/internal/domain/economy/item"
 )
 
 func TestWoundOf(t *testing.T) {
@@ -64,3 +65,15 @@ func TestStrikeOverkill(t *testing.T) {
 }
 
 func partDmgOf(b *Body, p Part) int { return b.partDmg(p) }
+
+// A replacement takes damage itself, not a cut split into organic children.
+func TestStrikeBlowReplacement(t *testing.T) {
+	b := Body{Missing: bit(LegL) | bit(FootL), Replacements: ReplacementsFrom([]item.Kind{LegL: item.PegLeg})}
+	never := func(int) int { panic("no split or overkill roll expected") }
+	if StrikeBlow(&b, LegL, 5, Cut, SplitCut, 0, 100, never, 1) || replacementDamage(&b, LegL) != 5 || len(b.Wounds) != 0 {
+		t.Fatalf("replacement damage not isolated: %+v", b)
+	}
+	if !StrikeBlow(&b, LegL, b.maxHP(LegL)*2, Cut, SplitCut, 0, 100, never, 2) || b.hasReplacement(LegL) {
+		t.Fatal("destroyed replacement survived overkill")
+	}
+}

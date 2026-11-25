@@ -371,13 +371,17 @@ const NumLayers = int(LayerConduit) + 1
 type Def struct {
 	Kind       Kind
 	Name       string
-	Wood       int // delivered wood required before work starts
+	Wood       int // primary material units required before work starts
 	Work       int // construct ticks after materials are in place
 	Layer      Layer
 	BlocksMove bool // completed building makes its tile unwalkable
-	Rotatable  bool
-	StoneOK    bool // may be built from any stone blocks instead of wood
-	MetalOK    bool // may be built from steel
+	// PassThroughOnly is RimWorld's passability between Standable and
+	// Impassable: a pawn may walk through the cell but cannot stop on it.
+	// Frames do not alter the cell's passability until construction finishes.
+	PassThroughOnly bool
+	Rotatable       bool
+	StoneOK         bool // may be built from any stone blocks instead of wood
+	MetalOK         bool // may be built from steel
 	// MetalOnly: steel is the only material (wood is refused); Wood is
 	// then the steel needed.
 	MetalOnly bool
@@ -415,8 +419,9 @@ type Def struct {
 	// then the blocks needed). Only: the one material it is made of (0:
 	// the flags decide), Wood being the units needed (hay matting, silver
 	// tile, foam shells for a foam charge). Extra are secondary materials
-	// delivered with the main one (gold in an ornate door, plasteel in a
-	// ship part); nothing reads them until their owner wires delivery.
+	// delivered with the main one (gold in an ornate door, steel in a
+	// research bench); AX-4's frame slots own delivery and readiness.
+	// Reinstalls and in-place swaps keep the materials already held.
 	// Unbuildable: never designated as a blueprint (an urn, the big screen,
 	// the telescope: traded or found, they arrive crated and are only
 	// reinstalled, A1).
@@ -459,16 +464,18 @@ func StuffStats(s item.Kind) (hpPct, workPct int) {
 }
 
 var defs = [kindCount]Def{
-	Wall:  {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
-	Bed:   {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}, MetalOK: true},
-	Door:  {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject, MetalOK: true},
-	Floor: {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor},
+	Wall: {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
+	// BED-1, wiki: Bed (800 work), double bed (1500), hospital bed (2800).
+	Bed:  {Kind: Bed, Name: "bed", Wood: 5, Work: 800, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}, MetalOK: true},
+	Door: {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject, MetalOK: true},
+	// wiki: Floors (wood floor: 3 wood, 85 work).
+	Floor: {Kind: Floor, Name: "floor", Wood: 3, Work: 85, Layer: LayerFloor},
 	// wiki: Table (1x2): 28 stuff, 750 work (A2; older 1x1 tables migrate in
 	// save.go's v11 step).
-	Table: {Kind: Table, Name: "table", Wood: 3, Work: 75, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2},
+	Table: {Kind: Table, Name: "table", Wood: 28, Work: 750, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2},
 		StoneOK: true, MetalOK: true},
 	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true, MetalOK: true},
-	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
+	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject, PassThroughOnly: true},
 	SleepingSpot: {Kind: SleepingSpot, Name: "sleeping spot", Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
 	// STK-BN, wiki: every production bench below is 3x1 (Workbench, Stove,
 	// Butcher table, ...): the worker stands south of the middle cell
@@ -477,7 +484,7 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	Stove: {Kind: Stove, Name: "stove", Wood: 5, Work: 140, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
-	DoubleBed: {Kind: DoubleBed, Name: "double bed", Wood: 9, Work: 150, Layer: LayerObject, Rotatable: true,
+	DoubleBed: {Kind: DoubleBed, Name: "double bed", Wood: 9, Work: 1500, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 2}, MetalOK: true},
 	ButcherTable: {Kind: ButcherTable, Name: "butcher table", Wood: 5, Work: 120, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
@@ -487,11 +494,11 @@ var defs = [kindCount]Def{
 	Sandbags:  {Kind: Sandbags, Name: "sandbags", Wood: 2, Work: 60, Layer: LayerObject, StoneOK: true},
 	SpikeTrap: {Kind: SpikeTrap, Name: "spike trap", Wood: 4, Work: 80, Layer: LayerObject},
 	// RSCH-1, wiki: Simple research bench (3x2, 75 stuff + 25 steel, 2800
-	// work). Scaled as the wave D rows (stuff / 9, work / 10); the steel is
-	// a secondary material, not modelled yet. The researcher sits at the
-	// middle of the south edge.
-	ResearchBench: {Kind: ResearchBench, Name: "research bench", Wood: 8, Work: 280, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, StoneOK: true, MetalOK: true},
+	// work). Store native primary, secondary and work values. The researcher
+	// sits at the middle of the south edge.
+	ResearchBench: {Kind: ResearchBench, Name: "research bench", Wood: 75, Work: 2800, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, StoneOK: true, MetalOK: true,
+		Extra: [3]Cost{{item.Steel, 25}}},
 	// A campfire is also a (slow) cooking spot; the cook stands south of it.
 	Campfire: {Kind: Campfire, Name: "campfire", Wood: 5, Work: 60, Layer: LayerObject, BlocksMove: true,
 		Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
@@ -511,7 +518,7 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	ToolCabinet: {Kind: ToolCabinet, Name: "tool cabinet", Wood: 30, Work: 120, Layer: LayerObject, BlocksMove: true,
 		MetalOK: true, MetalOnly: true, Components: 1},
-	HospitalBed: {Kind: HospitalBed, Name: "hospital bed", Wood: 45, Work: 200, Layer: LayerObject, Rotatable: true,
+	HospitalBed: {Kind: HospitalBed, Name: "hospital bed", Wood: 45, Work: 2800, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{1, 2}, MetalOK: true, Components: 2},
 	PodShell: {Kind: PodShell, Name: "pod shell", Layer: LayerObject, MetalOK: true, MetalOnly: true, Placed: true, Salvage: 6},
 	BrewingBench: {Kind: BrewingBench, Name: "brewing bench", Wood: 8, Work: 150, Layer: LayerObject, BlocksMove: true,
@@ -545,7 +552,7 @@ var defs = [kindCount]Def{
 		BlocksMove: true, Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 4},
 	Battery: {Kind: Battery, Name: "battery", Wood: 55, Work: 220, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 2},
-	TorchLamp: {Kind: TorchLamp, Name: "torch lamp", Wood: 3, Work: 30, Layer: LayerObject},
+	TorchLamp: {Kind: TorchLamp, Name: "torch lamp", Wood: 3, Work: 30, Layer: LayerObject, PassThroughOnly: true},
 	// TEMP-1, wiki: Heater (50 steel + 1 component), Cooler (90 steel + 3
 	// components), scaled as the wave D rows (material / 9); work ours.
 	Heater: {Kind: Heater, Name: "heater", Wood: 6, Work: 110, Layer: LayerObject, BlocksMove: true,
@@ -560,13 +567,13 @@ var defs = [kindCount]Def{
 		BlocksMove: true, Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 2},
 	// RSCH-1, wiki: Hi-tech research bench (5x2, 150 metal + 100 steel +
-	// 10 components, 5000 work; 250 W in power.go). Scaled as the wave D
-	// rows; the 100 steel is a secondary material, not modelled yet.
-	ElectricResearchBench: {Kind: ElectricResearchBench, Name: "electric research bench", Wood: 17, Work: 500, Layer: LayerObject,
+	// 10 components, 5000 work; 250 W in power.go). Store native primary,
+	// secondary and work values; components remain a separate requirement.
+	ElectricResearchBench: {Kind: ElectricResearchBench, Name: "electric research bench", Wood: 150, Work: 5000, Layer: LayerObject,
 		BlocksMove: true, Rotatable: true, Size: [2]int{5, 2}, Spot: [2]int{2, 2}, HasSpot: true,
-		MetalOK: true, MetalOnly: true, Components: 10},
-	// wiki: Vitals monitor (6000 work against the hospital bed's 4000):
-	// 1.5 times our hospital bed's work. The steel is original tuning.
+		MetalOK: true, MetalOnly: true, Components: 10, Extra: [3]Cost{{item.Steel, 100}}},
+	// wiki: Vitals monitor (6000 work); its steel and build work here are
+	// original tuning.
 	VitalsMonitor: {Kind: VitalsMonitor, Name: "vitals monitor", Wood: 40, Work: 300, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, MetalOK: true, MetalOnly: true, Components: 1},
 	// PLAY-024 (our costs, .agents/handoffs/PLAY.md#play024_plan): steel pieces (Wood is the
@@ -580,16 +587,16 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
 	// BED-1, wiki: Bedroll, Double bedroll, Animal sleeping spot, Animal
-	// bed, End table, Dresser. Costs and work are the wiki's scaled the
-	// way the bed's are (cost / 9, work / 10); footprints as in the wiki.
-	Bedroll: {Kind: Bedroll, Name: "bedroll", Wood: 4, Work: 60, Layer: LayerObject, Rotatable: true,
+	// bed, End table, Dresser. Store native work ticks; end table and
+	// dresser also have admitted native primary-material costs.
+	Bedroll: {Kind: Bedroll, Name: "bedroll", Wood: 4, Work: 600, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{1, 2}, Fabric: true},
-	DoubleBedroll: {Kind: DoubleBedroll, Name: "double bedroll", Wood: 9, Work: 110, Layer: LayerObject, Rotatable: true,
+	DoubleBedroll: {Kind: DoubleBedroll, Name: "double bedroll", Wood: 9, Work: 1100, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 2}, Fabric: true},
 	AnimalSleepingSpot: {Kind: AnimalSleepingSpot, Name: "animal sleeping spot", Layer: LayerObject},
-	AnimalBed:          {Kind: AnimalBed, Name: "animal bed", Wood: 4, Work: 40, Layer: LayerObject, Fabric: true},
-	EndTable:           {Kind: EndTable, Name: "end table", Wood: 3, Work: 100, Layer: LayerObject, StoneOK: true, MetalOK: true},
-	Dresser: {Kind: Dresser, Name: "dresser", Wood: 6, Work: 200, Layer: LayerObject, Rotatable: true,
+	AnimalBed:          {Kind: AnimalBed, Name: "animal bed", Wood: 4, Work: 400, Layer: LayerObject, Fabric: true},
+	EndTable:           {Kind: EndTable, Name: "end table", Wood: 30, Work: 1000, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	Dresser: {Kind: Dresser, Name: "dresser", Wood: 50, Work: 2000, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
 	// Wave D rows (ENG-003). Costs and work are the wiki's scaled the way
 	// BED-1 scales them (material / 9 rounded, work / 10); components as
@@ -638,8 +645,8 @@ var defs = [kindCount]Def{
 		Size: [2]int{2, 2}, StoneOK: true, MetalOK: true},
 	// BED-3, wiki: Stool (25 stuff, 450 work), Armchair (110 fabric,
 	// 14000 work).
-	Stool: {Kind: Stool, Name: "stool", Wood: 3, Work: 45, Layer: LayerObject, StoneOK: true, MetalOK: true},
-	Armchair: {Kind: Armchair, Name: "armchair", Wood: 12, Work: 1400, Layer: LayerObject, Rotatable: true,
+	Stool: {Kind: Stool, Name: "stool", Wood: 25, Work: 450, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	Armchair: {Kind: Armchair, Name: "armchair", Wood: 110, Work: 14000, Layer: LayerObject, Rotatable: true,
 		Fabric: true},
 	// DEF-3, wiki: Barricade, IED trap, Autocannon turret, Uranium slug
 	// turret, Mortar, Autodoor. A charge costs two shells (Wood counts
@@ -664,8 +671,8 @@ var defs = [kindCount]Def{
 	Autodoor: {Kind: Autodoor, Name: "powered door", Wood: 3, Work: 110, Layer: LayerObject, MetalOK: true, Components: 2},
 	// PRD-4, wiki: Shelf (2x1, 20 stuff, 500 work, research Complex
 	// furniture; it slows passage but does not block it; 3 stacks per
-	// cell, PRD-4's storage rule). Scaled as the wave D rows.
-	Shelf: {Kind: Shelf, Name: "shelf", Wood: 2, Work: 50, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1},
+	// cell, PRD-4's storage rule). Store native cost and work values.
+	Shelf: {Kind: Shelf, Name: "shelf", Wood: 20, Work: 500, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1},
 		StoneOK: true, MetalOK: true},
 	// DEF-4, wiki: Defoliator ship (6x3, 1200 HP, deconstructs to
 	// nothing); placed whole by the threat, so no cost and no work.
@@ -733,84 +740,105 @@ var defs = [kindCount]Def{
 	Vent: {Kind: Vent, Name: "vent", Wood: 3, Work: 80, Layer: LayerObject, BlocksMove: true, Rotatable: true,
 		MetalOK: true, MetalOnly: true},
 	// RSCH-0 contract, wiki: Multi-analyzer (2x2, 40 steel + 50 plasteel
-	// + 20 gold + 8 components, 10000 work). Scaled as the wave D rows
-	// (steel / 9 rounded, work / 10, components as the wiki); the plasteel
-	// and gold are secondary materials, not modelled yet.
-	MultiAnalyzer: {Kind: MultiAnalyzer, Name: "multi-analyzer", Wood: 4, Work: 1000, Layer: LayerObject, BlocksMove: true,
-		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 8},
-	// AX-0 contract rows (Planned until their owner flips them). wiki
-	// numbers scaled as the wave D rows: materials / 9 rounded (at least
-	// 1), work / 10, components and advanced components as the wiki;
-	// "orig" marks original tuning where the wiki is silent or [MEM].
+	// + 20 gold + 8 components, 10000 work). Store native primary, secondary
+	// and work values; components remain a separate requirement.
+	MultiAnalyzer: {Kind: MultiAnalyzer, Name: "multi-analyzer", Wood: 40, Work: 10000, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 8,
+		Extra: [3]Cost{{item.Plasteel, 50}, {item.Gold, 20}}},
+	// AX-0 contract rows are grouped by owner. Buildable A2/A3/A4 rows
+	// use admitted native wiki costs/work; the free sleeping spot has neither,
+	// and the unbuildable urn keeps original reinstall work. A5+ rows retain
+	// provisional values. "orig" marks original tuning where the wiki is
+	// silent or [MEM].
 	// A2, wiki: Ornate door, Column, Animal flap, Double sleeping spot,
 	// Animal sleeping box, Table, Couch, Plant pot, Small shelf, Wall torch
 	// lamp, Wall lamp, Flood light, Urn, Large stele, Grand stele, Egg box.
-	OrnateDoor: {Kind: OrnateDoor, Name: "ornate door", Wood: 8, Work: 1500, Layer: LayerObject, Rotatable: true,
-		Size: [2]int{2, 1}, StoneOK: true, MetalOK: true, Extra: [3]Cost{{item.Gold, 6}}},
-	Column: {Kind: Column, Name: "column", Wood: 2, Work: 75, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
-	// wiki (W): fabric or leather; not minifiable.
-	AnimalFlap: {Kind: AnimalFlap, Name: "animal flap", Wood: 3, Work: 85, Layer: LayerObject, Fabric: true},
-	// wiki text: 2x2, like the double bed.
+	// wiki: Ornate door (75 stuff, 50 gold, 15,000 work).
+	OrnateDoor: {Kind: OrnateDoor, Name: "ornate door", Wood: 75, Work: 15000, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{2, 1}, StoneOK: true, MetalOK: true, Extra: [3]Cost{{item.Gold, 50}}},
+	// wiki: Column (20 stuff, 750 work).
+	Column: {Kind: Column, Name: "column", Wood: 20, Work: 750, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
+	// wiki: Animal flap (25 fabric/leather, 850 work); not minifiable.
+	AnimalFlap: {Kind: AnimalFlap, Name: "animal flap", Wood: 25, Work: 850, Layer: LayerObject, Fabric: true},
+	// wiki: Double sleeping spot (free placement; no material or work cost).
 	DoubleSleepingSpot: {Kind: DoubleSleepingSpot, Name: "double sleeping spot", Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 2}},
-	AnimalSleepingBox: {Kind: AnimalSleepingBox, Name: "animal sleeping box", Wood: 3, Work: 18, Layer: LayerObject,
+	// wiki: Animal sleeping box (25 stuff, 180 work).
+	AnimalSleepingBox: {Kind: AnimalSleepingBox, Name: "animal sleeping box", Wood: 25, Work: 180, Layer: LayerObject,
 		StoneOK: true, MetalOK: true},
-	Table2x2: {Kind: Table2x2, Name: "table 2x2", Wood: 6, Work: 150, Layer: LayerObject, Size: [2]int{2, 2},
+	// wiki: Table (2x2) (50 stuff, 1,500 work).
+	Table2x2: {Kind: Table2x2, Name: "table 2x2", Wood: 50, Work: 1500, Layer: LayerObject, Size: [2]int{2, 2},
 		StoneOK: true, MetalOK: true},
-	Table2x4: {Kind: Table2x4, Name: "table 2x4", Wood: 11, Work: 300, Layer: LayerObject, Rotatable: true,
+	// wiki: Table (2x4) (95 stuff, 3,000 work).
+	Table2x4: {Kind: Table2x4, Name: "table 2x4", Wood: 95, Work: 3000, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 4}, StoneOK: true, MetalOK: true},
-	Table3x3: {Kind: Table3x3, Name: "table 3x3", Wood: 11, Work: 330, Layer: LayerObject, Size: [2]int{3, 3},
+	// wiki: Table (3x3) (100 stuff, 3,300 work).
+	Table3x3: {Kind: Table3x3, Name: "table 3x3", Wood: 100, Work: 3300, Layer: LayerObject, Size: [2]int{3, 3},
 		StoneOK: true, MetalOK: true},
-	Couch: {Kind: Couch, Name: "couch", Wood: 22, Work: 2000, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1},
+	// wiki: Couch (200 fabric/leather, 20,000 work).
+	Couch: {Kind: Couch, Name: "couch", Wood: 200, Work: 20000, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1},
 		Fabric: true},
-	PlantPot:   {Kind: PlantPot, Name: "plant pot", Wood: 2, Work: 25, Layer: LayerObject, StoneOK: true, MetalOK: true},
-	SmallShelf: {Kind: SmallShelf, Name: "small shelf", Wood: 1, Work: 25, Layer: LayerObject, StoneOK: true, MetalOK: true},
-	// Wall-mounted: placed against a wall, facing away from it (A2).
-	WallTorch: {Kind: WallTorch, Name: "wall torch", Wood: 2, Work: 10, Layer: LayerObject, Rotatable: true},
-	WallLamp: {Kind: WallLamp, Name: "wall lamp", Wood: 2, Work: 33, Layer: LayerObject, Rotatable: true,
+	// wiki: Plant pot (20 stuff, 250 work).
+	PlantPot: {Kind: PlantPot, Name: "plant pot", Wood: 20, Work: 250, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	// wiki: Small shelf (10 stuff, 250 work).
+	SmallShelf: {Kind: SmallShelf, Name: "small shelf", Wood: 10, Work: 250, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	// wiki: Wall torch lamp (15 wood, 100 work); mounted facing away from wall.
+	WallTorch: {Kind: WallTorch, Name: "wall torch", Wood: 15, Work: 100, Layer: LayerObject, Rotatable: true},
+	// wiki: Wall lamp (15 steel, 330 work); mounted facing away from wall.
+	WallLamp: {Kind: WallLamp, Name: "wall lamp", Wood: 15, Work: 330, Layer: LayerObject, Rotatable: true,
 		MetalOK: true, MetalOnly: true},
-	FloodLight: {Kind: FloodLight, Name: "flood light", Wood: 6, Work: 60, Layer: LayerObject, MetalOK: true, MetalOnly: true},
-	// Never built (traded or found; wiki: 20 stuff): it arrives crated and
-	// is only reinstalled. Work orig (its deconstruct time).
-	Urn: {Kind: Urn, Name: "urn", Wood: 2, Work: 50, Layer: LayerObject, StoneOK: true, MetalOK: true, Unbuildable: true},
-	LargeStele: {Kind: LargeStele, Name: "large stele", Wood: 14, Work: 800, Layer: LayerObject, BlocksMove: true,
+	// wiki: Flood light (50 steel, 600 work).
+	FloodLight: {Kind: FloodLight, Name: "flood light", Wood: 50, Work: 600, Layer: LayerObject, MetalOK: true, MetalOnly: true},
+	// wiki: Urn (20 stuff); unbuildable, with original tuning work for reinstall.
+	Urn: {Kind: Urn, Name: "urn", Wood: 20, Work: 50, Layer: LayerObject, StoneOK: true, MetalOK: true, Unbuildable: true},
+	// wiki: Large stele (125 stone, 8,000 work).
+	LargeStele: {Kind: LargeStele, Name: "large stele", Wood: 125, Work: 8000, Layer: LayerObject, BlocksMove: true,
 		Size: [2]int{2, 2}, StoneOnly: true},
-	GrandStele: {Kind: GrandStele, Name: "grand stele", Wood: 28, Work: 1600, Layer: LayerObject, BlocksMove: true,
+	// wiki: Grand stele (250 stone, 16,000 work).
+	GrandStele: {Kind: GrandStele, Name: "grand stele", Wood: 250, Work: 16000, Layer: LayerObject, BlocksMove: true,
 		Size: [2]int{3, 3}, StoneOnly: true},
-	EggBox: {Kind: EggBox, Name: "egg box", Wood: 2, Work: 200, Layer: LayerObject, StoneOK: true, MetalOK: true},
-	// A3, wiki: Floors, Straw matting, Sterile tile, Stone tile, Flagstone,
-	// Carpet (per tile; the lead's ruling: flagstone takes 4 blocks).
-	StrawMatting: {Kind: StrawMatting, Name: "straw matting", Wood: 1, Work: 12, Layer: LayerFloor, Only: item.Hay},
-	Concrete:     {Kind: Concrete, Name: "concrete", Wood: 1, Work: 10, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
-	PavedTile:    {Kind: PavedTile, Name: "paved tile", Wood: 1, Work: 30, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
-	SteelTile:    {Kind: SteelTile, Name: "steel tile", Wood: 1, Work: 80, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
-	SilverTile:   {Kind: SilverTile, Name: "silver tile", Wood: 8, Work: 80, Layer: LayerFloor, Only: item.Silver},
-	GoldTile:     {Kind: GoldTile, Name: "gold tile", Wood: 8, Work: 80, Layer: LayerFloor, Only: item.Gold},
-	SterileTile: {Kind: SterileTile, Name: "sterile tile", Wood: 1, Work: 160, Layer: LayerFloor, MetalOK: true, MetalOnly: true,
-		Extra: [3]Cost{{item.Silver, 1}}},
-	StoneTile:   {Kind: StoneTile, Name: "stone tile", Wood: 1, Work: 110, Layer: LayerFloor, StoneOnly: true},
-	Flagstone:   {Kind: Flagstone, Name: "flagstone", Wood: 1, Work: 50, Layer: LayerFloor, StoneOnly: true},
-	CarpetFloor: {Kind: CarpetFloor, Name: "carpet floor", Wood: 1, Work: 80, Layer: LayerFloor, Only: item.Cloth},
-	// A4, wiki: Waterproof conduit, Chemfuel powered generator, Watermill
-	// generator (5x6 with its wheel; 280 wood + 80 steel), Deep drill,
-	// Ground-penetrating scanner, Moisture pump, Electric crematorium. The
-	// chemfuel generator's work is orig (the wood-fired generator's).
-	WaterproofConduit: {Kind: WaterproofConduit, Name: "waterproof conduit", Wood: 1, Work: 4, Layer: LayerConduit,
+	// wiki: Egg box (20 stuff, 2,000 work).
+	EggBox: {Kind: EggBox, Name: "egg box", Wood: 20, Work: 2000, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	// A3, wiki: Floors (straw matting 2 hay/120 work; concrete 1 steel/100;
+	// paved tile 2 steel/300; steel tile 7 steel/800; silver and gold
+	// tiles 70 of their metal/800; sterile tile 3 steel + 12 silver/1600;
+	// stone tile 4 blocks/1100; flagstone 4 blocks/500; carpet 7 cloth/800;
+	// colour adds no cost).
+	StrawMatting: {Kind: StrawMatting, Name: "straw matting", Wood: 2, Work: 120, Layer: LayerFloor, Only: item.Hay},
+	Concrete:     {Kind: Concrete, Name: "concrete", Wood: 1, Work: 100, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
+	PavedTile:    {Kind: PavedTile, Name: "paved tile", Wood: 2, Work: 300, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
+	SteelTile:    {Kind: SteelTile, Name: "steel tile", Wood: 7, Work: 800, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
+	SilverTile:   {Kind: SilverTile, Name: "silver tile", Wood: 70, Work: 800, Layer: LayerFloor, Only: item.Silver},
+	GoldTile:     {Kind: GoldTile, Name: "gold tile", Wood: 70, Work: 800, Layer: LayerFloor, Only: item.Gold},
+	SterileTile: {Kind: SterileTile, Name: "sterile tile", Wood: 3, Work: 1600, Layer: LayerFloor, MetalOK: true, MetalOnly: true,
+		Extra: [3]Cost{{item.Silver, 12}}},
+	StoneTile:   {Kind: StoneTile, Name: "stone tile", Wood: 4, Work: 1100, Layer: LayerFloor, StoneOnly: true},
+	Flagstone:   {Kind: Flagstone, Name: "flagstone", Wood: 4, Work: 500, Layer: LayerFloor, StoneOnly: true},
+	CarpetFloor: {Kind: CarpetFloor, Name: "carpet floor", Wood: 7, Work: 800, Layer: LayerFloor, Only: item.Cloth},
+	// A4, wiki: Waterproof conduit (10 steel, 35 work); Chemfuel powered
+	// generator (100 steel, 3 components); Watermill generator (280 wood,
+	// 80 steel, 3 components, 4000 work); Deep drill (100 steel, 2
+	// components, 10000 work); Ground-penetrating scanner (150 steel, 4
+	// components, 1 advanced component, 12000 work); Moisture pump (75
+	// steel, 4 components, 1500 work); Electric crematorium (150 stuff,
+	// 20 steel, 2 components, 4500 work). Chemfuel generator work is
+	// original tuning, copied from the wood-fired generator.
+	WaterproofConduit: {Kind: WaterproofConduit, Name: "waterproof conduit", Wood: 10, Work: 35, Layer: LayerConduit,
 		MetalOK: true, MetalOnly: true},
-	ChemfuelGenerator: {Kind: ChemfuelGenerator, Name: "chemfuel generator", Wood: 11, Work: 320, Layer: LayerObject,
+	ChemfuelGenerator: {Kind: ChemfuelGenerator, Name: "chemfuel generator", Wood: 100, Work: 320, Layer: LayerObject,
 		BlocksMove: true, Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 3},
-	Watermill: {Kind: Watermill, Name: "watermill generator", Wood: 31, Work: 400, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{5, 6}, Components: 3, Extra: [3]Cost{{item.Steel, 9}}},
-	DeepDrill: {Kind: DeepDrill, Name: "deep drill", Wood: 11, Work: 1000, Layer: LayerObject, BlocksMove: true,
+	Watermill: {Kind: Watermill, Name: "watermill generator", Wood: 280, Work: 4000, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{5, 6}, Components: 3, Extra: [3]Cost{{item.Steel, 80}}},
+	DeepDrill: {Kind: DeepDrill, Name: "deep drill", Wood: 100, Work: 10000, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{1, 2}, Spot: [2]int{0, 2}, HasSpot: true, MetalOK: true, MetalOnly: true, Components: 2},
-	GroundScanner: {Kind: GroundScanner, Name: "ground-penetrating scanner", Wood: 17, Work: 1200, Layer: LayerObject,
+	GroundScanner: {Kind: GroundScanner, Name: "ground-penetrating scanner", Wood: 150, Work: 12000, Layer: LayerObject,
 		BlocksMove: true, Rotatable: true, Size: [2]int{3, 3}, Spot: [2]int{1, 3}, HasSpot: true, MetalOK: true, MetalOnly: true,
 		Components: 4, Extra: [3]Cost{{item.AdvancedComponents, 1}}},
-	MoisturePump: {Kind: MoisturePump, Name: "moisture pump", Wood: 8, Work: 150, Layer: LayerObject, BlocksMove: true,
+	MoisturePump: {Kind: MoisturePump, Name: "moisture pump", Wood: 75, Work: 1500, Layer: LayerObject, BlocksMove: true,
 		MetalOK: true, MetalOnly: true, Components: 4},
-	ElectricCrematorium: {Kind: ElectricCrematorium, Name: "electric crematorium", Wood: 17, Work: 450, Layer: LayerObject,
+	ElectricCrematorium: {Kind: ElectricCrematorium, Name: "electric crematorium", Wood: 150, Work: 4500, Layer: LayerObject,
 		BlocksMove: true, Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, Bench: true, StoneOnly: true,
-		Components: 2, Extra: [3]Cost{{item.Steel, 2}}},
+		Components: 2, Extra: [3]Cost{{item.Steel, 20}}},
 	// A5, wiki: Firefoam popper, IED firefoam trap (2 firefoam shells),
 	// Foam turret (100 metal; 140 chemfuel), IED antigrain warhead trap (1
 	// warhead), Rocketswarm launcher (20 plasteel; 180 chemfuel). A charge's
@@ -973,6 +1001,14 @@ func MaxHP(k Kind, s item.Kind) int {
 // WallMounted reports a building set in a wall gap that bounds rooms like
 // a wall: the cooler (PLAY-021) and the vent (TEMP-0).
 func (k Kind) WallMounted() bool { return k == Cooler || k == Vent }
+
+// FloorBarrier is !CoexistsWithFloors: no floor goes under k. RimWorld's
+// Original placement rule: wall-mounted equipment follows walls; fences,
+// gates and graves keep the existing SIM-028 floor restriction.
+func (k Kind) FloorBarrier() bool {
+	d := DefOf(k)
+	return k == Wall || k.WallMounted() || d.AnimalBlock || d.Dug
+}
 
 // WallFacing is the facing of a cooler (PLAY-021) or vent (TEMP-0) with h
 // solid neighbours east and west and v north and south: across the wall it
@@ -1139,15 +1175,19 @@ func All() []Def {
 	return out
 }
 
-// Parse returns the Kind for a definition name.
-func Parse(name string) (Kind, bool) {
+// kindOf is built once from immutable native definitions. First name wins.
+var kindOf = func() map[string]Kind {
+	m := make(map[string]Kind, len(defs))
 	for _, d := range defs {
-		if d.Name == name {
-			return d.Kind, true
+		if _, ok := m[d.Name]; !ok {
+			m[d.Name] = d.Kind
 		}
 	}
-	return 0, false
-}
+	return m
+}()
+
+// Parse returns the Kind for a definition name.
+func Parse(name string) (Kind, bool) { k, ok := kindOf[name]; return k, ok }
 
 // Valid reports whether k is a known kind.
 func (k Kind) Valid() bool { return k < kindCount }
@@ -1170,6 +1210,15 @@ func WorkTicks(k Kind) int { return DefOf(k).Work }
 
 // DeconstructTicks is the labor to take a building down.
 func DeconstructTicks(k Kind) int { return (DefOf(k).Work + 1) / 2 }
+
+// DeconstructRemaining is the active job's remaining work, or the
+// building's unstarted deconstruction cost.
+func DeconstructRemaining(b Building) int {
+	if b.Deconstruct {
+		return b.WorkLeft
+	}
+	return DeconstructTicks(b.Kind)
+}
 
 // Refund is the material returned by deconstruction (half, rounded down;
 // a carpet comes back whole, a placed kind gives its Salvage).
@@ -1328,14 +1377,16 @@ type Frame struct {
 	// place (same kind, same footprint, PLAY-011): built without taking
 	// the old piece down.
 	Swaps entity.EntityID
-	// AX-0 contract (0 until their owners use them): Tint is a carpet
-	// floor's colour (A3, the building's Tint once built); ExtraGot the
-	// Def.Extra secondary materials delivered so far, slot by slot.
+	// A3: Tint is a carpet floor's colour, copied to the building when built.
+	// AX-4: ExtraGot is secondary material delivered so far, slot by slot.
 	Tint     uint8
 	ExtraGot [3]int
+	// SwapNewRecipe: a different kind replaces the old piece in place;
+	// unlike a material-only swap, it buys all new secondary inputs.
+	SwapNewRecipe bool
 }
 
-// Ready reports materials and components are in place.
+// Ready reports primary, secondary and component materials are in place.
 func (f Frame) Ready() bool { return f.Wood >= f.Need && f.Comp >= f.CompNeed && f.ExtrasIn() }
 
 // Building is a completed structure.
@@ -1394,63 +1445,9 @@ type Building struct {
 	// NoAutoRefuel (REF-1): haulers leave this burner alone; only an
 	// ordered refuel feeds it (command.SetAutoRefuel). Zero: auto refuel.
 	NoAutoRefuel bool
+	// MaterialBasis survives moves and minification; zero is the current catalogue.
+	MaterialBasis item.MaterialBasis
 }
 
 // HP is the building's remaining hit points.
 func (b Building) HP() int { return max(0, MaxHP(b.Kind, b.Stuff)-b.Damage) }
-
-// SlotOf is the sleeping slot pawn id holds here, or -1.
-func (b Building) SlotOf(id uint64) int {
-	switch {
-	case id == 0:
-		return -1
-	case b.Claimant == id:
-		return 0
-	case b.Claimant2 == id && b.Kind.Sleepers() > 1:
-		return 1
-	}
-	return -1
-}
-
-// CanClaim reports whether pawn id may sleep here (it already holds a
-// slot, or one is free).
-func (b Building) CanClaim(id uint64) bool {
-	if b.SlotOf(id) >= 0 {
-		return true
-	}
-	return b.Claimant == 0 || (b.Kind.Sleepers() > 1 && b.Claimant2 == 0)
-}
-
-// Claim gives pawn id a slot (keeping one it already holds).
-func (b Building) Claim(id uint64) Building {
-	switch {
-	case b.SlotOf(id) >= 0:
-	case b.Claimant == 0:
-		b.Claimant = id
-	case b.Kind.Sleepers() > 1 && b.Claimant2 == 0:
-		b.Claimant2 = id
-	}
-	return b
-}
-
-// Release frees pawn id's slot.
-func (b Building) Release(id uint64) Building {
-	if b.Claimant == id {
-		b.Claimant = 0
-	}
-	if b.Claimant2 == id {
-		b.Claimant2 = 0
-	}
-	return b
-}
-
-// Owner is the first claimant that is not id (for "owned by" reasons).
-func (b Building) Owner(id uint64) uint64 {
-	if b.Claimant != 0 && b.Claimant != id {
-		return b.Claimant
-	}
-	if b.Claimant2 != id {
-		return b.Claimant2
-	}
-	return 0
-}

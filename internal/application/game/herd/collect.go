@@ -32,7 +32,7 @@ func ProductJob(p animal.Product) job.Kind {
 // Ready reports a tame animal whose product is full and free to collect.
 func Ready(h Host, aid entity.EntityID, a *animal.State, now uint64) bool {
 	if !a.Tame || a.Leaving || a.Enraged(now) || a.Product < animal.ProductFull ||
-		!animal.Produces(a.Species, a.Female, grown(*a, now)) {
+		!animal.Produces(a.Species, a.Female, grown(h, *a, now)) {
 		return false
 	}
 	return !claimed(h, aid)
@@ -44,7 +44,7 @@ func (c *Collect) Assign(id entity.EntityID) bool {
 	h := c.h
 	now := h.Now()
 	keep := func(o entity.EntityID, a *animal.State) bool { return Ready(h, o, a, now) }
-	if !h.AnyAnimal(keep) {
+	if !h.AnyTameAnimal(keep) {
 		return false // no product ready anywhere (the job index)
 	}
 	aid, ax, ay, ok := h.Nearest(id, keep)

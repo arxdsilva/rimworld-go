@@ -75,6 +75,7 @@ type Request struct {
 	ID             entity.EntityID
 	From, To, Goal pathing.Point
 	Token          Token
+	Guard          Guard
 	Query          pathing.Query
 	Kind           Kind
 	lo, hi         int // the corridor's span of the arena
@@ -141,6 +142,17 @@ func (s *Stage) SetPlan(i int, q pathing.Query, k Kind, allow []uint64) {
 	r.Query, r.Kind, r.lo = q, k, len(s.arena)
 	s.arena = append(s.arena, allow...)
 	r.hi = len(s.arena)
+}
+
+// WarmQuery materializes the lazy ground-cost and blocked-bit caches
+// on the owning lane before a search reads them in parallel.
+func WarmQuery(q pathing.Query, from pathing.Point) {
+	if c, ok := q.(pathing.Coster); ok {
+		c.ExtraCost(from.X, from.Y)
+	}
+	if b, ok := q.(pathing.Bitset); ok {
+		b.BlockedBits()
+	}
 }
 
 // Frozen reports that searches are running on several lanes: every cache

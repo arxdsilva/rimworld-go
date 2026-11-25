@@ -3,18 +3,19 @@
 
 package game
 
+import "rimworld-go/internal/application/game/mapview"
+
 // Minimap read model (NG-1 §2.12): one byte per tile saying what the
 // minimap shows there, rebuilt only when the ground or where plants stand
 // changes (the chunk read model's change count, chunk_view.go).
 
-// Minimap cell bits above the terrain code (low 6 bits, indexing
-// TerrainNames()).
+// Minimap cell labels are owned by mapview.
 const (
-	MinimapTerrain   uint8 = 0x3f // mask of the terrain code
-	MinimapPlant     uint8 = 0x40 // a plant stands here
-	MinimapFloor     uint8 = 0x80 // a built floor
-	MinimapStructure uint8 = 0xc0 // a building other than a floor
-	MinimapKind      uint8 = 0xc0 // mask of the plant/floor/structure bits
+	MinimapTerrain   = mapview.MinimapTerrain
+	MinimapPlant     = mapview.MinimapPlant
+	MinimapFloor     = mapview.MinimapFloor
+	MinimapStructure = mapview.MinimapStructure
+	MinimapKind      = mapview.MinimapKind
 )
 
 type minimapState struct {
@@ -52,38 +53,12 @@ func (s *ChunkIndex) Minimap(w *WorldView, ver uint64) (MinimapView, bool) {
 	return MinimapView{Ver: cur, W: s.grid.W, H: s.grid.H, Cells: m.cells}, true
 }
 
-// minimapCells builds a fresh layer (never written once handed out).
+// minimapCells adapts native read-model types for mapview's pixel renderer.
 func minimapCells(w *WorldView, mw, mh int) []uint8 {
-	out := make([]uint8, mw*mh)
-	if w.TerrainW == mw {
-		for i := range out {
-			if i < len(w.Terrain) {
-				out[i] = w.Terrain[i] & MinimapTerrain
-			}
-		}
-	}
-	set := func(x, y int, k uint8) {
-		if x >= 0 && y >= 0 && x < mw && y < mh {
-			i := y*mw + x
-			if out[i]&MinimapKind < k || k == MinimapStructure {
-				out[i] = out[i]&MinimapTerrain | k
-			}
-		}
-	}
-	for i := range w.Plants {
-		set(w.Plants[i].X, w.Plants[i].Y, MinimapPlant)
-	}
-	for i := range w.Buildings {
-		b := &w.Buildings[i]
-		k := MinimapStructure
-		if b.Floor {
-			k = MinimapFloor
-		}
-		for dy := 0; dy < max(b.H, 1); dy++ {
-			for dx := 0; dx < max(b.W, 1); dx++ {
-				set(b.X+dx, b.Y+dy, k)
-			}
-		}
-	}
-	return out
+	return mapview.MinimapCells(w.TerrainW, w.Terrain, mw, mh, w.Plants, w.Buildings,
+		func(p *PlantView) (int, int) { return p.X, p.Y },
+		func(b *BuildingView) (int, int, int, int, bool) {
+			return b.X, b.Y, b.W, b.H, b.Floor
+		},
+	)
 }

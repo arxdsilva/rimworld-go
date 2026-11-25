@@ -62,6 +62,81 @@ func roomLit(t *testing.T, g *Game, x, y int) bool {
 	return v.Lit
 }
 
+// RimWorld TorchLamp and StandingLamp are PassThroughOnly, not impassable.
+// A blueprint can occupy a pawn's cell, and finishing nonblocking furniture
+// does not eject the pawn; afterward the cell is traversable but unsuitable
+// as a destination. Wall-mounted lights remain Standable.
+func TestLightFixturePassThroughDoesNotDisplacePawns(t *testing.T) {
+	for _, kind := range []construction.Kind{construction.TorchLamp, construction.Lamp} {
+		t.Run(kind.String(), func(t *testing.T) {
+			g := New(Config{Seed: 1, Width: 24, Height: 12})
+			g.ClearPlants(0, 0, 23, 11)
+			g.SetGround(0, 0, 23, 11, "soil", "", "")
+			onCell, err := g.SpawnNamedPawn(7, 5, "Builder")
+			if err != nil {
+				t.Fatal(err)
+			}
+			walker, err := g.SpawnNamedPawn(2, 5, "Walker")
+			if err != nil {
+				t.Fatal(err)
+			}
+			def := construction.DefOf(kind)
+			if def.BlocksMove || !def.PassThroughOnly {
+				t.Fatalf("wrong original passability for %s: %+v", kind, def)
+			}
+			if ok, reason := g.canPlaceStuffAt(kind, item.Wood, construction.South, 7, 5); !ok {
+				t.Fatalf("nonblocking fixture refused just because pawn occupies target: %s", reason)
+			}
+			g.placeFrameStuff(kind, item.Wood, construction.South, 7, 5)
+			id := g.layerFrameAt(7, 5, construction.LayerObject)
+			fr, ok := g.frames.Get(id)
+			if !ok || !cellStandable(g, 7, 5) {
+				t.Fatal("nonblocking blueprint changed pawn passability")
+			}
+			g.completeFrame(id, fr)
+			pos, _ := g.positions.Get(onCell)
+			if pos.X != 7 || pos.Y != 5 {
+				t.Fatalf("nonblocking completion displaced pawn: %+v", pos)
+			}
+			if !g.grid.Walkable(7, 5) || cellStandable(g, 7, 5) {
+				t.Fatal("standing light must allow passage but not stopping")
+			}
+			if route, ok := g.pathTo(walker, 10, 5); !ok || len(route) == 0 {
+				t.Fatal("pass-through-only fixture disconnected passage")
+			}
+			if route, ok := g.pathTo(walker, 7, 5); !ok || len(route) == 0 ||
+				(route[len(route)-1].X == 7 && route[len(route)-1].Y == 5) {
+				t.Fatalf("path destination stopped inside a pass-through-only light: %v %t", route, ok)
+			}
+		})
+	}
+	for _, kind := range []construction.Kind{construction.WallTorch, construction.WallLamp} {
+		def := construction.DefOf(kind)
+		if def.BlocksMove || def.PassThroughOnly {
+			t.Fatalf("wall fixture should remain Standable: %s %+v", kind, def)
+		}
+	}
+	// An actual impassable wall still moves the occupant on completion.
+	g := New(Config{Seed: 1, Width: 24, Height: 12})
+	g.ClearPlants(0, 0, 23, 11)
+	g.SetGround(0, 0, 23, 11, "soil", "", "")
+	p, err := g.SpawnNamedPawn(13, 5, "Wall occupant")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.placeFrameStuff(construction.Wall, item.Wood, construction.South, 13, 5)
+	id := g.layerFrameAt(13, 5, construction.LayerObject)
+	fr, ok := g.frames.Get(id)
+	if !ok {
+		t.Fatal("wall frame missing")
+	}
+	g.completeFrame(id, fr)
+	pos, _ := g.positions.Get(p)
+	if pos.X == 13 && pos.Y == 5 || g.grid.Walkable(13, 5) {
+		t.Fatalf("completed blocker did not displace occupant: %+v", pos)
+	}
+}
+
 // TestLampNeedsPower: a lamp with no grid gives no light (grid, Glow); on
 // power it lights to its radius; when the generator runs dry it goes dark
 // at the next balance.

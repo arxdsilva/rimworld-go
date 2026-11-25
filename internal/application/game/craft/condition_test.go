@@ -114,20 +114,21 @@ func TestRotMovedFromGame(t *testing.T) {
 	if _, ok := f.stacks[1]; ok {
 		t.Fatal("rotten meat kept")
 	}
-	if _, ok := f.stacks[3]; !ok {
-		t.Fatal("carried meat removed")
+	if _, ok := f.stacks[3]; ok {
+		t.Fatal("rotted meat in a pawns carried stack must be destroyed")
 	}
 	if b := f.stacks[4]; b.Kind != item.Bones || b.Of != 9 {
 		t.Fatalf("corpse %+v", b)
 	}
-	if len(f.msgs) != 1 || f.msgs[0] != "1,1 8 meat rotted away" {
+	if len(f.msgs) != 1 || f.msgs[0] != "1,1 10 meat rotted away" {
 		t.Fatalf("messages %v", f.msgs)
 	}
-	f.temp = 0 // frozen: no rot
-	before := f.stacks[3].Rot
+	f.put(6, item.Stack{Kind: item.Meat, Qty: 1, Carrier: pawn, Rot: shelf - 800})
+	f.temp = 0
+	before := f.stacks[6].Rot
 	c.Condition.Rot(250)
-	if f.stacks[3].Rot != before {
-		t.Fatal("frozen food rots")
+	if fresh, ok := f.stacks[6]; !ok || fresh.Rot != before {
+		t.Fatal("cold carried meat spoiled or disappeared")
 	}
 	if FreshDays(item.Stack{Kind: item.Wood}) != -1 || FreshDays(item.Stack{Kind: item.Meat}) <= 0 {
 		t.Fatal("FreshDays")

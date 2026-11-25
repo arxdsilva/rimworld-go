@@ -368,7 +368,7 @@ func (h ordersHost) Spot(id entity.EntityID, x, y int) (int, int, bool) {
 }
 func (h ordersHost) Free(id, target entity.EntityID, k job.Kind) bool {
 	o, taken := h.g.reserve.EntityOwner(target)
-	return (!taken || o == id) && !h.g.postponedFor(id, k, target, 0, 0)
+	return (!taken || o == id) && (k != job.Uninstall || !occupiedBed(h.g, target)) && !h.g.postponedFor(id, k, target, 0, 0)
 }
 func (h ordersHost) Claim(id, target entity.EntityID) bool { return h.g.reserve.TryEntity(id, target) }
 func (h ordersHost) Walk(id entity.EntityID, j job.Record, x, y int) bool {
@@ -384,12 +384,25 @@ func (h ordersHost) Walk(id entity.EntityID, j job.Record, x, y int) bool {
 }
 func (h ordersHost) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
 func (h ordersHost) Pack(id entity.EntityID, st item.Stack) entity.EntityID {
-	h.g.removeBuildingAs(id, false) // the crate is the building: nothing refunded
-	sid, err := h.g.SpawnStack(st.Kind, st.Qty, st.X, st.Y)
-	if err == nil {
-		h.g.putStack(sid, st)
+	if occupiedBed(h.g, id) {
+		return 0
 	}
+	sid, err := h.g.SpawnStack(st.Kind, st.Qty, st.X, st.Y)
+	if err != nil {
+		return 0
+	}
+	h.g.removeBuildingAs(id, false) // the crate is the building: nothing refunded
+	h.g.putStack(sid, st)
 	return sid
+}
+func occupiedBed(g *Game, bid entity.EntityID) bool {
+	b, _ := g.bldgs.Get(bid)
+	for _, raw := range []uint64{b.Claimant, b.Claimant2} {
+		if p, ok := g.positions.Get(entity.EntityID(raw)); raw != 0 && ok && construction.Covers(b.Kind, b.Facing, b.X, b.Y, p.X, p.Y) {
+			return true
+		}
+	}
+	return false
 }
 func (h ordersHost) Carry(id, by entity.EntityID) {
 	if st, ok := h.g.stacks.Get(id); ok {
@@ -424,7 +437,7 @@ func (h ordersHost) Install(id, crate entity.EntityID) {
 	fr.Reinstall = 0
 	g.completeFrame(id, fr) // a new building on the frame's id, as a blueprint finishes
 	if b, ok := g.bldgs.Get(id); ok {
-		b.Quality, b.Damage = st.Quality, st.Wear
+		b.Quality, b.Damage, b.MaterialBasis = st.Quality, st.Wear, st.MaterialBasis
 		g.bldgs.Set(id, b)
 	}
 }

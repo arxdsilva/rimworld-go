@@ -49,14 +49,14 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Crafted items roll a quality from the worker's skill, with a chance of inspiration-boosted results. | `craft/quality.go` rolls on completion with the worker's skill through `domain/economy/quality`; `item.Stack` carries Quality and Stuff; apparel and weapons roll (grenades do not); constructed beds, bedrolls, animal bed, end table, dresser, table, chair and horseshoe pin roll at construction; PRD-3: sculptures roll on completion (`craft/art.go`). | The remaining craftables (PRD-4) roll once they exist. | PRD-0, PRD-2 | partial |
+| Crafted items roll a quality from the worker's skill, with a chance of inspiration-boosted results. | `craft/quality.go` rolls on completion with the worker's skill through `domain/economy/quality`; `item.Stack` carries Quality and Stuff; apparel and weapons including grenades roll; constructed beds, bedrolls, animal bed, end table, dresser, table, chair and horseshoe pin roll at construction; PRD-3: sculptures roll on completion (`craft/art.go`). | Additional non-Core recipes remain outside scope. | PRD-0, PRD-2 | done (native) |
 | Quality changes item stats and market value. | `quality` multipliers read from the stored quality by armor (`armor.AppendPiece`), insulation (`craft.Outfit.Bands`), beds (`construction.FurnitureOf`) and `item.StackValue`. | Weapon damage/accuracy by quality is not applied to wielded weapons (see 3.7). | PRD-2 | done (2026-11-20 audit: game/combat/gear.go Hold stores Quality/Stuff; gear_test.go TestMeleeByStuffAndQuality) |
-| Inspirations from creativity let a worker produce better work for a while. | `game/mind/inspiration.go`: mood >= 50 and Crafting or Construction >= 3, hourly check with mean time 410 - 4 x mood days (original tuning), lasts 8 days or until the next quality roll uses it, 1-day cooldown; mood never ends it (no flap test). `PawnView.Inspiration`/`InspirationTicks`. | Other inspiration types (checklist 10.2); `InspirationTicks` is not shown in the UI. | PRD-2 | partial |
+| Inspirations from creativity let a worker produce better work for a while. | `game/mind/inspiration.go`: mood >= 50, hourly check, original mean-time curve, eight-day duration and no separate post-use cooldown. Creativity uses Artistic, Crafting or Construction eligibility; native movement, recruitment, trade, surgery, taming, shooting and work inspirations have separate eligibility and effects. `PawnView.Inspiration`/`InspirationTicks` expose the state. | Duration UI detail remains separate. | PRD-2 | done (native inspiration types) |
 | Choose the stuff (steel, wood, cloth, leather, stone) for a product; stats depend on it. | `item.StuffOf`, `MadeFrom`, `DefaultStuff`, `StuffFactor`, `Stuffs`, `Insulation` (`domain/economy/item/stuff.go`); `Bill.Stuff` pinned with `ConfigureBill` and the allowed-stuff Forbid filter; `armor.Piece` scales plate and helmets by stuff; `BillView.Stuff`/`StuffKind`/`Quality`. | Melee weapons are not scaled by stuff; the wielded weapon keeps only a kind (see 3.7). | PRD-2 | done (2026-11-20 audit: game/combat/gear.go Held make; TestMeleeByStuffAndQuality steel 16 vs wood 14) |
 | Items have hit points and lose them outdoors, unroofed, over time; tattered apparel works worse; tainted apparel gives a mood penalty. | `item/condition.go` and `craft/condition.go`: 2 HP/day outdoors (original tuning, the wiki gives none), rain x5, water or marsh x3, roofed 0, metal and stone immune, raw resources exempt, quality factor. Worn apparel loses 1 HP on 40 % of days (`craft/garment.go`); ratty at 50 % HP (-3), tattered under 20 % (-5; Apparel page used over the 25 % on the Deterioration page); tainted -5/-8/-11/-14 by count; dead pawns drop a tainted outfit and auto-dress skips it. | Shelves (PRD-4); tattered apparel does not yet reduce armor beyond its HP. | PRD-2 | done |
 | Wielded weapons keep their quality and stuff; melee weapons scale with stuff. | `weaponKindOf`/`doEquip` store a kind only, so the crafted quality and stuff are lost on equip; melee weapons are not stuff-scaled. | Carry quality and stuff on the equipped weapon. | PRD-4 / DEF-4 | done (2026-11-20 audit: combat/gear.go Hold(id, st) keeps Quality, Stuff, Wear; TestDropWeaponKeepsTheMake) |
-| Colony wealth counts item and building value. | `Wealth()` (raid points) is separate from `room.BuildingValue`/`item.StackValue`. | Reuse the shared value functions. | PRD-4 | open |
-| Stock filters and bills by quality and hit-point range. | `Bill.Forbid` is a flat kind list. | Quality and HP ranges on bills (stockpiles have them since PRD-4: `zone.Special`). | PRD-4 | partial |
+| Colony wealth counts item and building value. | Native wealth, pack and caravan values use item.Book.StackValue; building wealth shares room.BuildingValue. | None for the shared formulas. | PRD-4 | done |
+| Stock filters and bills by quality and hit-point range. | Stockpile special filters and bill condition ranges; native SetBillRange, save compatibility, planning and consumption checks. | UI controls remain with the presentation owner. | PRD-4 | done (native) |
 
 ### 3.3 Benches and facilities
 
@@ -95,9 +95,9 @@ Bill queue, the three bill modes with resume, suspend, research gating, power-ga
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Bills filter by product quality and hit-point range. | `Bill.Forbid` is a flat kind list; only stockpiles have ranges. | Quality and HP ranges on bills. | later | open |
+| Bills filter by product quality and hit-point range. | Stockpile special filters and bill condition ranges; native SetBillRange, save compatibility, planning and consumption checks. | UI controls remain with the presentation owner. | later | done (native) |
 | An equipped weapon keeps its crafted quality and stuff. | `doEquip` stores a kind only (row 3.2). | Carry quality and stuff on the equipped weapon. | later | done (2026-11-20 audit: application/game/combat/gear.go Held{Quality,Stuff} copied to/from stack (lines ~128-153)) |
-| Colony wealth counts item and building value. | `Wealth()` is separate from `room.BuildingValue`/`item.StackValue` (row 3.2). | Reuse the shared value functions. | later | open |
+| Colony wealth counts item and building value. | Native wealth, pack and caravan values use item.Book.StackValue; building wealth shares room.BuildingValue. | None for the shared formulas. | later | done |
 | Haulers fill the fermenting barrel. | Cooks fill it through the bill (`craft/ferment.go`). | Move the fill to the haul work type. | later | open |
 | Wiki stack limits for the older kinds. | They keep 1000 so saves and golden pins stay valid. | A deliberate re-pin. | later | open |
 
@@ -184,7 +184,7 @@ Each phase ticks these items when its acceptance criteria are met. Titles are qu
 |---|---|---|
 | 6.1 Item system | **Item quality** (`[ ]`) and **Item hit points/deterioration** (`[ ]`) | PRD-2 |
 | 6.3 Stockpile zones | **Storage filters** (`[-]`) | PRD-4 |
-| 10.2 Inspirations | **High-mood inspiration chance** and **Inspiration types** (`[ ]`; creativity part only, note the rest) | PRD-2 |
+| 10.2 Inspirations | **High-mood inspiration chance** and **Inspiration types** (`[x]`; all eight Core types) | PRD-2 |
 | 12.4 Lighting | **Light can affect work/mood/accuracy where appropriate** (`[-]`; work part) | PRD-3 |
 | 13 Cleaning, Filth, Deterioration | **Outdoor deterioration** (`[ ]`) | PRD-2 |
 | 14.1 Generic workbench system | **Workstation** (`[-]`) | PRD-3 |

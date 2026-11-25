@@ -36,7 +36,7 @@ func (h *lethalHost) HurtHit(target entity.EntityID, l armor.Landed, by entity.E
 func lethalRig(w, ht int) *lethalHost {
 	f := newFake(w, ht)
 	h := &lethalHost{fakeHost: f, lethal: map[entity.EntityID]bool{}}
-	h.c = New(h, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f})
+	h.c = New(h, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f})
 	return h
 }
 

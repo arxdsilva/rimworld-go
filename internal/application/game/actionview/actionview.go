@@ -44,6 +44,7 @@ const (
 	Milk        = "milk"  // milking, or collecting ember oil (SIM-026)
 	Shear       = "shear" // shearing wool (SIM-026)
 	Eat         = "eat"
+	Sit         = "sit" // free-time SitDown: occupy the native chair cell
 	Refuel      = "refuel"
 	Haul        = "haul"
 	Horseshoes  = "horseshoes"
@@ -84,6 +85,8 @@ func Working(k job.Kind) string {
 		return Harvest
 	case job.Eat:
 		return Eat
+	case job.SitDown:
+		return Sit
 	case job.Horseshoes:
 		return Horseshoes
 	case job.Research, job.ScanGround, job.ScanMinerals:

@@ -19,7 +19,7 @@ func (g *Game) Wildlife() []WildlifeRow {
 	rows := map[animal.Species]*WildlifeRow{}
 	for _, id := range g.animalIDs {
 		a, ok := g.animals.Get(id)
-		if !ok || a.Tame {
+		if !ok || a.Tame || foreignPackAnimal(g, id) {
 			continue
 		}
 		r := rows[a.Species]

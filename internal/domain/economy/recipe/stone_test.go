@@ -31,7 +31,7 @@ func TestCutRecipes(t *testing.T) {
 		if d.ID != tc.id || d.Name != tc.name || d.Label != tc.label {
 			t.Errorf("%v: id/name/label = %v/%q/%q", tc.stone, d.ID, d.Name, d.Label)
 		}
-		if d.Bench != construction.StonecutterTable || d.Skill != work.Craft || d.Work != 300 || d.Legacy {
+		if d.Bench != construction.StonecutterTable || d.Skill != work.Craft || d.Work != 1600 || d.Legacy {
 			t.Errorf("%v: bench/skill/work = %v/%v/%d", tc.stone, d.Bench, d.Skill, d.Work)
 		}
 		if d.Input != (Input{Kind: item.ChunkOf(tc.stone), Qty: 1}) {
@@ -44,7 +44,7 @@ func TestCutRecipes(t *testing.T) {
 			t.Errorf("%v: input accepts the wrong stacks", tc.stone)
 		}
 	}
-	if CutYield != 10 {
+	if CutYield != 20 {
 		t.Fatalf("CutYield = %d", CutYield)
 	}
 	if got := Core().For(construction.StonecutterTable); len(got) != len(tests) {

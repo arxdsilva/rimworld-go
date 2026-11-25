@@ -224,7 +224,7 @@ var defs = [NumProjects]Def{
 	Prosthetics: {Project: Prosthetics, Name: "prosthetics", Label: "Prosthetics", Cost: 600, TechLevel: Industrial,
 		Requires: []Project{MachineTools},
 		Desc:     "Steel limbs to replace lost legs and arms.", Unlocks: []string{"recipe:make_prosthetic_leg", "recipe:make_prosthetic_arm",
-			"recipe:make_glass_eye", "recipe:make_valve_heart"}},
+			"recipe:make_acoustic_implant", "recipe:make_valve_heart"}},
 	// own: bridges; wiki: Complex furniture (Medieval, 300).
 	Bridges: {Project: Bridges, Name: "bridges", Label: "Bridges", Cost: 300, TechLevel: Medieval,
 		Desc: "Timber platforms over water, marsh and mud. They hold light things, not stone walls.", Unlocks: []string{"build:bridge"}},
@@ -257,9 +257,10 @@ var defs = [NumProjects]Def{
 	// wiki: Bionic replacements (Spacer, 2000, Fabrication, hidden Prosthetics; hi-tech bench + analyzer).
 	ServoReplacements: {Project: ServoReplacements, Name: "servo_replacements", Label: "Servo replacements", Cost: 2000, TechLevel: Spacer,
 		Bench: HiTechAnalyzer, Requires: []Project{Fabrication}, Hidden: []Project{Prosthetics},
-		Desc: "Powered limbs, eyes, ears, spines, hearts and stomachs that work better than the ones they replace.",
-		Unlocks: []string{"recipe:make_servo_arm", "recipe:make_servo_leg", "recipe:make_optic_implant", "recipe:make_cochlear_implant",
-			"recipe:make_spinal_brace", "recipe:make_pump_heart", "recipe:make_synth_stomach"}},
+		Desc: "Build powered limbs and artificial organs.",
+		Unlocks: []string{"recipe:make_servo_arm", "recipe:make_servo_leg", "recipe:make_optic_implant",
+			"recipe:make_cochlear_implant", "recipe:make_spinal_brace", "recipe:make_pump_heart",
+			"recipe:make_synth_stomach", "recipe:make_servo_jaw", "recipe:make_synth_tongue"}},
 	// wiki: Gun turrets (Industrial, 500, Blowback operation).
 	Sentries: {Project: Sentries, Name: "sentries", Label: "Sentry guns", Cost: 500, TechLevel: Industrial,
 		Requires: []Project{SelfLoading},

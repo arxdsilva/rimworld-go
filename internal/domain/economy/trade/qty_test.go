@@ -85,7 +85,7 @@ func TestGiftValueBoundedNoOverflow(t *testing.T) {
 	for k := item.Kind(0); k.String() != "unknown"; k++ {
 		best = max(best, b.Value(k))
 	}
-	v := GiftValue(b, []Delta{{Kind: item.Club, Qty: -MaxOfferQty}})
+	v := GiftValue(b, []Delta{{Kind: item.Club, Qty: -MaxOfferQty}}, Terms{})
 	if v < 0 || v > MaxOfferQty*max(best, 1) || MaxOfferQty*int64(max(best, 1))*100 > math.MaxInt64/1000 {
 		t.Fatalf("gift value %d (best %d)", v, best)
 	}

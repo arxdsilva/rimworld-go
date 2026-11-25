@@ -7,7 +7,15 @@ import (
 	"math"
 	"slices"
 
+	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/economy/quality"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/room"
 )
 
 // Source is a map's wealth in parts, the sweep's view of it: WealthOf
@@ -46,6 +54,10 @@ type Save struct {
 	// Value is the last full pass's count, once Counted.
 	Value   int
 	Counted bool
+	// InitialValue is the first deterministic wealth count used for mood,
+	// until the first regular hourly pass completes.
+	InitialValue   int
+	InitialCounted bool
 	// Hour is 1 + the hour of the pass in progress (0: none); Cursor the
 	// parts it has summed so far, into Partial.
 	Hour            uint64
@@ -70,6 +82,28 @@ func (t *Tracker) Value() int {
 	}
 	sum, _ := t.src.WealthOf(0, math.MaxInt)
 	return sum
+}
+
+// PrimeForMood captures a stable initial total once; normal hourly passes
+// take ownership after the first full count.
+func (t *Tracker) PrimeForMood() {
+	if t.s.Counted || t.s.InitialCounted {
+		return
+	}
+	t.s.InitialValue, _ = t.src.WealthOf(0, math.MaxInt)
+	t.s.InitialCounted = true
+}
+
+// MoodValue reads one cached count, without rescanning physical stock on
+// every pawn's thought calculation.
+func (t *Tracker) MoodValue() int {
+	if t.s.Counted {
+		return t.s.Value
+	}
+	if t.s.InitialCounted {
+		return t.s.InitialValue
+	}
+	return t.Value()
 }
 
 // History is the daily samples, oldest first (read only).
@@ -115,6 +149,7 @@ func (t *Tracker) Step(now uint64) {
 func (t *Tracker) finish(now uint64) {
 	rest, _ := t.src.WealthOf(t.s.Cursor, math.MaxInt)
 	t.s.Value, t.s.Counted = t.s.Partial+rest, true
+	t.s.InitialValue, t.s.InitialCounted = 0, false
 	t.s.Hour, t.s.Cursor, t.s.Partial = 0, 0, 0
 	if now < t.s.Next {
 		return
@@ -129,7 +164,7 @@ func (t *Tracker) finish(now uint64) {
 // Export is the tracker as saved; nil while it holds nothing (no pass
 // begun or finished).
 func (t *Tracker) Export() *Save {
-	if t == nil || len(t.s.History) == 0 && t.s.Next == 0 && !t.s.Counted && t.s.Hour == 0 {
+	if t == nil || len(t.s.History) == 0 && t.s.Next == 0 && !t.s.Counted && !t.s.InitialCounted && t.s.Hour == 0 {
 		return nil
 	}
 	s := t.s
@@ -144,4 +179,52 @@ func (t *Tracker) Import(s *Save) {
 		t.s = *s
 		t.s.History = slices.Clone(s.History)
 	}
+}
+
+// StorytellerBase counts buildings at half value, using the existing
+// authoritative wealth source rather than a second market valuation.
+func StorytellerBase(s Source, items, buildings int) difficulty.ThreatBase {
+	total, _ := s.WealthOf(0, math.MaxInt)
+	built, _ := s.WealthOf(items, items+buildings)
+	return difficulty.ThreatBase{Wealth: float64(total) - float64(built)/2}
+}
+
+func BuildingValue(b construction.Building) int {
+	q, ok := quality.FromStored(b.Quality)
+	if !ok {
+		q = quality.Default
+	}
+	return room.BuildingValue(b.Kind, b.Stuff, q)
+}
+
+func AddStashedAnimal(b *difficulty.ThreatBase, a animal.State) {
+	if a.Tame && !a.Dead() {
+		b.Wealth += float64(animal.DefOf(a.Species).MaxHP * 2)
+		b.AnimalPower += animal.ThreatPower(a)
+	}
+}
+
+// Census couples the actual count of residents with their weighted assets.
+type Census struct {
+	difficulty.ThreatBase
+	Residents int
+}
+
+// Add combines asset and resident counts without applying a threat curve.
+func (c *Census) Add(other Census) {
+	c.Wealth += other.Wealth
+	c.PawnWeight += other.PawnWeight
+	c.AnimalPower += other.AnimalPower
+	c.Residents += other.Residents
+}
+
+// AddPawn adds a known eligible resident; ownership and liveness are
+// resolved by the map/stash owner before entering the census.
+func (c *Census) AddPawn(bio pawngen.Pawn, known bool, v health.Record, b *body.Body, asleep bool) {
+	c.Residents++
+	age := 18.0 // original legacy resident fallback
+	if known {
+		age = float64(bio.AgeDays) / pawngen.DaysPerYear
+	}
+	c.PawnWeight += difficulty.PawnWeight(age, body.TemporaryHealthFraction(b, v.Injury, health.MaxHP), asleep)
 }

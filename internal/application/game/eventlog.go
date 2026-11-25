@@ -109,34 +109,28 @@ func (g *Game) logLines(id entity.EntityID) []LogLineView {
 	if len(l) == 0 {
 		return nil
 	}
-	// With the view cache on, an unchanged log keeps its lines: entries are
-	// only ever appended past the end or copied out to a new array, so the
-	// same first element and length mean the same entries (the cache holds
-	// the slice, so its array cannot be reused meanwhile).
+	// Event writers append or replace the slice; the memo retains its
+	// backing array so pointer and length identify unchanged entries.
 	vc := &g.views
-	if vc.on {
-		if c, ok := vc.logs[id]; ok && len(c.src) == len(l) && &c.src[0] == &l[0] {
-			return c.out
-		}
+	if c, ok := vc.logs[id]; ok && len(c.src) == len(l) && &c.src[0] == &l[0] {
+		return c.out
 	}
 	out := make([]LogLineView, 0, len(l))
 	for i := len(l) - 1; i >= 0; i-- {
-		d := clock.DateAt(clock.Tick(l[i].Tick))
+		d := clock.DateAtPolicy(clock.Tick(l[i].Tick), g.clock.Calendar())
 		out = append(out, LogLineView{Tick: l[i].Tick, Day: d.Day + 1, Hour: d.Hour, Text: evlog.Text(l[i].Kind, l[i].Weapon, l[i].Name, l[i].Amount)})
 	}
-	if vc.on {
-		if vc.logs == nil {
-			vc.logs = map[entity.EntityID]logLinesMemo{}
-		}
-		if len(vc.logs) > 2*len(g.logs)+64 { // drop the dead creatures' lines
-			for k := range vc.logs {
-				if _, ok := g.logs[k]; !ok {
-					delete(vc.logs, k)
-				}
+	if vc.logs == nil {
+		vc.logs = make(map[entity.EntityID]logLinesMemo)
+	}
+	if len(vc.logs) > 2*len(g.logs)+64 {
+		for k := range vc.logs {
+			if _, ok := g.logs[k]; !ok {
+				delete(vc.logs, k)
 			}
 		}
-		vc.logs[id] = logLinesMemo{src: l, out: out}
 	}
+	vc.logs[id] = logLinesMemo{src: l, out: out}
 	return out
 }
 

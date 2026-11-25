@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/pathstage"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -67,7 +68,7 @@ func TestPathsExactBelowLongThreshold(t *testing.T) {
 		}
 		g.positions.Set(id, Position{X: sx, Y: sy})
 		got, ok := g.pathTo(id, tx, ty)
-		want, wok := pathing.Find(plainQuery{g.grid}, sx, sy, tx, ty)
+		want, wok := pathing.Find(pathstage.PlainQuery{Query: g.grid}, sx, sy, tx, ty)
 		if ok != wok {
 			t.Fatalf("(%d,%d)->(%d,%d): found %v, A* %v", sx, sy, tx, ty, ok, wok)
 		}

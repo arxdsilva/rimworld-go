@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // settle flies every shot until none is left.
@@ -37,6 +38,19 @@ func landed(f *fakeHost) projectile.Trace {
 		}
 	}
 	return projectile.Trace{}
+}
+
+type fixedFriendlyFire struct {
+	host    *fakeHost
+	percent int
+}
+
+func (d fixedFriendlyFire) FriendlyFirePct() int             { return d.percent }
+func (d fixedFriendlyFire) Colonist(id entity.EntityID) bool { return d.host.pawns[id] }
+
+func combatWithFriendlyFire(f *fakeHost, percent int) *Combat {
+	return New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f,
+		Rules: fixedFriendlyFire{f, percent}})
 }
 
 func TestBurstTiming(t *testing.T) {
@@ -200,6 +214,12 @@ func TestStrayHitAndMiss(t *testing.T) {
 	}
 }
 
+// interceptAt is a human-sized creature's interception chance (permille) a
+// distance tiles down the line of fire: 400 scaled by the distance factor.
+func interceptAt(distance int) attack.Permille {
+	return attack.InterceptChance(1000) * attack.DistanceInterceptFactor(distance, 0) / 1000
+}
+
 // TestFriendlyFire: a creature in the line, ally or not, is struck at its
 // interception chance scaled by its distance from the muzzle (SHT-005):
 // none and no roll within InterceptNear, linear to the full chance at
@@ -267,6 +287,120 @@ func TestFriendlyFire(t *testing.T) {
 	settle(c)
 	if f.hits[5] != five || f.hits[2] == before {
 		t.Fatalf("past the raider at the full chance: %v", f.hits)
+	}
+}
+
+func TestDownedInterceptorReducedChance(t *testing.T) {
+	t.Parallel()
+	f := newFake(40, 10)
+	c := f.combat()
+	f.pawn(1, 2, 5, weapon.Rifle)
+	f.raider(2, 20, 5, weapon.Fists)
+	f.pawn(3, 10, 5, weapon.Fists)
+	f.lying[3] = true
+	chance := attack.DownedInterceptChance(interceptAt(8))
+	if chance != 17 {
+		t.Fatalf("downed interception chance %d, want a tenth of 171 permille", chance)
+	}
+	f.rolls = []int{0, chance - 1}
+	c.Strikes.Strike(1, 2, weapon.Rifle)
+	settle(c)
+	if f.hits[3] == 0 || f.hits[2] != 0 {
+		t.Fatal("a downed colonist can still intercept a shot at its reduced chance")
+	}
+	f.rolls = []int{0, chance}
+	c.Strikes.Strike(1, 2, weapon.Rifle)
+	settle(c)
+	if f.hits[2] == 0 {
+		t.Fatal("a roll at the reduced chance passes the downed interceptor")
+	}
+}
+
+func TestFriendlyFireDifficultyScalesFriendlyInterception(t *testing.T) {
+	t.Parallel()
+	d := weapon.DefOf(weapon.Rifle)
+	shot := projectile.Shot{Owner: 1, Weapon: weapon.Rifle, Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage),
+		Type: d.DamageType, Hit: weapon.HitOf(weapon.Rifle, d), FromX: 1, FromY: 5, Aimed: true}
+
+	t.Run("side to side", func(t *testing.T) {
+		f := newFake(30, 10)
+		f.pawn(1, 1, 5, weapon.Rifle)
+		f.pawn(2, 13, 5, weapon.Fists)
+		c := combatWithFriendlyFire(f, 50)
+		f.rolls = []int{199, 0, 0, 0}
+		if !c.Shots.through(&shot, 13, 5) || f.hits[2] == 0 {
+			t.Fatal("50% friendly fire keeps the 200-permille interception at roll 199")
+		}
+	})
+
+	t.Run("raiders shooting raiders are not scaled", func(t *testing.T) {
+		f := newFake(30, 10)
+		f.raider(1, 1, 5, weapon.Rifle)
+		f.raider(2, 13, 5, weapon.Fists)
+		c := combatWithFriendlyFire(f, 0)
+		raiderShot := shot
+		raiderShot.Raider = true
+		f.rolls = []int{399, 0, 0, 0}
+		if !c.Shots.through(&raiderShot, 13, 5) || f.hits[2] == 0 {
+			t.Fatal("friendly-fire difficulty must not touch raider-to-raider interception")
+		}
+	})
+
+	t.Run("a raider interceptor of a colonist's shot is not scaled", func(t *testing.T) {
+		f := newFake(30, 10)
+		f.pawn(1, 1, 5, weapon.Rifle)
+		f.raider(2, 13, 5, weapon.Fists)
+		c := combatWithFriendlyFire(f, 0)
+		f.rolls = []int{399, 0, 0, 0}
+		if !c.Shots.through(&shot, 13, 5) || f.hits[2] == 0 {
+			t.Fatal("a hostile in the way is caught at the full chance")
+		}
+	})
+
+	t.Run("zero suppresses colonist interception without a roll", func(t *testing.T) {
+		f := newFake(30, 10)
+		f.pawn(1, 1, 5, weapon.Rifle)
+		f.pawn(2, 13, 5, weapon.Fists)
+		c := combatWithFriendlyFire(f, 0)
+		f.rolls = []int{0}
+		if c.Shots.through(&shot, 13, 5) || f.hits[2] != 0 || len(f.rolls) != 1 {
+			t.Fatal("zero friendly fire prevents the interception roll")
+		}
+	})
+}
+
+func TestDownedTargetAccuracy(t *testing.T) {
+	t.Parallel()
+	f := newFake(40, 10)
+	c := f.combat()
+	f.pawn(1, 2, 5, weapon.Rifle)
+	f.pawn(2, 5, 5, weapon.Fists)
+	f.lying[2] = true
+	d := weapon.DefOf(weapon.Rifle)
+	close := c.Strikes.report(1, 2, 5, 2, 5, 5, d, false)
+	if close.Downed == 0 || close.Dist != 3 || close.Aim() != 1000 {
+		t.Fatalf("three-tile execution bonus: %+v aim %d", close, close.Aim())
+	}
+
+	four := c.Strikes.report(1, 2, 5, 2, 6, 5, d, false)
+	f.lying[2] = false
+	fourStanding := c.Strikes.report(1, 2, 5, 2, 6, 5, d, false)
+	if four.Downed == 0 || four.Dist != 4 || four.Aim() != fourStanding.Aim() {
+		t.Fatalf("exactly four tiles is neutral: downed %+v standing %+v", four, fourStanding)
+	}
+
+	f.lying[2] = true
+	five := c.Strikes.report(1, 2, 5, 2, 7, 5, d, false)
+	f.lying[2] = false
+	fiveStanding := c.Strikes.report(1, 2, 5, 2, 7, 5, d, false)
+	if five.Downed == 0 || five.Dist != 5 || five.Aim() != fiveStanding.Aim()/2 {
+		t.Fatalf("beyond four tiles halves chance: downed %+v standing %+v", five, fiveStanding)
+	}
+
+	f.lying[2] = true
+	melee := c.Strikes.report(1, 2, 5, 2, 5, 5, weapon.DefOf(weapon.Knife), false)
+	if melee.Downed != 0 || melee.Total() != melee.Band {
+		t.Fatalf("the ranged execution bonus must not change melee: %+v", melee)
 	}
 }
 

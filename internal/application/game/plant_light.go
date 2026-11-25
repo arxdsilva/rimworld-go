@@ -13,23 +13,13 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 )
 
-// Plant light rules in the growth pass (MAPGEN-3). A plant with MinLight
-// grows only on a cell lit at least that much (ordinary moss: daylight
-// or lamplight, never a dark cave). A plant with DiesInLight (duskmoss)
-// withers in that much light, losing a share of its full growth each
-// window it stands in it, and is removed at nothing; once withering it
-// recovers only below plant.WitherStopLight (hysteresis). Every other
-// plant grows by its growing light (FOOD-2, farm.GrowLight): full under
-// the open sky, a sun lamp's, a plain lamp's at most 50 %, too little.
+// Plant lighting checks minimum light, harmful light and wither hysteresis.
+// Ordinary crops grow using the sun, lamps and sky exposure.
 
-// witherNoticeRange: one wither notice per patch a day — a notice within
-// this range (Chebyshev) covers a new death.
+// One withering notice per patch per day.
 const witherNoticeRange = 12
 
-// lightGrows applies plant id's light rules for the window that ends now
-// (p is updated in place) and reports whether it may grow this window.
-// A plant withered to nothing is deleted and added to fp.Gone, like a
-// frost kill.
+// lightGrows applies light requirements and removes fully withered plants.
 func (g *Game) lightGrows(id entity.EntityID, p *plant.Plant, fp *farm.Pass) bool {
 	d := plant.DefOf(p.Species)
 	if d.MinLight <= 0 && d.DiesInLight <= 0 {
@@ -95,8 +85,28 @@ func (g *Game) PlantGrowth(id entity.EntityID) (PlantGrowthView, bool) {
 	if !ok {
 		return PlantGrowthView{}, false
 	}
-	st, in := g.growState(p, g.growNowOf())
-	return PlantGrowthView{State: st, RipeIn: in}, true
+	now := g.growNowOf()
+	st, in := g.growState(p, now)
+	t := int(g.temperatureAt(p.X, p.Y))
+	tick := uint64(g.clock.Now())
+	light, lightFactor := plant.FullGrowLight, 1000
+	if plant.OwnLightRules(p.Species) {
+		light = g.cellLightPermil(p.X, p.Y)
+		if !plant.LitEnough(p.Species, light) || p.Withering {
+			lightFactor = 0
+		}
+	} else {
+		light = farm.GrowLight(g.roofAt(p.X, p.Y).Roofed() || g.incidents.Eclipsed(tick),
+			g.incidents.SkyPermil(tick), g.artificialLight(p.X, p.Y), now.lamps,
+			p.X, p.Y, g.combat.Sight.Line)
+		lightFactor = plant.LightFactor(light)
+	}
+	rate := g.growRate(p, t, now.gp, light)
+	if p.Withering || p.Leafless(tick) || lightFactor == 0 {
+		rate = 0
+	}
+	return PlantGrowthView{State: st, RipeIn: in, Rate: rate, Fertility: plantFertility(g, p),
+		Light: light, LightFactor: lightFactor, Temperature: t, TemperatureFactor: plant.TempFactor(t)}, true
 }
 
 // growState says why plant p is or isn't growing now, and how many ticks

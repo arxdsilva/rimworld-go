@@ -172,7 +172,7 @@ func TestPodLaunchReasons(t *testing.T) {
 	podHold(t, g, pod, 0, ada)
 	plain := plainNear(t, g)
 	for _, p := range testPlanet().Neighbours(g.colonyTile()) {
-		if int(p) != tile && g.settlementFaction(int(p)) == 0 && !fleetOf(g).MapOpen(int(p)) {
+		if int(p) != tile && g.settlementFaction(int(p)) == 0 && !fleetOf(g).Life().MapOpen(int(p)) {
 			plain = int(p)
 			break
 		}

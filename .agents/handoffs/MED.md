@@ -139,3 +139,57 @@ Per-archetype animal anatomy · 2026-10-26 · afb74e18e
 - UI: `AnimalView.Parts`, `AnimalView.MovingPct`; inspector "Moving 75%", "Torso: 12/28 HP, bleeding", "Front left leg: missing", up to 6 lines + "+N more".
 - Limits: `TestGrownGolden` re-pinned `0x960cb818b7a41587` → `0xf2889f4a11cbdce0`; `TestScaleGolden` unchanged.
 - Open: an animal that loses every leg stays down forever (no auto-euthanasia); no scars; butchering yield ignores lost parts; food poisoning/overdose/anaesthetic still name the human torso slot (no animal path creates them).
+
+## MED-14-core-replacement-and-chronic-care
+Native chronic illness, anesthesia and fitted replacements · 2026-11-25 · this commit
+- Changed: deterministic birthday chronic conditions and asthma, surgery and anesthesia, distinct installed replacements and additive implants; fitted damage/heal/recovery and original asset/read models.
+- Decisions: preserve historical condition and item IDs, explicit legacy fitted migration, original 65% injury sensitivity and 3–6 death acidifier injuries. No expansion implants.
+- Save/HUD: native Health/inspection and typed migration; active and off-map medical progression retain owner and deterministic streams.
+- Boxes: vanilla **Age-related chronic conditions**, **Anesthesia**, **Prosthetics/bionics**, **Core additive implants and vanilla surgery** [x].
+- Open: none within the verified Core replacement/illness scope.
+
+## MED-03-core-animal-rescue-and-safe-beds
+Native downed-animal rescue and bed eligibility · 2026-11-25 · this commit
+- Changed: Doctor carries downed tame animals to safe animal beds/spots and releases the temporary claim on recovery. Care/rest reject forbidden beds and use reach/hazard checks; existing prisoner bed owner survives floor sleep.
+- Decisions: wild animals excluded; no separate emergency queue, manual animal bed assignment or special medical-animal-bed treatment introduced. Preserve urgent clinical work and existing patient ownership.
+- Save/HUD: existing carried-by/bed/health state; native save/replay and bed-loss regression preserve claims and recovery.
+- Boxes: RESCUE_GAP RSC-101 done, RSC-205 open (partial reach improvement); BEDS_GAP §3.1 forbidden and §3.3 animal bed rows partial; vanilla 18.5 **Rescue** [x] annotated. #74 partial, #241 partial, #242 not complete.
+- Open: #74 remaining rescue cases and general pre-admission/no-flap proof; #241 bedroll pickup and all forbid coverage; #242 medical animal beds and manual owner assignment.
+
+
+## RSC-002-and-203-headless-rescue-diplomacy
+Core departure risk and capture diplomacy · 2026-11-25 · this commit
+- Changed: native guest departure safety rejects active toxic fallout, even under shelter; expiry restores the ordinary climate/threat checks. This changes the safety input to the existing recovery/join decision, not a new departure blockade.
+- Changed: successful capture of a neutral surface-faction visitor or raider invokes the existing arrest goodwill threshold through the faction owner; no diplomacy change at command admission, no duplicate change on arrest or existing hostility, and no penalty for spacers, existing prisoners or own recruited colonists.
+- Decisions: reuse the existing -75 arrest goodwill threshold. No new incidents, save schema, RNG consumption or presentation work. Acidic smog is not represented in the current Core incident model.
+- Boxes: RESCUE_GAP RSC-002 done for current Core hazards; RSC-203 done; #74 partial. Existing faction relation and join-decision read paths remain authoritative; presentation remains separate.
+- Open: RSC-001 pod crash, RSC-201 rescuer temperature, RSC-202 enclosure, RSC-204 refusal reasons, RSC-205 reachability admission, RSC-206 crawling, RSC-207 downed death. No expansion or UI parity claim.
+
+## RSC-205-native-carrier-admission
+Reachable rescue and custody destinations · 2026-11-25 · this commit
+- Changed: actual carrier reachability and alternative destination search before forced or autonomous rescue, capture, arrest and prisoner transport; recheck physical bed admission on arrival and resume ordinary tending if transport cannot start. Invalid occupied beds no longer count as safe rescue destinations.
+- Decisions: maintain exposure fallback and deterministic patient/bed ordering. No new RNG or saved fields.
+- Boxes: RSC-205 done; refs #74.
+- Open: pod crash, rescuer-specific temperature, enclosure, precise hazard reason, crawl and downed death.
+
+## RSC-001-and-201-207-native-crash-and-downing
+Native transport pod crash, safe care and downed movement · 2026-11-25 · this commit
+- Changed: actual pod shell and downed stranger/faction victim, rescue vs capture; live carrier temperature, enclosed prison, distinct refusal reasons and arrival revalidation. Injury-downed conscious human crawls to bed or away from threat; reserved/carried patients stay put. Actual enemy combat downing may kill.
+- Decisions: local crash weight/cooldown/injuries, crawl delay 1200/step 120 ticks, death 500 permille only in configured storyteller colonies, not prisoners or environmental injuries. Existing recovery/join and toxic fallout policies retained; Core has no acidic smog.
+- Save/HUD: append incident ID; native focused letter; crawl cadence from saved downed tick, no new transient save owner. Warden visits may start beside the prisoner when the target itself blocks the path into an enclosed cell; the interval/no-flap regression passes without changing its assertions.
+- Boxes: RSC-001,201,202,204,206,207 native implemented; 002/101/203/205 previously done; #74 Core scope.
+- Open: presentation and expansion hazards excluded.
+
+## AIL-1-live-rescue-arrival
+Live clinical destination admission · 2026-11-25 · this commit
+- Changed: revalidate patient-healing air, hazard and eligibility at bed arrival; reject invalidated open-air transfers; safe failed-drop cleanup instead of a false successful rescue.
+- Decisions: preserve deliberate no-healing-site fallback only if the live policy allows it; failed clinical transfer does not retain the successful exposure retry delay.
+- Boxes: vanilla **Rescue** [x] annotated; SIM-063 and AIL-1 reviewed.
+- Open: none within this regression scope.
+
+## AIL-1-ground-rescue-live-safety
+Ground rescue live safety · 2026-11-25 · this commit
+- Changed: one physical ground-admission owner validates walkability, bed occupancy, nearby fire and foreign tile claims at selection and arrival. Replan via the actual carrier when a destination becomes physically unsafe; if no viable route, terminate without success or exposure cooldown.
+- Tests: unchanged TestExposureSpotRevalidatesLiveFire; own/foreign claims, blocked/out-of-map cells, reroute and terminal failure.
+- Boxes: vanilla **Rescue** [x] annotated; AIL-1 and SIM-063.
+- Open: none within this native regression scope; related presentation gaps remain separate.

@@ -157,6 +157,22 @@ func (a Tabs) prisonerTab(p game.PawnView, in gfx.Rect) {
 	a.kit().Label(in.X+prisonerIcon+6, y, a.shell.T("Prisoner of the colony"), gfx.Body)
 	y += float32(gfx.LineStep(gfx.Body)) + 8
 
+	factionName := v.Faction
+	if factionName == "" {
+		factionName = a.shell.T("No recorded faction")
+	}
+	a.kit().Label(in.X, y, gfx.Ellipsize(a.shell.Tf("Faction: %s", factionName), gfx.Body, float64(in.W)), gfx.Body)
+	y += float32(gfx.LineStep(gfx.Body)) + 4
+	// Difficulty is the complement of the authoritative ordinary recruit roll,
+	// not a new rule. Resistance must be cleared; inspiration can bypass it.
+	difficulty := a.shell.Tf("Recruitment difficulty: %.1f%% (last warden)", float64(1000-v.RecruitChanceMin)/10)
+	if v.RecruitChanceMin != v.RecruitChanceMax {
+		difficulty = a.shell.Tf("Recruitment difficulty: %.1f–%.1f%% (by warden skill)", float64(1000-v.RecruitChanceMax)/10, float64(1000-v.RecruitChanceMin)/10)
+	}
+	a.kit().Label(in.X, y, gfx.Ellipsize(difficulty, gfx.Body, float64(in.W)), gfx.Body)
+	y += float32(gfx.LineStep(gfx.Body)) + 2
+	a.kit().Label(in.X, y, a.shell.T("Ordinary visit, after resistance; inspiration can bypass."), gfx.Small)
+	y += float32(gfx.LineStep(gfx.Small)) + 6
 	a.kit().Label(in.X, y, a.shell.Tf("Resistance %d", v.Resistance), gfx.Body)
 	bar := gfx.Rect{X: in.X + 120, Y: y + 4, W: in.W - 120, H: 10}
 	frac := min(float32(v.Resistance)/float32(prisonerResMax), 1)

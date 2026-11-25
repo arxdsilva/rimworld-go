@@ -97,11 +97,11 @@ func SkillCell(tr lang.Tr, s game.SkillView, c dossierview.Card, decimals bool) 
 // TrainCell builds one training entry. A behaviour the species cannot learn
 // gives the zero Cell. Not wanted reads off; learned reads good and active
 // (bold).
-func TrainCell(tr lang.Tr, t game.AnimalTrainingView) Cell {
+func TrainCell(tr lang.Tr, a game.AnimalView, t game.AnimalTrainingView) Cell {
 	if !t.Allowed {
 		return Cell{}
 	}
-	cell := Cell{Label: t.Label, Value: lang.Tf(tr, "%d of %d", t.Steps, t.Needed), Tip: JoinTip(trainLines(tr, t))}
+	cell := Cell{Label: tr.T(t.Label), Value: lang.Tf(tr, "%d of %d", t.Steps, t.Needed), Tip: JoinTip(trainLines(tr, a, t))}
 	if t.Needed > 0 {
 		cell.Pct = min(t.Steps*100/t.Needed, 100)
 	}

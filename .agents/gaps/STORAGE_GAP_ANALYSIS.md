@@ -14,7 +14,7 @@ gap · done.
 
 | # | Vanilla | Evidence | Gap | Done |
 |---|---|---|---|---|
-| S1 | Each item has its own stack limit (most raw resources 75, silver 500, meals 10, medicine 25...). | `internal/domain/economy/item/value.go:77` `stackLimit` | **User decision (2026-11-01)**: every stackable kind holds up to `item.StackLimit` = 1000 per tile. It replaces the STO-2/PRD-4 per-kind wiki limits on purpose. | yes |
+| S1 | Each item has its own stack limit (most raw resources 75, silver 500, meals 10, medicine 25...). | `internal/domain/economy/item/value.go:77` `stackLimit` | **User decision (2026-11-01)**: every stackable kind holds up to `item.StackLimit` = 1000 per tile. It replaces the STO-2/PRD-4 per-kind wiki limits on purpose. An opt-in frozen item book now restores the former table; loading with that book splits oversized loose stacks deterministically, preserves quantity/metadata and cancels stale reservations. | yes (default retained; opt-in available) |
 | S2 | Weapons, apparel, corpses and body parts never stack; each has its own quality, hit points or body. | `value.go:77` (1 for `IsWeapon`, `IsContractWeapon`, `IsApparel`, `IsBelt`, `IsCorpse`, `IsImplant`, `IsOrgan`) | none | yes |
 | S3 | Stone chunks: one per tile. | `value.go:77` (`IsChunk` gives 1) | none | yes |
 | S4 | (no vanilla item) Bones: our item for a rotted body. | `value.go:77` | Bones were 1 (a corpse stand-in) with no per-unit state, so they move to 1000. | yes |
@@ -46,3 +46,9 @@ gap · done.
 - `zone/sto2_test.go` TestNewStorageDefaults (dump at Normal, custom, one stack per cell) and TestStackCap.
 - `game/stk_stack_test.go`: one tile reaches 1000 wood over 10+ hauls and never goes past; chunks stay one per tile, merged or hauled into a dump; a hopper keeps 75.
 - `adapters/inbound/ebiten/journey_stk_test.go`: a dump painted from the Architect (pane: Normal, a corpse/chunk filter) gets a carcass and a chunk hauled in; a one-tile stockpile stacks 240 wood.
+
+### Independent native review correction (2026-11-25)
+
+SIM-102: animal hauling uses derived map-local source and destination availability, region/area groups, owner-revision invalidation, and at most 16 deterministic final offers. Ordinary ground storage only; no per-animal global scan in stable no-work state. No unrelated gap is closed by this correction.
+
+Entity/tile-specific reservation invalidation prevents unrelated move claims from triggering candidate scans. Structural no-work remains valid across claim history overflow; relevant physical availability changes still invalidate. The unchanged native 40-animal/512-stack, 60-tick probe requires no repeated global work.

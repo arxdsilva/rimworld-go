@@ -10,13 +10,16 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 // TestWorkCellsMatchCellRect: every column's cell is WorkCellRect, and the
-// name cell sits at the window padding, as drawn.
+// name cell contains the approved portrait, name and status band.
 func TestWorkCellsMatchCellRect(t *testing.T) {
 	t.Parallel()
 	r := uikit.Button{X: 100, Y: 50, W: 900, H: 400}
@@ -26,7 +29,7 @@ func TestWorkCellsMatchCellRect(t *testing.T) {
 		t.Fatalf("%d cells, want %d", len(cells), len(WorkColumns)+1)
 	}
 	name := cells[0]
-	if want := (gfx.Rect{X: 100 + hudlayout.WindowPad, Y: 50 + 97 + 60, W: 232, H: hudlayout.WorkBox}); name.Col != "name" || name.R != want {
+	if want := (gfx.Rect{X: 100 + hudlayout.WorkPadL, Y: 50 + 97 + 60, W: 232, H: hudlayout.WorkBox}); name.Col != "name" || name.R != want {
 		t.Errorf("name cell = %+v, want %+v", name, want)
 	}
 	for _, c := range cells[1:] {
@@ -43,12 +46,17 @@ func TestWorkCellsMatchCellRect(t *testing.T) {
 	}
 }
 
-// TestWorkColumnsDrawn: the name and all 14 live columns are placed inside the
+// TestWorkColumnsDrawn: the name and all twenty live columns are placed inside the
 // Work window, for every shown row, at both column screens.
 func TestWorkColumnsDrawn(t *testing.T) {
 	t.Parallel()
-	if len(WorkLive) != len(WorkColumns) {
+	if len(WorkLive) != len(WorkColumns) || len(WorkColumns) != int(work.NumTypes) || workMaxCells != int(work.NumTypes)+1 {
 		t.Fatalf("%d live of %d columns", len(WorkLive), len(WorkColumns))
+	}
+	for col := range WorkColumns {
+		if cmd, ok := WorkTypeForCol(col); !ok || cmd != work.Type(col).Command() {
+			t.Fatalf("column %d command %v, want %v", col, cmd, work.Type(col).Command())
+		}
 	}
 	declared := workDeclared()
 	for _, s := range uikit.ColumnScreens() {
@@ -78,10 +86,18 @@ func TestWorkNameCellKeepsWholePixelRow(t *testing.T) {
 // workDrawShell lays the Work window in a chosen rect instead of the fake's.
 type workDrawShell struct {
 	*fakeShell
-	win gfx.Rect
+	win                 gfx.Rect
+	portraits, statuses *[]gfx.Rect
 }
 
 func (s workDrawShell) WindowRect() gfx.Rect { return s.win }
+func (s workDrawShell) DrawPortrait(_ *ebiten.Image, _ look.Look, x, y, w, h float64) bool {
+	*s.portraits = append(*s.portraits, gfx.Rect{X: float32(x), Y: float32(y), W: float32(w), H: float32(h)})
+	return true
+}
+func (s workDrawShell) DrawWorkStatus(_ *ebiten.Image, _ game.PawnView, x, y, size float32) {
+	*s.statuses = append(*s.statuses, gfx.Rect{X: x, Y: y, W: size, H: size})
+}
 
 // TestWorkDrawOnTheCells: at both column screens every column's header, each
 // row's name and each row's cell box are drawn at their workCells x. Dropping
@@ -92,9 +108,11 @@ func TestWorkDrawOnTheCells(t *testing.T) { //nolint:paralleltest // canvas-glob
 		fs, _ := newFake()
 		fs.env.Game = fakeReader{}
 		for i := 1; i <= 3; i++ {
-			fs.pawns = append(fs.pawns, game.PawnView{ID: entity.EntityID(i), Name: "P", Status: "alive", Priorities: []int{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}})
+			fs.pawns = append(fs.pawns, game.PawnView{ID: entity.EntityID(i), Name: "P", Status: "alive", Priorities: []int{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}})
 		}
-		w := New(workDrawShell{fs, win})
+		var portraits, statuses []gfx.Rect
+		w := New(workDrawShell{fs, win, &portraits, &statuses})
+		w.workView.sortBy(int(work.Art))
 		a := anchorsOf(func(img *ebiten.Image) { w.Work().draw(img, s.W, s.H) })
 		r := uikit.Button{X: win.X, Y: win.Y, W: win.W, H: win.H}
 		for _, c := range workCells(nil, r, 0) {
@@ -105,10 +123,44 @@ func TestWorkDrawOnTheCells(t *testing.T) { //nolint:paralleltest // canvas-glob
 				}
 			}
 		}
+		buttons := w.Work().buttons()
+		find := func(id string, want gfx.Rect) {
+			t.Helper()
+			for _, b := range buttons {
+				if b.ID == id {
+					if got := (gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); got != want {
+						t.Errorf("%s geometry %v, want %v", id, got, want)
+					}
+					return
+				}
+			}
+			t.Errorf("missing button %s", id)
+		}
+		name := workCells(nil, r, 0)[0].R
+		find(ids.WorkNameSort, gfx.Rect{X: name.X, Y: r.Y + workHeadY, W: name.W, H: workHeadH})
+		for col := range WorkColumns {
+			find(ids.PrefixWorkHead+uikit.Num(col), workHeadRect(r, col))
+		}
+		for row, pawn := range w.Work().rows() {
+			for _, cell := range workCells(nil, r, row)[1:] {
+				find(ids.PrefixWorkCell+uikit.Num(int(pawn.ID))+"."+uikit.Num(workColIndex(cell.Col)), cell.R)
+			}
+		}
+		if len(portraits) != 3 || len(statuses) != 3 {
+			t.Fatalf("%dx%d: missing portrait or status draws: %v %v", s.W, s.H, portraits, statuses)
+		}
 		for row := 0; row < 3; row++ {
+			name := workCells(nil, r, row)[0].R
+			wantPortrait := gfx.Rect{X: name.X, Y: name.Y, W: 25, H: 25}
+			wantStatus := gfx.Rect{X: name.Right() - 20, Y: name.Y + 3, W: 20, H: 20}
+			if portraits[row] != wantPortrait || statuses[row] != wantStatus {
+				t.Errorf("%dx%d row %d: portrait/status leave name cell: %v %v, want %v %v", s.W, s.H, row, portraits[row], statuses[row], wantPortrait, wantStatus)
+			}
 			for _, c := range workCells(nil, r, row) {
 				x, y0, y1 := c.R.X, c.R.Y, c.R.Y+c.R.H
-				if c.Col != workNameCol {
+				if c.Col == workNameCol {
+					x += 32 // name follows the portrait, within the same cell
+				} else {
 					x += float32(hudlayout.WorkBox) / 2 // the box centre
 				}
 				if !drawnAt(a, x, y0, y1) {

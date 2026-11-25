@@ -213,7 +213,7 @@ func TestTaintedApparelThought(t *testing.T) {
 
 // TestInspirationNoFlapInGame: an inspiration started in the game stays
 // through the hourly checks whatever the mood, until it fades, and the
-// calm keeps a new one off; the save keeps it.
+// the save preserves it and releases it at normal expiry.
 func TestInspirationNoFlapInGame(t *testing.T) {
 	t.Parallel()
 	g, ada := dressGame(t, 10, 8, 150)
@@ -241,10 +241,8 @@ func TestInspirationNoFlapInGame(t *testing.T) {
 	if _, ok := h.mind.Inspire.Of(ada); ok {
 		t.Fatal("not faded after 8 days")
 	}
-	h.clock.Advance(mind.InspireCalm / 2)
-	h.mind.Inspire.Check(ada)
-	if _, ok := h.mind.Inspire.Of(ada); ok {
-		t.Fatal("inspired again inside the calm")
+	if len(h.mind.Export().InspireCalm) != 0 {
+		t.Fatal("obsolete inspiration cooldown persisted in save")
 	}
 }
 

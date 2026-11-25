@@ -27,7 +27,7 @@ func Marked(a *animal.State) bool { return a.Tame && a.Designated && !a.Dead() }
 // holds.
 func (s *Slaughter) Assign(id entity.EntityID) bool {
 	h := s.hd.h
-	if !h.AnyAnimal(func(_ entity.EntityID, a *animal.State) bool { return Marked(a) }) {
+	if !h.AnyTameAnimal(func(_ entity.EntityID, a *animal.State) bool { return Marked(a) }) {
 		return false
 	}
 	aid, ax, ay, ok := h.Nearest(id, func(o entity.EntityID, a *animal.State) bool { return Marked(a) && !claimed(h, o) })

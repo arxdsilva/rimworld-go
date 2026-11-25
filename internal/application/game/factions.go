@@ -5,11 +5,14 @@ package game
 
 import (
 	"fmt"
+	"math"
+	"slices"
 
 	"rimworld-go/internal/application/game/factionview"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/storyteller"
 	"rimworld-go/pkg/randx"
 )
@@ -23,6 +26,31 @@ const raidRepelled = -5
 
 // Factions is the colony's Factions window.
 func (g *Game) Factions() []FactionView { return FactionViewsOf(g.ng.factions) }
+
+// SpecialFactions are hidden native faction objects, deliberately
+// excluded from surface settlement, diplomacy and trade indexes.
+func (g *Game) SpecialFactions() []FactionView { return FactionViewsOf(faction.Specials()) }
+
+// ActorFaction returns a detached faction object for a live actor,
+// using persisted human origin and the native species allegiance.
+func (g *Game) ActorFaction(id entity.EntityID) (FactionView, bool) {
+	if a, ok := g.animals.Get(id); ok {
+		f, ok := faction.CreatureFaction(a.Species, a.Tame)
+		return factionView(f), ok
+	}
+	if slices.Contains(g.pawnIDs, id) {
+		return factionView(faction.Colony()), true
+	}
+	if p := g.personOf(id); p != nil {
+		if f := g.factionOf(p.Faction); f != nil {
+			return factionView(*f), true
+		}
+		if f, ok := faction.Special(p.Origin); ok {
+			return factionView(f), true
+		}
+	}
+	return FactionView{}, false
+}
 
 // factionView is one faction row (game/factionview).
 func factionView(f faction.Faction) FactionView { return factionview.Of(f) }
@@ -40,7 +68,7 @@ func (g *Game) Story() StoryView {
 		Commitment: s.SaveMode == difficulty.Commitment,
 	}
 	if s.Difficulty.Adaptation {
-		v.Adaptation = int(g.ng.adapt.Value)
+		v.Adaptation = int(math.Round((g.ng.adapt.Factor(s.Difficulty) - 1) * 100))
 	}
 	return v
 }
@@ -57,7 +85,7 @@ func (g *Game) factionOf(ref int) *faction.Faction {
 // hostileRaider reports a hostile human faction that can raid.
 func hostileRaider(g *Game) bool {
 	for _, f := range g.ng.factions {
-		if f.Type.Human() && f.Relation == faction.Hostile && !f.Defeated {
+		if faction.Raider(f) {
 			return true
 		}
 	}
@@ -124,14 +152,17 @@ func queueRival(g *Game, of int, now uint64) bool {
 // False: fi can no longer raid (defeated, or no longer hostile), and the
 // queue sends whoever can instead.
 func rivalRaid(g *Game, fi, points int, now uint64) bool {
-	if !g.hasSetup() || fi < 0 || fi >= len(g.ng.factions) || !faction.Raider(g.ng.factions[fi]) {
+	if !canRivalRaid(g, fi) {
 		return false
 	}
 	if points <= 0 {
 		points = g.threatPoints()
 	}
-	factionRaid(g, fi, points, g.relDay(now)) // story.go
-	return true
+	return factionRaid(g, fi, points, g.relDay(now)) // story.go
+}
+
+func canRivalRaid(g *Game, fi int) bool {
+	return g.hasSetup() && fi >= 0 && fi < len(g.ng.factions) && faction.Raider(g.ng.factions[fi])
 }
 
 // DevAddFactions gives a colony with no factions the default slots

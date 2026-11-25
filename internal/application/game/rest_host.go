@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/recreate"
@@ -16,7 +17,6 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
-	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
@@ -42,7 +42,7 @@ type restHost struct {
 var _ rest.Host = restHost{}
 
 func newRestHost(g *Game) restHost {
-	return restHost{restBodies{g}, restBedding{g}, restClaims{g}, restRoutine{g}, restPatients{g}, restRooms{g}, restEvents{g}, restCouples{g}}
+	return restHost{restBodies{g}, restBedding{g}, restClaims{g}, restRoutine{g}, restPatients{g, g.care.Rest}, restRooms{g}, restEvents{g}, restCouples{g}}
 }
 
 type restBodies struct{ g *Game }
@@ -78,6 +78,9 @@ func (h restBodies) FloorSpot(id entity.EntityID, x, y int) (int, int) {
 type restBedding struct{ g *Game }
 
 func (h restBedding) BuildingIDs() []entity.EntityID { return h.g.bldgIDs }
+func (h restBedding) BuildingsKey() [2]uint64 {
+	return [2]uint64{uint64(h.g.mapState.id), h.g.bldgs.Ver()}
+}
 func (h restBedding) Building(id entity.EntityID) (construction.Building, bool) {
 	return h.g.bldgs.Get(id)
 }
@@ -130,12 +133,14 @@ func (h restClaims) TileFree(id entity.EntityID, x, y int) bool {
 
 type restRoutine struct{ g *Game }
 
-func (h restRoutine) Activity(id entity.EntityID) schedule.Activity { return h.g.activityOf(id) }
-func (h restRoutine) SeekFood(id entity.EntityID) bool              { return h.g.seekFood(id) }
-func (h restRoutine) Job(id entity.EntityID) job.Record {
-	j, _ := h.g.jobs.Get(id)
-	return j
+func (h restRoutine) Activity(id entity.EntityID) schedule.Activity {
+	if h.g.prison.Is(id) {
+		return schedule.Anything
+	} // captives do not follow colonist schedules
+	return h.g.activityOf(id)
 }
+func (h restRoutine) SeekFood(id entity.EntityID) bool  { return h.g.seekFood(id) }
+func (h restRoutine) Job(id entity.EntityID) job.Record { j, _ := h.g.jobs.Get(id); return j }
 
 func (h restRoutine) Band(id entity.EntityID) (int, int) {
 	c, ht := h.g.comfortShift(id) // TEMP-3: before apparel (wiki: Thoughts), traits and build kept
@@ -143,11 +148,13 @@ func (h restRoutine) Band(id entity.EntityID) (int, int) {
 	return b.Min, b.Max
 }
 
-type restPatients struct{ g *Game }
+type restPatients struct {
+	g *Game
+	*care.Rest
+}
 
-func (h restPatients) OnBedRest(id entity.EntityID) bool { return h.g.care.Rest.On(id) }
-func (h restPatients) MayUseMedicalBed(id entity.EntityID) bool {
-	return h.g.care.Rest.MayUseMedicalBed(id)
+func (h restPatients) RestFactor(id entity.EntityID) int32 {
+	return body.RestRateMultiplier(h.g.bodies[id])
 }
 
 // SurgeryWait: one only waiting for a surgeon who never came gets up
@@ -263,9 +270,9 @@ func (h recHost) Sight(id entity.EntityID) int    { return int(h.restBodies.g.ca
 func (h recHost) PawnIDs() []entity.EntityID      { return h.restBodies.g.pawnIDs }
 func (h recHost) Holds(x, y int) bool             { return h.restBodies.g.itemAt(x, y) != 0 }
 func (h recHost) Wealth() int                     { return h.restBodies.g.Wealth() }
-func (h recHost) Joy(id entity.EntityID) int      { return h.restBodies.g.joy[id] }
+func (h recHost) Joy(id entity.EntityID) int      { return joyForScheduling(h.restBodies.g, id) }
 func (h recHost) AddJoy(id entity.EntityID, n int) {
-	h.restBodies.g.joy[id] = recreation.Clamp(h.restBodies.g.joy[id] + n)
+	addRecreation(h.restBodies.g, id, n)
 }
 func (h recHost) Learn(id entity.EntityID, sk skill.ID, xp int) { h.restBodies.g.learn(id, sk, xp) }
 func (h recHost) Enjoyed(id entity.EntityID)                    { h.restBodies.g.rest.Waking.Felt(id, rest.Enjoyed) }

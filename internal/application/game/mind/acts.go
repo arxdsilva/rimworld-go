@@ -72,7 +72,7 @@ func (m *Mind) insult(id entity.EntityID, k mentalbreak.Kind, j job.Record, now 
 	t := m.track[id]
 	if k == mentalbreak.TargetedInsult {
 		if t.Target == 0 || !h.Alive(t.Target) {
-			m.end(id, k)
+			m.end(id, k, true)
 			return
 		}
 	} else {
@@ -142,7 +142,7 @@ func (m *Mind) rage(id entity.EntityID, j job.Record, now uint64) {
 	h := m.h
 	t := m.track[id]
 	if t.Target == 0 || !h.Alive(t.Target) {
-		m.end(id, mentalbreak.MurderousRage)
+		m.end(id, mentalbreak.MurderousRage, true)
 		return
 	}
 	if now >= t.Next && h.Assault(id, t.Target) {

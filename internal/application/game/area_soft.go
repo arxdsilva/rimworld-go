@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/pathstage"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/sim/command"
@@ -119,7 +120,8 @@ func (q softQuery) Reach(sx, sy, tx, ty int) bool {
 		return b.Reach(sx, sy, tx, ty)
 	case *grid.Grid:
 		if g := q.s.g; b == g.grid && !g.noRegions() {
-			return checkReach(g, b, sx, sy, tx, ty, g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+			got := g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty)
+			return pathstage.CheckReach(b, sx, sy, tx, ty, got, !got && checkIndex(g))
 		}
 	}
 	return true
@@ -142,13 +144,13 @@ func (g *Game) softPathQuery(id entity.EntityID, base pathing.Query) pathing.Que
 }
 
 // plainSoft hides q's region and bitset extensions for a reference
-// search (plainQuery) but keeps its soft costs, so the search finds the
+// search but keeps its soft costs, so the search finds the
 // same route.
 func plainSoft(q pathing.Query) pathing.Query {
 	if sq, ok := q.(softQuery); ok {
-		return softQuery{Query: plainQuery{sq.Query}, s: sq.s}
+		return softQuery{Query: pathstage.PlainQuery{Query: sq.Query}, s: sq.s}
 	}
-	return plainQuery{q}
+	return pathstage.PlainQuery{Query: q}
 }
 
 // softAnimalQuery is softPathQuery for an animal mover (a colonist's

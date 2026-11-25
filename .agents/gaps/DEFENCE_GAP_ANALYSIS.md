@@ -94,7 +94,7 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Raid points from wealth and colonists, hostile faction chosen, group built from a budget. | `raidPoints`, `Wealth`, `raidKit`: kit now picked by `kit.Pick` from faction tech and points over the DEF-2 catalogue. | Raiders wear no armor; checklist 24.1 Wealth calculation open. | DEF-2 | partial |
+| Raid points from wealth and colonists, hostile faction chosen, group built from a budget. | Native weighted wealth, eligible residents/animals and goods; ordinary threat evaluates its map, quests sum independent permanent colony/caravan point budgets (QST-025). Shared adaptation and faction kit selection remain native. | Original #252 wealth-calculation item (24.1) is implemented; independent commercial threat-curve parity is not claimed. | DEF-2, QST-1 | done (scoped native) |
 | Raiders wear armor by tech level. | None. | Raider armor in the kit. | DEF-3 | done (2026-11-20 audit: kit/armor.go Armor(); application/game/raids.go:200 applies kit.Armor to raiders; kit/armor_test.go) |
 | Colonist grenade throwing and rocket launchers. | Grenade throw order (DEF-4, above). | Rocket launcher kind. | DEF-4 | done (2026-11-20 audit: item.RocketLauncher/TripleRocketLauncher kinds, IsContractWeapon equippable; assets/metadata/weapon/rocket_launcher.yaml) |
 | Edge arrival and immediate assault. | `raidArrive`/`raidAssault`/`raidFlee` modes (`raids.go`); `planAssault`. | None. | - | done |

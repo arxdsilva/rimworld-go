@@ -178,3 +178,97 @@ func TestPrisonBedIgnoresTheAir(t *testing.T) {
 		t.Fatal("a prison bed is chosen whatever its air (capture, the warden)")
 	}
 }
+
+func TestExposureSpotInvalidatedInFlight(t *testing.T) {
+	c, h := hotInOwnBed()
+	h.air.spot[patient] = [2]int{12, 12}
+	if !c.Doctor.Assign(doc) {
+		t.Fatal("no initial rescue")
+	}
+	j := h.jobs[doc]
+	j.State = job.Do
+	c.Doctor.DoRescue(doc, j)
+	j = h.jobs[doc]
+	if j.State != job.Goto || j.Dest != 0 || c.Carry.Patient(doc) != patient {
+		t.Fatalf("not carrying to spot: %+v", j)
+	}
+	h.setAir(12, 12, 334)
+	h.air.spot[patient] = [2]int{15, 15}
+	h.pos[doc] = [2]int{j.TX, j.TY}
+	c.FollowCarriers()
+	j.State = job.Do
+	c.Doctor.DoRescue(doc, j)
+	if h.jobs[doc].State != job.Fail || c.Carry.Patient(doc) != 0 || h.pos[patient] != h.pos[doc] || h.ExposureWait(patient) > h.now {
+		t.Fatalf("stale spot completed or retained patient/retry: %+v, pos=%v, wait=%d", h.jobs[doc], h.pos[patient], h.ExposureWait(patient))
+	}
+}
+
+// A nonhealing bed is still admissible only when no healing destination
+// exists and the patient is not already in a bed or healing air.
+func TestLiveNoHealingSiteFallback(t *testing.T) {
+	c, h := scene()
+	h.heatstroked(patient, heatSev)
+	h.setAir(5, 5, 334)
+	h.bed(bedID, construction.Building{Kind: construction.Bed, X: 9, Y: 9})
+	h.setAir(9, 9, 334)
+	h.setAir(10, 9, 334)
+	h.pos[doc] = [2]int{5, 5}
+	if !c.Doctor.Assign(doc) {
+		t.Fatal("no-healing-site fallback refused")
+	}
+	if j := carry(t, c, h); j.State != job.Complete || j.Dest != bedID {
+		t.Fatalf("legitimate fallback invalidated: %+v", j)
+	}
+}
+
+func TestGroundRescueReroutesLiveHazard(t *testing.T) {
+	for _, alternate := range []bool{false, true} {
+		c, h := hotInOwnBed()
+		h.air.spot[patient] = [2]int{12, 12}
+		if !c.Doctor.Assign(doc) {
+			t.Fatal("no initial rescue")
+		}
+		j := h.jobs[doc]
+		j.State = job.Do
+		c.Doctor.DoRescue(doc, j)
+		j = h.jobs[doc]
+		if j.State != job.Goto || c.Carry.Patient(doc) != patient {
+			t.Fatal("fixture did not pick up")
+		}
+		h.pos[doc] = [2]int{j.TX, j.TY}
+		h.air.unsafe = map[[2]int]bool{h.pos[doc]: true}
+		if alternate {
+			h.air.spot[patient] = [2]int{15, 15}
+		} else {
+			delete(h.air.spot, patient)
+		}
+		c.FollowCarriers()
+		j.State = job.Do
+		c.Doctor.DoRescue(doc, j)
+		for _, log := range h.log {
+			if log == "rescued" {
+				t.Fatal("unsafe initial landing emitted success")
+			}
+		}
+		j = h.jobs[doc]
+		if !alternate {
+			if j.State != job.Fail || c.Carry.Patient(doc) != 0 || h.ExposureWait(patient) > h.now {
+				t.Fatal("unsuccessful transfer retained carry or success cooldown")
+			}
+			continue
+		}
+		if j.State != job.Goto || c.Carry.Patient(doc) != patient || j.TX != 15 || j.TY != 15 {
+			t.Fatalf("no live alternate transport: %+v", j)
+		}
+		h.pos[doc] = [2]int{j.TX, j.TY}
+		c.FollowCarriers()
+		j.State = job.Do
+		c.Doctor.DoRescue(doc, j)
+		if h.jobs[doc].State != job.Complete || h.pos[patient] != [2]int{15, 15} || c.Carry.Patient(doc) != 0 {
+			t.Fatal("safe alternate did not finish")
+		}
+		if h.ExposureWait(patient) != h.now+ExposureRetry {
+			t.Fatal("successful reroute lost anti-flap cooldown")
+		}
+	}
+}

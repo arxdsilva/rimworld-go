@@ -195,21 +195,7 @@ func (g *Game) seedGrassFrom(mask []bool) {
 			s.cells[i] = 1
 		}
 	}
-	for _, id := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(id); ok {
-			g.bareFootprint(s, b.Kind, b.Facing, b.X, b.Y)
-		}
-	}
-	for _, id := range g.frameIDs {
-		if f, ok := g.frames.Get(id); ok {
-			g.bareFootprint(s, f.Kind, f.Facing, f.X, f.Y)
-		}
-	}
-	for _, id := range g.plantIDs {
-		if p, ok := g.plants.Get(id); ok && g.grid.InBounds(p.X, p.Y) {
-			s.cells[p.Y*w+p.X] = 0
-		}
-	}
+	clearGrassFootprints(g, s)
 }
 
 // --- natural features and ruins -------------------------------------------
@@ -242,17 +228,7 @@ func (g *Game) naturalAt(x, y int) bool {
 	return ok && isNatural(b.Kind)
 }
 
-// refundOf is what deconstructing b gives back: a ruin gives half.
-func refundOf(b construction.Building) int {
-	r := construction.RefundFor(b.Kind, b.Stuff) // A2: ten times for a silver, gold or jade wall
-	if construction.DefOf(b.Kind).Layer == construction.LayerFloor {
-		r = orders.FloorRefund(b.Kind) // AX-1 (wiki: Floors): half, nothing for flagstone
-	}
-	if b.Ruin {
-		r = (r + 1) / 2 // half, rounded up: a ruin still gives something back
-	}
-	return r
-}
+func refundOf(b construction.Building) int { return orders.DeconstructionRefund(b) }
 
 // notColonyPiece reports a building that is not the colony's: a ruin, an
 // ancient vault piece (MAPGEN-3) or a natural feature (no wealth, no Home

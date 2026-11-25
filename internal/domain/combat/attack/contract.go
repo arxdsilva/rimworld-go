@@ -25,7 +25,7 @@ const (
 // DownedIntercept is the share (permille) of InterceptChance a downed
 // creature lying in a shot's path keeps (SHT-006). Original tuning, not a
 // published value (.agents/specs/CLEAN_ROOM.md).
-const DownedIntercept Permille = 250
+const DownedIntercept Permille = 100
 
 // Chain is the cumulative hit chance (permille) after each step: entry
 // StepClamp is Aim and entry StepCover is Total. A melee report holds its

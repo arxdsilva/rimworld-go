@@ -5,9 +5,11 @@ package care
 
 import (
 	"maps"
+	"rimworld-go/internal/domain/building/construction"
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
@@ -143,6 +145,14 @@ func (r *Rest) On(id entity.EntityID) bool {
 	return ok
 }
 
+// OnBedRest exposes the authoritative care state to the sleep owner.
+func (r *Rest) OnBedRest(id entity.EntityID) bool { return r.On(id) }
+
+// PatientBedSafe exposes the same clinical bed admission to fallback sleep.
+func (r *Rest) PatientBedSafe(id, bed entity.EntityID, x, y int) bool {
+	return !r.On(id) && !r.h.TameAnimal(id) || restBedSafe(r.h, id, bed, x, y)
+}
+
 // Since is when id's bed rest began.
 func (r *Rest) Since(id entity.EntityID) (uint64, bool) {
 	t, ok := r.since[id]
@@ -199,20 +209,44 @@ func (r *Rest) PatientRest(id entity.EntityID) bool {
 // tick, before anything else may send it somewhere), and gives back a
 // medical bed it held once it is up.
 func (r *Rest) Update(id entity.EntityID) {
+	r.UpdateWork(id, work.DefaultPriorities(), true)
+}
+
+// WorkType distinguishes seeking active treatment from convalescence.
+// Neither optional column controls emergency rescue or care of the downed.
+func (r *Rest) WorkType(id entity.EntityID) work.Type {
+	if r.h.NeedsTending(id) || r.h.AwaitingSurgery(id) || r.h.SickRest(id) || r.On(id) && r.h.SickStill(id) {
+		return work.Patient
+	}
+	return work.BedRest
+}
+
+// UpdateWork maintains the existing rest/bed owner, with the relevant work
+// column enabled. Admission can wait for the native work-priority pass.
+func (r *Rest) UpdateWork(id entity.EntityID, pr work.Priorities, admit bool) {
 	now := r.h.Now()
+	allowed := pr[r.WorkType(id)] > 0
 	if t, ok := r.retry[id]; ok && now >= t {
 		delete(r.retry, id)
 	}
 	if since, on := r.since[id]; on {
-		if r.off[id] || now-since >= RestMin && r.restOver(id) {
+		if r.off[id] || !allowed || now-since >= RestMin && r.restOver(id) {
 			delete(r.since, id)
 		}
-	} else if r.PatientRest(id) {
+	} else if allowed && admit && r.PatientRest(id) {
 		r.ensure()
 		r.since[id] = now
 	}
 	if len(r.bed) > 0 {
 		r.leaveBed(id)
+	}
+}
+
+// RecoveredAnimal releases a temporary animal bed after it stands.
+func (r *Rest) RecoveredAnimal(id entity.EntityID) {
+	if bid, ok := r.bed[id]; ok {
+		delete(r.bed, id)
+		r.releaseSlot(id, bid)
 	}
 }
 
@@ -241,16 +275,23 @@ func (r *Rest) Slot(id entity.EntityID, j job.Record) bool {
 		return false
 	}
 	switch {
-	case j.Kind == job.Eat || j.Kind == job.Warm:
+	case j.Kind.Eating() || j.Kind == job.Warm:
 		return false
 	case j.Kind == job.Tend && j.Target == id && j.Active():
 		return true // tending itself
 	case j.Kind == job.Sleep && j.Active() && (j.Target != 0 || r.h.Now() < r.retry[id] && r.WaitsForDoctor(id)):
-		// in bed, or on the floor for a doctor with no bed to be had
-		if j.State == job.Do && r.SelfTendDue(id, j) {
-			r.tendSelfInBed(id)
+		// A previously safe destination can become forbidden or hazardous.
+		// Return temporary medical ownership before selecting another bed.
+		if j.Target == 0 || restBedSafe(r.h, id, j.Target, j.TX, j.TY) {
+			if j.State == job.Do && r.SelfTendDue(id, j) {
+				r.tendSelfInBed(id)
+			}
+			return true
 		}
-		return true
+		if r.bed[id] == j.Target {
+			delete(r.bed, id)
+			r.releaseSlot(id, j.Target)
+		}
 	}
 	if j.Kind != job.None && j.State != job.Idle {
 		r.h.Interrupt(id, job.Interrupted)
@@ -329,8 +370,8 @@ func (r *Rest) restInMedicalBed(id entity.EntityID) bool {
 		return false
 	}
 	b, _ := r.h.Building(bid)
-	held := b.SlotOf(uint64(id)) >= 0
-	claimed := b.Claim(uint64(id))
+	held := construction.BedSlot(b, uint64(id)) >= 0
+	claimed := construction.ClaimBed(b, uint64(id))
 	r.h.SetBuilding(bid, claimed)
 	sx, sy := r.h.SleepCell(id, claimed)
 	if !r.h.StartJob(id, job.Record{Kind: job.Sleep, Target: bid, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
@@ -356,8 +397,8 @@ func (r *Rest) Hold(id, bid entity.EntityID) {
 
 // releaseSlot frees id's slot in bed bid, if it holds one.
 func (r *Rest) releaseSlot(id, bid entity.EntityID) {
-	if b, ok := r.h.Building(bid); ok && b.SlotOf(uint64(id)) >= 0 {
-		r.h.SetBuilding(bid, b.Release(uint64(id)))
+	if b, ok := r.h.Building(bid); ok && construction.BedSlot(b, uint64(id)) >= 0 {
+		r.h.SetBuilding(bid, construction.ReleaseBed(b, uint64(id)))
 	}
 }
 
@@ -384,10 +425,22 @@ func (r *Rest) leaveBed(id entity.EntityID) {
 // up if it sleeps there. A prisoner keeps its prison bed.
 func (r *Rest) SetBedMedical(id entity.EntityID, on bool) {
 	b, ok := r.h.Building(id)
-	if !ok || !b.Kind.Sleeps() || b.Medical == on {
+	if !ok || (!b.Kind.Sleeps() && !b.Kind.AnimalSleeps()) || b.Medical == on {
 		return
 	}
 	b.Medical = on
+	if b.Kind.AnimalSleeps() {
+		if on && b.Claimant != 0 {
+			cid := entity.EntityID(b.Claimant)
+			if r.c.Doctor.InjuredDowned(cid) && r.h.BedUnder(cid) == id {
+				r.Hold(cid, id)
+			} else {
+				b.Claimant = 0
+			}
+		}
+		r.h.SetBuilding(id, b)
+		return
+	}
 	var up []entity.EntityID
 	if on {
 		for _, c := range [2]uint64{b.Claimant, b.Claimant2} {
@@ -397,7 +450,7 @@ func (r *Rest) SetBedMedical(id entity.EntityID, on bool) {
 			case r.c.Doctor.InjuredDowned(cid) || r.MayUseMedicalBed(cid):
 				r.Hold(cid, id)
 			default:
-				b = b.Release(c)
+				b = construction.ReleaseBed(b, c)
 				if j, _ := r.h.Job(cid); j.Kind == job.Sleep && j.Target == id && j.Active() {
 					up = append(up, cid)
 				}
@@ -423,4 +476,29 @@ func (r *Rest) SetPawnBedRest(id entity.EntityID, on bool) {
 	r.ensure()
 	r.off[id] = true
 	delete(r.since, id)
+}
+
+// ForbidBed cancels in-flight care and removes existing ownership without
+// moving an injured occupant. Its next rescue/bed-rest search can take
+// a different bed, while a forbidden bed is never selected.
+func (r *Rest) ForbidBed(id entity.EntityID, b construction.Building, forget func(entity.EntityID)) {
+	h := r.h
+	if holder, ok := h.Owner(id); ok {
+		h.Interrupt(holder, job.Cancelled)
+	}
+	for _, owner := range [2]uint64{b.Claimant, b.Claimant2} {
+		if owner == 0 {
+			continue
+		}
+		pawn := entity.EntityID(owner)
+		if j, ok := h.Job(pawn); ok && j.Kind == job.Sleep && j.Target == id && j.Active() {
+			h.Interrupt(pawn, job.Cancelled)
+		}
+		if r.HeldBed(pawn) == id {
+			r.Clear(pawn)
+		}
+		forget(pawn)
+		b = construction.ReleaseBed(b, owner)
+	}
+	h.SetBuilding(id, b)
 }

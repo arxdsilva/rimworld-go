@@ -22,17 +22,7 @@ import (
 // (gathering.go gatherAbort).
 
 // pairRank orders a pawn's partners: spouse, fiancé, lover.
-func pairRank(k social.PairKind) int {
-	switch k {
-	case social.PairSpouse:
-		return 3
-	case social.PairFiance:
-		return 2
-	case social.PairLover:
-		return 1
-	}
-	return 0
-}
+func pairRank(k social.PairKind) int { return social.PairRank(k) }
 
 // partners lists id's living partners (lover, fiancé, spouse), strongest
 // first, then by id.

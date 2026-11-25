@@ -64,7 +64,7 @@ func phaseSystems(g *Game) *sched.Schedule {
 		w(PhaseClimate, PhaseClimate, g.phaseClimate).At(climateInterval, 0),
 		w(PhaseMedical, PhaseMedical, g.phaseMedical).At(hour, cadence.OffMedical),
 		w(PhaseNeeds, PhaseNeeds, g.phaseNeeds), w(PhaseAI, PhaseAI, g.phaseAI), w(PhaseJobs, PhaseJobs, g.phaseJobs),
-		w("social-day", PhaseSocial, func() { g.socialDay(now()) }).ForColony().At(clock.TicksPerDay, cadence.OffSocialDay).When(talk).Then("gather"),
+		w("social-day", PhaseSocial, func() { g.socialDay(now()) }).ForColony().At(clock.TicksPerDay, cadence.OffSocialDay).When(func() bool { return talk() || len(g.memories) > 0 }).Then("gather"),
 		w("gather", PhaseSocial, func() { g.gatherTick(now()) }).ForColony().When(talk).Then(PhaseSocial), // gathering.go: weddings and parties (M5)
 		w(PhaseSocial, PhaseSocial, g.phaseSocial), w(PhaseAnimals, PhaseAnimals, g.phaseAnimals),
 		w("wealth", PhaseThreats, func() { g.wealth.Step(now()) }).At(wealth.Stride, 0).Then("arrival"),         // game/wealth (EAI-014): each map's sweep, a slice a step
@@ -74,7 +74,7 @@ func phaseSystems(g *Game) *sched.Schedule {
 		w("story", PhaseThreats, func() { storyHour(g, now()) }).ForColony().At(hour, cadence.OffStory).When(g.hasSetup).Then("storyteller"),
 		w("storyteller", PhaseThreats, func() { fireStoryteller(g, now()) }).ForColony().When(func() bool { return g.threatsOn && now() >= g.nextThreat }).Then(PhaseThreats),
 		w(PhaseThreats, PhaseThreats, g.phaseThreats), w(PhaseIncidents, PhaseIncidents, g.phaseIncidents),
-		w("visitors", PhaseWorld, func() { visitsOf(g).Tick(aidOf(g), now()) }).ForColony().When(func() bool { return world() && len(g.worldSt.visitors) > 0 }).Then(PhaseWorld), // game/visit
+		w("visitors", PhaseWorld, func() { visitsOf(g).Tick(aidOf(g), now()) }).ForColony().When(func() bool { return world() && (len(g.worldSt.visitors) > 0 || len(g.worldSt.visitGroups) > 0) }).Then(PhaseWorld), // game/visit
 		w(PhaseWorld, PhaseWorld, g.phaseWorld).When(world).Then("world-upkeep"),
 		w("world-upkeep", PhaseWorld, func() { worldUpkeep(g, now()) }).ForColony().At(worldStep, 0).When(world),
 		w("scripts", PhaseWeather, func() { scriptClock(g, now()) }).ForColony().At(hour, 0).When(func() bool { return scriptsOn(g) }).Then("pawn-scripts"), // scripts.go (PLG-060): on_day, on_hour

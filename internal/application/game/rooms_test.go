@@ -4,6 +4,9 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/skill"
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -78,7 +81,7 @@ func TestMoodFromEatingAndSleeping(t *testing.T) {
 	if !labels["ate raw food"] || !labels["ate without a table"] {
 		t.Fatalf("thoughts = %+v", p.Thoughts)
 	}
-	if p.Mood >= mood.Base || p.MoodLabel == "" {
+	if p.Mood >= mood.Base+mood.DefOf(mood.ExpectationsForWealth(g.Wealth())).Value || p.MoodLabel == "" {
 		t.Fatalf("raw food outdoors should lower mood: %d %s", p.Mood, p.MoodLabel)
 	}
 	// a fine meal at a table cheers them up (FOOD-4: the wiki's +5; a
@@ -100,25 +103,176 @@ func TestMoodFromEatingAndSleeping(t *testing.T) {
 	}
 }
 
-func TestUnhappyPawnsWorkSlower(t *testing.T) {
+func TestLowMoodDoesNotReduceDirectWorkSpeed(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 6, Height: 4})
 	id, _ := g.SpawnNamedPawn(1, 1, "Bo")
-	for _, k := range []mood.Kind{mood.SleptOutside, mood.AteRaw, mood.AteWithoutTable, mood.SleptInAwfulRoom} {
+	for _, k := range []mood.Kind{mood.SleptOutside, mood.AteRaw, mood.AteWithoutTable, mood.SleptInAwfulRoom, mood.OrganHarvested} {
 		g.remember(id, k)
 	}
 	g.SetNeeds(id, needs.CriticalHunger-1, needs.CriticalRest-1)
 	if g.moodOf(id) >= mood.LowMood {
-		t.Fatalf("mood %d should be low", g.moodOf(id))
+		t.Fatalf("fixture mood %d should be low", g.moodOf(id))
 	}
-	slow := 0
 	for i := 0; i < 400; i++ {
-		if !g.workTick(id) {
-			slow++
+		if got := g.workProgress(id, skill.Mining, false); got != 1 {
+			t.Fatalf("low mood changed direct work progress at tick %d: %d", i, got)
 		}
 		g.clock.Advance(1)
 	}
-	if slow != 100 {
-		t.Fatalf("unhappy pawn lost %d of 400 work ticks, want 100", slow)
+}
+
+func TestThoughtViewDoesNotRewriteMemories(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 3, Width: 14, Height: 10})
+	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	now := uint64(g.clock.Now())
+	expired := mood.Memory{Kind: mood.AteRaw, Expires: now}
+	live := mood.Memory{Kind: mood.SleptInNiceRoom, Expires: now + 100}
+	g.memories[id] = mood.Memories{expired, live}
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		thoughts := g.thoughts(id)
+		liveCount := 0
+		for _, th := range thoughts {
+			if th.Kind == mood.AteRaw {
+				t.Fatalf("query %d: expired thought returned: %+v", attempt, thoughts)
+			}
+			if th.Kind == mood.SleptInNiceRoom {
+				liveCount++
+			}
+		}
+		if liveCount != 1 {
+			t.Fatalf("query %d: expected one live thought, got %d: %+v", attempt, liveCount, thoughts)
+		}
+		if got := g.memories[id]; len(got) != 2 || got[0] != expired || got[1] != live {
+			t.Fatalf("query %d changed saved memories: %+v", attempt, got)
+		}
+	}
+}
+
+func TestMoodStepExpiresStoredMemories(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 3, Width: 14, Height: 10})
+	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	now := uint64(g.clock.Now())
+	live := mood.Memory{Kind: mood.SleptInNiceRoom, Expires: now + 100}
+	g.memories[id] = mood.Memories{
+		{Kind: mood.AteRaw, Expires: now},
+		live,
+	}
+	g.stepMood(id)
+	if got := g.memories[id]; len(got) != 1 || got[0] != live {
+		t.Fatalf("mood step did not drop expired memory: %+v", got)
+	}
+	g.clock.Advance(100)
+	g.stepMood(id)
+	if _, ok := g.memories[id]; ok {
+		t.Fatalf("expired-only memory entry remains saved: %+v", g.memories[id])
+	}
+}
+
+func TestMoodExpirySaveLoadReplay(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 3, Width: 14, Height: 10})
+	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	now := uint64(g.clock.Now())
+	g.memories[id] = mood.Memories{
+		{Kind: mood.AteRaw, Expires: now},
+		{Kind: mood.SleptInNiceRoom, Expires: now + 500},
+	}
+	g.stepMood(id)
+	loaded := saveAndLoad(t, g)
+	if g.StateHash() != loaded.StateHash() {
+		t.Fatal("save/load hash diverged after mood pruning")
+	}
+	g.Step(750)
+	loaded.Step(750)
+	if g.StateHash() != loaded.StateHash() {
+		t.Fatal("loaded simulation diverged after expiring memories")
+	}
+}
+
+func TestMoodOfUsesSmoothedValueBetweenUpdates(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 5, Width: 14, Height: 10})
+	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	if got, want := g.moodOf(id), g.thoughtLevel(id); got != want {
+		t.Fatalf("mood before first update = %d, want %d", got, want)
+	}
+	g.stepMood(id)
+	before := g.moodOf(id)
+	g.remember(id, mood.AteRaw)
+	if target := g.thoughtLevel(id); target == before {
+		t.Fatal("test needs a changed mood target")
+	}
+	if got := g.moodOf(id); got != before {
+		t.Fatalf("mood changed between updates: %d -> %d", before, got)
+	}
+	g.stepMood(id)
+	if got := g.moodOf(id); got >= before {
+		t.Fatalf("mood did not approach lower target: %d -> %d", before, got)
+	}
+}
+
+func TestMoodFreezesWhileSleepingOrUnconscious(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{"sleeping", "downed"} {
+		t.Run(condition, func(t *testing.T) {
+			g := New(Config{Seed: 6, Width: 14, Height: 10})
+			id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+			g.stepMood(id)
+			before := g.moodOf(id)
+			now := uint64(g.clock.Now())
+			g.memories[id] = mood.Memories{
+				{Kind: mood.AteRaw, Expires: now},
+				{Kind: mood.Catharsis, Expires: now + 1000},
+			}
+			switch condition {
+			case "sleeping":
+				g.jobs.Set(id, job.Record{Kind: job.Sleep, State: job.Do})
+			case "downed":
+				v, _ := g.vital.Get(id)
+				v.Status = health.Downed
+				g.vital.Set(id, v)
+			}
+			g.stepMood(id)
+			if got := g.moodOf(id); got != before {
+				t.Fatalf("mood changed while %s: %d -> %d", condition, before, got)
+			}
+			if got := g.memories[id]; len(got) != 1 || got[0].Kind != mood.Catharsis {
+				t.Fatalf("expired memories left while %s: %+v", condition, got)
+			}
+			g.jobs.Set(id, job.Record{})
+			v, _ := g.vital.Get(id)
+			v.Status = health.Alive
+			g.vital.Set(id, v)
+			g.stepMood(id)
+			if got := g.moodOf(id); got <= before {
+				t.Fatalf("mood did not resume after %s: %d -> %d", condition, before, got)
+			}
+		})
+	}
+}
+
+func TestAwakeBedriddenPatientMoodStillMoves(t *testing.T) {
+	t.Parallel()
+	g, id, _ := sickPatient(t)
+	if !g.lyingAwake(id) {
+		g.SetNeeds(id, 9000, 9000)
+		restFed(g, 1)
+	}
+	if !g.lyingAwake(id) {
+		t.Fatal("patient is still unconscious")
+	}
+	g.stepMood(id)
+	before := g.moodOf(id)
+	g.memories[id] = mood.Memories{{Kind: mood.Catharsis, Expires: uint64(g.clock.Now()) + 1000}}
+	g.stepMood(id)
+	if got := g.moodOf(id); got <= before {
+		t.Fatalf("awake patient did not recover mood: %d -> %d", before, got)
+	}
+	if !(mindPawns{g}).Awake(id) {
+		t.Fatal("awake patient is treated as asleep for mental checks")
 	}
 }

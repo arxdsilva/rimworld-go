@@ -16,12 +16,14 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	raiddef "rimworld-go/internal/domain/raid"
 	"rimworld-go/internal/domain/sim/clock"
@@ -33,29 +35,28 @@ import (
 	"slices"
 )
 
-// Threats. The raid package (raid/) runs the storyteller's die, raid
-// plans, the raider AI, predator packs and hive swarms; the game keeps
-// the raider records and raid groups (prisoners, visitors and factions
-// write them too), spawns raids and answers raid's roles (raid_host.go).
+// Raid owns threat decisions; game owns the saved actor and group rosters.
 
 const firstRaidDay = 5
 
 var raiderNames = []string{"Krell", "Vasha", "Dorn", "Mira", "Tobias", "Ilse", "Grit", "Sable", "Hask", "Rook", "Nessa", "Brann"}
 
-// isRaider reports a pawn of another faction on the map: raiders and the
-// colony's prisoners (they path like raiders, so doors hold them), not a
-// released prisoner walking out.
+// isRaider includes hostile actors and prisoners still confined by raider doors.
 func (g *Game) isRaider(id entity.EntityID) bool {
 	r, ok := g.raiders[id]
 	return ok && !r.Leaving
 }
 
-// standingRaider is a hostile raider still on its feet (never a
-// prisoner), or a colonist on its feet in a berserk or murderous break:
-// colonists may attack it (SIM-066).
+// standingRaider includes standing hostiles and colonists in violent breaks.
 func (g *Game) standingRaider(id entity.EntityID) bool {
 	v, ok := g.vital.Get(id)
 	return ok && v.Status == health.Alive && (g.isRaider(id) && !g.prison.Is(id) || mind.Hostile(g.breaks[id].kind))
+}
+
+// fleeingRaider excludes retreating hostiles from defense targeting.
+func (g *Game) fleeingRaider(id entity.EntityID) bool {
+	r, ok := g.raiders[id]
+	return ok && !r.Leaving && r.Mode == raid.Fleeing
 }
 
 // fireStoryteller fires the due threat at the colony it strikes (MAP-12).
@@ -74,6 +75,17 @@ func (g *Game) phaseThreats() {
 	g.raid.Pods.Step(now)                          // raid/pods.go (DEF-4): drop pods land
 	ids := append(g.raiderBuf[:0], g.raiderIDs...) // the list changes as raiders die or leave
 	for _, id := range ids {
+		// Friendly visitors have their own visit lifecycle; the shared
+		// sleep executor already ran. Turned visitors remain raid actors.
+		if g.visitor(id) && !g.isRaider(id) && !g.prison.Is(id) {
+			continue
+		}
+		if j, ok := g.jobs.Get(id); ok && j.Kind == job.Sleep && j.Active() && !g.prison.Is(id) && g.isRaider(id) {
+			v, _ := g.vital.Get(id)
+			if v.Status == health.Alive || v.Status == health.Downed && v.Cause == health.CauseNoBed {
+				continue
+			}
+		}
 		g.raid.Raiders.Think(id, now) // raid/raiders.go
 	}
 	g.raiderBuf = ids[:0]
@@ -112,11 +124,11 @@ func (g *Game) Raid(n int) {
 }
 
 // raidWith sends one raider per weapon in kit, following plan.
-func (g *Game) raidWith(kit []item.Kind, plan raid.Plan) { g.raidFrom(kit, plan, 0) }
+func (g *Game) raidWith(kit []item.Kind, plan raid.Plan) bool { return g.raidFrom(kit, plan, 0) }
 
 // raidFrom is raidWith for the faction fac (1 + index into the colony's
 // factions; 0: unattributed), settled by raid/threats.go (DEF-4).
-func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
+func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) bool {
 	f := g.factionOf(fac) // factions.go: nil for a legacy raid
 	grp, tech := raid.Group{Size: len(kit), Plan: plan}, faction.Industrial
 	if f != nil {
@@ -124,16 +136,13 @@ func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
 	}
 	g.raid.Threats.Settle(&grp, tech, g.raidPoints(int(uint64(g.clock.Now())/clock.TicksPerDay)))
 	if grp.Arrival.DropPod() && len(kit) > 0 {
-		scriptIncident(g, incident.RivalRaid) // scripts.go (PLG-060): a raid is on_incident's "core.rival_raid"
-		podRaid(g, grp, kit, f)
-		return
+		return podRaid(g, grp, kit, f)
 	}
 	ex, ey, ok := g.edgeTile()
 	n := len(kit)
 	if !ok || n <= 0 {
-		return
+		return false
 	}
-	scriptIncident(g, incident.RivalRaid) // scripts.go (PLG-060)
 	if grp.Plan == raid.Siege {
 		grp.CampX, grp.CampY = g.raid.Raiders.Camp(ex, ey)
 	}
@@ -159,8 +168,8 @@ func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
 	}
 	g.raidGroups[group].Size = spawned
 	if spawned == 0 {
-		g.raidGroups[group].Over = f != nil // nothing to repel: no goodwill lost
-		return
+		g.raidGroups = g.raidGroups[:group] // no actors accepted
+		return false
 	}
 	g.combat.Log.Alarm(fmt.Sprintf("A raid of %d came: %s.", spawned, grp.Plan)) // combat/log.go (DEF-4)
 	if f != nil {
@@ -168,10 +177,14 @@ func (g *Game) raidFrom(kit []item.Kind, plan raid.Plan, fac int) {
 			g.relativeLetter(letters.Caution, "Relative among the raiders", kin, "raiders")
 		}
 		g.raidMessage(ex, ey, spawned, grp.Plan, f) // story.go
-		return
+		scriptIncident(g, incident.RivalRaid)
+		return true
 	}
 	title, text := raid.Warning(grp.Plan, spawned)
-	g.threat(title, ex, ey, "%s", text)
+	fields := letters.RaidFields(spawned, "raiders", "group", raid.EdgeDir(g.grid.Width(), g.grid.Height(), ex, ey))
+	threatWithFields(g, letters.RaidCode(grp.Plan), title, ex, ey, "%s", fields, text)
+	scriptIncident(g, incident.RivalRaid)
+	return true
 }
 
 // spawnRaider puts a raider of group with k on (x, y) (id 0: a new one).
@@ -187,7 +200,7 @@ func spawnRaider(g *Game, id entity.EntityID, group int, k item.Kind, x, y int) 
 	g.positions.Set(id, Position{X: x, Y: y})
 	switch {
 	case known:
-		g.names.Set(id, bioName(g.personOf(id).Bio))
+		g.names.Set(id, g.personOf(id).Bio.DisplayName())
 	case f != nil:
 		g.names.Set(id, g.raiderName(id, f)) // story.go
 	default:
@@ -207,15 +220,15 @@ func spawnRaider(g *Game, id entity.EntityID, group int, k item.Kind, x, y int) 
 
 // podRaid sends group grp in drop pods (raid/pods.go); raiders spawn as
 // the pods land.
-func podRaid(g *Game, grp raid.Group, kit []item.Kind, f *faction.Faction) {
+func podRaid(g *Game, grp raid.Group, kit []item.Kind, f *faction.Faction) bool {
 	grp.PodFaction, grp.Faction = grp.Faction, 0
 	g.raidGroups = append(g.raidGroups, grp)
 	gi := len(g.raidGroups) - 1
 	x, y, n := g.raid.Pods.Drop(gi, kit, grp.Arrival, uint64(g.clock.Now()))
 	g.raidGroups[gi].Size = n
 	if n == 0 {
-		g.raidGroups[gi].Over = f != nil
-		return
+		g.raidGroups = g.raidGroups[:gi]
+		return false
 	}
 	who := ""
 	if f != nil {
@@ -223,7 +236,10 @@ func podRaid(g *Game, grp raid.Group, kit []item.Kind, f *faction.Faction) {
 	}
 	text := raid.Announce(grp.Arrival, n, who)
 	g.combat.Log.Alarm(text)
-	g.threat("Drop pods", x, y, "%s", text)
+	fields := letters.RaidFields(n, who, "faction", "")
+	threatWithFields(g, "colony.drop_raid", "Drop pods", x, y, "%s", fields, text)
+	scriptIncident(g, incident.RivalRaid)
+	return true
 }
 
 func nearestEdge(p Position, w, h int) (int, int) { return raid.NearestEdge(p.X, p.Y, w, h) }
@@ -313,15 +329,30 @@ func (g *Game) raiderViews() []PawnView {
 		name, _ := g.names.Get(id)
 		j, _ := g.jobs.Get(id)
 		v, _ := g.vital.Get(id)
+		n, _ := g.need.Get(id)
 		plan := ""
 		if gi := g.raiders[id].Group; gi < len(g.raidGroups) {
 			plan = g.raidGroups[gi].Plan.String()
 		}
 		out = append(out, PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(), RaidPlan: plan,
 			Status: v.Status.String(), Reason: v.Cause.String(), Health: v.HP() * 100 / health.MaxHP,
+			Hunger: needs.Percent(n.Hunger), Rest: needs.Percent(n.Rest), NoRecreation: true,
 			Weapon: weaponDefOf(g, id).Name, Lying: v.Status != health.Alive, Hostile: true, Apparel: g.Wearing(id), Worn: g.apparel[id].Views(), ApparelArmor: g.apparel[id].Armor(),
 			Fleeing: g.raiders[id].Mode == raid.Fleeing, Advancing: g.raid.Raiders.Advancing(id)})
-		g.fillPawnAction(&out[len(out)-1], id, j)
+		pv := &out[len(out)-1]
+		pv.Ally, pv.Visitor = g.isAlly(id), g.visitor(id)
+		if pv.Ally || pv.Visitor {
+			pv.Hostile = false
+		}
+		if person := g.personOf(id); person != nil {
+			if f := g.factionOf(person.Faction); f != nil {
+				pv.Faction = f.Name
+			}
+		}
+		ts := g.thoughts(id)
+		pv.Thoughts = thoughtViews(ts)
+		g.fillSocialPawn(pv, mood.Level(ts))
+		g.fillPawnAction(pv, id, j)
 	}
 	return out
 }
@@ -341,16 +372,9 @@ func (g *Game) Raiders() (standing, total int) {
 	return
 }
 
-// Raid sizes and plans. The storyteller weighs the colony (its wealth,
-// its colonists and how long it has stood) into raid points, and spends
-// them on raiders: clubs are cheap, rifles dear. Most raids assault head
-// on; later ones may lay siege (dig in behind sandbags out of reach and
-// shoot at whoever comes close, then storm in) or, against a colony shut
-// behind walls and rock, send sappers who tunnel straight through and
-// step around traps.
+// Raid points buy assault, siege and sapper groups based on colony strength.
 
 const (
-	maxScaledRaiders = 8
 	// The colony weapons' raid prices (domain combat/kit keeps them).
 	clubCost, knifeCost, spearCost, rifleCost = 60, kit.Cheapest, 70, 90
 )
@@ -367,21 +391,16 @@ func (g *Game) raidPoints(day int) int {
 	if g.hasSetup() {
 		return g.threatPoints() // story.go: difficulty.ThreatPoints (NG-1 §3.3)
 	}
-	colonists := 0
-	for _, id := range g.pawnIDs {
-		if g.standingPawn(id) {
-			colonists++
-		}
-	}
-	return g.Wealth()/40 + colonists*30 + day*2
+	return g.Wealth()/40 + g.standingColonists()*30 + day*2
 }
 
 // raidKit spends points on raiders' weapons (at least one raider); Of for
-// a faction of tech, at most maxRaiders (domain combat/kit, DEF-2).
+// a faction of tech. The kit's per-pawn weapon costs determine the count
+// (domain combat/kit, DEF-2).
 func (g *Game) raidKit(points int) []item.Kind { return g.raidKitOf(points, faction.Industrial) }
 
 func (g *Game) raidKitOf(points int, tech faction.Tech) []item.Kind {
-	return kit.Pick(points, g.maxRaiders(), tech, g.rng.IntN)
+	return kit.Pick(min(points, difficulty.PointsCap), tech, g.rng.IntN)
 }
 
 // scaledRaid is the storyteller's raid: sized by raid points, with a plan
@@ -521,7 +540,7 @@ func (h raidMischief) Flammable(x, y, r int) (int, int, bool) { return flammable
 func (h raidMischief) Ignite(x, y int) bool                   { return h.g.ignite(x, y, burstFireSize) } // fire.go
 func (h raidMischief) Rival(fa, fb int) bool {
 	a, b := h.g.factionOf(fa), h.g.factionOf(fb)
-	return fa != fb && a != nil && b != nil && a.Relation == faction.Hostile && b.Relation == faction.Hostile
+	return fa != fb && a != nil && b != nil && faction.Enemies(*a, *b)
 }
 
 type raidSiege struct{ g *Game }

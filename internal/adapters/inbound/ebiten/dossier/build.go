@@ -147,6 +147,9 @@ func (b *builder) pawnWidget(n config.HUDNode, w float32) (item, bool) {
 	case "rest_bar":
 		return b.bar(b.p.a.T("Rest"), pv.Rest, n, w, tipRest, sheet.TabNeeds), true
 	case "fun_bar":
+		if pv.NoRecreation {
+			return item{}, false
+		}
 		return b.bar(b.p.a.T("Recreation"), pv.Recreation, n, w, tipFun, sheet.TabNeeds), true
 	case "need_bar":
 		label, pct, ok := sheet.NeedValue(b.p.a, pv, n.Def)
@@ -298,7 +301,7 @@ func (b *builder) train(def string, w float32) (item, bool) {
 		if t.Skill != int(sk) {
 			continue
 		}
-		cell := sheet.TrainCell(b.p.a, t)
+		cell := sheet.TrainCell(b.p.a, d.a, t)
 		if cell.Label == "" {
 			return item{}, false
 		}

@@ -238,6 +238,7 @@ func arrestScene(t *testing.T, chance int) (g *Game, doc, a, b entity.EntityID, 
 	visitsOf(g).SetStay(a, now+10*clock.TicksPerDay)
 	visitsOf(g).SetStay(b, now+10*clock.TicksPerDay)
 	g.sk.stats[doc].sheet[stat.ArrestSuccess] = int32(chance)
+	hutWalls(t, g, 18, 1, 22, 5)
 	bed := buildNow(t, g, construction.Bed, item.Wood, construction.South, 20, 3)
 	bb, _ := g.bldgs.Get(bed)
 	bb.ForPrisoners = true
@@ -314,5 +315,64 @@ func TestTurnedGuestsRaiseNoRaidAlert(t *testing.T) {
 		if m.Danger && strings.Contains(m.Text, g.personName(a)) {
 			t.Fatalf("a danger message would pause: %q", m.Text)
 		}
+	}
+}
+
+func TestCapturingDownedNeutralTurnsFactionOnce(t *testing.T) {
+	g, doc, a, b, fac := arrestScene(t, 1000)
+	g.hurt(a, health.DownedInjury+10, 0)
+	if v, _ := g.vital.Get(a); v.Status != health.Downed {
+		t.Fatal("fixture: visitor not downed")
+	}
+	before := g.factionOf(fac).Goodwill
+	g.Enqueue(command.Command{Kind: command.Capture, Pawn: uint64(doc), Target: uint64(a)})
+	g.ApplyPending()
+	if g.factionOf(fac).Goodwill != before {
+		t.Fatal("capture charged before custody")
+	}
+	for i := 0; i < 1000 && !g.prison.Is(a); i++ {
+		g.Step(1)
+	}
+	if !g.prison.Is(a) {
+		t.Fatal("neutral never captured")
+	}
+	f := g.factionOf(fac)
+	if f.Relation != faction.Hostile || f.Goodwill != arrestGoodwill || !hasEvent(g, fac, "visitor captured") {
+		t.Fatalf("capture did not turn faction: %+v", f)
+	}
+	g.Step(3)
+	if g.visitor(b) || !g.isRaider(b) {
+		t.Fatal("other visitor did not turn")
+	}
+	n := 0
+	for _, e := range f.Events {
+		if e == "visitor captured" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("capture diplomacy events %d", n)
+	}
+}
+
+func TestArrestingRecruitedColonistDoesNotTurnOriginFaction(t *testing.T) {
+	g, doc, _, _, fac := arrestScene(t, 1000)
+	bo, err := g.SpawnNamedPawn(9, 6, "Former guest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.ensurePerson(bo)
+	g.personOf(bo).Faction = fac
+	f := g.factionOf(fac)
+	before, relation, events := f.Goodwill, f.Relation, len(f.Events)
+	g.Enqueue(command.Command{Kind: command.Arrest, Pawn: uint64(doc), Target: uint64(bo)})
+	for i := 0; i < 1000 && !g.prison.Is(bo); i++ {
+		g.Step(1)
+	}
+	if !g.prison.Is(bo) {
+		t.Fatal("colonist was not arrested")
+	}
+	if f.Goodwill != before || f.Relation != relation || len(f.Events) != events {
+		t.Fatalf("arresting own colonist changed origin faction: %+v", f)
 	}
 }

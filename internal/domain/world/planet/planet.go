@@ -9,6 +9,7 @@ package planet
 
 import (
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/site"
@@ -32,6 +33,7 @@ type Params struct {
 	Pop      int // 0..2 (sparse, normal, crowded)
 	Factions []faction.Slot
 	Version  uint16
+	Calendar clock.CalendarPolicy
 }
 
 // v1 reports the WG generator (biome scoring, road classes, huge rivers,
@@ -141,3 +143,6 @@ func (b *Builder) Planet() *Planet { return b.out }
 
 // TileCount is the number of generated tiles.
 func (p *Planet) TileCount() int { return len(p.Center) }
+
+// WithCalendar returns the generation parameters with the owning calendar.
+func (p Params) WithCalendar(c clock.CalendarPolicy) Params { p.Calendar = c; return p }

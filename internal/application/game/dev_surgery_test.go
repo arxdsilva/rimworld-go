@@ -30,7 +30,7 @@ func TestDevLosePart(t *testing.T) {
 	if m := b.Capacity(body.Moving); m >= 1000 {
 		t.Fatalf("moving %d", m)
 	}
-	if fx := g.sk.stats[a]; fx == nil || fx.body != keyOf(b) {
+	if fx := g.sk.stats[a]; fx == nil || fx.body != statKeyOf(keyOf(b)) {
 		t.Fatal("the stat sheet follows the body")
 	}
 	if g.VitalOf(a).Injury != b.Damage() {
@@ -71,10 +71,10 @@ func TestDevSpawnImplants(t *testing.T) {
 	if !g.DevSpawnImplants(a) || g.viewGen == gen {
 		t.Fatal("spawned (and the view generation bumped)")
 	}
-	if len(implantKinds) < 9 {
-		t.Fatalf("implant kinds %v", implantKinds)
+	if len(item.ImplantKinds()) < 9 {
+		t.Fatalf("implant kinds %v", item.ImplantKinds())
 	}
-	for _, k := range implantKinds {
+	for _, k := range item.ImplantKinds() {
 		if n := g.stockOf(k); n != 1 {
 			t.Fatalf("%s: %d in stock", k, n)
 		}

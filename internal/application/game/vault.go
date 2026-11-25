@@ -8,10 +8,12 @@ import (
 
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/terrain"
@@ -88,7 +90,11 @@ func (g *Game) vaultPeaceful() bool {
 // to land (none stand yet when the site is laid) and the wealth so far.
 func (g *Game) vaultThreatPoints() int {
 	s := g.ng.setup
-	return difficulty.ThreatPoints(s.Difficulty, g.Wealth(), len(s.Colonists), 0, int(g.ng.adapt.Value))
+	b := wealth.StorytellerBase(g, len(g.itemIDs), len(g.bldgIDs))
+	for _, p := range s.Colonists {
+		b.PawnWeight += difficulty.PawnWeight(float64(p.AgeDays)/pawngen.DaysPerYear, 1, false)
+	}
+	return weightedThreat(g, b, 0)
 }
 
 // vaultSeed is the base of the vaults' private rolls.

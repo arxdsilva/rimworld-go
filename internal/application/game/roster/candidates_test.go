@@ -356,8 +356,11 @@ func TestBioOfFields(t *testing.T) {
 	}
 	for _, s := range lv.Skills {
 		want := 100
-		if s.Key == "plants" {
+		switch s.Key {
+		case "plants":
 			want = plant.WorkSpeedPermil(skill.Neutral) / 10
+		case "mining":
+			want = LevelSpeed(skill.Mining, skill.Neutral) / 10
 		}
 		if s.Level != skill.Neutral || (s.Key != "social" && s.SpeedPct != want) {
 			t.Fatalf("legacy skill %+v", s)

@@ -7,11 +7,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/gob"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
@@ -331,14 +334,21 @@ func TestDeliveryLeftoverOfAFoundStackIsStored(t *testing.T) {
 	if fr, _ := g.frames.Get(fid); fr.Wood != need {
 		t.Fatalf("the frame got %d wood, want %d", fr.Wood, need)
 	}
-	// the load taken (a full one) is the colony's: what the wall did not
-	// use is stored; the rest stays found where it lay
-	if q, claimed := storedQty(g, item.Wood); q != item.CarryLimit-need || !claimed {
-		t.Fatalf("stored %d wood (claimed %v), want %d", q, claimed, item.CarryLimit-need)
+	// The colonist picks up one native stack of wood. Leftover wood from
+	// the claimed load reaches storage; untouched found stacks stay found.
+	load := min(item.CarryLimit, item.Wood.StackLimit())
+	if q, claimed := storedQty(g, item.Wood); q != load-need || !claimed {
+		t.Fatalf("stored %d wood (claimed %v), want %d", q, claimed, load-need)
 	}
-	st, ok := g.stacks.Get(g.itemAt(4, 5))
-	if !ok || st.Qty != 150-item.CarryLimit || !st.Unclaimed {
-		t.Fatalf("the found remainder stays: %+v %v", st, ok)
+	found := 0
+	for _, id := range g.itemIDs {
+		st, ok := g.stacks.Get(id)
+		if ok && st.Kind == item.Wood && st.Unclaimed {
+			found += st.Qty
+		}
+	}
+	if found != 150-load {
+		t.Fatalf("untouched found wood %d, want %d", found, 150-load)
 	}
 }
 
@@ -434,7 +444,7 @@ func TestDroppedCarryIsTheColonys(t *testing.T) {
 
 func TestWorkersLeaveTheirOutputToHaulers(t *testing.T) {
 	t.Parallel()
-	g := New(Config{Seed: 1, Width: 24, Height: 12})
+	g := New(Config{Seed: seedForMiningRolls(t, 1, true), Width: 24, Height: 12})
 	chopper, _ := g.SpawnNamedPawn(1, 2, "Ada")
 	miner, _ := g.SpawnNamedPawn(1, 6, "Bo")
 	onlyWork(g, chopper, work.PlantCut) // FOOD-2: its own work type
@@ -472,8 +482,8 @@ func TestWorkersLeaveTheirOutputToHaulers(t *testing.T) {
 	if q, _ := storedQty(g, item.Wood); q != plant.DefOf(plant.Tree).Wood {
 		t.Fatalf("stored wood %d, want %d", q, plant.DefOf(plant.Tree).Wood)
 	}
-	if q, _ := storedQty(g, item.GraniteChunk); q != MineYield {
-		t.Fatalf("stored chunks %d, want %d", q, MineYield)
+	if q, _ := storedQty(g, item.GraniteChunk); q != 1 {
+		t.Fatalf("stored chunks %d, want %d", q, 1)
 	}
 }
 
@@ -533,6 +543,11 @@ func loadAsVersion(t *testing.T, g *Game, v int) *Game {
 	if err := dec.Decode(&s); err != nil {
 		t.Fatal(err)
 	}
+	// Historical save fixtures must encode the animal wire layout that
+	// predates the native v21 grouped-state writer, not just an old header.
+	if v < SaveVersion {
+		legacyAnimalFormat(&s)
+	}
 	info.Version = v
 	var out bytes.Buffer
 	zw := gzip.NewWriter(&out)
@@ -586,4 +601,91 @@ func TestMigrateClaimsFromV2(t *testing.T) {
 	runFed(h, 60, ada)
 	stillFound(t, h, loose, 4, 5)
 	stillFound(t, h, carcass, 6, 5)
+}
+
+// Physical drops use the running content book and destination cap,
+// not the capacity of the raw SpawnStack fixture.
+func TestNativeDropStackCapsAndPayload(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 20})
+	limit := g.sk.content.Items.StackLimit(item.SurvivalMeal)
+	want := item.Stack{Kind: item.SurvivalMeal, Qty: 2*limit + 5, Rot: 13, Poison: 37,
+		Ingredients:       [item.MaxIngredients]item.Kind{item.Rice, item.Meat},
+		IngredientSpecies: [item.MaxIngredients]uint8{0, 2}}
+	g.dropStackOf(want, 5, 4)
+	total, count := 0, 0
+	for _, st := range stacksOf(g, want.Kind) {
+		total += st.Qty
+		count++
+		if st.Qty > limit || st.Rot != want.Rot || st.Poison != want.Poison || st.Ingredients != want.Ingredients || st.IngredientSpecies != want.IngredientSpecies {
+			t.Fatalf("drop lost cap or meal payload: %+v", st)
+		}
+	}
+	if total != want.Qty || count != 3 {
+		t.Fatalf("drop got %d/%d stacks and units, want 3/%d", count, total, want.Qty)
+	}
+	h := saveLoad(t, g)
+	if !reflect.DeepEqual(stacksOf(g, want.Kind), stacksOf(h, want.Kind)) {
+		t.Fatal("physical drops changed on reload")
+	}
+}
+func TestNativeUnclaimedDropCaps(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 20})
+	limit := g.sk.content.Items.StackLimit(item.Wood)
+	qty := 2*limit + 30
+	g.spawnUnclaimed(item.Wood, qty, 5, 4, true)
+	total, count := 0, 0
+	for _, st := range stacksOf(g, item.Wood) {
+		total += st.Qty
+		count++
+		if st.Qty > limit || !st.Unclaimed || !st.Forbidden || st.HaulMarked || st.Carrier != 0 {
+			t.Fatalf("found stack: %+v", st)
+		}
+	}
+	if total != qty || count != 3 {
+		t.Fatalf("found got %d/%d, want 3/%d", count, total, qty)
+	}
+}
+func TestNativeDropRespectsHopperAndSpillCaps(t *testing.T) {
+	for _, spill := range []bool{false, true} {
+		t.Run(fmt.Sprint("spill=", spill), func(t *testing.T) {
+			g := New(Config{Seed: 1, Width: 20, Height: 20})
+			buildNow(t, g, construction.Hopper, item.Steel, construction.South, 5, 5)
+			x, y := 5, 5
+			if spill {
+				x, y = 6, 6
+				g.SpawnStack(item.Wood, 1, x, y)
+			}
+			g.dropStackOf(item.Stack{Kind: item.Chemfuel, Qty: 160}, x, y)
+			st, ok := g.stacks.Get(g.itemAt(5, 5))
+			if !ok || st.Kind != item.Chemfuel || st.Qty != zone.HopperStack {
+				t.Fatalf("hopper stack %+v, want %d chemfuel", st, zone.HopperStack)
+			}
+			total := 0
+			for _, s := range stacksOf(g, item.Chemfuel) {
+				total += s.Qty
+				if s.Qty > cellCap(g, s.Kind, s.X, s.Y) {
+					t.Fatalf("spill exceeds destination cap: %+v", s)
+				}
+			}
+			if total != 160 {
+				t.Fatalf("drop retained %d/160", total)
+			}
+		})
+	}
+}
+func TestNativeDropUsesContentBookAndRawProduction(t *testing.T) {
+	items, bell := limitedBook(25)
+	g := New(Config{Seed: 1, Width: 20, Height: 20, Content: Content{Items: items}})
+	g.dropStack(bell, 60, 6, 6)
+	total, count := 0, 0
+	for _, s := range stacksOf(g, bell) {
+		total += s.Qty
+		count++
+		if s.Qty > 25 {
+			t.Fatalf("book cap lost: %+v", s)
+		}
+	}
+	if total != 60 || count != 3 {
+		t.Fatalf("production got %d/%d want 3/60", count, total)
+	}
 }

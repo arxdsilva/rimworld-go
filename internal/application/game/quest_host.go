@@ -6,15 +6,15 @@ package game
 import (
 	"fmt"
 	"math"
-	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/application/game/wealth"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/sim/clock"
 	"slices"
 
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/application/game/quest/kinds"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
@@ -106,7 +106,7 @@ type questMemo struct {
 }
 
 func (h questHost) Landed() uint64                { return h.g.dayOff() }
-func (h questHost) Colonists() int                { return len(h.g.colonistsHomeAndAway()) }
+func (h questHost) Colonists() int                { return threatCensusOf(h.g, true).Residents }
 func (h questHost) ThreatScalePct() int           { return h.g.diff().ThreatScale }
 func (h questHost) RewardPct() int                { return h.g.diff().QuestRewardPct }
 func (h questHost) QuestThreats() bool            { return h.g.diff().QuestThreats }
@@ -133,8 +133,14 @@ func (h questHost) GrantXP(id entity.EntityID, s skill.ID, xp int) {
 		h.g.rebuildStats(id)
 	}
 }
-func (h questHost) Has(cid uint64, l []trade.Line) bool  { return travelOf(h.g).HasLines(cid, l) }
-func (h questHost) Take(cid uint64, l []trade.Line) bool { return travelOf(h.g).TakeLines(cid, l) }
+func (h questHost) Has(cid uint64, l []trade.Line) bool { return travelOf(h.g).HasLines(cid, l) }
+func (h questHost) Take(cid uint64, l []trade.Line) bool {
+	if !travelOf(h.g).TakeLines(cid, l) {
+		return false
+	}
+	maps.RefreshPace(fleetOf(h.g), entity.EntityID(cid))
+	return true
+}
 
 func (h questHost) Deposit(t int) (trade.Line, bool) {
 	k, n, ok := travelOf(h.g).Deposit(t)
@@ -220,23 +226,19 @@ func (h questHost) IntoCaravan(cid uint64, lines []trade.Line) bool {
 	ok := slices.ContainsFunc(h.g.worldS().caravans, func(c maps.Caravan) bool { return c.C.ID == cid })
 	if ok {
 		travelOf(h.g).CarryLines(cid, lines)
+		maps.RefreshPace(fleetOf(h.g), entity.EntityID(cid))
 	}
 	return ok
 }
 
-// Points are the raid points of the colony with every caravan's people
-// and goods added (QST-025): one difficulty.ThreatPoints call.
-func (h questHost) Points() int {
-	g := h.g
-	wealth, people := g.Wealth(), g.standingColonists()
-	for _, c := range g.worldS().caravans {
-		people += len(c.C.Members)
-		for _, st := range travelOf(g).Goods(c.C.ID) {
-			wealth += item.StackValue(st)
-		}
-	}
-	years := float64(g.rel(h.Now())) / float64(clock.TicksPerYear)
-	return difficulty.ThreatPoints(g.ng.setup.Difficulty, wealth, people, years, int(g.ng.adapt.Value))
+// Points sum the independently calculated raid points of each permanent
+// colony and real caravan (wiki: Quests, QST-025).
+func (h questHost) Points() (points int) {
+	ticks := h.g.rel(h.Now())
+	eachThreatScope(h.g, true, func(c wealth.Census) {
+		points += weightedThreat(h.g, c.ThreatBase, ticks)
+	})
+	return points
 }
 
 // NearTile is a free land tile lo..hi hops from home (QST-117).
@@ -322,9 +324,9 @@ func (h questHost) Raid(f, points int, _ uint64) bool {
 	ok := f >= 0 && f < len(g.ng.factions) && points > 0
 	if ok {
 		kit := g.raidKitOf(points, faction.DefOf(g.ng.factions[f].Type).Tech)
-		g.raidFrom(kit, g.raid.Threats.Plan(g.relDay(h.Now())), f+1)
+		return g.raidFrom(kit, g.raid.Threats.Plan(g.relDay(h.Now())), f+1)
 	}
-	return ok
+	return false
 }
 
 func (h questHost) Post(l quest.Letter) {
@@ -450,7 +452,10 @@ func (h questSite) guest(seed uint64, f, x, y int) (entity.EntityID, bool) {
 	id := g.entities.Next()
 	g.peopleReg().add(&person{ID: id, Bio: quest.PawnOf(seed, backstoriesOf(g)), HasBio: true, Faction: f, Where: whereVisitor})
 	g.socState().sig[id] = personSig{}
-	visitsOf(g).Place(id, f, cx, cy, uint64(g.clock.Now()))
+	now := uint64(g.clock.Now())
+	visitsOf(g).Place(id, f, cx, cy, now)
+	visitsOf(g).SetStay(id, math.MaxUint64)
+	visitsOf(g).NewGroup(visit.KindQuest, f, []visit.Member{{ID: id, Role: visit.RoleVisitor}}, now, math.MaxUint64)
 	return id, true
 }
 

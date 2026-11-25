@@ -4,8 +4,6 @@
 package game
 
 import (
-	"strings"
-
 	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/herd"
@@ -20,60 +18,11 @@ import (
 	"rimworld-go/pkg/mathx"
 )
 
-// Animal life (SIM-026): growing up, old age, mating, birth, eggs and
-// hatching, run inside phaseAnimals with no state of its own. The rules are in
-// herd/AGENTS.md.
+// Animal life is updated within phaseAnimals, including growth and breeding.
 
-// lifeEvery: a product fills in steps of this many ticks (staggered by
-// id), so the per-tick cost of life is a few compares.
-const lifeEvery = 250
-
-// tickLife is one animal's life for the tick (phaseAnimals, after its
-// needs). It reports false when the animal died of old age.
+// tickLife reports false when the animal dies of old age.
 func (g *Game) tickLife(id entity.EntityID, a *animal.State, now uint64) bool {
-	if a.Mate != 0 && a.Mode != animal.Wander {
-		g.endMating(id, a) // she lay down, he went to eat, either fled
-	}
-	if a.Pregnant != 0 && now >= a.Pregnant {
-		g.giveBirth(id, a, now)
-	}
-	tod := now % clock.TicksPerDay
-	if tod == dawnHour*clock.TicksPerHour && animal.Breeds(a.Species) && g.oldAge(id, a, now) {
-		return false
-	}
-	fill := (now+uint64(id))%lifeEvery == 0
-	var daily bool
-	switch {
-	case !a.Female:
-		daily = tod == animal.MateTick(a.Species, uint64(id))
-	case animal.Layer(a.Species):
-		daily = tod == animal.LayTick(a.Species, uint64(id))
-	}
-	if !fill && !daily || !animal.Breeds(a.Species) || !g.grown(*a, now) {
-		return true
-	}
-	if fill && a.Product < animal.ProductFull && animal.Produces(a.Species, a.Female, true) {
-		per := animal.ProductPerDay(a.Species, a.Food)
-		a.Product = min(animal.ProductFull, a.Product+rateSpan(now, per, clock.TicksPerDay, lifeEvery))
-	}
-	switch {
-	case daily && a.Female:
-		g.layEgg(id, a, now)
-	case daily:
-		g.mateCheck(id, a, now)
-	}
-	return true
-}
-
-// rateSpan is the share of per units over period ticks that falls in the
-// span ticks up to now (rateStep over a span).
-func rateSpan(now uint64, per, period, span int) int {
-	from := uint64(0)
-	if now > uint64(span) {
-		from = now - uint64(span)
-	}
-	p, q := uint64(per), uint64(period)
-	return int(now*p/q - from*p/q)
+	return animalLife(g).Tick(id, a, now, dawnHour)
 }
 
 // lifePhase is the phase-level part of life (phaseAnimals, once a tick):
@@ -86,12 +35,12 @@ func (g *Game) lifePhase(now uint64) {
 	}
 }
 
-// grown reports a grown animal.
+// grown checks adult age.
 func (g *Game) grown(a animal.State, now uint64) bool {
-	return animal.Adult(a.Species, animal.AgeDays(a.Born, now, a.Species))
+	return animal.Adult(a.Species, animal.AgeDays(a.Born, now, a.Species, g.clock.Calendar()))
 }
 
-// portion is a meal of v food to a: young animals eat half portions.
+// portion scales meals for young animals.
 func (g *Game) portion(a *animal.State, now uint64, v int) int {
 	if g.grown(*a, now) {
 		return v
@@ -101,10 +50,9 @@ func (g *Game) portion(a *animal.State, now uint64, v int) int {
 
 // --- old age --------------------------------------------------------------
 
-// oldAge rolls the day's old-age death for an old animal; it reports true
-// when it died.
+// oldAge reports whether this animal died from aging.
 func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
-	p := animal.OldAgeChance(a.Species, animal.AgeDays(a.Born, now, a.Species))
+	p := animal.OldAgeChance(a.Species, animal.AgeDays(a.Born, now, a.Species, g.clock.Calendar()))
 	if p <= 0 || g.rng.IntN(1000) >= p {
 		return false
 	}
@@ -115,7 +63,7 @@ func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
 	g.logEvent(id, logEntry{Kind: evlog.OldAge})
 	g.endMating(id, a)
 	g.removeAnimal(id)
-	toxicRot(g, g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, forbids(g).DropForbidden(pos.X, pos.Y), animal.CorpseYieldOf(*a, now, true)), body.ToxicBuildup(a.Body)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
+	toxicRot(g, g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, forbids(g).DropForbidden(pos.X, pos.Y), animal.CorpseYieldOf(*a, now, true, g.clock.Calendar())), body.ToxicBuildup(a.Body)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
 	if animal.DefOf(a.Species).Explosive {
 		g.burst(a.Species, pos)
 	}
@@ -124,159 +72,32 @@ func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
 
 // --- mating ---------------------------------------------------------------
 
-// mateCheck is a grown male's daily look for a mate (the MateChance roll
-// only when there is one).
+// mateCheck rolls mating when an eligible partner is available.
 func (g *Game) mateCheck(id entity.EntityID, a *animal.State, now uint64) {
-	if a.Mode != animal.Wander || a.Leaving || a.Mate != 0 || a.Food < animal.MateFood || a.Enraged(now) || g.beingTamed(id) {
-		return
-	}
-	if !a.Tame && g.wildCount() >= g.wildlifeCap() { // population.go
-		return
-	}
-	pos, _ := g.positions.Get(id)
-	fid, _, ok := g.nearestWhere(pos.X, pos.Y, animal.MateRadius, ckAnimal, func(o entity.EntityID, _ Position) bool {
-		f, ok := g.animals.Get(o)
-		return ok && o != id && g.mateable(f, *a, now) && !g.beingTamed(o)
-	})
-	if !ok || g.rng.IntN(100) >= animal.MateChance {
-		return
-	}
-	f, _ := g.animals.Get(fid)
-	until := now + animal.MateWalkLimit + animal.MateTicks
-	a.Mate, a.MateLeft, a.MateUntil = fid, animal.MateTicks, until
-	a.Path, a.PathI, a.NextThink = nil, 0, now
-	f.Mate, f.MateLeft, f.MateUntil = id, animal.MateTicks, until
-	f.Path, f.PathI = nil, 0
-	g.animals.Set(fid, f)
-}
-
-// mateable: f is a female male m may mate with.
-func (g *Game) mateable(f, m animal.State, now uint64) bool {
-	return f.Species == m.Species && f.HasSex && f.Female && f.Tame == m.Tame && g.grown(f, now) &&
-		f.Food >= animal.MateFood && f.Mode == animal.Wander && !f.Leaving && f.Mate == 0 &&
-		f.Pregnant == 0 && f.Mated == 0 && !f.Enraged(now)
+	animalLife(g).MateCheck(id, a, now)
 }
 
 // lifeMove is a wandering animal's life movement (thinkAnimal): a mating
 // under way, or a young one following its mother. It reports true when it
 // moved (or held) the animal this tick.
 func (g *Game) lifeMove(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
-	if a.Mate != 0 {
-		return g.mateStep(id, a, pos, now)
-	}
-	return g.followMother(id, a, pos, now)
+	return animalLife(g).Move(id, a, pathing.Point(pos), now)
 }
 
 // mateStep: she holds still; he walks to her, then mates for MateTicks.
 func (g *Game) mateStep(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
-	p, ok := g.animals.Get(a.Mate)
-	if !ok || p.Mate != id || p.Mode != animal.Wander || now > a.MateUntil {
-		g.endMating(id, a)
-		return false
-	}
-	if a.Female {
-		a.Path, a.PathI = nil, 0
-		return true
-	}
-	pp, _ := g.positions.Get(a.Mate)
-	if weapon.Distance(pos.X, pos.Y, pp.X, pp.Y) > 1 {
-		if a.PathI >= len(a.Path) && now >= a.RetryAt {
-			g.animalGoTo(id, a, pp.X, pp.Y)
-		}
-		return true
-	}
-	a.Path, a.PathI = nil, 0
-	if a.MateLeft--; a.MateLeft > 0 {
-		return true
-	}
-	fid := a.Mate
-	if animal.Layer(p.Species) {
-		p.Mated = animal.MatedEggsOf(p.Species)
-	} else {
-		p.Pregnant = now + animal.GestTicks(p.Species)
-	}
-	a.Mate, a.MateLeft, a.MateUntil = 0, 0, 0
-	p.Mate, p.MateLeft, p.MateUntil = 0, 0, 0
-	g.animals.Set(fid, p)
-	g.logEvent(id, logEntry{Kind: evlog.Mated, Other: fid, Name: animalLabel(p)})
-	g.logEvent(fid, logEntry{Kind: evlog.Mated, Other: id, Name: animalLabel(*a)})
-	return true
+	return animalLife(g).MateStep(id, a, pathing.Point(pos), now)
 }
 
 // endMating calls a's mating off on both sides.
-func (g *Game) endMating(id entity.EntityID, a *animal.State) {
-	if a.Mate == 0 {
-		return
-	}
-	if p, ok := g.animals.Get(a.Mate); ok && p.Mate == id {
-		p.Mate, p.MateLeft, p.MateUntil = 0, 0, 0
-		g.animals.Set(a.Mate, p)
-	}
-	a.Mate, a.MateLeft, a.MateUntil = 0, 0, 0
-}
+func (g *Game) endMating(id entity.EntityID, a *animal.State) { animalLife(g).EndMating(id, a) }
 
 // --- the young --------------------------------------------------------------
 
-// mother is the grown female of a's species, tameness and herd nearest
-// pos within MotherRadius.
-func (g *Game) mother(id entity.EntityID, a animal.State, pos Position, now uint64) (Position, bool) {
-	_, mp, ok := g.nearestWhere(pos.X, pos.Y, animal.MotherRadius, ckAnimal, func(o entity.EntityID, _ Position) bool {
-		m, ok := g.animals.Get(o)
-		return ok && o != id && m.Species == a.Species && m.Female && m.Tame == a.Tame &&
-			(a.Herd == 0 || m.Herd == a.Herd) && g.grown(m, now)
-	})
-	return mp, ok
-}
-
-// followMother wanders a young animal near its mother; false when it is
-// grown, still walking, not due to think, or has no mother near.
-func (g *Game) followMother(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
-	if a.PathI < len(a.Path) || now < a.NextThink || g.grown(*a, now) {
-		return false
-	}
-	mp, ok := g.mother(id, *a, pos, now)
-	if !ok {
-		return false
-	}
-	a.NextThink = now + 120 + uint64(g.rng.IntN(240))
-	r := animal.FollowNear
-	if weapon.Distance(pos.X, pos.Y, mp.X, mp.Y) > r {
-		r = 1 // catch up
-	}
-	g.animalGoTo(id, a, mp.X+g.rng.IntN(2*r+1)-r, mp.Y+g.rng.IntN(2*r+1)-r)
-	return true
-}
-
-// giveBirth: a pregnant animal's litter is born beside her.
+// giveBirth delivers the decided litter, keeping the pregnancy and any
+// unspawned young until a valid birth tile becomes available.
 func (g *Game) giveBirth(id entity.EntityID, a *animal.State, now uint64) {
-	a.Pregnant = 0
-	life := animal.LifeOf(a.Species)
-	n := life.LitterMin + g.rng.IntN(max(life.LitterMax-life.LitterMin, 0)+1)
-	pos, _ := g.positions.Get(id)
-	born := 0
-	for i := 0; i < n; i++ {
-		x, y, ok := g.birthSpot(pos.X, pos.Y)
-		if !ok {
-			break
-		}
-		cid, ok := g.spawnYoung(a.Species, x, y, a.Tame, a.Herd, now)
-		if !ok {
-			break
-		}
-		if c, ok := g.animals.Get(cid); ok {
-			c.Mother = uint64(id)
-			g.animals.Set(cid, c)
-		}
-		g.logEvent(cid, logEntry{Kind: evlog.Born, Other: id, Name: animalLabel(*a)})
-		born++
-	}
-	if born == 0 {
-		return
-	}
-	g.logEvent(id, logEntry{Kind: evlog.GaveBirth, Amount: born, Name: animal.YoungName(a.Species, born)})
-	if a.Tame {
-		g.message(pos.X, pos.Y, "%s gave birth to %s.", a.Name, animal.YoungPhrase(a.Species, born))
-	}
+	animalLife(g).GiveBirth(id, a, now)
 }
 
 // spawnYoung places a newborn (or hatchling) of s at (x, y).
@@ -306,35 +127,23 @@ func (g *Game) birthSpot(x, y int) (int, int, bool) {
 			return nx, ny, true
 		}
 	}
-	return x, y, g.grid.Walkable(x, y)
+	return x, y, g.dryWalkable(x, y)
 }
 
 // --- eggs -------------------------------------------------------------------
 
-// layEgg: a grown female layer's egg of the day, if she lays today.
-func (g *Game) layEgg(id entity.EntityID, a *animal.State, now uint64) {
-	n := animal.EggsToday(a.Species, uint64(id), int(now/clock.TicksPerDay)) // FOOD-3: the species' wiki interval
-	if a.Food < animal.LayFood || a.Leaving {
-		return
-	}
-	for range n {
-		g.layOne(id, a)
-	}
-}
-
-// layOne lays one egg of a's: fertile while mated, else a plain one (tame
-// plain layers only).
+// layOne consumes one pending egg only after it is laid. Wild plain
+// layers can lay without a mate; previously fertilized wild eggs hatch.
 func (g *Game) layOne(id entity.EntityID, a *animal.State) {
-	fertile := false
-	if a.Mated > 0 {
-		fertile = animal.FertileEgg(a.Species, a.Mated)
-		a.Mated--
-	}
-	plain := animal.EcologyOf(a.Species).Eggs == animal.PlainEggs && a.Tame
+	fertile := animal.FertileEgg(a.Species, a.Mated)
+	plain := animal.EcologyOf(a.Species).Eggs == animal.PlainEggs
 	if !fertile && !plain {
 		return
 	}
-	pos, _ := g.positions.Get(id)
+	pos, ok := g.positions.Get(id)
+	if !ok {
+		return
+	}
 	x, y := pos.X, pos.Y
 	if a.Tame {
 		if bx, by, ok := eggBoxNear(g, x, y); ok { // A2: an egg box in reach first
@@ -350,6 +159,9 @@ func (g *Game) layOne(id entity.EntityID, a *animal.State) {
 	sid, err := g.SpawnStack(kind, 1, x, y)
 	if err != nil {
 		return
+	}
+	if a.Mated > 0 {
+		a.Mated--
 	}
 	st, _ := g.stacks.Get(sid)
 	st.Animal = uint8(a.Species) // FOOD-1: an egg feeds by its species (animal.StackNutrition)
@@ -445,37 +257,9 @@ func (g *Game) incubate(now uint64) {
 	}
 }
 
-// hatch: the whole stack of fertile eggs hatches where it lies.
-func (g *Game) hatch(id entity.EntityID, st item.Stack) {
-	s := animal.Species(st.Animal)
-	now := uint64(g.clock.Now())
-	g.deleteItem(id)
-	herd := uint32(0)
-	if !st.Tame {
-		herd = g.wildHerdNear(s, st.X, st.Y, now)
-	}
-	n := 0
-	for i := 0; i < st.Qty; i++ {
-		x, y, ok := g.birthSpot(st.X, st.Y)
-		if !ok {
-			break
-		}
-		cid, ok := g.spawnYoung(s, x, y, st.Tame, herd, now)
-		if !ok {
-			break
-		}
-		g.logEvent(cid, logEntry{Kind: evlog.Hatched})
-		n++
-	}
-	if n == 0 || !st.Tame {
-		return
-	}
-	if n == 1 {
-		g.message(st.X, st.Y, "%s hatched.", capitalise(animal.YoungPhrase(s, 1)))
-		return
-	}
-	g.message(st.X, st.Y, "%s hatched.", animal.YoungPhrase(s, n))
-}
+// hatch creates only young that can occupy real tiles. Unhatched eggs
+// retain both their quantity and incubation progress for the next attempt.
+func (g *Game) hatch(id entity.EntityID, st item.Stack) { animalLife(g).Hatch(id, st) }
 
 // wildHerdNear is the herd of the nearest wild grown animal of s within
 // MotherRadius of (x, y), else a new herd.
@@ -490,13 +274,6 @@ func (g *Game) wildHerdNear(s animal.Species, x, y int, now uint64) uint32 {
 	}
 	g.wl.LastHerd++
 	return g.wl.LastHerd
-}
-
-func capitalise(s string) string {
-	if s == "" {
-		return s
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 // fillAnimalLife fills the breeding and product fields of an animal view.
@@ -523,3 +300,48 @@ func (g *Game) fillAnimalLife(av *AnimalView, a animal.State, now uint64) {
 		av.ProductPct = a.Product * 100 / animal.ProductFull
 	}
 }
+
+// animalLife composes the existing husbandry role with map-specific facts.
+// No new mutable owner, time source or random stream is introduced.
+func animalLife(g *Game) herd.Life { return herd.Life{H: lifeHost{herdHost{g}}} }
+
+type lifeHost struct{ herdHost }
+
+func (h lifeHost) Position(id entity.EntityID) (pathing.Point, bool) {
+	p, ok := h.g.positions.Get(id)
+	return pathing.Point(p), ok
+}
+func (h lifeHost) NearestAnimal(x, y, r int, keep func(entity.EntityID, animal.State) bool) (entity.EntityID, pathing.Point, bool) {
+	id, p, ok := h.g.nearestWhere(x, y, r, ckAnimal, func(id entity.EntityID, _ Position) bool { a, ok := h.g.animals.Get(id); return ok && keep(id, a) })
+	return id, pathing.Point(p), ok
+}
+func (h lifeHost) BeingHandled(id entity.EntityID) bool { return h.g.beingTamed(id) }
+func (h lifeHost) GoTo(id entity.EntityID, a animal.State, x, y int) animal.State {
+	h.g.animalGoTo(id, &a, x, y)
+	return a
+}
+func (h lifeHost) Event(id entity.EntityID, k uint8, other entity.EntityID, n int, name string) {
+	h.g.logEvent(id, logEntry{Kind: k, Other: other, Amount: n, Name: name})
+}
+func (h lifeHost) Birthday(id entity.EntityID, a animal.State, now uint64) animal.State {
+	g := h.g
+	if cadence.Due(now, clock.TicksPerDay, cadence.OffMedical, id) && animal.RollAsthmaBirthday(&a, now, g.stream(streamMedical).IntN, g.clock.Calendar()) {
+		g.markAnimalPatient(id)
+	}
+	return a
+}
+func (h lifeHost) OldAge(id entity.EntityID, a animal.State, now uint64) bool {
+	return h.g.oldAge(id, &a, now)
+}
+func (h lifeHost) BirthSpot(x, y int) (int, int, bool) { return h.g.birthSpot(x, y) }
+func (h lifeHost) SpawnYoung(s animal.Species, x, y int, tame bool, herdID uint32, now uint64) (entity.EntityID, bool) {
+	return h.g.spawnYoung(s, x, y, tame, herdID, now)
+}
+func (h lifeHost) WildHerdNear(s animal.Species, x, y int, now uint64) uint32 {
+	return h.g.wildHerdNear(s, x, y, now)
+}
+func (h lifeHost) LayOne(id entity.EntityID, a animal.State) animal.State {
+	h.g.layOne(id, &a)
+	return a
+}
+func (h lifeHost) PutEgg(id entity.EntityID, st item.Stack) { h.g.putStack(id, st) }

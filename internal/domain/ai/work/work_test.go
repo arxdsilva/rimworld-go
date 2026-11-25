@@ -6,11 +6,15 @@ package work
 import (
 	"slices"
 	"testing"
+
+	"rimworld-go/internal/domain/sim/command"
 )
 
 func TestPriorities(t *testing.T) {
 	p := DefaultPriorities()
-	if p[Haul] != DefaultPriority || p[Firefight] != DefaultPriority || p[Warden] != 0 {
+	if p[Haul] != DefaultPriority || p[Firefight] != DefaultPriority || p[Warden] != 0 ||
+		p[Patient] != DefaultPriority || p[BedRest] != DefaultPriority ||
+		p[Basic] != DefaultPriority || p[Smith] != DefaultPriority || p[Tailor] != DefaultPriority || p[Art] != DefaultPriority {
 		t.Fatalf("defaults %v", p)
 	}
 	p = p.Set(Grow, 1).Set(Mine, 0).Set(Cook, 9)
@@ -26,7 +30,7 @@ func TestPriorities(t *testing.T) {
 // TestOrderIsTheWikis pins work.Order against the wiki's Work page (WRK-001):
 // the tie-break and the Work tab's left-to-right order.
 func TestOrderIsTheWikis(t *testing.T) {
-	want := []Type{Firefight, Doctor, Warden, Handle, Cook, Hunt, Construct, Grow, Mine, PlantCut, Craft, Haul, Clean, Research}
+	want := []Type{Firefight, Patient, Doctor, BedRest, Basic, Warden, Handle, Cook, Hunt, Construct, Grow, Mine, PlantCut, Smith, Tailor, Art, Craft, Haul, Clean, Research}
 	if !slices.Equal(Order, want) {
 		t.Fatalf("Order %v, want %v", Order, want)
 	}
@@ -50,5 +54,24 @@ func TestFirefightFirst(t *testing.T) {
 			t.Fatalf("Order repeats %d", w)
 		}
 		seen[w] = true
+	}
+}
+
+func TestWorkColumnCommandMappings(t *testing.T) {
+	for _, tt := range []struct {
+		c command.WorkType
+		w Type
+	}{
+		{command.WorkPatient, Patient},
+		{command.WorkBedRest, BedRest},
+		{command.WorkBasic, Basic},
+		{command.WorkSmith, Smith},
+		{command.WorkTailor, Tailor},
+		{command.WorkArt, Art},
+	} {
+		w, ok := FromCommand(tt.c)
+		if !ok || w != tt.w || w.Command() != tt.c {
+			t.Fatalf("command %d maps to %d ok=%v", tt.c, w, ok)
+		}
 	}
 }

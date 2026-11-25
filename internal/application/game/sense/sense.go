@@ -21,15 +21,17 @@ import (
 type Sense struct {
 	Rules gameplay.Settings
 
-	Resume   map[entity.EntityID]job.Record // the job a tidy interrupted
-	TidyAt   map[entity.EntityID]uint64     // no tidy before this tick
-	HaulAt   map[entity.EntityID]uint64     // CSE-035's cooldown
-	SpareAt  map[entity.EntityID]uint64     // CSE-005's retry
-	UnloadAt map[entity.EntityID]uint64     // CSE-038's retry
-	NoClean  map[entity.EntityID]bool       // benches that opted out of tidying
-	TopOffOn map[entity.EntityID]bool       // CSE-002: not wanting recreation, from the high mark down to the low one
-	Packs    map[entity.EntityID]inventory.Pack
-	FromPack map[entity.EntityID]entity.EntityID // the carried stack came from the pack
+	Resume          map[entity.EntityID]job.Record // the job a tidy interrupted
+	TidyAt          map[entity.EntityID]uint64     // no tidy before this tick
+	HaulAt          map[entity.EntityID]uint64     // CSE-035's cooldown
+	SpareAt         map[entity.EntityID]uint64     // CSE-005's retry
+	UnloadAt        map[entity.EntityID]uint64     // CSE-038's retry
+	NoClean         map[entity.EntityID]bool       // benches that opted out of tidying
+	TopOffOn        map[entity.EntityID]bool       // CSE-002: not wanting recreation, from the high mark down to the low one
+	Packs           map[entity.EntityID]inventory.Pack
+	foodDonors      []entity.EntityID // derived from Packs; never serialized
+	foodDonorsValid bool
+	FromPack        map[entity.EntityID]entity.EntityID // the carried stack came from the pack
 
 	Tidy   Tidy
 	Gear   Gear
@@ -93,5 +95,7 @@ func (s *Sense) Do(id entity.EntityID, j job.Record) {
 		s.Gear.DoUnload(id, j)
 	case job.TakeSpare:
 		s.Gear.DoSpare(id, j)
+	case job.GiveItem:
+		s.Gear.DoGive(id, j)
 	}
 }

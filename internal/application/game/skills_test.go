@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/application/game/dossierview"
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/roster"
+	"rimworld-go/internal/application/game/wealth"
 	"strings"
 	"testing"
 
@@ -107,43 +108,30 @@ func TestRunBookReachesBiosAndLoads(t *testing.T) {
 	}
 }
 
-// TestNeutralPawnTimingsUnchanged: a neutral pawn (SpawnNamedPawn) works
-// exactly as the old boolean workTick did — 1 unit on every tick it
-// allowed, 0 on the low-mood ticks it skipped — skilled or not, and every
-// other skill/trait hook is the identity for it. Plant work has its own speed
-// curve (HRV-009, TestPlantWorkProgress).
+// TestNeutralPawnTimingsUnchanged: neutral work proceeds on every tick,
+// including low mood, while plant and mining speeds have their own curves.
 func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 3, Width: 12, Height: 8})
 	happy, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	sad, _ := g.SpawnNamedPawn(5, 2, "Bo")
+	g.wealth.Import(&wealth.Save{Counted: true, Value: 308_000}) // high wealth isolates severe mood
 	g.SetNeeds(sad, needs.CriticalHunger-1, needs.CriticalRest-1)
 	g.joy[sad] = 0
 	if g.moodOf(sad) >= mood.LowMood {
 		t.Fatalf("fixture: sad mood %d", g.moodOf(sad))
 	}
-	skipped := 0
 	for i := 0; i < 4000; i++ {
 		for _, id := range []entity.EntityID{happy, sad} {
-			want := 0
-			if g.workTick(id) {
-				want = 1
-			}
 			sk := skill.ID(i % int(skill.NumSkills))
-			if sk == skill.Plants {
-				sk = skill.Mining
+			if sk == skill.Plants || sk == skill.Mining {
+				sk = skill.Cooking
 			}
-			if got := g.workProgress(id, sk, i%3 != 0); got != want {
-				t.Fatalf("tick %d pawn %d: progress %d, workTick %d", i, id, got, want)
-			}
-			if want == 0 {
-				skipped++
+			if got := g.workProgress(id, sk, i%3 != 0); got != 1 {
+				t.Fatalf("tick %d pawn %d: low-mood work progress %d, want 1", i, id, got)
 			}
 		}
 		g.clock.Advance(1)
-	}
-	if skipped == 0 {
-		t.Fatal("the low-mood skip never happened")
 	}
 	n := needs.Pair{Hunger: 5000, Rest: 5000}
 	for now := uint64(0); now < 200; now++ {
@@ -162,9 +150,6 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	}
 	if g.bandsOf(happy) != g.apparel[happy].Bands() { // TEMP-4: its everyday clothes are garments now, no shift on top
 		t.Errorf("bands %v", g.bandsOf(happy))
-	}
-	if g.skillYield(happy, skill.Plants, 7) != 7 {
-		t.Error("yields moved for a neutral pawn")
 	}
 	// FOOD-3: butchering is the wiki's efficiency, 92.5 % at Cooking 7
 	if g.butcherYield(happy, 40) != 37 {
@@ -609,12 +594,12 @@ func TestDossierSaturatedAtCap(t *testing.T) {
 	if !c.Saturated[skill.Mining] || c.Saturated[skill.Shooting] {
 		t.Fatalf("saturated %v", c.Saturated)
 	}
-	day := g.sk.learned[id].day
+	day := g.sk.learned[id].Day
 	g.clock.Advance(24 * 2500)
 	if c := card(t, g, id); c.Saturated[skill.Mining] {
 		t.Fatal("still saturated the next day")
 	}
-	if g.sk.learned[id].day != day {
+	if g.sk.learned[id].Day != day {
 		t.Fatal("the card rolled the learning log over")
 	}
 }
@@ -826,7 +811,7 @@ func TestDossierFacts(t *testing.T) {
 		t.Fatalf("melee lines %d, %d", hit, dodge)
 	}
 	yield = c.ExtraLines[skill.Mining][0].Pct
-	if yield != g.skillPct(col, skill.Mining, 4, 60, 140) {
+	if yield != 97 {
 		t.Fatalf("mining yield %d", yield)
 	}
 

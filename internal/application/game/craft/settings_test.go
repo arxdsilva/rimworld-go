@@ -10,12 +10,14 @@ import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/quality"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 var crafting = work.Mask(0).Set(work.Craft, true)
+var smithing = work.Mask(0).Set(work.Smith, true)
 
 // clubBench is a workbench at (4, 4) with one "make a club" bill.
 func clubBench(t *testing.T, bl recipe.Bill) (*fakeHost, *Craft) {
@@ -295,6 +297,11 @@ func TestGatherSeveralIngredientsOntoTheBench(t *testing.T) {
 	f.put(52, item.Stack{Kind: item.Wood, Qty: 3, X: 6, Y: 6})
 	d := recipe.Core().DefOf(recipe.Club)
 	d.Inputs = []recipe.Input{{Kind: item.Wood, Qty: 4}, {Kind: item.Steel, Qty: 2}}
+	// Execution must read the same frozen recipe as planning.
+	core := recipe.Core()
+	defs := append([]recipe.Def(nil), core.All()...)
+	defs[recipe.Club] = d
+	c.Bills.UseBook(recipe.NewBook(defs, core.Keys()))
 	bl := c.Bills.Of(1)[0]
 	rec, ok := c.Shop.plan(pawn, bl, d, [2]int{4, 5})
 	if !ok || rec.Kind != job.HaulIngredients || rec.Count != 6 {
@@ -510,5 +517,38 @@ func TestIngredientSearchEdges(t *testing.T) {
 	}
 	if c.Bills.spot(999) != ([2]int{}) {
 		t.Fatal("a gone bench has no spot")
+	}
+}
+
+func TestBillConditionRangeAdmissionAndLiveRecheck(t *testing.T) {
+	f := newFake()
+	c := New(f)
+	f.pawns = []entity.EntityID{pawn}
+	f.build(1, construction.ElectricSmelter, 4, 4)
+	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.SmeltWeapon, Mode: recipe.Forever, Target: 1}})
+	f.put(50, item.Stack{Kind: item.Knife, Qty: 1, Quality: quality.Stored(quality.Poor), Stuff: item.Steel, X: 5, Y: 5})
+	f.put(51, item.Stack{Kind: item.Knife, Qty: 1, Quality: quality.Stored(quality.Good), Stuff: item.Steel, X: 8, Y: 8, Wear: 80})
+	f.put(52, item.Stack{Kind: item.Knife, Qty: 1, Quality: quality.Stored(quality.Good), Stuff: item.Steel, X: 10, Y: 10, Wear: 20})
+	cmd := cmdAt(command.SetBillRange, 0)
+	cmd.Mode = command.BillRangeQuality
+	cmd.X2, cmd.Y2 = int(quality.Normal), int(quality.Legendary)
+	c.Bills.Apply(cmd)
+	cmd.Mode = command.BillRangeHP
+	cmd.X2, cmd.Y2 = 50, 100
+	c.Bills.Apply(cmd)
+	if !c.Shop.Assign(pawn, crafting) || f.jobs[pawn].Target != 52 {
+		t.Fatalf("condition range selection: %+v", f.jobs[pawn])
+	}
+	v := c.Bills.AppendViews(nil, 1)[0]
+	if lo, hi := v.Condition.HP(); lo != 50 || hi != 100 {
+		t.Fatal("read model lost range")
+	}
+	// Changed condition after job assignment must not consume or produce anything.
+	st := f.stacks[52]
+	st.Wear = 80
+	f.stacks[52] = st
+	c.Shop.Do(pawn, f.jobs[pawn])
+	if f.jobs[pawn].State != job.Fail || f.stacks[52].Qty != 1 || f.Stock(item.Steel) != 0 {
+		t.Fatal("stale ingredient selection consumed")
 	}
 }

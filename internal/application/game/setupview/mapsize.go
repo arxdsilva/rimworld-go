@@ -49,6 +49,7 @@ func CloneFactions(fs []faction.Faction) []faction.Faction {
 		f.SettlementNames = slices.Clone(f.SettlementNames)
 		f.History = slices.Clone(f.History)
 		f.Events = slices.Clone(f.Events)
+		f.Enemies = slices.Clone(f.Enemies)
 		out[i] = f
 	}
 	return out
@@ -81,6 +82,9 @@ const (
 // peaking on peak (15 north, 45 south): seasons are 15 days centred on
 // the temperature curve (temperature.Climate.SeasonAt), summer first.
 func SeasonStartDay(peak int, s uint8) int {
+	return SeasonStartDayPolicy(peak, s, clock.CalendarPolicy{})
+}
+func SeasonStartDayPolicy(peak int, s uint8, p clock.CalendarPolicy) int {
 	var idx int // 0 summer, 1 fall, 2 winter, 3 spring
 	switch s {
 	case SeasonSummer:
@@ -92,7 +96,7 @@ func SeasonStartDay(peak int, s uint8) int {
 	default:
 		idx = 3
 	}
-	q := clock.DaysPerQuadrum
+	q := p.QuadrumDays()
 	d := peak - q/2 + idx*q
-	return (d%clock.DaysPerYear + clock.DaysPerYear) % clock.DaysPerYear
+	return (d%p.YearDays() + p.YearDays()) % p.YearDays()
 }

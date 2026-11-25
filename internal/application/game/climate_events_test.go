@@ -121,8 +121,8 @@ func TestOldExtremeEventMigrates(t *testing.T) {
 	now := uint64(g.clock.Now())
 	until := now + 2*clock.TicksPerDay
 	h := loadAsVersionWith(t, g, 7, func(s *saveState) {
-		s.NG1.Climate.YearMean -= 140
-		s.NG1.Extreme = extremeEvent{Kind: 2, Delta: -140, Until: until}
+		s.NG121.Climate.YearMean -= 140
+		s.NG121.Extreme = extremeEvent{Kind: 2, Delta: -140, Until: until}
 	})
 	if h.incidents.Climate != incident.ColdSnap || h.incidents.ClimateUntil != until || h.climate.YearMean != temperature.Temperate.YearMean-200 {
 		t.Fatalf("migrated %+v, climate %+v", h.incidents, h.climate)

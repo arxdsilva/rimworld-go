@@ -165,6 +165,9 @@ func (p *Prison) Chat(w, q entity.EntityID, now uint64) {
 	h.Meet(w, q)
 	st.NextVisit = now + prisoner.VisitInterval
 	switch {
+	case st.Mode == prisoner.Recruit && h.UseRecruitInspiration(w):
+		delete(p.st, q)
+		h.Recruit(q, w)
 	case st.Resistance > 0:
 		f := prisoner.ResistanceFactor(h.Opinion(q, w), h.Mood(q))
 		st.Resistance = max(0, st.Resistance-prisoner.Reduction(h.Negotiation(w), f))

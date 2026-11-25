@@ -3,6 +3,8 @@
 
 package diet
 
+import "rimworld-go/internal/domain/economy/item"
+
 // Food poisoning chances (wiki: Ailments, Food poisoning), in basis points
 // (hundredths of a percent). A cooked meal is poisoned when either of two
 // rolls hits: the kitchen's (by room cleanliness, or a flat chance at an
@@ -52,4 +54,18 @@ func Permille(bp int) int16 {
 		return 0
 	}
 	return int16(max((bp+5)/10, 1))
+}
+
+// PoisonRisk is the basis-point consumption risk after body resistance and
+// the difficulty multiplier; paste stays clean and raw/corpses are fixed.
+func PoisonRisk(st item.Stack, bodyPermille, difficultyPct int) int {
+	bp := int(st.Poison) * 10
+	switch {
+	case st.Kind == item.CorpseAnimal:
+		bp = CorpseChance
+	case st.Kind.Raw():
+		bp = RawChance
+	}
+	bp = bp * bodyPermille / 1000
+	return min(max((bp*difficultyPct+50)/100, 0), 10000)
 }

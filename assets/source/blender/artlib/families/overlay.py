@@ -524,6 +524,7 @@ ICONS = {
     "servo_arm": ("item", "servo_arm"),
     "servo_leg": ("item", "servo_leg"),
     "optic_implant": ("item", "optic_implant"),
+    "acoustic_implant": ("item", "acoustic_implant"),
     "cochlear_implant": ("item", "cochlear_implant"),
     "spinal_brace": ("item", "spinal_brace"),
     "pump_heart": ("item", "pump_heart"),

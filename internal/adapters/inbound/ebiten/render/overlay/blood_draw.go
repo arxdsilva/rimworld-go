@@ -55,10 +55,12 @@ const stainMaxAlpha = 0.85
 
 // Stain colours, fresh and dried (0..1).
 var (
-	bloodFresh = rgbHex(0x7a1414)
-	bloodDry   = rgbHex(0x4a1d1a)
-	ichorFresh = rgbHex(0xa8a030)
-	ichorDry   = rgbHex(0x5c5a1c)
+	bloodFresh   = rgbHex(0x7a1414)
+	bloodDry     = rgbHex(0x4a1d1a)
+	ichorFresh   = rgbHex(0xa8a030)
+	ichorDry     = rgbHex(0x5c5a1c)
+	residueFresh = rgbHex(0x6d8950)
+	residueDry   = rgbHex(0x4b5c34)
 )
 
 func rgbHex(h uint32) [3]float32 {
@@ -82,8 +84,11 @@ func StainShapeOf(amount float64) (StainShape, float64) {
 // first in-game day.
 func StainColour(kind string, age uint64) [3]float32 {
 	fresh, dry := bloodFresh, bloodDry
-	if kind == "ichor" {
+	switch kind {
+	case "ichor":
 		fresh, dry = ichorFresh, ichorDry
+	case "caustic residue":
+		fresh, dry = residueFresh, residueDry
 	}
 	t := float32(min(age, StainDryTicks)) / StainDryTicks
 	return light.Lerp3(fresh, dry, t)

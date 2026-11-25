@@ -68,7 +68,7 @@ func TestHealthSocialTabs(t *testing.T) {
 // reads the Social skill.
 func TestWardenWorkColumn(t *testing.T) {
 	t.Parallel()
-	if len(windows.WorkColumns) != 14 || windows.WorkColumns[12] != "Ward" || windows.WorkHelp[12] == "" {
+	if len(windows.WorkColumns) != 20 || windows.WorkColumns[12] != "Ward" || windows.WorkHelp[12] == "" {
 		t.Fatalf("columns = %v", windows.WorkColumns)
 	}
 	if cmd, ok := windows.WorkTypeForCol(12); !ok || cmd != command.WorkWarden {

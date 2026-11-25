@@ -99,9 +99,6 @@ func (a Aid) byID(id int) *faction.Faction { return ofRef(a.v.h.Factions(), a.re
 // RequestOK reports whether faction f sends military aid if asked now,
 // or why not.
 func (a Aid) RequestOK(f faction.Faction, now uint64) (bool, string) {
-	if !f.Type.Human() {
-		return false, ReasonNoFighters
-	}
 	if ok, why := faction.CanRequestAid(f, a.v.h.Cooldown(f.ID), now); !ok {
 		return false, why
 	}
@@ -218,6 +215,15 @@ func (a Aid) arrive(c *Call, now uint64) bool {
 		return true
 	}
 	c.Here, c.LeaveAt, c.Calm = true, now+allyStay, now
+	ms := make([]Member, 0, len(ids))
+	for i, id := range ids {
+		role := RoleFighter
+		if i == 0 {
+			role = RoleLeader
+		}
+		ms = append(ms, Member{ID: id, Role: role})
+	}
+	v.NewGroup(KindAid, ref, ms, now, now+allyStay)
 	h.Sided(ref-1, now) // its enemies take note (EAI-015)
 	h.Letter("good", "Military aid", ids[0], "%d fighters of %s have come to help defend the colony. They will fight any raiders and hostile animals, and go home once all is quiet, within a day.", len(ids), f.Name)
 	return true

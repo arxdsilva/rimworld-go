@@ -148,10 +148,10 @@ func planSplit(b *Body, p Part, dmg int, s Split, roll func(int) int) shares {
 // any other part is struck as Strike strikes it, its overkill judged on
 // its own share. A missing part takes nothing.
 func dealPlaced(b *Body, p Part, dmg int, kind WoundKind, lo, hi int, roll func(int) int, now uint64) {
-	if p >= b.numParts() || b.isMissing(p) || dmg <= 0 {
+	if p >= b.numParts() || b.isMissing(p) && !b.hasReplacement(p) || dmg <= 0 {
 		return
 	}
-	if room := b.maxHP(p) - b.partDmg(p) - 1; dmg > room && b.LossKills(p) {
+	if room := remainingHP(b, p) - 1; dmg > room && b.LossKills(p) {
 		b.hurtPart(p, room, kind, now) // hurtPart takes nothing for room <= 0
 		return
 	}
@@ -164,11 +164,11 @@ func dealPlaced(b *Body, p Part, dmg int, kind WoundKind, lo, hi int, roll func(
 // capped share, what a lost part could not hold), for the caller to
 // spill.
 func dealSpread(b *Body, p Part, dmg int, kind WoundKind, now uint64) int {
-	if p >= b.numParts() || b.isMissing(p) || dmg <= 0 {
+	if p >= b.numParts() || b.isMissing(p) && !b.hasReplacement(p) || dmg <= 0 {
 		return max(dmg, 0)
 	}
 	hit := dmg
-	if room := b.maxHP(p) - b.partDmg(p) - 1; hit > room && b.LossKills(p) {
+	if room := remainingHP(b, p) - 1; hit > room && b.LossKills(p) {
 		hit = max(room, 0)
 	}
 	before := b.Damage()
@@ -193,10 +193,10 @@ func dealSpread(b *Body, p Part, dmg int, kind WoundKind, now uint64) int {
 // first, ArmL an extra) the first part goes with it, yet the report stays
 // false.
 func StrikeBlow(b *Body, p Part, dmg int, kind WoundKind, s Split, lo, hi int, roll func(int) int, now uint64) bool {
-	if p >= b.numParts() || b.isMissing(p) || dmg <= 0 {
+	if p >= b.numParts() || b.isMissing(p) && !b.hasReplacement(p) || dmg <= 0 {
 		return false
 	}
-	if !splits(s) {
+	if b.hasReplacement(p) || !splits(s) {
 		return Strike(b, p, dmg, kind, lo, hi, roll, now)
 	}
 	sh := planSplit(b, p, dmg, s, roll)

@@ -10,10 +10,14 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/social"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/letterdata"
 	"rimworld-go/pkg/msgfmt"
 )
 
@@ -51,7 +55,7 @@ func TestLetterPostBecomesLetter(t *testing.T) {
 		t.Fatalf("%d letters, want 1", len(ls))
 	}
 	x, y := g.home()
-	want := LetterView{ID: 1, Tick: uint64(g.clock.Now()), Kind: "good", Title: "Wanderer joins",
+	want := LetterView{ID: 1, Tick: uint64(g.clock.Now()), Kind: "good", Code: letterdata.Code("Wanderer joins", "Bo has asked to join the colony."), Title: "Wanderer joins",
 		Text: "Bo has asked to join the colony.", Msg: msgfmt.Of("Bo has asked to join the colony."), X: x, Y: y, Focus: 7}
 	if !reflect.DeepEqual(ls[0], want) {
 		t.Fatalf("letter %+v, want %+v", ls[0], want)
@@ -75,6 +79,65 @@ func TestLetterPostBecomesLetter(t *testing.T) {
 	}
 	if ms := g.World().Messages; !ms[len(ms)-1].Danger {
 		t.Fatalf("threat message lost its danger flag: %+v", ms[len(ms)-1])
+	}
+}
+
+func TestStructuredLetterFieldsPersistAndAreCopied(t *testing.T) {
+	t.Parallel()
+	g := letterGame()
+	fields := []letterdata.Field{
+		{Name: "count", Kind: "count", Value: "3"},
+		{Name: "who", Kind: "faction", Value: "Heron-Eye Clan"},
+		{Name: "direction", Kind: "direction", Value: "west"},
+	}
+	threatWithFields(g, "colony.raid", "Raid", 2, 3, "Raid! %d raiders.", fields, 3)
+	fields[0].Value = "modified by caller"
+	one := g.World().Letters[0]
+	want := []letterdata.Field{
+		{Name: "count", Kind: "count", Value: "3"},
+		{Name: "who", Kind: "faction", Value: "Heron-Eye Clan"},
+		{Name: "direction", Kind: "direction", Value: "west"},
+	}
+	if one.Code != "colony.raid" || !reflect.DeepEqual(one.Fields, want) {
+		t.Fatalf("letter lost typed event data: %+v", one)
+	}
+	if m := g.World().Messages[len(g.World().Messages)-1]; m.Fields != nil {
+		t.Fatal("ticker leaked a mutable pointer to the saved letter's fields")
+	}
+	one.Fields[1].Value = "modified by reader"
+	if got := g.World().Letters[0].Fields; !reflect.DeepEqual(got, want) {
+		t.Fatalf("read-model fields alias persisted state: %+v", got)
+	}
+	restored := saveAndLoad(t, g)
+	two := restored.World().Letters[0]
+	if two.Code != "colony.raid" || !reflect.DeepEqual(two.Fields, want) {
+		t.Fatalf("save/load changed structured letter: %+v", two)
+	}
+}
+
+func TestRaidLetterHasSemanticFields(t *testing.T) {
+	t.Parallel()
+	g := letterGame()
+	f := &faction.Faction{Name: "Heron-Eye Clan"}
+	g.raidMessage(0, 6, 3, raid.Sappers, f)
+	l := g.World().Letters[0]
+	want := letters.RaidFields(3, f.Name, "faction", raid.EdgeDir(g.grid.Width(), g.grid.Height(), 0, 6))
+	if l.Kind != letters.Threat || l.Code != "colony.raid.sappers" ||
+		l.Title != "Sappers" || !reflect.DeepEqual(l.Fields, want) ||
+		l.Msg.Format != "Sappers! %s %s of %s %s tunnelling in through the walls from the %s." {
+		t.Fatalf("sapper warning %+v, fields want %+v", l, want)
+	}
+}
+
+func TestResearchLetterHasSemanticFields(t *testing.T) {
+	t.Parallel()
+	g := letterGame()
+	g.lab.Cur = research.Prosthetics
+	researchHost{g}.Letter("Research completed", "Prosthetics are ready.", 2, 3)
+	l := g.World().Letters[0]
+	want := []letterdata.Field{{Name: "what", Kind: "research", Value: research.DefOf(research.Prosthetics).Name}}
+	if l.Kind != letters.Good || l.Code != "research.completed" || !reflect.DeepEqual(l.Fields, want) {
+		t.Fatalf("research event %+v, fields want %+v", l, want)
 	}
 }
 
@@ -298,9 +361,9 @@ func TestOldSaveMigratesLetterMessages(t *testing.T) {
 	g.letters = letters.State{} // as saved before PLAY-018: messages, no letters
 	h := saveAndLoad(t, g)
 	want := []LetterView{
-		{ID: 1, Tick: 20, Kind: "threat", Title: "Cold snap", Text: "Cold!", Msg: msgfmt.Of("Cold!"), X: 5, Y: 6},
-		{ID: 2, Tick: 30, Kind: "good", Title: "Wanderer joins", Text: "Bo joined.", Msg: msgfmt.Of("Bo joined."), X: 7, Y: 8, Focus: 9},
-		{ID: 3, Tick: 40, Kind: "info", Title: "Caravan departed", Text: "Caravan left.", Msg: msgfmt.Of("Caravan left."), X: 1, Y: 2},
+		{ID: 1, Tick: 20, Kind: "threat", Code: letterdata.Code("Cold snap", "Cold!"), Title: "Cold snap", Text: "Cold!", Msg: msgfmt.Of("Cold!"), X: 5, Y: 6},
+		{ID: 2, Tick: 30, Kind: "good", Code: letterdata.Code("Wanderer joins", "Bo joined."), Title: "Wanderer joins", Text: "Bo joined.", Msg: msgfmt.Of("Bo joined."), X: 7, Y: 8, Focus: 9},
+		{ID: 3, Tick: 40, Kind: "info", Code: letterdata.Code("Caravan departed", "Caravan left."), Title: "Caravan departed", Text: "Caravan left.", Msg: msgfmt.Of("Caravan left."), X: 1, Y: 2},
 	}
 	if got := h.World().Letters; !reflect.DeepEqual(got, want) {
 		t.Fatalf("migrated letters\n got %+v\nwant %+v", got, want)

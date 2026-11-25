@@ -38,6 +38,31 @@ func FromCommand(c command.WorkType) (Type, bool) {
 		return Firefight, true
 	case command.WorkPlantCut:
 		return PlantCut, true
+	case command.WorkPatient:
+		return Patient, true
+	case command.WorkBedRest:
+		return BedRest, true
+	case command.WorkBasic:
+		return Basic, true
+	case command.WorkSmith:
+		return Smith, true
+	case command.WorkTailor:
+		return Tailor, true
+	case command.WorkArt:
+		return Art, true
 	}
 	return 0, false
+}
+
+// Command is the native command column for a validated work type.
+func (t Type) Command() command.WorkType {
+	return [...]command.WorkType{
+		command.WorkFirefight, command.WorkDoctor, command.WorkGrow,
+		command.WorkCook, command.WorkConstruct, command.WorkHunt,
+		command.WorkHaul, command.WorkClean, command.WorkResearch,
+		command.WorkMine, command.WorkCraft, command.WorkHandle,
+		command.WorkWarden, command.WorkPlantCut, command.WorkPatient,
+		command.WorkBedRest, command.WorkBasic, command.WorkSmith,
+		command.WorkTailor, command.WorkArt,
+	}[t]
 }

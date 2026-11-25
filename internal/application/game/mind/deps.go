@@ -33,17 +33,18 @@ type Pawns interface {
 	// Alive: not dead (downed counts); Standing: alive and on its feet.
 	Alive(id entity.EntityID) bool
 	Standing(id entity.EntityID) bool
+	Awake(id entity.EntityID) bool
 	// Colonists and Prisoners are the host's own id slices, read only.
 	Colonists() []entity.EntityID
 	Prisoners() []entity.EntityID
 	// Mood is id's mood, 0-100.
 	Mood(id entity.EntityID) int
-	// BreakShift is id's trait offset to the minor break threshold.
-	BreakShift(id entity.EntityID) int
 }
 
 // Breaks reads and writes the game's break record and rolls the dice.
 type Breaks interface {
+	// BreakShift is id's trait offset to the minor break threshold.
+	BreakShift(id entity.EntityID) int
 	Break(id entity.EntityID) (k mentalbreak.Kind, until uint64, ok bool)
 	SetBreak(id entity.EntityID, k mentalbreak.Kind, until uint64)
 	ClearBreak(id entity.EntityID)
@@ -108,8 +109,8 @@ type Brawls interface {
 type Events interface {
 	// Started: id broke into k, aimed at target (0: nobody).
 	Started(id entity.EntityID, k mentalbreak.Kind, target entity.EntityID)
-	// Recovered: id's break k ended (it calms, feels catharsis).
-	Recovered(id entity.EntityID, k mentalbreak.Kind)
+	// Recovered reports that a break ended and whether it awards catharsis.
+	Recovered(id entity.EntityID, k mentalbreak.Kind, catharsis bool)
 	// FightStarted logs and announces starter's fight with other.
 	FightStarted(starter, other entity.EntityID)
 	// Outcome rolls f's memory of the fight with other (none for the
@@ -121,6 +122,9 @@ type Events interface {
 type Muses interface {
 	// SkillLevel is id's level in sk (inspiration minimum skills).
 	SkillLevel(id entity.EntityID, sk skill.ID) uint8
+	Passion(id entity.EntityID, sk skill.ID) skill.Passion
+	CanRun(id entity.EntityID) bool
+	CanShoot(id entity.EntityID) bool
 	// Inspired announces id's new inspiration (a letter, the log).
 	Inspired(id entity.EntityID, label string)
 	// InspirationEnded tells that id's unused inspiration faded.

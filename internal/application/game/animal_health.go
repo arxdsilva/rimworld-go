@@ -4,7 +4,6 @@
 package game
 
 import (
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/application/game/animalview"
@@ -16,49 +15,22 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Animal medicine (MED-09). A wounded animal gets a body
-// (animal.State.Body). Since MED-13 it has its species' anatomy
-// (animal.AnatomyOf: quadruped, bird, snake, lizard or insect parts,
-// their hit points scaled by the species' size, animal.HealthScale): a hit
-// lands on a part picked by coverage, may take off a leg, a wing or an
-// eye, and a lost leg slows the animal (body.Capacity(Moving),
-// animal.State.Step). It is made on the first wound and dropped once
-// nothing is left to treat and no part is lost, so an unhurt animal
-// carries none and saves stay as they were. A body saved before MED-13
-// (every wound on one virtual part) migrates on load
-// (migrateAnimalBodies).
-//
-// The body reuses the humanlike rules: open cuts, bites and scratches
-// bleed (body.BleedRate) until tended, blood loss kills at 1000; each
-// wound that can fester rolls an infection 6–18 hours later
-// (infection.WoundChance), which races immunity (infection.StepRace) and
-// kills at full severity; wounds heal at the wiki rates (body.HealHour,
-// faster tended and asleep). Bleeding is scaled by the species' size:
-// RimWorld divides blood loss by body size; ours have none, so hit points
-// against a human's (health.MaxHP) stand in.
-//
-// Injury stays the hit point scalar everything else reads (death at
-// MaxHP, fleeing, the Health bar). The wounds are the treatable part of
-// it and never add up to more (reconcileAnimalBody): a wound adds to
-// both, healing a wound takes it off Injury, and Injury healed another way
-// (a tame animal's natural heal) trims the smallest open wounds. A vet's
-// tend works on the wounds (tendAnimalBody). Blood loss and infections
-// kill; a bad enough injury or blood loss downs the animal first
-// (animal.State.DownsNow, below).
-//
-// Once an hour the medical phase (phaseMedical, bleed.go) walks the
-// animal patients (sorted ids of animals with a body; derived, rebuilt
-// on first use after a load), never every animal. Rolls use the medical
-// stream (the part a hit lands on, the infection delay). Scars are left
-// out, so healing draws no random numbers.
+// Animal medicine (MED-09/MED-13). Animals use species-specific body
+// anatomy and sizes. Hits create wounds and can remove parts, slow movement,
+// bleed or infect. Injury remains the authoritative scalar for downing and
+// fleeing; the body holds the treatable wounds, scars and infection state.
+// Hourly patient steps heal and treat a small index of wounded animals.
+// Old saves migrate virtual body parts to the species' anatomy.
 
-// woundAnimal gives animal id (state a, Injury already raised by dmg) dmg of
-// kind and split on parts by coverage (body.SpreadBlowWithin, stopped at the hit
-// points it had before the blow, #269: a part whose loss would kill is never taken
-// off), then sets Injury's rise to what the body took, never below 0 (CBT 3.4).
-// It makes the body, schedules the new wounds' infection roll and adds the animal
-// to the patients. A blow whose dmg kills leaves no wound; one whose split kills
-// draws no infection delay and adds no patient.
+// A tame animal can be rescued to a species bed; wild animals remain
+// outside the colony's doctor roster. Recovered animals release temporary
+// bed stays, and dying animals clear carrier and reservation records.
+
+// woundAnimal gives animal id (state a, Injury already raised by dmg) a
+// blow stopped at the scalar HP it had before the hit (SpreadBlowWithin).
+// Only newly applied damage raises Injury; historical part loss is not
+// fresh damage. It makes the body, schedules infection and marks the patient.
+// A base blow that kills leaves no wound; a lethal split draws no infection delay.
 func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind body.WoundKind, split body.Split, by entity.EntityID, now uint64) {
 	if dmg <= 0 || a.Dead() || animal.IsMech(a.Species) { // DEF-4: a machine takes damage, not wounds
 		return
@@ -67,7 +39,7 @@ func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind bo
 		a.Body = animal.NewBody(a.Species)
 	}
 	b := a.Body
-	a.Injury += max(body.SpreadBlowWithin(b, dmg, kind, split, a.HP()+dmg, g.stream(streamMedical).IntN, now), 0) - dmg // the medical stream; never a fall
+	a.Injury += body.SpreadBlowWithin(b, dmg, kind, split, a.HP()+dmg, g.stream(streamMedical).IntN, now) - dmg // the medical stream; never a fall
 	if infection.WoundChance(kind, -1, infection.RoomOther) > 0 && !a.Dead() {
 		h := infection.DelayMin + g.stream(streamMedical).IntN(infection.DelaySpan+1)
 		for i := range b.Wounds { // the wounds this hit opened
@@ -76,45 +48,16 @@ func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind bo
 			}
 		}
 	}
-	reconcileAnimalBody(a)
+	animal.ReconcileBody(a)
 	if a.Body != nil && !a.Dead() {
 		g.markAnimalPatient(id)
-	}
-}
-
-// woundDmg is the damage of b's open wounds (scars excluded).
-func woundDmg(b *body.Body) int {
-	n := 0
-	for _, w := range b.Wounds {
-		if !w.Permanent {
-			n += w.Dmg
-		}
-	}
-	return n
-}
-
-// reconcileAnimalBody keeps a's open wounds within its Injury (trimming
-// the smallest when Injury healed another way) and drops the body once
-// nothing on it needs care and no part is lost (a lost leg stays lost:
-// MED-13). Lost parts are not wounds: they do not count against Injury
-// (nor against a split's stop: woundAnimal).
-func reconcileAnimalBody(a *animal.State) {
-	b := a.Body
-	if b == nil {
-		return
-	}
-	if d := woundDmg(b); d > a.Injury {
-		body.TrimOpen(b, d-max(a.Injury, 0))
-	}
-	if !needsCare(b) && b.Missing == 0 { // patients.go
-		a.Body = nil
 	}
 }
 
 // animalPatient reports an animal the hourly medical step must walk: it
 // has a body that needs care (patients.go). A body kept only for its
 // lost parts needs none.
-func animalPatient(a *animal.State) bool { return a.Body != nil && needsCare(a.Body) }
+func animalPatient(a *animal.Live) bool { return a.Body != nil && needsCare(a.Body) }
 
 // migrateAnimalBodies gives every animal body saved before MED-13 (the
 // humanlike model with no Scale: every wound on one virtual part) its
@@ -123,27 +66,15 @@ func animalPatient(a *animal.State) bool { return a.Body != nil && needsCare(a.B
 func (g *Game) migrateAnimalBodies() {
 	for _, id := range g.animalIDs {
 		a := g.animals.Ref(id)
-		if a == nil || a.Body == nil || a.Body.Scale != 0 || a.Body.Anatomy != body.Humanlike {
+		if a == nil || a.Body == nil {
 			continue
 		}
-		migrateAnimalBody(a)
+		body.MigrateReplacements(a.Body)
+		if a.Body.Scale != 0 || a.Body.Anatomy != body.Humanlike {
+			continue
+		}
+		animal.MigrateBody(a)
 	}
-}
-
-// migrateAnimalBody is migrateAnimalBodies on one animal.
-func migrateAnimalBody(a *animal.State) {
-	old := a.Body
-	nb := animal.NewBody(a.Species)
-	root := nb.Root()
-	nb.Wounds, nb.Conds = old.Wounds, old.Conds
-	nb.BloodLoss, nb.BloodStage = old.BloodLoss, old.BloodStage
-	for i := range nb.Wounds {
-		nb.Wounds[i].Part = root
-	}
-	for i := range nb.Conds {
-		nb.Conds[i].Part = root
-	}
-	a.Body = nb
 }
 
 // animalTendDue reports animal id (state a) with something a tend would
@@ -168,7 +99,7 @@ func tendAnimalBody(a *animal.State, q int32, now uint64) {
 		return
 	}
 	a.Body.TendAll(q, now)
-	reconcileAnimalBody(a)
+	animal.ReconcileBody(a)
 }
 
 // stepAnimalHealth runs an hour of animal medicine (from phaseMedical)
@@ -205,34 +136,27 @@ func (g *Game) stepAnimalBody(id entity.EntityID, a *animal.State, now uint64) b
 	if g.stepAnimalConds(id, a, b, now) {
 		return true
 	}
+	if b.HasAging() {
+		b.StepAging(now, g.agingSalt(id), g.stream(streamMedical).IntN)
+	}
 	lying := int32(0)
 	if lyingDown(*a) {
 		lying = body.LieGround
+		if a.Tame && g.rest.Animals.MedicalLying(id) {
+			lying = body.LieBed
+		}
 	}
-	before := woundDmg(b)
+	before := body.OpenWoundDamage(b)
 	b.HealHour(noScarRoll, lying)
-	a.Injury = max(0, a.Injury-(before-woundDmg(b)))
-	reconcileAnimalBody(a)
+	a.Injury = max(0, a.Injury-(before-body.OpenWoundDamage(b)))
+	animal.ReconcileBody(a)
 	g.checkAnimalDowned(id, a, now)
 	return false
 }
 
-// ---- downed animals ----
-//
-// An animal goes down at animal.DownInjuryPct of its hit points lost or
-// with severe blood loss, and stands again only at animal.UpInjuryPct with
-// blood loss below moderate (the hysteresis lives in the domain:
-// animal.State.DownsNow and StandsUp). It is checked when the animal is
-// hurt (animalHurt), on the hourly medical step of an animal patient
-// (stepAnimalBody) and on the animal's own decision cycle (downedThink:
-// starvation, a tend without a body) — never by a scan of every animal.
-//
-// A downed animal lies where it fell (the rest pose, tinted): thinkAnimal
-// returns at once, so it neither wanders, flees, fights, hunts nor feeds,
-// and it takes no path step (moveAnimal). It still bleeds, heals, starves
-// and can die. Predators take it as easy prey (huntable, findPrey),
-// hunters finish a marked one first (assignHunt), a vet tends a tame one
-// where it lies, and a downed wild animal is easier to tame (doTame).
+// Downing uses the domain's injury and blood-loss hysteresis. A downed
+// animal lies still while bleeding, healing and starving; predators can
+// hunt it and doctors can tend tame animals. StandsUp restores movement.
 
 // lyingDown reports an animal lying on the ground: asleep, or downed. It
 // heals as a sleeper and its rest refills.
@@ -248,6 +172,7 @@ func (g *Game) checkAnimalDowned(id entity.EntityID, a *animal.State, now uint64
 		return true
 	case a.StandsUp():
 		a.Downed, a.DownedTick = false, 0
+		g.care.Rest.RecoveredAnimal(id)
 		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
 		a.NextDecide = now // it thinks again at once
 		return true
@@ -283,7 +208,7 @@ func (g *Game) downedThink(id entity.EntityID, a *animal.State, now uint64) bool
 			}
 			g.downAnimal(id, a, now)
 		}
-		a.NextDecide = nextDecide(id, now) // animal_needs.go
+		a.NextDecide = animal.NextDecision(uint64(id), now) // animal_needs.go
 		if a.Tame && (now+uint64(id))%animal.DecideEvery == 0 {
 			g.naturalHeal(id, a, now) // vet_animals.go
 		}
@@ -352,7 +277,7 @@ func (g *Game) stepAnimalConds(id entity.EntityID, a *animal.State, b *body.Body
 	beaten := false
 	for i := range b.Conds {
 		c := &b.Conds[i]
-		if body.IsDisease(c.Kind) {
+		if body.IsDisease(c.Kind) || body.IsAging(c.Kind) {
 			continue
 		}
 		d := body.DefOfCond(c.Kind)
@@ -426,55 +351,7 @@ func (g *Game) sweepAnimalPatients() {
 // game/animalview).
 type AnimalPartView = animalview.Part
 
-// animalParts lists body b's hurt and lost parts in part order; a lost
-// part's children go with it.
-func animalParts(b *body.Body) []AnimalPartView {
-	var out []AnimalPartView
-	for _, ps := range b.Parts() {
-		if ps.Missing {
-			if par := b.PartDef(ps.Part).Parent; par != ps.Part && b.PartMissing(par) {
-				continue
-			}
-		} else if ps.HP >= ps.MaxHP {
-			continue
-		}
-		out = append(out, AnimalPartView{Label: ps.Label, HP: ps.HP, MaxHP: ps.MaxHP, Missing: ps.Missing,
-			Bleeding: b.PartBleedPerDay(ps.Part) > 0})
-	}
-	return out
-}
-
-// fillAnimalHealth fills an animal view's health block (MED-09): the
-// headline, bleeding, blood loss, the worst infection, whether a tend is
-// due, and the care level.
+// fillAnimalHealth provides the colony-owned care facts to the view owner.
 func (g *Game) fillAnimalHealth(av *AnimalView, id entity.EntityID, a animal.State, now uint64) {
-	av.CareLevel = uint8(g.care.Level(id)) // care package
-	av.BleedDeathHours = -1
-	av.HealthState = "Healthy"
-	av.MovingPct = 100
-	if a.Injury > 0 {
-		av.HealthState = "Injured"
-	}
-	b := a.Body
-	if b == nil {
-		av.NeedsTend = a.Tame && a.Injury > 0 && !g.tended(id)
-		return
-	}
-	av.Parts = animalParts(b)
-	av.MovingPct = int(b.Capacity(body.Moving)) / 10
-	av.NeedsTend = a.Tame && b.TendDue(now)
-	av.BleedPerDay = int(animal.BleedPerDay(b, a.Species))
-	av.BleedDeathHours = animal.BleedDeathHours(b, a.Species)
-	av.BloodLossPct = int(b.BloodLoss) / 10
-	av.BloodStage = body.BloodStageLabel(b.BloodStage)
-	for _, c := range b.Conds {
-		if c.Kind == body.CondInfection && (av.InfectionPct == 0 || int(c.Sev)/10 > av.InfectionPct) {
-			av.InfectionPct = max(int(c.Sev)/10, 1)
-			av.ImmunityPct = int(c.Immunity) / 10
-			av.InfectionLosing = infection.Losing(c, body.DefOfCond(c.Kind), now < c.TendUntil, 1000)
-		}
-	}
-	if av.BleedPerDay > 0 {
-		av.HealthState = fmt.Sprintf("Bleeding %d%%/day · death in %dh", av.BleedPerDay/10, av.BleedDeathHours)
-	}
+	animalview.FillHealth(av, a, now, uint8(g.care.Level(id)), a.Body == nil && a.Tame && a.Injury > 0 && g.tended(id))
 }

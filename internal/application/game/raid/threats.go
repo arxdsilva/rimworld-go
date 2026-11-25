@@ -87,7 +87,9 @@ func (t *Threats) Fire(now uint64) uint64 {
 	case ThreatManhunters:
 		t.s.ManhunterPack((3 + t.h.Roll(3)) * 100)
 	case ThreatHive:
-		t.hives.Swarm()
+		if !t.hives.Infest() {
+			t.s.ScaledRaid(day)
+		}
 	case ThreatMad:
 		if !t.s.MadAnimal(now) { // incidents.go
 			t.s.ScaledRaid(day)

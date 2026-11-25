@@ -33,6 +33,31 @@ func TestDefendArmedFightsBack(t *testing.T) {
 	}
 }
 
+func TestDefendArmedUsesCastPositionAndIgnoresFleeingRaider(t *testing.T) {
+	t.Parallel()
+	f := newFake(40, 20)
+	g := f.combat().Guard
+	f.pawn(1, 5, 5, weapon.Rifle)
+	f.raider(2, 10, 5, weapon.Rifle)
+	f.fleeing[2] = true
+	f.jobs[2] = job.Record{Kind: job.Attack, Target: 1, State: job.Do}
+	f.now = 9 // id 1's paced foe scan fires on this tick.
+	if g.Defend(1, job.Record{}) || len(f.started) != 0 {
+		t.Fatal("fleeing raider is excluded from defense")
+	}
+	f.fleeing[2] = false
+	f.jobs[2] = job.Record{}
+	f.build(50, construction.Wall, 7, 5)
+	if !g.Defend(1, job.Record{}) || len(f.started) != 1 || f.started[0].Kind != job.Move || f.started[0].TX == 5 && f.started[0].TY == 5 {
+		t.Fatalf("armed defender should move to a cast position, started %+v", f.started)
+	}
+	cast := f.started[0]
+	f.pos[1] = [2]int{cast.TX, cast.TY}
+	if !g.Defend(1, cast) || len(f.started) != 2 || f.started[1].Kind != job.Attack || f.started[1].Target != 2 {
+		t.Fatalf("at cast position should engage raider, started %+v", f.started)
+	}
+}
+
 // TestDefendSwitchDoesNotFlap: an armed colonist fighting one attacker only
 // turns on another at least SwitchMargin tiles closer.
 func TestDefendSwitchDoesNotFlap(t *testing.T) {
@@ -79,6 +104,7 @@ func TestDefendUnarmedFleesAndCalms(t *testing.T) {
 	// running: keep going between re-plans; the log is written once
 	run := f.started[0]
 	run.State = job.Goto
+	run.Path = []pathing.Point{{X: run.TX, Y: run.TY}}
 	f.now++
 	if !g.Defend(1, run) || len(f.started) != 1 || len(f.logs) != 1 {
 		t.Fatal("keep running")

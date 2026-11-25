@@ -22,7 +22,7 @@ func TestPickSpendsPointsByTech(t *testing.T) {
 	seen := map[faction.Tech]map[item.Kind]int{faction.Neolithic: {}, faction.Industrial: {}}
 	for seed := uint64(1); seed <= 60; seed++ {
 		for tech := range seen {
-			for _, k := range Pick(1<<20, 8, tech, roller(seed)) {
+			for _, k := range PickLimited(1<<20, 8, tech, roller(seed)) {
 				seen[tech][k]++
 				if !k.IsWeapon() {
 					t.Fatalf("%v is no weapon", k)
@@ -56,18 +56,18 @@ func TestPickSpendsPointsByTech(t *testing.T) {
 func TestPickBudget(t *testing.T) {
 	t.Parallel()
 	for seed := uint64(1); seed <= 30; seed++ {
-		if k := Pick(Cheapest, 8, faction.Industrial, roller(seed)); len(k) != 1 {
+		if k := PickLimited(Cheapest, 8, faction.Industrial, roller(seed)); len(k) != 1 {
 			t.Fatalf("knife points buy one raider: %v", k)
 		}
-		if k := Pick(0, 8, faction.Neolithic, roller(seed)); len(k) != 1 {
+		if k := PickLimited(0, 8, faction.Neolithic, roller(seed)); len(k) != 1 {
 			t.Fatalf("at least one raider: %v", k)
 		}
-		if k := Pick(1<<20, 5, faction.Industrial, roller(seed)); len(k) != 5 {
+		if k := PickLimited(1<<20, 5, faction.Industrial, roller(seed)); len(k) != 5 {
 			t.Fatalf("capped: %v", k)
 		}
 		pts := 300
 		spent := 0
-		kit := Pick(pts, 24, faction.Industrial, roller(seed))
+		kit := PickLimited(pts, 24, faction.Industrial, roller(seed))
 		for _, k := range kit[:len(kit)-1] {
 			spent += Cost(k)
 		}
@@ -82,7 +82,7 @@ func TestPickBudget(t *testing.T) {
 
 func TestPickDeterministic(t *testing.T) {
 	t.Parallel()
-	a, b := Pick(900, 8, faction.Industrial, roller(7)), Pick(900, 8, faction.Industrial, roller(7))
+	a, b := PickLimited(900, 8, faction.Industrial, roller(7)), PickLimited(900, 8, faction.Industrial, roller(7))
 	if len(a) != len(b) {
 		t.Fatal("same roll, same kit")
 	}
@@ -101,5 +101,17 @@ func TestLegacy(t *testing.T) {
 	}
 	if seen[item.Rifle] == 0 || seen[item.Knife] == 0 || seen[item.Spear] == 0 || len(seen) != 3 {
 		t.Fatalf("legacy kit %v", seen)
+	}
+}
+
+// Pick has no head-count cap: the points alone bound a raid.
+func TestPickUncappedBySpendingAlone(t *testing.T) {
+	t.Parallel()
+	k := Pick(1<<20, faction.Industrial, roller(3))
+	if len(k) <= 24 {
+		t.Fatalf("a huge budget bought only %d raiders", len(k))
+	}
+	if len(Pick(0, faction.Neolithic, roller(3))) != 1 {
+		t.Fatal("at least one raider")
 	}
 }

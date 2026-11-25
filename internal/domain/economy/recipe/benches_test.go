@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 )
@@ -31,12 +32,12 @@ func TestBenchMapping(t *testing.T) {
 		{construction.CraftingSpot, []ID{Club, Knife, MakeShortBow, MakeGreatbow}, []ID{Spear, MakeMace, MakeRevolver}},
 		{construction.FueledSmithy, []ID{Club, Knife, Spear, MakeMace, MakeGladius, MakeLongsword, MakePila, MakeShortBow}, []ID{MakeRevolver}},
 		{construction.ElectricSmithy, []ID{MakeMace, MakeLongsword, Spear}, []ID{MakeRevolver}},
-		{construction.MachiningTable, []ID{MakeRevolver, MakeMinigun, MakeEMPGrenades, MakeRifle, MakeProstheticLeg}, []ID{MakeMace}},
+		{construction.MachiningTable, []ID{MakeRevolver, MakeMinigun, MakeEMPGrenades, MakeRifle, MakeProstheticLeg, MakeProstheticArm, MakeValveHeart}, []ID{MakeMace}},
 		{construction.FabricationBench, []ID{FabricateComponent, MakeServoArm}, []ID{MakeRevolver}},
 		{construction.ElectricSmelter, []ID{SmeltWeapon}, nil},
 		{construction.ArtBench, []ID{SculptSmall, SculptLarge, SculptGrand}, nil},
 		{construction.ButcherSpot, []ID{ButcherAnimal}, []ID{ButcherDustbuck}},
-		{construction.Workbench, []ID{Club, Knife, Spear, MakeRifle, FabricateComponent, MakeServoArm}, []ID{MakeMace}},
+		{construction.Workbench, []ID{Club, Knife, Spear, MakeRifle, FabricateComponent}, []ID{MakeMace}},
 		{construction.ElectricStove, []ID{SimpleMeal}, nil},
 		{construction.BiofuelRefinery, nil, []ID{SimpleMeal}},
 	}
@@ -114,5 +115,27 @@ func TestSmeltYield(t *testing.T) {
 	}
 	if in.Label() != "1 metal weapon" {
 		t.Fatalf("label %q", in.Label())
+	}
+}
+
+func TestWorkTypeRoutesSpecialistRecipes(t *testing.T) {
+	for _, tc := range []struct {
+		recipe ID
+		want   work.Type
+	}{
+		{MakeMace, work.Smith},
+		{MakeLongsword, work.Smith},
+		{MakeParka, work.Tailor},
+		{MakeTribalwear, work.Tailor},
+		{Club, work.Craft},
+		{MakeRevolver, work.Craft},
+		{SculptSmall, work.Art},
+		{SculptLarge, work.Art},
+		{SculptGrand, work.Art},
+	} {
+		d := Core().DefOf(tc.recipe)
+		if got := d.WorkType(); got != tc.want {
+			t.Fatalf("%s work column = %d, want %d", d.Name, got, tc.want)
+		}
 	}
 }

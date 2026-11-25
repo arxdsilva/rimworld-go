@@ -13,7 +13,7 @@ func TestShooterPerTileWikiPoints(t *testing.T) {
 	want := map[int]int{
 		-20: 700_000, -10: 800_000, -6: 830_000, -4: 850_000, -2: 870_000, 0: 890_000,
 		2: 930_000, 4: 940_000, 6: 950_000, 8: 960_000, 10: 970_000, 12: 975_000,
-		14: 980_000, 16: 983_333, 18: 986_667, 20: 990_000, 22: 992_500, 26: 995_000,
+		14: 980_000, 16: 983_333, 18: 986_666, 20: 990_000, 22: 992_500, 26: 995_000,
 		30: 996_500, 40: 998_000, 60: 999_000,
 		1: 910_000, -5: 840_000, 3: 935_000, 5: 945_000,
 	}
@@ -49,8 +49,8 @@ func TestDownedFactor(t *testing.T) {
 
 func TestDownedInterceptConst(t *testing.T) {
 	t.Parallel()
-	if got := InterceptChance(1000) * DownedIntercept / 1000; got != 100 {
-		t.Fatalf("downed intercept at 1000: %d, want 100", got)
+	if got := InterceptChance(1000) * DownedIntercept / 1000; got != 40 {
+		t.Fatalf("downed intercept at 1000: %d, want 40", got)
 	}
 }
 

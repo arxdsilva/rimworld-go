@@ -3,7 +3,10 @@
 
 package mood
 
-import "testing"
+import (
+	"rimworld-go/internal/domain/sim/clock"
+	"testing"
+)
 
 func TestMemoriesAndLevel(t *testing.T) {
 	t.Parallel()
@@ -77,10 +80,18 @@ func TestSocialThoughtDefs(t *testing.T) {
 	if d := DefOf(SleptInBed); d.StackLimit != 1 || d.StackFactor != 1000 {
 		t.Fatalf("default stacking: %+v", d)
 	}
-	for _, k := range []Kind{Insulted, KindWords, Lovin, BondedDied, BondedLost, BondedGivenAway, BondedReleased} {
-		if d := DefOf(k); d.StackLimit != 5 || d.StackFactor != 900 {
+	for _, k := range []Kind{Insulted, KindWords} {
+		if d := DefOf(k); d.StackLimit != 10 || d.StackFactor != 900 {
 			t.Fatalf("%s stacking: %+v", d.Label, d)
 		}
+	}
+	for _, k := range []Kind{BondedDied, BondedLost, BondedReleased} {
+		if d := DefOf(k); d.StackLimit != 5 || d.StackFactor != 750 {
+			t.Fatalf("%s stacking: %+v", d.Label, d)
+		}
+	}
+	if d := DefOf(Catharsis); d.Value != 40 || d.Duration != 3*day || d.StackLimit != 5 || d.StackFactor != 750 {
+		t.Fatalf("catharsis: %+v", d)
 	}
 	if d := DefOf(GotMarried); d.Value != 40 || d.Duration != 30*day {
 		t.Fatalf("got married: %+v", d)
@@ -89,7 +100,7 @@ func TestSocialThoughtDefs(t *testing.T) {
 		t.Fatalf("grief: %+v", d)
 	}
 	m := Memories{{Kind: Grief, Expires: 10, Subject: 7, Value: -12}, {Kind: Catharsis, Expires: 10}}
-	if got := Level(Active(m)); got != Base-12+30 {
+	if got := Level(Active(m)); got != Base-12+40 {
 		t.Fatalf("Value override: level %d", got)
 	}
 	if DefOf(numKinds).Label != "" {
@@ -108,16 +119,16 @@ func TestAddForStacksAndRefreshesOldest(t *testing.T) {
 		t.Fatalf("len %d want %d", len(m), lim)
 	}
 	m = m.AddFor(Insulted, 7, 9000)
-	if len(m) != lim || m[0].Expires != 9000+DefOf(Insulted).Duration {
-		t.Fatalf("oldest not refreshed: %+v", m)
+	if len(m) != lim || m[len(m)-1].Expires != 9000+DefOf(Insulted).Duration {
+		t.Fatalf("oldest event was not replaced in event order: %+v", m)
 	}
-	m = m.AddFor(Insulted, 8, 10) // other subject stacks separately
-	if len(m) != lim+1 {
-		t.Fatalf("other subject: %d", len(m))
+	m = m.AddFor(Insulted, 8, 10) // the cap is per thought kind, not subject
+	if len(m) != lim || m[len(m)-1].Subject != 8 {
+		t.Fatalf("per-kind cap after another subject: %+v", m)
 	}
 	// non-stacking kind refreshes
-	m = Memories(nil).AddFor(CheatedOn, 1, 5).AddFor(CheatedOn, 1, 50)
-	if len(m) != 1 || m[0].Expires != 50+DefOf(CheatedOn).Duration {
+	m = Memories(nil).AddFor(GotMarried, 1, 5).AddFor(GotMarried, 1, 50)
+	if len(m) != 1 || m[0].Expires != 50+DefOf(GotMarried).Duration {
 		t.Fatalf("%+v", m)
 	}
 }
@@ -145,7 +156,7 @@ func TestAddValueAndDiminishingActive(t *testing.T) {
 		s = s.AddFor(KindWords, uint64(i+1), 0)
 	}
 	ts := Active(s)
-	if ts[0].Value != 5 || ts[1].Value != 4 || ts[2].Value != 3 {
+	if ts[0].Value != 5 || ts[1].Value != 5 || ts[2].Value != 4 {
 		t.Fatalf("%+v", ts)
 	}
 }
@@ -173,8 +184,8 @@ func TestApproach(t *testing.T) {
 // are unchanged, and a refresh takes the new label.
 func TestMemoryLabelOverride(t *testing.T) {
 	var m Memories
-	m = m.AddLabeled(Grief, 7, -20, "my wife died", 0)
-	m = m.AddValue(Grief, 8, -10, 0)
+	m = m.AddLabeledUntil(Grief, 7, -20, "my wife died", 0, day)
+	m = m.AddLabeledUntil(Grief, 8, -10, "", 0, day)
 	ts := Active(m)
 	if len(ts) != 2 || ts[0].Label != "my wife died" || ts[0].Value != -20 {
 		t.Fatalf("labelled grief %+v", ts)
@@ -182,8 +193,220 @@ func TestMemoryLabelOverride(t *testing.T) {
 	if ts[1].Label != DefOf(Grief).Label || ts[1].Value != -10 {
 		t.Fatalf("unlabelled grief keeps the def's line: %+v", ts[1])
 	}
-	m = m.AddLabeled(Grief, 7, -16, "my lover died", 5)
+	m = m.AddLabeledUntil(Grief, 7, -16, "my lover died", 5, day+5)
 	if ts := Active(m); len(ts) != 2 || ts[0].Label != "my lover died" || ts[0].Value != -16 {
 		t.Fatalf("refreshed grief %+v", ts)
+	}
+}
+
+// Conditional thought suppression is deterministic and leaves saved
+// memories unaffected. A full-probability test pins the classification.
+func TestNullifyConditionalKeepsMemories(t *testing.T) {
+	active := []Thought{
+		{Kind: Hungry, Value: -5},
+		{Kind: AteMeal, Value: 5, Memory: true},
+		{Kind: BrawlerRanged, Value: 10},
+		{Kind: AnestheticWoozy, Value: 10},
+	}
+	got := NullifyConditional(active, 10000, 17, 3, 77)
+	if len(got) != 1 || got[0].Kind != AteMeal {
+		t.Fatalf("conditional thought suppression: %+v", got)
+	}
+	for i := uint64(1); i <= 25; i++ {
+		first := NullifyConditional([]Thought{{Kind: Hungry, Value: -5}}, 100, 17, i, 77)
+		again := NullifyConditional([]Thought{{Kind: Hungry, Value: -5}}, 100, 17, i, 77)
+		if len(first) != len(again) {
+			t.Fatalf("same pawn/time varied for %d", i)
+		}
+	}
+}
+
+func TestAppendActiveAtFiltersExpiredWithoutChangingMemories(t *testing.T) {
+	t.Parallel()
+	memories := Memories{
+		{Kind: AteRaw, Expires: 10},
+		{Kind: SleptInNiceRoom, Expires: 20},
+		{Kind: AteWithoutTable, Expires: 10},
+	}
+	thoughts := AppendActiveAt(nil, memories, 10, Hungry)
+	if len(thoughts) != 2 || thoughts[0].Kind != SleptInNiceRoom || thoughts[1].Kind != Hungry {
+		t.Fatalf("expired memories must not be counted: %+v", thoughts)
+	}
+	if len(memories) != 3 || memories[0].Kind != AteRaw || memories[1].Kind != SleptInNiceRoom || memories[2].Kind != AteWithoutTable {
+		t.Fatalf("memory backing array changed: %+v", memories)
+	}
+	if got := AppendActiveAt(nil, memories, 20); len(got) != 0 {
+		t.Fatalf("expiry boundary is inclusive: %+v", got)
+	}
+}
+
+func TestPruneClearsExpiredLabels(t *testing.T) {
+	t.Parallel()
+	live := Memory{Kind: SleptInNiceRoom, Expires: 20}
+	m := Memories{{Kind: Grief, Expires: 10, Label: "an expired grief"}, live}
+	m = m.Prune(10)
+	if len(m) != 1 || m[0] != live {
+		t.Fatalf("pruned memories = %+v", m)
+	}
+	if tail := m[:cap(m)][1]; tail != (Memory{}) {
+		t.Fatalf("expired memory still retained in backing array: %+v", tail)
+	}
+}
+
+func TestStackingDiminishesToZero(t *testing.T) {
+	t.Parallel()
+	m := make(Memories, 128)
+	for i := range 64 {
+		m[i*2] = Memory{Kind: KindWords, Subject: uint64(i + 1), Expires: 200}
+		m[i*2+1] = Memory{Kind: Insulted, Subject: uint64(i + 1), Expires: 200}
+	}
+	ts := AppendActiveAt(nil, m, 100)
+	positive, negative := 0, 0
+	for i := 0; i < 64; i++ {
+		if i < 10 {
+			positive += ts[i*2].Value
+			negative += ts[i*2+1].Value
+		} else if ts[i*2].Value != 0 || ts[i*2+1].Value != 0 {
+			t.Fatalf("stack %d exceeded the Core cap: %+v", i, ts[i*2:i*2+2])
+		}
+	}
+	if positive != 33 || negative != -33 {
+		t.Fatalf("rounded cumulative stacks: kindness %d, insult %d", positive, negative)
+	}
+}
+
+func TestGroupReplacementReleasesRemovedMemories(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		edit func(Memories) Memories
+	}{
+		{"Add", func(m Memories) Memories { return m.Add(SleptInBed, 100) }},
+		{"AddFor", func(m Memories) Memories { return m.AddFor(SleptInBed, 1, 100) }},
+		{"ForgetGroupOf", func(m Memories) Memories { return m.ForgetGroupOf(SleptInBed) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := Memories{
+				{Kind: SleptOutside, Expires: 200, Label: "old sleep"},
+				{Kind: KindWords, Expires: 200, Label: "retained"},
+				{Kind: SleptOnGround, Expires: 200, Label: "old ground"},
+			}
+			got := tc.edit(m)
+			if got[0].Label != "retained" {
+				t.Fatalf("kept memories = %+v", got)
+			}
+			for _, removed := range m[len(got):] {
+				if removed != (Memory{}) {
+					t.Fatalf("removed memory remains referenced: %+v", removed)
+				}
+			}
+		})
+	}
+}
+
+func TestUnscaledMemoriesKeepTheirValues(t *testing.T) {
+	t.Parallel()
+	memories := Memories{
+		{Kind: Grief, Subject: 1, Expires: 200, Value: -20},
+		{Kind: Grief, Subject: 2, Expires: 200, Value: -10},
+		{Kind: Grief, Subject: 3, Expires: 200, Value: -30},
+	}
+	got := AppendActiveAt(nil, memories, 100)
+	for i, want := range []int{-20, -10, -30} {
+		if got[i].Value != want {
+			t.Fatalf("grief %d = %d, want %d", i, got[i].Value, want)
+		}
+	}
+}
+
+func TestAddLabeledUntilRefreshesExpiry(t *testing.T) {
+	t.Parallel()
+	m := Memories(nil).AddLabeledUntil(Grief, 7, -20, "my wife died", 0, 1200)
+	if len(m) != 1 || m[0].Expires != 1200 || m[0].Value != -20 || m[0].Label != "my wife died" {
+		t.Fatalf("first grief %+v", m)
+	}
+	m = m.AddLabeledUntil(Grief, 8, -14, "my sibling died", 0, 900)
+	m = m.AddLabeledUntil(Grief, 7, -16, "my lover died", 0, 1800)
+	if len(m) != 2 || m[0].Expires != 1800 || m[0].Value != -16 || m[0].Label != "my lover died" || m[1].Expires != 900 {
+		t.Fatalf("refreshed grief %+v", m)
+	}
+	if got := AppendActiveAt(nil, m, 900); len(got) != 1 || got[0].Value != -16 {
+		t.Fatalf("expired grief remained active: %+v", got)
+	}
+}
+
+func TestMemoryInsertionDiscardsExpiredEntries(t *testing.T) {
+	t.Parallel()
+	now := uint64(1000)
+	base := Memories{
+		{Kind: Insulted, Subject: 7, Expires: 999, Label: "expired insult"},
+		{Kind: KindWords, Subject: 1, Expires: 999, Label: "expired kindness"},
+		{Kind: SleptInNiceRoom, Expires: 1001},
+	}
+	for _, tc := range []struct {
+		name string
+		add  func(Memories) Memories
+	}{
+		{"Add", func(m Memories) Memories { return m.Add(AteRaw, now) }},
+		{"AddFor", func(m Memories) Memories { return m.AddFor(Insulted, 7, now) }},
+		{"AddLabeled", func(m Memories) Memories { return m.AddLabeled(KindWords, 1, 5, "fresh", now) }},
+		{"AddLabeledUntil", func(m Memories) Memories {
+			return m.AddLabeledUntil(Grief, 7, -10, "grief", now, now+10)
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.add(append(Memories(nil), base...))
+			if len(got) != 2 {
+				t.Fatalf("%s still stores expired memories: %+v", tc.name, got)
+			}
+			for _, m := range got {
+				if m.Expires <= now || m.Label == "expired insult" || m.Label == "expired kindness" {
+					t.Fatalf("%s retained expired memory: %+v", tc.name, got)
+				}
+			}
+		})
+	}
+}
+
+func TestCatharsisStacksAndExpiresAtCoreLimit(t *testing.T) {
+	t.Parallel()
+	var m Memories
+	for i := range 7 {
+		m = m.Add(Catharsis, uint64(i)*clock.TicksPerHour)
+	}
+	if len(m) != 5 {
+		t.Fatalf("catharsis cap %d", len(m))
+	}
+	ts := AppendActiveAt(nil, m, 6*clock.TicksPerHour)
+	total := 0
+	for _, thought := range ts {
+		total += thought.Value
+	}
+	if total != 122 {
+		t.Fatalf("catharsis stacked %d, want 122", total)
+	}
+	if len(AppendActiveAt(nil, m, 3*clock.TicksPerDay+6*clock.TicksPerHour)) != 0 {
+		t.Fatal("catharsis persisted beyond three days")
+	}
+}
+
+func TestSocialStackCapIsPerThoughtKind(t *testing.T) {
+	t.Parallel()
+	var m Memories
+	for i := range 15 {
+		m = m.AddFor(KindWords, uint64(i+1), uint64(i))
+	}
+	if len(m) != 10 {
+		t.Fatalf("kind words cap: %d", len(m))
+	}
+	total := 0
+	for _, thought := range Active(m) {
+		total += thought.Value
+	}
+	if total != 33 {
+		t.Fatalf("kind words total: %d", total)
+	}
+	if m[0].Subject != 6 || m[len(m)-1].Subject != 15 {
+		t.Fatalf("oldest event replacement order: %+v", m)
 	}
 }

@@ -4,19 +4,24 @@
 package filesave
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/savecanon"
+	"rimworld-go/internal/application/game/savefmt"
 )
 
-// raw is an encode func that writes body as the save.
-func raw(body string) func(io.Writer, string) error {
-	return func(w io.Writer, _ string) error { _, err := io.WriteString(w, body); return err }
+// raw supplies a real Gob capture for the queue's ordering tests.
+func raw(body string) func(string) (savecanon.Frozen, error) {
+	return func(_ string) (savecanon.Frozen, error) {
+		return savecanon.Freeze(body), nil
+	}
 }
 
 // TestQueueSaveLoadsAtItsTick: the file holds the colony as it was when
@@ -33,6 +38,10 @@ func TestQueueSaveLoadsAtItsTick(t *testing.T) {
 	g := game.NewColony(game.Config{Seed: 3, Width: 40, Height: 30})
 	g.Step(200)
 	tick, hash := g.Tick(), g.StateHash()
+	var want bytes.Buffer
+	if err := g.Save(&want, "My-colony"); err != nil {
+		t.Fatal(err)
+	}
 	if err := q.Save(g, "My colony!"); err != nil {
 		t.Fatal(err)
 	}
@@ -49,6 +58,10 @@ func TestQueueSaveLoadsAtItsTick(t *testing.T) {
 	rs := q.Done()
 	if len(rs) != 1 || rs[0].Err != nil || rs[0].Slot != "My colony!" || filepath.Base(rs[0].Path) != "My-colony"+Ext {
 		t.Fatalf("results %+v", rs)
+	}
+	got, err := os.ReadFile(rs[0].Path)
+	if err != nil || !bytes.Equal(got, want.Bytes()) {
+		t.Fatalf("queued save differs from synchronous canonical save: %v", err)
 	}
 	h, _, err := s.Load(rs[0].Path)
 	if err != nil {
@@ -85,7 +98,14 @@ func TestQueueOneInFlightCoalesces(t *testing.T) {
 		inFlight--
 		mu.Unlock()
 	}
-	q.saveTo = func(path string, raw []byte) error { enter(filepath.Base(path) + "=" + string(raw)); return nil }
+	q.saveTo = func(path string, raw []byte) error {
+		var body string
+		if err := gob.NewDecoder(bytes.NewReader(raw)).Decode(&body); err != nil {
+			return err
+		}
+		enter(filepath.Base(path) + "=" + body)
+		return nil
+	}
 	q.viewTo = func(slot string, v ViewFile) error { enter(fmt.Sprintf("view %s %v", slot, v.CX)); return nil }
 	if err := q.put("a", raw("1")); err != nil {
 		t.Fatal(err)
@@ -150,15 +170,105 @@ func TestQueueReusesTheBuffer(t *testing.T) {
 	t.Parallel()
 	q := NewQueue(Store{Dir: t.TempDir()})
 	defer q.Close()
-	var bufs []*byte
+	var bufs, inputs []*byte
 	q.saveTo = func(_ string, raw []byte) error { bufs = append(bufs, &raw[:1][0]); return nil }
 	for range 2 {
 		if err := q.put("a", raw("same size")); err != nil {
 			t.Fatal(err)
 		}
 		q.Wait()
+		inputs = append(inputs, &q.spare[:1][0])
 	}
-	if len(bufs) != 2 || bufs[0] != bufs[1] {
-		t.Fatal("the second save did not reuse the first one's buffer")
+	if len(bufs) != 2 || bufs[0] != bufs[1] || inputs[0] != inputs[1] {
+		t.Fatal("the second save did not reuse both input and output buffers")
+	}
+}
+
+// SaveAs must freeze the exact stamp and state even if an earlier job blocks
+// the worker. Coalescing may discard an older capture, but not mutate the
+// newest one or the in-flight capture through buffer reuse.
+func TestQueueCanonicalCaptureCoalescing(t *testing.T) {
+	t.Parallel()
+	q := NewQueue(Store{Dir: t.TempDir()})
+	defer q.Close()
+	started, gate := make(chan struct{}, 1), make(chan struct{})
+	var once sync.Once
+	release := func() { once.Do(func() { close(gate) }) }
+	defer release()
+	q.saveTo = func(path string, raw []byte) error {
+		if filepath.Base(path) == "block"+Ext {
+			started <- struct{}{}
+			<-gate
+		}
+		return writeSave(path, raw)
+	}
+	g := game.NewColony(game.Config{Seed: 7, Width: 40, Height: 30})
+	g.Step(1)
+	if err := q.Save(g, "block"); err != nil {
+		t.Fatal(err)
+	}
+	<-started
+	stamp := savefmt.Stamp{Name: "My slot!", Colony: "test"}
+	if err := q.SaveAs(g, stamp); err != nil {
+		t.Fatal(err)
+	}
+	g.Step(50)
+	var canonical, want bytes.Buffer
+	if err := game.EncodeSaveAs(g, &canonical, stamp); err != nil {
+		t.Fatal(err)
+	}
+	if err := savefmt.Compress(&want, canonical.Bytes()); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.SaveAs(g, stamp); err != nil {
+		t.Fatal(err)
+	}
+	g.Step(50)
+	release()
+	q.Wait()
+	results := q.Done()
+	if len(results) != 2 || results[0].Err != nil || results[1].Err != nil {
+		t.Fatalf("results: %+v", results)
+	}
+	got, err := os.ReadFile(results[1].Path)
+	if err != nil || !bytes.Equal(got, want.Bytes()) {
+		t.Fatalf("coalesced capture differs from newest canonical save: %v", err)
+	}
+}
+
+// An unsupported Gob interface may be captured but must fail canonicalization
+// on the worker without replacing the last valid file or writing its view.
+func TestQueueCanonicalizationFailureIsAtomic(t *testing.T) {
+	t.Parallel()
+	q := NewQueue(Store{Dir: t.TempDir()})
+	defer q.Close()
+	if err := q.put("a", raw("previous")); err != nil {
+		t.Fatal(err)
+	}
+	q.Wait()
+	rs := q.Done()
+	if len(rs) != 1 || rs[0].Err != nil {
+		t.Fatalf("initial save: %+v", rs)
+	}
+	want, err := os.ReadFile(rs[0].Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := q.put("a", func(_ string) (savecanon.Frozen, error) {
+		return savecanon.Freeze(struct{ Value any }{Value: 42}), nil
+	}); err != nil {
+		t.Fatalf("capture itself failed: %v", err)
+	}
+	if err := q.SaveView("a", ViewFile{CX: 1}); err != nil {
+		t.Fatal(err)
+	}
+	q.Wait()
+	failed := q.Done()
+	if len(failed) != 1 || failed[0].Err == nil || failed[0].Path != "" {
+		t.Fatalf("expected one failed save and skipped view: %+v", failed)
+	}
+	got, err := os.ReadFile(rs[0].Path)
+	if err != nil || !bytes.Equal(got, want) || exists(t, filepath.Join(q.store.Dir, "a"+ViewExt)) {
+		t.Fatalf("failed canonicalization changed previous save or view: %v", err)
 	}
 }

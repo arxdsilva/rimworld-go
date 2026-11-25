@@ -26,8 +26,7 @@ import (
 )
 
 // campScene is a landed world colony with one faction able to ask for the
-// camp (index gi, at its type's baseline goodwill, so the daily drift
-// leaves it be) and every other friendly-capable human faction with a
+// camp (index gi, inside its natural goodwill range) and every other friendly-capable human faction with a
 // settlement hostile.
 func campScene(t *testing.T) (g *Game, gi int) {
 	t.Helper()
@@ -42,7 +41,7 @@ func campScene(t *testing.T) (g *Game, gi int) {
 		f.Defeated, f.Besieged = false, false
 		if gi < 0 {
 			gi = i
-			f.Relation, f.Goodwill = faction.Neutral, d.Baseline
+			f.Relation, f.Goodwill = faction.Neutral, max(d.GoodwillMin, min(0, d.GoodwillMax))
 			continue
 		}
 		f.Relation, f.Goodwill = faction.Hostile, -80

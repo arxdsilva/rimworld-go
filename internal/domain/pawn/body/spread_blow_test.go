@@ -133,30 +133,115 @@ func withinBodies(seed uint64) Body {
 func cloneBody(b Body) Body {
 	b.Wounds = slices.Clone(b.Wounds)
 	b.Conds = slices.Clone(b.Conds)
-	b.Fitted = slices.Clone(b.Fitted)
+	b.Replacements = slices.Clone(b.Replacements)
+	b.Implants = slices.Clone(b.Implants)
 	return b
 }
 
-// TestSpreadBlowWithinMatchesBodyRule: with room = killAt - lossDamage,
-// SpreadBlowWithin is SpreadBlow on an animal plan's body: the same
-// return, body and draws, on every split form, the early stops included.
+// observeRoomShare is a test-only physical accounting oracle. It measures
+// surviving part damage, or the remaining HP consumed by a destruction.
+// It never treats the removal of an old child wound as new spill.
+func observeRoomShare(t *testing.T, b *Body, p Part, dmg int, now uint64) int {
+	t.Helper()
+	if p >= b.numParts() || b.isMissing(p) || dmg <= 0 {
+		return 0
+	}
+	before := b.partDmg(p)
+	capacity := b.PartDef(p).MaxHP - before
+	allowed := capacity
+	if b.LossKills(p) {
+		allowed--
+	}
+	b.hurtPart(p, min(dmg, max(0, allowed)), Cut, now)
+	if b.isMissing(p) {
+		return capacity
+	}
+	return b.partDmg(p) - before
+}
+
+// referenceRoom applies the native plan, observing each physical
+// placement independently. Record whether legacy aggregate accounting
+// is provably equivalent, including its unbounded-after-death spill.
+func referenceRoom(t *testing.T, b *Body, dmg int, s Split, room int, roll func(int) int) (int, bool) {
+	t.Helper()
+	start := lossDamage(b)
+	p, ok := b.PickPart(roll)
+	if !ok {
+		t.Fatal("fixture has no initial part")
+	}
+	plan := planSplit(b, p, dmg, s, roll)
+	placed, pending, planned := 0, 0, 0
+	equivalent := true
+	observe := func(p Part, n int) int {
+		before := b.Damage()
+		hit := observeRoomShare(t, b, p, n, 3)
+		placed += hit
+		if b.Damage()-before != hit || lossDamage(b)-start != placed {
+			equivalent = false
+		}
+		return n - hit
+	}
+	for _, x := range plan.s[:plan.n] {
+		planned += x.dmg
+		pending += observe(x.part, x.dmg)
+		if placed >= room {
+			return placed, equivalent
+		}
+	}
+	for attempt := 0; pending > 0 && attempt < MaxSpill; attempt++ {
+		p, ok := b.PickPart(roll)
+		if !ok {
+			break
+		}
+		pending = observe(p, pending)
+		if placed >= room {
+			return placed, equivalent && pending == 0
+		}
+	}
+	if pending > 0 {
+		before := b.Damage()
+		b.Wounds = append(b.Wounds, Wound{Part: b.Root(), Dmg: pending, Kind: Cut, At: 3, Size: int32(pending)})
+		placed += pending
+		equivalent = equivalent && b.Damage()-before == pending && lossDamage(b)-start == placed
+	}
+	if placed != planned {
+		t.Fatalf("oracle lost damage: placed %d planned %d", placed, planned)
+	}
+	return placed, equivalent
+}
+
+// TestSpreadBlowWithinMatchesBodyRule retains all upstream seeds, forms
+// and damage sizes. Where the anatomical rise equals physical placements
+// and the old spill does not continue after death, pin the old return,
+// body and draws. In every case also compare the observed-placement oracle.
+// This explicitly exercises the accounting divergence rather than ignoring it.
 func TestSpreadBlowWithinMatchesBodyRule(t *testing.T) {
 	t.Parallel()
-	n, stopped, quad := 0, 0, 0
+	n, stopped, quad, same, different := 0, 0, 0, 0, 0
 	for seed := uint64(1); seed <= 200; seed++ {
 		b0 := withinBodies(seed)
 		room := killAt(&b0) - lossDamage(&b0)
 		if room <= 0 {
-			continue // dead by the body's rule already: room must be > 0
+			continue
 		}
 		for s := SplitCut; s < numSplits; s++ {
 			for _, dmg := range []int{8, 30} {
-				a, b := cloneBody(b0), cloneBody(b0)
-				var na, nb []int
-				want := SpreadBlow(&a, dmg, Cut, s, splitTap(splitPCG(seed), &na), 3)
+				a, b, ref := cloneBody(b0), cloneBody(b0), cloneBody(b0)
+				var na, nb, nr []int
+				legacy := SpreadBlow(&a, dmg, Cut, s, splitTap(splitPCG(seed), &na), 3)
+				want, equivalent := referenceRoom(t, &ref, dmg, s, room, splitTap(splitPCG(seed), &nr))
 				got := SpreadBlowWithin(&b, dmg, Cut, s, room, splitTap(splitPCG(seed), &nb), 3)
-				if got != want || !reflect.DeepEqual(a, b) || !slices.Equal(na, nb) {
-					t.Fatalf("seed %d split %d dmg %d room %d: %d %v %v, SpreadBlow %d %v %v", seed, s, dmg, room, got, b.Wounds, nb, want, a.Wounds, na)
+				if got != want || !reflect.DeepEqual(ref, b) || !slices.Equal(nb, nr) {
+					t.Fatalf("seed %d split %d dmg %d room %d: actual %d %v %v, reference %d %v %v", seed, s, dmg, room, got, b.Wounds, nb, want, ref.Wounds, nr)
+				}
+				match := got == legacy && reflect.DeepEqual(a, b) && slices.Equal(na, nb)
+				if equivalent && !match {
+					t.Fatalf("seed %d split %d dmg %d: equivalent accounting changed legacy body/draws: %d vs %d", seed, s, dmg, got, legacy)
+				}
+				if match {
+					same++
+				} else {
+					different++
 				}
 				n++
 				if bodyDead(&a) {
@@ -168,14 +253,15 @@ func TestSpreadBlowWithinMatchesBodyRule(t *testing.T) {
 			}
 		}
 	}
-	if n < 1000 || stopped == 0 || quad == 0 {
-		t.Fatalf("%d blows compared, %d stopped by the body rule (%d quadruped)", n, stopped, quad)
+	t.Logf("%d comparisons, %d legacy exact, %d corrected divergences, %d body stops (%d quadruped)", n, same, different, stopped, quad)
+	if n < 1000 || stopped == 0 || quad == 0 || same < 1000 || different == 0 {
+		t.Fatal("insufficient equivalent and divergent split coverage")
 	}
 }
 
-// TestSpreadBlowWithinRoom: a room above the body rule's deals the shares
-// SpreadBlow stops before (and the spill), raising Damage by its return; a
-// room below stops earlier, but never before the first share.
+// TestSpreadBlowWithinRoom: a larger owner room permits the later
+// physical placements; a smaller room stops earlier. Preserve the exact
+// healthy and unsplit cases and compare all broader cases with the oracle.
 func TestSpreadBlowWithinRoom(t *testing.T) {
 	t.Parallel()
 	past := 0
@@ -187,13 +273,14 @@ func TestSpreadBlowWithinRoom(t *testing.T) {
 		}
 		for s := SplitCut; s < numSplits; s++ {
 			a, b := cloneBody(b0), cloneBody(b0)
-			stop := SpreadBlow(&a, 30, Cut, s, splitPCG(seed), 3)
-			before := b.Damage()
+			stop := SpreadBlowWithin(&a, 30, Cut, s, room, splitPCG(seed), 3)
+			ref := cloneBody(b0)
+			want, _ := referenceRoom(t, &ref, 30, s, room+1000, splitPCG(seed))
 			got := SpreadBlowWithin(&b, 30, Cut, s, room+1000, splitPCG(seed), 3)
-			if got < stop || b.Damage()-before > got {
-				t.Fatalf("seed %d split %d: a larger room took %d (Damage +%d), the body rule %d", seed, s, got, b.Damage()-before, stop)
+			if got < stop || got != want || !reflect.DeepEqual(ref, b) {
+				t.Fatalf("seed %d split %d: larger room took %d, oracle %d, smaller room %d", seed, s, got, want, stop)
 			}
-			if bodyDead(&a) && got > stop {
+			if stop >= room && got > stop {
 				past++
 			}
 		}

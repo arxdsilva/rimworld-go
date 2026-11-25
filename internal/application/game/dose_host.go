@@ -6,6 +6,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/dose"
 	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/application/game/saveutil"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -50,14 +51,14 @@ type savedDrug struct {
 }
 
 // exportDrugs is the Drugs save field in id order (nil: none).
-func (g *Game) exportDrugs() []entry[savedDrug] {
-	es := exportMap(g.drugs)
+func (g *Game) exportDrugs(owned ...bool) []entry[savedDrug] {
+	es := saveutil.ExportMap[entry[drug.State]](g.drugs)
 	if es == nil {
 		return nil
 	}
 	out := make([]entry[savedDrug], len(es))
 	for i, e := range es {
-		s := e.V
+		s := saveutil.OwnDrug(len(owned) > 0 && owned[0], e.V)
 		out[i] = entry[savedDrug]{e.ID, savedDrug{Alcohol: s.Alcohol, Highs: s.Highs, Addictions: s.Addictions,
 			Hangover: s.Hangover, Doses: s.Doses, Peaked: s.Peaked, HangPend: s.HangPend, Policy: s.Policy,
 			Retry: s.Retry, Tolerances: s.Tolerance, LastDoses: s.LastDose}}
@@ -79,7 +80,7 @@ func (g *Game) importDrugs(es []entry[savedDrug]) {
 			Tolerance: tol, Hangover: d.Hangover, Doses: d.Doses, Peaked: d.Peaked, HangPend: d.HangPend,
 			LastDose: last, Policy: d.Policy, Retry: d.Retry}}
 	}
-	g.drugs = importMap(ss)
+	g.drugs = saveutil.ImportMap(ss)
 }
 
 type dosePawns struct{ g *Game }
@@ -99,8 +100,12 @@ func (h dosePawns) Interrupt(id entity.EntityID, why job.FailReason) {
 
 type doseMinds struct{ g *Game }
 
-func (h doseMinds) Joy(id entity.EntityID) int         { return h.g.joy[id] }
-func (h doseMinds) SetJoy(id entity.EntityID, joy int) { h.g.joy[id] = joy }
+func (h doseMinds) Joy(id entity.EntityID) int { return joyForScheduling(h.g, id) }
+func (h doseMinds) SetJoy(id entity.EntityID, joy int) {
+	if recreationEligible(h.g, id) {
+		h.g.joy[id] = joy
+	}
+}
 func (h doseMinds) Needs(id entity.EntityID) (needs.Pair, bool) {
 	return h.g.need.Get(id)
 }

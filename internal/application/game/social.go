@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
-	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
@@ -41,6 +40,7 @@ const (
 // on the colony's, the first map's pass (even with nobody on it, once a
 // second map is open).
 func (g *Game) phaseSocial() {
+	g.wealth.PrimeForMood()
 	colony, now := primary(g) && (len(g.pawnIDs) > 0 || len(g.maps) > 1), uint64(g.clock.Now())
 	for _, id := range g.pawnIDs {
 		u := uint64(id)
@@ -287,9 +287,9 @@ type careSocial struct{ g *Game }
 
 func (h careSocial) Opinion(from, to entity.EntityID) int { return int(h.g.opinion(from, to)) }
 func (h careSocial) Awake(id entity.EntityID) bool        { return !h.g.asleep(id) }
-func (h careSocial) Recreation(id entity.EntityID) int    { return h.g.joy[id] }
+func (h careSocial) Recreation(id entity.EntityID) int    { return joyForScheduling(h.g, id) }
 func (h careSocial) Recreate(id entity.EntityID, amount int) {
-	h.g.joy[id] = recreation.Clamp(h.g.joy[id] + amount)
+	addRecreation(h.g, id, amount)
 }
 
 // Interact is the bedside talk of a visit: an interaction, and a "visited

@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"math"
 	"rimworld-go/internal/application/game/gather"
+	"rimworld-go/internal/domain/pawn/mood"
 	"slices"
 
 	"rimworld-go/internal/application/game/recreate"
@@ -288,6 +289,13 @@ func (g *Game) opinion(from, to entity.EntityID) int32 {
 // opinionTerms is from's opinion of to and (withTerms) its breakdown. An
 // edge caches it until its next memory expiry.
 func (g *Game) opinionTerms(from, to entity.EntityID, withTerms bool) (int32, []social.Term) {
+	return g.opinionTermsWithKin(from, to, withTerms, nil)
+}
+
+// opinionTermsWithKin accepts a read-scoped relation lookup. The relation
+// callback runs only on an opinion-cache miss, preserving the usual cache
+// invalidation and avoiding a second family walk in batched social reads.
+func (g *Game) opinionTermsWithKin(from, to entity.EntityID, withTerms bool, kin func() []social.Kind) (int32, []social.Term) {
 	if from == to || from == 0 || to == 0 {
 		return 0, nil
 	}
@@ -307,7 +315,13 @@ func (g *Game) opinionTerms(from, to entity.EntityID, withTerms bool) (int32, []
 			cached = true // the value holds; only its breakdown is missing
 		}
 	}
-	in := social.Inputs{Observer: g.socialPerson(from), Target: g.socialPerson(to), Relations: g.kinOf(from, to), Now: now}
+	var relations []social.Kind
+	if kin != nil {
+		relations = kin()
+	} else {
+		relations = g.kinOf(from, to)
+	}
+	in := social.Inputs{Observer: g.socialPerson(from), Target: g.socialPerson(to), Relations: relations, Now: now}
 	until := uint64(math.MaxUint64)
 	if e != nil {
 		d := e.dir(from)
@@ -449,6 +463,7 @@ func (g *Game) pruneEdge(e *edge, now uint64) {
 // socialDay is the daily upkeep: every edge pruned, emptied ones dropped,
 // strangers forgotten.
 func (g *Game) socialDay(now uint64) {
+	mood.PruneAll(g.memories, now)
 	s := g.soc
 	if s == nil {
 		return
@@ -469,18 +484,10 @@ func (g *Game) socialDay(now uint64) {
 }
 
 func cmpKey(a, b pairKey) int {
-	switch {
-	case a.lo != b.lo:
-		if a.lo < b.lo {
-			return -1
-		}
-		return 1
-	case a.hi < b.hi:
-		return -1
-	case a.hi > b.hi:
-		return 1
+	if n := cmp.Compare(a.lo, b.lo); n != 0 {
+		return n
 	}
-	return 0
+	return cmp.Compare(a.hi, b.hi)
 }
 
 // socialSave is socialState as saved.

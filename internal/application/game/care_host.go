@@ -23,6 +23,7 @@ import (
 type careHost struct {
 	careBodies
 	careRoster
+	careAnimalRoster
 	careBeds
 	careReach
 	careJobs
@@ -34,7 +35,7 @@ type careHost struct {
 var _ care.Host = careHost{}
 
 func newCareHost(g *Game) careHost {
-	return careHost{careBodies{g}, careRoster{g}, careBeds{g}, careReach{g}, careJobs{g}, careHealth{g}, careTreat{g}, careEvents{g}}
+	return careHost{careBodies{g}, careRoster{g}, careAnimalRoster{g}, careBeds{g}, careReach{g}, careJobs{g}, careHealth{g}, careTreat{g}, careEvents{g}}
 }
 
 type careBodies struct{ g *Game }
@@ -43,23 +44,43 @@ func (h careBodies) Pos(id entity.EntityID) (int, int, bool) {
 	p, ok := h.g.positions.Get(id)
 	return p.X, p.Y, ok
 }
-func (h careBodies) Place(id entity.EntityID, x, y int)             { h.g.positions.Set(id, Position{X: x, Y: y}) }
-func (h careBodies) Vital(id entity.EntityID) (health.Record, bool) { return h.g.vital.Get(id) }
-func (h careBodies) SetVital(id entity.EntityID, v health.Record)   { h.g.vital.Set(id, v) }
-func (h careBodies) Job(id entity.EntityID) (job.Record, bool)      { return h.g.jobs.Get(id) }
-func (h careBodies) SetJob(id entity.EntityID, j job.Record)        { h.g.jobs.Set(id, j) }
-func (h careBodies) Now() uint64                                    { return uint64(h.g.clock.Now()) }
+func (h careBodies) Place(id entity.EntityID, x, y int) { h.g.positions.Set(id, Position{X: x, Y: y}) }
+func (h careBodies) Vital(id entity.EntityID) (health.Record, bool) {
+	if a := h.g.animals.Ref(id); a != nil {
+		v := health.Record{Injury: a.Injury}
+		if a.Downed {
+			v.Status, v.Cause = health.Downed, health.CauseInjury
+		}
+		return v, true
+	}
+	return h.g.vital.Get(id)
+}
+func (h careBodies) SetVital(id entity.EntityID, v health.Record) { h.g.vital.Set(id, v) }
+func (h careBodies) Job(id entity.EntityID) (job.Record, bool)    { return h.g.jobs.Get(id) }
+func (h careBodies) SetJob(id entity.EntityID, j job.Record)      { h.g.jobs.Set(id, j) }
+func (h careBodies) Now() uint64                                  { return uint64(h.g.clock.Now()) }
 func (h careBodies) BleedPerDay(id entity.EntityID) int32 {
 	if b := h.g.bodies[id]; b != nil {
-		return b.BleedPerDay() // body/bleed.go
+		return b.BleedPerDay()
+	}
+	if a := h.g.animals.Ref(id); a != nil && a.Body != nil {
+		return a.Body.BleedPerDay()
 	}
 	return 0
 }
 
 type careRoster struct{ g *Game }
 
-func (h careRoster) PawnIDs() []entity.EntityID         { return h.g.pawnIDs }
-func (h careRoster) RaiderIDs() []entity.EntityID       { return h.g.raiderIDs }
+func (h careRoster) PawnIDs() []entity.EntityID   { return h.g.pawnIDs }
+func (h careRoster) RaiderIDs() []entity.EntityID { return h.g.raiderIDs }
+
+type careAnimalRoster struct{ g *Game }
+
+func (h careAnimalRoster) AnimalIDs() []entity.EntityID { return h.g.animalIDs }
+func (h careAnimalRoster) TameAnimal(id entity.EntityID) bool {
+	a := h.g.animals.Ref(id)
+	return a != nil && a.Tame
+}
 func (h careRoster) IsPrisoner(id entity.EntityID) bool { return h.g.prison.Is(id) }
 
 // IsColonist: one of the colony's own pawns. Visitors, traders, allies,
@@ -192,7 +213,9 @@ type careEvents struct{ g *Game }
 
 func (h careEvents) Rescued(rescuer, patient entity.EntityID) {
 	h.g.logPair(patient, rescuer, logRescuedBy, logRescued, 0, 0)
-	h.g.onRescued(rescuer, patient) // social.go: the patient's gratitude
+	if !h.g.isAnimal(patient) {
+		h.g.onRescued(rescuer, patient)
+	}
 }
 func (h careEvents) TendedBy(patient, doctor entity.EntityID) {
 	h.g.logPair(patient, doctor, logTendedBy, logTended, 0, 0)

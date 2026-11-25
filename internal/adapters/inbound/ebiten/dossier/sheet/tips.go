@@ -85,7 +85,7 @@ func TraitsTip(_ lang.Tr, b game.BioView) []TipLine {
 
 func permanent(pt game.PartView) bool {
 	s := strings.ToLower(pt.Status)
-	return pt.Implant != "" || strings.Contains(s, "missing") || strings.Contains(s, "scar") || strings.Contains(s, "artificial")
+	return pt.Implant != "" || len(pt.Implants) > 0 || strings.Contains(s, "missing") || strings.Contains(s, "scar") || strings.Contains(s, "artificial")
 }
 
 func partTone(pt game.PartView) Tone {
@@ -111,6 +111,9 @@ func HealthTip(tr lang.Tr, h game.HealthView) []TipLine {
 		text := pt.Label + ": " + pt.Status
 		if pt.Implant != "" {
 			text = lang.Tf(tr, "%s (%s)", text, pt.Implant)
+		}
+		if len(pt.Implants) > 0 {
+			text += " (" + strings.Join(pt.Implants, ", ") + ")"
 		}
 		tone := partTone(pt)
 		switch {
@@ -268,7 +271,7 @@ func AnimalTip(tr lang.Tr, a game.AnimalView) []TipLine {
 			out = append(out, TipLine{Text: lang.Tf(tr, "Turns on whoever hurts it %d%% of the time", a.Revenge), Tone: ToneWarning})
 		}
 	} else {
-		out = append(out, TipLine{Text: lang.Tf(tr, "A trained behaviour fades one step after %s without practice", ticksText(tr, training.DecayTicks))})
+		out = append(out, TipLine{Text: lang.Tf(tr, "A trained behaviour fades one step after %s without practice", ticksText(tr, training.DecayInterval(a.Wildness*10)))})
 	}
 	if a.Diet != "" {
 		out = append(out, TipLine{Text: lang.Tf(tr, "Eats: %s", a.Diet)})
@@ -294,24 +297,26 @@ func TrainDesc(tr lang.Tr, s training.Skill) string {
 		return tr.T("Stands watch over the colony and drives off threats.")
 	case training.Release:
 		return tr.T("Lets go of what it holds when told to.")
+	case training.Haul:
+		return tr.T("Carries loose items to suitable storage.")
 	}
 	return ""
 }
 
 // TrainTip is a behaviour's description, progress and how it fades.
 func TrainTip(tr lang.Tr, a game.AnimalView, t game.AnimalTrainingView) []TipLine {
-	return append(AnimalTip(tr, a), trainLines(tr, t)...)
+	return append(AnimalTip(tr, a), trainLines(tr, a, t)...)
 }
 
 // trainLines is what one behaviour teaches and how far along it is.
-func trainLines(tr lang.Tr, t game.AnimalTrainingView) []TipLine {
+func trainLines(tr lang.Tr, a game.AnimalView, t game.AnimalTrainingView) []TipLine {
 	s := training.Skill(t.Skill)
-	out := []TipLine{{Text: t.Label}}
+	out := []TipLine{{Text: tr.T(t.Label)}}
 	if d := TrainDesc(tr, s); d != "" {
 		out = append(out, TipLine{Text: d, Tone: ToneNeutral})
 	}
 	out = append(out, TipLine{Text: lang.Tf(tr, "Steps learned: %d of %d", t.Steps, t.Needed)})
-	out = append(out, TipLine{Text: lang.Tf(tr, "Fades one step after %s without practice", ticksText(tr, training.DecayTicks)), Tone: ToneOff})
+	out = append(out, TipLine{Text: lang.Tf(tr, "Fades one step after %s without practice", ticksText(tr, training.DecayInterval(a.Wildness*10))), Tone: ToneOff})
 	if !t.On && !t.Learned {
 		out = append(out, TipLine{Text: tr.T("Not being trained"), Tone: ToneOff})
 	}
@@ -392,9 +397,6 @@ func SkillTip(tr lang.Tr, s game.SkillView, c dossierview.Card, weapon string) [
 	}
 	return out
 }
-
-// DecayDays is how many days a trained step lasts, for UI that wants a number.
-func DecayDays() int { return int(training.DecayTicks / clock.TicksPerDay) }
 
 // WeaponLine is the wielded weapon's damage a hit and a second, for the melee
 // skill's tooltip; "" when the stats are empty.

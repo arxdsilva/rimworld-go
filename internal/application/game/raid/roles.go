@@ -78,4 +78,6 @@ type Senses interface {
 	// Shooter is the colonist or ally whose blow just wounded raider id
 	// (0: none, or something else hurt it).
 	Shooter(id entity.EntityID) entity.EntityID
+	// Eligible checks current automatic creature-target eligibility, independently of sight.
+	Eligible(source, target entity.EntityID) bool
 }

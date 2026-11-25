@@ -86,7 +86,7 @@ func TestMoveBedKeepsOwner(t *testing.T) {
 	bid := built(t, g, "bed", "south", 3, 3)
 	owner := builder(t, g, 1, 1)
 	b, _ := g.bldgs.Get(bid)
-	g.bldgs.Set(bid, b.Claim(uint64(owner)))
+	g.bldgs.Set(bid, construction.ClaimBed(b, uint64(owner)))
 
 	// the builder reinstalls it through the normal construct chain
 	moveCmd(g, bid, construction.East, 9, 6)
@@ -282,7 +282,7 @@ func TestBuildingUsableWhileMovePending(t *testing.T) {
 	if !slept {
 		t.Fatal("bed with a pending move was not slept in")
 	}
-	if b, _ := g.bldgs.Get(bid); b.SlotOf(uint64(pid)) < 0 {
+	if b, _ := g.bldgs.Get(bid); construction.BedSlot(b, uint64(pid)) < 0 {
 		t.Fatal("bed not claimed while move pending")
 	}
 	// the move completes under the sleeper: they wake up
@@ -290,7 +290,7 @@ func TestBuildingUsableWhileMovePending(t *testing.T) {
 	if j, _ := g.jobs.Get(pid); j.Kind == job.Sleep && j.Target == bid && j.State == job.Do {
 		t.Fatal("sleeper not woken by the move")
 	}
-	if b, _ := g.bldgs.Get(bid); b.SlotOf(uint64(pid)) < 0 || b.X != 10 {
+	if b, _ := g.bldgs.Get(bid); construction.BedSlot(b, uint64(pid)) < 0 || b.X != 10 {
 		t.Fatalf("claim lost or not moved: %+v", b)
 	}
 }

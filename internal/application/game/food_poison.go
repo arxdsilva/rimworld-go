@@ -30,15 +30,13 @@ func (g *Game) mealPoison(cook entity.EntityID, _ construction.Kind, x, y int) i
 // ate from st (afterEat): a hit gives it food poisoning (once: a second
 // bad meal changes nothing while it is still sick).
 func (g *Game) rollFoodPoison(id entity.EntityID, st item.Stack) {
-	bp := int(st.Poison) * 10
-	switch {
-	case st.Kind == item.CorpseAnimal:
-		bp = diet.CorpseChance
-	case st.Kind.Raw():
-		bp = diet.RawChance
+	pct := 100
+	if g.hasSetup() {
+		pct = g.ng.setup.Difficulty.FoodPoisonPercent()
 	}
-	if bp = bp * int(body.FoodPoisonChance(g.bodies[id])) / 1000; bp <= 0 || g.stream(streamMedical).IntN(10000) >= bp { // a synth stomach halves it (FOOD-6)
-		return // a clean meal (or paste): the stream untouched
+	bp := diet.PoisonRisk(st, int(body.FoodPoisonChance(g.bodies[id])), pct)
+	if bp == 0 || g.stream(streamMedical).IntN(10000) >= bp {
+		return
 	}
 	v, ok := g.vital.Get(id)
 	if !ok || v.Status == health.Dead {

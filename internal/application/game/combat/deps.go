@@ -61,7 +61,8 @@ type Roles struct {
 	Foam Foamer
 	// Rules (SHT-007) are the game's friendly-fire rules (nil: 100 %,
 	// no colonists, tests).
-	Rules Rules
+	Rules     Rules
+	MortarAim MortarAim
 }
 
 // Rules are the difficulty's friendly-fire share and who is a colonist
@@ -109,6 +110,9 @@ type Creatures interface {
 	StandingRaider(id entity.EntityID) bool
 	// Hostile: animal a is attacking a colonist.
 	Hostile(a animal.State) bool
+	// PackEnemy checks faction hostility towards a foreign visiting
+	// animal; source 0 is the colony and its defenses.
+	PackEnemy(source, target entity.EntityID) bool
 }
 
 // Who picks the creatures Near collects.
@@ -122,6 +126,20 @@ const (
 	Animals
 	Everyone = Animals | Raiders | Pawns
 )
+
+// Present masks out creature kinds with no authoritative roster entries.
+func Present(w Who, pawns, raiders, animals int) Who {
+	if pawns == 0 {
+		w &^= Pawns
+	}
+	if raiders == 0 {
+		w &^= Raiders
+	}
+	if animals == 0 {
+		w &^= Animals
+	}
+	return w & Everyone
+}
 
 // Seen is a creature Near found, with its tile.
 type Seen struct {
@@ -143,6 +161,9 @@ type Rosters interface {
 	// RaiderOn is raider t's tile when it is standing and attacking id
 	// (ok false otherwise): one call for the threat scan's raider loop.
 	RaiderOn(t, id entity.EntityID) (x, y int, ok bool)
+	// FleeingRaider reports a raider in its fleeing/panic state; defense
+	// target selection treats it as no longer a potential threat.
+	FleeingRaider(id entity.EntityID) bool
 	// Lying: a living humanlike lying downed (CBT-2: an ordered attack
 	// may go for one).
 	Lying(id entity.EntityID) bool
@@ -166,11 +187,19 @@ type Ground interface {
 	DigRock(x, y, dmg int)
 }
 
+// MortarAim reads independent crew capacity and skill facts.
+type MortarAim interface{ MortarMissRadius(entity.EntityID) int }
+
 // Skills is a humanlike's fighting: skill, stats and capability.
 type Skills interface {
 	// Melee is id's melee numbers (CBT-2): what its melee hit and dodge
 	// chances are read from (attack.HitChanceOf, attack.DodgeChanceOf).
 	Melee(id entity.EntityID) attack.Melee
+	// ImplantTools are natural close-combat attacks from equipped bionic
+	// arms or claws. The fixed array avoids allocation on every blow.
+	ImplantTools(id entity.EntityID) ([2]weapon.Tool, int)
+	// NaturalFists counts organic hands whose original punch remains available.
+	NaturalFists(id entity.EntityID) int
 	// ShotAim is id's shooting accuracy per tile (ppm) from its shooting
 	// score (the Shooting level plus its Shooting accuracy points, through
 	// attack.ShootingScore; SHT-002) and its pure Shooting level.
@@ -193,6 +222,7 @@ type Jobs interface {
 	StartJob(id entity.EntityID, j job.Record) bool
 	Interrupt(id entity.EntityID, reason job.FailReason)
 	PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool)
+	FlightPath(id entity.EntityID, x, y int) ([]pathing.Point, bool)
 }
 
 // Wounds is the hurt entry of a hit (CBT-1): where it lands, what armor
@@ -272,6 +302,9 @@ type Power interface {
 // The window (the tick a colonist that fled holds back from work until)
 // stays on the game, which lying down and stashing also clear.
 type Flight interface {
+	// AnimalOn reports whether t is an animal and whether it attacks id.
+	// It reads only animal intent, avoiding a full animal snapshot per scan.
+	AnimalOn(t, id entity.EntityID) (animal, attacking bool)
 	// Reachable: id can walk to (x, y); InHome: (x, y) lies in the home
 	// area (CBT-4: Guard.FleeGoal, moved from the game).
 	Reachable(id entity.EntityID, x, y int) bool

@@ -207,3 +207,72 @@ Work order and harvesting · 2026-11-04 · d707f6131
 - Proof: year probe (`RIMWORLD_PROBE=1 ... TestYearProofColonyFeedsItself`) before and after: 4 alive, 0 malnourished, 440 meals + 40 survival; food at day 60: 666 vs 632; more potatoes, less rice.
 - Limits: `game` stays at ceiling (175 files, 52928 lines); budget unchanged. `planDelivery` runs twice per assign for Construct+Haul colonists when nothing can be delivered (cost unmeasured). Feeding a downed animal (`AssignTame`) now comes after slaughter and collecting. amd64 hashes checked for application/domain only.
 - Open: rows WRK-101..107, HRV-101..103; work tab look never captured (`bin/game -capture-ui work` on native monitor mode; wider header hint unseen); not checked in a real game: ripe field with a cook's bill, building sites moving with Haul at 3.
+
+## PRD-6-core-artistic-skills
+Independent Artistic skill and sculpture learning · 2026-11-25 · this commit
+- Changed: twelve native skills, Artistic independent of Crafting; sculpture quality, learning and inspiration use Artistic, with Bio/Dossier normal skill display.
+- Decisions: append the skill ID, migrate historical eleven-slot arrays, preserve trait and skill IDs.
+- Save/HUD: typed pre-v21 skill migration; default docked/floating Dossier card uses six skill pairs.
+- Boxes: vanilla **Core skill set**, **Artistic work** [x]; RIMHUD RHUD-206 and RHUD-265 done; WORK_PRIORITIES Art row remains absent as a work column; #81 skill item implemented.
+- Open: separate Art work column (#83).
+
+## PRD-2-core-inspiration-types
+Native Core inspiration effects · 2026-11-25 · this commit
+- Changed: creativity, movement, recruitment, trade, surgery, taming, shooting and work inspirations use separate eligible native owners, effects, use and expiry.
+- Decisions: original mean-time curve and no separate post-use cooldown; preserve kind IDs and authoritative RNG.
+- Save/HUD: existing Inspiration/InspirationTicks projection and persisted inspiration state; no new UI or mod contract.
+- Boxes: vanilla **High-mood inspiration chance**, **Inspiration types** [x]; PRODUCTION_GAP §3.2 inspiration row done, §10.2 summary [x]; #90 inspiration and #73 inspiration item implemented.
+- Open: #73 other quality/wealth/filter items.
+
+## WRK-101-core-work-columns
+Patient, bed rest, basic, smith and tailor work types · 2026-11-25 · this commit
+- Changed: append five work IDs and use a single canonical order in native job admission and Work tab. Smith/Tailor recipes route separately; rest and clinical admission do not suppress emergencies.
+- Decisions: preserve old IDs, migrate old mask and priority slots and keep explicit disabled settings; do not create an Art alias.
+- Save/HUD: typed legacy migration and existing Work cells/headers; deterministic tie ordering.
+- Boxes: WORK_PRIORITIES order and WRK-101/102 done; vanilla **Work types** [-], UI **Work-type columns** [-] (Art absent); #83 partial, #148 five-column item implemented.
+- Open: #83 Art column; #148 portraits/status and simple mode (WRK-103).
+
+## BED-242-animal-medical-owner
+Animal bed ownership and native clinical recovery · 2026-11-25 · this commit
+- Changed: animal owner picker and medical toggle use existing commands; injured pets and doctor rescue prefer safe, available clinical animal beds. Temporary clinical claims preserve personal beds and are released when the stay ends.
+- Decisions: existing body bed-lying bonus and scalar recovery cadence, no new tuning; medical beds exclude healthy owners, and stale owner commands cannot displace clinical patients. Existing pen confinement policy is retained.
+- Save/HUD: reuse building claim/medical fields and care stay storage, no schema migration; native recovery and save/replay verified. Inspector shows owner/patient. All existing goldens tested unchanged.
+- Limits: existing numeric SOLID budget unchanged.
+- Boxes: BEDS_GAP §3.3 animal bed/owner row done, UI **Bed ownership shortcut where useful** [x], vanilla **Beds**, **Medical beds** [x] annotated, RSC-101 and PAWN_INTERACTION §3.6 downed-animal carry done; SOCIAL_SYSTEM_CONTRACT commands updated; #242 local owner/medical criteria met.
+- Open: #241 bedroll pickup/forbid scope and general per-bed immunity/quality stats remain separate.
+
+## WRK-108-art-work-column
+Independent Art work type · 2026-11-25 · this commit
+- Changed: append Art work and command IDs, route sculpture admission through Art and Artistic, and read actual recipe work type in Dossier. All 20 native work types follow the published local order.
+- Decisions: old shorter priority rows inherit Craft; explicit current Art off is preserved. Logical hash retains the historical projection for inherited settings and encodes every independent override (including zero); no RNG or schema change.
+- HUD: Art cell, skill, passion and help in Work, active work label in Dossier.
+- Boxes: vanilla **Work types** [x], UI **Work-type columns** [x], WORK_PRIORITIES WRK-108 done and canonical order; #83 local criteria met.
+- Open: none within this work-type slice.
+
+## WRK-103-simple-priorities-rows
+Work checkbox editing and sortable pawn rows · 2026-11-25 · this commit
+- Changed: Work mode toggles plain checks, preserving priorities of existing enabled cells; use existing typed commands for enable/disable, right click, drag and Shift bulk edit. Native numeric priorities are not changed by a presentation toggle.
+- HUD: real pawn portraits and highest-priority existing colonist status mark; stable detached name/column priority sort (skill tie-break). Preserve disabled hatching and the canonical column order.
+- Boxes: UI **Pawn rows**, **Simple priorities mode** [x], WORK_PRIORITIES WRK-103/104 and CTL-103 done; UI **Sort by name/skill/current priority** [-] (skill-only sort remains), MAIN_UI §19 and M2 updated; #148 local 7.1 criteria met.
+- Open: separate skill-only sorting, virtualization and other §7.2 rows remain separate.
+
+## PRD-7-native-condition-and-wealth
+Bill condition admission and shared physical value · 2026-11-25 · this commit
+- Changed: native SetBillRange command, zero-default condition range, bill read model, selection and consume-time enforcement. Bench forbid and dismantle state checked at start and work. Quality and wear use actual stacks; pack merge preserves physical identity. Wealth shares item.Book.StackValue and room.BuildingValue across colony and caravan owners.
+- Decisions: old saves retain unrestricted filters; zero fields preserve old semantics. No save-version bump; manifest records added fields. UI controls remain separate.
+- Limits: architecture budgets unchanged; helper extraction pays new root code.
+- Boxes: PRD-4 bill HP/quality and shared wealth rows done in Headless; refs #73, #252.
+- Open: remaining crafted quality families (#73); prior stack-policy override (#85).
+
+## BED-241-native-packing-admission
+Minified bedrolls and forbidden work admission · 2026-11-25 · this commit
+- Changed: both bedroll kinds verified through native uninstall and rotated reinstall, retaining condition/material/quality; stale pack rejects an occupied bed and never destroys the building before crate creation succeeds. Reject forbidden/retiring sleep destinations and work benches.
+- Decisions: a claim alone does not bar packing an empty bed; occupant position is checked at assignment and commit. Install test observes the exact completion tick before ordinary repair.
+- Boxes: BED-1 bedroll pickup done; forbid coverage advanced; refs #241.
+- Open: broader forbidden forced-use audit remains.
+
+## PRD-8-and-BED-241-native-quality-forbid
+Native grenade quality and forbidden bed lifecycle · 2026-11-25 · this commit
+- Changed: all native weapons including grenade recipes participate in existing physical quality owner. Forbid invalidates current bed claims, sleep/carry jobs, manual assignments and stale job execution; existing workbench forbid checks retained.
+- Decisions: no duplicate quality or reservation owner; existing quality numbers retained.
+- Boxes: #73 original native quality/bill/inspiration scope; #241 native bedroll and forbid scope.

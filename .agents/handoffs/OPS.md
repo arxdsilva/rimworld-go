@@ -216,3 +216,46 @@ Every declared table column is drawn: pure cell layouts, a column test per table
 - HUD/UI: no visible change beyond the tooltip hit area above. Save, determinism, mod impact: none.
 - Boxes: UI/UX checklist Appendix C **Every declared table column is drawn** (QA-002) `[x]`; spec-backlog #267 closed on push.
 - Open: none.
+
+## CI-002-save-freeze-followup
+Detached save capture on the simulation owner · 2026-11-24 · this commit
+- Changed: Queue.Save and SaveAs freeze the existing typed saveState and SaveInfo on the caller; the one worker serializes the owned values, canonicalizes Gob, compresses and atomically writes. No save-version or field-schema change. Synchronous save and independent StateHash retain their existing semantics.
+- Decisions: selective typed copies of live mutable references, including nested jobs/bills/health, world and extra maps, travelling prisoner raider records, physical quest lots, and accepted mod-state bytes; already-owned exports are reused. Provider reads and save notes stay on the caller. No live Game access, lock across encode, new dependency, or work added to simulation ticks.
+- Queue: superseding releases the old pending capture; the worker clears consumed captures and reuses only its own byte buffers, released at Close. Capture errors return directly; encode/canonical/write errors reach Done, preserve the prior file and suppress its failed save's view. Both Delete barriers remain.
+- Proof: populated ownership audits, capture-time byte/hash/metadata checks, native mutations during worker serialization, old-save and process-order regressions, including amd64 and arm64 for the tested two-map fixture.
+- Limits: root game non-test lines 52634 / 52650; no budget raised. Controlled 500-square save caller median 18.043 -> 2.349 ms before the final rare-path alias correction; +16.7% allocation bytes per completed save, about +2.8 MB per comparable pending snapshot.
+- HUD: existing Saving and failure behavior; no new UI.
+- Boxes: none: existing non-blocking save indicator and failure checklist entries already checked; this is a latency follow-up, not a new UI or upstream network/server contract.
+- Open: none within the verified save-capture scope. .
+
+## LOG-002-core-semantic-event-letters
+Stable event letter codes and read models · 2026-11-25 · this commit
+- Changed: native raids, pod raids, six diseases and completed research carry stable untranslated event codes and typed fields; legacy letters receive deterministic fallback identity.
+- Decisions: preserve original saved letters, notification actions and owner order; rendering reads the isolated letter projection.
+- Save/HUD: v21 letter fields and historic reads retained; existing right-side letters and research completion notification remain player-visible.
+- Boxes: vanilla **Event letter system**, **Research progress** [x] annotated; no new spec-backlog issue closure claimed.
+- Open: none within this semantic letter scope.
+
+
+
+## QA-002-core-table-reconciliation
+Reconcile QA-002 with Core presentation · 2026-11-26 · this commit
+- Changed: retain upstream free cell layouts and column guard. Work uses all twenty native work types plus the name/status cell; name-sort, portrait/status, priority and translated sorted headers share cell geometry. Animals uses the upstream drop/layout contract and active-language Haul progress. Trade uses upstream eight slots with gift-specific headers, exact physical lots, prices and draft actions preserved.
+- Decisions: No native, schema, art, budget increase or command-ID change; the Work name anchor test now pins the approved portrait/status layout rather than the obsolete bare text layout.
+- Boxes: QA-002 [x] retained from upstream. No change to other deferred UI boxes.
+- Open: #36, #55 and roof-risk/territory presentation remain partial.
+
+## CI-002-ENG-010-core-reconciliation
+Integrate the upstream benchmark fixture API · 2026-11-26 · this commit
+- Changed: adopt upstream ENG-010 colonist-count fixture and simulate hash contracts without replacing either Core implementation or upstream tooling. The grown golden uses DefaultColonists (20), retains the existing seed, map, 5,000 ticks, hash and causal history.
+- Decisions: No fresh gameplay tuning, save/schema, command ID, dependency, art, architecture budget or UI change. New CLI/fixture behavior belongs to upstream #286.
+- Boxes: existing headless simulation executable and deterministic benchmark runner [x] retained from upstream.
+- Open: #36/#55 and roof-risk/territory presentation remain partial.
+
+## CI-002-ENG-011-core-command-reconciliation
+Integrate upstream #285/#312 with Core · 2026-11-26 · this commit
+- Changed: retain upstream command queue, Tick/Seq envelope, keyed taming draws, replay CLI and live prisoner-break regression; preserve native trade payloads and market restoration before the command phase. Detached snapshots own the pending queue slice and persist its sequence counter; old pending commands restore in their saved order.
+- Decisions: both saved command payload and envelope retained, no new save version for additive fields. Keep Core canonical hash normalization plus upstream exclusion of the sequence counter; pending envelopes themselves remain hashed. No new golden pin, weakened assertion, dependencies, assets, UI product or architecture budget change.
+- Proof: existing save schema, v12 migration, command order, cross-map, keyed RNG, frozen ownership, replay, market, grown and scale tests pass. New scheduled exact-lot trade freezes the queue, then verifies target-tick execution, restored payload/sequence/counter and equal final state hash. The rare-payload ownership regression mutates live pending storage and submits another command after capture.
+- Boxes: preserve upstream 1.3 determinism / command ordering / replay and 19.1 Prisoner state checklist updates .
+- Open: #36/#55 and roof-risk/territory presentation remain partial.

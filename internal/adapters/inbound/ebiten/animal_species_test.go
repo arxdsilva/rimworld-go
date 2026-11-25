@@ -12,6 +12,7 @@ import (
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
@@ -195,11 +196,11 @@ func TestOverlayAboveTallAnimals(t *testing.T) {
 func TestAnimalLabelsShown(t *testing.T) {
 	t.Parallel()
 	an := game.AnimalView{Species: "arctic_fox", Label: "arctic fox"}
-	if got := inspector.AnimalTitle(an); got != "Arctic fox" {
+	if got := inspector.AnimalTitle(lang.English{}, an); got != "Arctic fox" {
 		t.Fatalf("title: %q", got)
 	}
 	an.Tame, an.Name = true, "Frost"
-	if got := inspector.AnimalTitle(an); got != "Frost (tame arctic fox)" {
+	if got := inspector.AnimalTitle(lang.English{}, an); got != "Frost (tame arctic fox)" {
 		t.Fatalf("tame title: %q", got)
 	}
 	if got := inspector.AnimalLabel(game.AnimalView{Species: "arctic_fox"}); got != "arctic fox" {
@@ -582,4 +583,29 @@ func TestRealElephantFlankPicks(t *testing.T) {
 	}
 	x0, y0, x1, y1, _ := r.animalBodyRect(w.Animals[0])
 	t.Logf("elephant east body box: %.2f,%.2f - %.2f,%.2f", x0-10, y0-10, x1-10, y1-10)
+}
+
+type animalTitleTranslation struct{}
+
+func (animalTitleTranslation) T(src string) string {
+	switch src {
+	case "arctic fox":
+		return "renard polaire"
+	case "%s (tame %s)":
+		return "%[2]s apprivoise : %[1]s"
+	}
+	return src
+}
+
+func TestAnimalTitleTranslation(t *testing.T) {
+	t.Parallel()
+	an := game.AnimalView{Species: "arctic_fox", Label: "arctic fox"}
+	tr := animalTitleTranslation{}
+	if got := inspector.AnimalTitle(tr, an); got != "Renard polaire" {
+		t.Fatalf("wild translated title: %q", got)
+	}
+	an.Tame, an.Name = true, "Frost"
+	if got := inspector.AnimalTitle(tr, an); got != "renard polaire apprivoise : Frost" {
+		t.Fatalf("tame translated title: %q", got)
+	}
 }

@@ -23,11 +23,11 @@ The colony's trade, comms and caravan dialogs: what a trader or faction offers, 
 ## Contracts
 - `Shell` = `ports.Commands + World + Speed + Widgets + Host`.
 - Every deal, gift and caravan form closes through `ports.Commands` (`command.Command` values); the dialog mutates no domain state. Trade and comms data come from read models.
-- `Dealings.Open` and `OpenFormCaravan` open the dialogs; `HoldPause` and the `Host`'s `HoldSpeed` hold the sim's pause and speed while a dialog is open.
+- Physical item trade: `TradeRowView.StackID` selects a colony stack for a sale/gift or a trader lot for a purchase; `GiftRows` switches to individually valued items for gifts, while ordinary materials remain grouped. The encoded command preserves `@ID` for exact physical identity. The client owns only draft quantities, and the game owns actual settlement.\n- `Dealings.Open` and `OpenFormCaravan` open the dialogs; `HoldPause` and the `Host`'s `HoldSpeed` hold the sim's pause and speed while a dialog is open.
 
 ## Invariants
 - Gift and deal totals are clamped to silver in reach (`TestCommsGiftClampsToSilverInReach`).
-- Caravans with sick members show the health note (`TestCaravanShowsSickMembers`).
+- Physical paid trade shows distinct material/quality/wear rows, and the gift preview uses actual selected stack values; changing modes clears the draft. `TestTradeDialogGiftPhysicalSelection`, `TestPaidDialogSelectsPhysicalBuyAndSellInOneOffer` and `TestTradeDialogRefreshesChangedPhysicalPrice` pin the UI contract.\n- Caravans with sick members show the health note (`TestCaravanShowsSickMembers`).
 - Dialog widgets are declared in the `Update` pass (`TestDialogsDeclareTheirWidgets`).
 
 ## Hot paths

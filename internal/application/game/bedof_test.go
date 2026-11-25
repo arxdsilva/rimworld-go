@@ -15,7 +15,7 @@ import (
 // bedOfScan is the reference: the scan bedOf replaced.
 func bedOfScan(g *Game, id entity.EntityID) entity.EntityID {
 	for _, bid := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(bid); ok && b.Kind.Sleeps() && b.SlotOf(uint64(id)) >= 0 {
+		if b, ok := g.bldgs.Get(bid); ok && b.Kind.Sleeps() && construction.BedSlot(b, uint64(id)) >= 0 {
 			return bid
 		}
 	}

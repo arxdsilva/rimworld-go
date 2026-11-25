@@ -58,7 +58,7 @@ func Of(f faction.Faction) Row {
 	return Row{
 		ID: f.ID, Name: f.Name, Type: d.Label, Leader: f.Leader.Name, LeaderTitle: f.Leader.Title,
 		Goodwill: f.Goodwill, Relation: rel, Settlements: len(f.Settlements), Tech: tech,
-		Emblem: "ui_icon/faction_" + d.Key, Accent: d.Accent,
+		Emblem: d.Emblem(), Accent: d.Accent,
 		History: slices.Clone(hist), Events: slices.Clone(events), Hidden: d.Hidden,
 	}
 }

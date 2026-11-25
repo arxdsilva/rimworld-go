@@ -29,11 +29,22 @@ const (
 	// from Grow (FOOD-2, wiki: Plants). Appended: an older save gives it
 	// its Grow priority on load.
 	PlantCut
+	// Patient is the patient work column (WRK-101); appended to preserve IDs.
+	Patient
+	// BedRest is the per-pawn rest-when-hurt column (WRK-101).
+	BedRest
+	// Basic is simple work such as flicking and opening caskets (WRK-101).
+	Basic
+	// Smith and Tailor split production work from Craft (WRK-102).
+	Smith
+	Tailor
+	// Art separates sculpture work from Craft without moving old IDs.
+	Art
 	NumTypes
 )
 
 // Mask is a bitset of enabled work types.
-type Mask uint16
+type Mask uint32
 
 // DefaultColonist enables every work type except warden work (PLAY-015:
 // firefighting is on).
@@ -52,6 +63,12 @@ func DefaultColonist() Mask {
 	m = m.Set(Clean, true)
 	m = m.Set(Handle, true)
 	m = m.Set(PlantCut, true)
+	m = m.Set(Patient, true)
+	m = m.Set(BedRest, true)
+	m = m.Set(Basic, true)
+	m = m.Set(Smith, true)
+	m = m.Set(Tailor, true)
+	m = m.Set(Art, true)
 	return m
 }
 
@@ -112,4 +129,4 @@ func (p Priorities) Set(t Type, v int) Priorities {
 // Order is the tie-break among work types sharing a priority, and the Work
 // tab's left-to-right order (WRK-001, wiki: Work): hauling comes near the end,
 // so a grower clears the field and a builder builds before piles are carried.
-var Order = []Type{Firefight, Doctor, Warden, Handle, Cook, Hunt, Construct, Grow, Mine, PlantCut, Craft, Haul, Clean, Research}
+var Order = []Type{Firefight, Patient, Doctor, BedRest, Basic, Warden, Handle, Cook, Hunt, Construct, Grow, Mine, PlantCut, Smith, Tailor, Art, Craft, Haul, Clean, Research}

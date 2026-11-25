@@ -54,10 +54,11 @@ func (r *Rage) WarnChase(id entity.EntityID, a *animal.State, target entity.Enti
 		return false
 	}
 	var who string
-	switch t := r.h.Ref(target); {
+	t, found := r.h.Animal(target)
+	switch {
 	case r.h.Colonist(target):
 		who = r.h.Name(target)
-	case t != nil && t.Tame:
+	case found && t.Tame:
 		who = "the " + t.Species.Label()
 		if t.Name != "" {
 			who = t.Name

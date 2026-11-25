@@ -78,3 +78,66 @@ func TestInterceptChance(t *testing.T) {
 		}
 	}
 }
+
+// Interception is 0 up to 5 tiles from the muzzle, full from 12 tiles and
+// linear in the distance between (wiki: Combat#Interception; no formula given).
+func TestDistanceInterceptFactor(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		dx, dy int
+		want   Permille
+	}{
+		{0, 0, 0}, {5, 0, 0}, {3, 4, 0}, {4, 4, 93}, {6, 0, 142}, {8, 0, 428}, {12, 0, 1000}, {20, 3, 1000}, {-9, 0, 571},
+	} {
+		if got := DistanceInterceptFactor(tc.dx, tc.dy); got != tc.want {
+			t.Errorf("DistanceInterceptFactor(%d,%d) = %d, want %d", tc.dx, tc.dy, got, tc.want)
+		}
+	}
+}
+
+func TestDownedInterceptChance(t *testing.T) {
+	t.Parallel()
+	for chance, want := range map[Permille]Permille{0: 0, 40: 4, 171: 17, 400: 40} {
+		if got := DownedInterceptChance(chance); got != want {
+			t.Errorf("DownedInterceptChance(%d) = %d, want %d", chance, got, want)
+		}
+	}
+}
+
+func TestFriendlyFireChance(t *testing.T) {
+	t.Parallel()
+	for percent, want := range map[int]Permille{-1: 0, 0: 0, 40: 160, 100: 400, 101: 400} {
+		if got := FriendlyFireChance(400, percent); got != want {
+			t.Errorf("FriendlyFireChance(400, %d) = %d, want %d", percent, got, want)
+		}
+	}
+}
+
+// A non-standing target is hit 8.5x as often within 3 tiles and half as
+// often from 5 tiles: wiki: Downed (+750% execution bonus).
+func TestDownedFactorLocalTable(t *testing.T) {
+	t.Parallel()
+	for distance, want := range map[int]Permille{0: 8500, 3: 8500, 4: 1000, 5: 500, 40: 500} {
+		if got := DownedFactor(distance); got != want {
+			t.Errorf("DownedFactor(%d) = %d, want %d", distance, got, want)
+		}
+	}
+}
+
+func TestDownedTargetReportAccuracy(t *testing.T) {
+	t.Parallel()
+	r := Report{Band: 100, Shooter: 1000, Weather: 1000, Size: 1000, Light: 1000, Downed: DownedFactor(3)}
+	for distance, want := range map[int]Permille{3: 850, 4: 100, 5: 50} {
+		r.Dist, r.Downed = distance, DownedFactor(distance)
+		if got := r.Aim(); got != want {
+			t.Errorf("downed aim at %d tiles = %d, want %d", distance, got, want)
+		}
+	}
+	r.Band, r.Dist, r.Downed = 200, 3, DownedFactor(3)
+	if got := r.Aim(); got != 1000 {
+		t.Fatalf("execution bonus clamps aim at 1000, got %d", got)
+	}
+	if got := (Report{Melee: true, Band: 400, Downed: DownedFactor(3), Dist: 3}).Total(); got != 400 {
+		t.Fatalf("downed ranged bonus changed melee chance to %d", got)
+	}
+}

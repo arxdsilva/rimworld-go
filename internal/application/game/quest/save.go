@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"slices"
 
+	"rimworld-go/internal/domain/economy/trade"
 	qd "rimworld-go/internal/domain/quest"
 )
 
@@ -79,13 +80,13 @@ func cloneQuest(n qd.Quest) qd.Quest {
 	if n.Parts != nil {
 		n.Parts = slices.Clone(n.Parts)
 		for i := range n.Parts {
-			n.Parts[i].Lines = slices.Clone(n.Parts[i].Lines)
+			n.Parts[i].Lines = trade.CloneLines(n.Parts[i].Lines)
 		}
 	}
 	if n.Rewards != nil {
 		n.Rewards = slices.Clone(n.Rewards)
 		for i := range n.Rewards {
-			n.Rewards[i].Lines = slices.Clone(n.Rewards[i].Lines)
+			n.Rewards[i].Lines = trade.CloneLines(n.Rewards[i].Lines)
 		}
 	}
 	return n

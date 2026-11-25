@@ -67,7 +67,7 @@ type World interface {
 	// (QST-036).
 	Colonists() int
 	// Points are the raid points summed over every colony map and caravan,
-	// one difficulty.ThreatPoints call (QST-025).
+	// each independently evaluated using the same difficulty and adaptation (QST-025).
 	Points() int
 	// ThreatScalePct and RewardPct are the difficulty's threat scale and
 	// quest reward percent (QST-034, QST-035).

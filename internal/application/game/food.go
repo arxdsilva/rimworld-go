@@ -279,6 +279,12 @@ func (g *Game) bestFood(id, eater entity.EntityID) (best entity.EntityID, bx, by
 			continue // RES-1: every portion claimed by other eaters; areas.go: outside the allowed area; a break ignores forbidding (STK-AL)
 		}
 		if s := pick.Score(st, pathing.Dist(pos.X, pos.Y, st.X, st.Y)); best == 0 || s > score || s == score && iid < best {
+			// A preferred but unreachable stack must not shadow edible food
+			// the pawn can actually fetch. Otherwise startJob fails repeatedly
+			// while the read-only food witness correctly finds reachable food.
+			if _, reachable := g.pathTo(id, st.X, st.Y); !reachable {
+				continue
+			}
 			best, bx, by, score = iid, st.X, st.Y, s
 		}
 	}

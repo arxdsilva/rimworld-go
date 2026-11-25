@@ -42,7 +42,7 @@ func feedable(d animal.Diet, t animal.Tier, allowed func(item.Kind) bool) func(i
 func (f *Feed) Assign(id entity.EntityID) bool {
 	h := f.h
 	now := h.Now()
-	if !h.AnyAnimal(func(_ entity.EntityID, a *animal.State) bool { return Due(a) }) {
+	if !h.AnyTameAnimal(func(_ entity.EntityID, a *animal.State) bool { return Due(a) }) {
 		return false
 	}
 	aid, ax, ay, ok := h.Nearest(id, func(o entity.EntityID, a *animal.State) bool {
@@ -76,7 +76,7 @@ func (f *Feed) failed(aid entity.EntityID, now uint64) {
 // portions is how many of food kind k lift animal a to FeedStop.
 func portions(h Host, a animal.State, k item.Kind) int {
 	per := animal.Meal(a.Species, animal.FeedValue(animal.EcologyOf(a.Species).Diet, k))
-	if !grown(a, h.Now()) {
+	if !grown(h, a, h.Now()) {
 		per *= animal.YoungMeal
 	}
 	if per <= 0 {

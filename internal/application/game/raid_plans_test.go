@@ -30,8 +30,8 @@ func TestRaidsGrowWithWealth(t *testing.T) {
 	if p, r := len(poor.raidKit(poor.raidPoints(5))), len(rich.raidKit(rich.raidPoints(5))); p != 1 || r <= p {
 		t.Fatalf("a poor colony faces one raider, a rich one more: %d vs %d", p, r)
 	}
-	if k := rich.raidKit(1 << 20); len(k) != maxScaledRaiders {
-		t.Fatalf("capped at %d, got %d", maxScaledRaiders, len(k))
+	if k := rich.raidKit(1 << 20); len(k) <= 8 {
+		t.Fatalf("raids are limited by points alone, got only %d raiders for a huge budget", len(k))
 	}
 }
 

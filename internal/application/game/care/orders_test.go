@@ -41,6 +41,7 @@ func orderScene() (*Care, *fakeHost, *orderPrison) {
 	h.outsider(visitor, 5, 5)
 	h.vital[visitor] = health.Record{Status: health.Alive}
 	h.bed(bedID, construction.Building{Kind: construction.Bed, X: 8, Y: 8})
+	h.bed(prisonID, construction.Building{Kind: construction.Bed, X: 9, Y: 8, ForPrisoners: true})
 	pr := newOrderPrison(h)
 	pr.raider[raider] = true
 	pr.visitor[visitor] = true
@@ -141,7 +142,7 @@ func orderCases() []orderCase {
 		{"rescue held by the doer", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) { h.owners[patient] = doc }, false, ""},
 		// noPath cuts every way, the patient's to any bed too: no safe bed
 		// (SIM-063); the doer alone cut off is TestRescueDoerCutOff.
-		{"rescue unreachable", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) { h.noPath = true }, false, ReasonNoBed},
+		{"rescue unreachable", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) { h.noPath = true }, false, ReasonUnreachable},
 		{"rescue standing", resc, doc, mate, none, true, ""},
 		{"rescue in bed", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) {
 			h.bldgs[bedID] = construction.Building{Kind: construction.Bed, X: 5, Y: 5, Claimant: uint64(patient)}
@@ -153,7 +154,7 @@ func orderCases() []orderCase {
 		{"capture", capt, doc, raider, none, false, ""},
 		{"capture a downed visitor", capt, doc, visitor, func(_ *Care, h *fakeHost, _ *orderPrison) { h.downed(visitor, 40) }, false, ""},
 		{"capture incapable of Doctor", capt, doc, raider, func(_ *Care, h *fakeHost, _ *orderPrison) { h.blocked[doc] = true }, false, ""},
-		{"capture no prison bed", capt, doc, raider, func(_ *Care, _ *fakeHost, pr *orderPrison) { pr.prisonBd = 0 }, false, ReasonNoPrisonBed},
+		{"capture no prison bed", capt, doc, raider, func(_ *Care, h *fakeHost, pr *orderPrison) { delete(h.bldgs, pr.prisonBd); pr.prisonBd = 0 }, false, ReasonNoPrisonBed},
 		{"capture by a breaking doer", capt, doc, raider, func(_ *Care, h *fakeHost, _ *orderPrison) { h.breaking = map[entity.EntityID]bool{doc: true} }, false, ReasonIncapable},
 		{"capture unreachable", capt, doc, raider, func(_ *Care, h *fakeHost, _ *orderPrison) { h.noPath = true }, false, ReasonUnreachable},
 		{"capture held", capt, doc, raider, func(_ *Care, h *fakeHost, _ *orderPrison) { h.owners[raider] = other }, false, ReasonBusyTarget + "P3"},
@@ -167,7 +168,7 @@ func orderCases() []orderCase {
 
 		{"arrest a visitor", arr, doc, visitor, none, false, ""},
 		{"arrest a colonist", arr, doc, mate, none, false, ""},
-		{"arrest no prison bed", arr, doc, visitor, func(_ *Care, _ *fakeHost, pr *orderPrison) { pr.prisonBd = 0 }, false, ReasonNoPrisonBed},
+		{"arrest no prison bed", arr, doc, visitor, func(_ *Care, h *fakeHost, pr *orderPrison) { delete(h.bldgs, pr.prisonBd); pr.prisonBd = 0 }, false, ReasonNoPrisonBed},
 		{"arrest by a downed doer", arr, doc, visitor, func(_ *Care, h *fakeHost, _ *orderPrison) { h.downed(doc, 40) }, false, ReasonIncapable},
 		{"arrest unreachable", arr, doc, visitor, func(_ *Care, h *fakeHost, _ *orderPrison) { h.noPath = true }, false, ReasonUnreachable},
 		{"arrest held", arr, doc, visitor, func(_ *Care, h *fakeHost, _ *orderPrison) { h.owners[visitor] = other }, false, ReasonBusyTarget + "P3"},

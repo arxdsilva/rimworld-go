@@ -270,6 +270,19 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 			run: func() { v.attackSettlement(id, site, settled) }},
 		{name: "split", label: "Split", why: notYet, tip: "Split\nSplitting a caravan in two."},
 	}
+	for _, market := range v.markets {
+		if market.CaravanID != id || market.Tile != tile {
+			continue
+		}
+		why := ""
+		if market.Negotiator == 0 {
+			why = v.sh.T("No caravan member can negotiate this trade.")
+		}
+		gizmos = append(gizmos, gizmo{name: "trade", label: v.sh.T("Trade"), why: why,
+			tip: v.sh.T("Trade at the settlement with this caravan's cargo."),
+			run: func() { marketDialog(v).open(market) }})
+		break
+	}
 	return o.Label, lines, append(gizmos, v.questGizmos(c)...)
 }
 

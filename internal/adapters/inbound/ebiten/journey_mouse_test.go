@@ -545,7 +545,9 @@ func TestJourneyMouseCtrlClickTradeCounter(t *testing.T) {
 		}
 		return 0 // a row nobody holds is gone
 	}
+	tradeReveal(j, "trade."+big.Kind+".take.1")
 	j.clickWith("trade."+big.Kind+".take.1", input.ModCtrl)
+	tradeReveal(j, "trade."+small.Kind+".take.1")
 	j.clickWith("trade."+small.Kind+".take.1", input.ModCtrl)
 	if !j.clickID("modal." + dialogs.TradeModalID + ".accept") {
 		t.Fatal("Accept is disabled with goods on the table")

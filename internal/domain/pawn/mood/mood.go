@@ -3,7 +3,10 @@
 
 package mood
 
-import "rimworld-go/internal/domain/sim/clock"
+import (
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/pkg/randx"
+)
 
 // Kind is a thought type.
 type Kind uint8
@@ -151,6 +154,20 @@ const (
 	// RescuedByColony (QST-057, QST-068, append only, saved): the colony
 	// came for this pawn, down on a site or held in a cell, and took them in.
 	RescuedByColony
+	BrawlerRanged // Brawler equipped a ranged weapon (state thought)
+	ExpectationsExtremelyLow
+	ExpectationsVeryLow
+	ExpectationsLow
+	ExpectationsModerate
+	ExpectationsHigh
+	ExpectationsSkyHigh
+	BlissCircuit
+	AugmentFan
+	NaturalPurist
+	AnestheticWoozy // anaesthetic recovery state (append-only)
+	RecreationDeprived
+	RecreationSatisfied
+	FatalOrganHarvest
 	numKinds
 )
 
@@ -193,145 +210,11 @@ const (
 // day: remembered thoughts last one in-game day.
 const day = uint64(clock.TicksPerDay)
 
-var defs = [numKinds]Def{
-	SleptOutside:      {"slept outside", -6, day, groupSleepPlace, 0, 0},
-	SleptOnGround:     {"slept on the ground", -4, day, groupSleepPlace, 0, 0},
-	SleptInBed:        {"slept in a bed", 2, day, groupSleepPlace, 0, 0},
-	SleptInAwfulRoom:  {"slept in an awful room", -4, day, groupSleepRoom, 0, 0},
-	SleptInNiceRoom:   {"slept in a nice room", 5, day, groupSleepRoom, 0, 0},
-	AteMeal:           {"ate a cooked meal", 0, day, groupMealKind, 0, 0}, // FOOD-4: retired (not vanilla), kept for older saves
-	AteRaw:            {"ate raw food", -7, day, groupMealKind, 0, 0},     // wiki: Food
-	AteAtTable:        {"ate at a table", 0, day, groupMealTable, 0, 0},   // FOOD-4: retired (not vanilla), kept for older saves
-	AteWithoutTable:   {"ate without a table", -3, day, groupMealTable, 0, 0},
-	Hungry:            {"hungry", -6, 0, groupNone, 0, 0}, // wiki: Saturation
-	Tired:             {"tired", -5, 0, groupNone, 0, 0},
-	Cold:              {"cold", -4, 0, groupNone, 0, 0},        // TEMP-3: retired (the 4-rung ladders), kept for older saves
-	Freezing:          {"freezing", -10, 0, groupNone, 0, 0},   // TEMP-3: retired (the 4-rung ladders), kept for older saves
-	Hot:               {"hot", -4, 0, groupNone, 0, 0},         // TEMP-3: retired (the 4-rung ladders), kept for older saves
-	Sweltering:        {"sweltering", -10, 0, groupNone, 0, 0}, // TEMP-3: retired (the 4-rung ladders), kept for older saves
-	RecreationStarved: {"recreation-starved", -12, 0, groupNone, 0, 0},
-	Bored:             {"bored", -5, 0, groupNone, 0, 0},
-	Entertained:       {"entertained", 4, 0, groupNone, 0, 0},
-	Catharsis:         {"catharsis", 30, day, groupNone, 0, 0},
-	Sick:              {"sick", -8, 0, groupNone, 0, 0},
-	InPain:            {"in pain", -6, 0, groupNone, 0, 0},
-	ColonistDied:      {"a colonist died", -3, 6 * day, groupNone, 0, 0},
-	UnburiedCorpse:    {"unburied corpse nearby", -2, 0, groupNone, 0, 0},
-	LaidToRest:        {"laid a friend to rest", 3, day, groupLaidToRest, 0, 0},
-	Soaked:            {"soaked", -3, day / 4, groupSoaked, 0, 0},
-	SnowDay:           {"snow day", 2, day, groupSnowDay, 0, 0},
-	Landed:            {"rough landing", -4, day, groupNone, 0, 0},
-	LovesWork:         {"doing work I love", 2, 0, groupLovesWork, 0, 0},
-	Difficulty:        {"the way of the world", 0, 0, groupNone, 0, 0},
-	// ENG-003: values follow the published RimWorld wiki by explicit user
-	// decision (balance override); labels are original. "stack" kinds
-	// stack up to 5 at 900 permille each.
-	Insulted:         {"insulted", -5, 2 * day, groupNone, stackLimit, stackFactor},
-	KindWords:        {"kind words", 5, 2 * day, groupNone, stackLimit, stackFactor},
-	RebuffedMood:     {"rebuffed", -5, 3 * day, groupNone, 0, 0},
-	HadToRebuff:      {"had to turn someone down", -3, 3 * day, groupNone, 0, 0},
-	CheatedOn:        {"cheated on", -20, 25 * day, groupNone, 0, 0},
-	ProposalRejected: {"proposal turned down", -18, 25 * day, groupNone, 0, 0},
-	GotMarried:       {"got married", 40, 30 * day, groupNone, 0, 0},
-	AttendedWedding:  {"attended a wedding", 20, 10 * day, groupNone, 0, 0},
-	AttendedParty:    {"attended a party", 8, 10 * day, groupNone, 0, 0},
-	BrokenUpWith:     {"was dumped", -15, 25 * day, groupNone, 0, 0},
-	Divorced:         {"divorced", -20, 30 * day, groupNone, 0, 0},
-	Lovin:            {"intimacy", 8, 3 * day, groupNone, stackLimit, stackFactor},
-	PartnerOpinion:   {"feelings for my partner", 0, 0, groupNone, 0, 0},
-	SleptAlone:       {"sleeping alone", -4, 0, groupNone, 0, 0},
-	Hungover:         {"hungover", -5, day / 2, groupNone, 0, 0},
-	Drunk:            {"tipsy", 6, 0, groupNone, 0, 0},
-	Withdrawal:       {"withdrawal", -15, 0, groupNone, 0, 0},
-	HighOnDrug:       {"high", 10, 0, groupNone, 0, 0},
-	BondedMaster:     {"my bonded animal", 5, 0, groupNone, 0, 0},
-	BondedNotMaster:  {"kept from my bonded animal", -3, 0, groupNone, 0, 0},
-	BondedDied:       {"bonded animal died", -8, 20 * day, groupNone, stackLimit, stackFactor},
-	BondedLost:       {"bonded animal lost", -8, 20 * day, groupNone, stackLimit, stackFactor},
-	BondedGivenAway:  {"gave my bonded animal away", -10, 60 * day, groupNone, stackLimit, stackFactor},
-	BondedReleased:   {"released my bonded animal", -5, 15 * day, groupNone, stackLimit, stackFactor},
-	Imprisoned:       {"imprisoned", -10, 0, groupNone, 0, 0},
-	ColonistLost:     {"a colonist went missing", -3, 6 * day, groupNone, 0, 0},
-	DisfiguredSelf:   {"disfigured", 0, 0, groupNone, 0, 0},
-	MissingPart:      {"missing a body part", -5, 0, groupNone, 0, 0},
-	Surgery:          {"had surgery", -3, day, groupNone, 0, 0},
-	Grief:            {"grief", 0, 0, groupNone, 0, 0},
-	// MED-06: wiki: Human resources (donor −30 for 7 days; the colony −5,
-	// −6 for a colonist's organ, stacking 5 at 75 %). The 6-day memory
-	// of the colony is original tuning.
-	OrganHarvested:             {"my organ was harvested", -30, 7 * day, groupNone, 0, 0},
-	KnowOrganHarvested:         {"someone's organ was harvested", -5, 6 * day, groupNone, harvestStack, harvestFactor},
-	KnowColonistOrganHarvested: {"a colonist's organ was harvested", -6, 6 * day, groupNone, harvestStack, harvestFactor},
-	// BED-2, wiki: Thoughts (room stage thoughts and sharing a bed last a
-	// day). Values come per memory; SharedBed's -5 is the opinion-0 value.
-	SleptInBedroom:  {"slept in my bedroom", 0, day, groupSleepRoom, 0, 0},
-	SleptInBarracks: {"slept in barracks", 0, day, groupSleepRoom, 0, 0},
-	SleptInHospital: {"lay in a hospital", 0, day, groupSleepRoom, 0, 0},
-	AteInDiningRoom: {"ate in a fine dining room", 0, day, groupDiningRoom, 0, 0},
-	EnjoyedRecRoom:  {"relaxed in a fine recreation room", 0, day, groupRecRoom, 0, 0},
-	SharedBed:       {"had to share a bed", -5, day, groupSharedBed, 0, 0},
-	// PRD-2, wiki: Apparel (ratty -3, tattered -5; tainted -5/-8/-11/-14
-	// by count, the value set per thought).
-	RattyApparel:    {"ratty apparel", -3, 0, groupNone, 0, 0},
-	TatteredApparel: {"tattered apparel", -5, 0, groupNone, 0, 0},
-	TaintedApparel:  {"wearing a dead man's clothes", -5, 0, groupNone, 0, 0},
-	// BED-3: need thoughts last an hour past their last refresh (values
-	// and labels per memory, wiki: Comfort, Beauty, Outdoors); slept in
-	// the cold or heat -4 for a day (wiki: Thoughts).
-	ComfortMood:  {"comfort", 0, needHour, groupComfort, 0, 0},
-	BeautyMood:   {"surroundings", 0, needHour, groupBeauty, 0, 0},
-	OutdoorsMood: {"time indoors", 0, needHour, groupOutdoors, 0, 0},
-	SleptCold:    {"slept in the cold", -4, day, groupSleptTemp, 0, 0},
-	SleptHot:     {"slept in the heat", -4, day, groupSleptTemp, 0, 0},
-	AtePaste:     {"ate nutrient paste", -4, day, groupMealKind, 0, 0},
-	// FOOD-0, wiki: Meals (fine +5, lavish +12), Kibble (-12), Saturation
-	// (ravenously hungry -12, malnourished -20), Human meat (raw -20,
-	// cooked -15; butchered a human -6 and its knowledge -6, six days
-	// each), Insect meat (raw -6, cooked -3), all a day.
-	AteFineMeal:         {"ate a fine meal", 5, day, groupMealKind, 0, 0},
-	AteLavishMeal:       {"ate a lavish meal", 12, day, groupMealKind, 0, 0},
-	AteKibble:           {"ate kibble", -12, day, groupMealKind, 0, 0},
-	AteHumanMeat:        {"ate human flesh", -20, day, groupNone, 0, 0},
-	AteInsectMeat:       {"ate insect meat", -6, day, groupNone, 0, 0},
-	ButcheredHuman:      {"butchered a human body", -6, 6 * day, groupNone, stackLimit, stackFactor},
-	ObservedButchery:    {"someone butchered a human", -6, 6 * day, groupNone, stackLimit, stackFactor},
-	Ravenous:            {"ravenously hungry", -12, 0, groupNone, 0, 0},
-	Malnourished:        {"malnourished", -20, 0, groupNone, 0, 0},
-	AteHumanMeatCooked:  {"ate a meal of human flesh", -15, day, groupNone, 0, 0},
-	AteInsectMeatCooked: {"ate a meal with insect meat", -3, day, groupNone, 0, 0},
-	ToxicFallout:        {"outdoors in toxic fallout", -5, 0, groupNone, 0, 0}, // FOOD-6, wiki: Toxic fallout
-	// TEMP-0, wiki: Thoughts (cold -4/-8/-12/-16, hot the same; the
-	// trigger temperatures are unpublished: TEMP-3's original tuning),
-	// Apparel (naked -6). Labels are our own.
-	Chilly:             {"chilly", -4, 0, groupTempCold, 0, 0},
-	Shivering:          {"shivering", -8, 0, groupTempCold, 0, 0},
-	NumbingCold:        {"numbing cold", -12, 0, groupTempCold, 0, 0},
-	AbsolutelyFreezing: {"freezing to the bone", -16, 0, groupTempCold, 0, 0},
-	Sweaty:             {"sweaty", -4, 0, groupTempHot, 0, 0},
-	Overheated:         {"overheated", -8, 0, groupTempHot, 0, 0},
-	Baking:             {"baking in the heat", -12, 0, groupTempHot, 0, 0},
-	BlisteringHot:      {"blistering hot", -16, 0, groupTempHot, 0, 0},
-	Naked:              {"naked", -6, 0, groupNone, 0, 0},
-	TurnedAwayWanderer: {"turned a wanderer away", -3, day, groupNone, 0, 0},
-	RescuedByColony:    {"rescued", 18, 30 * day, groupNone, 0, 0},
-}
+// Definitions are maintained in definitions.json and compiled into static Go.
+//go:generate python3 ../../../../scripts/gen_mood_defs.py
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).
 const needHour = uint64(clock.TicksPerHour)
-
-// harvestStack and harvestFactor stack the colony's harvest memories:
-// five at 75 % each further one. wiki: Human resources.
-const (
-	harvestStack  = 5
-	harvestFactor = 750
-)
-
-// stackLimit and stackFactor are the "stack" kinds' StackLimit and
-// StackFactor (ENG-003).
-const (
-	stackLimit  = 5
-	stackFactor = 900
-)
 
 // DefOf returns the thought definition.
 func DefOf(k Kind) Def {
@@ -349,7 +232,7 @@ func DefOf(k Kind) Def {
 }
 
 // Base is mood with no thoughts.
-const Base = 50
+const Base = 32
 
 // LowMood is the threshold below which work slows down.
 const LowMood = 30
@@ -366,63 +249,62 @@ type Memory struct {
 	Label   string
 }
 
-// Memories is a pawn's remembered thoughts (one per kind, newest wins).
+// Memories holds a pawn's timed thoughts; subject-specific kinds may stack.
 type Memories []Memory
 
 // Add remembers k at tick now, replacing an existing one of the same kind
 // and any other thought of the same group.
 func (m Memories) Add(k Kind, now uint64) Memories {
-	if g := DefOf(k).Group; g != groupNone {
-		out := m[:0]
-		for _, x := range m {
-			if x.Kind == k || DefOf(x.Kind).Group != g {
-				out = append(out, x)
-			}
-		}
-		m = out
+	d := DefOf(k)
+	if d.StackLimit > 1 {
+		return m.AddLabeledUntil(k, 0, 0, "", now, now+d.Duration)
 	}
-	exp := now + DefOf(k).Duration
+	m = m.compactFor(k, d.Group, now)
 	for i := range m {
 		if m[i].Kind == k {
-			m[i].Expires = exp
+			m[i].Expires = now + d.Duration
 			return m
 		}
 	}
-	return append(m, Memory{Kind: k, Expires: exp})
+	return append(m, Memory{Kind: k, Expires: now + d.Duration})
+}
+
+func (m Memories) compactFor(k Kind, group uint8, now uint64) Memories {
+	out := m[:0]
+	for _, x := range m {
+		if x.Expires <= now || group != groupNone && x.Kind != k && DefOf(x.Kind).Group == group {
+			continue
+		}
+		out = append(out, x)
+	}
+	clear(m[len(out):])
+	return out
 }
 
 // AddFor remembers k about subject at tick now. Memories of the same kind
 // and subject stack up to Def.StackLimit; beyond it the oldest is
 // refreshed. Group replacement works as in Add.
 func (m Memories) AddFor(k Kind, subject uint64, now uint64) Memories {
-	return m.addMemory(k, subject, 0, "", now)
+	return m.AddLabeled(k, subject, 0, "", now)
 }
 
 // AddValue is AddFor with a computed mood effect (grief and the like).
 func (m Memories) AddValue(k Kind, subject uint64, value int, now uint64) Memories {
-	return m.addMemory(k, subject, value, "", now)
+	return m.AddLabeled(k, subject, value, "", now)
 }
 
 // AddLabeled is AddValue with the line's own label ("": the def's).
 func (m Memories) AddLabeled(k Kind, subject uint64, value int, label string, now uint64) Memories {
-	return m.addMemory(k, subject, value, label, now)
+	return m.AddLabeledUntil(k, subject, value, label, now, now+DefOf(k).Duration)
 }
 
-func (m Memories) addMemory(k Kind, subject uint64, value int, label string, now uint64) Memories {
+// AddLabeledUntil records an event with an explicit expiry tick.
+func (m Memories) AddLabeledUntil(k Kind, subject uint64, value int, label string, now, expires uint64) Memories {
 	d := DefOf(k)
-	if d.Group != groupNone {
-		out := m[:0]
-		for _, x := range m {
-			if x.Kind == k || DefOf(x.Kind).Group != d.Group {
-				out = append(out, x)
-			}
-		}
-		m = out
-	}
-	exp := now + d.Duration
+	m = m.compactFor(k, d.Group, now)
 	n, oldest := 0, -1
 	for i := range m {
-		if m[i].Kind != k || m[i].Subject != subject {
+		if m[i].Kind != k || d.StackLimit == 1 && m[i].Subject != subject {
 			continue
 		}
 		n++
@@ -430,13 +312,18 @@ func (m Memories) addMemory(k Kind, subject uint64, value int, label string, now
 			oldest = i
 		}
 	}
+	fresh := Memory{Kind: k, Expires: expires, Subject: subject, Value: value, Label: label}
 	if n >= int(d.StackLimit) && oldest >= 0 {
-		m[oldest].Expires = exp
-		m[oldest].Value = value
-		m[oldest].Label = label
+		if d.StackLimit == 1 {
+			m[oldest] = fresh
+			return m
+		}
+		// The refreshed event is newest; stacking weights follow event order.
+		copy(m[oldest:], m[oldest+1:])
+		m[len(m)-1] = fresh
 		return m
 	}
-	return append(m, Memory{Kind: k, Expires: exp, Subject: subject, Value: value, Label: label})
+	return append(m, fresh)
 }
 
 // Approach moves the displayed mood (milli-points) toward the target over
@@ -476,6 +363,7 @@ func (m Memories) ForgetGroupOf(k Kind) Memories {
 			out = append(out, x)
 		}
 	}
+	clear(m[len(out):])
 	return out
 }
 
@@ -487,14 +375,69 @@ func (m Memories) Prune(now uint64) Memories {
 			out = append(out, x)
 		}
 	}
+	clear(m[len(out):])
+	return out
+}
+
+// ForgetOne drops one currently active memory. A fully expired set remains
+// untouched until normal cleanup, keeping the original hourly save semantics.
+func ForgetOne(m Memories, now uint64, roll func(int) int) Memories {
+	var found bool
+	for _, x := range m {
+		if x.Expires > now {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return m
+	}
+	active := m.Prune(now)
+	i := roll(len(active))
+	return append(active[:i], active[i+1:]...)
+}
+
+// ForgetSubject removes memories about one person or animal after the
+// relationship event is resolved. It clears removed labels and references.
+func (m Memories) ForgetSubject(k Kind, subject uint64) Memories {
+	out := m[:0]
+	for _, x := range m {
+		if x.Kind == k && x.Subject == subject {
+			continue
+		}
+		out = append(out, x)
+	}
+	clear(m[len(out):])
 	return out
 }
 
 // Thought is one active line with its effect.
 type Thought struct {
-	Kind  Kind
-	Label string
-	Value int
+	Kind   Kind
+	Label  string
+	Value  int
+	Memory bool // a live event memory, even when its definition has no default duration
+}
+
+// NullifyConditional applies late-stage memory impairment to current
+// state thoughts only. Saved memories stay intact, and the decision is
+// stable for each pawn, thought and hour across replay and save/load.
+func NullifyConditional(thoughts []Thought, chance int, seed, pawn, hour uint64) []Thought {
+	if chance == 0 {
+		return thoughts
+	}
+	n := 0
+	for _, th := range thoughts {
+		if !th.Memory {
+			salt := randx.SplitMix64(seed ^ randx.SplitMix64(pawn) ^ uint64(th.Kind)<<32 ^ hour)
+			if int(salt%10000) < chance {
+				continue
+			}
+		}
+		thoughts[n] = th
+		n++
+	}
+	return thoughts[:n]
 }
 
 // Active lists memories plus current state thoughts.
@@ -504,28 +447,64 @@ func Active(m Memories, states ...Kind) []Thought {
 
 // AppendActive appends Active(m, states...) to out.
 func AppendActive(out []Thought, m Memories, states ...Kind) []Thought {
-	var seen [numKinds]int
+	return appendActive(out, m, 0, false, states...)
+}
+
+// AppendActiveAt lists thoughts whose memories are still active at now.
+// It leaves the backing memory slice untouched.
+func AppendActiveAt(out []Thought, m Memories, now uint64, states ...Kind) []Thought {
+	return appendActive(out, m, now, true, states...)
+}
+
+const stackPrecision int64 = 1_000_000_000
+
+func stackRounded(v int64) int {
+	if v < 0 {
+		return -int((-v + stackPrecision/2) / stackPrecision)
+	}
+	return int((v + stackPrecision/2) / stackPrecision)
+}
+
+func appendActive(out []Thought, m Memories, now uint64, checkExpiry bool, states ...Kind) []Thought {
+	var counts [numKinds]uint8
+	var weights, totals [numKinds]int64
+	var shown [numKinds]int
 	for _, x := range m {
+		if checkExpiry && x.Expires <= now {
+			continue
+		}
 		d := DefOf(x.Kind)
 		v := d.Value
 		if x.Value != 0 {
 			v = x.Value
 		}
-		if x.Kind < numKinds {
-			for i := 0; i < seen[x.Kind]; i++ {
-				v = v * int(d.StackFactor) / 1000
+		if x.Kind < numKinds && d.StackLimit > 1 {
+			k := x.Kind
+			if counts[k] >= d.StackLimit {
+				v = 0 // tolerate old saves with more memories than today's cap
+			} else {
+				w := weights[k]
+				if w == 0 {
+					w = stackPrecision
+				} else {
+					w = w * int64(d.StackFactor) / 1000
+				}
+				weights[k] = w
+				totals[k] += int64(v) * w
+				n := stackRounded(totals[k])
+				v, shown[k] = n-shown[k], n
+				counts[k]++
 			}
-			seen[x.Kind]++
 		}
 		label := d.Label
 		if x.Label != "" {
 			label = x.Label
 		}
-		out = append(out, Thought{x.Kind, label, v})
+		out = append(out, Thought{Kind: x.Kind, Label: label, Value: v, Memory: true})
 	}
 	for _, k := range states {
 		d := DefOf(k)
-		out = append(out, Thought{k, d.Label, d.Value})
+		out = append(out, Thought{Kind: k, Label: d.Label, Value: d.Value})
 	}
 	return out
 }

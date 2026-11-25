@@ -11,12 +11,13 @@ import "rimworld-go/internal/domain/combat/damage"
 // ticks after the blow, Form the damage it deals and Chance its weight
 // when a blow picks its tool (Pick).
 type Tool struct {
-	Name     string
-	Damage   int
-	Pen      int
-	Cooldown int
-	Form     damage.Form
-	Chance   int
+	Name          string
+	Damage        int
+	Pen           int
+	Cooldown      int
+	Form          damage.Form
+	Chance        int
+	NoSocialFight bool // Core: powered claws are excluded from social fights
 }
 
 // tool is a Tool from the wiki's columns: name, damage, form, armor
@@ -166,24 +167,31 @@ func NaturalTools(primary Kind, d Def) (ts [2]Tool, n int) {
 
 // Pick chooses a blow's tool from ts by their chances, one draw from roll
 // when there is a choice (none for one tool). ts must not be empty.
-func Pick(ts []Tool, roll func(int) int) Tool {
+// PickIndex selects a tool by its weighted chance with the same RNG
+// draws as Pick. A sole tool consumes no random number.
+func PickIndex(ts []Tool, roll func(int) int) int {
 	if len(ts) == 1 {
-		return ts[0]
+		return 0
 	}
 	sum := 0
 	for _, t := range ts {
 		sum += max(t.Chance, 0)
 	}
 	if sum <= 0 {
-		return ts[0]
+		return 0
 	}
 	r := roll(sum)
-	for _, t := range ts {
+	for i, t := range ts {
 		if r -= max(t.Chance, 0); r < 0 {
-			return t
+			return i
 		}
 	}
-	return ts[len(ts)-1]
+	return len(ts) - 1
+}
+
+// Pick chooses a blow using the weighted tool chances.
+func Pick(ts []Tool, roll func(int) int) Tool {
+	return ts[PickIndex(ts, roll)]
 }
 
 // Melee is d as a melee blow with tool t: adjacent reach, no aim, one

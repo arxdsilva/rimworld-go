@@ -97,6 +97,43 @@ func mateUntilPregnant(t *testing.T, g *Game, s animal.Species, m, f entity.Enti
 	t.Fatalf("no mating in 60 days: %+v / %+v", animalOf(g, m), animalOf(g, f))
 }
 
+// Mating eligibility and reciprocal pair setup are independent of the
+// long-running gestation and birth proof below.
+func TestMatingSelectsEligiblePartner(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 3, Width: 30, Height: 20})
+	billy := spawnSexed(t, g, "goat", 13, 10, false, true, "Billy")
+	spawnSexed(t, g, "goat", 14, 10, false, true, "Other male")
+	spawnSexed(t, g, "sheep", 13, 11, true, true, "Other species")
+	keepFed(g, billy)
+	now := uint64(g.clock.Now())
+	for i := 0; i < 8; i++ {
+		male, _ := g.animals.Get(billy)
+		g.mateCheck(billy, &male, now)
+		if male.Mate != 0 {
+			t.Fatal("a male or another species was selected")
+		}
+	}
+	daisy := spawnSexed(t, g, "goat", 15, 10, true, true, "Daisy")
+	keepFed(g, daisy)
+	var male animal.State
+	for i := 0; i < 100; i++ {
+		male, _ = g.animals.Get(billy)
+		g.mateCheck(billy, &male, now)
+		g.animals.Set(billy, male)
+		if male.Mate != 0 {
+			break
+		}
+	}
+	female := animalOf(g, daisy)
+	if male.Mate != daisy || female.Mate != billy ||
+		male.MateLeft != animal.MateTicks || female.MateLeft != animal.MateTicks ||
+		male.MateUntil != now+animal.MateWalkLimit+animal.MateTicks ||
+		female.MateUntil != male.MateUntil {
+		t.Fatalf("mating did not establish a reciprocal pair: male %+v, female %+v", male, female)
+	}
+}
+
 func TestMatingPregnancyBirth(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 20})
@@ -173,14 +210,16 @@ func TestMatingPregnancyBirth(t *testing.T) {
 	}
 }
 
-func TestLitterInheritsTameness(t *testing.T) {
+func TestTameAndWildExistingLitter(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	now := uint64(g.clock.Now())
-	doe := spawnSexed(t, g, "deer", 8, 8, true, false, "")
+	doe := spawnSexed(t, g, "deer", 8, 8, true, true, "Doe")
 	cow := spawnSexed(t, g, "cow", 20, 8, true, true, "Bess")
 	setAnimal(g, doe, func(a *animal.State) { a.Pregnant, a.Herd = now+10, 7 })
 	setAnimal(g, cow, func(a *animal.State) { a.Pregnant, a.Herd = now+10, 9 })
+	g.releaseAnimal(doe)
+	g = saveLoad(t, g)
 	g.Step(20)
 	var wild, tame int
 	for _, id := range g.animalIDs {
@@ -201,8 +240,8 @@ func TestLitterInheritsTameness(t *testing.T) {
 			}
 		}
 	}
-	if wild == 0 || tame != 1 {
-		t.Fatalf("born: %d fawns, %d calves", wild, tame)
+	if wild < 1 || tame != 1 || animalOf(g, doe).Pregnant != 0 {
+		t.Fatalf("existing pregnancies must deliver: %d fawns, %d calves", wild, tame)
 	}
 	if !hasMessage(g, "Bess gave birth to a cow calf.") {
 		t.Fatalf("messages %+v", g.messages)
@@ -422,8 +461,18 @@ func TestChickensLayWithoutRooster(t *testing.T) {
 			g.Step(1)
 		}
 	}
-	if n := itemsOnGround(g, "egg"); n != 3 {
-		t.Fatalf("a tame hen lays an egg a day: %d in 3 days", n)
+	var tameEggs, wildEggs int
+	for _, id := range g.itemIDs {
+		if st, ok := g.stacks.Get(id); ok && st.Kind == item.Egg {
+			if st.Unclaimed {
+				wildEggs += st.Qty
+			} else {
+				tameEggs += st.Qty
+			}
+		}
+	}
+	if tameEggs != 3 || wildEggs != 3 {
+		t.Fatalf("three days: tame hen laid %d eggs, wild hen laid %d unclaimed eggs", tameEggs, wildEggs)
 	}
 	if _, _, ok := eggStack(g, item.FertileEgg); ok {
 		t.Fatal("no rooster: no fertile eggs")
@@ -551,4 +600,34 @@ func TestLifeSaveRoundTrip(t *testing.T) {
 		t.Fatalf("after the load the birth and the hatch happen: %d goats, %d chickens",
 			animalCount(h, animal.Goat), animalCount(h, animal.Chicken))
 	}
+}
+
+func TestReleasedFertileHenStillLaysAndHatches(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 30, Height: 20})
+	warmDay(t, g)
+	hen := spawnSexed(t, g, "turkey", 10, 10, true, true, "Hen")
+	setAnimal(g, hen, func(a *animal.State) { a.Mated = animal.MatedEggs })
+	g.releaseAnimal(hen)
+	g = saveLoad(t, g)
+	day := int(uint64(g.clock.Now())/clock.TicksPerDay) + 1
+	for !animal.LaysToday(animal.Turkey, uint64(hen), day) {
+		day++
+	}
+	advance(g, uint64(day)*clock.TicksPerDay+animal.LayTick(animal.Turkey, uint64(hen)))
+	keepFed(g, hen)
+	g.Step(1)
+	sid, st, ok := eggStack(g, item.FertileEgg)
+	if !ok || st.Tame || !st.Unclaimed || st.Animal != uint8(animal.Turkey) || animalOf(g, hen).Mated != animal.MatedEggs-1 {
+		t.Fatalf("released hen lost fertility or ownership: %+v", st)
+	}
+	st.Hatch = animal.HatchTicks(animal.Turkey) - climateInterval
+	g.putStack(sid, st)
+	g.Step(climateInterval + 1)
+	for _, id := range g.animalIDs {
+		if id != hen && animalOf(g, id).Species == animal.Turkey && !animalOf(g, id).Tame && hasLogKind(g, id, evlog.Hatched) {
+			return
+		}
+	}
+	t.Fatal("wild fertile egg did not hatch")
 }

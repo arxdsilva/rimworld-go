@@ -354,11 +354,11 @@ func TestStatsLayers(t *testing.T) {
 	}
 }
 
-// TestNearsightedScore: Nearsighted costs 6 shooting score points, the
+// TestNearsightedScore: Nearsighted costs 15 shooting score points, the
 // sight penalty of one eye at 50 % × 12 (original tuning; SHT-003).
 func TestNearsightedScore(t *testing.T) {
-	if s := Stats(Pawn{AgeDays: 30 * DaysPerYear, Conditions: []Condition{Nearsighted}}, trait.Core()); s[stat.ShootAcc] != -6 {
-		t.Fatalf("nearsighted shoot_acc %d, want -6", s[stat.ShootAcc])
+	if s := Stats(Pawn{AgeDays: 30 * DaysPerYear, Conditions: []Condition{Nearsighted}}, trait.Core()); s[stat.ShootAcc] != -15 {
+		t.Fatalf("nearsighted shoot_acc %d, want -15", s[stat.ShootAcc])
 	}
 	if s := Stats(Pawn{AgeDays: 30 * DaysPerYear}, trait.Core()); s[stat.ShootAcc] != 0 {
 		t.Fatalf("no condition shoot_acc %d, want 0", s[stat.ShootAcc])

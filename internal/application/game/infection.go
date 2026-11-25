@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -17,6 +18,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/caravan"
 	"rimworld-go/internal/domain/world/room"
 )
 
@@ -167,7 +169,10 @@ func (g *Game) tendQualityFor(doctor, patient entity.EntityID, med item.Kind) in
 // lies: a roofed, fully floored room without filth halves the chance (30 %
 // in sterile tile, AX-3); outdoors or anywhere else it stays whole. wiki: Infection.
 func (g *Game) roomInfectionFactor(id entity.EntityID) int32 {
-	pos, _ := g.positions.Get(id)
+	pos, ok := g.positions.Get(id)
+	if !ok {
+		return infection.RoomOther
+	}
 	r := g.roomAt(pos.X, pos.Y)
 	if r == room.Outdoors || r < 0 || r >= len(g.rooms) {
 		return infection.RoomOther
@@ -253,11 +258,32 @@ func (g *Game) rollInfections(id entity.EntityID, b *body.Body, now uint64) {
 	}
 }
 
-// immunityGain is id's immunity gain (permille; vitals monitors and
-// organs change it from MED-05/06; hunger from FOOD-6, wiki: Saturation).
+// immunityGain uses actual posture and furniture, not ownership alone.
+// Published factors: rimworldwiki.com/wiki/Immunity_Gain_Speed and /Rest.
 func (g *Game) immunityGain(id entity.EntityID) int32 {
-	n, _ := g.need.Get(id)                                                                           // ravenous x0.9, malnourished x0.7 (needs.ImmunityGain)
-	return (g.organImmunityGain(id) + g.monitorImmunityGain(id)) * needs.ImmunityGain(n.Band) / 1000 // organs.go (MED-05), surgery.go (MED-06)
+	n, known := g.need.Get(id)
+	if !known {
+		n.Rest = needs.Full
+	}
+	gain := g.organImmunityGain(id) * needs.ImmunityGain(n.Band) / 1000
+	v, _ := g.vital.Get(id)
+	resting := false
+	if g.onMap(id) && g.care.Carry.Carrier(id) == 0 {
+		j, _ := g.jobs.Get(id)
+		resting = v.Status == health.Alive && j.Kind == job.Sleep && j.State == job.Do
+		if resting || v.Status == health.Downed {
+			if bid := g.bedUnder(id); bid != 0 && (v.Status == health.Downed || j.Target == bid) {
+				b, _ := g.bldgs.Get(bid)
+				gain = gain * (construction.BedImmunityGain(b.Kind) + g.monitorImmunityGain(id)) / 1000
+			}
+		}
+	} else if v.Status == health.Alive && g.isStashed(id) {
+		if c := fleetOf(g).Of(id); c != nil {
+			hour := int(g.clock.Now()/clock.TicksPerHour) % 24
+			resting = !((c.C.State == caravan.Travelling || c.C.State == caravan.Returning) && caravan.Moving(hour) && c.Ask.Letter == 0 && len(c.C.Path) > 0)
+		}
+	}
+	return gain * infection.RestGain(n.Rest, resting) / 1000
 }
 
 // stepConds advances an hour of every condition race on id; it reports
@@ -298,34 +324,14 @@ func (g *Game) stepConds(id entity.EntityID, b *body.Body, now uint64) bool {
 
 // worstInfection is id's most severe infection (false: none).
 func (g *Game) worstInfection(id entity.EntityID) (body.Condition, bool) {
-	b := g.bodies[id]
-	if b == nil {
-		return body.Condition{}, false
-	}
-	var worst body.Condition
-	found := false
-	for _, c := range b.Conds {
-		if c.Kind == body.CondInfection && (!found || c.Sev > worst.Sev) {
-			worst, found = c, true
-		}
-	}
-	return worst, found
+	return infection.Worst(g.bodies[id])
 }
 
 // sick reports id fighting a condition it is not yet immune to (mood,
 // bed rest): it starts with the condition and ends once immunity wins,
 // which only ever grows, so it never flaps.
 func (g *Game) sick(id entity.EntityID) bool {
-	b := g.bodies[id]
-	if b == nil {
-		return false
-	}
-	for _, c := range b.Conds {
-		if d := body.DefOfCond(c.Kind); !d.NoImmunity && c.Immunity < infection.Full {
-			return true
-		}
-	}
-	return false
+	return infection.Sick(g.bodies[id])
 }
 
 // infectionLosing reports one of id's conditions on course to kill
@@ -360,18 +366,7 @@ func (g *Game) condDeathHours(id entity.EntityID, b *body.Body) int {
 // untendedHours is how long id's oldest untended open wound has waited
 // (whole hours; 0: none, or under an hour).
 func (g *Game) untendedHours(id entity.EntityID) int {
-	b := g.bodies[id]
-	if b == nil {
-		return 0
-	}
-	now := uint64(g.clock.Now())
-	oldest := now
-	for _, w := range b.Wounds {
-		if !w.Permanent && !w.Tended && w.At < oldest {
-			oldest = w.At
-		}
-	}
-	return int((now - oldest) / clock.TicksPerHour)
+	return infection.UntendedHours(g.bodies[id], uint64(g.clock.Now()))
 }
 
 // woundView is id's infection (percent of the worst; 0: none) and

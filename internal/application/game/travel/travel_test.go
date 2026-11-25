@@ -36,7 +36,7 @@ func TestSaveRoundTrip(t *testing.T) {
 	s := &State{}
 	s.setSleeper(4, 9)
 	s.holdOf(5).addItem(item.Stack{Kind: item.Gold, Qty: 3})
-	s.sites = []Site{{Tile: 11, Mineral: item.Jade, Qty: 700, Expires: 99}}
+	s.sites = []Site{{Tile: 11, Mineral: item.Jade, Qty: 700, Cells: 18, Expires: 99}}
 	s.flights = []Flight{{ID: 1, From: 2, To: 3, Arrive: 50, Pods: 2}}
 	s.setScan(6, Scan{Work: 12, For: item.Gold})
 	back := Import(s.Export())
@@ -71,7 +71,7 @@ func TestSettlementViewsAndIDs(t *testing.T) {
 		{Name: "Ash", Type: faction.Settlers, Relation: faction.Hostile, Settlements: []int{4}},
 		{Name: "Gone", Type: faction.Settlers, Defeated: true, Settlements: []int{5}},
 	}
-	v := SettlementViews(fs, func(int) string { return "" })
+	v := SettlementViews(fs, nil)
 	if len(v) != 1 || v[0].Name != "a settlement of Ash" || v[0].Visitable || v[0].Relation != "hostile" {
 		t.Fatalf("views %+v", v)
 	}
@@ -81,5 +81,81 @@ func TestSettlementViewsAndIDs(t *testing.T) {
 	}
 	if JoinNames([]string{"A", "B", "C"}) != "A, B and C" || JoinNames(nil) != "Nobody" {
 		t.Fatal("join names")
+	}
+}
+
+// A gift's eligible selling price differs by delivery method and follows
+// the item stack's physical condition.
+func TestPodGiftUsesStackQualityAndDeliveryRate(t *testing.T) {
+	book := item.Book{}
+	pod := Hold{Items: []item.Stack{{Kind: item.Lung, Qty: 1}}}
+	if got := pod.giftValue(book); got != 612 {
+		t.Fatalf("a lung pod gift credited %d, want 612", got)
+	}
+	pod.Items = append(pod.Items, item.Stack{Kind: item.Silver, Qty: 1000})
+	if got := pod.giftValue(book); got != 1612 {
+		t.Fatalf("gift silver must keep its face value: %d", got)
+	}
+	rifle := item.Stack{Kind: item.Rifle, Qty: 1}
+	pod = Hold{Items: []item.Stack{rifle}}
+	if got := pod.giftValue(book); got != 14 {
+		t.Fatalf("a normal rifle pod gift credited %d", got)
+	}
+	rifle.Wear = rifle.MaxHP() / 2
+	pod.Items[0] = rifle
+	if got, market := pod.giftValue(book), item.StackValue(rifle); market != 12 || got != 1 {
+		t.Fatalf("worn rifle gift %d with market value %d", got, market)
+	}
+}
+
+func TestInTransportPodHasNoPersistentIndex(t *testing.T) {
+	var nilState *State
+	if nilState.InTransportPod(9) {
+		t.Fatal("nil state claims a passenger")
+	}
+	s := &State{}
+	s.setSleeper(7, 9)
+	if s.InTransportPod(9) {
+		t.Fatal("casket sleeper is not a transport pod passenger")
+	}
+	s.holdOf(10).Pawns = []entity.EntityID{11}
+	s.flights = []Flight{{ID: 3, Load: Hold{Pawns: []entity.EntityID{12, 13}}}}
+	for _, id := range []entity.EntityID{11, 12, 13} {
+		if !s.InTransportPod(id) {
+			t.Fatalf("passenger %d missing from pod state", id)
+		}
+	}
+	for _, id := range []entity.EntityID{0, 9, 14} {
+		if s.InTransportPod(id) {
+			t.Fatalf("non-passenger %d claimed by pod state", id)
+		}
+	}
+	back := Import(s.Export())
+	for _, id := range []entity.EntityID{11, 12, 13} {
+		if !back.InTransportPod(id) {
+			t.Fatalf("save/load lost pod passenger %d", id)
+		}
+	}
+	delete(back.holds, 10)
+	back.flights = nil
+	if back.InTransportPod(11) || back.InTransportPod(12) {
+		t.Fatal("disembarked passengers remain in transport pod state")
+	}
+}
+
+func TestLegacySiteCellsPreserveOldGeometry(t *testing.T) {
+	for _, tc := range []struct {
+		k          item.Kind
+		qty, cells int
+	}{{item.Steel, 200, 10}, {item.Silver, 2400, 96}, {item.Gold, 80, 10}, {item.Jade, 700, 18}, {item.Wood, 75, 0}} {
+		v := &Save{Sites: []Site{{Tile: 11, Mineral: tc.k, Qty: tc.qty, Expires: 99}}}
+		s := Import(v)
+		got := s.Export().Sites[0]
+		if got.Cells != tc.cells || got.Qty != tc.qty || v.Sites[0].Cells != 0 {
+			t.Fatalf("legacy site %+v, want %d cells", got, tc.cells)
+		}
+		if Import(s.Export()).Export().Sites[0] != got {
+			t.Fatal("migration was not idempotent")
+		}
 	}
 }

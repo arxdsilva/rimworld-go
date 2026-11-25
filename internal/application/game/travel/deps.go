@@ -43,7 +43,7 @@ type Sites interface {
 	StructVer() uint64
 	BuildingIDs() []entity.EntityID
 	Building(id entity.EntityID) (construction.Building, bool)
-	Powered(id entity.EntityID) bool
+	ScanSite
 	// Fuel and SetFuel are a launcher's chemfuel, in whole units.
 	Fuel(id entity.EntityID) int
 	SetFuel(id entity.EntityID, units int)
@@ -51,6 +51,12 @@ type Sites interface {
 	Remove(id entity.EntityID)
 	// Explode bursts d at (x, y) (a stasis casket blowing up).
 	Explode(x, y int, d explosion.Def)
+}
+
+// ScanSite is the two independent requirements of a scanner.
+type ScanSite interface {
+	Powered(entity.EntityID) bool
+	SkyClear(construction.Building) bool
 }
 
 // People is the colony's pawns and its off-map stash.
@@ -162,6 +168,8 @@ type Landings interface {
 	// Found has caravan cid found it (game/maps, MAP-06).
 	FoundReason(t int) string
 	Found(cid uint64) string
+	// LandedCargo refreshes the caravan after the pod hold is committed.
+	LandedCargo(cid uint64)
 }
 
 // Colony is the colony-wide inputs and outputs.

@@ -506,6 +506,11 @@ func isSwapLabel(s string) bool { return strings.Contains(s, "→") }
 // dragged span, or the hovered cell when not dragging. An area tool in
 // the rectangle style gets its two corners; in the oval style every cell.
 func (t *Tool) PreviewCells() (ToolDef, []GhostCell) {
+	return placementCells(t, archMaxGhost)
+}
+
+// placementCells limits rendering work only; submission validates the entire drag.
+func placementCells(t *Tool, limit int) (ToolDef, []GhostCell) {
 	d, ok := ToolByID(t.ToolID)
 	sim := t.sim()
 	if !ok || sim == nil {
@@ -524,8 +529,8 @@ func (t *Tool) PreviewCells() (ToolDef, []GhostCell) {
 		return d, out
 	}
 	cells := ShapeCells(style, [2]int{x0, y0}, [2]int{x1, y1}, false)
-	if len(cells) > archMaxGhost {
-		cells = cells[:archMaxGhost]
+	if limit > 0 && len(cells) > limit {
+		cells = cells[:limit]
 	}
 	out := make([]GhostCell, 0, len(cells))
 	stuff := t.ToolStuff(d)
@@ -569,7 +574,7 @@ func (t *Tool) Submit() {
 	if t.sim() == nil {
 		return
 	}
-	d, cells := t.PreviewCells()
+	d, cells := placementCells(t, 0)
 	if d.ID == "" || d.Planned { // a placeholder never places anything
 		return
 	}

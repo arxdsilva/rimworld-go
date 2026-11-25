@@ -47,7 +47,14 @@ func (d *commsDraft) giftOf(id int) int {
 	if !ok {
 		n = CommsGiftStart
 	}
-	return max(1, min(n, max(1, d.view.BeaconSilver)))
+	minimum := 1
+	for _, f := range d.view.Factions {
+		if f.ID == id {
+			minimum = max(1, f.Gift.Cost)
+			break
+		}
+	}
+	return max(1, min(max(n, minimum), max(1, d.view.BeaconSilver)))
 }
 
 // stepGift moves faction id's gift amount.
@@ -88,6 +95,9 @@ func commsReason(tr lang.Tr, act game.CommsActionView) string {
 	}
 	if act.Reason == "" {
 		return tr.T("Not available.")
+	}
+	if act.Reason == game.ReasonNoGiftGain {
+		return tr.T("goodwill cannot increase")
 	}
 	return act.Reason
 }
@@ -175,7 +185,7 @@ func (dl *Dealings) commsFaction(d *commsDraft, f game.CommsFactionView, r gfx.R
 	if gift.Allowed && d.view.BeaconSilver < 1 {
 		why = noSilverReason(dl.sh)
 	}
-	if dl.kit().Button(fmt.Sprintf("comms.%d.giftless", id), gfx.Rect{X: r.X + 10, Y: by, W: 30, H: h}, "-", uikit.BtnOpts{Disabled: amount <= 1, Reason: dl.sh.T("Least is 1 silver.")}) {
+	if dl.kit().Button(fmt.Sprintf("comms.%d.giftless", id), gfx.Rect{X: r.X + 10, Y: by, W: 30, H: h}, "-", uikit.BtnOpts{Disabled: amount <= max(1, gift.Cost), Reason: dl.sh.Tf("Least is %d silver for goodwill.", max(1, gift.Cost))}) {
 		d.stepGift(id, -CommsGiftStep*qtyMult(dl.kit()))
 	}
 	dl.kit().Label(r.X+46, by+7, fmt.Sprintf("%d", amount), gfx.Label)
@@ -183,7 +193,7 @@ func (dl *Dealings) commsFaction(d *commsDraft, f game.CommsFactionView, r gfx.R
 		Disabled: amount >= d.view.BeaconSilver, Reason: dl.sh.T("That is all the silver in reach.")}) {
 		d.stepGift(id, CommsGiftStep*qtyMult(dl.kit()))
 	}
-	earn := faction.GiftGoodwill(amount)
+	earn := faction.GiftGoodwill(faction.Faction{Type: f.FactionType, Goodwill: f.Goodwill}, amount)
 	if dl.kit().Button(fmt.Sprintf("comms.%d.gift", id), gfx.Rect{X: r.X + 124, Y: by, W: 170, H: h}, dl.sh.T("Gift silver"), uikit.BtnOpts{
 		Disabled: why != "", Reason: why, Tip: dl.sh.Tf("Gift\nGives %d silver for about %+d goodwill.", amount, earn)}) {
 		dl.sh.Enqueue(command.Command{Kind: command.CommsGift, Index: id, Count: amount})

@@ -136,7 +136,7 @@ func TestMolotovIgnitesAndBurns(t *testing.T) {
 func TestEMPStunsTurret(t *testing.T) {
 	t.Parallel()
 	f, _ := turretRig(t)
-	c := New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f})
+	c := New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f})
 	tu := c.Turrets
 	f.pawn(1, 11, 5, weapon.Fists)
 	emp := weapon.DefOf(weapon.EMPGrenade).Blast

@@ -220,6 +220,9 @@ func (a Pawn) drawNeedsTab(screen *ebiten.Image, id entity.EntityID, r gfx.Rect)
 		pct   int
 		label string
 	}{{p.Health, "health"}, {p.Hunger, "food"}, {p.Rest, "rest"}, {p.Recreation, "fun"}, {p.Comfort, "comfort"}, {p.Beauty, "beauty"}, {p.Outdoors, "outdoors"}, {p.Mood, "mood"}}
+	if p.NoRecreation {
+		needs = append(needs[:3], needs[4:]...)
+	}
 	for i, n := range needs {
 		by := y + i*insBarStep
 		if float32(by+13) > in.Bottom() {

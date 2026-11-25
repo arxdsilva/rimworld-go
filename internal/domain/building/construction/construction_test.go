@@ -46,7 +46,7 @@ func TestDefsAreConsistent(t *testing.T) {
 
 func TestRefundAndFacing(t *testing.T) {
 	t.Parallel()
-	if Refund(SleepingSpot) != 0 || Refund(Bed) != 2 || Refund(Floor) != 0 {
+	if Refund(SleepingSpot) != 0 || Refund(Bed) != 2 || Refund(Floor) != 1 {
 		t.Fatalf("refund spot=%d bed=%d floor=%d", Refund(SleepingSpot), Refund(Bed), Refund(Floor))
 	}
 	if !SleepingSpot.Instant() || Bed.Instant() || !SleepingSpot.Sleeps() {
@@ -127,20 +127,20 @@ func frontMiddle(cells [][2]int, f Facing) [2]int {
 
 func TestDoubleBedHoldsTwo(t *testing.T) {
 	b := Building{Kind: DoubleBed}
-	b = b.Claim(7)
-	if !b.CanClaim(9) {
+	b = ClaimBed(b, 7)
+	if !CanClaimBed(b, 9) {
 		t.Fatal("second slot is free")
 	}
-	b = b.Claim(9)
-	if b.CanClaim(11) || b.SlotOf(7) != 0 || b.SlotOf(9) != 1 || b.Owner(11) != 7 {
+	b = ClaimBed(b, 9)
+	if CanClaimBed(b, 11) || BedSlot(b, 7) != 0 || BedSlot(b, 9) != 1 || BedOwner(b, 11) != 7 {
 		t.Fatalf("full double bed: %+v", b)
 	}
-	b = b.Release(7)
-	if !b.CanClaim(11) || b.SlotOf(9) != 1 {
+	b = ReleaseBed(b, 7)
+	if !CanClaimBed(b, 11) || BedSlot(b, 9) != 1 {
 		t.Fatal("releasing frees exactly that slot")
 	}
-	single := Building{Kind: Bed}.Claim(7)
-	if single.CanClaim(9) || single.Claim(9).SlotOf(9) != -1 {
+	single := ClaimBed(Building{Kind: Bed}, 7)
+	if CanClaimBed(single, 9) || BedSlot(ClaimBed(single, 9), 9) != -1 {
 		t.Fatal("a single bed holds one")
 	}
 	x0, y0 := SleepCell(DoubleBed, South, 4, 4, 0)
@@ -229,5 +229,21 @@ func TestElectricityKinds(t *testing.T) {
 		if RecipeBench(k) != k {
 			t.Errorf("RecipeBench(%s) = %s", k, RecipeBench(k))
 		}
+	}
+}
+
+func TestParseEveryDefinitionMatchesNativeOrder(t *testing.T) {
+	for _, d := range All() {
+		for _, first := range All() {
+			if first.Name == d.Name {
+				if got, ok := Parse(d.Name); !ok || got != first.Kind {
+					t.Fatalf("parse %q = %v/%v", d.Name, got, ok)
+				}
+				break
+			}
+		}
+	}
+	if _, ok := Parse("not a building"); ok {
+		t.Fatal("unknown accepted")
 	}
 }

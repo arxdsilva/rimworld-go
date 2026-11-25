@@ -40,16 +40,12 @@ func TestAtTablePrefersSeats(t *testing.T) {
 	s := New(f)
 	f.bed(1, construction.Table, 10, 10) // A2: the 1x2 table, (10, 10) and (10, 11)
 	f.bldgIDs = append(f.bldgIDs, 99)    // a building gone from the store
-	// food at (10, 14): the south seat (10, 12) is nearest; a stool to
-	// the east is worth 4 steps, an armchair to the west 7
-	if x, y, ok := s.Seats.AtTable(9, 10, 14); !ok || x != 10 || y != 12 {
-		t.Fatalf("bare table: %d,%d %v", x, y, ok)
+	// a table without a free chair does not offer a dining seat.
+	// A stool then an armchair introduce two usable spots.
+	f.pawn(9, 10, 14)
+	if _, _, ok := s.Seats.AtTable(9, 10, 14); ok {
+		t.Fatal("table without a chair is not a reservable sitting surface")
 	}
-	f.unreachable[[2]int{10, 9}] = true // food to the north: of the two cells 3 away, the left
-	if x, y, _ := s.Seats.AtTable(9, 10, 7); x != 9 || y != 10 {
-		t.Fatalf("tie: %d,%d", x, y)
-	}
-	delete(f.unreachable, [2]int{10, 9})
 	f.bed(2, construction.Stool, 11, 11)
 	if x, y, _ := s.Seats.AtTable(9, 10, 14); x != 11 || y != 11 {
 		t.Fatalf("stool: %d,%d", x, y)
@@ -62,8 +58,8 @@ func TestAtTablePrefersSeats(t *testing.T) {
 	f.taken[[2]int{9, 11}] = 7
 	f.unreachable[[2]int{11, 11}] = true
 	f.bed(4, construction.EndTable, 10, 12)
-	if x, y, _ := s.Seats.AtTable(9, 10, 14); x != 9 || y != 10 {
-		t.Fatalf("leftover: %d,%d", x, y)
+	if _, _, ok := s.Seats.AtTable(9, 10, 14); ok {
+		t.Fatal("all dining chairs blocked; cannot reserve bare table-side floor")
 	}
 	if _, _, ok := s.Seats.AtTable(9, 100, 100); ok {
 		t.Fatal("a table out of reach")
@@ -255,9 +251,9 @@ func TestBedded(t *testing.T) {
 	f.bed(12, construction.AnimalBed, 7, 7)
 	f.bed(13, construction.Bed, 9, 9) // forbidden: no one's
 	f.bed(14, construction.HospitalBed, 11, 11)
-	f.bldgs[10] = f.bldgs[10].Claim(1).Claim(2)
-	f.bldgs[11] = f.bldgs[11].Claim(3)
-	f.bldgs[12] = f.bldgs[12].Claim(4) // an animal bed is no colonist's bed
+	f.bldgs[10] = construction.ClaimBed(construction.ClaimBed(f.bldgs[10], 1), 2)
+	f.bldgs[11] = construction.ClaimBed(f.bldgs[11], 3)
+	f.bldgs[12] = construction.ClaimBed(f.bldgs[12], 4) // an animal bed is no colonist's bed
 	b := f.bldgs[13]
 	b.Forbidden = true
 	f.bldgs[13] = b
@@ -273,16 +269,60 @@ func TestBedded(t *testing.T) {
 		t.Fatalf("bedded %v", h)
 	}
 	// the spot freed: the first bedless colonist in order gets it, one only
-	f.bldgs[11] = f.bldgs[11].Release(3)
+	f.bldgs[11] = construction.ReleaseBed(f.bldgs[11], 3)
 	if h := s.Beds.Bedded(ids); len(h) != 3 || !h[1] || !h[2] || !h[3] || h[5] || h[6] {
 		t.Fatalf("one free spot %v", h)
 	}
-	f.bldgs[10] = f.bldgs[10].Release(2) // 2 now bedless too: two free slots for 2 and 3
+	f.bldgs[10] = construction.ReleaseBed(f.bldgs[10], 2) // 2 now bedless too: two free slots for 2 and 3
 	if h := s.Beds.Bedded(ids); len(h) != 3 || !h[1] || !h[2] || !h[3] || h[5] {
 		t.Fatalf("two free slots %v", h)
 	}
 	f.bed(16, construction.Bedroll, 15, 15) // a third free slot reaches 5, never the prisoner 4
 	if h := s.Beds.Bedded(ids); len(h) != 4 || h[4] || !h[5] || h[6] {
 		t.Fatalf("two free slots %v", h)
+	}
+}
+
+func TestColonyAIVanillaIngestSeatSearchUsesPawnRadiusAndRealSeat(t *testing.T) {
+	f := newFake()
+	s := New(f)
+	f.pawn(9, 4, 4)
+	f.bed(1, construction.Table, 35, 4)
+	f.bed(2, construction.Chair, 34, 4) // 30 steps from pawn, reachable
+	if x, y, ok := s.Seats.AtTable(9, 0, 0); !ok || x != 34 || y != 4 {
+		t.Fatalf("expected seat within pawn-centered radius despite distant food: %d,%d %v", x, y, ok)
+	}
+	f.pawn(9, 1, 4)
+	if _, _, ok := s.Seats.AtTable(9, 0, 0); ok {
+		t.Fatal("chair outside pawn-centered radius should not be selected")
+	}
+	f.pawn(9, 4, 4)
+	b := f.bldgs[2]
+	b.Forbidden = true
+	f.bldgs[2] = b
+	if _, _, ok := s.Seats.AtTable(9, 4, 4); ok {
+		t.Fatal("forbidden chair cannot be a valid dining seat; free table-side floor is not a chair")
+	}
+}
+
+func TestColonyAIVanillaIngestChecksAllSeatsAfterEightBlocked(t *testing.T) {
+	f := newFake()
+	s := New(f)
+	f.pawn(9, 10, 7)
+	f.bed(1, construction.Table2x2, 10, 10)
+	f.bed(2, construction.Table2x2, 16, 10)
+	// First table has eight physically seated candidates, all unreachable.
+	for i, c := range construction.SeatCells(construction.Table2x2, construction.South, 10, 10) {
+		f.bed(entity.EntityID(100+i), construction.Stool, c[0], c[1])
+		f.unreachable[c] = true
+	}
+	// The ninth candidate is reachable and is an allowed seat.
+	f.bed(300, construction.Armchair, 16, 9)
+	if x, y, ok := s.Seats.AtTable(9, 10, 11); !ok || x != 16 || y != 9 {
+		t.Fatalf("8 blocked candidates hid the reachable ninth chair: %d,%d %v", x, y, ok)
+	}
+	f.outside[[2]int{16, 9}] = true
+	if _, _, ok := s.Seats.AtTable(9, 10, 11); ok {
+		t.Fatal("chair outside the resident's allowed area was selected")
 	}
 }

@@ -3,6 +3,8 @@
 
 package recreation
 
+import "rimworld-go/internal/domain/pawn/expectations"
+
 // Recreation tolerance and the variety rule (AX-6; wiki: Recreation).
 // Every joy kind a colonist enjoys builds a tolerance for that kind, two
 // thirds of the recreation it gave, and the tolerance cuts what the kind
@@ -38,19 +40,7 @@ type Tolerance struct {
 // wealth w (wiki: Recreation, by expectations: extremely low 18, very
 // low 13, low 11, moderate 10, high 8, sky-high 7).
 func DecayPct(w int) int {
-	switch {
-	case w < 15000:
-		return 18
-	case w < 31000:
-		return 13
-	case w < 81000:
-		return 11
-	case w < 182000:
-		return 10
-	case w < 308000:
-		return 8
-	}
-	return 7
+	return expectations.ForWealth(w).Effects().ToleranceDecayPct
 }
 
 // Decay wears the tolerances off from At to now at pct percent of Full a

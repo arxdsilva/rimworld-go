@@ -28,7 +28,7 @@ func (b fakeBelts) Belt(id entity.EntityID) (item.Kind, uint8) { return b[id], 0
 func gearRig() (*fakeHost, *Combat, fakeBelts) {
 	f := newFake(60, 30)
 	b := fakeBelts{}
-	c := New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Arms: fakeArms{f}, Draft: f, Belts: b})
+	c := New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Arms: fakeArms{f}, Draft: f, Belts: b})
 	return f, c, b
 }
 

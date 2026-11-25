@@ -33,7 +33,7 @@ func partsOf(c Capacity) []Part {
 	case Hearing:
 		return []Part{EarL, EarR}
 	case Talking:
-		return []Part{Jaw}
+		return []Part{Jaw, Tongue}
 	case Breathing:
 		return []Part{LungL, LungR}
 	case BloodPumping:
@@ -56,9 +56,9 @@ func (b *Body) partFactor(p Part) (Factor, bool) {
 	}
 	state := "hurt"
 	switch {
-	case b.isMissing(p) && b.fitted(p):
-		state = strings.ToLower(b.Implant(p).String())
-	case b.isMissing(p) && b.replaced(p):
+	case b.isMissing(p) && b.hasReplacement(p):
+		state = strings.ToLower(b.ReplacementAt(p).String())
+	case b.isMissing(p) && b.coveredByReplacement(p):
 		state = "prosthetic limb"
 	case b.isMissing(p):
 		state = "missing"

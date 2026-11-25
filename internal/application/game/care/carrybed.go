@@ -6,6 +6,7 @@ package care
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -36,13 +37,26 @@ func (c *Care) carryToBed(id entity.EntityID, j job.Record, trip bedTrip) {
 		}
 	}
 	if j.Dest == 0 {
+		x, y, _ := h.Pos(id)
+		if trip == tripRescue {
+			if !h.AirHeals(j.Target, x, y, 0) {
+				failCarry(c, id, j, trip)
+				return
+			}
+			if !h.GroundSafe(j.Target, id, x, y) {
+				// A new physical hazard may be avoidable without putting the
+				// patient down on the unsafe tile. Keep the actual carry relation.
+				if !redirectGround(c, id, j) {
+					failCarry(c, id, j, trip)
+				}
+				return
+			}
+		}
 		laySpot(c, id, j)
 		return
 	}
-	if b, ok := h.Building(j.Dest); !ok || trip != tripRescue && !b.ForPrisoners {
-		c.DropPatient(id)
-		j.State, j.Fail = job.Fail, job.TargetGone
-		h.SetJob(id, j)
+	if !arrivalBedOK(c, id, j.Target, j.Dest, trip) {
+		failCarry(c, id, j, trip)
 		return
 	}
 	t := j.Target
@@ -62,17 +76,91 @@ func (c *Care) carryToBed(id entity.EntityID, j job.Record, trip bedTrip) {
 // (0: none): for a rescue the safe bed the carrier can get beside, and
 // unreachable true when safe beds exist but the carrier can reach none.
 func (c *Care) tripBed(id, t entity.EntityID, x, y int, trip bedTrip) (bid entity.EntityID, unreachable bool) {
-	if trip != tripRescue {
-		bid, _ = c.pr.PrisonBedFor(t, x, y)
-		return bid, false
-	}
-	q := rescueQuery(c, t, x, y)
+	q := tripQuery(c, id, t, x, y, trip)
 	if bid = q.healBest(c); bid == 0 {
 		return 0, false
 	}
 	q.reacher = id
 	bid = q.healBest(c)
 	return bid, bid == 0
+}
+
+func tripQuery(c *Care, carrier, patient entity.EntityID, x, y int, trip bedTrip) bedQuery {
+	q := rescueQuery(c, patient, x, y)
+	q.carrier = carrier
+	if trip != tripRescue {
+		q.prison, q.heal, q.animal = true, false, false
+	}
+	return q
+}
+
+// arrivalBedOK rechecks the physical destination against live ownership,
+// bed type, forbidden/hazard status and clinical conditions before putting
+// the patient down. Existing carry jobs never silently claim a now invalid bed.
+func arrivalBedOK(c *Care, carrier, patient, bid entity.EntityID, trip bedTrip) bool {
+	h := c.h
+	b, ok := h.Building(bid)
+	if !ok {
+		return false
+	}
+	q := tripQuery(c, carrier, patient, b.X, b.Y, trip)
+	q.reacher = carrier
+	// For BedUnder's structural check (carrier zero), exposure retry
+	// remains the Doctor's separate decision.
+	if !q.eligible(c, bid, b) {
+		return false
+	}
+	if carrier == 0 {
+		q.heal = false
+	}
+	if q.bedWhy(c, bid, b) == "" {
+		return true
+	}
+	if !q.heal || q.best(c) != 0 || !q.fallbackAllowed(c) {
+		return false
+	}
+	q.heal = false
+	return q.bedWhy(c, bid, b) == ""
+}
+
+// failCarry ends the obsolete transport at the carrier's actual tile.
+// The normal terminal-job cleanup releases its reservations. A failed
+// exposure transfer must not retain the successful-move cooldown.
+func failCarry(c *Care, id entity.EntityID, j job.Record, trip bedTrip) {
+	c.DropPatient(id)
+	if trip == tripRescue && c.h.ExposureWait(j.Target) > c.h.Now() {
+		c.h.SetExposureWait(j.Target, c.h.Now())
+	}
+	j.State, j.Fail = job.Fail, job.TargetGone
+	c.h.SetJob(id, j)
+}
+
+// tripWhy is the shared destination pre-admission check for forced,
+// autonomous rescue, capture and warden transport. It has no job effects.
+func tripWhy(c *Care, doer, target entity.EntityID, trip bedTrip) string {
+	px, py, _ := c.h.Pos(target)
+	bid, blocked := c.tripBed(doer, target, px, py, trip)
+	if bid != 0 {
+		return ""
+	}
+	if blocked {
+		return ReasonUnreachable
+	}
+	if trip == tripRescue && c.Doctor.exposureStuck(target) {
+		if x, y, ok := c.h.HealingSpotFor(target, doer); ok {
+			if _, ok = c.h.PathTo(doer, x, y); ok {
+				return ""
+			}
+			return ReasonUnreachable
+		}
+	}
+	if why := tripQuery(c, doer, target, px, py, trip).refusal(c); why != "" {
+		return why
+	}
+	if trip != tripRescue {
+		return ReasonNoPrisonBed
+	}
+	return ReasonNoBed
 }
 
 // setOff reserves the trip's bed, paths carrier id beside it and picks
@@ -135,11 +223,11 @@ func (c *Care) layInBed(patient, bid entity.EntityID, hold bool) {
 	switch {
 	case !hold:
 		h.ReleaseBed(patient)
-	case IsMedicalBed(b) || b.SlotOf(uint64(patient)) < 0:
+	case IsMedicalBed(b) || construction.BedSlot(b, uint64(patient)) < 0:
 		c.Rest.Hold(patient, bid)
 	}
 	b, _ = h.Building(bid)
-	b = b.Claim(uint64(patient))
+	b = construction.ClaimBed(b, uint64(patient))
 	h.SetBuilding(bid, b)
 	cx, cy := h.SleepCell(patient, b)
 	h.Place(patient, cx, cy)
@@ -153,7 +241,7 @@ func (c *Care) layInBed(patient, bid entity.EntityID, hold bool) {
 // there, the patient waits ExposureRetry.
 func setOffToSpot(c *Care, id entity.EntityID, j job.Record) (job.Record, bool) {
 	h := c.h
-	sx, sy, ok := h.HealingSpot(j.Target)
+	sx, sy, ok := h.HealingSpotFor(j.Target, id)
 	var path []pathing.Point
 	if ok {
 		path, ok = h.PathTo(id, sx, sy)
@@ -172,6 +260,23 @@ func setOffToSpot(c *Care, id entity.EntityID, j job.Record) (job.Record, bool) 
 	}
 	h.SetJob(id, j)
 	return j, true
+}
+
+// redirectGround replans an in-flight ground rescue through the same live
+// admission policy, without teleporting, re-picking or emitting success.
+func redirectGround(c *Care, id entity.EntityID, j job.Record) bool {
+	h := c.h
+	x, y, ok := h.HealingSpotFor(j.Target, id)
+	if !ok || !h.GroundSafe(j.Target, id, x, y) {
+		return false
+	}
+	path, ok := h.PathTo(id, x, y)
+	if !ok || len(path) == 0 {
+		return false
+	}
+	j.TX, j.TY, j.Path, j.PathI, j.State = x, y, path, 0, job.Goto
+	h.SetJob(id, j)
+	return true
 }
 
 // holdExposure: a rescue lifting patient t out of air that won't heal its

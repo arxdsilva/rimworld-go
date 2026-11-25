@@ -48,3 +48,34 @@ func TestJourneyWorkColumnsFollowOrder(t *testing.T) {
 		t.Fatalf("SetWorkPriority %+v (sent %v), want hauling priority %d", c, ok, want)
 	}
 }
+
+func TestJourneyWorkArtAndSimpleMode(t *testing.T) {
+	j := newJourney(t)
+	id := uint64(j.g.Snapshot()[0].ID)
+	j.key("F1", 0)
+	j.update(1)
+	cell := ids.PrefixWorkCell + strconv.FormatUint(id, 10) + "." + strconv.Itoa(int(work.Art))
+	before := j.pawn(id).Priorities[work.Art]
+	if !j.clickID(ids.WorkMode) {
+		t.Fatal("simple mode absent")
+	}
+	if j.pawn(id).Priorities[work.Art] != before {
+		t.Fatal("mode switch mutated priority")
+	}
+	if !j.clickID(cell) {
+		t.Fatal("Art checkbox absent")
+	}
+	c, ok := j.lastCmd(command.SetWorkEnabled)
+	if !ok || c.Work != command.WorkArt || c.Enabled != (before == 0) {
+		t.Fatalf("incorrect simple command %+v", c)
+	}
+	if !j.clickID(ids.WorkMode) || !j.clickID(cell) {
+		t.Fatal("manual Art cell absent")
+	}
+	c, ok = j.lastCmd(command.SetWorkPriority)
+	if !ok || c.Work != command.WorkArt {
+		t.Fatalf("incorrect manual command %+v", c)
+	}
+	j.clickID(ids.WorkNameSort)
+	j.clickID(ids.PrefixWorkHead + strconv.Itoa(int(work.Art)))
+}

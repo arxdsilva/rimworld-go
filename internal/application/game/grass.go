@@ -5,7 +5,6 @@ package game
 
 import (
 	"container/heap"
-	"encoding/binary"
 	"sort"
 
 	"rimworld-go/internal/application/game/snow"
@@ -90,21 +89,7 @@ func (g *Game) seedGrass() *grassState {
 			}
 		}
 	}
-	for _, id := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(id); ok {
-			g.bareFootprint(s, b.Kind, b.Facing, b.X, b.Y)
-		}
-	}
-	for _, id := range g.frameIDs {
-		if f, ok := g.frames.Get(id); ok {
-			g.bareFootprint(s, f.Kind, f.Facing, f.X, f.Y)
-		}
-	}
-	for _, id := range g.plantIDs {
-		if p, ok := g.plants.Get(id); ok && g.grid.InBounds(p.X, p.Y) {
-			s.cells[p.Y*w+p.X] = 0
-		}
-	}
+	clearGrassFootprints(g, s)
 	return s
 }
 
@@ -196,21 +181,11 @@ func grassFingerprint(s *grassState) uint64 {
 	if s.fpOK && s.fpVer == s.ver {
 		return s.fp
 	}
-	h := uint64(0xcbf29ce484222325)
-	mix := func(b []uint8) {
-		for len(b) >= 8 {
-			h = (h ^ binary.LittleEndian.Uint64(b)) * 0x100000001b3
-			h ^= h >> 29
-			b = b[8:]
-		}
-		for _, v := range b {
-			h = (h ^ uint64(v)) * 0x100000001b3
-		}
+	growth := s.growth
+	if s.nGrowing == 0 {
+		growth = nil
 	}
-	mix(s.cells)
-	if s.nGrowing > 0 {
-		mix(s.growth)
-	}
+	h := plant.GrassFingerprint(s.cells, growth)
 	s.fp, s.fpVer, s.fpOK = h|1, s.ver, true // never 0: 0 reads "no grass data"
 	return s.fp
 }
@@ -559,6 +534,26 @@ func (g *Game) importGrassGrowth(v []uint8) {
 	for i, x := range v {
 		if x != 0 && s.cells[i] == 1 {
 			g.startGrowing(s, int32(i), int(x))
+		}
+	}
+}
+
+// clearGrassFootprints keeps both generated and terrain-seeded grass bare under objects.
+func clearGrassFootprints(g *Game, s *grassState) {
+	w := g.grid.Width()
+	for _, id := range g.bldgIDs {
+		if b, ok := g.bldgs.Get(id); ok {
+			g.bareFootprint(s, b.Kind, b.Facing, b.X, b.Y)
+		}
+	}
+	for _, id := range g.frameIDs {
+		if f, ok := g.frames.Get(id); ok {
+			g.bareFootprint(s, f.Kind, f.Facing, f.X, f.Y)
+		}
+	}
+	for _, id := range g.plantIDs {
+		if p, ok := g.plants.Get(id); ok && g.grid.InBounds(p.X, p.Y) {
+			s.cells[p.Y*w+p.X] = 0
 		}
 	}
 }

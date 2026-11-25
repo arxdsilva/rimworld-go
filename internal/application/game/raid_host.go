@@ -39,7 +39,7 @@ var _ raid.Host = raidHost{}
 func newRaid(g *Game) *raid.Raid {
 	h := raidHost{raidRoster{g}, raidCaptives{g}, raidBodies{g}, combatJobs{g}, raidFight{g}, raidGround{g}, raidEvents{g}, combatDice{g}}
 	return raid.New(h, raid.Roles{Wild: raidWild{g}, Story: raidStory{g}, Mech: raidMech{g}, Arrive: raidArrive{g},
-		Mischief: raidMischief{g: g, wood: &woodIndex{}}, Siege: raidSiege{g}, Chronicle: g.combat.Log, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}, Senses: raidSenses{g}})
+		Mischief: raidMischief{g: g, wood: &woodIndex{}}, Siege: raidSiege{g}, Chronicle: g.combat.Log, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}, Senses: raidSenses{g}, Escape: newVisitHost(g)})
 }
 
 // raidSenses is raid.Senses (EAI-010, raid/sight.go): sight lines are
@@ -59,6 +59,34 @@ func (h raidSenses) Shooter(id entity.EntityID) entity.EntityID {
 		return 0
 	}
 	return by
+}
+
+func (h raidSenses) Eligible(source, target entity.EntityID) bool {
+	g := h.g
+	if source == target || !g.positions.Has(target) {
+		return false
+	}
+	if g.animals.Ref(target) != nil {
+		return g.combat.Tactics.RaidAnimalFoe(source, target)
+	}
+	if !g.standingPawn(target) || g.prison.Is(target) {
+		return false
+	}
+	if g.isAlly(target) {
+		return true
+	}
+	r, foreign := g.raiders[target]
+	if !foreign {
+		return colonistHere(g, target)
+	}
+	if !g.standingRaider(target) {
+		return false
+	}
+	mine := g.raiders[source].Group
+	if mine < 0 || mine >= len(g.raidGroups) || r.Group < 0 || r.Group >= len(g.raidGroups) {
+		return false
+	}
+	return (raidMischief{g: g}).Rival(g.raidGroups[mine].Faction, g.raidGroups[r.Group].Faction)
 }
 
 func (h raidSenses) Home() (x, y int) { return h.g.home() }
@@ -121,7 +149,12 @@ func (h raidFight) WalkableNear(x, y, r int) (int, int, bool) {
 func (h raidFight) Strike(id entity.EntityID, j job.Record, now uint64) {
 	h.g.combat.Strikes.Do(id, j, now)
 }
-func (h raidFight) Weapon(id entity.EntityID) weapon.Def { return weaponDefOf(h.g, id) }
+func (h raidFight) Weapon(id entity.EntityID) weapon.Def {
+	if a, ok := h.g.animals.Get(id); ok {
+		return weapon.DefOf(animal.DefOf(a.Species).Attack)
+	}
+	return weaponDefOf(h.g, id)
+}
 func (h raidFight) CanHit(x, y int, d weapon.Def, tx, ty int) bool {
 	return h.g.combat.Sight.CanHit(x, y, d, tx, ty)
 }
@@ -131,6 +164,10 @@ func (h raidFight) AimTicks(id entity.EntityID, d weapon.Def) int {
 func (h raidFight) Breach(id entity.EntityID, j job.Record) { h.g.combat.Breach.Do(id, j) }
 func (h raidFight) StartBreach(id entity.EntityID, tx, ty int) bool {
 	return h.g.combat.Breach.Start(id, tx, ty)
+}
+func (h raidFight) BreachRoute(id entity.EntityID, tx, ty int) bool {
+	_, ok := combatBreach(h).BreachRoute(id, tx, ty)
+	return ok
 }
 func (h raidFight) TurretFor(x, y, cd, sight int) (entity.EntityID, int, int, bool) {
 	return h.g.combat.Turrets.ForRaider(x, y, cd, sight)
@@ -249,8 +286,8 @@ func (h raidTactics) CoverSpot(id entity.EntityID, x, y, r int, d weapon.Def, tx
 	return h.g.combat.Tactics.BestCover(id, x, y, r, d, tx, ty)
 }
 func (h raidTactics) Danger(x, y int) (int, int, int, bool) { return h.g.combat.Tactics.Danger(x, y) }
-func (h raidTactics) Colonists(x, y, r int, buf []raid.Spot) []raid.Spot {
-	for _, s := range h.g.combat.Tactics.Colonists(x, y, r) {
+func (h raidTactics) Foes(source entity.EntityID, x, y, r int, buf []raid.Spot) []raid.Spot {
+	for _, s := range h.g.combat.Tactics.RaidFoes(source, x, y, r) {
 		buf = append(buf, raid.Spot(s))
 	}
 	return buf
@@ -279,6 +316,17 @@ func (h raidNest) HiveSpot(x, y int) bool {
 	g := h.g
 	return g.grid.InBounds(x, y) && g.roofAt(x, y).Roofed() && g.dryWalkable(x, y) && g.layerBldgAt(x, y, construction.LayerObject) == 0 &&
 		g.temperatureAt(x, y) > -170 && g.cellLightPermil(x, y) < 300
+}
+func (h raidNest) InfestationWeight(x, y int) int {
+	g := h.g
+	if !g.roofAt(x, y).Thick() || !g.dryWalkable(x, y) || g.layerBldgAt(x, y, construction.LayerObject) != 0 || !raid.NearColonyStructure(x, y, g.bldgIDs, g.bldgs.Get) {
+		return 0
+	}
+	cells := 0
+	if r := g.roomAt(x, y); r >= 0 && r < len(g.rooms) {
+		cells = g.rooms[r].contents.Cells
+	}
+	return raid.InfestationWeight(int(g.temperatureAt(x, y)), g.cellLightPermil(x, y), cells)
 }
 func (h raidNest) PlaceHive(x, y int) entity.EntityID {
 	return placeAncient(h.g, construction.HiveMound, x, y)

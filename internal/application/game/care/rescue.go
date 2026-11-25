@@ -69,7 +69,7 @@ func (c *patientRank) outranks(best *patientRank) bool {
 // (colonists, then prisoners; never one being carried or held by someone
 // else) for which want gives a job, and returns the first by outranks,
 // with the job's spot beside the patient filled in.
-func (d *Doctor) bestPatient(id entity.EntityID, want func(pid entity.EntityID) (job.Record, bool)) *patientRank {
+func (d *Doctor) bestPatient(id entity.EntityID, want func(pid entity.EntityID) (job.Record, bool), animals bool) *patientRank {
 	x, y, _ := d.h.Pos(id)
 	var best *patientRank
 	consider := func(pid entity.EntityID) {
@@ -100,6 +100,11 @@ func (d *Doctor) bestPatient(id entity.EntityID, want func(pid entity.EntityID) 
 	}
 	for _, pid := range d.h.RaiderIDs() {
 		if k := d.c.kindOf(pid); k == targetPrisoner || k == targetGuest || k == targetStranger {
+			consider(pid)
+		}
+	}
+	if animals {
+		for _, pid := range d.h.AnimalIDs() {
 			consider(pid)
 		}
 	}
@@ -147,11 +152,26 @@ func (d *Doctor) toSpot(pid entity.EntityID) bool {
 	return false
 }
 
+// rescueFor uses the same carrier-specific destination check as forced
+// orders. A downed pawn's own movement restrictions must not reject a
+// reachable rescue by someone else. Preserve the existing exposure retry
+// only when there is no healing spot at all, not merely no path for one doctor.
+func (d *Doctor) rescueFor(id, pid entity.EntityID) bool {
+	if !d.rescueEligible(pid) {
+		return false
+	}
+	if tripWhy(d.c, id, pid, tripRescue) == "" {
+		return true
+	}
+	d.toSpot(pid)
+	return false
+}
+
 // assignRescue carries the most urgent downed colonist to a bed.
 func (d *Doctor) assignRescue(id entity.EntityID) bool {
 	best := d.bestPatient(id, func(pid entity.EntityID) (job.Record, bool) {
-		return job.Record{Kind: job.Rescue, Target: pid}, d.Rescuable(pid)
-	})
+		return job.Record{Kind: job.Rescue, Target: pid}, d.rescueFor(id, pid)
+	}, true)
 	return best != nil && d.h.StartJob(id, best.rec)
 }
 
@@ -185,8 +205,11 @@ func (d *Doctor) PatientDied(id entity.EntityID) {
 // colonist or a guest the colony takes in (guest.go); Rescuable adds "a
 // free bed exists", which the order menu shows as a reason instead.
 func (d *Doctor) rescueEligible(pid entity.EntityID) bool {
-	if !d.InjuredDowned(pid) || d.h.IsPrisoner(pid) || d.h.BedUnder(pid) != 0 && !d.exposureStuck(pid) {
+	if !d.InjuredDowned(pid) || d.h.IsPrisoner(pid) {
 		return false
 	}
-	return d.h.IsColonist(pid) || d.c.Guest.Rescuable(pid)
+	if bid := d.h.BedUnder(pid); bid != 0 && arrivalBedOK(d.c, 0, pid, bid, tripRescue) && !d.exposureStuck(pid) {
+		return false
+	}
+	return d.h.IsColonist(pid) || d.h.TameAnimal(pid) || d.c.Guest.Rescuable(pid)
 }

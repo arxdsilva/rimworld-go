@@ -11,6 +11,8 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier"
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -179,4 +181,75 @@ func TestJourneyDossierPresetSaveLoad(t *testing.T) {
 		t.Fatalf("the bad look left %+v / %q behind", h.Layouts, h.Preset)
 	}
 	j.draw(2)
+}
+
+// A real tame animal exposes Haul in the card editor and the saved key builds a row.
+func TestJourneyDossierHaulDefinition(t *testing.T) {
+	j := newJourney(t)
+	pet, err := j.g.SpawnAnimal("husky", 12, 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j.g.TameAnimal(pet, "Rex")
+	dossierOn(j, true)
+	dossierClick(j, 12, 6)
+	j.a.dos.setup.Edit(func(h *config.HUD) {
+		h.Layouts.Docked = &config.HUDNode{Kind: sheet.KindColumn, Kids: []config.HUDNode{{Kind: "train", Def: "obedience"}}}
+	})
+	j.a.dos.setup.OpenAt(1)
+	j.update(2)
+	if !j.clickID("sec.tree.1") {
+		t.Fatal("training element missing")
+	}
+	j.update(2)
+	if !j.clickID("sec.def") {
+		t.Fatal("training definition picker missing")
+	}
+	j.update(2)
+	clickMenu(j, "sec.def", int(training.Haul))
+	h := j.a.settings.HUD.Layouts.Docked
+	if h == nil || len(h.Kids) != 1 || h.Kids[0].Def != "haul" {
+		t.Fatalf("haul not stored in edited tree: %+v", h)
+	}
+	if !j.clickID("modal.dossier.setup.close") {
+		t.Fatal("cannot close setup")
+	}
+	j.update(2)
+	j.draw(1)
+	if len(cardIDs(j, "dossier.d.")) != 1 {
+		t.Fatalf("haul row missing: %v", cardIDs(j, "dossier.d."))
+	}
+}
+
+func TestJourneyDossierDefaultHaul(t *testing.T) {
+	for _, docked := range []bool{true, false} {
+		j := newJourney(t)
+		pet, err := j.g.SpawnAnimal("husky", 12, 6)
+		if err != nil {
+			t.Fatal(err)
+		}
+		j.g.TameAnimal(pet, "Rex")
+		dossierOn(j, docked)
+		dossierClick(j, 12, 6)
+		if h := j.a.settings.HUD; h.Layouts.Docked != nil || h.Layouts.Floating != nil {
+			t.Fatal("fixture uses custom layout")
+		}
+		l := j.a.hud()
+		card := l.Card
+		if docked {
+			card = inspectorpkg.PaneLayout(l.Pane, j.a.insp.SelectionPane()).Card
+		}
+		if card.Empty() {
+			t.Fatal("default card not shown")
+		}
+		var drawn bool
+		events := thingTraceDraw(t, func() { j.draw(1) })
+		scale := float32(j.a.scale.S)
+		for _, e := range events {
+			drawn = drawn || (e.Text == "Haul" && e.X >= card.X*scale-0.5 && e.Y >= card.Y*scale-0.5 && e.X+e.W <= card.Right()*scale+0.5 && e.Y+e.H <= card.Bottom()*scale+0.5)
+		}
+		if !drawn {
+			t.Fatalf("default Haul row missing, docked=%v", docked)
+		}
+	}
 }

@@ -5,6 +5,7 @@ package game
 
 import (
 	"fmt"
+	"rimworld-go/internal/application/game/setupview"
 	"slices"
 	"sort"
 	"testing"
@@ -121,7 +122,7 @@ func TestMapGenerationPlacesTheSameVents(t *testing.T) {
 	for _, seed := range seeds {
 		s := setupFor(t, "broken_hull", func(s *Setup) { s.Seed = seed })
 		b := NewColonyBuilder(Config{Setup: s})
-		for i := 0; i <= buildSteps() && b.Game() == nil; i++ {
+		for i := 0; i <= setupview.BuildSteps() && b.Game() == nil; i++ {
 			b.Step(1)
 		}
 		g := b.Game()

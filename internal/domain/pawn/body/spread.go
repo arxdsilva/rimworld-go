@@ -29,7 +29,7 @@ func Spread(b *Body, dmg int, kind WoundKind, intn func(int) int, now uint64) {
 			break
 		}
 		hit := left
-		if room := b.PartDef(p).MaxHP - b.partDmg(p) - 1; hit > room && b.LossKills(p) {
+		if room := remainingHP(b, p) - 1; hit > room && b.LossKills(p) {
 			if room <= 0 {
 				continue
 			}

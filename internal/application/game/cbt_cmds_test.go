@@ -4,6 +4,7 @@
 package game
 
 import (
+	"reflect"
 	"testing"
 
 	"rimworld-go/internal/domain/sim/command"
@@ -46,5 +47,27 @@ func TestThreatResponseAndSmokepopCommands(t *testing.T) {
 	g.ApplyPending()
 	if after := view().Smokepops; after != before {
 		t.Fatalf("PopSmokepop without a pack changed uses %d -> %d", before, after)
+	}
+}
+
+func TestPlayerOrdersRejectRaiderAndPreserveNativeJob(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 30, Height: 20})
+	id, _ := g.SpawnNamedPawn(15, 10, "Ada")
+	g.Raid(1)
+	rid := g.raiderIDs[0]
+	before, _ := g.jobs.Get(rid)
+	for _, k := range []command.Kind{command.MovePawn, command.DraftPawn, command.Prioritize} {
+		g.Enqueue(command.Command{Kind: k, Pawn: uint64(rid), X: 2, Y: 2, Enabled: true, Queue: true})
+		g.Enqueue(command.Command{Kind: k, Pawn: uint64(rid), X: 2, Y: 2, Enabled: true})
+	}
+	g.ApplyPending()
+	after, _ := g.jobs.Get(rid)
+	if !reflect.DeepEqual(before, after) || g.draft[rid] || len(g.orderQueue[rid]) != 0 {
+		t.Fatal("player orders mutated raider")
+	}
+	g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(id), Enabled: true})
+	g.ApplyPending()
+	if !g.draft[id] {
+		t.Fatal("own resident draft not admitted")
 	}
 }

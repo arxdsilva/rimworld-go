@@ -126,3 +126,11 @@ func TestInsulationByStuffAndQuality(t *testing.T) {
 		t.Fatal("a good duster shades better")
 	}
 }
+
+func TestGrenadeQualityCondition(t *testing.T) {
+	for _, k := range []Kind{FragGrenades, MolotovCocktails, EMPGrenades} {
+		if !HasQuality(k) || MaxHP(k) <= 0 || k.StackLimit() != 1 {
+			t.Fatalf("grenade quality/condition %v", k)
+		}
+	}
+}

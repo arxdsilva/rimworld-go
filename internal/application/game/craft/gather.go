@@ -66,7 +66,7 @@ type planBuf struct{ cands, picks []pick }
 // in its ingredient source, if it names one (RES-1).
 func (p planner) fits(bl recipe.Bill, st item.Stack, spot [2]int) bool {
 	// FOOD-3: a rotten body only burns (wiki: Corpse)
-	return bl.Allows(st.Kind) && (!st.Rotten() || bl.Recipe == recipe.Cremate) && (bl.Radius <= 0 || pathing.Dist(spot[0], spot[1], st.X, st.Y) <= bl.Radius) &&
+	return bl.AllowsStack(st) && (!st.Rotten() || bl.Recipe == recipe.Cremate) && (bl.Radius <= 0 || pathing.Dist(spot[0], spot[1], st.X, st.Y) <= bl.Radius) &&
 		(bl.Source == 0 || p.h.InSource(bl.Source, st.X, st.Y))
 }
 

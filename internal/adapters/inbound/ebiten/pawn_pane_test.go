@@ -616,7 +616,7 @@ func tabFixture() *stubSim {
 		Pain:       12,
 		Capacities: []game.CapacityView{{Label: "Moving", Pct: 85}, {Label: "Manipulation", Pct: 100}, {Label: "Sight", Pct: 60}, {Label: "Consciousness", Pct: 100}},
 		Parts:      []game.PartView{{Label: "left leg", Status: "missing"}, {Label: "right arm", Status: game.PartWounded}},
-		Operations: []game.OperationView{{Label: "Install bionic arm", Slot: 0}},
+		Operations: []game.OperationView{{Label: "Install servo arm", Slot: 0}},
 	}}
 	s.social = map[entity.EntityID]game.SocialView{1: socialFixture()}
 	return s

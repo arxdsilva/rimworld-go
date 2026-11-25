@@ -18,22 +18,26 @@ func TestDefTable(t *testing.T) {
 		tech          Tech
 		min, max      int
 		fixed, friend bool
-		baseline      int
 		perTenK       int
 		titles        string
 		points        int
 	}
 	rows := []row{
-		{Settlers, "settlers", Industrial, -20, 60, false, true, 10, 12, "Warden,Steward", 100},
-		{Clans, "clans", Neolithic, -40, 40, false, true, 0, 16, "Elder,Hearth-mother,Hearth-father", 100},
-		{Drifters, "drifters", Industrial, -90, 10, false, true, -30, 10, "Boss,Caller", 100},
-		{Freebooters, "freebooters", Industrial, -100, -100, true, false, -100, 8, "Captain,Ringleader", 120},
-		{Swarm, "swarm", Neolithic, -100, -100, true, false, -100, 0, "", 100},
+		{Settlers, "settlers", Industrial, -50, 50, false, true, 12, "Warden,Steward", 100},
+		{Clans, "clans", Neolithic, -50, 50, false, true, 16, "Elder,Hearth-mother,Hearth-father", 100},
+		{Drifters, "drifters", Industrial, -100, -80, false, true, 10, "Boss,Caller", 100},
+		{Freebooters, "freebooters", Industrial, -100, -100, true, false, 8, "Captain,Ringleader", 120},
+		{Swarm, "swarm", Neolithic, -100, -100, true, false, 0, "", 100},
+		{FierceClans, "fierce-clans", Neolithic, -100, -80, false, true, 16, "Elder,Hearth-mother,Hearth-father", 100},
+		{SavageClans, "savage-clans", Neolithic, -100, -100, true, false, 16, "Elder,Hearth-mother,Hearth-father", 120},
+		{AncientQuiet, "old-kin", Spacer, 0, 0, false, true, 0, "", 100},
+		{AncientHostile, "lost-kin", Spacer, -100, -100, true, false, 0, "", 100},
+		{MechHive, "iron-host", Spacer, -100, -100, true, false, 0, "", 100},
 	}
 	for _, r := range rows {
 		d := DefOf(r.t)
 		if d.Type != r.t || d.Key != r.key || d.Tech != r.tech || d.GoodwillMin != r.min || d.GoodwillMax != r.max ||
-			d.Fixed != r.fixed || d.CanBeFriendly != r.friend || d.Baseline != r.baseline || d.PerTenK != r.perTenK ||
+			d.Fixed != r.fixed || d.CanBeFriendly != r.friend || d.PerTenK != r.perTenK ||
 			strings.Join(d.Leaders, ",") != r.titles || d.PointsPct != r.points {
 			t.Errorf("%s: %+v", r.key, d)
 		}
@@ -59,7 +63,7 @@ func TestDefTable(t *testing.T) {
 		t.Error("DefOf returns a copy")
 	}
 	slots := DefaultSlots()
-	want := []Slot{{Settlers, 2}, {Clans, 2}, {Drifters, 1}, {Freebooters, 1}}
+	want := []Slot{{Settlers, 1}, {Drifters, 1}, {Clans, 1}, {FierceClans, 1}, {SavageClans, 1}, {Freebooters, 1}}
 	if len(slots) != len(want) {
 		t.Fatalf("slots %v", slots)
 	}
@@ -68,12 +72,12 @@ func TestDefTable(t *testing.T) {
 			t.Errorf("slot %d: %v", i, slots[i])
 		}
 	}
-	for _, ty := range []Type{Settlers, Clans, Drifters, Freebooters} {
+	for _, ty := range []Type{Settlers, Clans, Drifters, Freebooters, FierceClans, SavageClans} {
 		if !ty.Human() {
 			t.Errorf("%v is human", ty)
 		}
 	}
-	if Swarm.Human() || Player.Human() || NumTypes.Human() {
+	if Swarm.Human() || MechHive.Human() || Player.Human() || NumTypes.Human() {
 		t.Error("swarm, player and unknown are not human")
 	}
 }
@@ -97,8 +101,15 @@ func TestGenerate(t *testing.T) {
 		if len(f.History) != 1 || int(f.History[0]) != f.Goodwill {
 			t.Errorf("%s history %v", f.Name, f.History)
 		}
-		if f.Type == Freebooters && f.Relation != Hostile {
-			t.Errorf("freebooters start hostile")
+		switch f.Type {
+		case Settlers, Clans:
+			if f.Relation != Neutral {
+				t.Errorf("%s starts neutral: %+v", f.Type, f)
+			}
+		case Drifters, FierceClans, SavageClans, Freebooters:
+			if f.Relation != Hostile {
+				t.Errorf("%s starts hostile: %+v", f.Type, f)
+			}
 		}
 		if f.Relation == Friendly && !d.CanBeFriendly {
 			t.Errorf("%s friendly but cannot be", f.Name)
@@ -111,7 +122,8 @@ func TestGenerate(t *testing.T) {
 			t.Errorf("%s: title %q not in %v", f.Name, f.Leader.Title, d.Leaders)
 		}
 	}
-	if counts[Settlers] != 2 || counts[Clans] != 2 || counts[Drifters] != 1 || counts[Freebooters] != 1 {
+	if counts[Settlers] != 1 || counts[Clans] != 1 || counts[Drifters] != 1 ||
+		counts[Freebooters] != 1 || counts[FierceClans] != 1 || counts[SavageClans] != 1 {
 		t.Errorf("counts %v", counts)
 	}
 	// Counts clamp to MaxCount; player slots and unknown types are skipped; swarm works.
@@ -224,74 +236,100 @@ func TestFactionHostilityHysteresis(t *testing.T) {
 
 func TestDailyDriftAndAdjust(t *testing.T) {
 	t.Parallel()
-	// Settlers at 60 drift to the +10 baseline, one point a day, and stay
-	// Friendly: an ally holds until goodwill reaches 0.
-	f := Faction{Type: Settlers, Goodwill: 60, Relation: Friendly}
-	for d := 0; d < 30; d++ {
+	f := Faction{Type: Settlers, Goodwill: 60, Relation: Neutral}
+	for range 5 {
 		DailyDrift(&f)
 	}
-	if f.Goodwill != 30 || f.Relation != Friendly {
-		t.Errorf("day 30: %d %v", f.Goodwill, f.Relation)
+	if f.Goodwill != 58 || f.DriftDay != 0 {
+		t.Fatalf("five high days: %+v", f)
 	}
-	DailyDrift(&f)
-	if f.Goodwill != 29 || f.Relation != Friendly {
-		t.Errorf("day 31: %d %v", f.Goodwill, f.Relation)
-	}
-	for d := 0; d < 100; d++ {
+	for range 20 {
 		DailyDrift(&f)
 	}
-	if f.Goodwill != 10 || f.Relation != Friendly {
-		t.Errorf("settles at baseline: %d %v", f.Goodwill, f.Relation)
+	if f.Goodwill != 50 {
+		t.Fatalf("upper natural goodwill limit: %+v", f)
 	}
-	if len(f.History) != HistoryDays || f.History[len(f.History)-1] != 10 {
-		t.Errorf("history keeps 60 days: %d", len(f.History))
+	for range 65 {
+		DailyDrift(&f)
 	}
-	// Up toward the baseline from below.
-	g := Faction{Type: Settlers, Goodwill: -40, Relation: Neutral}
-	DailyDrift(&g)
-	if g.Goodwill != -39 {
-		t.Errorf("rises toward +10: %d", g.Goodwill)
+	if f.Goodwill != 50 || len(f.History) != HistoryDays {
+		t.Fatalf("history and stable goodwill: %+v", f)
 	}
-	// Drifters hover at -30 and never calm down once hostile.
-	dr := Faction{Type: Drifters, Goodwill: -55, Relation: Hostile}
-	for d := 0; d < 200; d++ {
-		DailyDrift(&dr)
+	low := Faction{Type: Settlers, Goodwill: -60, Relation: Neutral}
+	for range 25 {
+		DailyDrift(&low)
 	}
-	if dr.Goodwill != -30 || dr.Relation != Hostile {
-		t.Errorf("drifters: %d %v", dr.Goodwill, dr.Relation)
+	if low.Goodwill != -55 || low.DriftDay != 0 {
+		t.Fatalf("low drift: %+v", low)
 	}
-	// Fixed types never move; the swarm and freebooters stay hostile.
-	for _, ty := range []Type{Freebooters, Swarm} {
-		fx := Faction{Type: ty, Goodwill: -100, Relation: Hostile}
-		for d := 0; d < 50; d++ {
-			DailyDrift(&fx)
+	for range 25 {
+		DailyDrift(&low)
+	}
+	if low.Goodwill != -50 {
+		t.Fatalf("natural floor: %+v", low)
+	}
+	rough := Faction{Type: Drifters, Goodwill: -20, Relation: Hostile}
+	for range 5 {
+		DailyDrift(&rough)
+	}
+	if rough.Goodwill != -22 || rough.Relation != Hostile {
+		t.Fatalf("rough faction natural range: %+v", rough)
+	}
+	for _, typ := range []Type{Freebooters, SavageClans, Swarm, MechHive, AncientHostile} {
+		fixed := Faction{Type: typ, Goodwill: -100, Relation: Hostile}
+		for range 50 {
+			DailyDrift(&fixed)
 		}
-		Adjust(&fx, 80, "gift")
-		if fx.Goodwill != -100 || fx.Relation != Hostile {
-			t.Errorf("%v moved: %d", ty, fx.Goodwill)
+		Adjust(&fixed, 100, "gift")
+		if fixed.Goodwill != -100 || fixed.Relation != Hostile {
+			t.Errorf("%s moved from fixed hostility: %+v", typ, fixed)
 		}
 	}
-	// Adjust: -5 for a repelled raid, clamps, keeps the last five events.
 	a := Faction{Type: Clans, Goodwill: 0}
 	for i := 0; i < 7; i++ {
 		Adjust(&a, -5, "raid repelled "+string(rune('a'+i)))
 	}
 	if a.Goodwill != -35 || len(a.Events) != EventCount || a.Events[0] != "raid repelled c" || a.Events[4] != "raid repelled g" {
-		t.Errorf("adjust: %d %v", a.Goodwill, a.Events)
+		t.Fatalf("goodwill ledger: %+v", a)
 	}
 	Adjust(&a, -500, "")
-	if a.Goodwill != -100 || a.Relation != Hostile || len(a.Events) != EventCount {
-		t.Errorf("clamp: %d %v", a.Goodwill, a.Relation)
+	if a.Goodwill != -100 || a.Relation != Hostile {
+		t.Fatalf("negative clamp: %+v", a)
 	}
 	Adjust(&a, 500, "")
 	if a.Goodwill != 100 || a.Relation != Friendly {
-		t.Errorf("clamp high: %d %v", a.Goodwill, a.Relation)
+		t.Fatalf("positive clamp: %+v", a)
 	}
-	// A type that cannot be friendly never is.
-	nf := Faction{Type: Freebooters, Goodwill: 90}
-	Update(&nf)
-	if nf.Relation == Friendly {
-		t.Error("freebooters cannot be friendly")
+}
+
+func TestHiddenFactionIdentificationAndVisiting(t *testing.T) {
+	t.Parallel()
+	for typ, emblem := range map[Type]string{
+		FierceClans:    "ui_icon/faction_clans",
+		SavageClans:    "ui_icon/faction_clans",
+		AncientQuiet:   "ui_icon/faction_settlers",
+		AncientHostile: "ui_icon/faction_freebooters",
+		MechHive:       "ui_icon/faction_swarm",
+	} {
+		if got := DefOf(typ).Emblem(); got != emblem {
+			t.Errorf("%s emblem %s, want %s", typ, got, emblem)
+		}
+	}
+	for _, typ := range []Type{AncientQuiet, AncientHostile, MechHive, Swarm} {
+		f := Faction{Type: typ, Relation: Neutral}
+		if typ.HasWorldSettlements() || f.CanVisit() || Raider(Faction{Type: typ, Relation: Hostile}) {
+			t.Errorf("%s hidden faction entered surface diplomacy", typ)
+		}
+	}
+	for _, typ := range []Type{Settlers, Clans, FierceClans, SavageClans, Drifters, Freebooters} {
+		f := Faction{Type: typ, Relation: Neutral}
+		if !typ.HasWorldSettlements() || !f.CanVisit() {
+			t.Errorf("%s surface type could not visit while neutral", typ)
+		}
+		f.Defeated = true
+		if f.CanVisit() {
+			t.Errorf("%s defeated faction can still visit", typ)
+		}
 	}
 }
 
@@ -482,7 +520,9 @@ func TestBesiegedGoodwillCannotRise(t *testing.T) {
 		t.Fatalf("goodwill %d, want -60", f.Goodwill)
 	}
 	f.Besieged = false
-	DailyDrift(&f)
+	for range 5 {
+		DailyDrift(&f)
+	}
 	if f.Goodwill != -59 {
 		t.Fatalf("goodwill %d, want the drift to resume at -59", f.Goodwill)
 	}
@@ -518,5 +558,22 @@ func TestNoSettlersStartFriendly(t *testing.T) {
 	t.Parallel()
 	if mx := def(Settlers).GoodwillMax; mx >= FriendlyAt {
 		t.Errorf("Settlers start max %d reaches the ally band", mx)
+	}
+}
+
+func TestCaptiveHostilityUsesExistingDiplomacyOnce(t *testing.T) {
+	f := Faction{Type: Settlers, Relation: Neutral, Goodwill: 5}
+	CaptiveHostility(&f, -75)
+	if f.Relation != Hostile || f.Goodwill != -75 || len(f.Events) != 1 {
+		t.Fatalf("neutral capture %+v", f)
+	}
+	CaptiveHostility(&f, -75)
+	if len(f.Events) != 1 || f.Goodwill != -75 {
+		t.Fatal("already-hostile capture charged twice")
+	}
+	ancient := Faction{Type: AncientQuiet, Relation: Neutral, Goodwill: 0}
+	CaptiveHostility(&ancient, -75)
+	if ancient.Relation != Neutral || ancient.Goodwill != 0 || len(ancient.Events) != 0 {
+		t.Fatalf("spacer charged %+v", ancient)
 	}
 }

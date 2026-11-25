@@ -39,9 +39,9 @@ func (s *Strikes) melee(attacker entity.EntityID, wk weapon.Kind, d weapon.Def, 
 // blow resolves a melee attack of attacker on target with weapon wk (hk
 // the kind its hit takes its form from: an animal's own attack; d its
 // profile) and returns the tool's profile (its cooldown follows).
-func (s *Strikes) blow(attacker, target entity.EntityID, wk, hk weapon.Kind, d weapon.Def, ax, ay, tx, ty int, roll func(int) int) weapon.Def {
+func (s *Strikes) blow(attacker, target entity.EntityID, wk, hk weapon.Kind, d weapon.Def, ax, ay, tx, ty int, roll func(int) int, social bool) weapon.Def {
 	h := s.h
-	t := s.tool(attacker, wk, hk, d, roll)
+	t := s.toolFor(attacker, wk, hk, d, roll, social)
 	m := t.Melee(d) // a gun's stock keeps the gun's name: the trace is melee (its sound)
 	r := s.report(attacker, ax, ay, target, tx, ty, m, false)
 	hit, dodged := roll(1000) < r.Total(), false
@@ -64,12 +64,50 @@ func (s *Strikes) blow(attacker, target entity.EntityID, wk, hk weapon.Kind, d w
 // hands' (weapon.ToolsOf), else the weapon's own profile as its one tool
 // (the mechanoids' blades).
 func (s *Strikes) tool(attacker entity.EntityID, wk, hk weapon.Kind, d weapon.Def, roll func(int) int) weapon.Tool {
+	return s.toolFor(attacker, wk, hk, d, roll, false)
+}
+
+func (s *Strikes) toolFor(attacker entity.EntityID, wk, hk weapon.Kind, d weapon.Def, roll func(int) int, social bool) weapon.Tool {
 	if _, beast := s.h.Animal(attacker); beast {
 		ts, n := weapon.NaturalTools(hk, d)
 		return weapon.Pick(ts[:n], roll)
 	}
-	if ts := weapon.ToolsOf(wk); len(ts) > 0 {
-		return s.gear.Make(attacker).Tool(weapon.Pick(ts, roll)) // CBT-3: by its stuff and quality
+	base := weapon.ToolsOf(wk)
+	added, n := s.h.ImplantTools(attacker)
+	if social {
+		kept := 0
+		for i := 0; i < n; i++ {
+			// wiki: Power claw, Body part weapons (social fights).
+			if added[i].NoSocialFight {
+				continue
+			}
+			added[kept] = added[i]
+			kept++
+		}
+		n = kept
+	}
+	fists := 2
+	if wk == weapon.Fists {
+		fists = s.h.NaturalFists(attacker)
+		if fists == 0 {
+			base = base[1:] // only head and teeth remain
+		}
+	}
+	if n > 0 || fists != 2 {
+		var tools [8]weapon.Tool
+		baseCount := copy(tools[:], base)
+		if fists == 1 {
+			tools[0].Chance /= 2 // one of the two natural hands remains
+		}
+		count := baseCount + copy(tools[baseCount:], added[:n])
+		i := weapon.PickIndex(tools[:count], roll)
+		if i >= baseCount {
+			return tools[i]
+		}
+		return s.gear.Make(attacker).Tool(tools[i])
+	}
+	if len(base) > 0 {
+		return s.gear.Make(attacker).Tool(weapon.Pick(base, roll))
 	}
 	return weapon.Tool{Name: d.Name, Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Cooldown: d.Cooldown,
 		Form: weapon.HitOf(hk, d).Form, Chance: 1000}

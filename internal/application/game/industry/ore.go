@@ -176,10 +176,10 @@ func (s *State) nearestOre(x, y, w int) (int, bool) {
 
 // take brings up one cycle's portion of ore cell k: the kind and count,
 // and whether the cell ran out (it is then dropped from the list).
-func (s *State) take(k int) (item.Kind, int, bool) {
+func (s *State) take(k, amount int) (item.Kind, int, bool) {
 	c := &s.ore[k]
 	kind := item.Kind(c.Ore)
-	n := min(int(c.Left), portionOf(kind))
+	n := min(int(c.Left), amount)
 	c.Left -= int32(n)
 	s.ver++
 	if c.Left <= 0 {

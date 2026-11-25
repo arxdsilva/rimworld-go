@@ -211,3 +211,48 @@ func TestTrainTipStartsWithTheAnimal(t *testing.T) {
 		t.Fatalf("no line for the skill: %+v", tip)
 	}
 }
+
+// The per-family table is a second, independent summary of the same rows.
+// Recount the actual rows rather than applying an assumed single-row delta.
+func TestRHUDFamilyCounts(t *testing.T) {
+	t.Parallel()
+	_, doc := readGapDoc(t)
+	section := regexp.MustCompile(`^### ([A-L])\. `)
+	summary := regexp.MustCompile(`^\| ([A-L])\. [^|]+\| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \|$`)
+	var family string
+	actual, declared := map[string][5]int{}, map[string][5]int{}
+	status := map[string]int{"done": 1, "partial": 2, "missing": 3, "excluded": 4}
+	for _, line := range strings.Split(doc, "\n") {
+		if m := section.FindStringSubmatch(line); m != nil {
+			family = m[1]
+		}
+		if m := summary.FindStringSubmatch(line); m != nil {
+			var row [5]int
+			for i := range row {
+				row[i], _ = strconv.Atoi(m[i+2])
+			}
+			if _, exists := declared[m[1]]; exists {
+				t.Fatalf("duplicate summary %s", m[1])
+			}
+			declared[m[1]] = row
+		}
+		if !strings.HasPrefix(line, "| RHUD-") {
+			continue
+		}
+		cols := strings.Split(line, "|")
+		if len(cols) != 7 || family == "" {
+			t.Fatalf("unclassified family row: %s", line)
+		}
+		i, ok := status[strings.TrimSpace(cols[4])]
+		if !ok {
+			t.Fatalf("unknown status: %s", line)
+		}
+		row := actual[family]
+		row[0]++
+		row[i]++
+		actual[family] = row
+	}
+	if len(actual) != 12 || !reflect.DeepEqual(actual, declared) {
+		t.Fatalf("family counts actual=%v declared=%v", actual, declared)
+	}
+}

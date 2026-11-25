@@ -23,25 +23,26 @@ Scope: the Work tab and how a colonist picks work: the tie-break between work ty
 
 | Wiki | Type | Before WRK-001 | Now | Note |
 |---|---|---|---|---|
-| 1 | Firefight | 1 | 1 | |
-| 2 | Patient | no column | no column | Automatic before work; WRK-101 |
-| 3 | Doctor | 2 | 2 | |
-| 4 | Bed rest | no column | no column | The per-colonist "Rest when hurt" setting (PLAY-020); WRK-101 |
-| 5 | Basic | no column | no column | Flicking is in Construct, opening in Haul; WRK-101 |
-| 6 | Warden | 3 | 3 | |
-| 7 | Handle | 9 | 4 | |
-| 8 | Cook | 6 | 5 | |
-| 9 | Hunt | 8 | 6 | |
-| 10 | Construct | 5 | 7 | |
-| 11 | Grow | 10 | 8 | |
-| 12 | Mine | 12 | 9 | |
-| 13 | Plant cut | 11 | 10 | |
-| 14, 15 | Smith, Tailor | in Craft | in Craft | WRK-102 |
-| 16 | Art | absent | absent | No Artistic skill or art system |
-| 17 | Craft | 7 | 11 | |
-| 18 | Haul | 4 | 12 | The largest error, and the cause of "hauls before it finishes the field" |
-| 19 | Clean | 14 | 13 | |
-| 20 | Research | 13 | 14 | |
+| 1 | Firefight | 1 | 1 |  |
+| 2 | Patient | no column | 2 | Patient work; urgent care remains independent of the work schedule (WRK-101). |
+| 3 | Doctor | 2 | 3 |  |
+| 4 | Bed rest | no column | 4 | BedRest column and legacy rest setting migration (WRK-101). |
+| 5 | Basic | no column | 5 | Basic jobs including flick/open (WRK-101). |
+| 6 | Warden | 3 | 6 |  |
+| 7 | Handle | 9 | 7 |  |
+| 8 | Cook | 6 | 8 |  |
+| 9 | Hunt | 8 | 9 |  |
+| 10 | Construct | 5 | 10 |  |
+| 11 | Grow | 10 | 11 |  |
+| 12 | Mine | 12 | 12 |  |
+| 13 | Plant cut | 11 | 13 |  |
+| 14 | Smith | in Craft | 14 | Separate recipe/bench admission (WRK-102). |
+| 15 | Tailor | in Craft | 15 | Separate recipe/bench admission (WRK-102). |
+| 16 | Art | in Craft | 16 | Independent sculpture admission and Artistic skill (WRK-108). |
+| 17 | Craft | 7 | 17 | |
+| 18 | Haul | 4 | 18 | |
+| 19 | Clean | 14 | 19 | |
+| 20 | Research | 13 | 20 | |
 
 ## Rows
 
@@ -60,13 +61,14 @@ State: `done` shipped; `open` owed to a later change; `kept` differs from the wi
 | WRK-009 | Tab text: the header did not state the tie-break, and Growing claimed to cut grass, which is Plant cut since FOOD-2. | done | `ebiten/windows/work.go` |
 | WRK-010 | Doctor's inner order: wiki has tends, operations, then rescue; ours rescues first. | kept | MED-03's decision |
 | WRK-011 | Haul delivers to frames before general hauling; the wiki lists general first. Kept so that a hauler with Construct off still feeds a site before clearing the map. | kept | `game/tick.go` |
-| WRK-101 | Patient, Bed rest and Basic columns. Needs new `work.Type` values and a save migration. | open | |
-| WRK-102 | Smith and Tailor split from Craft. Needs new `work.Type` values, recipe skills and a save migration. | open | |
-| WRK-103 | Simple mode: the manual priorities toggle with plain checks. | open | |
-| WRK-104 | Sorting by a column (CTL-103). Changing a whole column from its header moved to CTL-014. | open | |
+| WRK-101 | Patient, Bed rest and Basic columns; preserve existing IDs and legacy priorities/masks. | done | `domain/ai/work/work.go`, `migrate.go`, `game/priorities.go`, native care and Work tab |
+| WRK-102 | Smith and Tailor split from Craft; preserve old Craft settings in migration and route by recipe work type. | done | `domain/ai/work/migrate.go`, `domain/economy/recipe/benches.go`, `game/priorities.go` |
+| WRK-103 | Simple mode: the manual priorities toggle with plain checks. | done | `windows/work.go`: checkbox editing retains existing numeric preferences; new enables set 3. |
+| WRK-104 | Sorting by a column (CTL-103). Changing a whole column from its header moved to CTL-014. | done | `windows/work.go`: stable detached name/priority sort; skill breaks ties, Shift still changes the column. |
 | WRK-105 | The sound when assigning a pawn to work it will do poorly (wiki). | open | |
 | WRK-106 | Dragging to paint priorities: CTL-015. | done | `ebiten/windows/work.go` |
 | WRK-107 | A delivery taken from the Construct slot is a `job.Haul`, so the colonist card names it Hauling and its speed reads as Haul work. Cosmetic. | open | `game/bio_view.go` |
+| WRK-108 | Separate Art from Craft, append stable IDs and migrate historical priority rows. | done | `work`, `recipe.Def.WorkType`, `game/priorities.go`, `saveutil`, Work tab and Dossier. |
 
 ## Already matching
 

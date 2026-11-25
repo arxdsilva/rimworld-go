@@ -29,7 +29,7 @@ func TestMortarAimClickSendsTarget(t *testing.T) {
 		t.Fatalf("on=%v cmds=%v", m.On, s.got)
 	}
 	c := s.got[0]
-	if c.Kind != command.SetMortarTarget || c.X != 3 || c.Y != 4 || c.X2 != 9 || c.Y2 != 8 || c.Pawn != 5 {
+	if c.Kind != command.SetMortarTarget || c.Target != 7 || c.X != 3 || c.Y != 4 || c.X2 != 9 || c.Y2 != 8 || c.Pawn != 5 {
 		t.Errorf("command = %+v", c)
 	}
 }

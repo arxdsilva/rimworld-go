@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game/dose"
 	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/application/game/travel"
+	"rimworld-go/internal/domain/economy/item"
 )
 
 // Social is one colonist's Social tab: relations and the social log.
@@ -95,12 +96,13 @@ type Capacity struct {
 
 // Part is one hurt, missing, scarred or artificial body part.
 type Part struct {
-	Label   string
-	Status  string
-	HP      int
-	Part    int    // body.Part (SIM-049)
-	Implant string // fitted implant's name, "" if none
-	Bleed   int    // the part's bleeding, percent of blood per day (MED-01)
+	Label    string
+	Status   string
+	HP       int
+	Part     int      // body.Part (SIM-049)
+	Implant  string   // replacement part, if any
+	Implants []string // additive devices attached to the part
+	Bleed    int      // the part's bleeding, percent of blood per day (MED-01)
 	// TendTip lists the part's open wounds with their tend quality, one
 	// a line ("cut, 6 HP: tended 74%"; "" when none; MED-02).
 	TendTip string
@@ -122,16 +124,43 @@ type Operation struct {
 
 // Prisoner is one prisoner's Prisoner tab; Mode is a prisoner.Mode.
 type Prisoner struct {
-	Mode            uint8
-	Resistance      int
-	Warden          string
-	ForPrisonersBed bool
+	Mode                               uint8
+	Resistance                         int
+	Warden                             string
+	ForPrisonersBed                    bool
+	Faction                            string
+	RecruitChanceMin, RecruitChanceMax int32 // permille after resistance; last live warden or skill-range bounds
 }
 
 // WorldMap is the World tab: the colony's tile and its caravans.
 type WorldMap struct {
-	Tile     int
-	Caravans []travel.CaravanView
+	Tile        int
+	Caravans    []travel.CaravanView
+	Markets     []MarketView // open faction-base markets at visiting caravans
+	MarketReply MarketReply  // transient command receipt
+}
+
+// MarketView is a snapshot of one visited settlement and its physical
+// caravan stock. The UI sends WorldCaravanTrade through the command queue.
+type MarketView struct {
+	CaravanID, Negotiator       uint64
+	Tile, FactionID             int
+	Epoch, RestockAt            uint64
+	CaravanSilver, TraderSilver int
+	Rows, GiftRows              []MarketRow
+	Quote                       uint64
+}
+
+// MarketRow holds quantities and prices in hundredths of a silver.
+type MarketRow struct {
+	Kind, Category, Label string
+	Building              uint8
+	ItemKind              item.Kind
+	StackID               uint64
+	GiftC                 int
+	CargoQty, StockQty    int
+	BuyC, SellC           int
+	WillBuy, WillSell     bool
 }
 
 // Area is one allowed area.
@@ -154,4 +183,10 @@ type HistoryEntry struct {
 	Text  string
 	Kind  string
 	Pawns []uint64
+}
+
+// MarketReply is the last market command result, not simulation state.
+type MarketReply struct {
+	Serial, CaravanID, Quote uint64
+	Reason                   string
 }

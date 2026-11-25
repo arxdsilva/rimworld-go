@@ -5,6 +5,8 @@ package game
 
 import (
 	"cmp"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"slices"
 
 	"rimworld-go/internal/domain/animal"
@@ -163,12 +165,15 @@ func (g *Game) stainHit(target entity.EntityID, from, to Position, dmg int) {
 // stainDeath pools blood where creature id died (pawns; called from die).
 func (g *Game) stainDeath(id entity.EntityID) {
 	if pos, ok := g.positions.Get(id); ok {
-		g.stamp(pos.X, pos.Y, g.stainKindOf(id), deathPool)
+		kind := g.stainKindOf(id)
+		if b := g.bodies[id]; b != nil && body.HasImplant(b, body.Torso, item.AcidFailsafe) {
+			kind = stain.CausticResidue // wiki: Death acidifier (slime filth)
+		}
+		g.stamp(pos.X, pos.Y, kind, deathPool)
 	}
 }
 
-// stainAnimalDeath pools blood (or ichor) where an animal of species s
-// died at pos (called from killAnimal).
+// stainAnimalDeath leaves blood or ichor at the animal's death tile.
 func (g *Game) stainAnimalDeath(s animal.Species, pos Position) {
 	if animal.IsMech(s) {
 		return // DEF-4: a machine leaves its wreck, no blood
@@ -180,9 +185,8 @@ func (g *Game) stainAnimalDeath(s animal.Species, pos Position) {
 	g.stamp(pos.X, pos.Y, kind, deathPool)
 }
 
-// bleeding reports a creature that is losing blood: an animal under half
-// its hit points, or a humanlike (colonist, prisoner or raider) whose body
-// bleeds (MED-01: an untended cut, bite, scratch or fresh stump).
+// bleeding reports blood loss from a severely hurt animal or humanlike
+// with an untended bleeding wound (MED-01).
 func (g *Game) bleeding(id entity.EntityID) bool {
 	if a, ok := g.animals.Get(id); ok {
 		return a.HP()*2 < animal.DefOf(a.Species).MaxHP && !animal.IsMech(a.Species) // DEF-4: a machine does not bleed
@@ -190,8 +194,7 @@ func (g *Game) bleeding(id entity.EntityID) bool {
 	return g.bleedingNow(id) // bleed.go
 }
 
-// stainStep drips blood behind a bleeding creature every 3rd tile it walks
-// (called from stepPawn and stepAnimal with the tile it left).
+// stainStep drips blood every third tile a bleeding creature travels.
 func (g *Game) stainStep(id entity.EntityID, from Position) {
 	if !g.bleeding(id) {
 		if len(g.stains.dripN) > 0 {
@@ -211,8 +214,7 @@ func (g *Game) stainStep(id entity.EntityID, from Position) {
 	g.stamp(from.X, from.Y, g.stainKindOf(id), dripStain)
 }
 
-// stainDowned grows a pool under a downed, bleeding colonist once an hour
-// (called each tick from phaseNeeds for downed pawns).
+// stainDowned grows a blood pool hourly beneath a downed bleeder.
 func (g *Game) stainDowned(id entity.EntityID, now uint64) {
 	if now%clock.TicksPerHour != 0 || !g.bleeding(id) {
 		return
@@ -259,8 +261,7 @@ func (g *Game) stainDecay() {
 	}
 }
 
-// pruneDrips forgets drip counters of creatures that are gone, and the
-// boots of pawns that are (filth.go).
+// pruneDrips clears stale drip counters and boot dirt (filth.go).
 func (g *Game) pruneDrips() {
 	g.pruneCarried()
 	for id := range g.stains.dripN {
@@ -323,9 +324,8 @@ type stainKeyed struct {
 	s stain.Stain
 }
 
-// sortedStains is the stains sorted y then x (as exportStains, without
-// the fade remainders): the memo while it still matches every tile, else
-// a fresh sort. Read only.
+// sortedStains returns the cached y/x order while all tiles match,
+// otherwise regenerates it. The result is read-only.
 func (g *Game) sortedStains() []stainKeyed {
 	tiles := g.stains.tiles
 	m := &g.views.stains

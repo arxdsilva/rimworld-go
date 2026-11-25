@@ -138,12 +138,16 @@ func joyOfIdle(k job.Kind) recreation.JoyKind {
 // from game/rooms.go): starved, bored or entertained; ok false between.
 func Mood(joy int) (k mood.Kind, ok bool) {
 	switch {
-	case joy < recreation.Starved:
+	case joy <= 0:
 		return mood.RecreationStarved, true
-	case joy < recreation.Bored:
+	case joy < 1500:
+		return mood.RecreationDeprived, true
+	case joy < 3000:
 		return mood.Bored, true
-	case joy >= recreation.Entertained:
+	case joy >= 8500:
 		return mood.Entertained, true
+	case joy >= 7000:
+		return mood.RecreationSatisfied, true
 	}
 	return 0, false
 }

@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/world/site"
 	"testing"
 
 	"rimworld-go/internal/domain/animal"
@@ -25,7 +26,7 @@ func wildlifeColony(tb testing.TB) *Game {
 func wildMap(tb testing.TB) *Game {
 	tb.Helper()
 	g := New(Config{Seed: 3, Width: 120, Height: 120})
-	g.generate(3)
+	g.generate(3, site.Site{})
 	g.seedGrass()
 	return addHerds(tb, g)
 }

@@ -4,7 +4,10 @@
 package game
 
 import (
+	"bytes"
 	"testing"
+
+	"rimworld-go/internal/domain/ai/job"
 
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -120,4 +123,64 @@ func TestPluginShelfStores(t *testing.T) {
 		t.Fatalf("shelf filter %v does not list the bell", z.Filter)
 	}
 	t.Fatal("no shelf zone")
+}
+
+func TestPerKindStackPolicyMigratesActualSave(t *testing.T) {
+	g := New(Config{Seed: 2, Width: 24, Height: 18})
+	pawn := worker(t, g, 1, 1)
+	sid, err := g.SpawnStack(item.Wood, 250, 10, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _ := g.stacks.Get(sid)
+	st.Forbidden = true
+	g.putStack(sid, st)
+	if !g.reserve.TryCount(pawn, sid, 100, 250) {
+		t.Fatal("reservation")
+	}
+	g.jobs.Set(pawn, job.Record{Kind: job.Haul, Target: sid, State: job.Goto})
+	var buf bytes.Buffer
+	if err := g.Save(&buf, "stack migration"); err != nil {
+		t.Fatal(err)
+	}
+	raw := buf.Bytes()
+	old, _, err := Load(bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	orig, _ := old.stacks.Get(sid)
+	if orig.Qty != 250 {
+		t.Fatal("legacy default changed")
+	}
+	book := item.Core().WithPerKindStackLimits()
+	h, _, err := LoadContent(bytes.NewReader(raw), Content{Items: book})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := 0
+	for _, id := range h.itemIDs {
+		part, _ := h.stacks.Get(id)
+		if part.Kind != item.Wood {
+			continue
+		}
+		sum += part.Qty
+		if part.Qty > 75 || !part.Forbidden {
+			t.Fatalf("migrated stack %+v", part)
+		}
+	}
+	first, ok := h.stacks.Get(sid)
+	if sum != 250 || !ok || first.Qty != 75 || h.reserve.Free(sid, 75) != 75 {
+		t.Fatalf("migration sum=%d first=%+v reservation=%d", sum, first, h.reserve.Free(sid, 75))
+	}
+	if j, _ := h.jobs.Get(pawn); j.Active() {
+		t.Fatalf("stale claim job %+v", j)
+	}
+	buf.Reset()
+	if err := h.Save(&buf, "stack migrated"); err != nil {
+		t.Fatal(err)
+	}
+	again, _, err := LoadContent(&buf, Content{Items: book})
+	if err != nil || h.StateHash() != again.StateHash() {
+		t.Fatalf("repeat policy load: %v", err)
+	}
 }

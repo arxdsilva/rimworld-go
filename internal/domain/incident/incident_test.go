@@ -36,9 +36,10 @@ func TestPickDeterministic(t *testing.T) {
 	// the eclipse (toxic fallout waits for day 60), TEMP-2 the heat wave
 	// and the cold snap (the game vetoes them out of season; the volcanic
 	// winter waits for day 60). EAI-031 added the chased refugee (the game
-	// vetoes it without a hostile faction to chase them).
-	if len(seen) != 21 {
-		t.Fatalf("picked %v, want all 21 temperate nature events", seen)
+	// vetoes it without a hostile faction to chase them). The traveler
+	// group has the same host capacity check as visitor groups.
+	if len(seen) != 23 || !seen[TransportPodCrash] {
+		t.Fatalf("picked %v, want all 23 temperate nature events", seen)
 	}
 }
 

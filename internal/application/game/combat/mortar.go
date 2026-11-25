@@ -29,6 +29,7 @@ import (
 // manning and leaving. Every roll is on the defence stream.
 type Mortars struct {
 	h       Host
+	crewAim MortarAim
 	f       Field
 	pw      Power    // AX-5: the rocket battery fires only while powered (battery.go)
 	turrets *Turrets // Targetable
@@ -269,7 +270,7 @@ func (m *Mortars) call(id entity.EntityID, st *Mortar, sx, sy int, now uint64) {
 			pick = s.ID
 		}
 	}
-	if pick == 0 && st.Assigned != 0 && h.StandingPawn(st.Assigned) && !h.StandingRaider(st.Assigned) {
+	if pick == 0 && st.Assigned != 0 && m.canCrew(st.Assigned) {
 		pick = st.Assigned
 		h.Interrupt(pick, job.Cancelled) // a player's order: it drops what it does
 	}
@@ -316,7 +317,7 @@ func (m *Mortars) fire(b construction.Building, st *Mortar, ax, ay int, now uint
 	st.Fired++
 	d := weapon.DefOf(weapon.MortarHE)
 	st.ReadyAt = now + uint64(d.Cooldown+d.Warmup)
-	lx, ly := m.scatter(ax, ay, MissRadius(m.crewLevel(st.Crew)))
+	lx, ly := m.scatter(ax, ay, m.crewAim.MortarMissRadius(st.Crew))
 	m.shots.Lob(st.Crew, wk, b.X, b.Y, ax, ay, lx, ly)
 }
 
@@ -325,14 +326,15 @@ func (m *Mortars) fire(b construction.Building, st *Mortar, ax, ay int, now uint
 // level 0, 1.0 at level 8, 0.7 at level 20 (-0.025 a level). wiki:
 // Mortar, Shooting
 func MissRadius(level int) int {
-	f := 1200 - 25*min(max(level, 0), 20)
-	return weapon.MortarForcedMiss * f / 1000
+	return MissRadiusWithCapacities(level, 1000, 1000)
 }
 
-// crewLevel is crewman c's Shooting level, clamped to 0..20.
-func (m *Mortars) crewLevel(c entity.EntityID) int {
-	_, l := m.h.ShotAim(c)
-	return min(max(l, 0), 20)
+// MissRadiusWithCapacities is the independent mortar accuracy multiplier.
+// wiki: Mortar Miss Radius Multiplier. Clamp the radius to a positive value
+// for extreme modded manipulation (original tuning).
+func MissRadiusWithCapacities(level, sight, manipulation int) int {
+	f := 1200 - 25*min(max(level, 0), 20) + (1000 - min(max(sight, 0), 1000)) - (manipulation-1000)/2
+	return weapon.MortarForcedMiss * max(f, 1) / 1000
 }
 
 // scatter is a cell within rad (thousandths of a tile) of (x, y),
@@ -356,7 +358,7 @@ func (m *Mortars) scatter(x, y, rad int) (int, int) {
 // colonist to call to it. A raiders' mortar takes no orders.
 func (m *Mortars) SetTarget(id entity.EntityID, x, y int, crew entity.EntityID) {
 	st := m.states[id]
-	if st.Hostile {
+	if st.Hostile || !m.h.InBounds(x, y) || crew != 0 && !m.canCrew(crew) {
 		return
 	}
 	st.Forced, st.TX, st.TY, st.Aiming = true, x, y, false
@@ -369,7 +371,7 @@ func (m *Mortars) SetTarget(id entity.EntityID, x, y int, crew entity.EntityID) 
 // ClearTarget drops mortar id's forced target: it picks hostiles itself.
 func (m *Mortars) ClearTarget(id entity.EntityID) {
 	st, ok := m.states[id]
-	if !ok {
+	if !ok || st.Hostile {
 		return
 	}
 	st.Forced, st.TX, st.TY, st.Aiming = false, 0, 0, false
@@ -416,6 +418,21 @@ func (m *Mortars) Man(c, id entity.EntityID) bool {
 	st.Crew, st.ManSince, st.SeenAt, st.Aiming = c, m.h.Now(), m.h.Now(), false
 	m.set(id, st)
 	return true
+}
+
+// canCrew requires a standing member of this map's colony roster.
+// Named visitors, prisoners and off-map people are not crew.
+func (m *Mortars) canCrew(id entity.EntityID) bool {
+	x, y, ok := m.h.Pos(id)
+	if !ok || !m.colonist(id) {
+		return false
+	}
+	for _, s := range m.h.Near(x, y, 0, Pawns, nil) {
+		if s.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // colonist: a standing colonist (a raiders' mortar's mark).

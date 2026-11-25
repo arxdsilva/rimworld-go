@@ -6,6 +6,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/forage"
+	"rimworld-go/internal/application/game/pathstage"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -242,7 +243,11 @@ func (q flapQuery) Walkable(x, y int) bool {
 }
 func (q flapQuery) BlockedBits() []uint64 { return q.g.layerBits(region.Colonist) }
 func (q flapQuery) Reach(sx, sy, tx, ty int) bool {
-	return q.g.noRegions() || checkReach(q.g, q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+	if q.g.noRegions() {
+		return true
+	}
+	got := q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty)
+	return pathstage.CheckReach(q, sx, sy, tx, ty, got, !got && checkIndex(q.g))
 }
 
 // colonistGrid is the walkability people plan with: the grid, or with animal
@@ -263,7 +268,7 @@ func (g *Game) layerReach(q pathing.Query, pos Position, x, y int) bool {
 		// without regions (or inside a pen, which regions don't know)
 		// Reach is optimistic: search for the truth, so a colony with
 		// regions off flees exactly as one with them
-		_, ok := pathing.Find(plainQuery{q}, pos.X, pos.Y, x, y)
+		_, ok := pathing.Find(pathstage.PlainQuery{Query: q}, pos.X, pos.Y, x, y)
 		return ok
 	}
 	if r, ok := q.(pathing.Reacher); ok {

@@ -33,6 +33,8 @@ type Store[T any] struct {
 	denseValues   []T
 	pages         []*page
 	far           map[entity.EntityID]int
+	ver           uint64 // transient Set/Delete sequence, never persisted
+
 }
 
 // NewStore returns an empty Store.
@@ -107,6 +109,7 @@ func (s *Store[T]) dropIndex(id entity.EntityID) {
 
 // Set assigns v to id, overwriting any existing value.
 func (s *Store[T]) Set(id entity.EntityID, v T) {
+	s.ver++
 	if idx, ok := s.index(id); ok {
 		s.denseValues[idx] = v
 		return
@@ -149,6 +152,7 @@ func (s *Store[T]) Delete(id entity.EntityID) {
 	if !ok {
 		return
 	}
+	s.ver++
 	lastIdx := len(s.denseEntities) - 1
 	lastEntity := s.denseEntities[lastIdx]
 
@@ -167,6 +171,11 @@ func (s *Store[T]) Delete(id entity.EntityID) {
 func (s *Store[T]) Len() int {
 	return len(s.denseEntities)
 }
+
+// Ver is the transient version of store values: every Set and each
+// successful Delete advances it. Reads through Ref never mutate values.
+// It is not saved or used by the deterministic simulation RNG.
+func (s *Store[T]) Ver() uint64 { return s.ver }
 
 // AnyRef reports whether fn accepts some stored value, calling it in
 // insertion order with a pointer to each (no copy) until one does. fn

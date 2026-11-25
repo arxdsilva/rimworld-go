@@ -42,7 +42,7 @@ func rightFrame(x, y int, press, down, release bool) *inputframe.Frame {
 func centre(r gfx.Rect) (int, int) { return int(r.X + r.W/2), int(r.Y + r.H/2) }
 
 func alive(id entity.EntityID, m game.MapID, order int) game.PawnView {
-	return game.PawnView{ID: id, Map: m, Status: "alive", BarOrder: order}
+	return game.PawnView{ID: id, Map: uint32(m), Status: "alive", BarOrder: order}
 }
 
 // drag presses on slot a, holds, and releases at (x, y).

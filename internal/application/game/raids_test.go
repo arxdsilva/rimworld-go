@@ -88,8 +88,20 @@ func TestStorytellerSendsTheFirstRaid(t *testing.T) {
 	}
 	jumpTo(g, firstRaidDay+1, 0)
 	g.Step(1)
+	// The first threat may be a pod raid. Check the announced raid now,
+	// then let its already scheduled pods land before counting raiders.
+	if len(g.raidGroups) == 0 {
+		t.Fatal("the first raid should be sent around day 5")
+	}
+	for _, group := range g.raidGroups {
+		for _, pod := range group.Pods {
+			if !pod.Landed && pod.Land > uint64(g.clock.Now()) {
+				g.Step(int(pod.Land-uint64(g.clock.Now())) + 1)
+			}
+		}
+	}
 	if _, n := g.Raiders(); n == 0 {
-		t.Fatal("the first raid should arrive around day 5")
+		t.Fatal("the first raid did not arrive")
 	}
 	if g.nextThreat <= uint64(g.clock.Now()) {
 		t.Fatal("the next threat should be scheduled")

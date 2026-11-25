@@ -6,9 +6,12 @@ package travel
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/wealth"
+	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/quality"
 	"rimworld-go/internal/domain/economy/trade"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Goods is what caravan cid carries, a copy (MAP-08: what a demand asks for).
@@ -109,4 +112,23 @@ func (o Ops) TakeLines(cid uint64, lines []trade.Line) bool {
 	}
 	o.h.Changed()
 	return true
+}
+
+// CargoThreat adds caravan-owned assets; seen contains animals already
+// represented in the colony's stash. No mutable cargo leaves its owner.
+func (s *State) CargoThreat(cid uint64, book item.Book, b *difficulty.ThreatBase, seen map[entity.EntityID]bool) {
+	if s == nil {
+		return
+	}
+	if h := s.cargo[cid]; h != nil {
+		for _, st := range h.Items {
+			b.Wealth += float64(book.StackValue(st)) * float64(st.Qty)
+		}
+		for _, a := range h.Animals {
+			if !seen[a.ID] {
+				wealth.AddStashedAnimal(b, a.State)
+				seen[a.ID] = true
+			}
+		}
+	}
 }

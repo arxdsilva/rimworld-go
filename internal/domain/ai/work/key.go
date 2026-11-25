@@ -9,6 +9,8 @@ var keys = [NumTypes]string{
 	Firefight: "firefight", Doctor: "doctor", Grow: "grow", Cook: "cook", Construct: "construct",
 	Hunt: "hunt", Haul: "haul", Clean: "clean", Research: "research", Mine: "mine", Craft: "craft",
 	Handle: "handle", Warden: "warden", PlantCut: "plant_cut",
+	Patient: "patient", BedRest: "bed_rest", Basic: "basic",
+	Smith: "smith", Tailor: "tailor", Art: "art",
 }
 
 // Key is t's stable name ("cook"; "" for an unknown type).

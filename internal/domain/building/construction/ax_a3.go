@@ -14,11 +14,10 @@ import (
 // predicates it adds here for its own kinds. Every A3 floor is live (AX-3).
 func plannedA3(Kind) bool { return false }
 
-// FixedWork reports a floor whose construct work is the wiki's whatever it
-// is made of (AX-3): every A3 floor. wiki: Floors (stone tile 1100 and
-// flagstone 500 in any stone, concrete 100 and the tiles 800 in their
-// metal). The wood floor and the rest scale with their material
-// (StuffStats).
+// FixedWork reports an A3 floor whose construction work is fixed across
+// materials (wiki: Floors). Ticks: straw matting 120, concrete 100, paved
+// tile 300, steel/silver/gold tiles 800, sterile tile 1600, stone tile
+// 1100, flagstone 500 and carpet 800. The pre-existing wood floor is not fixed.
 func FixedWork(k Kind) bool { return k >= StrawMatting && k <= CarpetFloor }
 
 // FloorFor is the floor kind a floor of stuff is laid as (AX-3): stone

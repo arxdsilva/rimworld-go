@@ -6,6 +6,7 @@ package animal
 import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/sim/clock"
 )
 
 // An animal's medical body (MED-09, MED-13; moved here from the game's
@@ -78,4 +79,71 @@ func BleedDeathHours(b *body.Body, s Species) int {
 // scaled to its hit points (MED-13).
 func NewBody(s Species) *body.Body {
 	return &body.Body{Anatomy: AnatomyOf(s), Scale: HealthScale(s)}
+}
+
+// ReconcileBody bounds open wounds by scalar injury and drops fully
+// healed bodies unless a part is permanently missing.
+func ReconcileBody(a *State) {
+	b := a.Body
+	if b == nil {
+		return
+	}
+	if d := body.OpenWoundDamage(b); d > a.Injury {
+		body.TrimOpen(b, d-max(a.Injury, 0))
+	}
+	if !body.NeedsCare(b) && b.Missing == 0 {
+		a.Body = nil
+	}
+}
+
+// MigrateBody upgrades a pre-anatomy live body's virtual part into the
+// species anatomy while preserving wounds and conditions.
+func MigrateBody(a *Live) {
+	old := a.Body
+	nb := NewBody(a.Species)
+	root := nb.Root()
+	nb.Wounds, nb.Conds = old.Wounds, old.Conds
+	nb.BloodLoss, nb.BloodStage = old.BloodLoss, old.BloodStage
+	for i := range nb.Wounds {
+		nb.Wounds[i].Part = root
+	}
+	for i := range nb.Conds {
+		nb.Conds[i].Part = root
+	}
+	a.Body = nb
+}
+
+// RollAsthmaBirthday is checked on the animal's existing daily cadence.
+// Unknown legacy birth dates are not fabricated. Species-life normalization
+// is native tuning; the public Ailments article establishes the human curve
+// and susceptibility of both wild and domestic animals.
+func RollAsthmaBirthday(a *State, now uint64, roll func(int) int, policy ...clock.CalendarPolicy) bool {
+	if a == nil || a.Born == 0 || IsMech(a.Species) {
+		return false
+	}
+	ageDays := AgeDays(a.Born, now, a.Species, policy...)
+	if ageDays == AgeDays(a.Born, now-clock.TicksPerDay, a.Species, policy...) {
+		return false
+	}
+	if !body.AsthmaBirthday(ageDays, LifeOf(a.Species).LifeDays, roll) {
+		return false
+	}
+	return DevelopAsthma(a, now)
+}
+
+// DevelopAsthma places one incident on every eligible lung of this animal.
+// Common Body conditions own the treatment and progression rules.
+func DevelopAsthma(a *State, now uint64) bool {
+	if a == nil || IsMech(a.Species) {
+		return false
+	}
+	if a.Body == nil {
+		next := NewBody(a.Species)
+		if !body.DevelopAsthma(next, now) {
+			return false
+		}
+		a.Body = next
+		return true
+	}
+	return body.DevelopAsthma(a.Body, now)
 }

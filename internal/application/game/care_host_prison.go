@@ -7,10 +7,8 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
-	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -22,20 +20,20 @@ type carePrison struct{ g *Game }
 func (h carePrison) IsRaider(id entity.EntityID) bool     { return h.g.isRaider(id) }
 func (h carePrison) IsVisitor(id entity.EntityID) bool    { return h.g.visitor(id) }
 func (h carePrison) PersonName(id entity.EntityID) string { return h.g.personName(id) }
-func (h carePrison) PrisonBedFor(target entity.EntityID, x, y int) (entity.EntityID, bool) {
-	return h.g.prisonBedFor(target, Position{X: x, Y: y})
+func (h carePrison) DropGear(target entity.EntityID)      { h.g.dropRaiderGear(target) }
+func (h carePrison) MakePrisoner(target, captor entity.EntityID) {
+	if h.g.visitor(target) || h.g.isRaider(target) && !h.g.prison.Is(target) {
+		faction.CaptiveHostility(h.g.factionOf(int(careGuests(h).FactionOf(target))), arrestGoodwill)
+	}
+	h.g.makePrisoner(target, captor)
 }
-func (h carePrison) DropGear(target entity.EntityID)             { h.g.dropRaiderGear(target) }
-func (h carePrison) MakePrisoner(target, captor entity.EntityID) { h.g.makePrisoner(target, captor) }
 
 // ArrestRoll: reaching a visitor to arrest it turns its faction hostile
 // whatever the roll says (wiki: Events), and visit.notice turns the rest of
 // its people on the map.
 func (h carePrison) ArrestRoll(arrester, target entity.EntityID) bool {
 	if h.g.visitor(target) {
-		if f := h.g.factionOf(h.g.personOf(target).Faction); f != nil {
-			faction.Adjust(f, min(0, arrestGoodwill-f.Goodwill), "visitor arrested")
-		}
+		faction.RecordHostility(h.g.factionOf(h.g.personOf(target).Faction), arrestGoodwill, "visitor arrested")
 	}
 	return h.g.stream(streamPrison).IntN(1000) < h.g.arrestChance(arrester, target)
 }
@@ -150,35 +148,5 @@ func migrateStarvation(g *Game, id entity.EntityID) {
 		v.Status, v.Cause = health.Alive, health.CauseNone
 		g.vital.Set(id, v)
 		g.updateDowned(id, g.bodies[id], &v)
-	}
-}
-
-// stepMalnutrition is an hour of malnutrition (FOOD-1,
-// body/cond_malnutrition.go) on every pawn with needs that is at 0 % food
-// or still malnourished, in store order: it sets in, rises, recedes once
-// fed and kills at full severity (the old down-and-die rule is gone).
-func stepMalnutrition(g *Game, now uint64) {
-	var ids []entity.EntityID
-	g.need.All(func(id entity.EntityID, n needs.Pair) {
-		if (n.Starving() || body.Malnutrition(g.bodies[id]) > 0) && owns(g, id) { // MAP-0: on its own map's pass
-			ids = append(ids, id)
-		}
-	})
-	for _, id := range ids {
-		v, ok := g.vital.Get(id)
-		b := g.ensureBody(id, &v)
-		if !ok || v.Status == health.Dead || b == nil {
-			continue
-		}
-		changed, dead := body.StepMalnutrition(b, g.need.Ref(id).Starving(), now/clock.TicksPerHour, g.stream(streamMedical).IntN)
-		if dead {
-			pos, _ := g.positions.Get(id)
-			g.message(pos.X, pos.Y, "%s starved to death.", g.name(id))
-			g.dieMedical(id, health.CauseNoFood) // caravan_medical.go
-			g.clearPatient(id)
-		} else if changed {
-			g.bodyChanged(id, b, &v) // body.go: stats follow, joins the patients
-			g.updateDowned(id, b, &v)
-		}
 	}
 }

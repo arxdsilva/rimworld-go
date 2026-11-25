@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -15,13 +16,18 @@ import (
 // fakeMuses is the fake host's Muses role: skill levels by pawn (0 when
 // unset) and the inspiration news.
 type fakeMuses struct {
-	skill    map[entity.EntityID]uint8
-	inspired []entity.EntityID
-	faded    []entity.EntityID
+	skill            map[entity.EntityID]uint8
+	passions         map[entity.EntityID]skill.Passion
+	slow, nonviolent map[entity.EntityID]bool
+	inspired         []entity.EntityID
+	faded            []entity.EntityID
 }
 
-func (f *fakeHost) SkillLevel(id entity.EntityID, _ skill.ID) uint8 { return f.skill[id] }
-func (f *fakeHost) Inspired(id entity.EntityID, _ string)           { f.inspired = append(f.inspired, id) }
+func (f *fakeHost) SkillLevel(id entity.EntityID, _ skill.ID) uint8      { return f.skill[id] }
+func (f *fakeHost) Passion(id entity.EntityID, _ skill.ID) skill.Passion { return f.passions[id] }
+func (f *fakeHost) CanRun(id entity.EntityID) bool                       { return !f.slow[id] }
+func (f *fakeHost) CanShoot(id entity.EntityID) bool                     { return !f.nonviolent[id] }
+func (f *fakeHost) Inspired(id entity.EntityID, _ string)                { f.inspired = append(f.inspired, id) }
 func (f *fakeHost) InspirationEnded(id entity.EntityID, _ string) {
 	f.faded = append(f.faded, id)
 }
@@ -44,7 +50,7 @@ func TestMTBHours(t *testing.T) {
 	}
 }
 
-func TestInspirationStartsUsesAndCalms(t *testing.T) {
+func TestInspirationStartsAndCanRestartWithoutCooldown(t *testing.T) {
 	t.Parallel()
 	f, m := creativeFake()
 	f.mood[1] = 49
@@ -64,15 +70,10 @@ func TestInspirationStartsUsesAndCalms(t *testing.T) {
 	if !m.Inspire.Use(1, Creativity) || m.Inspire.Use(1, Creativity) {
 		t.Fatal("an inspiration is spent exactly once")
 	}
-	f.now = InspireCalm - 1
+	f.now = clock.TicksPerHour
 	m.Inspire.Check(1)
-	if _, ok := m.Inspire.Of(1); ok {
-		t.Fatal("inspired again during the calm")
-	}
-	f.now = InspireCalm
-	m.Inspire.Check(1)
-	if _, ok := m.Inspire.Of(1); !ok {
-		t.Fatal("not inspired after the calm")
+	if in, ok := m.Inspire.Of(1); !ok || in.Kind != Creativity || len(f.inspired) != 2 {
+		t.Fatal("Core allows another inspiration on the next eligible hourly roll")
 	}
 }
 
@@ -85,8 +86,8 @@ func TestInspirationNeedsSkill(t *testing.T) {
 		f.now = uint64(h) * clock.TicksPerHour
 		m.Inspire.Check(1)
 	}
-	if _, ok := m.Inspire.Of(1); ok || len(f.inspired) != 0 {
-		t.Fatal("an unskilled colonist got inspired creativity")
+	if in, ok := m.Inspire.Of(1); ok && in.Kind == Creativity {
+		t.Fatal("an unskilled colonist got creativity")
 	}
 }
 
@@ -102,15 +103,18 @@ func TestInspirationFades(t *testing.T) {
 		t.Fatal("a faded inspiration was spent")
 	}
 	m.Inspire.Check(1)
-	if len(f.faded) != 1 || m.Inspire.calm[1] != InspireDuration+InspireCalm {
-		t.Fatalf("faded %v, calm %d", f.faded, m.Inspire.calm[1])
+	if len(f.faded) != 1 {
+		t.Fatalf("expired inspiration must be announced once: %v", f.faded)
+	}
+	f.now += clock.TicksPerHour
+	m.Inspire.Check(1)
+	if _, ok := m.Inspire.Of(1); !ok {
+		t.Fatal("expired inspiration prevented the next hourly roll")
 	}
 }
 
-// TestInspirationNoFlap: a mood swinging across the threshold every hour
-// starts an inspiration once and never ends it early; after it fades, the
-// calm keeps a new one off. Over 30 days of always-winning rolls there
-// are at most one start per duration-plus-calm.
+// TestInspirationNoFlap: mood fluctuations do not terminate an active
+// inspiration. A new one can be won after the previous 8-day duration.
 func TestInspirationNoFlap(t *testing.T) {
 	t.Parallel()
 	f, m := creativeFake()
@@ -129,14 +133,14 @@ func TestInspirationNoFlap(t *testing.T) {
 		}
 		was = on
 	}
-	period := (InspireDuration + InspireCalm) / clock.TicksPerHour
+	period := InspireDuration / clock.TicksPerHour
 	if max := hours/period + 1; starts == 0 || starts > max || ends > starts {
 		t.Fatalf("%d starts, %d ends in %d hours (at most %d)", starts, ends, hours, max)
 	}
 }
 
-// TestInspirationCheckFromTickAndSave: Mind.Tick's hourly check inspires a
-// calm colonist, and the save keeps the inspiration and the calm.
+// TestInspirationCheckFromTickAndSave: old saves retain the active
+// inspiration; legacy saved cooldown timestamps no longer block new rolls.
 func TestInspirationCheckFromTickAndSave(t *testing.T) {
 	t.Parallel()
 	f, m := creativeFake()
@@ -148,15 +152,121 @@ func TestInspirationCheckFromTickAndSave(t *testing.T) {
 	if _, ok := m.Inspire.Of(1); !ok {
 		t.Fatal("the hourly check never ran")
 	}
-	m.Inspire.calm[2] = 99
 	s := m.Export()
+	s.InspireCalm = map[entity.EntityID]uint64{1: f.now + 40*clock.TicksPerDay}
 	n := New(f)
 	n.Import(s)
-	if _, ok := n.Inspire.Of(1); !ok || n.Inspire.calm[2] != 99 {
-		t.Fatalf("loaded %+v", s)
+	if _, ok := n.Inspire.Of(1); !ok || len(n.Export().InspireCalm) != 0 {
+		t.Fatalf("legacy cooldown not dropped on load: %+v", n.Export())
+	}
+	n.Inspire.Use(1, Creativity)
+	n.Inspire.Check(1)
+	if _, ok := n.Inspire.Of(1); !ok {
+		t.Fatal("historical cooldown blocked a new inspiration")
 	}
 	n.Import(Save{}) // an older save: none
 	if _, ok := n.Inspire.Of(1); ok {
 		t.Fatal("an older save kept an inspiration")
+	}
+}
+
+func TestCoreInspirationEligibilityAndHistoricalIDs(t *testing.T) {
+	t.Parallel()
+	if Creativity != 1 || GoFrenzy != 2 || Recruitment != 3 || Surgery != 4 ||
+		Taming != 5 || Trade != 6 || ShootFrenzy != 7 || WorkFrenzy != 8 {
+		t.Fatal("saved inspiration Kind IDs changed")
+	}
+	f, m := creativeFake()
+	if got := m.Inspire.choose(1); got != Creativity {
+		t.Fatalf("skilled creative chose %v", got)
+	}
+	f.skill[1] = 0
+	if m.Inspire.eligible(1, Creativity) || m.Inspire.eligible(1, Surgery) ||
+		m.Inspire.eligible(1, Recruitment) || m.Inspire.eligible(1, Taming) || m.Inspire.eligible(1, Trade) {
+		t.Fatal("zero-skill colonist got a skilled inspiration")
+	}
+	if !m.Inspire.eligible(1, GoFrenzy) || !m.Inspire.eligible(1, ShootFrenzy) ||
+		!m.Inspire.eligible(1, WorkFrenzy) {
+		t.Fatal("general inspiration prerequisites")
+	}
+	f.slow = map[entity.EntityID]bool{1: true}
+	f.nonviolent = map[entity.EntityID]bool{1: true}
+	if m.Inspire.eligible(1, GoFrenzy) || m.Inspire.eligible(1, ShootFrenzy) ||
+		m.Inspire.choose(1) != WorkFrenzy {
+		t.Fatal("trait and work-incapacity exclusions")
+	}
+	f.skill[1] = 3
+	if !m.Inspire.eligible(1, Surgery) || !m.Inspire.eligible(1, Taming) ||
+		!m.Inspire.eligible(1, Recruitment) || !m.Inspire.eligible(1, Trade) {
+		t.Fatal("required skills did not unlock Core inspirations")
+	}
+	f.passions = map[entity.EntityID]skill.Passion{1: skill.Major}
+	if got := m.Inspire.weight(1, Recruitment); got != 50 {
+		t.Fatalf("major passion weight %d", got)
+	}
+	f.passions[1] = skill.Minor
+	if got := m.Inspire.weight(1, Recruitment); got != 25 {
+		t.Fatalf("minor passion weight %d", got)
+	}
+}
+
+func TestCoreInspirationUseAndExpiry(t *testing.T) {
+	t.Parallel()
+	f, m := creativeFake()
+	for k := Creativity; k < numInspirations; k++ {
+		m.Inspire.Start(1, k)
+		if !m.Inspire.Has(1, k) || !m.Inspire.Use(1, k) || m.Inspire.Use(1, k) {
+			t.Fatalf("one-use inspiration %v", k)
+		}
+		f.now += clock.TicksPerHour
+	}
+	m.Inspire.Start(1, WorkFrenzy)
+	f.now += InspireDuration
+	if m.Inspire.Has(1, WorkFrenzy) {
+		t.Fatal("timed frenzy outlasted eight days")
+	}
+	m.Inspire.Check(1)
+	if _, ok := m.Inspire.Of(1); ok {
+		t.Fatal("expired frenzy remained active")
+	}
+}
+
+func TestInspiredStatMultipliers(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		k       InspirationKind
+		s       stat.ID
+		v, want int32
+	}{
+		{GoFrenzy, stat.MoveSpeed, 1000, 1400},
+		{WorkFrenzy, stat.WorkSpeed, 1000, 1800},
+		{ShootFrenzy, stat.ShootAcc, 0, 8},
+		{Creativity, stat.MoveSpeed, 1000, 1000},
+	} {
+		if got := AdjustStat(tc.s, tc.v, tc.k); got != tc.want {
+			t.Errorf("kind %v stat %v: %d want %d", tc.k, tc.s, got, tc.want)
+		}
+	}
+}
+
+func TestDeadColonistDropsInspiration(t *testing.T) {
+	t.Parallel()
+	f, m := creativeFake()
+	m.Inspire.Start(1, WorkFrenzy)
+	f.dead[1] = true
+	m.Downed(1)
+	if _, ok := m.Inspire.Of(1); ok || len(m.Export().Inspire) != 0 {
+		t.Fatal("the dead colonist retained an active or saved inspiration")
+	}
+}
+
+func TestDownedLivingPawnRetainsInspiration(t *testing.T) {
+	t.Parallel()
+	f, m := creativeFake()
+	m.Inspire.Start(1, WorkFrenzy)
+	f.down[1] = true
+	m.Downed(1)
+	if !m.Inspire.Has(1, WorkFrenzy) {
+		t.Fatal("temporary incapacity ended an active inspiration")
 	}
 }

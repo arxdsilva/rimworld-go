@@ -4,7 +4,7 @@
 The colony's animal handling: taming, training, feeding, collecting and slaughter.
 
 ## Notes
-Animal life (SIM-026, plan 4.1-4.3, `game/animal_life.go`; the rules the game package runs beside this package): growing up, old age, mating,
+Animal life (SIM-026, plan 4.1-4.3, `herd/life.go`; map adapters remain in `game/animal_life.go`): growing up, old age, mating,
 birth, eggs and hatching. Everything runs inside phaseAnimals, from
 fields on animal.State and item.Stack, with no state of its own:
 
@@ -18,9 +18,8 @@ fields on animal.State and item.Stack, with no state of its own:
   - Mating: each grown male checks once a day, at its own awake tick
     (animal.MateTick: no state, and never twice a day), for a grown
     female within MateRadius; both fed (MateFood), wandering, not
-    leaving, she neither pregnant nor carrying eggs, both wild or both
-    tame, and wild pairs only while the map is under its carrying
-    capacity. A MateChance roll; on success he walks to her while she
+    leaving, she neither pregnant nor carrying eggs, both tame; wild animals do not begin mating, but completed
+    pregnancies and fertilized eggs survive an ownership change. A MateChance roll; on success he walks to her while she
     waits, MateTicks beside her, then she is pregnant (live bearers) or
     carries MatedEggsOf eggs (layers). A mating not done by MateUntil,
     or either partner leaving Wander, is called off.

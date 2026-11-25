@@ -230,19 +230,89 @@ func FailDeathChance(op Operation) int32 {
 	switch {
 	case op.Kind == ExciseCarcinoma:
 		return 250
-	case (op.Kind == InstallImplant || op.Kind == InstallOrgan) && op.Part == Heart:
+	case op.Kind == InstallOrgan && op.Part == Heart:
+		return 250
+	case op.Kind == InstallImplant && op.Part == Heart && op.Item == item.ValveHeart:
 		return 250
 	}
 	return 0
 }
 
+// OperationMaterial is the stock item a doctor carries into surgery.
+// wiki: Peg leg, Wooden hand, Wooden foot (one wood), Denture (medicine
+// only). Old item IDs stay readable in inventory and saves, but new
+// procedures use the raw material directly.
+func OperationMaterial(op Operation) item.Kind {
+	if op.Kind != InstallImplant && op.Kind != InstallOrgan {
+		return 0
+	}
+	if op.Kind == InstallImplant {
+		switch op.Item {
+		case item.PegLeg, item.WoodenHand, item.ProstheticFoot:
+			return item.Wood
+		case item.Denture:
+			return 0
+		}
+	}
+	return op.Item
+}
+
+// LegacyMaterial lets an older save use its manufactured primitive parts
+// in surgery. New surgeries prefer raw stock; previous item IDs remain
+// usable until depleted without adding new crafting recipes.
+func LegacyMaterial(op Operation) item.Kind {
+	if op.Kind != InstallImplant {
+		return 0
+	}
+	switch op.Item {
+	case item.PegLeg, item.WoodenHand, item.ProstheticFoot, item.Denture:
+		return op.Item
+	}
+	return 0
+}
+
+func AcceptsMaterial(op Operation, k item.Kind) bool {
+	return k != 0 && (k == OperationMaterial(op) || k == LegacyMaterial(op))
+}
+
+// OperationWork is surgical work before doctor speed, in game ticks.
+// wiki: Peg leg, Wooden hand, Denture (1,500), Wooden foot (1,000),
+// Bionic leg, Painstopper (2,500), and prosthetic removal (2,000).
+// Zero leaves general surgery on the existing project work schedule.
+func OperationWork(op Operation) int {
+	switch op.Kind {
+	case InstallImplant:
+		switch op.Item {
+		case item.ProstheticFoot:
+			return 1000
+		case item.PegLeg, item.WoodenHand, item.Denture:
+			return 1500
+		default:
+			return 2500
+		}
+	case RemoveImplant:
+		if op.Item == item.NerveDampener {
+			return 2500
+		}
+		return 2000
+	case InstallOrgan:
+		return 2500 // wiki: Kidney, Lung, Heart, Liver
+	case ExciseCarcinoma:
+		return 4500 // wiki: Carcinoma
+	case HarvestOrgan:
+		return 2000 // wiki: Kidney, Lung, Heart, Liver (removal)
+	}
+	return 0
+}
+
 // MedicineNeed is the medicine an operation uses up and the lowest kind
-// allowed: two herbal or better for installs, removals, harvests and
-// amputations, one for anaesthesia and euthanasia, and four industrial
+// allowed: two herbal or better for installs and harvests, one for removal and
+// amputations, anaesthesia and euthanasia, and four industrial
 // or better for a carcinoma excision. wiki: Doctoring, Carcinoma.
 func MedicineNeed(k OpKind) (qty int, least item.Kind) {
 	switch k {
-	case Anesthetize, Euthanize:
+	case Anesthetize, Euthanize, RemoveImplant, HarvestOrgan:
+		// wiki: Kidney, Lung, Heart, Liver (each harvest uses one dose).
 		return 1, item.HerbalMedicine
 	case ExciseCarcinoma:
 		return 4, item.IndustrialMedicine
@@ -259,6 +329,23 @@ func MinSkill(k OpKind) int {
 	return 0
 }
 
+// OperationMinSkill includes part-specific implant requirements.
+func OperationMinSkill(op Operation) int {
+	if (op.Kind == InstallImplant || op.Kind == RemoveImplant) && op.Item.IsAddedImplant() {
+		return MedicalSkill(op.Item)
+	}
+	if op.Kind == InstallImplant {
+		return MedicalSkill(op.Item)
+	}
+	if op.Kind == InstallOrgan {
+		if op.Part == Heart {
+			return 8
+		} // wiki: Heart
+		return 5 // wiki: Kidney, Lung, Liver
+	}
+	return MinSkill(op.Kind)
+}
+
 // condOn reports a condition of kind k on part p.
 func (b *Body) condOn(k CondKind, p Part) bool {
 	for _, c := range b.Conds {
@@ -269,6 +356,118 @@ func (b *Body) condOn(k CondKind, p Part) bool {
 	return false
 }
 
+// operationsConflict prevents duplicate or mutually exclusive requests,
+// while allowing distinct additive implants on the same body part.
+func OperationsConflict(a, b Operation) bool {
+	if a.Kind != b.Kind || a.Part != b.Part {
+		return false
+	}
+	if a.Kind == InstallImplant || a.Kind == RemoveImplant {
+		if a.Item.IsAddedImplant() && b.Item.IsAddedImplant() {
+			return a.Item == b.Item
+		}
+	}
+	return true
+}
+
+// SurgeryDrop is a recovered item or material after a successful operation.
+// Recovery is decided before Apply destroys the replaced part.
+type SurgeryDrop struct {
+	Kind item.Kind
+	Qty  int
+}
+
+// SurgeryYields returns items recovered by a successful installation,
+// removal or amputation. Installed organs remain separate harvest operations.
+func SurgeryYields(b *Body, op Operation) []SurgeryDrop {
+	if b == nil {
+		return nil
+	}
+	switch op.Kind {
+	case InstallImplant, RemoveImplant, InstallOrgan, Amputate:
+	default:
+		return nil
+	}
+	var drops []SurgeryDrop
+	if op.Kind == RemoveImplant && op.Item.IsAddedImplant() {
+		k, n := RemovalYield(op.Item)
+		if n > 0 {
+			drops = append(drops, SurgeryDrop{Kind: k, Qty: n})
+		}
+		return drops
+	}
+	for p, r := range b.Replacements {
+		if r.Kind == 0 || !b.under(Part(p), op.Part) {
+			continue
+		}
+		if op.Kind == RemoveImplant && Part(p) != op.Part {
+			continue
+		}
+		k, n := RemovalYield(r.Kind)
+		if n > 0 {
+			drops = append(drops, SurgeryDrop{Kind: k, Qty: n})
+		}
+	}
+	// A healthy natural heart removed to fit an artificial heart can be
+	// transplanted, without the organ-harvest thought (replacement surgery).
+	if op.Kind == InstallImplant && op.Part == Heart && b.ReplacementAt(Heart) == 0 &&
+		!b.isMissing(Heart) && b.partDmg(Heart) == 0 {
+		drops = append(drops, SurgeryDrop{Kind: item.Heart, Qty: 1})
+	}
+	return drops
+}
+
+// AvailableOperations lists every valid procedure in the Health tab's
+// stable surgery order. The simulation owns validity; UI only adds stock,
+// doctor and medicine availability and filters queued operations.
+func AvailableOperations(b *Body) []Operation {
+	var out []Operation
+	add := func(op Operation) {
+		if b.CanOperate(op) {
+			out = append(out, op)
+		}
+	}
+	for p := Part(0); p < NumParts; p++ {
+		for k, def := range artificialDefs {
+			if def.Parts&bit(p) != 0 && !def.Legacy {
+				add(Operation{Kind: InstallImplant, Part: p, Item: item.Kind(k)})
+			}
+		}
+	}
+	for p := Part(0); p < NumParts; p++ {
+		add(Operation{Kind: RemoveImplant, Part: p})
+		for _, imp := range b.Implants {
+			if imp.Part == p {
+				add(Operation{Kind: RemoveImplant, Part: p, Item: imp.Kind})
+			}
+		}
+	}
+	for p := Part(0); p < NumParts; p++ {
+		if !Inner(p) {
+			add(Operation{Kind: Amputate, Part: p})
+		}
+	}
+	for p := Part(0); p < NumParts; p++ {
+		if OrganOf(p) != 0 {
+			add(Operation{Kind: HarvestOrgan, Part: p})
+		}
+	}
+	for p := Part(0); p < NumParts; p++ {
+		if k := OrganOf(p); k != 0 {
+			add(Operation{Kind: InstallOrgan, Part: p, Item: k})
+		}
+	}
+	add(Operation{Kind: Euthanize, Part: Torso})
+	add(Operation{Kind: Anesthetize, Part: Torso})
+	for p := Part(0); p < NumParts; p++ {
+		add(Operation{Kind: ExciseCarcinoma, Part: p})
+	}
+	return out
+}
+
+// OpCode packs a surgery bill into a stable job identifier.
+func OpCode(op Operation) int { return int(op.Kind)<<16 | int(op.Part)<<8 | int(op.Item) }
+
 // CanOperate reports the operation is valid on the current body.
 // Surgery is for the humanlike body: no operation is valid on an animal
 // plan (MED-13; animal surgery is out of scope).
@@ -278,16 +477,23 @@ func (b *Body) CanOperate(op Operation) bool {
 	}
 	switch op.Kind {
 	case InstallImplant:
-		return Fits(op.Item, op.Part) && b.CanReplace(op.Part)
-	case RemoveImplant: // taking out an artificial heart kills
-		return b.fitted(op.Part) && !defs[op.Part].Vital
+		if op.Item.IsAddedImplant() {
+			return CanAddImplant(b, op.Part, op.Item)
+		}
+		return FitsReplacement(op.Item, op.Part) && b.CanReplace(op.Part)
+	case RemoveImplant:
+		if op.Item.IsAddedImplant() {
+			return artificial(op.Item).Removable && HasImplant(b, op.Part, op.Item)
+		}
+		return op.Item == 0 && b.hasReplacement(op.Part)
 	case Amputate: // organs are harvested, not amputated
 		return !b.isMissing(op.Part) && !defs[op.Part].Vital && !Inner(op.Part)
 	case HarvestOrgan: // a natural organ still in place
 		return OrganOf(op.Part) != 0 && !b.isMissing(op.Part) && !b.blockedAbove(op.Part)
 	case InstallOrgan: // into a missing (or artificial) or a damaged organ
 		return FitsOrgan(op.Item, op.Part) && !b.blockedAbove(op.Part) &&
-			(b.isMissing(op.Part) || b.partDmg(op.Part) > 0)
+			(b.isMissing(op.Part) || b.partDmg(op.Part) > 0 ||
+				(op.Item == item.Lung && b.condOn(CondAsthma, op.Part)))
 	case Euthanize, Anesthetize:
 		return op.Part == Torso
 	case ExciseCarcinoma:
@@ -336,16 +542,28 @@ func (b *Body) succeed(op Operation) bool {
 	defer b.dropAgingAfter(op) // aging.go (MED-08): a replaced or removed part takes its age conditions along
 	switch op.Kind {
 	case InstallImplant:
-		if !b.isMissing(op.Part) {
+		if op.Item.IsAddedImplant() {
+			return AddImplant(b, op.Part, op.Item)
+		}
+		if !b.isMissing(op.Part) || b.hasReplacement(op.Part) {
 			b.destroy(op.Part)
 		}
-		return b.Install(op.Part, op.Item)
+		if !b.InstallReplacement(op.Part, op.Item) {
+			return false
+		}
+		if op.Item == item.SynthStomach {
+			b.RemoveCond(CondGutWorms) // wiki: Bionic stomach, cures existing gut worms
+		}
+		return true
 	case RemoveImplant:
-		_, ok := b.Remove(op.Part)
+		if op.Item.IsAddedImplant() {
+			return DetachImplant(b, op.Part, op.Item)
+		}
+		_, ok := b.RemoveReplacement(op.Part)
 		return ok
 	case InstallOrgan:
 		p := op.Part
-		b.SetImplant(p, 0)
+		b.SetReplacement(p, 0)
 		b.Missing &^= bit(p)
 		b.Fresh &^= bit(p)
 		kept := b.Wounds[:0]
@@ -403,7 +621,10 @@ func (op Operation) DoneText(o Outcome) string {
 	case InstallImplant:
 		return "fitted a " + op.Item.String() + " to the " + part
 	case RemoveImplant:
-		return "removed the implant from the " + part
+		if op.Item.IsAddedImplant() {
+			return "removed the " + op.Item.String() + " from the " + part
+		}
+		return "removed the artificial part from the " + part
 	case HarvestOrgan:
 		return "harvested the " + part
 	case InstallOrgan:

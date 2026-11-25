@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldinfo"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/tabview"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/caravan"
@@ -76,26 +77,28 @@ type toolState struct {
 // their markers, the selection and the modes (route, pod targeting, the
 // pick-spot cursor).
 type View struct {
-	sh     Shell
-	open   bool
-	chart  chart
-	g      *globe.View
-	objs   []Object
-	live   []int // the tiles of the simulation's settlements, sorted
-	marks  []mark
-	tiles  []int // onTile scratch
-	read   readStamp
-	sel    selState
-	route  routeState
-	pods   podState
-	spot   spotState
-	tools  toolState
-	card   card     // the tile card of the bare tile shown
-	etaC   etaCache // the selected caravan's travel time and distance
-	frame  uint64   // Updates seen (the double-click window)
-	hops   planet.HopScratch
-	quests []game.QuestView // the quests read with the objects (the caravan's request and talks gizmos)
-	game   Reader           // the colony the state above belongs to
+	sh          Shell
+	open        bool
+	chart       chart
+	g           *globe.View
+	objs        []Object
+	live        []int // the tiles of the simulation's settlements, sorted
+	marks       []mark
+	tiles       []int // onTile scratch
+	read        readStamp
+	sel         selState
+	route       routeState
+	pods        podState
+	spot        spotState
+	tools       toolState
+	card        card     // the tile card of the bare tile shown
+	etaC        etaCache // the selected caravan's travel time and distance
+	frame       uint64   // Updates seen (the double-click window)
+	hops        planet.HopScratch
+	quests      []game.QuestView     // the quests read with the objects (the caravan's request and talks gizmos)
+	markets     []tabview.MarketView // visited markets cached with the same world snapshot
+	marketReply tabview.MarketReply  // receipt at the same read boundary
+	game        Reader               // the colony the state above belongs to
 }
 
 // New builds the view over its shell (closed).
@@ -275,6 +278,7 @@ func (v *View) refresh(env Env, p *planet.Planet) {
 	v.read = readStamp{tick: now, frame: v.frame, ok: true}
 	r := readModels{maps: env.Game.Maps(), world: env.Game.WorldMap(), ax: v.sh.World().AX, quests: v.sh.World().Quests, tiles: p.TileCount()}
 	v.quests = r.quests
+	v.markets, v.marketReply = r.world.Markets, r.world.MarketReply
 	if src, ok := env.Game.(WorldSource); ok {
 		r.sites = src.WorldSites()
 	}

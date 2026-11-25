@@ -40,9 +40,11 @@ func TestTakeSetModeRelease(t *testing.T) {
 	if want := uint64(rid) * visitStagger % prisoner.VisitInterval; st.NextVisit != want {
 		t.Fatalf("first visit %d, want %d (staggered by id)", st.NextVisit, want)
 	}
-	p.SetMode(rid, uint8(prisoner.Execute)+1)
-	if st.Mode != prisoner.Recruit {
-		t.Fatal("an unknown mode is ignored")
+	for _, mode := range []uint8{uint8(prisoner.Execute) + 1, uint8(prisoner.Execute) + 2, 255} {
+		p.SetMode(rid, mode)
+		if st.Mode != prisoner.Recruit {
+			t.Fatalf("unknown mode %d was accepted", mode)
+		}
 	}
 	p.SetMode(rid, uint8(prisoner.Reduce))
 	if st.Mode != prisoner.Reduce {
@@ -189,8 +191,13 @@ func TestLive(t *testing.T) {
 	f.jobs[rid] = job.Record{Kind: job.Sleep, State: job.Do}
 	f.needs[rid] = needs.Pair{Hunger: needs.Full, Rest: needs.Full}
 	p.Live(rid, 2)
+	if f.jobs[rid].Kind != job.Sleep || f.jobs[rid].State != job.Do || f.needs[rid].Rest != needs.Full {
+		t.Fatal("the native sleep executor owns physical sleep and waking")
+	}
+	f.jobs[rid] = job.Record{Kind: job.Sleep, State: job.Complete}
+	p.Live(rid, 2)
 	if f.jobs[rid].Kind != job.None {
-		t.Fatal("rested: it gets up")
+		t.Fatal("completed sleep: it gets up")
 	}
 	p.Live(rid, 900-7*uint64(rid)%900)
 	if f.jobs[rid].Kind != job.Move {
@@ -216,5 +223,50 @@ func TestLive(t *testing.T) {
 	p.Live(rid, 6)
 	if p.Is(rid) || f.Held(rid).Leaving {
 		t.Fatal("the dead are no prisoners, and walk nowhere")
+	}
+}
+
+func TestInspiredRecruitmentConsumesOnlyOnRecruitChat(t *testing.T) {
+	p, f := rig(t)
+	st := p.State(rid)
+	st.Mode, st.Resistance = prisoner.Recruit, 25000
+	f.inspiredRecruit = true
+	p.Chat(warden, rid, 4)
+	if p.Is(rid) || len(f.recruited) != 1 || f.inspiredRecruit {
+		t.Fatalf("inspired recruiter did not bypass resistance: %+v, %v", st, f.recruited)
+	}
+	p, f = rig(t)
+	st = p.State(rid)
+	st.Mode, st.Resistance = prisoner.Reduce, 25000
+	f.inspiredRecruit = true
+	p.Chat(warden, rid, 4)
+	if !p.Is(rid) || len(f.recruited) != 0 || !f.inspiredRecruit {
+		t.Fatalf("reducing resistance spent inspiration: %+v", st)
+	}
+}
+
+func TestRecruitDifficultyViewUsesNativeWardenChance(t *testing.T) {
+	p, f := rig(t)
+	before := *p.State(rid)
+	draws := f.ri
+	v, ok := p.View(rid, true)
+	if !ok || v.RecruitChanceMin != prisoner.RecruitChance(0) || v.RecruitChanceMax != prisoner.RecruitChance(20) {
+		t.Fatalf("no warden range: %+v", v)
+	}
+	held := f.Held(rid)
+	held.Warden = warden
+	f.SetHeld(rid, held)
+	f.social = 12
+	v, ok = p.View(rid, true)
+	if !ok || v.RecruitChanceMin != prisoner.RecruitChance(12) || v.RecruitChanceMax != v.RecruitChanceMin || v.Warden == "" {
+		t.Fatalf("actual warden chance: %+v", v)
+	}
+	f.SetVital(warden, health.Record{Status: health.Dead})
+	v, _ = p.View(rid, true)
+	if v.RecruitChanceMin != prisoner.RecruitChance(0) || v.RecruitChanceMax != prisoner.RecruitChance(20) || v.Warden != "" {
+		t.Fatalf("dead warden is not an available recruiter: %+v", v)
+	}
+	if *p.State(rid) != before || f.ri != draws {
+		t.Fatal("reading the difficulty changed the prisoner or consumed RNG")
 	}
 }

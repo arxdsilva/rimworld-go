@@ -123,8 +123,8 @@ func TestAnimalHitsLandOnParts(t *testing.T) {
 				if b.Anatomy != animal.AnatomyOf(sp) || b.VitalLost() {
 					t.Fatalf("%s: body %+v", key, b)
 				}
-				if woundDmg(b) > a.Injury {
-					t.Fatalf("%s: wounds %d over injury %d", key, woundDmg(b), a.Injury)
+				if body.OpenWoundDamage(b) > a.Injury {
+					t.Fatalf("%s: wounds %d over injury %d", key, body.OpenWoundDamage(b), a.Injury)
 				}
 				if parts[b.Anatomy] == nil {
 					parts[b.Anatomy] = map[body.Part]bool{}

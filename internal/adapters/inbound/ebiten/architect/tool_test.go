@@ -261,3 +261,23 @@ func TestMarksForceTheirOverlays(t *testing.T) {
 		t.Fatal("no colony: nothing sent")
 	}
 }
+
+func TestLargeBuildingDragPreviewDoesNotTruncateSubmission(t *testing.T) {
+	tl, f := newFake(&fakeSim{blocked: map[[2]int]string{{25, 25}: "Rock"}})
+	tl.Open, tl.ToolID, tl.Drag = true, "wall", true
+	tl.Style = StyleRect
+	tl.X0, tl.Y0, tl.X1, tl.Y1 = 0, 0, 32, 32
+	_, preview := tl.PreviewCells()
+	if len(preview) != archMaxGhost {
+		t.Fatalf("preview %d", len(preview))
+	}
+	tl.Submit()
+	if len(f.cmds) != 33*33-1 {
+		t.Fatalf("submitted %d cells", len(f.cmds))
+	}
+	for _, c := range f.cmds {
+		if c.X == 25 && c.Y == 25 {
+			t.Fatal("blocked cell after preview cap submitted")
+		}
+	}
+}

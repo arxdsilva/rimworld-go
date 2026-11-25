@@ -13,11 +13,12 @@ import (
 // set), heatstroke per pawn (Full-based), the everyday comfortable range,
 // a healing spot per pawn and the ExposureWait ticks.
 type fakeAir struct {
-	temp  map[[2]int]int
-	heat  map[entity.EntityID]int32
-	spot  map[entity.EntityID][2]int
-	wait  map[entity.EntityID]uint64
-	spots int // HealingSpot calls
+	temp   map[[2]int]int
+	heat   map[entity.EntityID]int32
+	spot   map[entity.EntityID][2]int
+	wait   map[entity.EntityID]uint64
+	spots  int // HealingSpot calls
+	unsafe map[[2]int]bool
 }
 
 func (a *fakeAir) ensure() {
@@ -45,6 +46,13 @@ func (h *fakeHost) HealingSpot(id entity.EntityID) (int, int, bool) {
 	h.air.spots++
 	s, ok := h.air.spot[id]
 	return s[0], s[1], ok
+}
+
+func (h *fakeHost) GroundSafe(patient, carrier entity.EntityID, x, y int) bool {
+	return h.AirHeals(patient, x, y, 0) && !h.air.unsafe[[2]int{x, y}]
+}
+func (h *fakeHost) HealingSpotFor(patient, carrier entity.EntityID) (int, int, bool) {
+	return h.HealingSpot(patient)
 }
 
 func (h *fakeHost) ExposureWait(id entity.EntityID) uint64 { h.air.ensure(); return h.air.wait[id] }

@@ -89,17 +89,17 @@ func (c *Care) judge(doer entity.EntityID, o command.Order, target entity.Entity
 		if !c.rescueTarget(target) {
 			return false, ReasonNoLonger
 		}
-		return true, firstWhy(c.doerWhy(doer, true), c.holdWhy(doer, target), c.rescueBedWhy(target), c.reachWhy(doer, target))
+		return true, firstWhy(c.doerWhy(doer, true), c.holdWhy(doer, target), tripWhy(c, doer, target, tripRescue), c.reachWhy(doer, target))
 	case command.OrderCapture:
 		if !c.Capturable(target) || c.BeingCaptured(target) {
 			return false, ReasonNoLonger
 		}
-		return true, firstWhy(c.doerWhy(doer, false), c.holdWhy(doer, target), c.prisonBedWhy(target), c.reachWhy(doer, target))
+		return true, firstWhy(c.doerWhy(doer, false), c.holdWhy(doer, target), tripWhy(c, doer, target, tripCapture), c.reachWhy(doer, target))
 	case command.OrderArrest:
 		if v, _ := c.h.Vital(target); !c.Arrestable(target) || v.Status != health.Alive || c.BeingCaptured(target) {
 			return false, ReasonNoLonger
 		}
-		return true, firstWhy(c.doerWhy(doer, false), c.holdWhy(doer, target), c.prisonBedWhy(target), c.reachWhy(doer, target))
+		return true, firstWhy(c.doerWhy(doer, false), c.holdWhy(doer, target), tripWhy(c, doer, target, tripCapture), c.reachWhy(doer, target))
 	case command.OrderTendPatient:
 		return c.judgeTend(doer, target)
 	case command.OrderFeedPatient:
@@ -176,15 +176,6 @@ func (c *Care) rescueBedWhy(target entity.EntityID) string {
 	px, py, _ := c.h.Pos(target)
 	if c.SafeBedFor(target, px, py, RescueBed) == 0 && !c.Doctor.toSpot(target) { // AIL-1: or a spot whose air heals
 		return ReasonNoBed
-	}
-	return ""
-}
-
-// prisonBedWhy: no free prisoner bed for target.
-func (c *Care) prisonBedWhy(target entity.EntityID) string {
-	px, py, _ := c.h.Pos(target)
-	if _, ok := c.pr.PrisonBedFor(target, px, py); !ok {
-		return ReasonNoPrisonBed
 	}
 	return ""
 }

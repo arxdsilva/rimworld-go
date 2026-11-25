@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -236,7 +237,36 @@ New:
 // this pin to get a test to pass. Only a migration step that really changes a
 // v12 save's state may move the hash: re-pin it then, saying in the commit
 // why that migration changes it.
-const saveV12Hash = uint64(0xcd8c86c147ee0ebb) // v20: the migration sets FriendlyFirePct 100 on a v12 setup (SHT-007)
+// v20: legacy colonists gain Patient, BedRest and Basic; Smith and Tailor
+// inherit their former Craft setting. Their saved labor masks and active
+// work priorities therefore change on load.
+// Core faction semantics change the migrated v12 world: SetEnemies
+// rebuilds the foreign war ledger using the new rough-faction war bands.
+// The additive, authoritative Faction.DriftDay and People.Origin fields
+// also enter the canonical state. The v12 fixture bytes stay frozen.
+// The visitor-group migration now reattaches the four original v12 visitors
+// and their trader's carrier manifest to a durable caravan group (world v3,
+// trade v3). The loaded authoritative state therefore gains GroupID and
+// membership; the byte-for-byte original fixture remains untouched.
+// Restoring native game.MapID and the published command enum order keeps
+// prior save and script identities stable; the resulting v12 migration hash
+// is the value pinned below.
+// v21: historical 11-skill arrays are decoded through savelegacy and copied
+// to 12-skill canonical records, with Artistic at neutral level 7.
+// The extra saved skill position intentionally changes the authoritative
+// state hash; the frozen v12 fixture itself must remain byte-identical.
+// Saved setup difficulty now carries neutral adaptation
+// growth, food-poison risk, and fractional adaptation carry. Loaded v12
+// settings are upgraded to BalanceVersion 3 while preserving its other
+// rules, the old fixture bytes, and the original 600-tick continuation.
+// The public-source adaptation correction intentionally canonicalizes the
+// historical smoothed score as bounded fixed-point adaptation days, with the
+// early-colony ceiling. The old fixture bytes remain frozen.
+// Completed historical structures now retain their original paid-material
+// era. The eight nonzero MaterialBasis records explain the entire delta
+// from 0xde9f3c38a6932cd8; TestV12MaterialBasisCausalHash preserves that independent
+// historical reference and checks save/load plus 600-tick continuation.
+const saveV12Hash = uint64(0x49a77fd3f03b4950)
 
 // v12Colony is the colony in the fixture: rich in state, so that as many
 // saved fields as practical are non-zero.
@@ -371,6 +401,35 @@ func TestSaveV12Fixture(t *testing.T) {
 	}
 	if !g.hasSetup() || info.MapSize != 60 || info.Colonists == 0 {
 		t.Fatalf("fixture header %+v, has setup %v", info, g.hasSetup())
+	}
+	// Independently decode the historical fields and verify the migration
+	// before checking the hash. Do not call the production migration helper.
+	zr, err := savefmt.NewReader(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec := gob.NewDecoder(zr)
+	var historicalInfo SaveInfo
+	if err := dec.Decode(&historicalInfo); err != nil {
+		t.Fatal(err)
+	}
+	var historical saveState
+	if err := savefmt.Finish(dec.Decode(&historical), zr); err != nil {
+		t.Fatal(err)
+	}
+	if historical.NG1 == nil {
+		t.Fatal("v12 fixture lacks historical setup state")
+	}
+	wantUnits := int32(historical.NG1.Adapt.Days) * 10000
+	wantUnits = min(1000000, max(-600000, wantUnits))
+	if g.relDay(uint64(g.clock.Now())) < 30 {
+		wantUnits = min(0, wantUnits)
+	}
+	if a := g.ng.adapt; !a.Precise || a.Units != wantUnits || a.Days != 0 || a.Value != 0 || a.GrowthCarry != 0 {
+		t.Fatalf("v12 adaptation migration: %+v, want %d precise units", a, wantUnits)
+	}
+	if g.diff().FriendlyFirePercent() != 100 {
+		t.Fatal("pre-v20 fixture must retain full friendly fire")
 	}
 	hash := g.StateHash()
 	if hash != saveV12Hash {

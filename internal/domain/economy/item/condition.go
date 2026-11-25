@@ -12,15 +12,9 @@ import "rimworld-go/internal/domain/economy/quality"
 // its wiki rate, apart from rotting; the other raw resources have no
 // condition (the wiki gives them no rate here), so they keep forever.
 
-// HasQuality reports a kind made with a quality roll and with hit points:
-// apparel and weapons (wiki: Quality; furniture and art are buildings),
-// but not grenades, thrown from a stack.
-func HasQuality(k Kind) bool {
-	if k == FragGrenades || k == MolotovCocktails || k == EMPGrenades {
-		return false
-	}
-	return k.IsApparel() || k.IsWeapon()
-}
+// HasQuality includes all crafted core weapons and apparel. Thrown
+// weapons use the same physical quality record and craft roll.
+func HasQuality(k Kind) bool { return k.IsApparel() || k.IsWeapon() }
 
 // maxHP is the base hit points per kind. wiki: Apparel (parka 140, tuque
 // 80, duster 200); the wool parka is our own garment and takes the
@@ -204,8 +198,11 @@ func HPValuePct(hp, maxHP int) int {
 // StackValue is the market value of one unit of s: its kind's value,
 // scaled by its material against the default one, its quality and its
 // hit points.
-func StackValue(s Stack) int {
-	v := s.Kind.Value()
+func StackValue(s Stack) int { return Book{}.StackValue(s) }
+
+// StackValue uses the run's base price, including content patches.
+func (b Book) StackValue(s Stack) int {
+	v := b.Value(s.Kind)
 	if MadeFrom(s.Kind) != 0 {
 		v = v * StuffFactor(s.Kind, s.StuffOfStack(), func(p StuffProps) int { return p.Value }) / 1000
 	}

@@ -5,19 +5,22 @@ package game
 
 import (
 	"maps"
+	"rimworld-go/internal/application/game/saveutil"
+	"slices"
+
+	"rimworld-go/internal/application/game/aging"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/gearfacts"
+	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/recreate"
-	"rimworld-go/internal/domain/animal"
-	"slices"
-	"strings"
-
 	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/backstory"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -30,6 +33,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	miningrules "rimworld-go/internal/domain/world/mining"
 )
 
 // Skills, stats and traits in play (NG-1 §5.4). Every colonist (and any
@@ -47,8 +51,6 @@ const (
 	// workingTicks: a pawn counts as doing skilled work (passion joy)
 	// this long after its last unit of progress.
 	workingTicks = 2
-	// lovesWorkMajor is the passion thought for a major passion.
-	lovesWorkMajor = 4
 )
 
 // skillState is the per-pawn identity, skill and stat data.
@@ -143,19 +145,18 @@ type pawnFx struct {
 	learnPct  [skill.NumSkills]int16 // pawngen.LearnPct
 	incapable backstory.Bits
 	traits    []trait.ID
-	neutral   bool    // base sheet, all factors 100%: the fast path
-	body      bodyKey // the capacities the body layer was built from (body.go)
-	gear      int32   // the worn armour's MoveSpeed offset it was built with (game/gearfacts, GEAR-009)
+	neutral   bool        // base sheet, all factors 100%: the fast path
+	bodyAim   int32       // derived capacity score, updated independently of the sheet
+	body      bodyStatKey // the Moving/Manipulation stat-layer key (body.go)
+	gear      int32       // the worn armour's MoveSpeed offset it was built with (game/gearfacts, GEAR-009)
 }
 
-// learnLog is how much each skill learned today and in the last 7 days,
-// and the hundredths of a point learning-rate factors left over.
-type learnLog struct {
-	day   int32
-	today [skill.NumSkills]int32
-	week  [7][skill.NumSkills]int32 // by day % 7
-	carry [skill.NumSkills]int16
+func (fx *pawnFx) hasTrait(t trait.ID) bool {
+	return fx != nil && slices.Contains(fx.traits, t)
 }
+
+// learnLog is the skill domain's deterministic seven-day history.
+type learnLog = skill.LearnLog
 
 type workingRec struct {
 	sk   skill.ID
@@ -244,14 +245,15 @@ func (g *Game) bioFor(id entity.EntityID) (pawngen.Pawn, bool) {
 // age, conditions, traits, then the difficulty layer, then the wounded
 // body's capacities (body.go; a pawn without a bio gets that layer alone).
 func (g *Game) rebuildStats(id entity.EntityID) {
-	key, gm := keyOf(g.bodies[id]), gearfacts.MovePermille(g.apparel[id]) // body.go: capacities, recomputed only on change; worn armour
+	bk := keyOf(g.bodies[id])
+	key, gm := statKeyOf(bk), gearfacts.MovePermille(g.apparel[id]) // body.go: stats exclude Sight; worn armour
 	p, ok := g.sk.bios[id]
 	if !ok {
-		if key == healthyKey && gm == 0 {
+		if key == healthyStatKey && gm == 0 && bodyAimOf(bk) == 0 {
 			delete(g.sk.stats, id)
 			return
 		}
-		fx := &pawnFx{sheet: stat.Build(stat.Base(), gearfacts.Mods(gm), bodyMods(key)), body: key, gear: gm}
+		fx := &pawnFx{sheet: stat.Build(stat.Base(), gearfacts.Mods(gm), bodyMods(key)), body: key, bodyAim: bodyAimOf(bk), gear: gm}
 		for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 			fx.workPct[sk], fx.learnPct[sk] = 100, 100
 		}
@@ -259,7 +261,7 @@ func (g *Game) rebuildStats(id entity.EntityID) {
 		return
 	}
 	layers := append(pawngen.StatLayers(p, traitsOf(g)), g.difficultyMods(), gearfacts.Mods(gm), bodyMods(key))
-	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(backstoriesOf(g), traitsOf(g)), traits: p.Traits, body: key, gear: gm}
+	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(backstoriesOf(g), traitsOf(g)), traits: p.Traits, body: key, bodyAim: bodyAimOf(bk), gear: gm}
 	fx.neutral = fx.sheet == stat.Base()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 		fx.workPct[sk] = int16(pawngen.SkillWorkPct(p, traitsOf(g), sk))
@@ -290,10 +292,21 @@ func (g *Game) difficultyMods() []stat.Mod {
 
 // statOf is one stat of id (the neutral value for pawns without a bio).
 func (g *Game) statOf(id entity.EntityID, s stat.ID) int32 {
+	var v int32
 	if fx := g.sk.stats[id]; fx != nil {
-		return fx.sheet[s]
+		v = fx.sheet[s]
+		if s == stat.ShootAcc {
+			v += fx.bodyAim
+		}
+	} else {
+		v = stat.Base()[s]
 	}
-	return stat.Base()[s]
+	if g.mind != nil && (s == stat.ShootAcc || s == stat.MoveSpeed || s == stat.WorkSpeed) {
+		if in, ok := g.mind.Inspire.Of(id); ok {
+			v = mind.AdjustStat(s, v, in.Kind)
+		}
+	}
+	return v
 }
 
 // skillOf is id's skill sk (neutral for pawns without a bio).
@@ -354,10 +367,9 @@ func (g *Game) IncapableReason(id entity.EntityID, t work.Type) string {
 // --- work progress and learning ------------------------------------
 
 // workProgress is how much work pawn id does this tick on work trained
-// by skill sk (hasSkill false: work speed only). rate = mood gate ×
-// WorkSpeed × skill speed × trait/condition skill factor, carried in
-// permille, so a neutral pawn does exactly 1 unit a tick — and 0 on the
-// low-mood ticks workTick has always skipped. Skilled work also trains sk.
+// by skill sk (hasSkill false: work speed only). Rate combines WorkSpeed,
+// skill speed and trait/condition factors, carried in permille. Mood
+// changes mental break risk rather than reducing direct work progress.
 func (g *Game) workProgress(id entity.EntityID, sk skill.ID, hasSkill bool) int {
 	return g.workProgressPct(id, sk, hasSkill, 100)
 }
@@ -369,11 +381,8 @@ func (g *Game) workProgressPct(id entity.EntityID, sk skill.ID, hasSkill bool, p
 		g.sk.ensure()
 		g.sk.working[id] = workingRec{sk: sk, tick: uint64(g.clock.Now())}
 	}
-	if !g.workTick(id) {
-		return 0
-	}
 	rate := int64(1000)
-	if fx := g.sk.stats[id]; fx != nil && !fx.neutral || hasSkill && roster.LevelSpeed(sk, g.skillOf(id, sk).Level) != 1000 || pct != 100 {
+	if fx := g.sk.stats[id]; fx != nil && !fx.neutral || hasSkill && roster.LevelSpeed(sk, g.skillOf(id, sk).Level) != 1000 || pct != 100 || g.mind.Inspire.Has(id, mind.WorkFrenzy) {
 		rate = int64(g.statOf(id, stat.WorkSpeed)) * int64(pct) / 100
 		if hasSkill {
 			rate = rate * int64(roster.LevelSpeed(sk, g.skillOf(id, sk).Level)) / 1000
@@ -381,6 +390,9 @@ func (g *Game) workProgressPct(id entity.EntityID, sk skill.ID, hasSkill bool, p
 				rate = rate * int64(fx.workPct[sk]) / 100
 			}
 		}
+	}
+	if hasSkill && sk == skill.Mining {
+		rate = rate * int64(miningrules.SightSpeed(g.capacity(id, body.Sight))) / 1000
 	}
 	units := 1
 	if c := g.sk.workCarry[id]; rate != 1000 || c != 0 {
@@ -412,67 +424,34 @@ func (g *Game) learn(id entity.EntityID, sk skill.ID, xp int) {
 	if fx := g.sk.stats[id]; fx != nil && !fx.neutral {
 		// LearnRate × trait learning, hundredths carried per skill
 		f := int64(fx.sheet[stat.LearnRate]) * int64(fx.learnPct[sk]) / 1000
-		raw := int64(xp)*f + int64(lg.carry[sk])
-		xp, lg.carry[sk] = int(raw/100), int16(raw%100)
+		raw := int64(xp)*f + int64(lg.Carry[sk])
+		xp, lg.Carry[sk] = int(raw/100), int16(raw%100)
 		if xp <= 0 {
 			return
 		}
 	}
 	s := &set[sk]
 	before, lv := roster.TotalXP(*s), s.Level
-	skill.LearnCapped(s, xp, int(lg.today[sk]))
+	skill.LearnCapped(s, xp, int(lg.Today[sk]))
 	gain := int32(roster.TotalXP(*s) - before) // what was banked: a maxed skill clamps
-	lg.today[sk] += gain
-	lg.week[lg.day%7][sk] += gain
+	lg.Today[sk] += gain
+	lg.Week[lg.Day%7][sk] += gain
 	if s.Level != lv {
 		g.rebuildStats(id)
 	}
 }
 
-// learnLogOf is id's learning log, rolled over to today: a new day
-// clears the saturation count and that weekday's slot.
+// learnLogOf returns id's XP history advanced to the current game day.
 func (g *Game) learnLogOf(id entity.EntityID) *learnLog {
 	g.sk.ensure()
 	day := int32(uint64(g.clock.Now()) / clock.TicksPerDay)
 	lg := g.sk.learned[id]
 	if lg == nil {
-		lg = &learnLog{day: day}
+		lg = &learnLog{Day: day}
 		g.sk.learned[id] = lg
 	}
-	if lg.day != day {
-		for d := lg.day + 1; d <= day && d <= lg.day+7; d++ {
-			lg.week[d%7] = [skill.NumSkills]int32{}
-		}
-		lg.today, lg.day = [skill.NumSkills]int32{}, day
-	}
+	lg.Roll(day)
 	return lg
-}
-
-// saturated is which skills have reached today's soft cap (skill.SoftCapDay).
-func (lg *learnLog) saturated(day int32) [skill.NumSkills]bool {
-	var out [skill.NumSkills]bool
-	if lg.day != day {
-		return out // a new day, not rolled over yet
-	}
-	for sk := range out {
-		out[sk] = lg.today[sk] >= skill.SoftCapDay
-	}
-	return out
-}
-
-// lastWeek is the experience each skill gained in the 7 days up to day (Bio
-// tab "This week: +N"), in skill.ID order.
-func (lg *learnLog) lastWeek(day int32) [skill.NumSkills]int {
-	var out [skill.NumSkills]int
-	for d := day - 6; d <= day; d++ {
-		if d < 0 || d > lg.day || lg.day-d >= 7 {
-			continue
-		}
-		for sk := range out {
-			out[sk] += int(lg.week[d%7][sk])
-		}
-	}
-	return out
 }
 
 // combatLearn trains the attack skill of a colonist that just struck by
@@ -504,38 +483,34 @@ func (g *Game) dayPasses(id entity.EntityID) {
 	if set := g.sk.skills[id]; set != nil {
 		changed := false
 		for sk := range set {
-			l := set[sk].Level
+			l, before := set[sk].Level, roster.TotalXP(set[sk])
 			skill.DecayDay(&set[sk])
+			if loss := before - roster.TotalXP(set[sk]); loss > 0 {
+				lg := g.learnLogOf(id)
+				lg.Today[sk] -= int32(loss)
+			}
 			changed = changed || set[sk].Level != l
 		}
 		if changed {
 			g.rebuildStats(id)
 		}
 	}
+	if !g.clock.Calendar().BiologicalDayDue(uint64(g.clock.Now())) {
+		return
+	}
 	p.AgeDays++
 	g.sk.bios[id] = p
 	if p.AgeDays%pawngen.DaysPerYear == 0 {
-		g.rebuildStats(id) // birthday (letter: optional, off; not shown)
+		g.rebuildStats(id) // birthday
+		aging.Birthday(agingHost{g}, id, uint64(g.clock.Now()))
 	}
 }
 
 // --- yields, accuracy, traits ---------------------------------------
 
-// skillPct is the ±4%/level factor around level 7, clamped to lo..hi.
-func (g *Game) skillPct(id entity.EntityID, sk skill.ID, perLevel, lo, hi int) int {
-	l := int(g.skillOf(id, sk).Level)
-	return min(max(100+perLevel*(l-skill.Neutral), lo), hi)
-}
-
-// skillYield scales a mining yield by sk (plants have plant.YieldAmount):
-// ×clamp(100 + 4·(L−7), 60, 140)% (exact for a neutral pawn). Positive yields
-// stay at least 1.
-func (g *Game) skillYield(id entity.EntityID, sk skill.ID, qty int) int {
-	pct := g.skillPct(id, sk, 4, 60, 140)
-	if pct == 100 || qty <= 0 {
-		return qty
-	}
-	return max(1, qty*pct/100)
+// miningYieldPermil reads the actual worker's live capacities and skill.
+func (g *Game) miningYieldPermil(id entity.EntityID) int {
+	return miningrules.Yield(int(g.skillOf(id, skill.Mining).Level), g.capacity(id, body.Manipulation), g.capacity(id, body.Sight))
 }
 
 // butcherYield scales a butchering yield (meat, leather) by the butcher's
@@ -554,7 +529,7 @@ const ReasonSkill = "not skilled enough"
 // tuning), downed, Brawler from Scrapper, Nimble from LightFooted.
 func (g *Game) meleeOf(id entity.EntityID) attack.Melee {
 	k := keyOf(g.bodies[id]) // body.go: Moving, Manipulation, Sight (healthy without a body)
-	m := attack.Melee{Moving: int(k[0]), Manip: int(k[1]), Sight: int(k[2])}
+	m := attack.Melee{Moving: int(k[0]), Manip: int(k[1]), Sight: int(k[2]), Brawler: g.sk.stats[id].hasTrait(trait.Scrapper)}
 	if v, ok := g.vital.Get(id); ok {
 		m.Skill, m.Skilled, m.Offset, m.Down = int(g.skillOf(id, skill.Melee).Level), true, 10*int(g.statOf(id, stat.MeleeAcc)), v.Status != health.Alive
 		bio, _ := g.personBio(id)
@@ -607,41 +582,13 @@ func activeSkill(g *Game, id entity.EntityID) (skill.ID, bool) {
 	return w.sk, true
 }
 
-// traitThoughts applies id's traits and the difficulty to its thoughts:
-// thought scales and additions, the passion state thought, the trait mood
-// offset and the difficulty's mood line (hidden when 0).
+// traitThoughts uses the frozen trait book and current work passion.
 func (g *Game) traitThoughts(id entity.EntityID, ts []mood.Thought) []mood.Thought {
-	if fx := g.sk.stats[id]; fx != nil && len(fx.traits) > 0 {
-		tb := traitsOf(g)
-		for i := range ts {
-			for _, t := range fx.traits {
-				d := tb.DefOf(t)
-				if sc, ok := d.ThoughtScale[ts[i].Kind]; ok {
-					ts[i].Value = ts[i].Value * int(sc) / 100
-				}
-				if add, ok := d.AddThought[ts[i].Kind]; ok {
-					ts[i].Value += int(add)
-				}
-			}
-		}
-		for _, t := range fx.traits {
-			for _, m := range tb.DefOf(t).Mods {
-				if m.Stat == stat.MoodOffset && m.Add != 0 {
-					ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: strings.ToLower(tb.DefOf(t).Label), Value: int(m.Add)})
-				}
-			}
-		}
+	var ids []trait.ID
+	if fx := g.sk.stats[id]; fx != nil {
+		ids = fx.traits
 	}
-	switch g.lovesWork(id) {
-	case skill.Minor:
-		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.DefOf(mood.LovesWork).Label, Value: mood.DefOf(mood.LovesWork).Value})
-	case skill.Major:
-		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.DefOf(mood.LovesWork).Label, Value: lovesWorkMajor})
-	}
-	if off := g.moodOffset(); off != 0 {
-		ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: mood.DefOf(mood.Difficulty).Label, Value: off})
-	}
-	return ts
+	return trait.ApplyThoughts(traitsOf(g), ids, ts, g.lovesWork(id), g.moodOffset())
 }
 
 // comfortShift is id's ColdComfort and HeatComfort (tenths of a degree
@@ -666,10 +613,36 @@ func (g *Game) decayNeeds(id entity.EntityID, n needs.Pair, now uint64) needs.Pa
 	return needs.DecayRated(n, now, hr, rr, &c.hunger, &c.rest)
 }
 
+// recreationEligible is a physical need of ordinary colony residents,
+// not prisoners, visitors or hostile pawns.
+func recreationEligible(g *Game, id entity.EntityID) bool {
+	if !g.colonist(id) || g.prison.Is(id) {
+		return false
+	}
+	if p := g.personOf(id); p != nil {
+		return p.Faction == 0 && (p.Where == whereColony || p.Where == whereCaravan)
+	}
+	return true
+}
+
+// joyForScheduling is neutral for pawns without a recreation need.
+func joyForScheduling(g *Game, id entity.EntityID) int {
+	if !recreationEligible(g, id) {
+		return recreation.Full
+	}
+	return g.joy[id]
+}
+
+func addRecreation(g *Game, id entity.EntityID, amount int) {
+	if recreationEligible(g, id) {
+		g.joy[id] = recreation.Clamp(g.joy[id] + amount)
+	}
+}
+
 // drainJoy is one awake tick of recreation drain: RecreationRate, less
 // 20%/40% while doing minor/major passion work.
 func (g *Game) drainJoy(id entity.EntityID, now uint64) {
-	if now%recreation.DrainPeriod != 0 || g.joy[id] <= 0 {
+	if !recreationEligible(g, id) || now%recreation.DrainPeriod != 0 || g.joy[id] <= 0 {
 		return
 	}
 	r := recreate.PassionDrain(g.statOf(id, stat.RecreationRate), g.lovesWork(id))
@@ -742,6 +715,7 @@ func (g *Game) incapableOrder(id entity.EntityID, o command.Order) string {
 // incapable work, skill levels and passions, title. Pawns without a bio
 // (raiders SETUP did not generate) read as legacy pawns.
 func (g *Game) fillPawnBio(pv *PawnView) {
+	pv.CanTalk = g.alive(pv.ID) && g.capacity(pv.ID, body.Talking) > 0
 	p, ok := g.sk.bios[pv.ID]
 	if !ok {
 		p = legacyBio(pv.ID, pv.Name)
@@ -775,14 +749,14 @@ func (g *Game) bioView(id entity.EntityID) (BioView, bool) {
 
 // exportBios is the pawn identity state a save carries: every bio, the
 // live skills and the fractional work.
-func (g *Game) exportBios() (bios map[entity.EntityID]pawngen.Pawn, skills map[entity.EntityID]skill.Set, carry map[entity.EntityID]int32) {
+func (g *Game) exportBios(owned ...bool) (bios map[entity.EntityID]pawngen.Pawn, skills map[entity.EntityID]skill.Set, carry map[entity.EntityID]int32) {
 	if len(g.sk.bios) == 0 {
 		return nil, nil, nil
 	}
 	bios = make(map[entity.EntityID]pawngen.Pawn, len(g.sk.bios))
 	skills = make(map[entity.EntityID]skill.Set, len(g.sk.skills))
 	for id, p := range g.sk.bios {
-		bios[id] = p
+		bios[id] = saveutil.OwnPawn(len(owned) > 0 && owned[0], p)
 	}
 	for id, set := range g.sk.skills {
 		skills[id] = *set

@@ -7,15 +7,18 @@ import (
 	"reflect"
 	"slices"
 
+	"rimworld-go/internal/application/game/visit"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/sim/command"
 )
 
 // ItemKinds maps saved item kinds onto the running content (PLG-026): the
 // kind of the same key now, or item.None for one the run lacks (its
-// plugin is no longer loaded). Core kinds keep their places, so only
-// plugin kinds ever move; kinds past the saved keys (item.None, the
+// plugin is no longer loaded). Core kinds keep their places, but adding core kinds can overlap old
+// plugin slots; kinds past the saved keys (item.None, the
 // "no material" sentinel) stay as they are.
 type ItemKinds struct {
 	to []item.Kind // nil: every kind stays
@@ -65,7 +68,8 @@ func (m ItemKinds) gone(k item.Kind) bool { return k != item.None && m.Kind(k) =
 // a field, of a gone kind), as are a gone kind's slice elements and map
 // entries; a lone field naming a gone kind becomes item.None, which every
 // Kind method answers neutrally. A slice of kinds sorted before stays
-// sorted. Kinds stored as plain integers are the caller's.
+// sorted. Stock and carrier ledgers retain their Goods ordering; saved
+// item commands retain their key identity or are removed as a whole.
 func (m ItemKinds) Walk(v any) {
 	if m.Same() {
 		return
@@ -74,43 +78,70 @@ func (m ItemKinds) Walk(v any) {
 	w.walk(reflect.ValueOf(v).Elem())
 }
 
+// MigrateConstructionStacks gives all old physical crates their original
+// construction basis, including nested packs, markets, holds and flights.
+// Reuse the item remap traversal; only historical load invokes this.
+func MigrateConstructionStacks(v any, version int) {
+	if version >= 21 {
+		return
+	}
+	w := walker{seen: map[reflect.Type]bool{}, constructionVersion: version}
+	w.walk(reflect.ValueOf(v).Elem())
+}
+
 // walker is one Walk: the map and which types can hold a kind.
 type walker struct {
-	m    ItemKinds
-	seen map[reflect.Type]bool // type → may hold an item kind (memo)
+	constructionVersion int
+	m                   ItemKinds
+	seen                map[reflect.Type]bool // type → may hold an item kind (memo)
 }
 
 var (
-	kindType   = reflect.TypeFor[item.Kind]()
-	stackType  = reflect.TypeFor[item.Stack]()
-	filterType = reflect.TypeFor[zone.Filter]()
+	kindType    = reflect.TypeFor[item.Kind]()
+	stackType   = reflect.TypeFor[item.Stack]()
+	filterType  = reflect.TypeFor[zone.Filter]()
+	lineType    = reflect.TypeFor[trade.Line]()
+	stockType   = reflect.TypeFor[trade.Stock]()
+	cargoType   = reflect.TypeFor[visit.Cargo]()
+	commandType = reflect.TypeFor[command.Command]()
 )
 
-// holds reports values of type t may hold an item kind.
+// holds reports whether t can contain a kind or a command's encoded
+// reference. Cache complete reachability results, never an in-progress
+// false result: saveState recursively contains extra map saveStates.
 func (w *walker) holds(t reflect.Type) bool {
 	if v, ok := w.seen[t]; ok {
 		return v
 	}
-	w.seen[t] = false // a recursive type holds one only through its other parts
-	out := false
+	out := w.reaches(t, make(map[reflect.Type]bool))
+	w.seen[t] = out
+	return out
+}
+
+func (w *walker) reaches(t reflect.Type, visited map[reflect.Type]bool) bool {
+	if v, ok := w.seen[t]; ok {
+		return v
+	}
+	if visited[t] {
+		return false
+	}
+	visited[t] = true
+	if t == kindType || t == filterType || t == commandType {
+		return true
+	}
 	switch t.Kind() {
-	case reflect.Uint8:
-		out = t == kindType
-	case reflect.Array:
-		out = t == filterType || w.holds(t.Elem())
-	case reflect.Slice, reflect.Pointer:
-		out = w.holds(t.Elem())
+	case reflect.Array, reflect.Slice, reflect.Pointer:
+		return w.reaches(t.Elem(), visited)
 	case reflect.Map:
-		out = w.holds(t.Key()) || w.holds(t.Elem())
+		return w.reaches(t.Key(), visited) || w.reaches(t.Elem(), visited)
 	case reflect.Struct:
 		for i := range t.NumField() {
-			if f := t.Field(i); f.IsExported() && w.holds(f.Type) {
-				out = true
+			if f := t.Field(i); f.IsExported() && w.reaches(f.Type, visited) {
+				return true
 			}
 		}
 	}
-	w.seen[t] = out
-	return out
+	return false
 }
 
 // walk remaps v in place and reports v is (or directly holds) a stack of
@@ -121,6 +152,21 @@ func (w *walker) walk(v reflect.Value) (drop bool) {
 		return false
 	}
 	switch {
+	case t == stackType && w.constructionVersion > 0:
+		st := v.Interface().(item.Stack)
+		if st.Kind == item.MinifiedBuilding && st.MaterialBasis == (item.MaterialBasis{}) {
+			st.MaterialBasis = construction.HistoricalBasis(construction.Kind(st.Building), w.constructionVersion)
+			v.Set(reflect.ValueOf(st))
+		}
+		return false
+	case t == commandType:
+		c, ok := w.m.Command(v.Interface().(command.Command))
+		if ok {
+			v.Set(reflect.ValueOf(c))
+		}
+		return !ok
+	case t == lineType && w.m.gone(v.Interface().(trade.Line).Kind):
+		return true
 	case t == kindType:
 		k := item.Kind(v.Uint()) // #nosec G115 -- v's type is item.Kind (uint8), so v.Uint() fits
 		v.SetUint(uint64(w.m.Kind(k)))
@@ -141,9 +187,15 @@ func (w *walker) walk(v reflect.Value) (drop bool) {
 				continue
 			}
 			gone := w.walk(v.Field(i))
-			if gone && (t == stackType && f.Name == "Kind" || f.Type == stackType) {
+			if gone && (t == stackType && f.Name == "Kind" || f.Type == stackType || f.Type == commandType || f.Type == lineType) {
 				drop = true
 			}
+		}
+		// Only inventory owners have a Goods-sorted contract. Do not
+		// reorder unrelated delivery and reward sequences.
+		if t == stockType || t == cargoType {
+			lines := v.FieldByName("Lines").Interface().([]trade.Line)
+			slices.SortStableFunc(lines, compareLines)
 		}
 	case reflect.Array:
 		for i := range v.Len() {
@@ -178,6 +230,8 @@ func (w *walker) slice(v reflect.Value) {
 	}
 }
 
+func compareLines(a, b trade.Line) int { return a.Goods().Compare(b.Goods()) }
+
 // mapOf rebuilds a map with its keys and values remapped, without the
 // entries walk drops (surviving keys stay distinct: the map is one to
 // one).
@@ -200,40 +254,57 @@ func (w *walker) mapOf(v reflect.Value) {
 	v.Set(out)
 }
 
-// filter moves f's plugin bits to their kinds now, clearing gone ones.
+// filter reconstructs permissions in the saved key namespace. A historical
+// plugin slot can now be a native kind, so the current core boundary is
+// not a valid source boundary. Preserve the out-of-band sentinel.
 func (w *walker) filter(f zone.Filter) zone.Filter {
-	out := f
-	for k := item.CoreKinds; k < int(item.None); k++ {
-		out = out.With(item.Kind(k), false)
+	if w.m.Same() {
+		return f
 	}
-	for k := item.CoreKinds; k < int(item.None); k++ {
-		if f.Has(item.Kind(k)) {
-			if to := w.m.Kind(item.Kind(k)); to != item.None {
-				out = out.With(to, true)
-			}
+	out := zone.Filter{}.With(item.None, f.Has(item.None))
+	for i, to := range w.m.to {
+		if i < int(item.None) && to != item.None && f.Has(item.Kind(i)) {
+			out = out.With(to, true)
 		}
 	}
 	return out
 }
 
-// Commands remaps the commands that carry an item kind as a plain byte
-// (SetBillIngredient's Stuff), in place, dropping one whose kind is gone
-// (cmds itself when none is). Stuff elsewhere is a building material,
-// never a plugin kind; filter commands name kinds by key.
+// Command remaps saved item intent without changing its quote or
+// silently selecting another physical lot. A missing key or ambiguous
+// world lot invalidates the entire command, never just one offer line.
+func (m ItemKinds) Command(c command.Command) (command.Command, bool) {
+	if m.Same() {
+		return c, true
+	}
+	switch c.Kind {
+	case command.SetBillIngredient:
+		k := item.Kind(c.Stuff)
+		if m.gone(k) {
+			return c, false
+		}
+		c.Stuff = uint8(m.Kind(k))
+	case command.ProposeTrade, command.WorldCaravanTrade:
+		name, ok := trade.RemapOffer(c.Name, len(m.to), m.Kind, c.Kind == command.WorldCaravanTrade)
+		if !ok {
+			return c, false
+		}
+		c.Name = name
+	}
+	return c, true
+}
+
+// Commands remaps a list of queued commands, dropping an invalid intent
+// as a whole. Walk also applies Command inside nested saved orders.
 func (m ItemKinds) Commands(cmds []command.Command) []command.Command {
 	if m.Same() {
 		return cmds
 	}
 	out := cmds[:0:0]
 	for _, c := range cmds {
-		if c.Kind == command.SetBillIngredient {
-			k := item.Kind(c.Stuff)
-			if m.gone(k) {
-				continue
-			}
-			c.Stuff = uint8(m.Kind(k))
+		if moved, ok := m.Command(c); ok {
+			out = append(out, moved)
 		}
-		out = append(out, c)
 	}
 	return out
 }

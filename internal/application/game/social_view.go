@@ -6,10 +6,10 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/tabview"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/pkg/mathx"
 )
 
 // socialView builds pawn id's Social tab: everyone it is related to, has
@@ -28,60 +28,38 @@ func (g *Game) socialView(id entity.EntityID) (SocialView, bool) {
 			}
 		}
 	}
-	type ranked struct {
-		row      RelationRowView
-		strength int32
-	}
-	var rows []ranked
+	var rows tabview.SocialRows
+	graph := famGraph{g}
+	own := social.AncestryOf(social.ID(id), graph)
 	for _, o := range others {
-		ks := g.kinOf(id, o)
-		to, termsTo := g.opinionTerms(id, o, true)
-		from, termsFrom := g.opinionTerms(o, id, true)
+		other := social.AncestryOf(social.ID(o), graph)
+		pair := g.pairOf(id, o)
+		ks := kinFromAncestry(graph, &own, &other, pair)
+		to, termsTo := g.opinionTermsWithKin(id, o, true, func() []social.Kind { return ks })
+		from, termsFrom := g.opinionTermsWithKin(o, id, true, func() []social.Kind {
+			return kinFromAncestry(graph, &other, &own, pair)
+		})
 		if len(ks) == 0 && g.edgeOf(id, o) == nil && to == 0 && from == 0 {
 			continue
 		}
-		otherMale := g.socialPerson(o).Male
-		label := ""
-		var strength int32
-		for _, k := range ks {
-			if b := absI32(social.Bonus(k)); label == "" || b > strength {
-				label, strength = social.Label(k, otherMale), b
-			}
-		}
-		if label == "" {
-			switch {
-			case g.friendOf(id, o):
-				label = "friend"
-			case g.rivalOf(id, o):
-				label = "rival"
-			default:
-				label = "acquaintance"
-			}
-		}
-		rows = append(rows, ranked{RelationRowView{
-			Other: uint64(o), Name: g.personName(o), Label: label, Status: g.personStatus(o),
-			OpinionTo: centiPoints(to), OpinionFrom: centiPoints(from),
-			TermsTo: termViews(termsTo), TermsFrom: termViews(termsFrom),
-			RomanceNote: g.romanceNote(id, o), // social_romance.go (M5)
-		}, strength})
+		rows.Add(tabview.SocialRowFacts{
+			Other: uint64(o), Name: g.personName(o), Status: g.personStatus(o),
+			RomanceNote: g.romanceNote(id, o), Male: g.socialPerson(o).Male,
+			Kin: ks, To: to, From: from, TermsTo: termsTo, TermsFrom: termsFrom,
+			Friend: g.friendOf(id, o), Rival: g.rivalOf(id, o),
+		})
 	}
-	slices.SortStableFunc(rows, func(a, b ranked) int {
-		if a.strength != b.strength {
-			return int(b.strength - a.strength)
-		}
-		if da, db := mathx.Abs(a.row.OpinionTo), mathx.Abs(b.row.OpinionTo); da != db {
-			return db - da
-		}
-		if a.row.Other < b.row.Other {
-			return -1
-		}
-		return 1
-	})
-	v := SocialView{Log: g.socialLogViews(id)}
-	for _, r := range rows {
-		v.Relations = append(v.Relations, r.row)
+	return rows.Build(g.socialLogViews(id)), true
+}
+
+// kinFromAncestry reads family relations from one view's snapshot and
+// includes the couple edge, in the same order as Game.kinOf.
+func kinFromAncestry(graph famGraph, a, b *social.Ancestry, pair social.Pair) []social.Kind {
+	ks := social.AppendKinBetween(nil, a, b, graph)
+	if k, ok := pair.Kind.Relation(); ok {
+		ks = append(ks, k)
 	}
-	return v, true
+	return ks
 }
 
 // personStatus is the Social tab's status word for id.
@@ -109,37 +87,17 @@ func (g *Game) personStatus(id entity.EntityID) string {
 	return ""
 }
 
-func absI32(v int32) int32 {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-
-// centiPoints rounds centi-points to whole points (half away from zero).
-func centiPoints(c int32) int {
-	if c < 0 {
-		return -int((-c + 50) / 100)
-	}
-	return int((c + 50) / 100)
-}
-
-func termViews(ts []social.Term) []OpinionTermView {
-	if len(ts) == 0 {
-		return nil
-	}
-	out := make([]OpinionTermView, len(ts))
-	for i, t := range ts {
-		out[i] = OpinionTermView{Label: t.Label, Value: centiPoints(t.Value)}
-	}
-	return out
-}
+// centiPoints is retained for existing game test and read call sites.
+func centiPoints(c int32) int { return tabview.CentiPoints(c) }
 
 // fillSocialPawn fills colonist pv's social fields: the smoothed mood it
 // shows (and the target it moves to) and its latest interaction bubble.
 func (g *Game) fillSocialPawn(pv *PawnView, target int) {
 	pv.MoodTarget = target
-	pv.Mood = g.smoothedMood(pv.ID, target)
+	pv.Mood = target
+	if m, ok := g.smoothedMood(pv.ID); ok {
+		pv.Mood = m
+	}
 	pv.MoodLabel = mood.Label(pv.Mood)
 	pv.Interaction, pv.InteractTick = g.lastInteraction(pv.ID)
 	pv.SocialFight = g.mind.InFight(pv.ID) // mind/fight.go (M6)

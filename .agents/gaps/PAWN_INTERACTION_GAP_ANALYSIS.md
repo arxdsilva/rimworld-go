@@ -84,7 +84,7 @@ Tending priority chain and quality, care policy, self-tend, surgery queue, socia
 | Beat out fire on a burning pawn | Pawns have no burning state. | out of scope (needs a burning state) |
 | Resurrection | No resurrection item or serum. | out of scope (needs a resurrection item) |
 | Carry to an arbitrary spot | No free-carry command or drop target. | out of scope (needs a carry-to-cell command) |
-| Downed-animal carry to animal beds | No animal bed building or animal carry job. | out of scope (needs animal beds) |
+| Downed-animal carry to animal beds | RSC-101/BED-242: native rescue carries downed tame animals to safe animal beds, prioritizes designated medical beds, and releases temporary claims after recovery. | done |
 
 ## 4. Wiki constants
 
@@ -164,3 +164,7 @@ Each phase ticks these items when its acceptance criteria are met. Titles are qu
 ## 7. Out of scope
 
 See section 3.6. Each item stays listed with its missing prerequisite. A phase never half-implements one of them.
+
+### Independent native review correction (2026-11-25)
+
+SIM-063 / AIL-1: live patient-healing air and structural admission are checked again at actual arrival; an invalid bed/spot transfer terminates at the carrier's tile with normal claim cleanup and no successful-transfer cooldown. The deliberate no-healing-site fallback remains conditional. No unrelated gap is closed by this correction.

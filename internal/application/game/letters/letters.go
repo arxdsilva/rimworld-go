@@ -16,6 +16,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/letterdata"
 	"rimworld-go/pkg/msgfmt"
 )
 
@@ -49,6 +50,8 @@ func KindOf(kind string, danger bool) string {
 type Letter struct {
 	ID, Tick uint64
 	Kind     string
+	Code     string             // source event code, independent of rendered title
+	Fields   []letterdata.Field // typed parameters persisted with the letter
 	Title    string
 	Text     string
 	Msg      msgfmt.Text // Text as its catalog key and args (OPT-001)
@@ -150,6 +153,26 @@ func (s *State) Lapse(now uint64) {
 	if s.list = slices.DeleteFunc(s.list, func(l Letter) bool { return l.Until != 0 && l.Until <= now }); len(s.list) != n {
 		s.ver++
 	}
+}
+
+// GetLive is a decision admission, not a display read: the offer is
+// invalid at its exact expiry tick, even before the periodic lapse pass.
+func (s *State) GetLive(id, now uint64) (Letter, bool) {
+	l, ok := s.Get(id)
+	if ok && l.Until != 0 && l.Until <= now {
+		s.Remove(id)
+		return Letter{}, false
+	}
+	return l, ok
+}
+
+// RemoveLive consumes a decision only if it was live at now.
+func (s *State) RemoveLive(id, now uint64) (Letter, bool) {
+	l, ok := s.Remove(id)
+	if ok && l.Until != 0 && l.Until <= now {
+		return Letter{}, false
+	}
+	return l, ok
 }
 
 // Get is letter id; ok false for an unknown id.

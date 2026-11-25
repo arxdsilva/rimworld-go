@@ -20,12 +20,18 @@ func OperationLabel(b *Body, op Operation) string {
 	part := op.Part.Label()
 	switch op.Kind {
 	case InstallImplant:
+		if op.Item.IsAddedImplant() {
+			return fmt.Sprintf("Install %s (%s)", op.Item, part)
+		}
 		if op.Part < NumParts && b.Missing&(1<<op.Part) == 0 {
 			return fmt.Sprintf("Replace %s with %s", part, op.Item)
 		}
 		return fmt.Sprintf("Install %s (%s)", op.Item, part)
 	case RemoveImplant:
-		return fmt.Sprintf("Remove implant (%s)", part)
+		if op.Item.IsAddedImplant() {
+			return fmt.Sprintf("Remove %s (%s)", op.Item, part)
+		}
+		return fmt.Sprintf("Remove artificial part (%s)", part)
 	case Amputate:
 		return fmt.Sprintf("Amputate %s", part)
 	case HarvestOrgan: // MED-00 placeholders until MED-06
@@ -44,7 +50,7 @@ func OperationLabel(b *Body, op Operation) string {
 
 // woundKindLabels name WoundKind values for the Health tab.
 var woundKindLabels = [...]string{Cut: "cut", Bruise: "bruise", Bite: "bite", Scratch: "scratch",
-	Burn: "burn", Surgical: "surgical cut", Stab: "stab", Gunshot: "gunshot", Frostbite: "frostbite"}
+	Burn: "burn", Surgical: "surgical cut", Stab: "stab", Gunshot: "gunshot", Frostbite: "frostbite", CorrosiveBurn: "corrosive burn"}
 
 // WoundKindLabel names a wound kind ("gunshot").
 func WoundKindLabel(k WoundKind) string {

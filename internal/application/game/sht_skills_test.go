@@ -22,12 +22,7 @@ import (
 func TestManipulationCostsShootingScore(t *testing.T) {
 	t.Parallel()
 	for manip, want := range map[int32]int32{500: -4, 0: -8, 1000: 0, 1500: 0} {
-		var got int32
-		for _, m := range bodyMods(bodyKey{1000, manip, 1000}) {
-			if m.Stat == stat.ShootAcc {
-				got = m.Add
-			}
-		}
+		got := bodyAimOf(bodyKey{1000, manip, 1000})
 		if got != want {
 			t.Errorf("manip %d: shoot_acc %+d, want %+d", manip, got, want)
 		}
@@ -70,7 +65,7 @@ func TestSoftCapInGame(t *testing.T) {
 	}))
 	xp := func() int64 { return roster.TotalXP(g.skillOf(id, skill.Mining)) }
 	before := xp()
-	for g.learnLogOf(id).today[skill.Mining] < skill.SoftCapDay {
+	for g.learnLogOf(id).Today[skill.Mining] < skill.SoftCapDay {
 		g.learn(id, skill.Mining, 50)
 	}
 	atCap := xp() - before
@@ -177,7 +172,7 @@ func TestMaxedSkillLogsBankedGain(t *testing.T) {
 		g.learn(id, skill.Mining, 100)
 	}
 	banked := roster.TotalXP(g.skillOf(id, skill.Mining)) - before
-	if got := int64(g.learnLogOf(id).today[skill.Mining]); got != banked || banked >= 1000 {
+	if got := int64(g.learnLogOf(id).Today[skill.Mining]); got != banked || banked >= 1000 {
 		t.Fatalf("logged %d, banked %d of 50000 fed, want 100 at most", got, banked)
 	}
 }

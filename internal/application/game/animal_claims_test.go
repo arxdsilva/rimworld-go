@@ -203,16 +203,22 @@ func TestWildEggsAreUnclaimed(t *testing.T) {
 	for _, tame := range []bool{false, true} {
 		g := New(Config{Seed: 1, Width: 30, Height: 20})
 		warmDay(t, g)
-		hen := spawnSexed(t, g, "turkey", 10, 10, true, tame, "Hen")
-		setAnimal(g, hen, func(a *animal.State) { a.Mated = animal.MatedEggs })
+		species, kind := animal.Goose, item.Egg
+		if tame {
+			species, kind = animal.Turkey, item.FertileEgg
+		}
+		hen := spawnSexed(t, g, species.String(), 10, 10, true, tame, "Hen")
+		if tame {
+			setAnimal(g, hen, func(a *animal.State) { a.Mated = animal.MatedEggs })
+		}
 		day := int(uint64(g.clock.Now())/clock.TicksPerDay) + 1
-		for !animal.LaysToday(animal.Turkey, uint64(hen), day) {
+		for !animal.LaysToday(species, uint64(hen), day) {
 			day++
 		}
-		advance(g, uint64(day)*clock.TicksPerDay+animal.LayTick(animal.Turkey, uint64(hen)))
+		advance(g, uint64(day)*clock.TicksPerDay+animal.LayTick(species, uint64(hen)))
 		keepFed(g, hen)
 		g.Step(1)
-		_, st, ok := eggStack(g, item.FertileEgg)
+		_, st, ok := eggStack(g, kind)
 		if !ok {
 			t.Fatalf("tame %v: no egg", tame)
 		}

@@ -16,7 +16,7 @@ import (
 // applySetting runs a PRD-1 bill-settings command on bill c.Index (in
 // range) of bench bid's bills. A changed bill searches for ingredients
 // again at once.
-func (b *Bills) applySetting(bid entity.EntityID, bills []recipe.Bill, c command.Command) {
+func (b *Bills) applySetting(bid entity.EntityID, bills []recipe.Bill, c command.Command) int {
 	bl := bills[c.Index]
 	switch c.Kind {
 	case command.ConfigureBill:
@@ -24,17 +24,31 @@ func (b *Bills) applySetting(bid entity.EntityID, bills []recipe.Bill, c command
 	case command.SetBillIngredient:
 		k := item.Kind(c.Stuff)
 		if !b.book.DefTakes(b.book.DefOf(bl.Recipe), k) {
-			return
+			return -1
 		}
 		bl = bl.SetAllowed(k, c.Enabled)
+	case command.SetBillRange:
+		switch c.Mode {
+		case command.BillRangeHP:
+			bl.Condition = bl.Condition.WithHP(c.X2, c.Y2)
+		case command.BillRangeQuality:
+			bl.Condition = bl.Condition.WithQuality(c.X2, c.Y2)
+		default:
+			return -1
+		}
 	case command.ReorderBill:
-		b.reorder(bid, bills, c.Index, c.Index+c.Count)
-		return
+		to := max(0, min(c.Index+c.Count, len(bills)-1))
+		if to == c.Index {
+			return -1
+		}
+		b.reorder(bid, bills, c.Index, to)
+		return to
 	case command.SetStorageSource: // RES-1: take ingredients only from this storage (0: anywhere)
 		bl.Source = c.Zone
 	}
 	bl.SearchAt = 0
 	bills[c.Index] = bl
+	return c.Index
 }
 
 // configured is bill bl with ConfigureBill c's settings, each brought
@@ -71,16 +85,42 @@ func (b *Bills) reorder(bid entity.EntityID, bills []recipe.Bill, from, to int) 
 		copy(bills[from:to], bills[from+1:to+1])
 	}
 	bills[to] = moved
+	b.remapJobs(bid, bills, from, to)
+}
+
+// remapJobs keeps the live index accurate for UI and legacy records.
+// A removed row becomes invalid, never the next row with the same recipe.
+func (b *Bills) remapJobs(bid entity.EntityID, rows []recipe.Bill, from, to int) {
 	for _, pid := range b.h.PawnIDs() {
 		j, ok := b.h.Job(pid)
-		if !ok || j.Dest != bid || j.Kind != job.Bill && j.Kind != job.HaulIngredients {
-			continue
-		}
-		if n := movedIndex(j.BillIndex, from, to); n != j.BillIndex {
-			j.BillIndex = n
-			b.h.SetJob(pid, j)
+		if next, changed := RemapBillJob(j, bid, rows, from, to); ok && changed {
+			b.h.SetJob(pid, next)
 		}
 	}
+}
+
+// RemapBillJob keeps a live or suspended job's saved index consistent.
+// Removed rows get an invalid index and fail through the normal job-end
+// owner, preserving physical carry, pack contents and reservations.
+func RemapBillJob(j job.Record, bid entity.EntityID, rows []recipe.Bill, from, to int) (job.Record, bool) {
+	if j.Dest != bid || !billJob(j.Kind) {
+		return j, false
+	}
+	n := editedIndex(j.BillIndex, from, to)
+	if j.BillIdentity != 0 {
+		n = billOf(j, rows)
+		if n >= len(rows) {
+			n = -1
+		}
+	}
+	if n == j.BillIndex {
+		return j, false
+	}
+	j.BillIndex = n
+	if n < 0 && j.Active() {
+		j.State, j.Fail = job.Fail, job.TargetGone
+	}
+	return j, true
 }
 
 // movedIndex is where bill i sits after the bill at from moved to to.
@@ -104,4 +144,20 @@ func (b *Bills) spot(bid entity.EntityID) [2]int {
 	}
 	_, spot, _ := construction.Footprint(bench.Kind, bench.Facing, bench.X, bench.Y)
 	return spot
+}
+
+func billJob(k job.Kind) bool {
+	return k == job.Bill || k == job.HaulIngredients || k == job.PackIngredients
+}
+func editedIndex(i, from, to int) int {
+	if to >= 0 {
+		return movedIndex(i, from, to)
+	}
+	if i == from {
+		return -1
+	}
+	if i > from {
+		return i - 1
+	}
+	return i
 }

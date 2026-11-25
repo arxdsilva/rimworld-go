@@ -468,7 +468,8 @@ func TestJourneyOrdersRescueDowned(t *testing.T) {
 func TestJourneyOrdersCaptureFromMenu(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{9, 4}))
-	carePrisonBed(j, careBed(j, "sleeping spot", 14, 2))
+	bed := careBed(j, "sleeping spot", 14, 2)
+	careMarkPrisonBed(j, bed)
 	j.g.Raid(1)
 	j.tick(2)
 	var raider uint64
@@ -485,6 +486,9 @@ func TestJourneyOrdersCaptureFromMenu(t *testing.T) {
 	doer := uint64(j.a.renderer.Selected())
 	r := j.pawn(raider)
 	name := r.Name
+	careRightClick(j, r.X, r.Y)
+	careRefusedPrisonOrder(j, "Capture "+name)
+	careEnclosePrisonBed(j, bed)
 	labels := careRightClick(j, r.X, r.Y)
 	j.pick("Capture " + name)
 	c, ok := j.lastCmd(command.Prioritize)
@@ -503,10 +507,14 @@ func TestJourneyOrdersCaptureFromMenu(t *testing.T) {
 func TestJourneyOrdersArrestFromMenu(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{12, 6}))
-	carePrisonBed(j, careBed(j, "sleeping spot", 16, 2))
+	bed := careBed(j, "sleeping spot", 16, 2)
+	careMarkPrisonBed(j, bed)
 	doer, target := ordColonists(j)[0], ordColonists(j)[1]
 	tp := j.pawn(target)
 	ordPick(j, 0)
+	careRightClick(j, tp.X, tp.Y)
+	careRefusedPrisonOrder(j, "Arrest "+tp.Name)
+	careEnclosePrisonBed(j, bed)
 	labels := careRightClick(j, tp.X, tp.Y)
 	j.pick("Arrest " + tp.Name)
 	c, ok := j.lastCmd(command.Prioritize)

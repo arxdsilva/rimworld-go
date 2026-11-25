@@ -41,7 +41,16 @@ func (h allowHost) DoorChanged(b construction.Building) {
 func forbids(g *Game) allow.Forbids { return allow.New(allowHost{g}) }
 
 // setForbidden applies a SetForbidden command (a stack or a building).
-func (g *Game) setForbidden(id entity.EntityID, on bool) { forbids(g).Set(id, on) }
+func (g *Game) setForbidden(id entity.EntityID, on bool) {
+	forbids(g).Set(id, on)
+	if b, ok := g.bldgs.Get(id); on && ok && b.Forbidden && (b.Kind.Sleeps() || b.Kind.AnimalSleeps()) {
+		g.care.Rest.ForbidBed(id, b, func(pawn entity.EntityID) {
+			if g.sleptAt[pawn] == id {
+				delete(g.sleptAt, pawn)
+			}
+		})
+	}
+}
 
 // markForbidden forbids or allows every ground stack in the rectangle.
 func (g *Game) markForbidden(x1, y1, x2, y2 int, on bool) { forbids(g).Rect(x1, y1, x2, y2, on) }

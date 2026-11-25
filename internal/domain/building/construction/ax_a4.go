@@ -12,9 +12,9 @@ func plannedA4(Kind) bool { return false }
 
 // ExtraNeed is how many of its Def.Extra[i] secondary material frame f
 // takes (AX-4 owns the delivery): none for a reinstall or an in-place
-// material swap (the piece already holds them), none past the slots.
+// same-kind material swap (the piece already holds them), none past the slots.
 func (f Frame) ExtraNeed(i int) int {
-	if i < 0 || i >= len(f.ExtraGot) || f.Reinstall != 0 || f.Swaps != 0 {
+	if i < 0 || i >= len(f.ExtraGot) || f.Reinstall != 0 || f.Swaps != 0 && !f.SwapNewRecipe {
 		return 0
 	}
 	return DefOf(f.Kind).Extra[i].N

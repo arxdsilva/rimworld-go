@@ -6,6 +6,7 @@ package trade
 import (
 	"slices"
 
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/pkg/mathx"
@@ -25,6 +26,9 @@ const (
 	Quartermaster
 	// CurioMerchant: an orbital ship of rare and costly goods.
 	CurioMerchant
+	TribalSettlement
+	IndustrialSettlement
+	SpacerSettlement
 	NumKinds
 )
 
@@ -38,9 +42,7 @@ const (
 	Sell
 )
 
-// Def is a trader kind's static definition. SilverMin..SilverMax is the
-// silver it arrives with; Specialty lists the item categories
-// (item.Kind.Category) it pays SpecialtyPct more for.
+// Def describes a trader's stock categories and available silver.
 type Def struct {
 	Kind                 TraderKind
 	Key, Label           string
@@ -49,27 +51,12 @@ type Def struct {
 	Specialty            []string
 }
 
-// Price rules (hundredths of a silver, percent; .agents/handoffs/PLAY.md#play024_plan).
+// Published Core trade pricing. All price quotes use hundredths of silver.
 const (
-	// BuyMarkupPct is the markup over value at Social 0 and goodwill 0;
-	// each Social level takes off SocialStepCenti hundredths of a point and
-	// each goodwill point BuyGoodwillMilli thousandths of a point, down to
-	// BuyFloorPct.
-	BuyMarkupPct     = 45
-	BuyFloorPct      = 6
-	BuyGoodwillMilli = 60 // 0.06 points per goodwill
-	// SellCutPct is the trader's cut below value at Social 0 and goodwill
-	// 0, shrinking the same way (SellGoodwillMilli per goodwill point) down
-	// to SellFloorPct.
-	SellCutPct        = 50
-	SellFloorPct      = 10
-	SellGoodwillMilli = 50 // 0.05 points per goodwill
-	// SocialStepCenti is 1.2 points per Social level, in hundredths.
-	SocialStepCenti = 120
-	// SellCapPct: a sell price is never above this share of the buy price.
-	SellCapPct = 90
-	// SpecialtyPct is the extra a trader pays for its specialty.
-	SpecialtyPct = 10
+	BuyBasePct               = 140
+	SellBasePct              = 60
+	SocialStepCenti          = 150
+	MaxTradeImprovementCenti = 3950
 )
 
 // Plugin goods in stock (PLG-026): a plugin kind whose def opts in
@@ -87,23 +74,28 @@ type Line struct {
 	Kind     item.Kind
 	Qty      int
 	Building uint8
+	Lots     []Lot // saved physical variants within the stock row
 }
 
 // Stock is a trader's goods (sorted by item kind, silver not among them)
 // and its silver.
 type Stock struct {
-	Kind   TraderKind
-	Lines  []Line
-	Silver int
+	Kind      TraderKind
+	Lines     []Line
+	Silver    int
+	NextLotID uint64
 }
 
 // Terms are what moves prices: the negotiator's Social level, the
 // faction's goodwill, and whether the faction is hostile (hostile
 // factions don't trade).
 type Terms struct {
-	Social   int
-	Goodwill int
-	Hostile  bool
+	Social       int
+	Goodwill     int
+	Hostile      bool
+	Inspired     bool
+	ImproveCenti int          // +2% TPI at a faction settlement, applied after the cap
+	FactionType  faction.Type // gift recipient; pricing remains goodwill-independent
 }
 
 // Delta is one line of an offer: Qty > 0 the colony buys Qty units of
@@ -111,7 +103,8 @@ type Terms struct {
 type Delta struct {
 	Kind     item.Kind
 	Qty      int
-	Building uint8 // a crated building's kind (AX-1), as Line.Building
+	Building uint8  // a crated building's kind (AX-1), as Line.Building
+	StackID  uint64 // colony stack for sale/gift, trader lot for purchase
 }
 
 // Reject is why Settle refused an offer (RejectNone: accepted).
@@ -174,10 +167,39 @@ type Result struct {
 // OK reports an accepted offer.
 func (r Result) OK() bool { return r.Reject == RejectNone }
 
+// TradedValue sums the market value of purchases and sales for goodwill.
+// The book preserves plugin item prices and crate construction kinds.
+func (r Result) TradedValue(b item.Book) int {
+	total := 0
+	for _, lines := range [][]Line{r.Buy, r.Sell} {
+		for _, line := range lines {
+			v, ok := addCenti(total, line.OrdinaryQty(), line.Goods().Value(b))
+			if !ok {
+				return 0
+			}
+			total = v
+			for _, lot := range line.Lots {
+				market := stackMarketValue(b, lot.Stack)
+				if line.Kind == item.MinifiedBuilding {
+					market = line.Goods().Value(b)
+				}
+				total, ok = addCenti(total, lot.Stack.Qty, market)
+				if !ok {
+					return 0
+				}
+			}
+		}
+	}
+	return total
+}
+
 var defs = [NumKinds]Def{
-	BulkHauler:    {Kind: BulkHauler, Key: "bulk_hauler", Label: "Bulk hauler", SilverMin: 900, SilverMax: 1500, Specialty: []string{"Food", "Materials"}},
-	Quartermaster: {Kind: Quartermaster, Key: "quartermaster", Label: "Quartermaster", SilverMin: 1200, SilverMax: 2000, Specialty: []string{"Weapons", "Apparel"}},
-	CurioMerchant: {Kind: CurioMerchant, Key: "curio_merchant", Label: "Curio merchant", Orbital: true, SilverMin: 1600, SilverMax: 2600, Specialty: []string{"Manufactured"}},
+	BulkHauler:           {Kind: BulkHauler, Key: "bulk_hauler", Label: "Bulk hauler", SilverMin: 900, SilverMax: 1500, Specialty: []string{"Food", "Materials"}},
+	Quartermaster:        {Kind: Quartermaster, Key: "quartermaster", Label: "Quartermaster", SilverMin: 1200, SilverMax: 2000, Specialty: []string{"Weapons", "Apparel"}},
+	CurioMerchant:        {Kind: CurioMerchant, Key: "curio_merchant", Label: "Curio merchant", Orbital: true, SilverMin: 1600, SilverMax: 2600, Specialty: []string{"Manufactured"}},
+	TribalSettlement:     {Kind: TribalSettlement, Key: "tribal_settlement", Label: "Tribal settlement", SilverMin: 400, SilverMax: 1500},
+	IndustrialSettlement: {Kind: IndustrialSettlement, Key: "industrial_settlement", Label: "Industrial settlement", SilverMin: 800, SilverMax: 3000},
+	SpacerSettlement:     {Kind: SpacerSettlement, Key: "spacer_settlement", Label: "Spacer settlement", SilverMin: 800, SilverMax: 3000},
 }
 
 // DefOf is trader kind k's definition (the zero Def for an unknown kind).
@@ -218,7 +240,8 @@ var pools = [NumKinds][]entry{
 	},
 	CurioMerchant: {
 		{item.Gold, 20, 60, 100}, {item.NanomedKit, 2, 5, 90}, {item.ServoArm, 1, 1, 60},
-		{item.ServoLeg, 1, 1, 60}, {item.OpticImplant, 1, 1, 50}, {item.Beer, 4, 12, 80},
+		{item.ServoLeg, 1, 1, 60}, {item.OpticImplant, 1, 1, 50},
+		{item.Beer, 4, 12, 80},
 		{item.SparkTablet, 3, 8, 70}, {item.AshleafTea, 4, 10, 70}, {item.CarpetWool, 2, 6, 80},
 		{item.IndustrialMedicine, 2, 6, 60},
 		// AX-8: now and then a mind core, the ship computer core's heart
@@ -228,6 +251,17 @@ var pools = [NumKinds][]entry{
 		// AX-7: books (see the bulk hauler's).
 		{item.Novel, 1, 3, 70}, {item.Textbook, 1, 3, 60}, {item.Schematic, 1, 2, 50},
 	},
+}
+
+// MED-14 devices have their own draw sequence. The historical merchant
+// stock and the caller's RNG stream retain their existing identities.
+var curioMed14 = [...]entry{
+	{item.BlissCircuit, 1, 1, 30}, {item.NerveDampener, 1, 1, 30},
+	{item.AcidFailsafe, 1, 1, 15}, {item.AcousticImplant, 1, 1, 50},
+	{item.ServoClaw, 1, 1, 20}, {item.CochlearImplant, 1, 1, 40},
+	{item.ServoJaw, 1, 1, 40}, {item.SynthTongue, 1, 1, 40},
+	{item.ApexArm, 1, 1, 10}, {item.ApexLeg, 1, 1, 10},
+	{item.ApexEye, 1, 1, 10},
 }
 
 // neolithicBanned reports goods a neolithic faction cannot make or carry.
@@ -243,6 +277,9 @@ func Generate(b item.Book, k TraderKind, tech faction.Tech, rng *randx.Rand) Sto
 	st := Stock{Kind: k}
 	if k >= NumKinds {
 		return st
+	}
+	if k >= TribalSettlement {
+		return generateSettlement(tech, k, rng)
 	}
 	st.Silver = d.SilverMin + rng.IntN(d.SilverMax-d.SilverMin+1)
 	for _, e := range pools[k] {
@@ -263,6 +300,10 @@ func Generate(b item.Book, k TraderKind, tech faction.Tech, rng *randx.Rand) Sto
 			st.AddGoods(Goods{item.MinifiedBuilding, uint8(c.kind)}, qty)
 		}
 	}
+	var medical *randx.Rand
+	if k == CurioMerchant {
+		medical = rng.Clone() // fork before plugin draws: core medical stock is plugin-independent
+	}
 	for _, it := range b.Plugins() {
 		n := b.Def(it).TraderStock
 		if n <= 0 || !Wants(b, k, it) {
@@ -271,6 +312,14 @@ func Generate(b item.Book, k TraderKind, tech faction.Tech, rng *randx.Rand) Sto
 		qty := 1 + rng.IntN(n)
 		if rng.IntN(100) < pluginStockPct {
 			st.AddGoods(Goods{Kind: it}, qty)
+		}
+	}
+	if medical != nil {
+		for _, e := range curioMed14 {
+			qty := e.min + medical.IntN(e.max-e.min+1)
+			if medical.IntN(100) < e.pct {
+				st.AddGoods(Goods{Kind: e.kind}, qty)
+			}
 		}
 	}
 	return st
@@ -286,6 +335,8 @@ func Wants(b item.Book, k TraderKind, it item.Kind) bool {
 	}
 	c := b.Category(it)
 	switch k {
+	case TribalSettlement, IndustrialSettlement, SpacerSettlement:
+		return true
 	case BulkHauler:
 		return c == "Food" || c == "Materials" || it == item.HerbalMedicine || it == item.IndustrialMedicine || it == item.Components
 	case Quartermaster:
@@ -295,14 +346,14 @@ func Wants(b item.Book, k TraderKind, it item.Kind) bool {
 	}
 }
 
-func isSpecialty(b item.Book, k TraderKind, it item.Kind) bool {
-	c := b.Category(it)
-	for _, s := range DefOf(k).Specialty {
-		if s == c {
-			return true
-		}
+// TradePriceImprovementCenti is the published negotiator adjustment.
+// Settlement TPI is added after the normal (potentially inspired) cap.
+func TradePriceImprovementCenti(t Terms) int {
+	base := mathx.Clamp(t.Social, 0, 20) * SocialStepCenti
+	if t.Inspired {
+		base += 1800
 	}
-	return false
+	return min(base, MaxTradeImprovementCenti) + mathx.Clamp(t.ImproveCenti, 0, 200)
 }
 
 // Price is one unit of it on side s with a trader of kind k under terms
@@ -312,29 +363,86 @@ func Price(b item.Book, it item.Kind, k TraderKind, s Side, t Terms) int {
 	return PriceOf(b, Goods{Kind: it}, k, s, t)
 }
 
-// PriceOf is Price for goods g: a crated building is worth CrateValue.
-func PriceOf(b item.Book, g Goods, k TraderKind, s Side, t Terms) int {
-	it := g.Kind
-	if it == item.Silver {
+// PriceOf quotes an item (including a crated building) at its market value.
+func PriceOf(b item.Book, g Goods, k TraderKind, side Side, t Terms) int {
+	return PriceMarket(g, g.Value(b), k, side, t)
+}
+
+// PriceMarket uses the public 140% buy and 60% sell coefficients.
+// All intermediates remain centi-silver; callers settle the signed net.
+func PriceMarket(g Goods, market int, _ TraderKind, side Side, t Terms) int {
+	if g.Kind == item.Silver {
 		return 100
 	}
-	v := g.Value(b) * 100
-	if v <= 0 || t.Hostile {
+	if t.Hostile {
 		return 0
 	}
-	social := mathx.Clamp(t.Social, 0, 20)
-	// Rates are in hundredths of a percentage point (10000 = 100 %).
-	markup := max(BuyMarkupPct*100-SocialStepCenti*social-BuyGoodwillMilli/10*t.Goodwill, BuyFloorPct*100)
-	buy := v * (10000 + markup) / 10000
-	if s == Buy {
+	if market < 0 {
+		return -1
+	}
+	if market == 0 {
+		return 0
+	}
+	tpi := TradePriceImprovementCenti(t)
+	baseBuy, ok := addCenti(0, market, BuyBasePct)
+	if !ok {
+		return -1
+	}
+	product, ok := addCenti(0, baseBuy, 10000-tpi)
+	if !ok {
+		return -1
+	}
+	buy := product / 10000
+	if side == Buy {
 		return buy
 	}
-	cut := max(SellCutPct*100-SocialStepCenti*social-SellGoodwillMilli/10*t.Goodwill, SellFloorPct*100)
-	sell := v * (10000 - cut) / 10000
-	if isSpecialty(b, k, it) {
-		sell = sell * (100 + SpecialtyPct) / 100
+	baseSell, ok := addCenti(0, market, SellBasePct)
+	if !ok {
+		return -1
 	}
-	return min(sell, buy*SellCapPct/100)
+	product, ok = addCenti(0, baseSell, 10000+tpi)
+	if !ok {
+		return -1
+	}
+	sell := product / 10000
+	switch {
+	case g.Kind.IsWeapon():
+		sell /= 5
+	case g.Kind == item.MinifiedBuilding:
+		switch construction.Kind(g.Building) {
+		case construction.SmallSculpture, construction.LargeSculpture, construction.GrandSculpture:
+			product, ok = addCenti(0, sell, 110)
+		default:
+			product, ok = addCenti(0, sell, 70)
+		}
+		if !ok {
+			return -1
+		}
+		sell = product / 100
+	}
+	return min(sell, buy)
+}
+
+// RoundedSilver converts a signed full-offer net to nearest whole silver.
+func RoundedSilver(centi int) int {
+	n, rem := centi/100, centi%100
+	if rem >= 50 {
+		n++
+	}
+	if rem <= -50 {
+		n--
+	}
+	return n
+}
+
+// addCenti checks an accumulated quote before multiplying a quantity by
+// its price. Both input and subtotal must be nonnegative.
+func addCenti(total, qty, unit int) (int, bool) {
+	const limit = int(^uint(0) >> 1)
+	if total < 0 || qty < 0 || unit < 0 || unit != 0 && qty > (limit-total)/unit {
+		return 0, false
+	}
+	return total + qty*unit, true
 }
 
 // Settle checks offer against the colony's counts (colony), the trader's
@@ -347,6 +455,10 @@ func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Te
 	}
 	net := map[Goods]int{}
 	for _, d := range offer {
+		// Stack-specific goods are settled only by SettlePhysical.
+		if d.StackID != 0 {
+			return Result{Reject: RejectUnwanted}
+		}
 		if d.Qty < -MaxOfferQty || d.Qty > MaxOfferQty {
 			return Result{Reject: RejectBadQty}
 		}
@@ -368,7 +480,11 @@ func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Te
 	slices.SortFunc(keys, Goods.Compare)
 	stock := map[Goods]int{}
 	for _, l := range st.Lines {
-		stock[l.Goods()] += l.Qty
+		n, ok := addCenti(stock[l.Goods()], l.Qty, 1)
+		if !ok {
+			return Result{Reject: RejectOverStock}
+		}
+		stock[l.Goods()] = n
 	}
 	var res Result
 	var buyC, sellC int // hundredths
@@ -382,7 +498,11 @@ func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Te
 			if stock[g] < q {
 				return Result{Reject: RejectOverStock}
 			}
-			buyC += q * PriceOf(b, g, st.Kind, Buy, t)
+			var ok bool
+			buyC, ok = addCenti(buyC, q, PriceOf(b, g, st.Kind, Buy, t))
+			if !ok {
+				return Result{Reject: RejectOverStock}
+			}
 			res.Buy = append(res.Buy, Line{Kind: it, Qty: q, Building: g.Building})
 		default:
 			q = -q
@@ -396,41 +516,67 @@ func Settle(b item.Book, offer []Delta, colony map[item.Kind]int, st Stock, t Te
 			} else if !Wants(b, st.Kind, it) {
 				return Result{Reject: RejectUnwanted}
 			}
-			sellC += q * Price(b, it, st.Kind, Sell, t)
+			var ok bool
+			sellC, ok = addCenti(sellC, q, Price(b, it, st.Kind, Sell, t))
+			if !ok {
+				return Result{Reject: RejectOverStock}
+			}
 			res.Sell = append(res.Sell, Line{Kind: it, Qty: q})
 		}
 	}
 	if gift {
-		res.Goodwill = faction.GiftGoodwill(GiftValue(b, offer))
+		transferred := make([]Delta, len(res.Sell))
+		for i, l := range res.Sell {
+			transferred[i] = Delta{Kind: l.Kind, Building: l.Building, Qty: -l.Qty}
+		}
+		value, ok := checkedGiftValue(b, transferred, t)
+		if !ok {
+			return Result{Reject: RejectOverStock}
+		}
+		res.Goodwill = faction.GiftGoodwill(
+			faction.Faction{Type: t.FactionType, Goodwill: t.Goodwill}, value)
 		return res
 	}
 	res.SilverCenti = sellC - buyC
-	if res.SilverCenti < 0 {
-		res.Silver = -((-res.SilverCenti + 99) / 100) // colony pays, rounded up
-		if colony[item.Silver] < -res.Silver {
-			return Result{Reject: RejectUnaffordable}
-		}
-	} else {
-		res.Silver = res.SilverCenti / 100 // trader pays, rounded down
-		if st.Silver < res.Silver {
-			return Result{Reject: RejectUnaffordable}
-		}
+	res.Silver = RoundedSilver(res.SilverCenti)
+	if res.Silver < 0 && colony[item.Silver] < -res.Silver ||
+		res.Silver > 0 && st.Silver < res.Silver {
+		return Result{Reject: RejectUnaffordable}
 	}
 	return res
 }
 
-// GiftValue is the market value, in whole silver, of what the colony
-// gives in offer (its negative lines; silver counts at face value). It
-// relies on Settle's MaxOfferQty bound: callers pass only offers Settle
-// accepted, so the products cannot overflow.
-func GiftValue(b item.Book, offer []Delta) int {
-	total := 0
+// GiftValue returns the value of outgoing goods for diplomacy, after
+// delivery-method and Social selling factors. Overflow rejects the offer.
+func GiftValue(b item.Book, offer []Delta, t Terms) int {
+	value, _ := checkedGiftValue(b, offer, t)
+	return value
+}
+
+func checkedGiftValue(b item.Book, offer []Delta, t Terms) (int, bool) {
+	method := GiftVisitor
+	if t.ImproveCenti == 200 {
+		method = GiftSettlement
+	}
+	centi := 0
 	for _, d := range offer {
-		if d.Qty < 0 {
-			total += -d.Qty * b.Value(d.Kind)
+		if d.Qty < -MaxOfferQty || d.Qty > MaxOfferQty {
+			return 0, false
+		}
+		if d.Qty >= 0 {
+			continue
+		}
+		unit := GiftGoodsCenti(b, Goods{Kind: d.Kind, Building: d.Building}, method, t.Social)
+		var ok bool
+		if unit < 0 {
+			return 0, false
+		}
+		centi, ok = addCenti(centi, -d.Qty, unit)
+		if !ok {
+			return 0, false
 		}
 	}
-	return total
+	return centi / 100, true
 }
 
 // Add adds qty (negative: removes) of kind k to st, keeping its lines
@@ -451,4 +597,13 @@ func (st *Stock) AddGoods(g Goods, qty int) {
 	if qty > 0 {
 		st.Lines = slices.Insert(st.Lines, i, Line{Kind: g.Kind, Qty: qty, Building: g.Building})
 	}
+}
+
+// Deliveries contains purchased goods and positive settlement silver, in
+// the native drop order. It never includes an outgoing silver payment.
+func (r Result) Deliveries() []Line {
+	if r.Silver <= 0 {
+		return r.Buy
+	}
+	return append([]Line{{Kind: item.Silver, Qty: r.Silver}}, r.Buy...)
 }

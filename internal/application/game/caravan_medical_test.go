@@ -177,3 +177,23 @@ func TestCaravanMedicTends(t *testing.T) {
 		t.Fatalf("tended with no medic: %+v", *f)
 	}
 }
+
+func TestCaravanChronicAgingUsesTheMedicalPatientOwner(t *testing.T) {
+	g := worldGame(t)
+	away := g.pawnIDs[0]
+	g.developAging(away, body.CondArteryBlockage, int(body.Heart), uint64(g.clock.Now()))
+	before, ok := g.bodies[away].Cond(body.CondArteryBlockage)
+	if !ok || !g.indexedPatient(away) {
+		t.Fatal("initial chronic patient was not indexed")
+	}
+	initial := before.Sev
+	formCaravan(t, g, nearDest(t, g), away)
+	if !g.isStashed(away) || !g.indexedPatient(away) {
+		t.Fatal("caravan stashing discarded the chronic medical patient")
+	}
+	g.stepAgingConds(uint64(g.clock.Now()) + 120*clock.TicksPerDay)
+	after, ok := g.bodies[away].Cond(body.CondArteryBlockage)
+	if !ok || after.Sev <= initial {
+		t.Fatalf("caravan member's aging did not progress: before=%d after=%+v", initial, after)
+	}
+}

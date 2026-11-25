@@ -37,7 +37,7 @@ func newFakeDebris() *fakeDebris {
 }
 
 func newDebrisCombat(f *fakeHost, db *fakeDebris) *Combat {
-	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f, Debris: db})
+	return New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f, Debris: db})
 }
 
 func (d *fakeDebris) put(id entity.EntityID, st item.Stack) {
@@ -350,7 +350,7 @@ func TestFlameCreatureMayNotCatch(t *testing.T) {
 func TestEMPTurretAdapts(t *testing.T) {
 	t.Parallel()
 	f, _ := turretRig(t)
-	c := New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f})
+	c := New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f})
 	emp := weapon.DefOf(weapon.EMPGrenade).Blast
 	c.Blasts.Explode(9, weapon.EMPGrenade, 10, 6, emp)
 	until := c.Turrets.Aim(50).StunnedUntil

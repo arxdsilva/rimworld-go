@@ -28,19 +28,18 @@ func TestStepChance(t *testing.T) {
 	}
 }
 
-func TestDecay(t *testing.T) {
+func TestDecayInterval(t *testing.T) {
 	t.Parallel()
-	if Decay(Guard, 3, DecayTicks-1) != 3 || Decay(Guard, 3, DecayTicks) != 2 || Decay(Guard, 3, 2*DecayTicks) != 1 {
-		t.Fatal("steps lost")
-	}
-	if Decay(Guard, 3, 99*DecayTicks) != 0 {
-		t.Fatal("floor zero")
-	}
-	if Decay(Obedience, 3, 99*DecayTicks) != 1 {
-		t.Fatal("obedience floor")
-	}
-	if Decay(Obedience, 2, 99*DecayTicks) != 0 || Decay(Obedience, 0, 5) != 0 || Decay(NumSkills, 4, 1<<40) != 4 {
-		t.Fatal("edge")
+	for _, tc := range []struct {
+		wildness int
+		interval uint64
+	}{
+		{-1, DecayMaxTicks}, {0, DecayMaxTicks}, {500, 9 * 60000},
+		{1000, DecayMinTicks}, {1500, DecayMinTicks},
+	} {
+		if got := DecayInterval(tc.wildness); got != tc.interval {
+			t.Fatalf("wildness %d: %d, want %d", tc.wildness, got, tc.interval)
+		}
 	}
 }
 

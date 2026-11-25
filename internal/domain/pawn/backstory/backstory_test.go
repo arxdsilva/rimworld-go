@@ -17,13 +17,13 @@ func TestWorkMaskTable(t *testing.T) {
 	cases := map[Bits][]work.Type{
 		Violence:     {work.Hunt},
 		Caring:       {work.Doctor},
-		DumbLabor:    {work.Haul, work.Clean},
+		DumbLabor:    {work.Basic, work.Haul, work.Clean},
 		Intellectual: {work.Research},
 		Animals:      {work.Handle},
 		Cooking:      {work.Cook},
 		Plants:       {work.Grow, work.PlantCut},
 		Mining:       {work.Mine},
-		Crafting:     {work.Craft},
+		Crafting:     {work.Craft, work.Smith, work.Tailor, work.Art},
 		Construction: {work.Construct},
 	}
 	for b, types := range cases {
@@ -40,6 +40,16 @@ func TestWorkMaskTable(t *testing.T) {
 	}
 	if AllBits.WorkMask().Enabled(work.Firefight) {
 		t.Fatal("firefighting is never disabled")
+	}
+}
+
+func TestArtisticDisabledByCraftingIncapability(t *testing.T) {
+	t.Parallel()
+	if !Crafting.DisablesSkill(skill.Artistic) || !Crafting.DisablesSkill(skill.Crafting) {
+		t.Fatal("incapable crafting must exclude both crafting and sculpting")
+	}
+	if (Construction | Mining).DisablesSkill(skill.Artistic) {
+		t.Fatal("unrelated work incapability excluded artistic")
 	}
 }
 

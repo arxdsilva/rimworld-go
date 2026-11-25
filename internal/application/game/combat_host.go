@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -21,6 +22,8 @@ import (
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
@@ -32,8 +35,7 @@ import (
 
 // combatHost implements combat.Host (combat/deps.go) over the game: one
 // small adapter type per role, each a thin view of *Game, so no method is
-// added to Game itself (.agents/specs/SOLID_GO.md §10). Every method passes
-// values only: they run on the tick path (§7).
+// added to Game itself (.agents/specs/SOLID_GO.md §10); role calls pass values on the tick path.
 type combatHost struct {
 	combatCreatures
 	combatRosters
@@ -50,7 +52,7 @@ var _ combat.Host = combatHost{}
 func newCombat(g *Game) *combat.Combat {
 	h := combatHost{combatCreatures{g}, combatRosters{g}, combatGround{g}, combatSkills{g}, combatJobs{g}, combatHarm{g}, combatEvents{g}, combatDice{g}}
 	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g},
-		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}, Belts: combatArms{g}, Debris: combatDebris{g}, Foam: combatFoam{g}, Rules: combatRosters{g}})
+		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}, Belts: combatArms{g}, Debris: combatDebris{g}, Foam: combatFoam{g}, Rules: combatRosters{g}, MortarAim: combatSkills{g}})
 }
 
 type combatCreatures struct{ g *Game }
@@ -66,13 +68,32 @@ func (h combatCreatures) StandingPawn(id entity.EntityID) bool           { retur
 func (h combatCreatures) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h combatCreatures) Hostile(a animal.State) bool                    { return h.g.hostile(a) }
 
+// PackEnemy uses the saved visit group and world faction wars.
+func (h combatCreatures) PackEnemy(source, target entity.EntityID) bool {
+	g := h.g
+	if g.worldSt == nil {
+		return false
+	}
+	kind, ref := faction.NumTypes, 0
+	if source == 0 {
+		kind = faction.Player
+	} else if a, ok := g.animals.Get(source); ok {
+		if t, hidden := faction.Creature(a.Species); hidden {
+			kind = t
+		}
+	} else if p := g.personOf(source); p != nil {
+		ref = p.Faction
+	}
+	return visit.PackEnemy(g.worldSt.visitGroups, g.ng.factions, ref, kind, target)
+}
+
 type combatRosters struct{ g *Game }
 
 func (h combatRosters) AnimalIDs() []entity.EntityID    { return h.g.animalIDs }
 func (h combatRosters) RaiderIDs() []entity.EntityID    { return h.g.raiderIDs }
 func (h combatRosters) Drafted(id entity.EntityID) bool { return h.g.drafted(id) }
 func (h combatRosters) Name(id entity.EntityID) string  { return h.g.name(id) }
-func (h combatRosters) FriendlyFirePct() int            { return h.g.diff().FriendlyFirePct } // SHT-007, Rules
+func (h combatRosters) FriendlyFirePct() int            { return h.g.diff().FriendlyFire } // SHT-007, Rules
 func (h combatRosters) Colonist(id entity.EntityID) bool { // a pawn not in raiders: no visitor or leaving raider
 	_, r := h.g.raiders[id]
 	return h.g.isPawn(id) && !r
@@ -81,12 +102,14 @@ func (h combatRosters) Lying(id entity.EntityID) bool { // vital records are hum
 	return h.g.vital.Has(id) && h.g.vital.Ref(id).Status == health.Downed
 }
 
+func (h combatRosters) FleeingRaider(id entity.EntityID) bool { return h.g.fleeingRaider(id) }
+
 // RaiderOn answers the threat scan's raider loop in one call (combat
 // defend.go ThreatTo): a raider on its feet with an attack job on id.
 func (h combatRosters) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 	g := h.g
 	rj, _ := g.jobs.Get(t)
-	if !g.isRaider(t) || !g.standingRaider(t) || rj.Kind != job.Attack || rj.Target != id {
+	if !g.isRaider(t) || !g.standingRaider(t) || g.fleeingRaider(t) || rj.Kind != job.Attack || rj.Target != id {
 		return 0, 0, false
 	}
 	p, _ := g.positions.Get(t)
@@ -97,8 +120,15 @@ func (h combatRosters) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 // within do; combat.Who has the index's kind bits.
 func (h combatRosters) Near(x, y, r int, who combat.Who, buf []combat.Seen) []combat.Seen {
 	g := h.g
+	who = combat.Present(who, len(g.pawnIDs), len(g.raiderIDs), len(g.animalIDs))
+	if who == 0 {
+		return buf
+	}
 	g.creatures().grid.Each(x, y, r+1, func(e idxEntry) bool {
-		if p, ok := g.positions.Get(e.id); ok && e.kind&uint8(who) != 0 && weapon.Distance(x, y, p.X, p.Y) <= r {
+		if e.kind&uint8(who) == 0 {
+			return true
+		}
+		if p, ok := g.positions.Get(e.id); ok && weapon.Distance(x, y, p.X, p.Y) <= r {
 			buf = append(buf, combat.Seen{ID: e.id, X: p.X, Y: p.Y})
 		}
 		return true
@@ -138,12 +168,20 @@ func (h combatGround) DigRock(x, y, dmg int) { h.g.raid.Rock.Dig(x, y, dmg) } //
 type combatSkills struct{ g *Game }
 
 func (h combatSkills) Melee(id entity.EntityID) attack.Melee { return h.g.meleeOf(id) } // skills.go (CBT-2)
+
+func (h combatSkills) ImplantTools(id entity.EntityID) ([2]weapon.Tool, int) {
+	return body.MeleeTools(h.g.bodies[id])
+}
+func (h combatSkills) NaturalFists(id entity.EntityID) int { return body.NaturalFists(h.g.bodies[id]) }
 func (h combatSkills) ShotAim(id entity.EntityID) (int, int) {
-	if a, ok := h.g.animals.Get(id); ok && animal.IsMech(a.Species) {
+	if a := h.g.animals.Ref(id); a != nil && animal.IsMech(a.Species) {
 		return attack.ShooterPerTile(animal.MechShootingSkill), animal.MechShootingSkill // DEF-4: wiki: Lancer (96 %)
 	}
 	l := int(h.g.skillOf(id, skill.Shooting).Level)
-	return attack.ShooterPerTile(attack.ShootingScore(l, int(h.g.statOf(id, stat.ShootAcc)))), l // SHT-002
+	return attack.ShooterPerTile(attack.ShootingScore(l, int(h.g.statOf(id, stat.ShootAcc)))), l
+}
+func (h combatSkills) MortarMissRadius(id entity.EntityID) int {
+	return combat.MissRadiusWithCapacities(int(h.g.skillOf(id, skill.Shooting).Level), int(h.g.capacity(id, body.Sight)), int(h.g.capacity(id, body.Manipulation)))
 }
 func (h combatSkills) Learn(id entity.EntityID, ranged bool, xp int) { h.g.combatLearn(id, ranged, xp) }
 func (h combatSkills) AimTicks(id entity.EntityID, ticks int) int {
@@ -159,6 +197,12 @@ func (h combatJobs) SetJob(id entity.EntityID, j job.Record)        { h.g.jobs.S
 func (h combatJobs) StartJob(id entity.EntityID, j job.Record) bool { return h.g.startJob(id, j) }
 func (h combatJobs) Interrupt(id entity.EntityID, r job.FailReason) { h.g.interrupt(id, r) }
 func (h combatJobs) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
+	return h.g.pathTo(id, x, y)
+}
+func (h combatJobs) FlightPath(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
+	if h.g.areaBypass(id, job.Record{Kind: job.Move}) {
+		defer h.g.endAreaBypass()
+	}
 	return h.g.pathTo(id, x, y)
 }
 func (h combatJobs) ReleaseOwner(id entity.EntityID) { h.g.reserve.ReleaseOwner(id) } // raid.Jobs
@@ -238,6 +282,10 @@ func (h combatPower) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 
 type combatFlight struct{ g *Game }
 
+func (h combatFlight) AnimalOn(t, id entity.EntityID) (bool, bool) {
+	a := h.g.animals.Ref(t)
+	return a != nil, a != nil && a.Mode == animal.Attack && a.Target == id
+}
 func (h combatFlight) Reachable(id entity.EntityID, x, y int) bool    { return h.g.reachable(id, x, y) }
 func (h combatFlight) InHome(x, y int) bool                           { return h.g.inHome(y*h.g.grid.Width() + x) }
 func (h combatFlight) DropForFlight(id entity.EntityID, j job.Record) { h.g.dropForFlight(id, j) }
@@ -262,7 +310,7 @@ func (h combatHunts) HuntGivenUp(id entity.EntityID, j job.Record, tx, ty int, n
 func (h combatHunts) AbandonHunt(id entity.EntityID, j job.Record) { h.g.abandonHunt(id, j) }
 func (h combatHunts) CarryKill(id entity.EntityID) bool            { return h.g.herdOf().CarryKill(id) }
 func (h combatHunts) AnyMarked() bool { // jobindex.go
-	return h.g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.Designated && !a.Dead() })
+	return h.g.animals.AnyLive(func(_ entity.EntityID, a *animal.Live) bool { return a.Designated && !a.Dead() })
 }
 func (h combatHunts) Reserved(id entity.EntityID) bool {
 	_, taken := h.g.reserve.EntityOwner(id)

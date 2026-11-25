@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/setupview"
 	"testing"
 
 	"rimworld-go/internal/application/game/visit"
@@ -39,7 +40,7 @@ func ptGame(t *testing.T, items item.Book) (*Game, *traderCaravan) {
 	t.Helper()
 	b := NewColonyBuilder(Config{Setup: setupFor(t, "broken_hull", func(s *Setup) { s.MapSize = 60 }), Content: Content{Items: items}})
 	var g *Game
-	for i := 0; i <= buildSteps() && g == nil; i++ {
+	for i := 0; i <= setupview.BuildSteps() && g == nil; i++ {
 		if _, _, done := b.Step(1); done {
 			g = b.Game()
 		}
@@ -111,6 +112,7 @@ func TestPluginTradeSellBuy(t *testing.T) {
 	c.Kind, c.Stock.Kind = trade.CurioMerchant, trade.CurioMerchant
 	c.Stock.Add(ptBell, 30)
 	c.Stock.Silver = 3000
+	c.Cargo = visit.AssignCargo(c.Stock, c.Members) // fixture changed stock after caravan arrival
 	neg := openCaravanTrade(t, g, c)
 	ptYard(t, g, neg, [2]int{int(item.Silver), 3000}, [2]int{int(ptBell), 10})
 	v, ok := g.TradeView()
@@ -133,7 +135,7 @@ func TestPluginTradeSellBuy(t *testing.T) {
 
 	sell := []trade.Delta{{Kind: ptBell, Qty: -4}}
 	gd := g.colonyGoods(false)
-	res := trade.Settle(items, sell, gd.counts, c.Stock, terms, false)
+	res := trade.Settle(items, sell, gd.Counts(), c.Stock, terms, false)
 	if !res.OK() || res.Silver != 4*want.SellC/100 {
 		t.Fatalf("selling 4 bells settles %+v", res)
 	}
@@ -148,7 +150,7 @@ func TestPluginTradeSellBuy(t *testing.T) {
 	}
 
 	buy := []trade.Delta{{Kind: ptBell, Qty: 30}}
-	res = trade.Settle(items, buy, g.colonyGoods(false).counts, c.Stock, terms, false)
+	res = trade.Settle(items, buy, g.colonyGoods(false).Counts(), c.Stock, terms, false)
 	if !res.OK() || res.Silver >= 0 {
 		t.Fatalf("buying 30 bells settles %+v", res)
 	}

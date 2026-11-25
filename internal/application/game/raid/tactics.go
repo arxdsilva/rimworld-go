@@ -10,7 +10,6 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -46,8 +45,9 @@ type Tactics interface {
 	// Danger is the landing tile and reach of an explosive in flight
 	// whose blast would catch (x, y).
 	Danger(x, y int) (lx, ly, reach int, ok bool)
-	// Colonists appends the standing colonists within r of (x, y).
-	Colonists(x, y, r int, buf []Spot) []Spot
+	// Foes appends visible colony and foreign-faction targets for source.
+	// A zero source asks for colonists only (kidnapping guard check).
+	Foes(source entity.EntityID, x, y, r int, buf []Spot) []Spot
 	// Block is the first wall or shut door on id's way to (tx, ty) and
 	// the tile to hit it from; Bash is one blow on it with d (false: gone
 	// or out of touch).
@@ -99,7 +99,7 @@ const (
 func (rs *Raiders) target(id entity.EntityID, r *Raider, x, y int, d weapon.Def, now uint64) (t entity.EntityID, tx, ty int, ok, anyone bool) {
 	h, e := rs.h, &rs.eye
 	nid, nx, ny, anyone := h.RaidTarget(x, y)
-	known := anyone && e.knows(id, r, nid, x, y, nx, ny, now)
+	known := anyone && rs.eligible(id, nid) && e.knows(id, r, nid, x, y, nx, ny, now)
 	if rs.t == nil {
 		if !known {
 			t, tx, ty, ok = h.TurretFor(x, y, 1<<20, 2*SightRange)
@@ -114,15 +114,15 @@ func (rs *Raiders) target(id entity.EntityID, r *Raider, x, y int, d weapon.Def,
 	if known {
 		t, tx, ty, ok, best = nid, nx, ny, true, weapon.Distance(x, y, nx, ny)-rs.danger(nid)
 	}
-	rs.spots = rs.t.Colonists(x, y, max(SightRange, d.Range), rs.spots[:0])
+	rs.spots = rs.t.Foes(id, x, y, max(SightRange, d.Range), rs.spots[:0])
 	for _, s := range rs.spots {
 		sc := weapon.Distance(x, y, s.X, s.Y) - rs.danger(s.ID)
-		if (sc < best || sc == best && s.ID < t) && e.knows(id, r, s.ID, x, y, s.X, s.Y, now) {
+		if rs.eligible(id, s.ID) && (sc < best || sc == best && s.ID < t) && e.knows(id, r, s.ID, x, y, s.X, s.Y, now) {
 			t, tx, ty, best, ok = s.ID, s.X, s.Y, sc, true
 		}
 	}
 	for _, m := range e.recall(r, now) { // remembered, wherever it is now
-		if m == 0 || m == t || h.Vital(m).Status != health.Alive {
+		if m == 0 || m == t || !rs.eligible(id, m) {
 			continue
 		}
 		if mx, my, mok := h.Pos(m); mok {
@@ -313,10 +313,6 @@ func (rs *Raiders) escape(id entity.EntityID, j job.Record, x, y int, now uint64
 		h.ReleaseOwner(id)
 		h.SetJob(id, job.Record{Kind: job.Attack, Target: t, TX: tx, TY: ty, State: job.Do, WorkLeft: h.AimTicks(id, h.Weapon(id))})
 		return true
-	}
-	if rs.unreachable(id) {
-		ex, ey := h.NearestEdge(x, y)
-		return h.StartBreach(id, ex, ey)
 	}
 	return false
 }

@@ -30,10 +30,10 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Sleeping spot, bedroll, double bedroll, bed, double bed, hospital bed, animal sleeping spot, animal bed. | `construction.Kind` adds `Bedroll`, `DoubleBedroll`, `AnimalSleepingSpot`, `AnimalBed`, `EndTable`, `Dresser`; `Kind.AnimalSleeps` is the predicate. | Bedrolls are not yet picked up as minified items. | BED-1 | partial |
+| Sleeping spot, bedroll, double bedroll, bed, double bed, hospital bed, animal sleeping spot, animal bed. | Bed kinds exist; bedroll and double bedroll use native minified-item uninstall/reinstall with material, quality, condition and facing preserved. Occupied bed refused. | None for native packing. | BED-1 | done |
 | A bed has an owner; couples share a double bed; an owner can be reassigned. | `Building.Claimant`/`Claimant2`; `partnerBed`, `sleepInPartnerBed`, `cmdAssignBedOwner` (`beds.go`). | None. | - | done |
 | Beds can be marked for prisoners or kept as medical beds. | `Building.ForPrisoners`; `Building.Medical` with `care.IsMedicalBed` (`care/beds.go`). Medical is a per-building flag, so any bed can be medical, not only the hospital bed. | None. | - | done |
-| A bed can be forbidden so nobody claims or uses it. | `construction.Building.Forbidden` is checked in the sleep choice (`rest/beds.go` `SleepIn`, `rest/animals.go` `Bed`) and shown in `BuildingView.Forbidden`. Care, benches and doors do not check it. | Forbidden check in care, benches and doors. | BED-1 | partial |
+| A bed can be forbidden so nobody claims or uses it. | Native bed/animal/rescue selection and actual arrival reject forbidden beds; forbidding releases claims and interrupts active sleep/carry; manual assignment and stale jobs cannot restore use. Work benches also enforce forbid. | No remaining known native path in this scoped audit. | BED-1 | done (native) |
 | Lovin' in a shared double bed. | `lovinCheck`, `lovinBed`, `doLovin` (`beds.go`). | None. | - | done |
 | Colonists may be told which bed to use, and a fresh bed is claimed on first sleep. | `sleepInBed` picks partner bed, own bed, else nearest free claimable bed inside the allowed area (`areaAllows`). | None. | - | done |
 | A pawn without a bed sleeps on the ground in a spot of its allowed area. | `assignSleepInPlace`, `sleepFloorSpot` (`area_dest.go`). | None. | - | done |
@@ -53,8 +53,8 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Tamed animals sleep in animal beds or spots assigned by the player; medical animal beds heal them. | `rest.Animals.Bed` (`rest/animals.go`) picks a free, allowed animal bed or spot and claims it for the pet (`Claimant`); `Animals.SleepRate` scales rest by the bed. Medical animal beds and `AssignOwner` for animal beds are not done. | Medical animal beds; AssignOwner for animal beds. | BED-1 | partial |
-| Animals rest on the 60-tick bucket decision, never scanning all creatures. | The bed choice runs inside the existing bucket decision (`animal_needs.go` calling `rest.Animals.Bed`); no new scan. | None. | BED-1 | done |
+| Tamed animals sleep in animal beds or spots assigned by the player; medical animal beds heal them. | BED-242: `rest.Beds.AssignOwner` and the inspector assign/clear a tame animal owner. `care.Rest.SetBedMedical` designates animal beds/spots; rescue and ordinary pet rest prefer safe clinical beds, preserve the separate personal claim, and return a temporary stay on recovery/end of rest. `stepAnimalBody` uses the existing bed lying-heal bonus; scalar-only animals use the existing faster recovery cadence. Pen confinement remains the existing native policy. | None in the owner/medical-bed slice. | BED-1 | done |
+| Animals rest on the 60-tick bucket decision, never scanning all creatures. | The bed choice runs inside the existing bucket decision (`animal_needs.go` calling `rest.Animals.RestBed`); no new scan. | None. | BED-1 | done |
 
 ### 3.4 Room statistics and roles
 

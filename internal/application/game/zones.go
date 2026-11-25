@@ -5,6 +5,7 @@ package game
 
 import (
 	"reflect"
+	"rimworld-go/internal/application/game/saveutil"
 	"slices"
 	"strings"
 
@@ -41,19 +42,7 @@ var zoneKindNames = map[zone.Kind]string{zone.KindStockpile: ZoneStockpile, zone
 	zone.KindDump: ZoneDump, zone.KindShelf: ZoneShelf, zone.KindHopper: ZoneHopper, zone.KindGrave: ZoneGrave,
 	zone.KindBookcase: ZoneBookcase}
 
-func zoneKindOf(name string) (zone.Kind, bool) {
-	switch name {
-	case ZoneStockpile:
-		return zone.KindStockpile, true
-	case ZoneGrow:
-		return zone.KindGrow, true
-	case ZonePen:
-		return zone.KindPen, true
-	case ZoneDump:
-		return zone.KindDump, true
-	}
-	return 0, false
-}
+func zoneKindOf(name string) (zone.Kind, bool) { return zone.PaintKind(name) }
 
 // StockpileVariantDump is the DesignateStockpile command value
 // (Command.Build) that paints a dumping stockpile instead of a stockpile.
@@ -101,11 +90,11 @@ type legacyZones struct {
 	pens       []pen
 }
 
-func (g *Game) exportZones() zoneSave {
+func (g *Game) exportZones(owned ...bool) zoneSave {
 	s := g.zones.Export()
 	out := zoneSave{W: s.W, H: s.H, Cells: s.Cells, Zones: s.Zones, Next: s.Next, Store: g.haul.store.Export()}
 	if len(g.haul.storedAt) > 0 {
-		out.StoredAt = g.haul.storedAt
+		out.StoredAt = saveutil.OwnMap(len(owned) > 0 && owned[0], g.haul.storedAt)
 	}
 	return out
 }
@@ -239,20 +228,20 @@ type zoneMemo struct {
 	ok             bool
 }
 
-// zoneViews lists every zone in id order. With the view cache on the list
-// is shared and read only, rebuilt only when the zone map's Ver moves;
-// the readouts (Group, Stored, Capacity) when a stack moves too.
+// zoneViews lists every zone in id order. The list is rebuilt only when the
+// zone map's Ver moves, with the view cache on or off (building it formats
+// every filter name, which dominated a headless tick that asks several times);
+// with the cache on it is also shared, read only, and the readouts (Group,
+// Stored, Capacity) are recounted only when a stack moves.
 func (g *Game) zoneViews() []ZoneView {
-	if !g.views.on {
-		return countZones(g, g.buildZoneViews(), nil)
-	}
 	m := &g.views.zones
-	if m.ok && m.src == g.zones && m.ver == g.zones.Ver() {
-		if checkIndex(g) && !reflect.DeepEqual(m.views, g.buildZoneViews()) {
-			panic("zoneViews: zones changed without a Ver bump")
-		}
-	} else {
+	if !(m.ok && m.src == g.zones && m.ver == g.zones.Ver()) {
 		m.views, m.src, m.ver, m.ok, m.counted = g.buildZoneViews(), g.zones, g.zones.Ver(), true, nil
+	} else if g.views.on && checkIndex(g) && !reflect.DeepEqual(m.views, g.buildZoneViews()) {
+		panic("zoneViews: zones changed without a Ver bump")
+	}
+	if !g.views.on {
+		return countZones(g, m.views, nil)
 	}
 	if gen := g.idx.ground.Gen(); m.counted == nil || m.gen != gen {
 		m.counted, m.gen = countZones(g, m.views, m.counted), gen

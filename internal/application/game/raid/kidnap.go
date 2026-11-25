@@ -118,7 +118,7 @@ func (kn *Kidnaps) target(id entity.EntityID, x, y int) (entity.EntityID, int, i
 // (EAI-023: the creature index, one tile round, with Tactics).
 func (kn *Kidnaps) guarded(c entity.EntityID, x, y int) bool {
 	if kn.t != nil {
-		kn.near = kn.t.Colonists(x, y, 1, kn.near[:0])
+		kn.near = kn.t.Foes(0, x, y, 1, kn.near[:0])
 		for _, s := range kn.near {
 			if s.ID != c {
 				return true

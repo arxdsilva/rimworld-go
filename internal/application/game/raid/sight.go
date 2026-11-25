@@ -6,6 +6,7 @@ package raid
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -127,6 +128,14 @@ func (e *eyes) shot(id entity.EntityID, r *Raider, hurt int, now uint64) (entity
 	return by, true
 }
 
+// eligible is shared by fresh, recalled, and retained automatic targets.
+func (rs *Raiders) eligible(source, target entity.EntityID) bool {
+	if rs.eye.s != nil {
+		return rs.eye.s.Eligible(source, target)
+	}
+	return rs.h.Vital(target).Status == health.Alive
+}
+
 // turn: raider id (record r) at (x, y), attacking with j, lets go of its
 // target: shot by another foe switchMargin closer, or, on its look, lost
 // track of it. A target it still sees is remembered afresh.
@@ -136,7 +145,11 @@ func (rs *Raiders) turn(id entity.EntityID, r *Raider, j job.Record, shot entity
 		return false
 	}
 	tx, ty, creature := h.Pos(j.Target)
-	if shot != 0 && shot != j.Target {
+	if creature && !rs.eligible(id, j.Target) {
+		h.Interrupt(id, job.Cancelled)
+		return true
+	}
+	if shot != 0 && rs.eligible(id, shot) && shot != j.Target {
 		if sx, sy, ok := h.Pos(shot); ok && (!creature || weapon.Distance(x, y, sx, sy)+switchMargin <= weapon.Distance(x, y, tx, ty)) {
 			h.Interrupt(id, job.Cancelled)
 			return true

@@ -72,6 +72,8 @@ const (
 	// CondCryptosleepSickness is the daze after a stasis casket (AX-9,
 	// cond_crypto.go): it wears off by time.
 	CondCryptosleepSickness
+	CondAsthma     // wiki: Ailments (treatable chronic lung condition)
+	CondAlzheimers // wiki: Ailments (progressive brain condition)
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )

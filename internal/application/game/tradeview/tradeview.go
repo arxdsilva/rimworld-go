@@ -9,7 +9,11 @@
 // and §29). Plain data: no state, no host.
 package tradeview
 
-import "rimworld-go/internal/domain/sim/entity"
+import (
+	"rimworld-go/internal/domain/economy/trade"
+	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/sim/entity"
+)
 
 // Trade is the open trade session (game.Game.TradeView; ok false while
 // none is open). Prices are per unit in hundredths of a silver.
@@ -20,10 +24,11 @@ type Trade struct {
 	// until it (or the caravan) leaves.
 	Trader, TraderKind, Faction string
 	FactionID                   int
+	FactionType                 faction.Type
 	Orbital                     bool
 	HoursLeft                   int
 	// Negotiator is the colonist trading, with its Social level and the
-	// price modifier it earns (PriceModPct: percent off the base markup,
+	// price modifier it earns (PriceModPct: percent trade price improvement,
 	// shown as "Price modifier").
 	Negotiator     entity.EntityID
 	NegotiatorName string
@@ -37,7 +42,8 @@ type Trade struct {
 	TraderSilver int
 	// Rows are the goods either side has, by category then label; silver
 	// is never a row.
-	Rows []Row
+	Rows     []Row
+	GiftRows []Row // physical gift quotes; nil when no faction receives gifts
 	// Reason is why the last ProposeTrade was refused ("" when none was).
 	Reason string
 }
@@ -51,7 +57,8 @@ type Trade struct {
 type Row struct {
 	Kind, Label, Category string
 	ColonyQty, TraderQty  int
-	BuyC, SellC           int
+	BuyC, SellC, GiftC    int
+	StackID               uint64 // colony stack for selling/gift, trader lot for buying
 	WillBuy, WillSell     bool
 }
 
@@ -74,14 +81,15 @@ type Comms struct {
 // Faction is one faction row: its goodwill and relation
 // ("hostile", "neutral", "friendly") and each action it allows now.
 type Faction struct {
-	ID       int
-	Name     string
-	Type     string // faction.Type key ("settlers", ...)
-	Goodwill int
-	Relation string
-	Gift     Action
-	Caravan  Action
-	Aid      Action
+	ID          int
+	Name        string
+	Type        string // faction.Type key ("settlers", ...)
+	FactionType faction.Type
+	Goodwill    int
+	Relation    string
+	Gift        Action
+	Caravan     Action
+	Aid         Action
 }
 
 // Action is one comms action: Allowed now, its Cost (goodwill
@@ -108,4 +116,49 @@ type Orbital struct {
 	CaravanVisiting  bool
 	CaravanFaction   string
 	CaravanHoursLeft int
+}
+
+// GiftAction reports the native radio gift admission against current
+// goodwill and the available beacon stock.
+const (
+	ReasonNoBeacon   = "needs a powered trade beacon"
+	ReasonNoSilver   = "no silver near a trade beacon"
+	ReasonNoGiftGain = "goodwill cannot increase"
+)
+
+func GiftAction(f faction.Faction, beacons bool, silver int) Action {
+	a := Action{Cost: faction.GiftSilverFor(f, f.Goodwill+1)}
+	switch {
+	case f.Defeated:
+		a.Reason = faction.ReasonGone
+	case f.Besieged:
+		a.Reason = faction.ReasonBesieged
+	case !beacons:
+		a.Reason = ReasonNoBeacon
+	case a.Cost == 0:
+		a.Reason = ReasonNoGiftGain
+	case silver < a.Cost:
+		a.Reason = ReasonNoSilver
+	default:
+		a.Allowed = true
+	}
+	return a
+}
+
+func OrbitalStatus(name string, kind trade.TraderKind, until, now uint64, present, powered, beacon bool) Orbital {
+	if !present {
+		return Orbital{CallReason: "no ship in range"}
+	}
+	if !powered {
+		return Orbital{CallReason: "no power"}
+	}
+	v := Orbital{Present: true, Ship: name, Kind: LowerLabel(trade.DefOf(kind).Label), HoursLeft: HoursLeft(until, now), CallOK: true}
+	if !beacon {
+		v.CallOK, v.CallReason = false, ReasonNoBeacon
+	}
+	return v
+}
+
+func FactionRow(f faction.Faction, relation string, beacons bool, silver int) Faction {
+	return Faction{ID: f.ID, Name: f.Name, Type: f.Type.String(), FactionType: f.Type, Goodwill: f.Goodwill, Relation: relation, Gift: GiftAction(f, beacons, silver)}
 }

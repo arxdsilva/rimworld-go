@@ -25,7 +25,7 @@ import (
 //     still to take. Before RouteI: the pack entry and count stowed, or 0, 0 once
 //     laid on the bench.
 //   - Route[Count:] lists the loads laid on the bench.
-//   - SpareX is the recipe: bills can be reordered or removed during the walk.
+//   - SpareX is the recipe key; BillIdentity binds the exact row through edits.
 //   - Target is where it heads: the next stack, or the bench (Dest).
 //
 // What is stowed stays in the pack if the job ends early: marked to go to storage
@@ -65,13 +65,20 @@ func orderPicks(picks []pick, x, y int) {
 	}
 }
 
-// billOf is the index in bills of the recipe job j gathers for (len(bills): it
-// has gone): where j says if it is still there, else the first bill of it.
+// billOf resolves the immutable row identity, not a duplicate recipe.
+// Older jobs without identity may continue only at their exact saved index;
+// configuration edits remap live indices. A lost row is never substituted.
 func billOf(j job.Record, bills []recipe.Bill) int {
-	if j.BillIndex < len(bills) && int(bills[j.BillIndex].Recipe) == j.SpareX {
-		return j.BillIndex
+	if j.BillIdentity != 0 {
+		if i := j.BillIndex; i >= 0 && i < len(bills) && bills[i].Identity == j.BillIdentity {
+			return i
+		}
+		if i := slices.IndexFunc(bills, func(b recipe.Bill) bool { return b.Identity == j.BillIdentity }); i >= 0 {
+			return i
+		}
+		return len(bills)
 	}
-	if i := slices.IndexFunc(bills, func(b recipe.Bill) bool { return int(b.Recipe) == j.SpareX }); i >= 0 {
+	if i := j.BillIndex; i >= 0 && i < len(bills) && (j.Kind != job.PackIngredients || int(bills[i].Recipe) == j.SpareX) {
 		return i
 	}
 	return len(bills)
@@ -79,9 +86,9 @@ func billOf(j job.Record, bills []recipe.Bill) int {
 
 // packGather runs one tick of pack gathering j at bench b, on arriving: at a
 // stack it stows what fits of the pick, at the bench it unpacks. Then it walks on.
-func (s *Shop) packGather(id entity.EntityID, j job.Record, b construction.Building) {
+func (s *Shop) packGather(id entity.EntityID, j job.Record, b construction.Building, bl recipe.Bill) {
 	atBench := j.Target == j.Dest
-	if atBench && !s.unpack(id, &j, b) || !atBench && !s.stowPick(id, &j) {
+	if atBench && !s.unpack(id, &j, b) || !atBench && !s.stowPick(id, &j, bl) {
 		s.fail(id, j, job.TargetGone)
 		return
 	}
@@ -129,11 +136,11 @@ func (s *Shop) fits(id entity.EntityID, k item.Kind) int {
 // stowPick moves what fits of the pick at RouteI into pawn id's pack; false when
 // the stack is gone, short or taken. What doesn't fit stays a pick, still claimed,
 // for the next trip; nothing fitting at all sends the pawn back with what it has.
-func (s *Shop) stowPick(id entity.EntityID, j *job.Record) bool {
+func (s *Shop) stowPick(id entity.EntityID, j *job.Record, bl recipe.Bill) bool {
 	h := s.h
 	sid, take := j.Route[j.RouteI], int(j.Route[j.RouteI+1])
 	st, ok := h.Stack(sid)
-	if !ok || st.Carrier != 0 || st.Qty < take {
+	if !ok || st.Carrier != 0 || st.Forbidden || !bl.AllowsStack(st) || st.Qty < take {
 		return false
 	}
 	n := min(take, s.fits(id, st.Kind))

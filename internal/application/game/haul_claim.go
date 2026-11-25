@@ -15,18 +15,9 @@ import (
 // them, every other job uses them. Whatever a colonist picks up, puts
 // down or stores is the colony's (doHaul, dropCarry, mergeOrSet).
 
-// spawnUnclaimed drops a stack found on the map (kind k, qty) at (x, y),
-// merging into a like found stack there; forbid also forbids it (raid
-// loot).
+// spawnUnclaimed drops found goods at native caps, preserving their flags.
 func (g *Game) spawnUnclaimed(k item.Kind, qty, x, y int, forbid bool) {
-	sid, err := g.SpawnStack(k, qty, x, y)
-	if err != nil {
-		return
-	}
-	if st, ok := g.stacks.Get(sid); ok {
-		st.Unclaimed, st.Forbidden = true, forbid
-		g.mergeOrSet(sid, st)
-	}
+	g.dropStackOf(item.Stack{Kind: k, Qty: qty, Unclaimed: true, Forbidden: forbid}, x, y)
 }
 
 // claim makes st the colony's: no longer found, no haul mark.

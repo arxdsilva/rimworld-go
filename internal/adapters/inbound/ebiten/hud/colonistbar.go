@@ -245,7 +245,7 @@ func (c ColonistBar) StatusesOf(p game.PawnView) []BarStatus {
 func (c ColonistBar) statusesWith(p game.PawnView, fires []game.FireView) []BarStatus {
 	since, idling := c.bar.idle[p.ID]
 	held := idling && c.sh.Tick() >= since+BarIdleHold
-	if g := c.sh.Env().Game; g != nil && p.Map != g.ViewedMap() {
+	if g := c.sh.Env().Game; g != nil && game.MapID(p.Map) != g.ViewedMap() {
 		fires = nil // the fires are the viewed map's
 	}
 	return BarStatusesIn(c.sh, p, onFire(fires, p), held)
@@ -486,13 +486,13 @@ func (c ColonistBar) ClickAway(id entity.EntityID, shift bool) bool {
 		return false
 	}
 	for _, p := range c.Pawns() {
-		if p.ID != id || p.Map == g.ViewedMap() {
+		if p.ID != id || game.MapID(p.Map) == g.ViewedMap() {
 			continue
 		}
 		if shift {
 			c.Toast(BarCrossMapHint)
 		} else {
-			c.sh.Jump(ports.Spot{Map: p.Map, X: p.X, Y: p.Y, Focus: id})
+			c.sh.Jump(ports.Spot{Map: game.MapID(p.Map), X: p.X, Y: p.Y, Focus: id})
 		}
 		return true
 	}
@@ -622,6 +622,14 @@ func drawBrackets(screen *ebiten.Image, slot gfx.Rect) {
 	for _, c := range [...]struct{ x, y, dx, dy float32 }{{x0, y0, 1, 1}, {x1, y0, -1, 1}, {x0, y1, 1, -1}, {x1, y1, -1, -1}} {
 		gfx.Line(screen, c.x, c.y+c.dy*w/2, c.x+c.dx*l, c.y+c.dy*w/2, w, uikit.Heading, false)
 		gfx.Line(screen, c.x+c.dx*w/2, c.y, c.x+c.dx*w/2, c.y+c.dy*l, w, uikit.Heading, false)
+	}
+}
+
+// DrawStatusMark renders the highest-priority existing colonist status for a compact row.
+func (c ColonistBar) DrawStatusMark(screen *ebiten.Image, p game.PawnView, x, y, size float32) {
+	sts := c.StatusesOf(p)
+	if len(sts) > 0 {
+		c.drawStatuses(screen, barCard{art: gfx.Rect{X: x, Y: y, W: size, H: size}, icon: size}, sts[:1])
 	}
 }
 

@@ -475,9 +475,15 @@ func TestMortarHostileAndSpot(t *testing.T) {
 	if MissRadius(0) != 10800 || MissRadius(8) != 9000 || MissRadius(20) != 6300 || MissRadius(99) != 6300 {
 		t.Fatal("miss radius by Shooting")
 	}
+	if got := MissRadiusWithCapacities(20, 1000, 1500); got != 4050 {
+		t.Fatalf("enhanced crew radius %d, want 4050", got)
+	}
+	if got := MissRadiusWithCapacities(20, 500, 1000); got != 10800 {
+		t.Fatalf("reduced sight crew radius %d, want 10800", got)
+	}
 	f.aims[2] = [2]int{0, 0}
-	if m.crewLevel(2) != 0 || m.crewLevel(1) != 20 {
-		t.Fatalf("crew levels %d %d", m.crewLevel(2), m.crewLevel(1))
+	if m.crewAim.MortarMissRadius(2) != 10800 || m.crewAim.MortarMissRadius(1) != 6300 {
+		t.Fatalf("crew radii %d %d", m.crewAim.MortarMissRadius(2), m.crewAim.MortarMissRadius(1))
 	}
 }
 

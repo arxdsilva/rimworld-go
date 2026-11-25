@@ -301,14 +301,15 @@ func commsAlly(t *testing.T, j *journey) {
 	}
 	id, gw := -1, 0
 	for _, f := range v.Factions {
-		if f.Caravan.Allowed && (id < 0 || f.Goodwill > gw) {
+		if f.FactionType.HasWorldSettlements() && f.Relation != "hostile" &&
+			(id < 0 || f.Goodwill > gw) {
 			id, gw = f.ID, f.Goodwill
 		}
 	}
 	if id < 0 {
 		t.Fatalf("no faction takes caravan requests: %+v", v.Factions)
 	}
-	const gift = faction.GiftSilverPerGoodwill * 10 // 10 goodwill, under GiftGoodwillMax
+	const gift = faction.GiftSilverPerGoodwill * 25 // the real positive-goodwill curve rises in cost
 	for i := 0; gw < faction.FriendlyAt; i++ {
 		if i == 20 {
 			t.Fatalf("faction %d stuck at goodwill %d after %d gifts", id, gw, i)
@@ -364,10 +365,17 @@ func TestJourneyDialogsCommsConsole(t *testing.T) {
 	id := func(act string) string { return "comms." + strconv.Itoa(friend) + "." + act }
 
 	gw := goodwill()
+	minimumGift := dialogs.CommsGiftStart
+	for _, row := range v.Factions {
+		if row.ID == friend {
+			minimumGift = max(minimumGift, row.Gift.Cost)
+		}
+	}
 	j.clickID(id("giftmore"))
 	j.clickID(id("gift"))
-	if c, ok := j.lastCmd(command.CommsGift); !ok || c.Index != friend || c.Count != dialogs.CommsGiftStart+dialogs.CommsGiftStep {
-		t.Fatalf("CommsGift %+v (sent %v), want %d silver to faction %d", c, ok, dialogs.CommsGiftStart+dialogs.CommsGiftStep, friend)
+	wantGift := minimumGift + dialogs.CommsGiftStep
+	if c, ok := j.lastCmd(command.CommsGift); !ok || c.Index != friend || c.Count != wantGift {
+		t.Fatalf("CommsGift %+v (sent %v), want %d silver to faction %d", c, ok, wantGift, friend)
 	}
 	if goodwill() <= gw {
 		t.Fatalf("goodwill %d after the gift, want above %d", goodwill(), gw)
@@ -415,6 +423,24 @@ func TestJourneyDialogsCommsConsole(t *testing.T) {
 	}
 }
 
+// tradeReveal moves the trade rows to a requested counter. Trade stock is
+// generated from weighted pools, so its chosen row may be below the fold.
+func tradeReveal(j *journey, id string) {
+	j.t.Helper()
+	ui := j.a.uiSt()
+	for off := float32(0); off < 5000; off += 30 {
+		if ui.Scroll == nil {
+			ui.Scroll = map[string]float32{}
+		}
+		ui.Scroll["trade.rows"] = off
+		j.update(1)
+		if _, ok := ui.Find(id); ok {
+			return
+		}
+	}
+	j.t.Fatalf("trade counter %q never appeared while scrolling", id)
+}
+
 // tradeOne puts one item on the open trade dialog's table (sells one of
 // the first goods the trader buys, else buys the cheapest it sells) and
 // accepts: ProposeTrade leaves, and the trader's stock moves by one.
@@ -442,6 +468,7 @@ func tradeOne(t *testing.T, j *journey) {
 	if row.Kind == "" {
 		t.Fatalf("nothing to trade: %+v", v.Rows)
 	}
+	tradeReveal(j, "trade."+row.Kind+"."+btn+".1")
 	if !j.clickID("trade." + row.Kind + "." + btn + ".1") {
 		t.Fatalf("%s 1 %s is disabled", btn, row.Kind)
 	}
@@ -563,6 +590,9 @@ func TestJourneyDialogsPrisonerTab(t *testing.T) {
 	if j.a.insp.PaneOpenTab() != inspectorpkg.PrisonerTabID {
 		t.Fatalf("open tab %q, want Prisoner", j.a.insp.PaneOpenTab())
 	}
+	if v, ok := g.Prisoner(cast.Prisoner); !ok || v.RecruitChanceMax < v.RecruitChanceMin || v.RecruitChanceMin <= 0 {
+		t.Fatalf("missing native recruitment estimate: %+v", v)
+	}
 	j.clickID(inspectorpkg.PrisonerModeID(prisoner.Reduce))
 	if c, ok := j.lastCmd(command.SetPrisonerMode); !ok || c.Target != uint64(cast.Prisoner) || c.Mode != uint8(prisoner.Reduce) {
 		t.Fatalf("SetPrisonerMode %+v (sent %v), want Reduce for the prisoner", c, ok)
@@ -651,3 +681,41 @@ func TestJourneyDialogsCaravanFormAndReturn(t *testing.T) {
 // worldFly is enough Updates for the globe's flight to the colony (it opens
 // centred on it) to put the markers in place.
 const worldFly = 30
+
+func TestJourneyDialogsAnimalBedOwnerMedical(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t)
+	pet, err := j.g.SpawnAnimal("husky", 15, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j.g.TameAnimal(pet, "Rex")
+	if !j.g.BuildNow("animal sleeping spot", "wood", "south", 12, 5) {
+		t.Fatal("no animal bed")
+	}
+	bed := dlgBuildingAt(j, 12, 5)
+	j.clickTile(12, 5, inputframe.Left, 0)
+	j.clickID(inspectorpkg.BedOwnerID(0))
+	j.update(1)
+	if j.a.uiModalTop() != inspectorpkg.BedOwnerModalID {
+		t.Fatal("no animal owner modal")
+	}
+	j.clickID(inspectorpkg.BedOwnerPickID(pet))
+	if c, ok := j.lastCmd(command.AssignBedOwner); !ok || c.Target != uint64(bed.ID) || c.Pawn != uint64(pet) {
+		t.Fatalf("animal owner command %+v", c)
+	}
+	if dlgBuilding(j, uint64(bed.ID)).Claimant != pet {
+		t.Fatal("animal claim did not reach native state")
+	}
+	j.clickID(inspectorpkg.BedMedicalID)
+	if c, ok := j.lastCmd(command.SetBedMedical); !ok || c.Target != uint64(bed.ID) || !c.Enabled {
+		t.Fatalf("medical command %+v", c)
+	}
+	if v := dlgBuilding(j, uint64(bed.ID)); !v.Medical || v.Claimant != 0 {
+		t.Fatalf("medical status/claim %+v", v)
+	}
+	j.clickID(inspectorpkg.BedMedicalID)
+	if dlgBuilding(j, uint64(bed.ID)).Medical {
+		t.Fatal("medical toggle did not turn off")
+	}
+}

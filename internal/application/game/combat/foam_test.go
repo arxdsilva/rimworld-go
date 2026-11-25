@@ -44,7 +44,7 @@ func (f *fakeFoam) Spill(x, y, n int) { f.spills[[2]int{x, y}] += n }
 func foamRig() (*fakeHost, *fakeFoam, *Combat) {
 	f := newFake(40, 30)
 	fm := &fakeFoam{fires: map[[2]int]int{}, spills: map[[2]int]int{}}
-	return f, fm, New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f, Foam: fm})
+	return f, fm, New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f, Foam: fm})
 }
 
 func TestFoamBurstDousesAndStains(t *testing.T) {

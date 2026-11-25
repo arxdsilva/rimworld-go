@@ -38,7 +38,7 @@ func (o *Orders) Do(id entity.EntityID, j job.Record) {
 // hostiles' way changed with it (the game rebuilds its path caches).
 func (o *Orders) Apply(c command.Command) (way bool) {
 	id, k := o.h.Object(c.X, c.Y)
-	if id == 0 {
+	if id == 0 || c.Target != 0 && entity.EntityID(c.Target) != id {
 		return false
 	}
 	switch {

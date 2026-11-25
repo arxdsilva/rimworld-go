@@ -29,7 +29,7 @@ var pawnActions = map[string]bool{
 	ActionAim: true, ActionMelee: true, ActionChop: true, ActionMine: true, ActionBuild: true,
 	ActionDeconstruct: true, ActionRepair: true, ActionBreach: true, ActionSow: true, ActionHarvest: true,
 	ActionCraft: true, ActionCook: true, ActionTailor: true, ActionButcher: true, ActionResearch: true,
-	ActionTend: true, ActionRescue: true, ActionTame: true, ActionEat: true, ActionRefuel: true,
+	ActionTend: true, ActionRescue: true, ActionTame: true, ActionEat: true, ActionSit: true, ActionRefuel: true,
 	ActionHaul: true, ActionHorseshoes: true, ActionClean: true, ActionDig: true, ActionBury: true, ActionCremate: true,
 }
 
@@ -46,7 +46,7 @@ func TestActionVocabularyCoversJobs(t *testing.T) {
 		job.Mine: ActionMine, job.Sow: ActionSow, job.Harvest: ActionHarvest, job.Eat: ActionEat,
 		job.Tend: ActionTend, job.Refuel: ActionRefuel, job.Horseshoes: ActionHorseshoes,
 		job.Research: ActionResearch, job.Tame: ActionTame, job.Repair: ActionRepair,
-		job.Breach: ActionBreach, job.Haul: ActionHaul, job.Clean: ActionClean,
+		job.Breach: ActionBreach, job.Haul: ActionHaul, job.Clean: ActionClean, job.SitDown: ActionSit,
 	}
 	for k, a := range want {
 		if got := g.actionOf(id, do(k)); got != a {
@@ -166,6 +166,7 @@ func TestActionRescueAndBenches(t *testing.T) {
 func TestActionProgress(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
+	g.SetGround(4, 3, 4, 3, "rock", "granite", "")
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	plantID, err := g.SpawnPlant(9, 9)
 	if err != nil {
@@ -195,7 +196,7 @@ func TestActionProgress(t *testing.T) {
 		{"eat", job.Record{Kind: job.Eat}},
 	}
 	totals := map[string]int{
-		"cut": plant.DefOf(plant.BerryBush).CutWork, "harvest": plant.DefOf(plant.BerryBush).HarvestWork, "mine": MineWork, "sow": SowWork, "research": rlab.Session,
+		"cut": plant.DefOf(plant.BerryBush).CutWork, "harvest": plant.DefOf(plant.BerryBush).HarvestWork, "mine": g.mineWorkAt(4, 3), "sow": SowWork, "research": rlab.Session,
 		"tend": TendWork, "tame": animal.TameWork, "construct": fr.WorkLeft, "bill": recipe.Core().DefOf(recipe.Club).Work, "eat": needs.EatWorkTicks,
 	}
 	for _, c := range cases {
@@ -662,5 +663,21 @@ func TestActionViewFirstAim(t *testing.T) {
 	want := 1 - float64(j.WorkLeft)/float64(first)
 	if pv := pawnView(g, att); math.Abs(pv.AttackCycle-want) > 1e-9 {
 		t.Fatalf("action bar %v, want %v (WorkLeft %d of %d)", pv.AttackCycle, want, j.WorkLeft, first)
+	}
+}
+
+// TestSitViewFacesChairCell: a pawn seated on a SitDown job reads as the
+// "sit" action and its view carries the chair cell for the renderer.
+func TestSitViewFacesChairCell(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 16, Height: 12})
+	id, _ := g.SpawnNamedPawn(8, 4, "Bo")
+	g.jobs.Set(id, job.Record{Kind: job.SitDown, State: job.Do, TX: 8, TY: 4, WorkLeft: 600})
+	if p := pawnView(g, id); p.Action != ActionSit || p.ActX != 8 || p.ActY != 4 {
+		t.Fatalf("seated view: action %q at %d,%d, want sit at 8,4", p.Action, p.ActX, p.ActY)
+	}
+	g.jobs.Set(id, job.Record{Kind: job.SitDown, State: job.Goto, TX: 8, TY: 4, WorkLeft: 600})
+	if p := pawnView(g, id); p.Action != "" {
+		t.Fatalf("walking to the chair acts %q", p.Action)
 	}
 }

@@ -5,10 +5,12 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/social"
@@ -85,16 +87,6 @@ type prisonLife struct{ g *Game }
 
 func (h prisonLife) Needs(id entity.EntityID) needs.Pair       { n, _ := h.g.need.Get(id); return n }
 func (h prisonLife) SetNeeds(id entity.EntityID, n needs.Pair) { h.g.need.Set(id, n) }
-func (h prisonLife) Heal(id entity.EntityID, v health.Record, now uint64) health.Record {
-	h.g.heal(id, &v, now) // combat.go
-	return v
-}
-func (h prisonLife) Decay(id entity.EntityID, n needs.Pair, now uint64) needs.Pair {
-	return h.g.decayNeeds(id, n, now) // skills.go
-}
-func (h prisonLife) DownedHunger(id entity.EntityID, now uint64) needs.Pair {
-	return h.g.downedHunger(id, now, false)
-}
 
 type prisonWarden struct{ g *Game }
 
@@ -138,6 +130,9 @@ func (h prisonTalk) Opinion(from, to entity.EntityID) int32 { return h.g.opinion
 func (h prisonTalk) Mood(id entity.EntityID) int            { return h.g.prisonerMood(id) }
 func (h prisonTalk) Negotiation(id entity.EntityID) int32   { return h.g.negotiation(id) }
 func (h prisonTalk) SocialLevel(id entity.EntityID) int     { return int(h.g.skillOf(id, skSocial).Level) }
+func (h prisonTalk) UseRecruitInspiration(id entity.EntityID) bool {
+	return h.g.mind.Inspire.Use(id, mind.Recruitment)
+}
 func (h prisonTalk) Chat(a, b entity.EntityID, now uint64) {
 	h.g.applyInteraction(a, b, social.Chitchat, now) // social.go: memories, log
 }
@@ -146,6 +141,7 @@ func (h prisonTalk) Chat(a, b entity.EntityID, now uint64) {
 // raid roster with its own bio, every relation it had and the default
 // work priorities (incapable work off).
 func (g *Game) enlist(p entity.EntityID) {
+	g.reserve.ReleaseTarget(p)
 	g.interrupt(p, job.Cancelled)
 	g.releaseBed(p)
 	delete(g.raiders, p)
@@ -155,7 +151,7 @@ func (g *Game) enlist(p entity.EntityID) {
 		if _, has := g.sk.bios[p]; !has && per.HasBio {
 			g.giveBio(p, per.Bio) // skills.go: its skills and stats
 		}
-		per.Bio, per.HasBio, per.Where, per.Faction = g.sk.bios[p], false, whereColony, 0
+		per.Bio, per.HasBio, per.Where, per.Faction, per.Origin = g.sk.bios[p], false, whereColony, 0, faction.Player
 	}
 	if _, ok := g.prio[p]; !ok {
 		g.prio[p] = work.DefaultPriorities()

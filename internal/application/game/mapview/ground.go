@@ -17,7 +17,9 @@ import (
 // MinedOres is every ore a rock cell can hold, in code order: the metal
 // veins of geology.Ores() and the buried machinery (game.WorldView.Ore
 // codes, OreNames, game.SetGround).
-func MinedOres() []geology.Ore { return append(geology.Ores(), geology.Machinery) }
+func MinedOres() []geology.Ore {
+	return append(geology.Ores(), geology.Machinery, geology.Plasteel, geology.Uranium, geology.Jade)
+}
 
 // StoneNames maps game.WorldView.StoneType codes to names ("" is none).
 func StoneNames() []string {

@@ -128,7 +128,7 @@ All four are permille; each base is 1000 in `Base()`.
 | `AddOperation` | `Pawn`=patient, `Index`=body.OpKind, `Build`=part, `Stuff`=item kind |
 | `RemoveOperation` | `Pawn`, `Index`=op slot |
 | `SetDrugPolicy` | `Pawn`, `Mode`=drug.Preset |
-| `AssignBedOwner` | `Target`=bed, `Pawn`=owner (0 clears), `Index`=slot |
+| `AssignBedOwner` | `Target`=bed, `Pawn`=owner (0 clears), `Index`=slot; animal beds use slot 0 and accept a living tame animal or 0; medical, forbidden or reserved animal beds and temporary stays reject reassignment |
 | `SetAnimalMaster` | `Target`=animal, `Pawn`=master (0 clears) |
 | `SetTraining` | `Target`=animal, `Index`=training.Skill, `Enabled` |
 | `GiftAnimal` | `Target`=animal, `Pawn`=visitor |
@@ -136,7 +136,7 @@ All four are permille; each base is 1000 in `Base()`.
 | `Arrest` | `Pawn`=arrester, `Target` |
 | `SetPrisonerMode` | `Target`=prisoner, `Mode`=prisoner.Mode |
 | `SetBedForPrisoners` | `Target`=bed, `Enabled` |
-| `SetBedMedical` (PLAY-020) | `Target`=bed, `Enabled`: that bed only |
+| `SetBedMedical` (PLAY-020) | `Target`=bed, `Enabled`: that bed only, including animal beds/spots; clinical animal stays use temporary claims and the existing lying-heal rate |
 | `SetPawnBedRest` (PLAY-020) | `Target`=colonist, `Enabled`: rest when hurt |
 | `FormCaravan` | `Name`=comma-separated member ids, `Count`=destination tile |
 | `CaravanReturn` | `Target`=caravan id |
@@ -224,7 +224,7 @@ Also add `command.WorkWarden` to `WorkType`.
 | `internal/domain/pawn/body` | `anatomy.go`, `wound.go`, `capacity.go`, `scar.go`, `implant.go`, `surgery.go` |
 | `internal/domain/pawn/drug` | `drug.go` (defs keyed by `item.Kind`), `severity.go`, `addiction.go`, `policy.go` |
 | `internal/domain/pawn/prisoner` | `prisoner.go` (State, Mode, ResistanceFactor, recruit chance) |
-| `internal/domain/animal/training` | `training.go` (Skill: Obedience, Guard, Release; step chances; decay; bond chances) |
+| `internal/domain/animal/training` | `training.go` (Skill: Obedience, Guard, Release, Haul (append-only ID; legacy three-skill save array); step chances; decay; bond chances) |
 | `internal/domain/world/area` | `area.go` (bitset areas, ≤10, `Paint`, `Contains`, `Export`/`Import`) |
 | `internal/domain/world/caravan` | `caravan.go` (Caravan{ID, Members, Animals, Tile, Path, Progress, Dest, State}, speed, `Step`) |
 
@@ -341,7 +341,7 @@ func RecruitChance(social int) int32
   - `HealthView{Capacities []CapacityView; Parts []PartView; Pain int; Operations []OperationView; Drugs []DrugLineView}`
   - `PrisonerView{Mode uint8; Resistance int; Warden string; ForPrisonersBed bool}`
   - `WorldMapView{Tile int; Caravans []CaravanView}`
-  - `CaravanView{ID uint64; Members []string; Tile, Dest int; Progress int; State string}`
+  - `CaravanView{ID uint64; Members []string; Health []string; Cargo []item.Stack; Tile, Dest int; Progress int; State string; MemberFacts []travel.CaravanMemberFacts; Split travel.SplitView; TravelState caravan.State; FoodDays int32; FoodKnown bool; SpeedPermil int32; TilesPerDay float64; Moving, Resting, WaitingEncounter bool}` (MAP-24: detached native facts; milli-days and permille; UI does not invent travel rules or mood estimates.)
   - `AreaView{Index int; Name string; Cells int}`
   - `HistoryEntryView{Tick uint64; Text string; Kind string; Pawns []uint64}`
   - `PawnView` gains `Interaction string`, `InteractTick uint64`, `MoodTarget int`, `Prisoner bool`, `Visitor bool`, `SocialFight bool`.

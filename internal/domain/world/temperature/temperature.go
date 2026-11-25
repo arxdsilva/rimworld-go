@@ -38,6 +38,7 @@ type Climate struct {
 	Amplitude int
 	PeakDay   int
 	DaySwing  int
+	Calendar  clock.CalendarPolicy
 }
 
 // Temperate is the temperate-forest calibration (the original map, TEMP-2
@@ -54,13 +55,27 @@ const (
 	warmestHour = 15
 )
 
+// WithCalendar preserves the peak's seasonal phase across policies.
+func (c Climate) WithCalendar(p clock.CalendarPolicy) Climate {
+	if c.Calendar == p {
+		return c
+	}
+	old := c.Calendar.YearDays()
+	peak := (c.PeakDay%old + old) % old
+	c.PeakDay = int(int64(peak) * int64(p.YearDays()) / int64(old))
+	c.Calendar = p
+	return c
+}
+
 // DailyMean is the outdoor mean for the day containing tick t.
 func (c Climate) DailyMean(t clock.Tick) Temp {
-	day := int(t/clock.TicksPerDay) % clock.DaysPerYear
-	half := clock.DaysPerYear / 2
-	dist := (day - c.PeakDay + clock.DaysPerYear) % clock.DaysPerYear
+	year := c.Calendar.YearDays()
+	day := int(t/clock.TicksPerDay) % year
+	half := year / 2
+	peak := (c.PeakDay%year + year) % year
+	dist := (day - peak + year) % year
 	if dist > half {
-		dist = clock.DaysPerYear - dist
+		dist = year - dist
 	}
 	// dist in [0, half]: +amplitude at the peak, -amplitude half a year away
 	return Temp(c.YearMean + c.Amplitude - 2*c.Amplitude*dist/half)
@@ -84,13 +99,22 @@ func (c Climate) Range() (low, high Temp) {
 
 // GrowingDays counts the days of the year whose mean is above min.
 func (c Climate) GrowingDays(min Temp) int {
-	n := 0
-	for d := 0; d < clock.DaysPerYear; d++ {
-		if c.DailyMean(clock.Tick(d*clock.TicksPerDay)) > min {
-			n++
-		}
+	y := c.Calendar.YearDays()
+	half := y / 2
+	if Temp(c.YearMean+c.Amplitude) <= min {
+		return 0
 	}
-	return n
+	if Temp(c.YearMean-c.Amplitude) > min {
+		return y
+	}
+	if c.Amplitude <= 0 {
+		return 0
+	}
+	// Temperature at distance d is peak - floor(2*A*d/half).
+	// Count the peak and the pairs at distances whose floored drop fits.
+	drop := int64(c.YearMean + c.Amplitude - int(min))
+	d := (drop*int64(half) - 1) / int64(2*c.Amplitude)
+	return 1 + 2*int(d)
 }
 
 // diurnal is the offset from the daily mean at tick-of-day tod: -DaySwing
@@ -126,13 +150,19 @@ func Season(t clock.Tick) string { return seasonAt(t, peakDay) }
 // SeasonAt is Season for this climate: the seasons centre on c.PeakDay, so
 // a southern-hemisphere site (PeakDay 45) has winter when the north has
 // summer (NG-1 §4.2).
-func (c Climate) SeasonAt(t clock.Tick) string { return seasonAt(t, c.PeakDay) }
+func (c Climate) SeasonAt(t clock.Tick) string { return seasonAtPolicy(t, c.PeakDay, c.Calendar) }
 
 func seasonAt(t clock.Tick, peak int) string {
-	day := int(t/clock.TicksPerDay) % clock.DaysPerYear
-	q := clock.DaysPerQuadrum
-	peak = (peak%clock.DaysPerYear + clock.DaysPerYear) % clock.DaysPerYear
-	switch (day - peak + q/2 + clock.DaysPerYear) % clock.DaysPerYear / q {
+	return seasonAtPolicy(t, peak, clock.CalendarPolicy{})
+}
+func SeasonPolicy(t clock.Tick, p clock.CalendarPolicy) string {
+	return Temperate.WithCalendar(p).SeasonAt(t)
+}
+func seasonAtPolicy(t clock.Tick, peak int, p clock.CalendarPolicy) string {
+	year, q := p.YearDays(), p.QuadrumDays()
+	day := int(t/clock.TicksPerDay) % year
+	peak = (peak%year + year) % year
+	switch (day - peak + q/2 + year) % year / q {
 	case 0:
 		return "Summer"
 	case 1:

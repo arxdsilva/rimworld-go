@@ -4,8 +4,8 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/saveutil"
 	"slices"
-	"sort"
 
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/application/game/herd"
@@ -16,16 +16,10 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/biome"
 )
 
-// Wildlife (SIM-019, SIM-025). Which species live on the map follows the
-// season and their habitat: cold-climate animals come in winter,
-// hot-climate ones in summer. Start herds and later arrivals are drawn by
-// those weights from g.rng (deterministic); how many live on the map
-// follows its carrying capacity (population.go). Rarer events: a
-// legendary animal wanders in at most once a year, explosive animals
-// burst when they die, and hive swarms come out of the rock (hive.go).
+// Wildlife draws species by habitat/season and fills their ecosystem
+// weight budget deterministically. Incidents add rare animals separately.
 
 // wildlifeState is the saved wildlife event state.
 type wildlifeState struct {
@@ -44,12 +38,15 @@ type wildlifeState struct {
 	// the herds walking off an overfull map; Gnaw the timbergnaws of the
 	// current gnawing event (incidents.go).
 	Count     int
-	Preds     int // predators among Count
+	Preds     int // predator share of the ecosystem weight budget
 	CountHour uint64
-	PopSettle uint64
-	Departs   []departure
-	Gnaw      gnawEvent
-	Forage    forage.Memory // FEED-001: tame animals' feeding memory (animal_needs.go)
+	// WeightSchema marks the in-memory budget cache as computed.
+	// Loading invalidates historical cached counts and costs.
+	WeightSchema bool
+	PopSettle    uint64
+	Departs      []departure
+	Gnaw         gnawEvent
+	Forage       forage.Memory // FEED-001: tame animals' feeding memory (animal_needs.go)
 	// Herd (FOOD-3) is the herd's saved settings (auto-slaughter caps);
 	// herd the component over it (handling.go herdOf: built on first
 	// use, never saved).
@@ -92,53 +89,14 @@ const (
 	legendaryChance  = 2
 )
 
-// wildWeight is species s's chance to be drawn as a wild herd in biome b
-// in season: how common it is there (animal.Weight; 0 for domestic, pet,
-// event and hive animals and for species of other biomes) times the
-// season's welcome.
-func wildWeight(s animal.Species, b biome.ID, season string) int {
-	return animal.Weight(s, b) * animal.SeasonWeight(s, season)
-}
-
-// pickSpecies draws one species of the map's biome passing keep, weighted
-// for the current season; ok is false when none qualifies.
+// pickSpecies supplies the map's current biome and native random stream.
 func (g *Game) pickSpecies(keep func(animal.Species) bool) (animal.Species, bool) {
-	season := g.season(uint64(g.clock.Now())) // setup.go: the map's own calendar
-	// Setup games never draw domestic or pet species wild; legacy colonies
-	// keep their draws (and RNG sequence) exactly.
-	setup := g.hasSetup()
-	weight := func(s animal.Species) int {
-		if setup && !isWildSpecies(s) {
-			return 0
-		}
-		return wildWeight(s, g.biome, season)
-	}
-	total := 0
-	for _, s := range animal.All() {
-		if keep(s) {
-			total += weight(s)
-		}
-	}
-	if total <= 0 {
-		return 0, false
-	}
-	roll := g.rng.IntN(total)
-	for _, s := range animal.All() {
-		if !keep(s) {
-			continue
-		}
-		if roll -= weight(s); roll < 0 {
-			return s, true
-		}
-	}
-	return 0, false
+	return animal.PickWildSpecies(g.biome, g.season(uint64(g.clock.Now())), g.hasSetup(), g.rng.IntN, keep)
 }
 
 func anySpecies(animal.Species) bool { return true }
 
 func isPredator(s animal.Species) bool { return animal.DefOf(s).Predator }
-
-func isPrey(s animal.Species) bool { return !animal.DefOf(s).Predator }
 
 // herdSizeOf draws a herd size for s.
 func (g *Game) herdSizeOf(s animal.Species) int {
@@ -164,7 +122,7 @@ func (g *Game) spawnHerdIn(h *habitat, s animal.Species, x, y, n int) []entity.E
 	for i := 0; i < n; i++ {
 		for try := 0; try < 12; try++ {
 			hx, hy := x+g.rng.IntN(5)-2, y+g.rng.IntN(5)-2
-			if h != nil && !h.open(hx, hy) {
+			if h != nil && !h.Open(hx, hy) {
 				continue
 			}
 			id, err := g.spawnAnimal(s, hx, hy)
@@ -177,7 +135,7 @@ func (g *Game) spawnHerdIn(h *habitat, s animal.Species, x, y, n int) []entity.E
 			if i == 0 {
 				days = max(days, life.AdultDays) // a herd has a grown leader
 			}
-			a.Born = animal.BornAt(now, uint64(days)*clock.TicksPerDay)
+			a.Born = animal.BornAt(now, g.clock.Calendar().CalendarDays(uint64(days))*clock.TicksPerDay)
 			a.Female = g.rng.IntN(2) == 0
 			a.Food = animal.Full * (60 + g.rng.IntN(41)) / 100
 			a.Rest = animal.Full * (60 + g.rng.IntN(41)) / 100
@@ -198,78 +156,28 @@ func (g *Game) spawnHerdIn(h *habitat, s animal.Species, x, y, n int) []entity.E
 // that target except the first.
 func (g *Game) spawnWildlife() {
 	g.wild = true
-	target := g.startTarget()
-	n := startHerdsMin + g.rng.IntN(startHerdsMax-startHerdsMin+1)
-	picks := make([]animal.Species, 0, n)
-	for i := 0; i < n; i++ {
-		if s, ok := g.pickSpecies(anySpecies); ok {
-			picks = append(picks, s)
-		}
-	}
-	has := func(f func(animal.Species) bool) bool {
-		for _, s := range picks {
-			if f(s) {
-				return true
-			}
-		}
-		return false
-	}
-	if len(picks) > 0 && !has(isPrey) {
-		if s, ok := g.pickSpecies(isPrey); ok {
-			picks[0] = s
-		}
-	}
-	if len(picks) > 1 && !has(isPredator) {
-		if s, ok := g.pickSpecies(isPredator); ok {
-			picks[len(picks)-1] = s
-		}
-	}
-	// the first herd, then the predators, then the rest: a small map's
-	// target is not used up before the predators are placed
-	if len(picks) > 1 {
-		rest := append([]animal.Species(nil), picks[1:]...)
-		sort.SliceStable(rest, func(i, j int) bool { return isPredator(rest[i]) && !isPredator(rest[j]) })
-		copy(picks[1:], rest)
-	}
-	count, preds := 0, 0
 	var hab *habitat
 	if g.hasSetup() {
 		hab = g.newHabitat() // wildlife_habitat.go: Setup games place by habitat
 	}
-	place := func(s animal.Species, room int) {
-		size, r := min(g.herdSizeOf(s), room), wildStartRadius
+	animal.StartEcosystem(g.wildlifeCap(), g.rng.IntN, g.pickSpecies, func(s animal.Species, room int) int {
+		w := animal.EcosystemWeight(s)
+		size, r := min(g.herdSizeOf(s), max(1, room/w)), wildStartRadius
 		if isPredator(s) {
 			size, r = min(size, startPredatorMax), wolfStartRadius
 		}
 		var x, y int
 		var ok bool
 		if hab != nil {
-			x, y, ok = hab.pick(s)
+			x, y, ok = hab.Pick(s)
 		} else {
 			x, y, ok = g.randomTileAway(r)
 		}
-		if ok {
-			k := len(g.spawnHerdIn(hab, s, x, y, size))
-			count += k
-			if isPredator(s) {
-				preds += k
-			}
+		if !ok {
+			return 0
 		}
-	}
-	for i, s := range picks {
-		room := target - count
-		if i == 0 {
-			room = max(room, animal.RosterOf(s).HerdMin)
-		}
-		if room > 0 {
-			place(s, room)
-		}
-	}
-	for tries := 0; count < target && tries < 4*target; tries++ {
-		if s, ok := g.pickWildGroup(count, preds); ok {
-			place(s, target-count)
-		}
-	}
+		return len(g.spawnHerdIn(hab, s, x, y, size)) * w
+	})
 }
 
 // migrate is the wildlife's upkeep: a legendary may wander in
@@ -314,7 +222,7 @@ func (g *Game) mapEdgeTile() (int, int, bool) {
 func (g *Game) legendaryDue(now uint64) bool {
 	day := int(now / clock.TicksPerDay)
 	return g.wild && day >= legendaryFromDay && now%uint64(clock.TicksPerDay) == uint64(legendaryHour*clock.TicksPerHour) &&
-		g.wl.LegendaryYear != day/clock.DaysPerYear+1
+		g.wl.LegendaryYear != day/g.clock.Calendar().YearDays()+1
 }
 
 // legendaryVisit brings a glimmerstag in at a map edge when roll (a
@@ -330,7 +238,7 @@ func (g *Game) legendaryVisit(now uint64, roll int) {
 	if _, err := g.spawnAnimal(animal.Glimmerstag, x, y); err != nil {
 		return
 	}
-	g.wl.LegendaryYear = int(now/clock.TicksPerDay)/clock.DaysPerYear + 1
+	g.wl.LegendaryYear = int(now/clock.TicksPerDay)/g.clock.Calendar().YearDays() + 1
 	g.message(x, y, "A glimmerstag wanders in.")
 }
 
@@ -457,4 +365,18 @@ func (g *Game) afterLoadAnimals() {
 		}
 	}
 	g.craft.Bills.UpgradeLegacy() // craft/bills.go
+}
+
+// saved detaches the persisted wildlife memory, omitting runtime hosts and
+// indexes (Gob has always ignored those unexported fields).
+func (w wildlifeState) saved(own bool) wildlifeState {
+	w.herd, w.rage, w.idx, w.food, w.ids = nil, nil, creatureIndex{}, foodIndex{}, nil
+	w.Bursts, w.CropRaids = saveutil.OwnSlice(own, w.Bursts), saveutil.OwnSlice(own, w.CropRaids)
+	w.Departs = saveutil.OwnElements(own, w.Departs, func(d departure) departure {
+		d.IDs, d.Last = slices.Clone(d.IDs), slices.Clone(d.Last)
+		return d
+	})
+	w.Gnaw.IDs, w.Gnaw.Chew = saveutil.OwnSlice(own, w.Gnaw.IDs), saveutil.OwnSlice(own, w.Gnaw.Chew)
+	w.Forage, w.Herd, w.Rage = saveutil.OwnForage(own, w.Forage), saveutil.OwnHerd(own, w.Herd), saveutil.OwnRage(own, w.Rage)
+	return w
 }

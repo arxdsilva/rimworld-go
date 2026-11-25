@@ -5,6 +5,7 @@ package game
 
 import (
 	"bytes"
+	"rimworld-go/internal/domain/pawn/body"
 	"testing"
 
 	"rimworld-go/internal/application/game/rage"
@@ -18,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/site"
 )
 
 // Animal needs and states (SIM-024, plan 2.3).
@@ -710,7 +712,7 @@ func TestBiomeWildlifeAtStart(t *testing.T) {
 	t.Parallel()
 	cold := map[animal.Species]bool{}
 	for seed := uint64(1); seed <= 25; seed++ {
-		g := NewColony(Config{Seed: seed, Width: 60, Height: 60, Biome: biome.Tundra})
+		g := NewColony(Config{Seed: seed, Width: 120, Height: 120, Biome: biome.Tundra})
 		herds := map[uint32][]animal.State{}
 		for _, id := range g.animalIDs {
 			a := animalOf(g, id)
@@ -749,7 +751,7 @@ func TestBiomeWildlifeAtStart(t *testing.T) {
 func TestWildlifeSaveContinuesDeterministically(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 4, Width: 60, Height: 50})
-	g.generate(4)
+	g.generate(4, site.Site{})
 	g.seedGrass()
 	g.wild = true
 	g.spawnWildlife()
@@ -777,5 +779,39 @@ func TestWildlifeSaveContinuesDeterministically(t *testing.T) {
 				t.Fatalf("step %d: animal %d diverged after load:\n%+v\n%+v", i, id, a, b)
 			}
 		}
+	}
+}
+
+// The body-derived rest multiplier must reach actual animal sleep ticks.
+func TestAsthmaticAnimalSleepRecoversSlower(t *testing.T) {
+	g := New(Config{Seed: 901, Width: 25, Height: 14})
+	healthyID, _ := g.SpawnAnimal("cow", 6, 6)
+	asthmaticID, _ := g.SpawnAnimal("cow", 16, 6)
+	for _, id := range []entity.EntityID{healthyID, asthmaticID} {
+		a, _ := g.animals.Get(id)
+		a.HasSex = true
+		a.Food = animal.Full
+		a.Rest = 1000
+		a.Mode = animal.Rest
+		a.Path = nil
+		g.animals.Set(id, a)
+	}
+	a, _ := g.animals.Get(asthmaticID)
+	if !animal.DevelopAsthma(&a, 0) {
+		t.Fatal("could not give the animal asthma")
+	}
+	for i := range a.Body.Conds {
+		a.Body.Conds[i].Sev = 500
+		a.Body.Conds[i].Stage = 2
+	}
+	g.animals.Set(asthmaticID, a)
+	if body.RestRateMultiplier(a.Body) != 850 {
+		t.Fatalf("expected 85%% rest rate, got %d", body.RestRateMultiplier(a.Body))
+	}
+	g.Step(clock.TicksPerHour)
+	healthy := animalOf(g, healthyID).Rest
+	sick := animalOf(g, asthmaticID).Rest
+	if healthy <= sick || healthy-sick < 100 {
+		t.Fatalf("animal sleep ignored breathing: healthy=%d, asthmatic=%d", healthy, sick)
 	}
 }

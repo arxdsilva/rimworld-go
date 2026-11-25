@@ -59,3 +59,53 @@ func TestTable_ReleaseOwnerClearsClaims(t *testing.T) {
 		t.Fatal("another pawn should be able to claim after release")
 	}
 }
+
+func TestClaimChangeHistory(t *testing.T) {
+	tab := NewTable()
+	owner, target := entity.EntityID(1), entity.EntityID(2)
+	entityChange := func(id entity.EntityID, x, y int) bool { return id == target }
+	tileChange := func(id entity.EntityID, x, y int) bool { return id == 0 && x == 7 && y == 8 }
+	rev := tab.Ver()
+	tab.TryTile(owner, 50, 50)
+	if tab.ChangedSince(rev, entityChange) || tab.ChangedSince(rev, tileChange) {
+		t.Fatal("unrelated tile invalidated consumer")
+	}
+	rev = tab.Ver()
+	tab.TryCount(owner, target, 2, 10)
+	if !tab.ChangedSince(rev, entityChange) || tab.ChangedSince(rev, tileChange) {
+		t.Fatal("count claim not tracked precisely")
+	}
+	rev = tab.Ver()
+	tab.TryCount(owner, target, 2, 10)
+	if tab.Ver() != rev || tab.ChangedSince(rev, entityChange) {
+		t.Fatal("idempotent claim changed revision")
+	}
+	tab.TryCount(owner, target, 3, 10)
+	if !tab.ChangedSince(rev, entityChange) {
+		t.Fatal("count replacement not tracked")
+	}
+	rev = tab.Ver()
+	tab.TryTile(owner, 7, 8)
+	tab.TryEntity(owner, target)
+	if !tab.ChangedSince(rev, tileChange) || !tab.ChangedSince(rev, entityChange) {
+		t.Fatal("tile/whole conversion not tracked")
+	}
+	rev = tab.Ver()
+	tab.ReleaseOwner(owner)
+	if !tab.ChangedSince(rev, tileChange) || !tab.ChangedSince(rev, entityChange) {
+		t.Fatal("bulk release lost affected target")
+	}
+	tab.TryEntity(owner, target)
+	rev = tab.Ver()
+	tab.ReleaseTarget(target)
+	if !tab.ChangedSince(rev, entityChange) {
+		t.Fatal("target removal not tracked")
+	}
+	rev = tab.Ver()
+	for i := 0; i <= changeHistory; i++ {
+		tab.TryTile(owner, i, 50)
+	}
+	if !tab.ChangedSince(rev, tileChange) {
+		t.Fatal("expired history did not conservatively invalidate")
+	}
+}
