@@ -8,8 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/replay"
 )
 
 // Main runs the tool with argv (program name first), writes the final colony
@@ -18,6 +20,8 @@ func Main(argv []string, out, errOut io.Writer) int {
 	fs := flag.NewFlagSet(argv[0], flag.ContinueOnError)
 	fs.SetOutput(errOut)
 	seed := fs.Uint64("seed", 1, "deterministic RNG seed")
+	record := fs.String("record", "", "write a replay file to this path")
+	every := fs.Int("every", 100, "ticks between replay checkpoints (with -record)")
 	ticks := fs.Int("ticks", 100, "number of simulation ticks to run")
 	width := fs.Int("width", 20, "map width in tiles")
 	height := fs.Int("height", 20, "map height in tiles")
@@ -27,7 +31,39 @@ func Main(argv []string, out, errOut io.Writer) int {
 		}
 		return 2
 	}
-	print(out, game.NewColony(game.Config{Seed: *seed, Width: *width, Height: *height}), *ticks)
+	opts := replay.Options{Seed: *seed, Width: *width, Height: *height}
+	g := game.NewColony(game.Config{Seed: opts.Seed, Width: opts.Width, Height: opts.Height})
+	if *record == "" {
+		print(out, g, *ticks)
+		return 0
+	}
+	if *every < 0 {
+		fmt.Fprintln(errOut, "simulate: -every must not be negative")
+		return 2
+	}
+	rec := replay.NewRecorder(g, opts, uint64(*every))
+	rec.Step(*ticks)
+	print(out, g, 0)
+	return writeReplay(*record, rec.File(), out, errOut)
+}
+
+func writeReplay(path string, f replay.File, out, errOut io.Writer) int {
+	file, err := os.Create(path)
+	if err == nil {
+		err = replay.Encode(file, f)
+		if cerr := file.Close(); err == nil {
+			err = cerr
+		}
+	}
+	if err != nil {
+		fmt.Fprintf(errOut, "simulate: %v\n", err)
+		return 1
+	}
+	hash := "-"
+	if n := len(f.Checkpoints); n > 0 {
+		hash = f.Checkpoints[n-1].Hash
+	}
+	fmt.Fprintf(out, "replay %s checkpoints=%d hash=%s\n", path, len(f.Checkpoints), hash)
 	return 0
 }
 

@@ -6,11 +6,14 @@ package simulate
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/replay"
 )
 
 func run(t *testing.T, args ...string) string {
@@ -70,5 +73,44 @@ func TestHashLineDeterministic(t *testing.T) {
 	}
 	if c := run(t, "-seed", "2", "-ticks", "50"); lastLine(c) == lastLine(a) {
 		t.Fatalf("seed 2 hash equals seed 1: %q", lastLine(c))
+	}
+}
+
+func TestMainRecordWritesFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.replay")
+	var plain, rec, errOut bytes.Buffer
+	Main([]string{"simulate", "-ticks", "120"}, &plain, &errOut)
+	if code := Main([]string{"simulate", "-ticks", "120", "-record", path, "-every", "50"}, &rec, &errOut); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	body, extra, _ := strings.Cut(rec.String(), "replay "+path)
+	if body != plain.String() {
+		t.Fatalf("colony output changed:\n%q\n%q", body, plain.String())
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	file, err := replay.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := len(file.Checkpoints)
+	want := fmt.Sprintf(" checkpoints=%d hash=%s\n", n, file.Checkpoints[n-1].Hash)
+	if extra != want {
+		t.Fatalf("line %q, want %q", extra, want)
+	}
+}
+
+func TestMainRecordErrors(t *testing.T) {
+	var out, errOut bytes.Buffer
+	bad := filepath.Join(t.TempDir(), "no", "dir", "r.replay")
+	if code := Main([]string{"simulate", "-ticks", "3", "-record", bad}, &out, &errOut); code != 1 || errOut.Len() == 0 {
+		t.Fatalf("unwritable: exit %d err %q", code, errOut.String())
+	}
+	errOut.Reset()
+	if code := Main([]string{"simulate", "-record", bad, "-every", "-1"}, &out, &errOut); code != 2 {
+		t.Fatalf("negative every: exit %d", code)
 	}
 }
