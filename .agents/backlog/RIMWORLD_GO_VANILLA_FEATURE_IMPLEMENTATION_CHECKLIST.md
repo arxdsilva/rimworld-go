@@ -1575,7 +1575,7 @@ children systems.
 
 -   [x] **Capture downed hostile** (SIM-045)
     -   Carry to prisoner-designated bed/room.
--   [-] **Prisoner state** (SIM-045: room-bound; SIM-063: a warden carries a downed prisoner back to a prison bed, "Take <name> to bed" too; no escape behaviour)
+-   [x] **Prisoner state** (SIM-045: room-bound, stays a raider of its faction until recruited; SIM-063: a warden carries a downed prisoner back to a prison bed, "Take <name> to bed" too; CBT-4 escape: the prisoner's tick rolls a prison break (19.4), escapees fight their way out under a "Prison break" alert; #10: `TestLiveStartsPrisonBreak` drives it through the tick)
     -   Faction remains distinct until recruited.
     -   Restricted movement/escape behavior.
 

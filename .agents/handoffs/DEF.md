@@ -250,3 +250,12 @@ An animal's split blow stops at its own hit points, not the body's lost-part tot
 - Save impact: none. HUD/UI: none; the Health tab already shows the animal's wounds and hit points.
 - Boxes: COMBAT_GAP multi-part row (row 78) `done` kept, its animal sentence now names `SpreadBlowWithin` and #269. spec-backlog: none (#269 has no spec-backlog issue); #269 is closed on push.
 - Open: #280 the part-loss cap (`LossKills`, `internal/domain/pawn/body/anatomy.go:108`) still reads the body total on a healed animal.
+
+## CBT-10-prisoner-state
+Prisoner state's escape behaviour was already live (CBT-4); proved through the tick and ticked · 2026-11-25 · d8eb1d00d
+- Changed: no behaviour. #10 reported "no escape behaviour", but CBT-4 (`73ffc63cd`) shipped prison breaks (`internal/application/game/prison/escape.go`) and ticked 19.4 **Escape attempt** and its COMBAT_GAP row, not 19.1 **Prisoner state**. `TestLiveStartsPrisonBreak` now drives `Prison.Live`, which the raid phase runs every tick for each prisoner (`raid/raiders.go:45`), into the roll: a hit on the prisoner's hourly check past the grace starts a break of its room; a miss or a downed prisoner starts none. Before, only `breakOut` was tested directly.
+- Decisions: no change to who may start a break or to the original timings (60-day mean time, 3-day grace, 10-day calm).
+- HUD/UI: the existing "Prison break" threat alert (`prison_host.go:183`); the Prisoner tab still shows no break history (UI spec Wave UI-5 **Prisoner** `[-]`, unchanged).
+- Save, determinism, mod impact: none.
+- Boxes: backlog 19.1 **Prisoner state** `[-]` → `[x]`. spec-backlog #10: its one line is met; closed by the PR.
+- Open: a sleeping prisoner can start or join a break (`prison/life.go:64` runs after the downed return only); whether starters must be awake is undecided, recorded as a finding of the #10 run (PR Open follow-ups).
