@@ -26,6 +26,7 @@ The colony's full-screen world view (MAP-2, MAIN_UI_SCREENS §33, §35, §36): t
 - Every gizmo carries why it is disabled; the simulation's own answer wins where the game offers one (`LaunchReason`, `AttackReason`, `TravelEstimate`).
 - Draws go through the canvas (Rule 3 of `ui_canvas_guard_test.go`); only `spot_draw.go:DrawSpot` draws raw, on the map.
 - Another tab or the Architect opening closes the view; a new game resets it (`follow`).
+- A caravan's inspector shows its food (`CaravanView.FoodDays`, tenths of a day: the reserve plus the cargo's days, #14) after "Heading for", and tags a prisoner member "(prisoner)" from `CaravanView.Prisoner` (parallel to `Members`; a shorter slice is tolerated; `TestInspectCaravanFoodAndPrisoner`).
 
 ## Tests
 - `view_test.go`, headless over a fake shell and a small real planet.

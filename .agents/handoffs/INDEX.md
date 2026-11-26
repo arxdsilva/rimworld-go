@@ -193,6 +193,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | MAP-4-endings-turrets-neutral-attacks | The everyone-gone ending, hostile turrets, neutral attacks | 2026-11-02 | [WORLD.md](WORLD.md#map-4-endings-turrets-neutral-attacks) |
 | MAP-5-doors-visitors-wanderers | Enemy doors, hostile visitors, new wanderers | 2026-11-02 | [WORLD.md](WORLD.md#map-5-doors-visitors-wanderers) |
 | MAP-6-deferred-four | The four deferred items, second pass | 2026-11-03 | [WORLD.md](WORLD.md#map-6-deferred-four) |
+| MAP-7-caravan-prisoners-and-food | Form caravan takes prisoners and food by amount | 2026-11-25 | [WORLD.md](WORLD.md#map-7-caravan-prisoners-and-food) |
 | MED-00-contract | Medical overhaul contract and save groundwork | 2026-10-26 | [MED.md](MED.md#med-00-contract) |
 | MED-01-bleeding | Bleeding, blood loss, pain, downed | 2026-10-26 | [MED.md](MED.md#med-01-bleeding) |
 | MED-02-tend-immunity | Tend quality, healing, scars, infection vs immunity | 2026-10-26 | [MED.md](MED.md#med-02-tend-immunity) |

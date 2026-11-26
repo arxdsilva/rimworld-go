@@ -1548,10 +1548,21 @@ Build an expedition and verify it can survive the journey.
 -   **Entry:** World tab → Form caravan.
 -   **Regions:** colonist and animal pick lists (checkboxes), the
     destination tile picked on the globe, a summary (count, speed).
--   **Commands:** `command.FormCaravan` (`Name` = comma-separated member
-    ids, `Count` = destination tile).
+-   **Regions:** colonist, prisoner and animal pick lists, goods with
+    people's food first under "Food", the destination tile picked on the
+    globe, a summary (count, speed, food days against travel days).
+-   **Commands:** `command.FormCaravan` (`Name` = colonists, prisoners,
+    animals, `stack:qty`, comma-separated; `Count` = destination tile).
 -   **States:** no members picked or no destination: Send disabled with
-    the reason; downed or drafted colonists are listed disabled.
+    the reason; downed or drafted colonists are listed disabled. A food
+    shortfall shows "Not enough food for the trip." and does not block
+    Send. The summary reads "Food: X days · travel: Y days".
+-   [x] Prisoners picked in the dialog and food by amount, with food days
+    against travel time (#14, MAP-7; `dialogs/caravan.go`,
+    `dialogs/caravan_plan.go`).
+-   [-] Medicine and currency sections, temperature and forage in the
+    summary are not built (open in `.agents/handoffs/WORLD.md`,
+    `map-7-caravan-prisoners-and-food`).
 -   [x] Not wired yet (M9); no goods or mass budget in this slice. (2026-11-20 audit: ebiten/dialogs/caravan.go FormTooHeavy, massKg/capKg, goods map; caravan_pack.go; caravan_test.go)
 
 ------------------------------------------------------------------------
@@ -2354,7 +2365,7 @@ required before a polished external build.
 ## Wave UI-7 --- World gameplay
 
 -   [x] World Map (SIM-046: World tab F8 with globe and caravan list; no object selection) (2026-11-20 audit: worldview/pick.go placeMarks, objects.go, view.go Selected; view_test.go TestPickingCyclesAndDoubleClickEnters)
--   [x] Caravan Formation (SIM-046: colonists and destination only) (2026-11-20 audit: dialogs/caravan.go goods + mass budget (FormTooHeavy); caravan_pack.go)
+-   [-] Caravan Formation (SIM-046: colonists and destination only; MAP-7 #14: prisoners and food by amount; medicine, currency and temperature not built, §34) (2026-11-20 audit: dialogs/caravan.go goods + mass budget (FormTooHeavy); caravan_pack.go)
 -   [x] Caravan Inspector (SIM-046: caravan list in the World tab) (2026-11-20 audit: worldview/inspector.go inspectCaravan(o))
 -   [x] Quest (QST-3: the Quests tab (F7) and window per §31: Available/Active/Historical lists, detail with coloured text, reward choice, pawn card, links, Reward preferences; quest letters, the expiring alert and the world-site marker; `.agents/gaps/QUESTS_GAP_ANALYSIS.md`)
 -   [x] Transport Pod (AX-9: §36's loading (dialog, pod and launcher panes) and targeting (World tab picker, pods in flight); no range ring, attack or founding) (2026-11-20 audit: worldview/pods.go range ring, PodArriveAttackEdge/Centre, PodArriveFound; journey_gone_test.go TestJourneyWorldPodsAttackNeutralBase)

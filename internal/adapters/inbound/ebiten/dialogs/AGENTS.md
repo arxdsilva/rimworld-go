@@ -4,9 +4,10 @@
 The colony's trade, comms and caravan dialogs: what a trader or faction offers, the deal the player builds, and the commands that close it. `Dealings` keeps the open dialog and reaches the simulation through `Shell` and its own sources. Feature package (ARCH-005 wave 5.3, agent A10).
 
 ## Owns
-- `Dealings` (18 methods, 5 exported: `SyncDealings`, `OpenFormCaravan`, `Open`, `Paused`, `HoldPause`), built by `New(sh Shell) *Dealings`.
-- `Host` (4 methods: `Trade`, `Comms`, `Sites`, `HoldSpeed`).
-- `TradeSource` and `CommsSource`: one-method optional capabilities (`TradeStatus`, `CommsView`) that the root asserts on `Simulation` (`.agents/specs/SOLID_GO.md` §5).
+- `Dealings` (40 methods, at the `SOLID_GO.md` §8 cap: new draft code goes on `*formCaravan` or free functions, never a new `Dealings` method; 5 exported: `SyncDealings`, `OpenFormCaravan`, `Open`, `Paused`, `HoldPause`), built by `New(sh Shell) *Dealings`.
+- `Host` (7 methods: `Trade`, `Comms`, `Caravans`, `HoldSpeed`, `DrawPortrait`, `Icon`, `Items`).
+- `TradeSource`, `CommsSource` and `CaravanSource`: optional capabilities (`TradeView`, `CommsView`; `WorldSites` and `FormEstimate`) that the root asserts on `Simulation` (`.agents/specs/SOLID_GO.md` §5). The Form caravan dialog reads its settlements and its trip estimate through `Host.Caravans()`.
+- The Form caravan draft (`formCaravan`, `caravan.go`, `caravan_pack.go`, `caravan_plan.go`): colonists, prisoners (`form.prisoner.<id>`, under their own heading, disabled when downed), tame animals, goods (people's food first under "Food", `caravan.Edible`). `Name` is colonists, prisoners, animals, `stack:qty`. The summary shows food days (`caravan.Days`) against `FormEstimate` travel days, memoized per (destination, eaters, load); a shortfall warns ("Not enough food for the trip.") and leaves Send enabled.
 - Pure draft maths and text: `TradeLines`/`TradeLine`, `CaravanTitle`, `CaravanTip`, `CaravanHealthNote`, `MemberList`, `SilverText`; the `tradeDraft` type (11 methods) holds the deal being built.
 - Modal IDs: `TradeModalID`, `CommsModalID`, `FormCaravanID`, `LoadPodsID` (AX-9: the Load transport pods dialog, `OpenLoadPods`).
 
@@ -34,8 +35,8 @@ The colony's trade, comms and caravan dialogs: what a trader or faction offers, 
 - Widgets are declared once per `Update`; `Draw` paints the open dialog. Not benchmarked.
 
 ## Tests
-- 6 source files, 4 test files, 8 `Test*` functions (`TestTradeDialogTotals`, `TestCommsGiftClampsToSilverInReach`, `TestCaravanShowsSickMembers`, `TestDialogsDeclareTheirWidgets`).
-- Coverage 73.7 % (ARCH-005 row).
+- 10 source files, 10 test files, 25 `Test*` functions (`TestTradeDialogTotals`, `TestCommsGiftClampsToSilverInReach`, `TestCaravanShowsSickMembers`, `TestDialogsDeclareTheirWidgets`; the Form caravan's `TestCaravanListsPrisonersApart`, `TestCaravanNameOrder`, `TestCaravanCapCountsPrisoners`, `TestCaravanFoodAgainstTravel`, `TestCaravanEstimateMemoized`).
+- Coverage 77.1 % (#14).
 
 ## Notes
 - `TradeSource`/`CommsSource` are optional: the root asserts them on `Simulation`, so a source without them is handled by the dialog's own code path.

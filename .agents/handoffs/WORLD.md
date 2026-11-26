@@ -142,3 +142,21 @@ The last open quest rows: offer help, site threats, reachability, rare rewards �
 - Limits: relief 509620cf9 (`idindex`, `actionview`, `mapview` buckets, `forage.Rings`); game lines 52,084 → 51,873 and the ceiling lowered to match; files 174; `Game` unchanged.
 - Kept out: the far ancient-ship ending site (decision 3, QST-180..184, the ship gap) and the crashed-pod refugee, which is an incident, not a quest (decision 5, QST-175..179).
 - Open: none in the QST rows. One follow-up: `SiteRuler` folded into `maps.Quester` once it has room.
+
+## MAP-7-caravan-prisoners-and-food
+Form caravan takes prisoners and food by amount · 2026-11-25 · uncommitted
+- Changed: the Form caravan dialog lists prisoners under their own heading (a downed one is disabled), goods with people's food first under "Food", and the summary "Food: X days · travel: Y days"; a shortfall shows "Not enough food for the trip." and Send stays enabled (`dialogs/caravan_plan.go:114-133`).
+- Changed: a prisoner boards at departure, carries 35 kg and eats; it returns as a prisoner (`maps/form.go`, `maps/caravan.go`). Caravans set out on packed food: `caravan.Edible` (meals, berries, pemmican, not hay), eaten spoiling-first (`caravan.Ration`, `domain/world/caravan/food.go`).
+- Decisions: depart never writes `FoodDays`; a new caravan reserves 0; reform and close keep the reserve and cargo food; a reserve ends when the caravan enters a map. Eat order is (shelf, kind), a total order, so map order cannot change a result (`TestRationOrderIndependent`). The pre-form estimate is memoized per (destination, eaters, load).
+- Decisions: save gained `Caravan.Captives` and `Caravan.Fed` (appended, no SaveVersion bump; `testdata/save_schema.txt` updated); old saves travel (`TestLegacyCaravanKeepsFoodDays`, `TestCaravanFoodSaveLoad`).
+- Limits: no budget file touched; `Dealings` and `Fleet` stay at 40 methods (new code as free functions or on `*formCaravan`).
+- Boxes: `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` §28.1 "Form caravan dialog" and "Travel supplies" `[x]`; `MAIN_UI_SCREENS_SPECIFICATION.md` §34 ENG-003 contract: prisoners and food `[x]`, medicine, currency and temperature `[-]`; its "Caravan Formation" row `[-]`. The `spec-backlog` issue for #14 is the lead's.
+- HUD: the dialog summary (`dialogs`) and the inspector Food line (`worldview/inspector.go:218`, which reads `travel.CaravanView.FoodDays`, the reserve plus the cargo food from `maps.Views`), with the "(prisoner)" tag.
+- Open:
+  - F1: settlement restock, transport pods and quest arrivals still grant an abstract `FoodDays` reserve (`maps/road.go:125`, `maps/pod.go:29`, `maps/caravan.go:110`); to file.
+  - F2: caravan food on the road ignores food policy, cannibal and kibble thoughts and spoilage in cargo (A-P6); to file.
+  - F3: caravans do not forage on the road; to file.
+  - F4: the pre-form travel estimate ignores mounts (A-P4); to file.
+  - F5: §34 medicine, currency, temperature and forage are not built; to file.
+  - F6: prisoners in `Pawns()` showed as colonists in the dialog; fixed in this change, not filed.
+  - F7: no public setup gives a real game with both a planet and a prisoner; the AC-1 journey runs over the `globeTabSim` stub; to file.

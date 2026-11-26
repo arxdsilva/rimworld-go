@@ -2187,7 +2187,7 @@ relocation. citeturn2search12
 
 ## 28.1 Caravan formation
 
--   [-] **Form caravan dialog** (SIM-046: colonists and destination; AX-9: tame pack animals and goods by amount; MAP-1: prisoners and animals carry through a reform; no prisoners picked in the dialog)
+-   [x] **Form caravan dialog** (SIM-046: colonists and destination; AX-9: tame pack animals and goods by amount; MAP-1: prisoners and animals carry through a reform; MAP-7 #14: prisoners picked in the dialog, food by amount)
     -   Select colonists.
     -   animals.
     -   prisoners.
@@ -2196,7 +2196,7 @@ relocation. citeturn2search12
     -   destination.
 -   [x] **Mass/carry capacity** (AX-9: body size x 35 kg each (wiki: Caravan): 35 kg a person, an animal by its wiki body size; goods by their wiki masses; overweight picks refused)
     -   Pawns and pack animals carry limited mass.
--   [-] **Travel supplies** (SIM-046: food days only)
+-   [x] **Travel supplies** (SIM-046: food days only; MAP-7 #14: food is the packed cargo's nutrition, eaten on the road; the dialog shows food days against travel time and warns)
     -   Estimate food and travel time.
 -   [x] **Gather/loading phase** (AX-9: members gather at a hitching spot or the drop spot; haulers and the members carry the goods there and lead the pack animals in; they wait until loaded, half a day at most)
     -   Pawns collect assigned cargo before departure.
