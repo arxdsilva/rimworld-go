@@ -329,3 +329,19 @@ Native structural support loss, damage and risk projection · 2026-11-25 · this
 - Save/HUD: additive RoofLoss with owned snapshot copy and normalization. Native danger letter and collapse stamp; overlay and pause remain open. Historical replay hashes retain the square representation of the derived Supported bit only, reconstructed from snapshot terrain/buildings without mutating live roofs. All old v12/habits/scale/grown pins pass unchanged. The recreation workload excludes hazardous mining but retains unchanged sleep/food/work thresholds and asserts injury-free pawns; actual collapse has independent regression coverage.
 - Boxes: MIN-201..207 and MIN-402 implemented in native model, MIN-401 presentation separate; #68 native slice. #252 original 24.1 wealth row already implemented and shared across colony/caravan goods.
 - Open: roof-risk overlay and auto-pause.
+
+## DEF-15-turret-fuse-hiss
+Turret fuse hiss · 2026-11-26 · 696371bd1
+- Changed: a turret hisses while it is Sparking, powered or not; the nearest 2 are heard (`amb.turret_fuse_hiss`, the key `fuse:<id>`, `render/cue/machines.go:88`).
+- Decisions:
+  - a positional loop rather than a one-shot (K2): the loop plays while Sparking holds and fades when the key is left out;
+  - read every frame in `Machines`, not memoised in `ListenWorld` (`render/cue/signals.go:59`), which runs only when ticks advance;
+  - volume 0.4: above the machine hums (0.3) because it warns of a blast, below the re-arm (0.7) (`audiogen/structure_recipes.go:141`); seed 946 keeps the render byte-equal across runs (`TestTurretFuseHissLoop`);
+  - ambience bus, because `BusOf` maps the `amb.` prefix to it (`pkg/audiomanifest/audiomanifest.go:150`).
+- Limits: the ebiten root is untouched, and its budget line stays at 12180 (`internal/arch/solid_budget.txt:16`); no `Bus` method was added; one key string is allocated per sparking turret per frame (`TestFuseHissAllocs`).
+- HUD: none new, because Sparking already shows as the "Turret about to explode" alert (`hud/alerts_power.go:123`) and as the inspector line.
+- Determinism: presentation only, with no save or replay impact.
+- Boxes: checklist 2246 `[x]` (bold name); gap rows MULTIMAP:105 (the running, stale since EAI-012) and :106 (Now cells, the table has no state column); the spec-backlog issue #15 stays open for AC-1 (`[-]`).
+- Open:
+  - line 2234 (Visit friendly settlement: trade and gifts) is ticked once PR #322 merges;
+  - `make art-check`'s Python step needs Pillow (PIL), which the machine lacks; it was not run.

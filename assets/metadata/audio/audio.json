@@ -222,6 +222,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "amb.turret_fuse_hiss",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.4,
+      "files": [
+        "ambience/turret_fuse_hiss.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.turret_fuse_hiss",
+      "seed": 946,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "amb.water_river",
       "bus": "ambience",
       "loop": true,

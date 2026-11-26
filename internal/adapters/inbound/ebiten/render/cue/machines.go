@@ -73,17 +73,36 @@ const (
 	WaterShoreGain = 10.0
 )
 
+// heardMachine is one running machine's loop on screen.
+type heardMachine struct {
+	key, id  string
+	vol, pan float64
+}
+
+// nearestHums puts the loudest MaxMachineLoops of each sound into want.
+func nearestHums(want map[string]Loop, heard []heardMachine) {
+	sort.SliceStable(heard, func(i, j int) bool { return heard[i].vol > heard[j].vol })
+	count := map[string]int{}
+	for _, h := range heard {
+		if count[h.id] == MaxMachineLoops {
+			continue
+		}
+		count[h.id]++
+		want[h.key] = Loop{ID: h.id, Vol: h.vol, Pan: h.pan}
+	}
+}
+
 // Machines adds a positioned loop for each running machine (a
 // generator making power, a heater or cooler working), the nearest
 // MaxMachineLoops of each sound. A machine stopping drops out of the list
 // and fades away.
 func (b *Bus) Machines(rv *render.View, want map[string]Loop, w game.WorldView, v camera.Viewport) {
-	type heardMachine struct {
-		key, id  string
-		vol, pan float64
-	}
 	var heard []heardMachine
+	var fuses fuseHeard // sparking turrets hiss powered or not (turret_fuse_sounds.go)
 	for _, bd := range w.Buildings {
+		if bd.Sparking {
+			fuses.hear(&bd, rv, v)
+		}
 		if bd.PowerOut <= 0 && !bd.Powered { // cheap filter: nothing electric runs without one
 			continue
 		}
@@ -96,15 +115,8 @@ func (b *Bus) Machines(rv *render.View, want map[string]Loop, w game.WorldView, 
 			heard = append(heard, heardMachine{"power:" + strconv.FormatUint(uint64(bd.ID), 10), m.id, vol, pan})
 		}
 	}
-	sort.SliceStable(heard, func(i, j int) bool { return heard[i].vol > heard[j].vol })
-	count := map[string]int{}
-	for _, h := range heard {
-		if count[h.id] == MaxMachineLoops {
-			continue
-		}
-		count[h.id]++
-		want[h.key] = Loop{ID: h.id, Vol: h.vol, Pan: h.pan}
-	}
+	nearestHums(want, heard)
+	fuses.into(want)
 	b.benchWork(rv, want, v)      // crafters at their benches (structure_sounds.go)
 	b.shipPartHum(rv, want, w, v) // crashed ship parts (raid_sounds.go)
 }
