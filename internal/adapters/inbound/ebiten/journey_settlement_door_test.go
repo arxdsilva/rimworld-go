@@ -4,20 +4,30 @@
 package ebiten
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/planet"
 )
 
-// attackedBase is a real attack on a neutral base, its map in view.
-func attackedBase(t *testing.T) *journey {
+// attackedBase is a real attack on a neutral base, its map in view. With
+// tech set, the base is the nearest neutral one of a faction at that tech
+// level (only an industrial base has sentry turrets, mapgen.Settlement).
+func attackedBase(t *testing.T, tech string) *journey {
 	t.Helper()
-	j, _, _ := neutralBase(t)
+	var j *journey
+	if tech == "" {
+		j, _, _ = neutralBase(t)
+	} else {
+		j = neutralBaseOf(t, tech)
+	}
 	j.clickID("world.act.attack")
 	if !j.clickID("modal." + worldview.AttackID + ".ok") {
 		t.Fatal("the confirm refused Attack")
@@ -44,12 +54,45 @@ func attackedBase(t *testing.T) *journey {
 	return j
 }
 
+// neutralBaseOf is neutralBase at the nearest not-hostile settlement of a
+// faction whose tech level is tech, chosen by the faction, not by the seed.
+func neutralBaseOf(t *testing.T, tech string) *journey {
+	t.Helper()
+	j, p := worldColony(t)
+	ofTech := map[string]bool{}
+	for _, f := range j.g.Factions() {
+		if f.Tech == tech {
+			ofTech[f.Name] = true
+		}
+	}
+	var s game.WorldSiteView
+	bd, home := -1, j.g.WorldMap().Tile
+	var sc planet.HopScratch
+	for _, v := range j.g.WorldSites() {
+		if v.Relation == "hostile" || !ofTech[v.Faction] {
+			continue
+		}
+		if d := p.HopsWith(&sc, home, v.Tile, 200); d >= 0 && (bd < 0 || d < bd) {
+			s, bd = v, d
+		}
+	}
+	if bd < 0 {
+		t.Fatalf("no reachable %s base that is not hostile in %+v", tech, j.g.WorldSites())
+	}
+	c := formCaravan(j, j.g.Snapshot()[0].ID, s.Tile)
+	game.DevArrive(j.g, entity.EntityID(c.ID), s.Tile)
+	worldOpen(j)
+	worldFind(j, s)
+	worldPick(j, "world.obj.caravan."+strconv.FormatUint(c.ID, 10), "caravan:"+strconv.FormatUint(c.ID, 10))
+	return j
+}
+
 // TestJourneyEnemyDoorRefusesClaim (MAP-17): a real attack on a base lays its
 // doors shut; selecting one says why colonists can't pass, offers only Claim,
 // and refuses that with a reason while its defenders stand.
 func TestJourneyEnemyDoorRefusesClaim(t *testing.T) {
 	t.Parallel()
-	j := attackedBase(t)
+	j := attackedBase(t, "")
 	var door game.BuildingView
 	for _, b := range j.g.World().Buildings {
 		if b.Hostile && b.Kind == "door" {
@@ -119,11 +162,12 @@ func TestEnemyDoorClaimSendsTheOrder(t *testing.T) {
 	}
 }
 
-// TestJourneyClaimAfterTheDefeat (MAP-17; wiki: Door): after the defenders
-// fall, a click on Claim makes the selected enemy door ours.
+// TestJourneyClaimAfterTheDefeat (MAP-17, MAP-21; wiki: Door, Faction base): the
+// defenders fall, and the door and the turret each take a click on Claim. The
+// door stops being hostile, the turret goes on with no grid.
 func TestJourneyClaimAfterTheDefeat(t *testing.T) {
 	t.Parallel()
-	j := attackedBase(t)
+	j := attackedBase(t, research.Industrial.String())
 	for _, p := range j.g.Snapshot() {
 		if p.Hostile {
 			j.g.Injure(p.ID, 100000)
@@ -151,14 +195,20 @@ func TestJourneyClaimAfterTheDefeat(t *testing.T) {
 		return b.ID
 	}
 	door := claim(func(b game.BuildingView) bool { return b.Kind == "door" }, inspector.DoorClaimID)
-	var claimed game.BuildingView
+	gun := claim(func(b game.BuildingView) bool { return b.Kind != "door" }, inspector.TurretClaimID)
 	for _, v := range j.g.World().Buildings {
-		if v.ID == door {
-			claimed = v
-			break
+		switch v.ID {
+		case door:
+			if v.Hostile {
+				t.Fatalf("door %+v", v)
+			}
+		case gun:
+			if v.Hostile || !v.OffGrid || !v.Powered {
+				t.Fatalf("turret %+v", v)
+			}
+			if lines := bldLines(j.a.insp.Building().BuildingPane(gun)); !strings.Contains(lines, inspector.OffGridLine) {
+				t.Fatalf("the pane says %q", lines)
+			}
 		}
-	}
-	if claimed.ID == 0 || claimed.Hostile || claimed.Kind != "door" {
-		t.Fatalf("door after Claim: %+v", claimed)
 	}
 }
