@@ -92,3 +92,16 @@ Determinism and replay: keyed RNG, command order, replay verify · 2026-11-25 ·
 - Limits: `internal/application/game` stays at its line ceiling (52808 lines); Game methods and fields unchanged.
 - Boxes: §1.3 Deterministic RNG streams `[-]` (left: every other `g.rng` user and the salted streams); §1.3 Stable command ordering `[x]`; §1.3 Replay command stream `[x]`; §1.4 Headless simulation executable `[x]`.
 - Open: #284 (recording replays from the interactive `cmd/game`); keyed-RNG migration of the remaining `g.rng` and salted streams (lane finding, filed by the backlog supervisor).
+
+## ENG-012-post-409-clean-room
+Post-#409 fixes: clean-room names, weakened tests, old-save training decay · 2026-11-26 · eaf1daad0
+- Changed: no comment or identifier in code, defs, locale, scripts or package docs names the game's implementation (its C# classes, methods, Def fields). #409's references were reworded in our terms, and `PassThroughOnly` was renamed `NoStop`. `internal/arch` `TestNoProprietaryImplementationNames` enforces this, and `CLEAN_ROOM.md` Policy states it.
+- Changed: `CLEAN_ROOM.md` gains four exception rows, user decision 2026-11-26: difficulty presets (NG-1/NG-2), mood and wealth expectations (SIM-071), animal trainability and combat power (SIM-047), wildlife density. The mood and difficulty generators stamp each wiki tag with its family and refuse a page with no row.
+- Changed: a mental break that ends in any way gives a one-day retry cooldown (`mind.BreakRetryTicks`, original tuning), proved by `TestBreakRetryCooldownDoesNotFlap` (c8ac82053).
+- Changed: tame animals in pre-v21 saves start training decay at the load tick instead of applying every elapsed interval at once (77121afe8).
+- Changed: the turret half of `TestJourneyClaimAfterTheDefeat` is restored. The cause was the fixture's faction, not the product: the test now picks an industrial base (f2a506cd8).
+- Changed: the seed-6 combat case asserts a bounded outcome (wolf dead within 4,000 ticks) (7fba45a2f).
+- Decisions: the gameplay changes #409 made stay as the user accepted them. The cooldown rides in the existing `Mind.Track` field, so the save format is unchanged. `Mothballed` keeps its name (plain English, a saved field).
+- Limits: `internal/application/game` sits at its 52650-line ceiling, so the next addition goes in a sub-package or needs a budget decision.
+- Boxes: none, because these fixes restore guards and policy behind boxes #409 already ticked.
+- Open: renaming the inspiration identifiers (`GoFrenzy`, `ShootFrenzy`, `WorkFrenzy`) and the wealth-expectation tier labels is the user's call; #411 (breaks cleared through `g.breaks` skip the cooldown); #412 (no HUD row for the cooldown).

@@ -182,6 +182,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | ENG-009-agent-cleanup | Parallel work reuses and cleans up agents | 2026-10-30 | [ENG.md](ENG.md#eng-009-agent-cleanup) |
 | ENG-010-headless-state-hash-and-colonist-scales | Headless state hash and colonist-count benchmark | 2026-11-25 | [ENG.md](ENG.md#eng-010-headless-state-hash-and-colonist-scales) |
 | ENG-011-determinism-replay | Determinism and replay: keyed RNG, command order, replay verify | 2026-11-25 | [ENG.md](ENG.md#eng-011-determinism-replay) |
+| ENG-012-post-409-clean-room | Post-#409 fixes: clean-room names, weakened tests, old-save training decay | 2026-11-26 | [ENG.md](ENG.md#eng-012-post-409-clean-room) |
 | FCT-104-native-special-faction-identity | Hidden faction identity and actual actor origin | 2026-11-25 | [SIM.md](SIM.md#fct-104-native-special-faction-identity) |
 | FEED-001-tame-animal-food | Hungry tame animals reach the food the colony has | 2026-10-30 | [FOOD.md](FOOD.md#feed-001-tame-animal-food) |
 | FISH-tanks | Fish tanks | 2026-11-02 | [FOOD.md](FOOD.md#fish-tanks) |
