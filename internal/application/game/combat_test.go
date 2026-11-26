@@ -4,6 +4,7 @@
 package game
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -63,17 +64,17 @@ func TestHunterFetchesRifleAndBringsDownDustbuck(t *testing.T) {
 
 func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 	t.Parallel()
-	// Upstream CBT 3.4b changed seed 5 to 6 on its own rule set.
-	// The combined Core source retains the original seed 5 kill, while
-	// seed 6 is downed with the rifleman still attacking at 2,000 ticks.
-	// Independently observed both seeds before choosing these expectations.
-	for _, tc := range []struct {
-		name string
-		seed uint64
-		dead bool
-	}{{"killed", 5, true}, {"downed still engaged", 6, false}} {
-		t.Run(tc.name, func(t *testing.T) {
-			seed := tc.seed
+	// A drafted rifleman shoots the wolf down and then finishes it: while
+	// the wolf lives, downed or not, the rifleman's job stays an active
+	// attack on it, and the fight ends with the wolf dead inside a fixed
+	// budget. Measured after the draft (1-tick steps): seed 5 downs the wolf
+	// at tick 1,079 and kills it at 1,656; seed 6 downs it at 1,262 and
+	// kills it at 2,031. The 4,000-tick budget is about twice the slower
+	// seed, so it fails only if a downed wolf stops being finished.
+	const fightBudget = 4000 // ticks after the draft
+	for _, seed := range []uint64{5, 6} {
+		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+			t.Parallel()
 			g := New(Config{Seed: seed, Width: 30, Height: 12})
 			victim, _ := g.SpawnNamedPawn(10, 6, "Bait")
 			shooter, _ := g.SpawnNamedPawn(4, 6, "Shooter")
@@ -97,27 +98,33 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 				t.Fatalf("wolf should read as hostile: %+v", w.Animals)
 			}
 			g.Apply(command.Command{Kind: command.DraftPawn, Pawn: uint64(shooter), Enabled: true})
-			for i := 0; i < 40 && animalAlive(g, wolf); i++ {
-				g.Step(50)
-			}
-			if tc.dead {
-				if animalAlive(g, wolf) {
-					a, _ := g.animals.Get(wolf)
-					t.Fatalf("drafted rifleman should auto-engage the wolf: wolf %+v", a)
-				}
-				if got := itemsOnGround(g, "timber wolf corpse"); got != 1 {
-					t.Fatalf("wolf corpses = %d", got)
-				}
-			} else {
+			const step = 50
+			sawDowned := false
+			for elapsed := 0; elapsed < fightBudget && animalAlive(g, wolf); elapsed += step {
+				g.Step(step)
 				a, ok := g.animals.Get(wolf)
+				if !ok {
+					break
+				}
+				sawDowned = sawDowned || a.Downed
+				if j, _ := g.jobs.Get(shooter); j.Kind != job.Attack || j.Target != wolf || !j.Active() {
+					t.Fatalf("drafted rifleman stopped attacking the living wolf at +%d ticks: wolf %+v job %+v",
+						elapsed+step, a, j)
+				}
+				if a.Downed && itemsOnGround(g, "timber wolf corpse") != 0 {
+					t.Fatalf("living downed wolf left a corpse: %+v", a)
+				}
+			}
+			if animalAlive(g, wolf) {
+				a, _ := g.animals.Get(wolf)
 				j, _ := g.jobs.Get(shooter)
-				if !ok || !a.Downed || a.Attacker != shooter || a.Injury <= 0 ||
-					j.Kind != job.Attack || j.Target != wolf || !j.Active() {
-					t.Fatalf("downed wolf must still be engaged: wolf %+v job %+v", a, j)
-				}
-				if got := itemsOnGround(g, "timber wolf corpse"); got != 0 {
-					t.Fatalf("living downed wolf created %d corpses", got)
-				}
+				t.Fatalf("wolf still alive %d ticks after the draft: wolf %+v job %+v", fightBudget, a, j)
+			}
+			if !sawDowned {
+				t.Fatal("wolf should be downed before it is finished")
+			}
+			if got := itemsOnGround(g, "timber wolf corpse"); got != 1 {
+				t.Fatalf("wolf corpses = %d", got)
 			}
 			if g.VitalOf(victim).Status == health.Dead {
 				t.Fatal("victim should survive a short fight")
