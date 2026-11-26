@@ -151,6 +151,9 @@ const (
 	// RescuedByColony (QST-057, QST-068, append only, saved): the colony
 	// came for this pawn, down on a site or held in a cell, and took them in.
 	RescuedByColony
+	// SkySong (#13, append only, saved): a state thought while the sky
+	// song plays.
+	SkySong
 	numKinds
 )
 
@@ -314,6 +317,7 @@ var defs = [numKinds]Def{
 	Naked:              {"naked", -6, 0, groupNone, 0, 0},
 	TurnedAwayWanderer: {"turned a wanderer away", -3, day, groupNone, 0, 0},
 	RescuedByColony:    {"rescued", 18, 30 * day, groupNone, 0, 0},
+	SkySong:            {"lifted by the sky song", 6, 0, groupNone, 0, 0},
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

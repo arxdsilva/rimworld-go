@@ -40,7 +40,7 @@ State: `open` owed to a later change; `kept` differs on purpose. Phase in bracke
 
 | Id | Gap | Wiki | Today | State |
 |---|---|---|---|---|
-| RSC-001 | Transport pod crash | Events (summary): good, random; friendly or neutral goes to a medical bed, hostile to a prison bed; a non-hostile may join or leave. Guest: hostile victims can only be captured | No event. Stranger path reached only by `DevJoinOffer`, `dev_social.go:157`. Vanilla checklist 1996 `[ ]` | open [RSC-1] |
+| RSC-001 | Transport pod crash | Events (summary): good, random; friendly or neutral goes to a medical bed, hostile to a prison bed; a non-hostile may join or leave. Guest: hostile victims can only be captured | SIM-067: `EscapePodCrash` (`domain/incident/windfall.go`, `game/windfall`) lands a faction-less downed stranger who takes the guest path. Faction-member and hostile victims (prison bed, capture only) are not built. Vanilla checklist 2008 `[x]` | open [RSC-1], stranger variant done; faction and hostile victims left |
 | RSC-002 | What "safe to leave" means | "the outdoor temperature is within the pawn's safe temperature range, there is no toxic fallout or acidic smog" | `leavingSafe`, `visitors.go:195-199`; compare at the phase | open [RSC-1], check first |
 | RSC-101 | Rescuing animals | Rescue covers downed animals | `rescueEligible` takes a colonist or guest, `care/rescue.go:152-157`. `AnimalBed` and `AnimalSleepingSpot` exist in `domain/building/construction` | open [RSC-2] |
 | RSC-102 | Mechanoids | Rescue names them; "mechs always die" | No rescue of mechanoids | matches in effect |
@@ -58,7 +58,7 @@ State: `open` owed to a later change; `kept` differs on purpose. Phase in bracke
 
 ## Proposed phases
 
-- **RSC-1, transport pod crash.** Event in `domain/incident` and the storyteller; a wounded stranger or faction member lands in a pod; letter; the existing guest path takes over. Hostile ones only by capture. Ships with the letter and the map marker, and closes checklist 1996 and the open half of 1597.
+- **RSC-1, transport pod crash.** Event in `domain/incident` and the storyteller; a wounded stranger or faction member lands in a pod; letter; the existing guest path takes over. Hostile ones only by capture. Ships with the letter and the map marker, and closes checklist 1996 and the open half of 1597. SIM-067 shipped the stranger variant; faction and hostile victims remain.
 - **RSC-2, animal rescue.** Doctors carry downed tame animals to animal beds; the order on the map; tending already follows. Decide what happens with no animal bed, since the page gives only the humans' rule. Goes with the open row on feeding downed animals in `PAWN_INTERACTION_GAP_ANALYSIS.md`.
 - **RSC-3, rules and reasons.** Rescuer's temperature; room check; capture cost; a specific refusal reason; the unreachable case.
 
@@ -68,4 +68,4 @@ Every downed cause but no-bed is rescuable. Sleeping spot, bedroll, bed and hosp
 
 ## Checklist cross-reference
 
-Vanilla: 1996 Transport pod crash `[ ]` (RSC-1); 1597 Rescue/recovery join chance `[-]` (RSC-1); 1020 and 1521 Rescue `[x]` (stay); 2281 Rescue downed/captured person `[ ]` is a quest row, not this. No row covers animal rescue, so RSC-2 adds one.
+Vanilla: 2008 Transport pod crash `[x]` (SIM-067; faction and hostile victims stay in RSC-1); 1609 Rescue/recovery join chance `[-]` (strangers now arrive; the faction and hostile half stays in RSC-1); 1020 and 1521 Rescue `[x]` (stay); 2281 Rescue downed/captured person `[ ]` is a quest row, not this. No row covers animal rescue, so RSC-2 adds one.

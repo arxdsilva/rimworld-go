@@ -125,6 +125,29 @@ func SkyChip(event string, ends, now uint64) (StatusChip, bool) {
 	return StatusChip{Capitalize1(event) + left, Capitalize1(event) + "\nA sky event is under way.", uikit.Warning}, true
 }
 
+// SongChip is the sky song's condition line ("Sky song, 3.0 h left"); ok is
+// false unless the song is still on (ends > now, WorldView.SkySongEnds).
+func SongChip(ends, now uint64) (StatusChip, bool) {
+	if ends <= now {
+		return StatusChip{}, false
+	}
+	left := fmt.Sprintf(", %.1f h left", float64(ends-now)/float64(clock.TicksPerHour))
+	return StatusChip{"Sky song" + left, "Sky song\nA calm hum from the sky lifts every colonist's mood while it lasts.", uikit.LetterGood}, true
+}
+
+// skyChips are the sky conditions after the status chips: the sky event, then
+// the song, so an eclipse and the song show side by side.
+func skyChips(w game.WorldView, now uint64) []StatusChip {
+	var out []StatusChip
+	if chip, ok := SkyChip(w.SkyEvent, w.SkyEventEnds, now); ok {
+		out = append(out, chip)
+	}
+	if chip, ok := SongChip(w.SkySongEnds, now); ok {
+		out = append(out, chip)
+	}
+	return out
+}
+
 // Capitalize1 upper-cases the first letter of s.
 func Capitalize1(s string) string {
 	if s == "" {

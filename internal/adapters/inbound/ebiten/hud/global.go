@@ -214,9 +214,7 @@ func (c Global) Plan() GlobalPlan {
 	}
 	w := c.sh.World()
 	p := GlobalPlan{Reason: c.sh.PauseReason(), Weather: w.Weather != "", Chips: chipsIn(w, c.sh.Env().Units)}
-	if chip, ok := SkyChip(w.SkyEvent, w.SkyEventEnds, uint64(c.sh.Tick())); ok { // FOOD-6: eclipse, toxic fallout
-		p.Chips = append(p.Chips, chip)
-	}
+	p.Chips = append(p.Chips, skyChips(w, uint64(c.sh.Tick()))...) // FOOD-6 eclipse, toxic fallout; #13 sky song
 	if line := c.RoofLegend(); line != "" {
 		p.Legend = gfx.WrapPx(line, gfx.Body, GlobalInnerW)
 	}

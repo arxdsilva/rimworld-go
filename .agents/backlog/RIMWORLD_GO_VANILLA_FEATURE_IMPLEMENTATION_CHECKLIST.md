@@ -1606,7 +1606,7 @@ children systems.
 
 ## 19.5 Other recruitment
 
--   [-] **Rescue/recovery join chance** (SIM-063: a rescued faction-less stranger asks to join on recovery, 50 % when leaving is safe, 100 % when not; Accept/Decline letter. Missing: an event that brings such strangers (transport pod crash))
+-   [-] **Rescue/recovery join chance** (SIM-063: a rescued faction-less stranger asks to join on recovery, 50 % when leaving is safe, 100 % when not; Accept/Decline letter. SIM-067: the escape pod crash brings such strangers. Missing: faction-member and hostile pod victims)
 -   [x] **Wanderer/migrant joins event** (SIM-046)
 -   [x] **Refugee/visitor join opportunity where part of base event (2026-11-20 audit: domain/incident: RefugeeChased, VisitorGroup, WandererJoins handled in game/incidents.go)
     set**
@@ -2005,16 +2005,16 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Orbital trader** (2026-11-20 audit: domain/incident/incident.go OrbitalTrader; game/trade_orbital.go)
 -   [x] **Friendly visitors** (SIM-046)
 -   [x] **Wanderer joins** (SIM-046)
--   [ ] **Transport pod crash / downed stranger**
--   [ ] **Resource meteorite**
--   [ ] **Cargo pod drop**
+-   [x] **Transport pod crash / downed stranger** (SIM-067: domain/incident EscapePodCrash; game/windfall)
+-   [x] **Resource meteorite** (SIM-067: OreMeteor; game/windfall)
+-   [x] **Cargo pod drop** (SIM-067: SupplyDrop, forbidden stacks; game/windfall)
 -   [x] **Animal joins** (SIM-025: stray joins)
 -   [x] **Farm animals wander in** (SIM-025)
 -   [x] **Rare self-tame animal** (SIM-025: taken a liking)
 -   [x] **Wild animal migration**
 -   [x] **Party** (SIM-042)
 -   [x] **Marriage** (SIM-042: wedding gathering)
--   [ ] **Psychic soothe-like temporary positive mood event**
+-   [x] **Psychic soothe-like temporary positive mood event** (SIM-067: Sky song, mood.SkySong, HUD chip)
     -   Original presentation/content.
 
 ## 25.3 Negative incidents

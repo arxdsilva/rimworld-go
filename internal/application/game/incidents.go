@@ -11,8 +11,12 @@ import (
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/windfall"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -20,7 +24,9 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/msgfmt"
 )
@@ -209,7 +215,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 	id = g.sk.content.Incidents.Like(id) // a plugin incident runs its like's checks (PLG-026)
 	switch id {
 	case incident.Party, incident.VisitorGroup, incident.WandererJoins, incident.TraderCaravan, incident.OrbitalTrader,
-		incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter:
+		incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter,
+		incident.EscapePodCrash, incident.OreMeteor, incident.SupplyDrop, incident.SkySong: // #13: colony-wide windfalls
 		if !primary(g) {
 			return false
 		}
@@ -252,6 +259,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return true
 	case incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter: // TEMP-2: the season's temperature
 		return climateFits(g, id, now) // weather_ng1.go
+	case incident.EscapePodCrash, incident.OreMeteor, incident.SupplyDrop, incident.SkySong:
+		return windfallOf(g).Fits(id, now) // game/windfall (#13)
 	}
 	return false
 }
@@ -304,6 +313,8 @@ func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
 			g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letters.Caution, Text: text + patchedNote(g.sk.content, id)})
 		}
 		return ok
+	case incident.EscapePodCrash, incident.OreMeteor, incident.SupplyDrop, incident.SkySong:
+		return windfallOf(g).Fire(id, now) // game/windfall (#13)
 	}
 	return false
 }
@@ -835,4 +846,73 @@ func toxicRot(g *Game, corpse entity.EntityID, sev int32) {
 		st.Rot = st.Shelf()
 		g.stacks.Set(corpse, st)
 	}
+}
+
+// windfallOf is the 25.2 helpful incidents (#13) on the map, rolling on
+// the main stream; stateless, built per call like visitsOf.
+func windfallOf(g *Game) windfall.Windfall { return windfall.New(windfallHost{g}, g.rng) }
+
+// windfallHost is game/windfall's roles (windfall/deps.go) over the game.
+type windfallHost struct{ g *Game }
+
+func (h windfallHost) Home() (x, y int)  { return h.g.home() }
+func (h windfallHost) Size() (w, ht int) { return h.g.grid.Width(), h.g.grid.Height() }
+func (h windfallHost) PodSpot(cx, cy int, taken [][2]int) (int, int, bool) {
+	return h.g.podSpot(cx, cy, taken)
+}
+
+// MeteorFree: at least 2 in from every edge, open dry walkable ground
+// with no plant, stack or zone on it and no building, frame or creature
+// (colonist, visitor, raider, animal) within 1 (indexed lookups only).
+func (h windfallHost) MeteorFree(x, y int) bool {
+	g := h.g
+	if x < 2 || y < 2 || x >= g.grid.Width()-2 || y >= g.grid.Height()-2 || !g.dryWalkable(x, y) ||
+		g.roofAt(x, y).Roofed() || g.plantAt(x, y) != 0 || g.itemAt(x, y) != 0 {
+		return false
+	}
+	if _, zoned := g.zones.At(x, y); zoned {
+		return false
+	}
+	for i := range 9 { // the rock would turn a door beside it (setTerrain: reorientAround)
+		for l := range construction.Layer(numLayers) {
+			if g.layerBldgAt(x+i%3-1, y+i/3-1, l) != 0 || g.layerFrameAt(x+i%3-1, y+i/3-1, l) != 0 {
+				return false
+			}
+		}
+	}
+	near := false
+	g.within(x, y, 1, ckAll, func(entity.EntityID, Position) { near = true }) // animal_index.go
+	return !near
+}
+
+// Rock raises rough rock holding ore on (x, y), granite where the ground
+// has no stone (placeLump's way, world_state.go).
+func (h windfallHost) Rock(x, y int, ore geology.Ore) {
+	g := h.g
+	g.setTerrain(x, y, terrain.Rock)
+	if g.geo.At(x, y) == geology.None {
+		g.geo.Set(x, y, geology.Granite)
+	}
+	g.geo.SetOre(x, y, ore)
+}
+
+func (h windfallHost) Drop(k item.Kind, qty, x, y int) {
+	h.g.dropGoods(trade.Line{Kind: k, Qty: qty}, x, y, true)
+}
+func (h windfallHost) Colonists() int { return len(h.g.pawnIDs) }
+
+// Crash puts a faction-less visitor on (x, y), hurt by a blow of hurt.
+func (h windfallHost) Crash(x, y, hurt int) (entity.EntityID, bool) {
+	id := h.g.spawnVisitor(0, nil, x, y, uint64(h.g.clock.Now())) // visitors.go
+	if id == 0 {
+		return 0, false
+	}
+	h.g.hurt(id, hurt, 0) // combat.go
+	return id, true
+}
+func (h windfallHost) Name(id entity.EntityID) string   { return h.g.personName(id) }
+func (h windfallHost) SongOn(now uint64) bool           { return h.g.incidents.Song(now) }
+func (h windfallHost) StartSong(now, ticks uint64) bool { return h.g.incidents.StartSong(now, ticks) }
+func (h windfallHost) Letter(title string, x, y int, focus entity.EntityID, format string, args ...any) {
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: letters.Good, Msg: msgfmt.Of(format, args...)})
 }

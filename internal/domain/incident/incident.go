@@ -76,6 +76,13 @@ const (
 	// RivalRaid (EAI-030, in no pool): a raid the story queued for a later
 	// tick (State.Queue): a rival faction's, or the refugee's pursuers'.
 	RivalRaid
+	// 25.2 (#13, Nature pool, our weights): windfalls (windfall.go) land a
+	// hurt stranger, an ore-bearing rock or forbidden cargo on the map; the
+	// sky song (song.go) lifts every colonist's mood for about two days.
+	EscapePodCrash
+	OreMeteor
+	SupplyDrop
+	SkySong
 	NumIDs
 )
 
@@ -171,6 +178,11 @@ var defs = [NumIDs]Def{
 	// EAI-031: original tuning, a few a year, once the colony has a footing.
 	RefugeeChased: {Key: "refugee_chased", Name: "Refugee chased", Category: Nature, Weight: 3, Cooldown: 30, MinDay: 12},
 	RivalRaid:     {Key: "rival_raid", Name: "Rival raid", Category: Threat},
+	// 25.2 (#13): original tuning, helpful and occasional.
+	EscapePodCrash: {Key: "escape_pod_crash", Name: "Escape pod crash", Category: Nature, Helpful: true, Weight: 4, Cooldown: 15, MinDay: 6},
+	OreMeteor:      {Key: "ore_meteor", Name: "Ore meteor", Category: Nature, Helpful: true, Weight: 5, Cooldown: 12, MinDay: 5},
+	SupplyDrop:     {Key: "supply_drop", Name: "Supply drop", Category: Nature, Helpful: true, Weight: 6, Cooldown: 10, MinDay: 4},
+	SkySong:        {Key: "sky_song", Name: "Sky song", Category: Nature, Helpful: true, Weight: 4, Cooldown: 20, MinDay: 8},
 }
 
 func init() {
@@ -197,6 +209,9 @@ type State struct {
 	// EclipseUntil and FalloutUntil (FOOD-6, sky.go) are the absolute
 	// ticks the eclipse and the toxic fallout end (0: none; older saves).
 	EclipseUntil, FalloutUntil uint64
+	// SongUntil (25.2, #13, song.go) is the absolute tick the sky song
+	// ends (0: none; older saves).
+	SongUntil uint64
 	// Climate (TEMP-2, climate.go) is the climate event under way, from
 	// the absolute tick ClimateFrom to ClimateUntil (0: none).
 	Climate                   ID

@@ -37,8 +37,9 @@ func TestPickDeterministic(t *testing.T) {
 	// and the cold snap (the game vetoes them out of season; the volcanic
 	// winter waits for day 60). EAI-031 added the chased refugee (the game
 	// vetoes it without a hostile faction to chase them).
-	if len(seen) != 21 {
-		t.Fatalf("picked %v, want all 21 temperate nature events", seen)
+	// #13 added the escape pod crash, ore meteor, supply drop and sky song.
+	if len(seen) != 25 {
+		t.Fatalf("picked %v, want all 25 temperate nature events", seen)
 	}
 }
 

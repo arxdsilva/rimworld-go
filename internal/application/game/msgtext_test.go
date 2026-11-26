@@ -144,6 +144,7 @@ var postFormats = map[string]map[string]int{
 	"care":     {"Message": 2},
 	"orders":   {"Message": 2},
 	"prison":   {"Message": 2},
+	"windfall": {"Letter": 4},
 }
 
 // formatExceptions are posting calls whose format is not a literal the

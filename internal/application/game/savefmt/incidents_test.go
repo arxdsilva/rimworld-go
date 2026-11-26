@@ -5,6 +5,7 @@ package savefmt
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/incident"
@@ -49,6 +50,22 @@ func TestRemapIncidentsFollowsKeys(t *testing.T) {
 	}
 	if len(st.Queue) != 1 || st.Queue[0].ID != incident.RivalRaid {
 		t.Fatalf("gone Queue %+v", st.Queue)
+	}
+	// a save from before 25.2 (#13), whose core ended at rival_raid, keeps
+	// its plugin incidents through their keys when core grows by four
+	ks := incident.Core().Keys()
+	if !slices.Equal(ks[len(ks)-4:], []string{"core.escape_pod_crash", "core.ore_meteor", "core.supply_drop", "core.sky_song"}) {
+		t.Fatalf("fixture: the windfalls are not core's last four: %q", ks[len(ks)-4:])
+	}
+	old := Keys{incident.Class: append(slices.Clone(ks[:len(ks)-4]), "p.a", "p.b")}
+	st = &incident.State{Last: map[incident.ID]uint64{incident.RivalRaid: 4, n - 4: 7, n - 3: 9}}
+	st.Enqueue(incident.Queued{ID: n - 3, At: 11})
+	old.RemapIncidents(incidentBook("p.a", "p.b"), st)
+	if want := map[incident.ID]uint64{incident.RivalRaid: 4, n: 7, n + 1: 9}; !reflect.DeepEqual(st.Last, want) {
+		t.Fatalf("pre-#13 Last %v, want %v", st.Last, want)
+	}
+	if len(st.Queue) != 1 || st.Queue[0].ID != n+1 {
+		t.Fatalf("pre-#13 Queue %+v", st.Queue)
 	}
 	st = state() // a save without keys keeps its IDs
 	Keys{}.RemapIncidents(incident.Core(), st)

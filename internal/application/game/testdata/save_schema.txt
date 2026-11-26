@@ -565,6 +565,7 @@ saveState.Incidents.Queue[].At uint64
 saveState.Incidents.Queue[].Faction int
 saveState.Incidents.Queue[].ID rimworld-go/internal/domain/incident.ID = uint8
 saveState.Incidents.Queue[].Points int
+saveState.Incidents.SongUntil uint64
 saveState.Incoming map[rimworld-go/internal/domain/sim/entity.EntityID]int
 saveState.Incoming{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Incoming{} int

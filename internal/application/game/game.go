@@ -737,6 +737,7 @@ type WorldView struct {
 	// "eclipse" or "") and its end tick (0: none).
 	SkyEvent     string
 	SkyEventEnds uint64
+	SkySongEnds  uint64 // #13: the sky song's end tick while it plays (0: none)
 	// TEMP-0 contract (zero until TEMP-2, TEMP-1): the climate event under way (its incident key or "") and end tick;
 	// TempVer, the temperature overlay's cache key: it changes whenever a cell's air may have (game/thermo).
 	ClimateEvent              string
@@ -1546,6 +1547,7 @@ func (g *Game) world() WorldView {
 	fillDietView(g, &w)     // food.go (FOOD-4): food policies, days of food
 	w.Gear = outfitWorld(g) // apparel.go: game/outfit (GEAR-3)
 	w.SkyEvent, w.SkyEventEnds = g.incidents.SkyView(uint64(g.clock.Now()))
+	w.SkySongEnds = g.incidents.SongView(uint64(g.clock.Now()))                         // #13 (incident/song.go)
 	w.ClimateEvent, w.ClimateEventEnds = g.incidents.ClimateView(uint64(g.clock.Now())) // TEMP-2 (incident/climate.go)
 	w.Extreme = w.ClimateEvent
 	w.Frames = g.frameViews()

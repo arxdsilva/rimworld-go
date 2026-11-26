@@ -3,7 +3,10 @@
 
 package mood
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestMemoriesAndLevel(t *testing.T) {
 	t.Parallel()
@@ -185,5 +188,17 @@ func TestMemoryLabelOverride(t *testing.T) {
 	m = m.AddLabeled(Grief, 7, -16, "my lover died", 5)
 	if ts := Active(m); len(ts) != 2 || ts[0].Label != "my lover died" || ts[0].Value != -16 {
 		t.Fatalf("refreshed grief %+v", ts)
+	}
+}
+
+// TestSkySongThought (#13): a plain, positive state thought.
+func TestSkySongThought(t *testing.T) {
+	t.Parallel()
+	d := DefOf(SkySong)
+	if d.Label != "lifted by the sky song" || d.Value != 6 || d.Duration != 0 {
+		t.Fatalf("sky song: %+v", d)
+	}
+	if strings.Contains(d.Label, "psychic") || strings.Contains(d.Label, "soothe") {
+		t.Fatal("the label borrows a proprietary name")
 	}
 }
