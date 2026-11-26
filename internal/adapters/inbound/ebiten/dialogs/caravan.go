@@ -37,19 +37,21 @@ const (
 // formCaravan is the dialog's draft: colonists, and (AX-9) pack animals
 // and goods by kind.
 type formCaravan struct {
-	picked map[entity.EntityID]bool
-	beasts map[entity.EntityID]bool
-	goods  map[string]int
-	dest   int // -1 none
+	picked   map[entity.EntityID]bool
+	captives map[entity.EntityID]bool // prisoners leaving with the colonists
+	beasts   map[entity.EntityID]bool
+	goods    map[string]int
+	dest     int // -1 none
 	// globe is the tile last picked on the World tab's globe (-1 none),
 	// read live while the dialog is open.
 	globe func() int
+	memo  planMemo // the trip estimate for the current picks (caravan_plan.go)
 }
 
 // OpenFormCaravan opens the dialog over the World tab; globePick reports
 // the tile last picked on its globe (-1 none).
 func (dl *Dealings) OpenFormCaravan(globePick func() int) {
-	f := &formCaravan{picked: map[entity.EntityID]bool{}, beasts: map[entity.EntityID]bool{}, goods: map[string]int{}, dest: globePick(), globe: globePick}
+	f := &formCaravan{picked: map[entity.EntityID]bool{}, captives: map[entity.EntityID]bool{}, beasts: map[entity.EntityID]bool{}, goods: map[string]int{}, dest: globePick(), globe: globePick}
 	dl.kit().Push(uikit.Modal{
 		ID: FormCaravanID, Title: dl.sh.T("Form caravan"), W: formCaravanW, H: formCaravanH,
 		Draw: func(body gfx.Rect) { dl.formCaravanBody(f, body) },
@@ -127,8 +129,9 @@ func caravanPickReason(p game.PawnView) string {
 // formCaravanBody declares the colonist picks, the destinations and the
 // summary.
 func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
-	left, right := body.SplitH(body.W * 2 / 3)
-	left, mid := left.SplitH(left.W / 2)
+	lm, right := body.SplitH(body.W * 2 / 3)
+	lm, summary := lm.SplitV(lm.H - formSummaryH)
+	left, mid := lm.SplitH(lm.W / 2)
 	left.W, mid.W = left.W-12, mid.W-12
 	dl.caravanPacks(f, mid) // caravan_pack.go (AX-9): pack animals and goods
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
@@ -140,32 +143,15 @@ func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
 			pawns = append(pawns, p)
 		}
 	}
-	lrest, summary := lrest.SplitV(lrest.H - 56)
-	if len(pawns) == 0 {
-		dl.kit().Label(lrest.X, lrest.Y, dl.sh.T("No colonists."), uikit.DimText())
-	} else {
-		area := dl.kit().ScrollArea("form.members", lrest, float32(len(pawns)*formRowH), uikit.ScrollOpts{Step: formRowH * 2})
-		y := area.View.Y - area.Off
-		for _, p := range pawns {
-			rr := gfx.Rect{X: area.View.X, Y: y, W: area.View.W, H: formRowH - 4}
-			y += formRowH
-			if rr.Y < area.View.Y || rr.Bottom() > area.View.Bottom() {
-				continue
-			}
-			why := caravanPickReason(p)
-			on := f.picked[p.ID] && why == ""
-			if dl.kit().Check(fmt.Sprintf("form.member.%d", p.ID), rr, pawnLabel(dl.sh, p), &on, uikit.CheckOpts{Disabled: why != "", Reason: why}) {
-				f.picked[p.ID] = on
-			}
-		}
-	}
-	n := len(f.members())
-	dl.kit().Label(summary.X, summary.Y+6, dl.sh.Tf("%d colonist(s) · %s · 5 days of food", n, dl.caravanLoadLine(f)), gfx.Small)
-	dl.kit().Label(summary.X, summary.Y+26, dl.sh.T("They gather at a hitching spot if there is one, then leave by the map edge; a friendly settlement hosts them a day."), gfx.WithColor(gfx.Small, uikit.TextDim))
+	dl.scrollRows("form.members", lrest, append(f.colonistRows(dl, pawns), f.prisonerRows(dl, pawns)...))
+	f.summary(dl, summary)
 
 	rh, rrest := right.SplitV(26)
 	dl.kit().Label(rh.X, rh.Y, dl.sh.T("Destination"), hs)
-	sites := dl.sh.Sites()
+	var sites []game.WorldSiteView
+	if src, ok := dl.sh.Caravans(); ok {
+		sites = src.WorldSites()
+	}
 	rows := len(sites) + 1
 	area := dl.kit().ScrollArea("form.dests", rrest, float32(rows*formRowH), uikit.ScrollOpts{Step: formRowH * 2})
 	y := area.View.Y - area.Off

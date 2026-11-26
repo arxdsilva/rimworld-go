@@ -206,6 +206,9 @@ type Populator interface {
 	// Aboard is our people (colonists, prisoners) and tame animals on the
 	// current map, in id order.
 	Aboard() (people, animals []entity.EntityID)
+	// Captive reports id is a prisoner of the colony, on a map or stashed
+	// (#14: prisoners leave with a forming caravan).
+	Captive(id entity.EntityID) bool
 	// PackUp loads the current map's unforbidden goods, and a settlement's
 	// found loot, onto caravan cid.
 	PackUp(cid uint64)

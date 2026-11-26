@@ -592,8 +592,22 @@ func TestJourneyMouseCtrlClickCaravanCounter(t *testing.T) {
 	if have["silver"] < 20 || have["rifle"] < 1 || have["rifle"] >= 10 {
 		t.Fatalf("the colony holds %d silver and %d rifles: need a plenty of one and fewer than 10 of the other", have["silver"], have["rifle"])
 	}
-	j.clickWith("form.goods.silver.inc", input.ModCtrl)
-	j.clickWith("form.goods.rifle.inc", input.ModCtrl)
+	// the food rows now come first (#14): wheel the packs list down to a row
+	for _, id := range []string{"form.goods.silver.inc", "form.goods.rifle.inc"} {
+		for i := 0; i < 40 && !hasWidget(j.a, id); i++ {
+			w, ok := j.a.uiSt().Find("form.packs")
+			if !ok {
+				t.Fatal("no packs list")
+			}
+			cx, cy := w.R.Center()
+			s := float32(j.a.scale.S)
+			j.f.Cur.Mx, j.f.Cur.My, j.f.Cur.WheelY = int(cx*s), int(cy*s), -1
+			j.update(1)
+			j.f.Cur.WheelY = 0
+			j.update(1)
+		}
+		j.clickWith(id, input.ModCtrl)
+	}
 	if !j.clickID("modal." + dialogs.FormCaravanID + ".form.send") {
 		t.Fatal("Send is disabled with a colonist, a destination and goods")
 	}

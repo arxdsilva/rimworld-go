@@ -5,6 +5,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/dose"
+	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/application/game/tabview"
 	"rimworld-go/internal/application/game/travel"
@@ -60,7 +61,11 @@ func (g *Game) Prisoner(id entity.EntityID) (PrisonerView, bool) {
 
 // WorldMap is the World tab.
 func (g *Game) WorldMap() WorldMapView {
-	return g.worldMapView()
+	v := WorldMapView{Tile: g.colonyTile()}
+	if g.worldSt != nil {
+		v.Caravans = maps.Views(fleetOf(g), g.caravanMemberStatus)
+	}
+	return v
 }
 
 // Areas lists the colony's allowed areas.

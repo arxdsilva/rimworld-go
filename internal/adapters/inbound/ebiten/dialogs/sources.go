@@ -3,7 +3,10 @@
 
 package dialogs
 
-import "rimworld-go/internal/application/game"
+import (
+	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/entity"
+)
 
 // TradeSource is the open trade session, if any. The simulation offers it
 // optionally (SOLID_GO.md §5); the Host resolves it.
@@ -17,7 +20,16 @@ type CommsSource interface {
 	CommsView() (game.CommsView, bool)
 }
 
+// CaravanSource is what the Form caravan dialog plans with: the
+// settlements a caravan may visit and how long a caravan of members
+// carrying load would take to reach tile dest, and why it cannot (#14).
+type CaravanSource interface {
+	WorldSites() []game.WorldSiteView
+	FormEstimate(members []entity.EntityID, dest int, load int32) (ticks int, why string)
+}
+
 var (
-	_ TradeSource = (*game.Game)(nil)
-	_ CommsSource = (*game.Game)(nil)
+	_ TradeSource   = (*game.Game)(nil)
+	_ CommsSource   = (*game.Game)(nil)
+	_ CaravanSource = (*game.Game)(nil)
 )

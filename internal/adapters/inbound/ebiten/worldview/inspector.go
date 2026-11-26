@@ -215,6 +215,7 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 	if c.Dest != c.Tile && c.Dest >= 0 {
 		lines = append(lines, line{"Heading for", v.tileName(c.Dest)})
 	}
+	lines = append(lines, line{"Food", fmt.Sprintf("%.1f days", float64(c.FoodDays)/10)})
 	if c.State == caravan.Travelling.Label() || c.State == caravan.Returning.Label() {
 		lines = append(lines, line{"Next tile", fmt.Sprintf("%d%%", c.Progress)})
 		if eta, why, _ := v.eta(c.ID, c.Tile, c.Dest); why == "" {
@@ -225,6 +226,9 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 		h := "well"
 		if i < len(c.Health) && c.Health[i] != "" {
 			h = c.Health[i]
+		}
+		if i < len(c.Prisoner) && c.Prisoner[i] {
+			m += " (prisoner)"
 		}
 		lines = append(lines, line{m, h})
 	}

@@ -327,27 +327,6 @@ func (g *Game) importWorld(s *worldSave) {
 	}
 }
 
-// worldMapView builds the World tab: the colony tile and every caravan.
-func (g *Game) worldMapView() WorldMapView {
-	v := WorldMapView{Tile: g.colonyTile()}
-	if g.worldSt == nil {
-		return v
-	}
-	for i := range g.worldSt.caravans {
-		c := &g.worldSt.caravans[i]
-		cv := CaravanView{ID: c.C.ID, Tile: c.C.Tile, Dest: c.C.Dest, Progress: c.C.Progress / 10, State: c.C.State.Label()}
-		if c.Back {
-			cv.Dest = c.Home
-		}
-		for _, m := range c.C.Members {
-			cv.Members = append(cv.Members, g.personName(entity.EntityID(m)))
-			cv.Health = append(cv.Health, g.caravanMemberStatus(entity.EntityID(m))) // caravan_medical.go
-		}
-		v.Caravans = append(v.Caravans, cv)
-	}
-	return v
-}
-
 // travelOf is game/travel over the game (AX-9): stasis caskets, transport
 // pods, the mineral scanner and hitching spots, its state in worldSt.ax9.
 func travelOf(g *Game) travel.Ops {
@@ -604,6 +583,12 @@ func (g *Game) TravelEstimate(id uint64, t int) (ticks int, why string) {
 	return fleetOf(g).Estimate(entity.EntityID(id), t, uint64(g.clock.Now()))
 }
 
+// FormEstimate is how long a caravan of members carrying load would take
+// to reach world tile dest, and why it cannot (#14, Form caravan dialog).
+func (g *Game) FormEstimate(members []entity.EntityID, dest int, load int32) (ticks int, why string) {
+	return maps.Plan(fleetOf(g), members, dest, load, uint64(g.clock.Now()))
+}
+
 // mapsFlush applies game/maps' queued map requests and the hourly census
 // at the end of a tick, after every map's phases (MAP-01..04; game.go
 // Step). A single-map game that never opened another returns at once.
@@ -806,6 +791,7 @@ func (h mapsPop) Census(cells []int) maps.Census {
 	}
 	return c
 }
+func (h mapsPop) Captive(id entity.EntityID) bool { return h.g.prison.Is(id) }
 func (h mapsPop) Aboard() (people, animals []entity.EntityID) {
 	g := h.g
 	people = slices.Clone(g.pawnIDs)

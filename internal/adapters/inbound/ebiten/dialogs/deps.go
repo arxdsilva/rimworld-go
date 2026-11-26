@@ -24,9 +24,9 @@ type Host interface {
 	Trade() (game.TradeView, bool)
 	// Comms is the open comms session; false likewise (optional CommsSource).
 	Comms() (game.CommsView, bool)
-	// Sites are the settlements a caravan may visit (nil when the
-	// simulation lists none).
-	Sites() []game.WorldSiteView
+	// Caravans is the simulation's caravan planning reads; false when it
+	// offers none (optional CaravanSource).
+	Caravans() (CaravanSource, bool)
 	// HoldSpeed sets the speed tier without the speed cue: the dialogs
 	// pause the display while open and give the tier back after.
 	HoldSpeed(tier int)

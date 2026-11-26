@@ -54,6 +54,14 @@ type Caravan struct {
 	// its answer: the caravan stands still meanwhile (MAP-08).
 	NextEnc uint64
 	Ask     Ask
+	// Captives are prisoners leaving with it when it sets out: set only
+	// while Forming, emptied at depart (#14).
+	Captives []entity.EntityID
+	// Fed is nutrition already eaten beyond what the caravan owed (needs
+	// units, under one unit's nutrition). Each road hour the reserve
+	// (C.FoodDays) drains first, then the members eat whole units off the
+	// cargo, then they starve (#14).
+	Fed int32
 }
 
 // Clone is a deep copy of c.
@@ -63,6 +71,7 @@ func (c Caravan) Clone() Caravan {
 	c.C.Path = slices.Clone(c.C.Path)
 	c.Out = slices.Clone(c.Out)
 	c.Exiting = slices.Clone(c.Exiting)
+	c.Captives = slices.Clone(c.Captives)
 	return c
 }
 

@@ -8,7 +8,6 @@ import (
 
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/caravan"
 )
@@ -31,11 +30,12 @@ func (f Fleet) Form(members string, dest int) {
 		f.h.Note("Pick a destination for the caravan.")
 		return
 	}
-	ids := travel.ParseIDs(members, func(id entity.EntityID) bool { return f.h.Candidate(id) && f.Of(id) == nil })
+	ids := travel.ParseIDs(members, func(id entity.EntityID) bool { return f.h.Candidate(id) && !listed(f, id) })
 	if len(ids) == 0 {
 		f.h.Note("Nobody can join the caravan.")
 		return
 	}
+	captives := pickCaptives(f, members, ids)
 	route := p.Route(home, dest)
 	if len(route) < 2 {
 		f.h.Note("The caravan has no way to get there.")
@@ -47,7 +47,8 @@ func (f Fleet) Form(members string, dest int) {
 		Home: home, Out: route, Formed: now, Map: cur,
 	}
 	cargo := f.h.Cargo()
-	cargo.Pack(c.C.ID, members, len(ids)) // game/travel (AX-9): goods and pack animals
+	cargo.Pack(c.C.ID, members, len(ids)+len(captives)) // game/travel (AX-9): goods and pack animals; prisoners carry
+	c.Captives = captives
 	for _, id := range ids {
 		f.h.SetDraft(id, true) // AX-9: a hitching spot first
 		if !cargo.Hitch(c.C.ID, id, len(c.C.Members)) && !f.h.StartExit(id) {
@@ -134,28 +135,22 @@ func (f Fleet) dropMember(c *Caravan, id entity.EntityID) {
 // depart sets a formed caravan on its way: its pace (pace), its food,
 // the departure letter.
 func (f Fleet) depart(c *Caravan, now uint64) {
+	board(f, c) // #14: the prisoners who can still go leave with it
 	var names []string
 	for _, m := range c.C.Members {
 		names = append(names, f.h.Name(entity.EntityID(m)))
 	}
 	f.pace(c)
-	c.C.FoodDays = FoodDays
 	c.C.State = caravan.Travelling
 	c.NextTalk = now + talkPeriod
-	f.h.Letter(false, "Caravan departed", 0, "%s set out for %s with %d days of food.", travel.JoinNames(names), f.h.TileName(c.C.Dest), FoodDays/1000)
+	f.h.Letter(false, "Caravan departed", 0, "%s set out for %s with %d days of food.", travel.JoinNames(names), f.h.TileName(c.C.Dest), foodDays(f, c)/1000)
 }
 
 // pace sets c's speed inputs (MAP-09, wiki: Caravan): the slowest member
 // still walking (the downed are carried), the load against what it can
 // carry (game/travel), and its best mount when there is one per person.
 func (f Fleet) pace(c *Caravan) {
-	slowest := int32(1000)
-	for _, m := range c.C.Members {
-		if v := f.h.Capacity(entity.EntityID(m), body.Moving); v > 0 {
-			slowest = min(slowest, v)
-		}
-	}
-	c.C.Slowest = max(slowest, 1)
+	c.C.Slowest = slowest(f.h, c.C.Members)
 	c.C.Load = int32((1000 - min(max(f.h.Cargo().Pace(c.C.ID, len(c.C.Members)), 250), 1000)) * 1000 / 750)
 	mounts, best := 0, int32(0)
 	for _, a := range c.C.Animals {
@@ -178,6 +173,7 @@ func (f Fleet) Return(id entity.EntityID) {
 	}
 	switch c.C.State {
 	case caravan.Forming:
+		c.Captives = nil // called off: they were never boarded
 		for _, m := range slices.Clone(c.Exiting) {
 			f.dropMember(c, m)
 		}

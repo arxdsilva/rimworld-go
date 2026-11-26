@@ -46,7 +46,7 @@ func (f Fleet) Step(now uint64) {
 				break
 			}
 			caravan.Advance(&c.C, int(now%clock.TicksPerDay/clock.TicksPerHour), dm)
-			if c.C.FoodDays == 0 {
+			if c.C.FoodDays == 0 && !eat(f, c) { // the reserve first, then the cargo (#14)
 				for _, m := range c.C.Members {
 					f.h.Starve(entity.EntityID(m))
 				}
@@ -311,7 +311,13 @@ func (f Fleet) Estimate(id entity.EntityID, t int, now uint64) (int, string) {
 	if cp.C.State == caravan.Forming || cp.C.Slowest == 0 {
 		f.pace(&cp) // not set out yet: its pace as it would leave
 	}
-	ticks := caravan.Estimate(route[1:], cp.C.Speed(), int(now%clock.TicksPerDay/clock.TicksPerHour), f.difficulty(now))
+	return travelTicks(f, route, &cp.C, now)
+}
+
+// travelTicks is how long c would take over route (its first tile where it
+// stands), nights included, and why it cannot ("" when it can).
+func travelTicks(f Fleet, route []int, c *caravan.Caravan, now uint64) (int, string) {
+	ticks := caravan.Estimate(route[1:], c.Speed(), int(now%clock.TicksPerDay/clock.TicksPerHour), f.difficulty(now))
 	if ticks < 0 {
 		return 0, "Too slow to get there."
 	}

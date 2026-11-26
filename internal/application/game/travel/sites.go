@@ -174,4 +174,9 @@ type CaravanView struct {
 	Tile, Dest int
 	Progress   int
 	State      string
+	// FoodDays is the days of food in tenths, the reserve plus the cargo
+	// food (#14).
+	FoodDays int
+	// Prisoner marks each member who is a prisoner, parallel to Members.
+	Prisoner []bool
 }

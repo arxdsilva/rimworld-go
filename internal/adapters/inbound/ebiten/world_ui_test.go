@@ -26,8 +26,9 @@ type globeTabSim struct {
 	area  map[entity.EntityID]int
 }
 
-func (s *globeTabSim) WorldParams() (planet.Params, bool) { return planet.Params{}, false }
-func (s *globeTabSim) WorldSites() []game.WorldSiteView   { return s.sites }
+func (s *globeTabSim) WorldParams() (planet.Params, bool)                       { return planet.Params{}, false }
+func (s *globeTabSim) WorldSites() []game.WorldSiteView                         { return s.sites }
+func (s *globeTabSim) FormEstimate([]entity.EntityID, int, int32) (int, string) { return 0, "" }
 func (s *globeTabSim) AreaOf(id entity.EntityID) int {
 	if a, ok := s.area[id]; ok {
 		return a

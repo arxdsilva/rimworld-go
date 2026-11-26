@@ -9,7 +9,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
-	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/look"
@@ -65,14 +64,13 @@ func (h dialogsHost) Comms() (game.CommsView, bool) {
 	return game.CommsView{}, false
 }
 
-// Sites are the settlements a caravan may visit.
-func (h dialogsHost) Sites() []game.WorldSiteView {
+// Caravans is the simulation's caravan planning reads (#14).
+func (h dialogsHost) Caravans() (dialogs.CaravanSource, bool) {
 	if r := h.a.renderer; r != nil {
-		if s, ok := r.game.(worldview.WorldSource); ok {
-			return s.WorldSites()
-		}
+		s, ok := r.game.(dialogs.CaravanSource)
+		return s, ok
 	}
-	return nil
+	return nil, false
 }
 
 // HoldSpeed sets the speed tier without the speed cue.

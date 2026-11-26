@@ -33,9 +33,10 @@ func packKg(species string) int {
 	return caravan.PackKg(animal.BodySize(s))
 }
 
-// capKg is what f's colonists and animals carry.
+// capKg is what f's colonists, prisoners and animals carry (the
+// simulation's Pack and Pace count every person alike).
 func (f *formCaravan) capKg(dl *Dealings) int {
-	kg := len(f.members()) * caravan.PersonCarryKg
+	kg := (len(f.members()) + len(f.prisoners())) * caravan.PersonCarryKg
 	for _, a := range dl.sh.World().Animals {
 		if f.beasts[a.ID] {
 			kg += packKg(a.Species)
@@ -57,15 +58,11 @@ func (f *formCaravan) massKg(b item.Book) int {
 // 1.6 tiles a day").
 func (dl *Dealings) caravanLoadLine(f *formCaravan) string {
 	c, m := f.capKg(dl), f.massKg(dl.sh.Items())
-	load := int32(0)
-	if c > 0 {
-		load = int32(1000 * min(m, c) / c)
-	}
-	return dl.sh.Tf("%d / %d kg · about %.1f tiles a day", m, c, caravan.TilesPerDay(caravan.LoadFactor(load))) // on flat ground
+	return dl.sh.Tf("%d / %d kg · about %.1f tiles a day", m, c, caravan.TilesPerDay(caravan.LoadFactor(f.loadPermille(dl)))) // on flat ground
 }
 
-// caravanList is the command's Name: the colonists, the animals, then the
-// goods' stack entries.
+// caravanList is the command's Name: the colonists, the prisoners, the
+// animals, then the goods' stack entries (no empty parts).
 func (dl *Dealings) caravanList(f *formCaravan) string {
 	var ids []entity.EntityID
 	for id, on := range f.beasts {
@@ -74,6 +71,9 @@ func (dl *Dealings) caravanList(f *formCaravan) string {
 		}
 	}
 	parts := []string{MemberList(f.members())}
+	if p := f.prisoners(); len(p) > 0 {
+		parts = append(parts, MemberList(p))
+	}
 	if extra := LoadList(sortedIDs(ids), f.goods, dl.goodsRows()); extra != "" {
 		parts = append(parts, extra)
 	}
@@ -102,8 +102,44 @@ func (dl *Dealings) caravanPacks(f *formCaravan, r gfx.Rect) {
 			}
 		})
 	}
-	for _, g := range dl.goodsRows() {
-		g := g
+	food, other := splitFood(dl.goodsRows())
+	if len(rows) == 0 && len(food)+len(other) == 0 {
+		dl.kit().Label(rest.X, rest.Y, dl.sh.T("No tame animals or loose goods."), uikit.DimText())
+		return
+	}
+	if len(food) > 0 {
+		rows = append(rows, headingRow(dl, dl.sh.T("Food")))
+		rows = f.goodsPickRows(dl, rows, food)
+		if len(other) > 0 {
+			rows = append(rows, headingRow(dl, dl.sh.T("Other goods")))
+		}
+	}
+	dl.scrollRows("form.packs", rest, f.goodsPickRows(dl, rows, other))
+}
+
+// splitFood parts goods rows into the people-edible ones (caravan.Edible)
+// and the rest, each in its order.
+func splitFood(all []goodsRow) (food, other []goodsRow) {
+	for _, g := range all {
+		if k, ok := item.ParseKind(g.kind); ok && caravan.Edible(k) {
+			food = append(food, g)
+		} else {
+			other = append(other, g)
+		}
+	}
+	return food, other
+}
+
+// headingRow is a heading row of the pick list (text already translated).
+func headingRow(dl *Dealings, text string) func(gfx.Rect) {
+	return func(rr gfx.Rect) {
+		dl.kit().Label(rr.X, rr.Y+4, text, gfx.WithColor(gfx.Label, uikit.Heading))
+	}
+}
+
+// goodsPickRows appends a stepper row for each of goods to rows.
+func (f *formCaravan) goodsPickRows(dl *Dealings, rows []func(gfx.Rect), goods []goodsRow) []func(gfx.Rect) {
+	for _, g := range goods {
 		key := "form.goods." + strings.ReplaceAll(g.kind, " ", "_")
 		rows = append(rows, func(rr gfx.Rect) {
 			v := f.goods[g.kind]
@@ -117,11 +153,7 @@ func (dl *Dealings) caravanPacks(f *formCaravan, r gfx.Rect) {
 			}
 		})
 	}
-	if len(rows) == 0 {
-		dl.kit().Label(rest.X, rest.Y, dl.sh.T("No tame animals or loose goods."), uikit.DimText())
-		return
-	}
-	dl.scrollRows("form.packs", rest, rows)
+	return rows
 }
 
 // sortedIDs is ids, ascending.

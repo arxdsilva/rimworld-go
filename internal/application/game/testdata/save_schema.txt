@@ -2804,8 +2804,11 @@ saveState.World.Caravans[].C.Slowest int32
 saveState.World.Caravans[].C.State rimworld-go/internal/domain/world/caravan.State = uint8
 saveState.World.Caravans[].C.Tile int
 saveState.World.Caravans[].C.VisitUntil uint64
+saveState.World.Caravans[].Captives []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.World.Caravans[].Captives[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.Caravans[].Exiting []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.World.Caravans[].Exiting[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.Caravans[].Fed int32
 saveState.World.Caravans[].Formed uint64
 saveState.World.Caravans[].Home int
 saveState.World.Caravans[].Map uint32

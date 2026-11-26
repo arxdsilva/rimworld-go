@@ -288,7 +288,7 @@ func (l Lifecycle) close(id uint32) {
 		for _, x := range c.Exiting {
 			c.C.Members = slices.DeleteFunc(c.C.Members, func(m uint64) bool { return m == uint64(x) })
 		}
-		c.Exiting = nil
+		c.Exiting, c.Captives = nil, nil // the closing map's prisoners are not boarded
 		if len(c.C.Members) == 0 {
 			*f.list = slices.Delete(*f.list, i, i+1)
 			i--
