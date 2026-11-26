@@ -90,9 +90,10 @@ type View struct {
 	pods   podState
 	spot   spotState
 	tools  toolState
-	card   card     // the tile card of the bare tile shown
-	etaC   etaCache // the selected caravan's travel time and distance
-	frame  uint64   // Updates seen (the double-click window)
+	terr   territoryState // the territory mirrored from the live settlements
+	card   card           // the tile card of the bare tile shown
+	etaC   etaCache       // the selected caravan's travel time and distance
+	frame  uint64         // Updates seen (the double-click window)
 	hops   planet.HopScratch
 	quests []game.QuestView // the quests read with the objects (the caravan's request and talks gizmos)
 	game   Reader           // the colony the state above belongs to
@@ -318,6 +319,7 @@ func (v *View) syncLive(p *planet.Planet) {
 			o.razed = f >= 0 && !v.isLive(o.Tile)
 		}
 	}
+	v.terr.sync(p, v.live, v.isLive, v.g)
 	if v.g == nil || len(v.g.Marks) == len(v.live) {
 		return
 	}

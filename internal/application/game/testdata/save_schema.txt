@@ -2874,6 +2874,22 @@ saveState.World.Quests.Quests[].Seed uint64
 saveState.World.Quests.Quests[].Stars uint8
 saveState.World.Quests.Quests[].State rimworld-go/internal/domain/quest.State = uint8
 saveState.World.Quests.Quests[].Target int
+saveState.World.Settle rimworld-go/internal/application/game/settlement.Save
+saveState.World.Settle.Markets []rimworld-go/internal/domain/economy/trade.Market
+saveState.World.Settle.Markets[] rimworld-go/internal/domain/economy/trade.Market
+saveState.World.Settle.Markets[].Faction int16
+saveState.World.Settle.Markets[].NextAt uint64
+saveState.World.Settle.Markets[].Restocked uint64
+saveState.World.Settle.Markets[].Stock rimworld-go/internal/domain/economy/trade.Stock
+saveState.World.Settle.Markets[].Stock.Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.World.Settle.Markets[].Stock.Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.World.Settle.Markets[].Stock.Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.World.Settle.Markets[].Stock.Lines[].Building uint8
+saveState.World.Settle.Markets[].Stock.Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Settle.Markets[].Stock.Lines[].Qty int
+saveState.World.Settle.Markets[].Stock.Silver int
+saveState.World.Settle.Markets[].Tile int32
+saveState.World.Settle.Version uint8
 saveState.World.Stashed []rimworld-go/internal/application/game.stashRec
 saveState.World.Stashed[] rimworld-go/internal/application/game.stashRec
 saveState.World.Stashed[].Beast rimworld-go/internal/domain/animal.State

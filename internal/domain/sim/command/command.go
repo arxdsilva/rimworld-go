@@ -462,6 +462,9 @@ const (
 	// at the colony's drop spot; an unknown key does nothing.
 	ScriptMessage
 	ScriptSpawn
+	// TradeSettlement: caravan Target trades with the settlement on its
+	// tile (#11).
+	TradeSettlement
 )
 
 // ScriptMessage modes (Command.Mode).

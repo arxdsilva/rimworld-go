@@ -268,6 +268,7 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 			run: func() { v.send(command.Command{Kind: command.EnterMap, Target: id}) }},
 		{name: "attack", label: "Attack", why: attackWhy, tip: "Attack\nAttack the settlement here. Attacking a settlement that is not hostile costs its faction " + strconv.Itoa(attackGoodwill) + " goodwill and turns them hostile until it recovers.",
 			run: func() { v.attackSettlement(id, site, settled) }},
+		v.tradeGizmo(id, c.TradeWhy),
 		{name: "split", label: "Split", why: notYet, tip: "Split\nSplitting a caravan in two."},
 	}
 	return o.Label, lines, append(gizmos, v.questGizmos(c)...)
@@ -464,7 +465,7 @@ func (v inspector) inspectSettlement(o *Object) (string, []line, []gizmo) {
 	} else {
 		lines = append(lines, line{"", "Select a caravan first to see how far it is."})
 	}
-	return o.Label, lines, nil
+	return o.Label, lines, []gizmo{v.settlementTrade(s.Tile)}
 }
 
 // inspectTile is a bare tile: the tile card (worldinfo).
@@ -480,7 +481,8 @@ func (v inspector) inspectTile(t int) (string, []line, []gizmo) {
 		*c = card{tile: t, day: day, f: u.F, info: worldinfo.BuildTileInfoWith(p, t, worldinfo.Opts{Units: u, Day: day, Live: v.isLive}), ok: true}
 	}
 	ti := &c.info
-	lines := make([]line, 0, len(ti.Rows)+2)
+	lines := make([]line, 0, len(ti.Rows)+3)
+	lines = append(lines, v.territoryRow(t)) // first, so it shows without scrolling
 	if ti.Difficulty != "" {
 		lines = append(lines, line{"Difficulty", ti.Difficulty})
 	}

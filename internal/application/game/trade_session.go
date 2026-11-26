@@ -4,10 +4,10 @@
 package game
 
 import (
-	"cmp"
 	"fmt"
-	"slices"
 
+	"rimworld-go/internal/application/game/settlement"
+	"rimworld-go/internal/application/game/tradeview"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -36,11 +36,11 @@ import (
 const (
 	ReasonNoTrader    = "no trader here"
 	ReasonCantTalk    = "can't talk"
-	ReasonNoTrade     = "they won't trade with you"
+	ReasonNoTrade     = tradeview.ReasonNoTrade
 	ReasonNotTrading  = "not trading now"
-	ReasonTradeOpen   = "another trade is open"
+	ReasonTradeOpen   = tradeview.ReasonTradeOpen
 	ReasonRadioInUse  = "the radio is in use"
-	ReasonOfferBroken = "that offer makes no sense"
+	ReasonOfferBroken = tradeview.ReasonOfferBroken
 	ReasonNoGiftee    = "there is no one to give it to"
 )
 
@@ -85,17 +85,14 @@ func (g *Game) termsFor(id entity.EntityID, f *faction.Faction) trade.Terms {
 	return t
 }
 
-// priceModPct is the percent the terms take off the base buy markup
-// (Social and goodwill), within what the floor allows.
-func priceModPct(t trade.Terms) int {
-	centi := t.Social*trade.SocialStepCenti + t.Goodwill*trade.BuyGoodwillMilli/10
-	return min(centi/100, trade.BuyMarkupPct-trade.BuyFloorPct)
-}
-
-// TradeView is the open trade session (ok false while none is open).
+// TradeView is the open trade session (ok false while none is open): the
+// colony's, else a caravan's at a settlement (game/settlement).
 func (g *Game) TradeView() (TradeView, bool) {
 	s := g.trade.session
 	if s == nil {
+		if w := g.worldSt; w != nil && w.settle.Live(settleHost{g}) {
+			return w.settle.View(settleHost{g}, travelOf(g))
+		}
 		return TradeView{}, false
 	}
 	v := TradeView{Negotiator: s.negotiator, NegotiatorName: g.name(s.negotiator), Reason: s.reason, Orbital: s.trader == 0}
@@ -110,48 +107,12 @@ func (g *Game) TradeView() (TradeView, bool) {
 		v.Faction, v.FactionID, v.Goodwill = p.f.Name, p.f.ID, p.f.Goodwill
 	}
 	v.HoursLeft = hoursLeft(p.until, uint64(g.clock.Now()))
-	v.Social, v.PriceModPct = terms.Social, priceModPct(terms)
-	b := g.sk.content.Items
+	v.Social, v.PriceModPct = terms.Social, tradeview.PriceModPct(terms)
 	gd := g.colonyGoods(v.Orbital)
 	v.ColonySilver, v.TraderSilver = gd.counts[item.Silver], p.stock.Silver
-	theirs := map[trade.Goods]int{} // AX-1: a crated building is goods of its own
-	keys := make([]trade.Goods, 0, len(gd.counts)+len(p.stock.Lines))
-	for _, l := range p.stock.Lines {
-		if int(l.Kind) >= b.Len() {
-			continue // item.None: a removed plugin's goods show no row
-		}
-		theirs[l.Goods()] += l.Qty
-		keys = append(keys, l.Goods())
-	}
-	for k := range gd.counts {
-		if k != item.Silver && b.Value(k) > 0 && theirs[trade.Goods{Kind: k}] == 0 {
-			keys = append(keys, trade.Goods{Kind: k})
-		}
-	}
-	slices.SortFunc(keys, trade.Goods.Compare)
-	keys = slices.Compact(keys)
-	for _, gk := range keys {
-		k, colony := gk.Kind, gd.counts[gk.Kind]
-		if gk.Building != 0 {
-			colony = 0 // the colony's own crates are not on offer
-		}
-		v.Rows = append(v.Rows, TradeRowView{Kind: gk.Name(b), Label: cmp.Or(gk.Label(b), itemLabel(k)), Category: b.Category(k),
-			ColonyQty: colony, TraderQty: theirs[gk],
-			BuyC: trade.PriceOf(b, gk, p.kind, trade.Buy, terms), SellC: trade.PriceOf(b, gk, p.kind, trade.Sell, terms),
-			WillBuy: theirs[gk] > 0, WillSell: gk.Building == 0 && trade.Wants(b, p.kind, k)})
-	}
-	slices.SortStableFunc(v.Rows, func(a, b TradeRowView) int {
-		if ra, rb := item.CategoryRank(a.Category), item.CategoryRank(b.Category); ra != rb {
-			return ra - rb
-		}
-		switch {
-		case a.Label < b.Label:
-			return -1
-		case a.Label > b.Label:
-			return 1
-		}
-		return 0
-	})
+	st := *p.stock
+	st.Kind = p.kind // priced as the trader's kind
+	v.Rows = tradeview.Rows(g.sk.content.Items, gd.counts, st, terms, itemLabel)
 	return v, true
 }
 
@@ -161,6 +122,9 @@ func (g *Game) TradeView() (TradeView, bool) {
 func (g *Game) cmdProposeTrade(offer string, gift bool) {
 	s := g.trade.session
 	if s == nil {
+		if w := g.worldSt; w != nil && w.settle.Live(settleHost{g}) {
+			w.settle.Propose(settleHost{g}, travelOf(g), offer, gift) // game/settlement (#11)
+		}
 		return
 	}
 	p, ok := g.party(s)
@@ -222,8 +186,8 @@ func (g *Game) cmdProposeTrade(offer string, gift bool) {
 	g.message(pos.X, pos.Y, "%s traded with %s.", g.name(s.negotiator), p.name)
 }
 
-// cmdCloseTrade ends the trade session.
-func (g *Game) cmdCloseTrade() { g.trade.session = nil }
+// cmdCloseTrade ends the trade session (the colony's or a settlement's).
+func (g *Game) cmdCloseTrade() { g.trade.session = nil; settlementOf(g).Close() }
 
 // holdingJob reports id is conscious and holding an open session's job
 // (Trade or UseComms, past its wait).
@@ -238,13 +202,42 @@ func (g *Game) holdingJob(id entity.EntityID) bool {
 // sessionBusy is why id can't open a session now ("" when it can): only
 // one trade or comms session is open at a time.
 func (g *Game) sessionBusy(id entity.EntityID) string {
-	if s := g.trade.session; s != nil && s.negotiator != id {
+	if s := g.trade.session; s != nil && s.negotiator != id || g.worldSt != nil && g.worldSt.settle.Live(settleHost{g}) { // or a caravan's at a settlement (#11)
 		return ReasonTradeOpen
 	}
 	if c := g.trade.comms; c != nil && c.operator != id {
 		return ReasonRadioInUse
 	}
 	return ""
+}
+
+// settlementOf is the settlement markets and session (game/settlement, #11).
+func settlementOf(g *Game) *settlement.State {
+	if w := g.worldS(); w.settle == nil {
+		w.settle = &settlement.State{}
+	}
+	return g.worldSt.settle
+}
+
+// settleHost is game/settlement's Host; Seed and Tiles build the planet (Open only).
+type settleHost struct{ g *Game }
+
+func (h settleHost) Now() uint64      { return uint64(h.g.clock.Now()) }
+func (h settleHost) Seed() uint64     { return settlement.SeedOf(h.g.worldPlanet()) }
+func (h settleHost) Tiles() int       { return settlement.TilesOf(h.g.worldPlanet()) }
+func (h settleHost) Items() item.Book { return h.g.sk.content.Items }
+func (h settleHost) Day() int         { return h.g.relDay(h.Now()) + 1 }
+func (h settleHost) Site(t int) (int, *faction.Faction, string) {
+	return settlement.SiteIn(h.g.ng.factions, t)
+}
+func (h settleHost) Pawn(id uint64) (string, int) {
+	return h.g.personName(entity.EntityID(id)), int(h.g.skillOf(entity.EntityID(id), skill.Social).Level)
+}
+func (h settleHost) Caravan(cid uint64) (settlement.Visit, bool) {
+	if c := fleetOf(h.g).At(entity.EntityID(cid)); c != nil {
+		return settlement.VisitOf(&c.C, c.Back), true
+	}
+	return settlement.Visit{}, false
 }
 
 // doTrade runs a Trade job's Do phase: catch up with the trader, wait,

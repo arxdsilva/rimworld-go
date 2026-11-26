@@ -481,7 +481,11 @@ func (g *View) recolour() {
 	}
 	g.Base = g.Base[:n]
 	for i := 0; i < n; i++ {
-		g.Base[i] = g.tileColour(i)
+		c := g.tileColour(i)
+		if g.geom.terr.owner != nil && isLand(g.P, i) {
+			c = tintOf(&g.geom.terr, i, c)
+		}
+		g.Base[i] = c
 	}
 	g.geom.vertexColours(g.P, g.Base, g.mode == ModeBiome)
 }

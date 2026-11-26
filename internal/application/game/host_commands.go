@@ -48,6 +48,8 @@ func (g *Game) applyHostCommand(c command.Command) {
 		fleetOf(g).Return(target) // game/maps
 	case command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel:
 		mapsApply(g, c) // world_state.go: game/maps (MAP-01..04)
+	case command.TradeSettlement:
+		settlementOf(g).Open(settleHost{g}, travelOf(g), c.Target, g.sessionBusy(0)) // trade_session.go: game/settlement (#11)
 	case command.SetColonyCap:
 		SetMaxColonies(g, c.Count) // world_state.go
 	case command.NewWanderers:

@@ -241,8 +241,8 @@ func (l Lifecycle) destroy(fi, t int) string {
 			fa.SettlementNames = slices.Delete(slices.Clone(fa.SettlementNames), k, k+1)
 		}
 	}
-	if p := f.h.Planet(); p != nil && t >= 0 && t < len(p.Settlement) && p.Settlement[t] >= 0 {
-		p.Settlement[t] = -1
+	if p := f.h.Planet(); p != nil {
+		planet.Unsettle(p, t) // #11: its territory is rebuilt
 	}
 	for j := range fs {
 		if j != fi && Enemies(fs[j], *fa) {
@@ -293,15 +293,18 @@ func (l Lifecycle) openAt(t int) *Meta {
 }
 
 // Prune drops from a rebuilt planet p the settlements its factions fs no
-// longer hold (destroyed in this game; the planet is not saved). A planet
-// whose factions do not match fs is left alone.
+// longer hold (destroyed in this game; the planet is not saved), with one
+// territory rebuild (planet.Unsettle). A planet whose factions do not
+// match fs is left alone.
 func Prune(p *planet.Planet, fs []faction.Faction) {
 	if p == nil || len(p.Factions) != len(fs) {
 		return
 	}
+	var gone []int
 	for t := range p.Settlement {
 		if fi, _ := p.SettlementFaction(t); fi >= 0 && !slices.Contains(fs[fi].Settlements, t) {
-			p.Settlement[t] = -1
+			gone = append(gone, t)
 		}
 	}
+	planet.Unsettle(p, gone...)
 }

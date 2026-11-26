@@ -10,7 +10,7 @@ The colony's full-screen world view (MAP-2, MAIN_UI_SCREENS §33, §35, §36): t
 
 ## Depends on
 - Leaves: `art`, `gfx`, `globe`, `globemath`, `hudlayout`, `inputframe`, `ports`, `uikit`, `units`, `worldinfo`.
-- `application/game` read models and `game/axview`; domain `sim/clock`, `sim/command`, `sim/entity`, `world/caravan`, `world/planet`; `platform/config`, `platform/input`.
+- `application/game` read models and `game/axview`; domain `faction`, `sim/clock`, `sim/command`, `sim/entity`, `world/caravan`, `world/planet`; `platform/config`, `platform/input`.
 
 ## Must not depend on
 - Feature packages (`hud`, `windows`, `dialogs`, `inspector`, `orders`, `wizard`, ...): `FormCaravan` and the intents reach them through the shell.
@@ -18,16 +18,18 @@ The colony's full-screen world view (MAP-2, MAIN_UI_SCREENS §33, §35, §36): t
 
 ## Contracts
 - Root calls: `Show`, `Toggle`, `Close`, `Open`, `Escape` (pick spot, pod menu, targeting or route, selection, then the view), `LaunchFor`, `Declare` (once per Update, in `colonyUI`, before the HUD's widgets), `DrawGlobe` (in the map's place), `HandleSpot`, `Spotting`, `DrawSpot`.
-- Widget ids: `world.obj.<map|caravan|settlement|quest|site|pod>.<id>`, `world.act.<jump|form|abandon|reform|travel|return|settle|enter|attack|split|quest|fulfil|negotiate|confirm|cancel>` (`quest`: View quest on a quest site; `fulfil` and `negotiate`: a caravan standing on an open request or talks), `world.pod.<drop|dropcentre|attackedge|attackcentre|found|gift|visit|spot|cancel>`, `world.pod.target.<tile>`, `world.search`, `world.search.field`, `world.legend`, `world.grid`, `world.close`, modals `world.abandon` and `world.attack` (a non-hostile base asks first, MAP-15).
+- Widget ids: `world.obj.<map|caravan|settlement|quest|site|pod>.<id>`, `world.act.<jump|form|abandon|reform|travel|return|settle|enter|attack|trade|split|quest|fulfil|negotiate|confirm|cancel>` (`trade`: on a caravan, disabled with the game's `CaravanView.TradeWhy`; on a settlement, for our lowest-id caravan on its tile, else "Send a caravan here to trade."), `world.territory` (toolbar toggle tinting the land by owner) (`quest`: View quest on a quest site; `fulfil` and `negotiate`: a caravan standing on an open request or talks), `world.pod.<drop|dropcentre|attackedge|attackcentre|found|gift|visit|spot|cancel>`, `world.pod.target.<tile>`, `world.search`, `world.search.field`, `world.legend`, `world.grid`, `world.close`, modals `world.abandon` and `world.attack` (a non-hostile base asks first, MAP-15).
 - Everything leaves as `command.Command` (`ports.Commands`) or `ports.Intent`; a launch names the pods' own map (`MapSet`), so a switch to the target map does not move the command.
 
 ## Invariants
 - Objects are read when the clock has moved `refreshTicks` or the view sent a command, never per frame (`TestObjectsAreReadOnlyWhenNeeded`); estimates are cached (`TestEstimateIsCached`); the range ring is one breadth-first search per targeting start.
+- Territory (`territory.go`, `territoryState`): the view holds its own `faction.Territory`, built by `planet.BuildTerritory` on its read-only planet copy (never the game planet's index; `Fork` shares that pointer) from the live settlements. Settlement-list invariant: `WorldSites` skips only defeated factions, so the view's live set (`syncLive`) equals the game's settlement index. It rebuilds only when the live set or planet changes, never per frame, and pushes to the globe once per version (the version carries a hash of the faction types, because `SetTerritory` ignores a type change under one version) and again for a rebuilt globe. Owner names come from the game's `Factions()`, not the planet's.
 - Every gizmo carries why it is disabled; the simulation's own answer wins where the game offers one (`LaunchReason`, `AttackReason`, `TravelEstimate`).
 - Draws go through the canvas (Rule 3 of `ui_canvas_guard_test.go`); only `spot_draw.go:DrawSpot` draws raw, on the map.
 - Another tab or the Architect opening closes the view; a new game resets it (`follow`).
 
 ## Tests
+- `territory_test.go`, `trade_test.go`: territory mirror and tint pushes, the Trade gizmos.
 - `view_test.go`, headless over a fake shell and a small real planet.
 
 ## Notes

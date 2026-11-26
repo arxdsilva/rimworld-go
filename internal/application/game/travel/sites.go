@@ -174,4 +174,7 @@ type CaravanView struct {
 	Tile, Dest int
 	Progress   int
 	State      string
+	// TradeWhy is "" when the caravan can trade with the settlement where
+	// it stands, otherwise why not (#11; the trade gizmo's disabled reason).
+	TradeWhy string
 }

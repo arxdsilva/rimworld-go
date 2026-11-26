@@ -9,7 +9,15 @@
 // and §29). Plain data: no state, no host.
 package tradeview
 
-import "rimworld-go/internal/domain/sim/entity"
+import (
+	"cmp"
+	"slices"
+	"strings"
+
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
+	"rimworld-go/internal/domain/sim/entity"
+)
 
 // Trade is the open trade session (game.Game.TradeView; ok false while
 // none is open). Prices are per unit in hundredths of a silver.
@@ -108,4 +116,55 @@ type Orbital struct {
 	CaravanVisiting  bool
 	CaravanFaction   string
 	CaravanHoursLeft int
+}
+
+// Rows are the trade dialog's rows for the colony's goods mine against
+// stock st under terms, by category then label (label names a kind; silver
+// is never a row). Both colony and settlement sessions build them here.
+// Prices are for st.Kind. A kind past b (a removed plugin's goods) shows
+// no row; a crated building is goods of its own (AX-1), sold but never
+// bought, and the colony's own crates are not on offer.
+func Rows(b item.Book, mine map[item.Kind]int, st trade.Stock, terms trade.Terms, label func(item.Kind) string) []Row {
+	theirs := map[trade.Goods]int{}
+	keys := make([]trade.Goods, 0, len(mine)+len(st.Lines))
+	for _, l := range st.Lines {
+		if int(l.Kind) >= b.Len() {
+			continue
+		}
+		theirs[l.Goods()] += l.Qty
+		keys = append(keys, l.Goods())
+	}
+	for k := range mine {
+		if k != item.Silver && b.Value(k) > 0 && theirs[trade.Goods{Kind: k}] == 0 {
+			keys = append(keys, trade.Goods{Kind: k})
+		}
+	}
+	slices.SortFunc(keys, trade.Goods.Compare)
+	keys = slices.Compact(keys)
+	var rows []Row
+	for _, gk := range keys {
+		k, have := gk.Kind, mine[gk.Kind]
+		if gk.Building != 0 {
+			have = 0
+		}
+		rows = append(rows, Row{Kind: gk.Name(b), Label: cmp.Or(gk.Label(b), label(k)), Category: b.Category(k),
+			ColonyQty: have, TraderQty: theirs[gk],
+			BuyC: trade.PriceOf(b, gk, st.Kind, trade.Buy, terms), SellC: trade.PriceOf(b, gk, st.Kind, trade.Sell, terms),
+			WillBuy: theirs[gk] > 0, WillSell: gk.Building == 0 && trade.Wants(b, st.Kind, k)})
+	}
+	slices.SortStableFunc(rows, func(a, c Row) int {
+		if ra, rc := item.CategoryRank(a.Category), item.CategoryRank(c.Category); ra != rc {
+			return ra - rc
+		}
+		return strings.Compare(a.Label, c.Label)
+	})
+	return rows
+}
+
+// PriceModPct is the price modifier terms earn: percent off the base
+// markup (Trade.PriceModPct), from Social and goodwill, within what the
+// floor allows.
+func PriceModPct(terms trade.Terms) int {
+	centi := terms.Social*trade.SocialStepCenti + terms.Goodwill*trade.BuyGoodwillMilli/10
+	return min(centi/100, trade.BuyMarkupPct-trade.BuyFloorPct)
 }

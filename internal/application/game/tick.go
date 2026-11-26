@@ -84,7 +84,7 @@ func (g *Game) applyOne(c command.Command) {
 	switch c.Kind {
 	case command.AddOperation, command.RemoveOperation, command.SetDrugPolicy, command.AssignBedOwner,
 		command.SetAnimalMaster, command.SetTraining, command.GiftAnimal, command.Capture, command.Arrest,
-		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap, command.SetTankStock, command.NewWanderers,
+		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.TradeSettlement, command.SetColonyCap, command.SetTankStock, command.NewWanderers,
 		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
 		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
 		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)

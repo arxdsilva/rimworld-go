@@ -77,13 +77,14 @@ type planetGeom struct {
 	kcol        []rgb        // corner vertex colour per corner copy, current mode
 	Rivers      []globeSeg
 	Roads       []globeSeg
-	Coast       []globeSeg   // land/ocean and land/lake edges
-	edges       [][2]uint32  // every tile edge once, as unique corners (the grid)
-	feats       []featLabel  // named features, largest first
-	labels      []Label      // this frame's placed names (at most maxLabels)
-	markWH      [][2]float32 // settlement name sizes, logical
-	measuredAt  float64      // the UI scale the label sizes were measured at
-	grid        bool         // draw the tile grid when zoomed in
+	Coast       []globeSeg    // land/ocean and land/lake edges
+	edges       [][2]uint32   // every tile edge once, as unique corners (the grid)
+	feats       []featLabel   // named features, largest first
+	labels      []Label       // this frame's placed names (at most maxLabels)
+	markWH      [][2]float32  // settlement name sizes, logical
+	measuredAt  float64       // the UI scale the label sizes were measured at
+	grid        bool          // draw the tile grid when zoomed in
+	terr        territoryTint // owner tint of the land (SetTerritory)
 }
 
 func isLand(p *planet.Planet, i int) bool {

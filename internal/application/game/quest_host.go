@@ -310,6 +310,7 @@ func (h mapsQuests) HoldsVisit(t int) bool {
 // SettlementLost: the quests at tile t lose their site; a defeated faction's
 // quests learn it too (talks, a request).
 func (h mapsQuests) SettlementLost(fi, t int, defeated bool) {
+	settlementOf(h.g).Drop(t) // trade_session.go: its market and any session there go (#11)
 	questSignal(h.g, quest.Signal{Kind: quest.SigSiteLost, Tile: t})
 	if defeated {
 		questSignal(h.g, quest.Signal{Kind: quest.SigFactionDefeated, Faction: fi + 1})

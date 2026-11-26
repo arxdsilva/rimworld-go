@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/application/game/quest"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/sense"
+	"rimworld-go/internal/application/game/settlement"
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/application/game/visit"
@@ -84,17 +85,18 @@ type worldState struct {
 	// out (areas.go; not saved: views only).
 	areaVer     map[uint16]uint64
 	areaGen     uint64
-	ship        *ship.State   // story.go: game/ship (AX-8), built on first use
-	ax9         *travel.State // game/travel (AX-9): caskets, pods, sites, hitching
-	ax9h        travel.Host   // its host (travelOf), built once
-	mapsH       maps.Host     // game/maps' host (fleetOf), built once
-	maxColonies int           // Options' cap, sent at start and load (never saved; 0 means 1)
-	visitH      visit.Host    // game/visit's host (visitsOf), built once
-	atlas       maps.Atlas    // game/maps: the open maps beyond the first (MAP-01)
-	sense       *sense.Sense  // senseOf (sense_host.go): the habit rules (CSE)
-	outfits     outfit.Book   // outfitBook (apparel.go): apparel policies (GEAR-3), saved as Outfits
-	quests      *quest.Quests // questOf (quest_host.go): the quests root (QST-1), saved as Quests
-	questMemo   questMemo     // questViews: the read model's quest list
+	ship        *ship.State       // story.go: game/ship (AX-8), built on first use
+	ax9         *travel.State     // game/travel (AX-9): caskets, pods, sites, hitching
+	ax9h        travel.Host       // its host (travelOf), built once
+	mapsH       maps.Host         // game/maps' host (fleetOf), built once
+	maxColonies int               // Options' cap, sent at start and load (never saved; 0 means 1)
+	visitH      visit.Host        // game/visit's host (visitsOf), built once
+	atlas       maps.Atlas        // game/maps: the open maps beyond the first (MAP-01)
+	sense       *sense.Sense      // senseOf (sense_host.go): the habit rules (CSE)
+	outfits     outfit.Book       // outfitBook (apparel.go): apparel policies (GEAR-3), saved as Outfits
+	quests      *quest.Quests     // questOf (quest_host.go): the quests root (QST-1), saved as Quests
+	questMemo   questMemo         // questViews: the read model's quest list
+	settle      *settlement.State // settlementOf (trade_session.go): settlement markets (#11), saved as Settle
 }
 
 // worldSave is worldState as saved.
@@ -106,10 +108,11 @@ type worldSave struct {
 	// AreaOf is the allowed-area assignments: Version 1 saves hold area
 	// positions (index i is id i+1 now), Version 2 area refs (PLAY-015).
 	AreaOf  []areaAssign
-	HuntOut []huntOutRec // area_dest.go
-	AX9     *travel.Save // game/travel (AX-9): absent in older saves
-	Atlas   *maps.Atlas  // game/maps (MAP-01): absent while one map was ever open
-	Quests  *quest.Save  // game/quest (QST-1): absent before the first quest or in a legacy colony
+	HuntOut []huntOutRec     // area_dest.go
+	AX9     *travel.Save     // game/travel (AX-9): absent in older saves
+	Atlas   *maps.Atlas      // game/maps (MAP-01): absent while one map was ever open
+	Quests  *quest.Save      // game/quest (QST-1): absent before the first quest or in a legacy colony
+	Settle  *settlement.Save // game/settlement (#11): absent in older saves and before the first settlement trade
 }
 
 // worldSaveVersion is the format exportWorld writes (2: area refs).
@@ -282,10 +285,10 @@ func (g *Game) exportWorld() *worldSave {
 	if w != nil && w.quests != nil {
 		qs = w.quests.Export() // nil while it holds nothing
 	}
-	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 && w.ax9.Empty() && w.atlas.Empty() && qs == nil {
+	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 && w.ax9.Empty() && w.atlas.Empty() && qs == nil && w.settle.Export() == nil {
 		return nil
 	}
-	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors), Quests: qs}
+	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors), Quests: qs, Settle: w.settle.Export()}
 	for _, c := range w.caravans {
 		s.Caravans = append(s.Caravans, c.Clone())
 	}
@@ -318,7 +321,7 @@ func (g *Game) importWorld(s *worldSave) {
 		}
 		w.areaOf[a.Pawn] = importAreaRef(s.Version, a.Area) // areas.go
 	}
-	w.huntOut, w.ax9 = importHuntOut(s.HuntOut), travel.Import(s.AX9) // area_dest.go, game/travel
+	w.huntOut, w.ax9, w.settle = importHuntOut(s.HuntOut), travel.Import(s.AX9), settlement.Import(s.Settle) // area_dest.go, game/travel, game/settlement
 	if s.Atlas != nil {
 		w.atlas = *s.Atlas.Clone()
 	}
@@ -335,7 +338,8 @@ func (g *Game) worldMapView() WorldMapView {
 	}
 	for i := range g.worldSt.caravans {
 		c := &g.worldSt.caravans[i]
-		cv := CaravanView{ID: c.C.ID, Tile: c.C.Tile, Dest: c.C.Dest, Progress: c.C.Progress / 10, State: c.C.State.Label()}
+		cv := CaravanView{ID: c.C.ID, Tile: c.C.Tile, Dest: c.C.Dest, Progress: c.C.Progress / 10, State: c.C.State.Label(),
+			TradeWhy: g.worldSt.settle.Reason(settleHost{g}, c.C.ID, g.sessionBusy(0))} // game/settlement (#11): never builds the planet
 		if c.Back {
 			cv.Dest = c.Home
 		}

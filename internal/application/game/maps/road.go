@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/travel"
-	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
@@ -119,7 +118,7 @@ func (f Fleet) Arrived(c *Caravan, now uint64) {
 		return
 	}
 	fa := f.h.Faction(c.C.Tile)
-	if fa != nil && fa.Type.Human() && fa.Relation != faction.Hostile && !fa.Defeated {
+	if fa != nil && fa.Welcomes() {
 		c.C.State = caravan.Visiting
 		c.C.VisitUntil = now + visitTicks
 		c.C.FoodDays = FoodDays

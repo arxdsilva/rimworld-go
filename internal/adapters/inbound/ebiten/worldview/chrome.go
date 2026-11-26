@@ -34,7 +34,7 @@ const (
 // ToolbarRect is the toolbar's row: above the tabs, right of the
 // inspector.
 func ToolbarRect(lay hudlayout.Layout) gfx.Rect {
-	return gfx.Rect{X: lay.Pane.Right() + hudlayout.HudMargin, Y: lay.Tabs.Y - toolH - hudlayout.HudMargin, W: 4*toolW + 3*6, H: toolH}
+	return gfx.Rect{X: lay.Pane.Right() + hudlayout.HudMargin, Y: lay.Tabs.Y - toolH - hudlayout.HudMargin, W: 5*toolW + 4*6, H: toolH}
 }
 
 // declareChrome declares the view's panels and returns the rectangles
@@ -96,6 +96,7 @@ func (v chromeBar) declareTools(sw int, p *planet.Planet) []gfx.Rect {
 	btn(LegendID, "Legend", "Legend\nWhat the colours, roads and rivers mean.", v.tools.legendOn, why, func() { v.tools.legendOn = !v.tools.legendOn })
 	grid := v.g != nil && v.g.Grid()
 	btn(GridID, "Grid", "Grid\nOutline every tile (zoomed in).", grid, why, func() { v.g.SetGrid(!v.g.Grid()) })
+	btn(TerritoryID, v.sh.T("Territory"), v.sh.T("Territory\nTint the land each faction holds."), v.terr.on, why, v.toggleTerritory)
 	btn(CloseID, "Close", "Close\nBack to the map."+v.sh.KeyHint(input.TabWorld), false, "", v.Close)
 	out := []gfx.Rect{tb}
 	if p == nil || v.g == nil {
