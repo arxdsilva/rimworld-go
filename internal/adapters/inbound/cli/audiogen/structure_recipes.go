@@ -27,8 +27,9 @@ func chiselTap(at, f, gain float64) []s.Layer {
 
 // structureSounds are the sounds of wave D's defences and workshops
 // (DEF-3, PRD-3): two heavy turrets, a mortar, a charge arming, the
-// powered door and six bench work loops. Ids are sfx.<name> for the
-// one-shots and amb.<name> for the loops (heard where a crafter works).
+// powered door, six bench work loops and the turret fuse hiss. Ids are
+// sfx.<name> for the one-shots and amb.<name> for the loops (heard where a
+// crafter works or a fuse burns).
 // Seeds are 930+.
 func structureSounds() []sound {
 	return []sound{
@@ -136,5 +137,13 @@ func structureSounds() []sound {
 				{Wave: s.Sine, Start: 0.3, Freq: 900, FreqEnd: 1500, Dur: 0.12, Attack: 0.02, Decay: 0.05, Gain: 0.15},
 				{Wave: s.Sine, Start: 0.7, Freq: 1500, FreqEnd: 800, Dur: 0.1, Attack: 0.02, Decay: 0.04, Gain: 0.12},
 			})}, 0.25},
+		// A burning fuse on a turret: a bright, fluttering hiss with sparks
+		// crackling in it. Volume 0.4: above the machine hums (0.3) because it
+		// warns of a coming blast, below the turret re-arm (0.7).
+		{s.Recipe{ID: "amb.turret_fuse_hiss", Seed: 946, Loop: 1.0, Layers: []s.Layer{
+			{Wave: s.White, Dur: span(1.0), HighPass: 2800, LowPass: 9500, Tremolo: 7, TremoloDepth: 0.3, Gain: 0.7},
+			{Wave: s.White, Dur: span(1.0), BandPass: 5000, Q: 1.2, Grains: 32, GrainLen: 0.003, Gain: 0.6},
+			{Wave: s.Pink, Dur: span(1.0), BandPass: 1800, Q: 0.7, Gain: 0.15},
+		}}, 0.4},
 	}
 }
