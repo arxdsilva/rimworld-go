@@ -8,170 +8,170 @@ package difficulty
 var presets = [Custom]Named{
 	// Mix of published wiki numbers and original project tuning.
 	Wanderer: {Preset: Wanderer, Key: "wanderer", Label: "Wanderer", Desc: "Build in peace \u2014 no raids or packs.", Settings: Settings{
-		ThreatScale:            10,    // wiki: AI Storytellers
+		ThreatScale:            10,    // wiki: AI Storytellers (NG-2)
 		BigThreats:             false, // original tuning
 		PeacefulDays:           0,     // original tuning
 		Adaptation:             false, // original tuning
-		AdaptStrength:          100,   // wiki: AI Storytellers
+		AdaptStrength:          100,   // wiki: AI Storytellers (NG-2)
 		TimeEscalation:         false, // original tuning
 		EscPerYear:             25,    // original tuning
 		IgnoreWealth:           false, // original tuning
-		CropYield:              120,   // wiki: AI Storytellers
-		MineYield:              120,   // wiki: AI Storytellers
-		ButcherYield:           100,   // wiki: AI Storytellers
-		ResearchSpeed:          120,   // wiki: AI Storytellers
-		MoodOffset:             10,    // wiki: AI Storytellers
-		Infection:              30,    // wiki: AI Storytellers
-		DiseaseFreq:            33,    // wiki: AI Storytellers
-		AnimalRevenge:          25,    // wiki: AI Storytellers
+		CropYield:              120,   // wiki: AI Storytellers (NG-2)
+		MineYield:              120,   // wiki: AI Storytellers (NG-2)
+		ButcherYield:           100,   // wiki: AI Storytellers (NG-2)
+		ResearchSpeed:          120,   // wiki: AI Storytellers (NG-2)
+		MoodOffset:             10,    // wiki: AI Storytellers (NG-2)
+		Infection:              30,    // wiki: AI Storytellers (NG-2)
+		DiseaseFreq:            33,    // wiki: AI Storytellers (NG-2)
+		AnimalRevenge:          25,    // wiki: AI Storytellers (NG-2)
 		PredatorsHuntColonists: false, // original tuning
 		ExtremeWeather:         false, // original tuning
 		PainTolerance:          10,    // original tuning
 		QuestRewardPct:         100,   // original tuning
 		QuestThreats:           false, // original tuning
-		AdaptGrowth:            0,     // wiki: AI Storytellers
-		FoodPoisonChance:       30,    // wiki: AI Storytellers
-		FriendlyFire:           40,    // wiki: AI Storytellers
+		AdaptGrowth:            0,     // wiki: AI Storytellers (NG-2)
+		FoodPoisonChance:       30,    // wiki: AI Storytellers (NG-2)
+		FriendlyFire:           40,    // wiki: AI Storytellers (NG-2)
 		BalanceVersion:         3,
 	}},
 	// Mix of published wiki numbers and original project tuning.
 	Gentle: {Preset: Gentle, Key: "gentle", Label: "Gentle", Desc: "Rare, small threats; room to learn.", Settings: Settings{
-		ThreatScale:            30,    // wiki: AI Storytellers
+		ThreatScale:            30,    // wiki: AI Storytellers (NG-2)
 		BigThreats:             true,  // original tuning
 		PeacefulDays:           12,    // original tuning
 		Adaptation:             true,  // original tuning
-		AdaptStrength:          100,   // wiki: AI Storytellers
+		AdaptStrength:          100,   // wiki: AI Storytellers (NG-2)
 		TimeEscalation:         false, // original tuning
 		EscPerYear:             25,    // original tuning
 		IgnoreWealth:           false, // original tuning
-		CropYield:              120,   // wiki: AI Storytellers
-		MineYield:              120,   // wiki: AI Storytellers
-		ButcherYield:           100,   // wiki: AI Storytellers
-		ResearchSpeed:          120,   // wiki: AI Storytellers
-		MoodOffset:             10,    // wiki: AI Storytellers
-		Infection:              50,    // wiki: AI Storytellers
-		DiseaseFreq:            40,    // wiki: AI Storytellers
-		AnimalRevenge:          100,   // wiki: AI Storytellers
+		CropYield:              120,   // wiki: AI Storytellers (NG-2)
+		MineYield:              120,   // wiki: AI Storytellers (NG-2)
+		ButcherYield:           100,   // wiki: AI Storytellers (NG-2)
+		ResearchSpeed:          120,   // wiki: AI Storytellers (NG-2)
+		MoodOffset:             10,    // wiki: AI Storytellers (NG-2)
+		Infection:              50,    // wiki: AI Storytellers (NG-2)
+		DiseaseFreq:            40,    // wiki: AI Storytellers (NG-2)
+		AnimalRevenge:          100,   // wiki: AI Storytellers (NG-2)
 		PredatorsHuntColonists: false, // original tuning
 		ExtremeWeather:         false, // original tuning
 		PainTolerance:          5,     // original tuning
 		QuestRewardPct:         100,   // original tuning
 		QuestThreats:           true,  // original tuning
-		AdaptGrowth:            25,    // wiki: AI Storytellers
-		FoodPoisonChance:       50,    // wiki: AI Storytellers
-		FriendlyFire:           40,    // wiki: AI Storytellers
+		AdaptGrowth:            25,    // wiki: AI Storytellers (NG-2)
+		FoodPoisonChance:       50,    // wiki: AI Storytellers (NG-2)
+		FriendlyFire:           40,    // wiki: AI Storytellers (NG-2)
 		BalanceVersion:         3,
 	}},
 	// Mix of published wiki numbers and original project tuning.
 	Settled: {Preset: Settled, Key: "settled", Label: "Settled", Desc: "Fair challenge with time to recover.", Settings: Settings{
-		ThreatScale:            60,    // wiki: AI Storytellers
+		ThreatScale:            60,    // wiki: AI Storytellers (NG-2)
 		BigThreats:             true,  // original tuning
 		PeacefulDays:           8,     // original tuning
 		Adaptation:             true,  // original tuning
-		AdaptStrength:          100,   // wiki: AI Storytellers
+		AdaptStrength:          100,   // wiki: AI Storytellers (NG-2)
 		TimeEscalation:         false, // original tuning
 		EscPerYear:             25,    // original tuning
 		IgnoreWealth:           false, // original tuning
-		CropYield:              100,   // wiki: AI Storytellers
-		MineYield:              100,   // wiki: AI Storytellers
-		ButcherYield:           100,   // wiki: AI Storytellers
-		ResearchSpeed:          100,   // wiki: AI Storytellers
-		MoodOffset:             5,     // wiki: AI Storytellers
-		Infection:              75,    // wiki: AI Storytellers
-		DiseaseFreq:            67,    // wiki: AI Storytellers
-		AnimalRevenge:          100,   // wiki: AI Storytellers
+		CropYield:              100,   // wiki: AI Storytellers (NG-2)
+		MineYield:              100,   // wiki: AI Storytellers (NG-2)
+		ButcherYield:           100,   // wiki: AI Storytellers (NG-2)
+		ResearchSpeed:          100,   // wiki: AI Storytellers (NG-2)
+		MoodOffset:             5,     // wiki: AI Storytellers (NG-2)
+		Infection:              75,    // wiki: AI Storytellers (NG-2)
+		DiseaseFreq:            67,    // wiki: AI Storytellers (NG-2)
+		AnimalRevenge:          100,   // wiki: AI Storytellers (NG-2)
 		PredatorsHuntColonists: true,  // original tuning
 		ExtremeWeather:         true,  // original tuning
 		PainTolerance:          0,     // original tuning
 		QuestRewardPct:         100,   // original tuning
 		QuestThreats:           true,  // original tuning
-		AdaptGrowth:            75,    // wiki: AI Storytellers
-		FoodPoisonChance:       75,    // wiki: AI Storytellers
-		FriendlyFire:           40,    // wiki: AI Storytellers
+		AdaptGrowth:            75,    // wiki: AI Storytellers (NG-2)
+		FoodPoisonChance:       75,    // wiki: AI Storytellers (NG-2)
+		FriendlyFire:           40,    // wiki: AI Storytellers (NG-2)
 		BalanceVersion:         3,
 	}},
 	// Mix of published wiki numbers and original project tuning.
 	Seasoned: {Preset: Seasoned, Key: "seasoned", Label: "Seasoned", Desc: "The intended challenge.", Settings: Settings{
-		ThreatScale:            100,   // wiki: AI Storytellers
+		ThreatScale:            100,   // wiki: AI Storytellers (NG-2)
 		BigThreats:             true,  // original tuning
 		PeacefulDays:           6,     // original tuning
 		Adaptation:             true,  // original tuning
-		AdaptStrength:          90,    // wiki: AI Storytellers
+		AdaptStrength:          90,    // wiki: AI Storytellers (NG-2)
 		TimeEscalation:         false, // original tuning
 		EscPerYear:             25,    // original tuning
 		IgnoreWealth:           false, // original tuning
-		CropYield:              100,   // wiki: AI Storytellers
-		MineYield:              100,   // wiki: AI Storytellers
-		ButcherYield:           100,   // wiki: AI Storytellers
-		ResearchSpeed:          100,   // wiki: AI Storytellers
-		MoodOffset:             0,     // wiki: AI Storytellers
-		Infection:              100,   // wiki: AI Storytellers
-		DiseaseFreq:            100,   // wiki: AI Storytellers
-		AnimalRevenge:          100,   // wiki: AI Storytellers
+		CropYield:              100,   // wiki: AI Storytellers (NG-2)
+		MineYield:              100,   // wiki: AI Storytellers (NG-2)
+		ButcherYield:           100,   // wiki: AI Storytellers (NG-2)
+		ResearchSpeed:          100,   // wiki: AI Storytellers (NG-2)
+		MoodOffset:             0,     // wiki: AI Storytellers (NG-2)
+		Infection:              100,   // wiki: AI Storytellers (NG-2)
+		DiseaseFreq:            100,   // wiki: AI Storytellers (NG-2)
+		AnimalRevenge:          100,   // wiki: AI Storytellers (NG-2)
 		PredatorsHuntColonists: true,  // original tuning
 		ExtremeWeather:         true,  // original tuning
 		PainTolerance:          0,     // original tuning
 		QuestRewardPct:         100,   // original tuning
 		QuestThreats:           true,  // original tuning
-		AdaptGrowth:            100,   // wiki: AI Storytellers
-		FoodPoisonChance:       100,   // wiki: AI Storytellers
-		FriendlyFire:           40,    // wiki: AI Storytellers
+		AdaptGrowth:            100,   // wiki: AI Storytellers (NG-2)
+		FoodPoisonChance:       100,   // wiki: AI Storytellers (NG-2)
+		FriendlyFire:           40,    // wiki: AI Storytellers (NG-2)
 		BalanceVersion:         3,
 	}},
 	// Mix of published wiki numbers and original project tuning.
 	Grim: {Preset: Grim, Key: "grim", Label: "Grim", Desc: "Harsh threats, thin margins.", Settings: Settings{
-		ThreatScale:            155,   // wiki: AI Storytellers
+		ThreatScale:            155,   // wiki: AI Storytellers (NG-2)
 		BigThreats:             true,  // original tuning
 		PeacefulDays:           4,     // original tuning
 		Adaptation:             true,  // original tuning
-		AdaptStrength:          70,    // wiki: AI Storytellers
+		AdaptStrength:          70,    // wiki: AI Storytellers (NG-2)
 		TimeEscalation:         false, // original tuning
 		EscPerYear:             25,    // original tuning
 		IgnoreWealth:           false, // original tuning
-		CropYield:              95,    // wiki: AI Storytellers
-		MineYield:              95,    // wiki: AI Storytellers
-		ButcherYield:           90,    // wiki: AI Storytellers
-		ResearchSpeed:          95,    // wiki: AI Storytellers
-		MoodOffset:             -5,    // wiki: AI Storytellers
-		Infection:              100,   // wiki: AI Storytellers
-		DiseaseFreq:            105,   // wiki: AI Storytellers
-		AnimalRevenge:          100,   // wiki: AI Storytellers
+		CropYield:              95,    // wiki: AI Storytellers (NG-2)
+		MineYield:              95,    // wiki: AI Storytellers (NG-2)
+		ButcherYield:           90,    // wiki: AI Storytellers (NG-2)
+		ResearchSpeed:          95,    // wiki: AI Storytellers (NG-2)
+		MoodOffset:             -5,    // wiki: AI Storytellers (NG-2)
+		Infection:              100,   // wiki: AI Storytellers (NG-2)
+		DiseaseFreq:            105,   // wiki: AI Storytellers (NG-2)
+		AnimalRevenge:          100,   // wiki: AI Storytellers (NG-2)
 		PredatorsHuntColonists: true,  // original tuning
 		ExtremeWeather:         true,  // original tuning
 		PainTolerance:          0,     // original tuning
 		QuestRewardPct:         100,   // original tuning
 		QuestThreats:           true,  // original tuning
-		AdaptGrowth:            100,   // wiki: AI Storytellers
-		FoodPoisonChance:       110,   // wiki: AI Storytellers
-		FriendlyFire:           40,    // wiki: AI Storytellers
+		AdaptGrowth:            100,   // wiki: AI Storytellers (NG-2)
+		FoodPoisonChance:       110,   // wiki: AI Storytellers (NG-2)
+		FriendlyFire:           40,    // wiki: AI Storytellers (NG-2)
 		BalanceVersion:         3,
 	}},
 	// Mix of published wiki numbers and original project tuning.
 	Merciless: {Preset: Merciless, Key: "merciless", Label: "Merciless", Desc: "Built to break you. Mostly.", Settings: Settings{
-		ThreatScale:            220,   // wiki: AI Storytellers
+		ThreatScale:            220,   // wiki: AI Storytellers (NG-2)
 		BigThreats:             true,  // original tuning
 		PeacefulDays:           3,     // original tuning
 		Adaptation:             true,  // original tuning
-		AdaptStrength:          40,    // wiki: AI Storytellers
+		AdaptStrength:          40,    // wiki: AI Storytellers (NG-2)
 		TimeEscalation:         false, // original tuning
 		EscPerYear:             25,    // original tuning
 		IgnoreWealth:           false, // original tuning
-		CropYield:              80,    // wiki: AI Storytellers
-		MineYield:              80,    // wiki: AI Storytellers
-		ButcherYield:           80,    // wiki: AI Storytellers
-		ResearchSpeed:          90,    // wiki: AI Storytellers
-		MoodOffset:             -10,   // wiki: AI Storytellers
-		Infection:              110,   // wiki: AI Storytellers
-		DiseaseFreq:            111,   // wiki: AI Storytellers
-		AnimalRevenge:          100,   // wiki: AI Storytellers
+		CropYield:              80,    // wiki: AI Storytellers (NG-2)
+		MineYield:              80,    // wiki: AI Storytellers (NG-2)
+		ButcherYield:           80,    // wiki: AI Storytellers (NG-2)
+		ResearchSpeed:          90,    // wiki: AI Storytellers (NG-2)
+		MoodOffset:             -10,   // wiki: AI Storytellers (NG-2)
+		Infection:              110,   // wiki: AI Storytellers (NG-2)
+		DiseaseFreq:            111,   // wiki: AI Storytellers (NG-2)
+		AnimalRevenge:          100,   // wiki: AI Storytellers (NG-2)
 		PredatorsHuntColonists: true,  // original tuning
 		ExtremeWeather:         true,  // original tuning
 		PainTolerance:          -5,    // original tuning
 		QuestRewardPct:         100,   // original tuning
 		QuestThreats:           true,  // original tuning
-		AdaptGrowth:            100,   // wiki: AI Storytellers
-		FoodPoisonChance:       120,   // wiki: AI Storytellers
-		FriendlyFire:           40,    // wiki: AI Storytellers
+		AdaptGrowth:            100,   // wiki: AI Storytellers (NG-2)
+		FoodPoisonChance:       120,   // wiki: AI Storytellers (NG-2)
+		FriendlyFire:           40,    // wiki: AI Storytellers (NG-2)
 		BalanceVersion:         3,
 	}},
 }

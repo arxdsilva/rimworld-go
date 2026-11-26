@@ -4,7 +4,8 @@
 // Package expectations defines the wealth bands used by mood and recreation.
 package expectations
 
-// The boundaries and bonuses follow RimWorld's wealth expectations table.
+// The boundaries and bonuses are wiki numbers (CLEAN_ROOM expectations row,
+// 2026-11-26).
 // https://rimworldwiki.com/wiki/Wealth#Expectations
 const (
 	VeryLowAt  = 15_000

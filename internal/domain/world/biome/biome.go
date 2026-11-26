@@ -61,7 +61,8 @@ type Def struct {
 	Plants []PlantDensity
 	Grass  int // permille of soft tiles with grass at the start
 	Regrow int // days for a grazed or cut grass tile to grow back (0: never)
-	// AnimalDensity100 is the Core biome animalDensity in hundredths.
+	// AnimalDensity100 is the biome's wild animal density in hundredths
+	// (wiki: Biomes; CLEAN_ROOM wildlife row, 2026-11-26).
 	// It budgets the sum of wild animal ecosystem weights per 10,000 tiles.
 	AnimalDensity100 int
 	// Warmth (tenths of a degree, original) is how warm the land counts

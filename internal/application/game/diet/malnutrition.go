@@ -42,7 +42,7 @@ func MalnutritionCandidates(all func(func(entity.EntityID, needs.Pair)), bodies 
 }
 
 // StepMalnutrition advances ordinary map and caravan patients once per hour.
-// Off-map WorldPawns are owned by the separate world pass.
+// Off-map pawns are owned by the separate world pass (game/worldpawn).
 func StepMalnutrition(h interface {
 	MalnutritionPeople
 	MalnutritionCare

@@ -62,10 +62,10 @@ func roomLit(t *testing.T, g *Game, x, y int) bool {
 	return v.Lit
 }
 
-// RimWorld TorchLamp and StandingLamp are PassThroughOnly, not impassable.
+// The torch lamp and the standing lamp are NoStop, not impassable.
 // A blueprint can occupy a pawn's cell, and finishing nonblocking furniture
 // does not eject the pawn; afterward the cell is traversable but unsuitable
-// as a destination. Wall-mounted lights remain Standable.
+// as a destination. Wall-mounted lights remain valid destinations.
 func TestLightFixturePassThroughDoesNotDisplacePawns(t *testing.T) {
 	for _, kind := range []construction.Kind{construction.TorchLamp, construction.Lamp} {
 		t.Run(kind.String(), func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestLightFixturePassThroughDoesNotDisplacePawns(t *testing.T) {
 				t.Fatal(err)
 			}
 			def := construction.DefOf(kind)
-			if def.BlocksMove || !def.PassThroughOnly {
+			if def.BlocksMove || !def.NoStop {
 				t.Fatalf("wrong original passability for %s: %+v", kind, def)
 			}
 			if ok, reason := g.canPlaceStuffAt(kind, item.Wood, construction.South, 7, 5); !ok {
@@ -112,8 +112,8 @@ func TestLightFixturePassThroughDoesNotDisplacePawns(t *testing.T) {
 	}
 	for _, kind := range []construction.Kind{construction.WallTorch, construction.WallLamp} {
 		def := construction.DefOf(kind)
-		if def.BlocksMove || def.PassThroughOnly {
-			t.Fatalf("wall fixture should remain Standable: %s %+v", kind, def)
+		if def.BlocksMove || def.NoStop {
+			t.Fatalf("wall fixture should remain a valid destination: %s %+v", kind, def)
 		}
 	}
 	// An actual impassable wall still moves the occupant on completion.

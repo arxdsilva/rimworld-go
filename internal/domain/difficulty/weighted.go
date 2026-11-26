@@ -28,7 +28,7 @@ func PawnWeight(ageYears, healthFraction float64, asleep bool) float64 {
 	return w * InjuryWeight(healthFraction)
 }
 
-// InjuryWeight reduces pawn points for temporary injuries (wiki: Raid points).
+// InjuryWeight reduces pawn points for temporary injuries (wiki: Raid points; DEF-*).
 // Original tuning: 65% injury sensitivity; a fully injured pawn retains 35%
 // of its health-based weight.
 func InjuryWeight(healthFraction float64) float64 {

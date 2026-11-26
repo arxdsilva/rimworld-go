@@ -7,8 +7,8 @@ package animal
 // The zero value is intentionally invalid: all declared species need an
 // explicit row. Pen livestock, other untrainable species, hive monsters
 // and original hostile mechs have no normal training.
-// wiki: https://rimworldwiki.com/wiki/List_of_animals
-// wiki: https://rimworldwiki.com/wiki/Trainability
+// wiki: https://rimworldwiki.com/wiki/List_of_animals (SIM-047)
+// wiki: https://rimworldwiki.com/wiki/Trainability (SIM-047)
 type Trainability uint8
 
 const (

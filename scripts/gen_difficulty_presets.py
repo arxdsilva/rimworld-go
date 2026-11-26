@@ -41,7 +41,7 @@ for row in rows:
             value = str(value).lower()
         elif type(value) is not int:
             raise ValueError(f"{row['key']}.{field}: unsupported field type")
-        provenance = "wiki: AI Storytellers" if field in wiki_fields else "original tuning"
+        provenance = "wiki: AI Storytellers (NG-2)" if field in wiki_fields else "original tuning"
         lines.append(f"\t\t{field}: {value}, // {provenance}")
     lines.append("\t\tBalanceVersion: 3,")
     lines.append("\t}},")

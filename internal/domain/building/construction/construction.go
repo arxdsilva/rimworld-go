@@ -375,13 +375,13 @@ type Def struct {
 	Work       int // construct ticks after materials are in place
 	Layer      Layer
 	BlocksMove bool // completed building makes its tile unwalkable
-	// PassThroughOnly is RimWorld's passability between Standable and
-	// Impassable: a pawn may walk through the cell but cannot stop on it.
+	// NoStop marks a completed building a pawn may walk through but never
+	// stop on (original rule, between open ground and a blocking wall).
 	// Frames do not alter the cell's passability until construction finishes.
-	PassThroughOnly bool
-	Rotatable       bool
-	StoneOK         bool // may be built from any stone blocks instead of wood
-	MetalOK         bool // may be built from steel
+	NoStop    bool
+	Rotatable bool
+	StoneOK   bool // may be built from any stone blocks instead of wood
+	MetalOK   bool // may be built from steel
 	// MetalOnly: steel is the only material (wood is refused); Wood is
 	// then the steel needed.
 	MetalOnly bool
@@ -475,7 +475,7 @@ var defs = [kindCount]Def{
 	Table: {Kind: Table, Name: "table", Wood: 28, Work: 750, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2},
 		StoneOK: true, MetalOK: true},
 	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true, MetalOK: true},
-	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject, PassThroughOnly: true},
+	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject, NoStop: true},
 	SleepingSpot: {Kind: SleepingSpot, Name: "sleeping spot", Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
 	// STK-BN, wiki: every production bench below is 3x1 (Workbench, Stove,
 	// Butcher table, ...): the worker stands south of the middle cell
@@ -552,7 +552,7 @@ var defs = [kindCount]Def{
 		BlocksMove: true, Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 4},
 	Battery: {Kind: Battery, Name: "battery", Wood: 55, Work: 220, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 2},
-	TorchLamp: {Kind: TorchLamp, Name: "torch lamp", Wood: 3, Work: 30, Layer: LayerObject, PassThroughOnly: true},
+	TorchLamp: {Kind: TorchLamp, Name: "torch lamp", Wood: 3, Work: 30, Layer: LayerObject, NoStop: true},
 	// TEMP-1, wiki: Heater (50 steel + 1 component), Cooler (90 steel + 3
 	// components), scaled as the wave D rows (material / 9); work ours.
 	Heater: {Kind: Heater, Name: "heater", Wood: 6, Work: 110, Layer: LayerObject, BlocksMove: true,
@@ -1002,8 +1002,7 @@ func MaxHP(k Kind, s item.Kind) int {
 // a wall: the cooler (PLAY-021) and the vent (TEMP-0).
 func (k Kind) WallMounted() bool { return k == Cooler || k == Vent }
 
-// FloorBarrier is !CoexistsWithFloors: no floor goes under k. RimWorld's
-// Original placement rule: wall-mounted equipment follows walls; fences,
+// FloorBarrier reports that no floor goes under k. Original placement rule: wall-mounted equipment follows walls; fences,
 // gates and graves keep the existing SIM-028 floor restriction.
 func (k Kind) FloorBarrier() bool {
 	d := DefOf(k)

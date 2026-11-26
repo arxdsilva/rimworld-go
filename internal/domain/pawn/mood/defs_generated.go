@@ -6,9 +6,9 @@ package mood
 
 // Saved Kind numbers stay in mood.go; this data is from definitions.json.
 var defs = [numKinds]Def{
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	SleptOutside: {Label: "slept outside", Value: -4, Duration: day, Group: groupSleepPlace, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	SleptOnGround: {Label: "slept on the ground", Value: -4, Duration: day, Group: groupSleepPlace, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	SleptInBed: {Label: "slept in a bed", Value: 2, Duration: day, Group: groupSleepPlace, StackLimit: 0, StackFactor: 0},
@@ -18,13 +18,13 @@ var defs = [numKinds]Def{
 	SleptInNiceRoom: {Label: "slept in a nice room", Value: 5, Duration: day, Group: groupSleepRoom, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	AteMeal: {Label: "ate a cooked meal", Value: 0, Duration: day, Group: groupMealKind, StackLimit: 0, StackFactor: 0},
-	// wiki: Food
+	// wiki: Food (FOOD-*)
 	AteRaw: {Label: "ate raw food", Value: -7, Duration: day, Group: groupMealKind, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	AteAtTable: {Label: "ate at a table", Value: 0, Duration: day, Group: groupMealTable, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	AteWithoutTable: {Label: "ate without a table", Value: -3, Duration: day, Group: groupMealTable, StackLimit: 0, StackFactor: 0},
-	// wiki: Saturation
+	// wiki: Saturation (FOOD-*)
 	Hungry: {Label: "hungry", Value: -6, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	Tired: {Label: "tired", Value: -5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
@@ -36,25 +36,25 @@ var defs = [numKinds]Def{
 	Hot: {Label: "hot", Value: -4, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	Sweltering: {Label: "sweltering", Value: -10, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	RecreationStarved: {Label: "recreation-starved", Value: -20, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	Bored: {Label: "bored", Value: -5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	Entertained: {Label: "entertained", Value: 10, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	Catharsis: {Label: "catharsis", Value: 40, Duration: 3 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
 	// original tuning
 	Sick: {Label: "sick", Value: -8, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	InPain: {Label: "in pain", Value: -6, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	ColonistDied: {Label: "a colonist died", Value: -3, Duration: 6 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
 	// original tuning
 	UnburiedCorpse: {Label: "unburied corpse nearby", Value: -2, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	LaidToRest: {Label: "laid a friend to rest", Value: 3, Duration: day, Group: groupLaidToRest, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	Soaked: {Label: "soaked", Value: -3, Duration: 6000, Group: groupSoaked, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	SnowDay: {Label: "snow day", Value: 2, Duration: day, Group: groupSnowDay, StackLimit: 0, StackFactor: 0},
@@ -64,33 +64,33 @@ var defs = [numKinds]Def{
 	LovesWork: {Label: "doing work I love", Value: 2, Duration: 0, Group: groupLovesWork, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	Difficulty: {Label: "the way of the world", Value: 0, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	Insulted: {Label: "insulted", Value: -5, Duration: 2 * day, Group: groupNone, StackLimit: 10, StackFactor: 900},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	KindWords: {Label: "kind words", Value: 5, Duration: 2 * day, Group: groupNone, StackLimit: 10, StackFactor: 900},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	RebuffedMood: {Label: "rebuffed", Value: -5, Duration: 3 * day, Group: groupNone, StackLimit: 5, StackFactor: 900},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	HadToRebuff: {Label: "had to turn someone down", Value: -3, Duration: 3 * day, Group: groupNone, StackLimit: 5, StackFactor: 900},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	CheatedOn: {Label: "cheated on", Value: -20, Duration: 25 * day, Group: groupNone, StackLimit: 2, StackFactor: 750},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	ProposalRejected: {Label: "proposal turned down", Value: -18, Duration: 25 * day, Group: groupNone, StackLimit: 5, StackFactor: 500},
-	// wiki: Mood
+	// wiki: Mood (SIM-071)
 	GotMarried: {Label: "got married", Value: 40, Duration: 30 * day, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	AttendedWedding: {Label: "attended a wedding", Value: 20, Duration: 10 * day, Group: groupNone, StackLimit: 10, StackFactor: 750},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	AttendedParty: {Label: "attended a party", Value: 8, Duration: 10 * day, Group: groupNone, StackLimit: 10, StackFactor: 750},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	BrokenUpWith: {Label: "was dumped", Value: -15, Duration: 25 * day, Group: groupNone, StackLimit: 2, StackFactor: 750},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	Divorced: {Label: "divorced", Value: -20, Duration: 30 * day, Group: groupNone, StackLimit: 2, StackFactor: 750},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	Lovin: {Label: "intimacy", Value: 8, Duration: 3 * day, Group: groupNone, StackLimit: 10, StackFactor: 600},
 	// original tuning
 	PartnerOpinion: {Label: "feelings for my partner", Value: 0, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	SleptAlone: {Label: "sleeping alone", Value: -4, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	Hungover: {Label: "hungover", Value: -5, Duration: 12 * needHour, Group: groupNone, StackLimit: 0, StackFactor: 0},
@@ -100,21 +100,21 @@ var defs = [numKinds]Def{
 	Withdrawal: {Label: "withdrawal", Value: -15, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	HighOnDrug: {Label: "high", Value: 10, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	BondedMaster: {Label: "my bonded animal", Value: 5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	BondedNotMaster: {Label: "kept from my bonded animal", Value: -3, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	BondedDied: {Label: "bonded animal died", Value: -8, Duration: 20 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	BondedLost: {Label: "bonded animal lost", Value: -8, Duration: 20 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
-	// wiki: Thoughts/Memory Social
+	// wiki: Thoughts/Memory Social (ENG-003)
 	BondedGivenAway: {Label: "gave my bonded animal away", Value: -10, Duration: 60 * day, Group: groupNone, StackLimit: 10, StackFactor: 750},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	BondedReleased: {Label: "released my bonded animal", Value: -5, Duration: 15 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
 	// original tuning
 	Imprisoned: {Label: "imprisoned", Value: -10, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	ColonistLost: {Label: "a colonist went missing", Value: -6, Duration: 6 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
 	// original tuning
 	DisfiguredSelf: {Label: "disfigured", Value: 0, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
@@ -124,11 +124,11 @@ var defs = [numKinds]Def{
 	Surgery: {Label: "had surgery", Value: -3, Duration: day, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	Grief: {Label: "grief", Value: 0, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	OrganHarvested: {Label: "my organ was harvested", Value: -30, Duration: 8 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	KnowOrganHarvested: {Label: "someone's organ was harvested", Value: -5, Duration: 8 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	KnowColonistOrganHarvested: {Label: "a colonist's organ was harvested", Value: -5, Duration: 8 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
 	// original tuning
 	SleptInBedroom: {Label: "slept in my bedroom", Value: 0, Duration: day, Group: groupSleepRoom, StackLimit: 0, StackFactor: 0},
@@ -142,9 +142,9 @@ var defs = [numKinds]Def{
 	EnjoyedRecRoom: {Label: "relaxed in a fine recreation room", Value: 0, Duration: day, Group: groupRecRoom, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	SharedBed: {Label: "had to share a bed", Value: -5, Duration: day, Group: groupSharedBed, StackLimit: 0, StackFactor: 0},
-	// wiki: Apparel
+	// wiki: Apparel (GEAR-*)
 	RattyApparel: {Label: "ratty apparel", Value: -3, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Apparel
+	// wiki: Apparel (GEAR-*)
 	TatteredApparel: {Label: "tattered apparel", Value: -5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	TaintedApparel: {Label: "wearing a dead man's clothes", Value: -5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
@@ -154,84 +154,84 @@ var defs = [numKinds]Def{
 	BeautyMood: {Label: "surroundings", Value: 0, Duration: needHour, Group: groupBeauty, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	OutdoorsMood: {Label: "time indoors", Value: 0, Duration: needHour, Group: groupOutdoors, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	SleptCold: {Label: "slept in the cold", Value: -4, Duration: day, Group: groupSleptTemp, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	SleptHot: {Label: "slept in the heat", Value: -4, Duration: day, Group: groupSleptTemp, StackLimit: 0, StackFactor: 0},
-	// wiki: Meals
+	// wiki: Meals (FOOD-*)
 	AtePaste: {Label: "ate nutrient paste", Value: -4, Duration: day, Group: groupMealKind, StackLimit: 0, StackFactor: 0},
-	// wiki: Meals
+	// wiki: Meals (FOOD-*)
 	AteFineMeal: {Label: "ate a fine meal", Value: 5, Duration: day, Group: groupMealKind, StackLimit: 0, StackFactor: 0},
-	// wiki: Meals
+	// wiki: Meals (FOOD-*)
 	AteLavishMeal: {Label: "ate a lavish meal", Value: 12, Duration: day, Group: groupMealKind, StackLimit: 0, StackFactor: 0},
-	// wiki: Meals
+	// wiki: Meals (FOOD-*)
 	AteKibble: {Label: "ate kibble", Value: -12, Duration: day, Group: groupMealKind, StackLimit: 0, StackFactor: 0},
-	// wiki: Human meat
+	// wiki: Human meat (FOOD-*)
 	AteHumanMeat: {Label: "ate human flesh", Value: -20, Duration: day, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Insect meat
+	// wiki: Insect meat (FOOD-*)
 	AteInsectMeat: {Label: "ate insect meat", Value: -6, Duration: day, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	ButcheredHuman: {Label: "butchered a human body", Value: -6, Duration: 6 * day, Group: groupNone, StackLimit: 10, StackFactor: 750},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	ObservedButchery: {Label: "someone butchered a human", Value: -6, Duration: 6 * day, Group: groupNone, StackLimit: 1, StackFactor: 1000},
-	// wiki: Saturation
+	// wiki: Saturation (FOOD-*)
 	Ravenous: {Label: "ravenously hungry", Value: -12, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// original tuning
 	Malnourished: {Label: "malnourished", Value: -20, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Human meat
+	// wiki: Human meat (FOOD-*)
 	AteHumanMeatCooked: {Label: "ate a meal of human flesh", Value: -15, Duration: day, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Insect meat
+	// wiki: Insect meat (FOOD-*)
 	AteInsectMeatCooked: {Label: "ate a meal with insect meat", Value: -3, Duration: day, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Toxic fallout
+	// wiki: Toxic fallout (TEMP-*)
 	ToxicFallout: {Label: "outdoors in toxic fallout", Value: -5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	Chilly: {Label: "chilly", Value: -4, Duration: 0, Group: groupTempCold, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	Shivering: {Label: "shivering", Value: -8, Duration: 0, Group: groupTempCold, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	NumbingCold: {Label: "numbing cold", Value: -12, Duration: 0, Group: groupTempCold, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	AbsolutelyFreezing: {Label: "freezing to the bone", Value: -16, Duration: 0, Group: groupTempCold, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	Sweaty: {Label: "sweaty", Value: -4, Duration: 0, Group: groupTempHot, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	Overheated: {Label: "overheated", Value: -8, Duration: 0, Group: groupTempHot, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	Baking: {Label: "baking in the heat", Value: -12, Duration: 0, Group: groupTempHot, StackLimit: 0, StackFactor: 0},
-	// wiki: Temperature
+	// wiki: Temperature (TEMP-*)
 	BlisteringHot: {Label: "blistering hot", Value: -16, Duration: 0, Group: groupTempHot, StackLimit: 0, StackFactor: 0},
-	// wiki: Apparel
+	// wiki: Apparel (GEAR-*)
 	Naked: {Label: "naked", Value: -6, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts/Memory Misc
+	// wiki: Thoughts/Memory Misc (SIM-071)
 	TurnedAwayWanderer: {Label: "turned a wanderer away", Value: -3, Duration: 6 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	RescuedByColony: {Label: "rescued", Value: 18, Duration: 30 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	BrawlerRanged: {Label: "carrying a ranged weapon", Value: -10, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Wealth
+	// wiki: Wealth (SIM-071)
 	ExpectationsExtremelyLow: {Label: "extremely low expectations", Value: 30, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Wealth
+	// wiki: Wealth (SIM-071)
 	ExpectationsVeryLow: {Label: "very low expectations", Value: 24, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Wealth
+	// wiki: Wealth (SIM-071)
 	ExpectationsLow: {Label: "low expectations", Value: 18, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Wealth
+	// wiki: Wealth (SIM-071)
 	ExpectationsModerate: {Label: "moderate expectations", Value: 12, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Wealth
+	// wiki: Wealth (SIM-071)
 	ExpectationsHigh: {Label: "high expectations", Value: 6, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Wealth
+	// wiki: Wealth (SIM-071)
 	ExpectationsSkyHigh: {Label: "sky-high expectations", Value: 0, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Joywire
+	// wiki: Joywire (MED-*)
 	BlissCircuit: {Label: "bliss circuit", Value: 30, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Body modder
+	// wiki: Body modder (MED-*)
 	AugmentFan: {Label: "augmentation enthusiast", Value: 0, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Body purist
+	// wiki: Body purist (MED-*)
 	NaturalPurist: {Label: "augmentation skeptic", Value: 0, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Anesthetic
+	// wiki: Anesthetic (MED-*)
 	AnestheticWoozy: {Label: "recovering from anesthesia", Value: 10, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	RecreationDeprived: {Label: "recreation deprived", Value: -10, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	RecreationSatisfied: {Label: "recreation satisfied", Value: 5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
-	// wiki: Thoughts
+	// wiki: Thoughts (SIM-071)
 	FatalOrganHarvest: {Label: "died from organ removal", Value: -6, Duration: 6 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
 }

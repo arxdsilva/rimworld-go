@@ -10,6 +10,7 @@ Contributors must not:
 - extract game data or assets;
 - copy dialogue, descriptions or other text;
 - duplicate exact balancing databases.
+- name the game's internal classes, methods, fields or Def keys, or say a rule matches the game's code. A rule taken from the game cites its public wiki page (`// wiki: <page>`), else it is `// original tuning`. `internal/arch` `TestNoProprietaryImplementationNames` enforces this over code, definitions, locale, scripts and package docs.
 
 Art: never trace, extract, recolor, vectorize or closely reconstruct proprietary RimWorld sprites, textures, icons, UI art, source files or other copyrighted assets, and never use extracted RimWorld assets as image-to-image inputs or ask for a pixel-perfect recreation. Reproduce broad design principles and gameplay readability, not proprietary artwork.
 
@@ -42,6 +43,10 @@ Numbers from the published RimWorld wiki are tuning data where the table allows 
 | Gameplay UI sizes and scaling | UIS-* | `.agents/gaps/UI_SCALE_GAP_ANALYSIS.md` | 2026-11-06 | On-screen sizes, proportions, UI scale steps and zoom range measured in the running game (1.6.4871, Core) | Art, icons, colours, fonts, text and code; screenshots never enter the repo |
 | Quests | QST-* | `.agents/gaps/QUESTS_GAP_ANALYSIS.md` | 2026-11-07 | Wiki numbers (timers, cadence, points, star multipliers, reward caps, goodwill deltas, outcome odds); on-screen sizes and flow measured in the running game (Core only) | Quest names, letter and description text, art and code; the game's assemblies and Def XML are never read; screenshots never enter the repo |
 | Trade, orbital traders and the trade beacon | AX-1 (trade) | `.agents/gaps/ARCHITECT_GAP_ANALYSIS.md`, `.agents/gaps/MULTIMAP_GAP_ANALYSIS.md` | 2026-11-18 | Wiki numbers (orbital trader stay, beacon diameter, what blocks it and its 40 W draw), raised by a contributor and approved by the user | Names and prose |
+| Difficulty presets and storyteller settings | NG-1, NG-2 | Vanilla checklist **Difficulty profile**, **Custom difficulty**, **Storyteller component**; `internal/domain/difficulty/presets.json` | 2026-11-26 | Wiki numbers (wiki: AI Storytellers): the six presets' threat, yield, mood, disease, infection and revenge settings, adaptation | Names and prose |
+| Mood, thoughts and wealth expectations | SIM-071 | Vanilla checklist **Memory thoughts**, **Wealth-driven expectations**; `internal/domain/pawn/mood/definitions.json`, `internal/domain/pawn/expectations` | 2026-11-26 | Wiki numbers (thought offsets and durations, wealth bands and their bonuses, recreation tolerance decay) | Names and prose; the expectation tier labels are listed for review |
+| Animal trainability and combat power | SIM-047 | Vanilla checklist **Trainability**; `internal/domain/animal/trainability.go`, `combat_power.go` | 2026-11-26 | Wiki numbers (trainability class per real species, combat power) | Names and prose; RimWorld-invented creatures stay excluded |
+| Wildlife density | WG-* (wildlife) | `internal/domain/world/biome`, `internal/domain/animal/ecosystem.go` | 2026-11-26 | Wiki numbers (wiki: Biomes, animal density per biome) | Names and prose |
 | Game architecture research (public books, talks, papers, engine docs and source) | GAR-* | `.agents/gaps/GAME_ARCHITECTURE_GAP_ANALYSIS.md` | 2026-11-08 | Ideas and published numbers only, each with its URL: scheduling, parallelism, events, render batching, frame pacing, runtime tuning | Code, text and diagrams from any source; nothing about RimWorld's internals |
 
 Notes:

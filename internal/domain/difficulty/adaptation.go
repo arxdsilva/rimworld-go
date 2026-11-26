@@ -31,7 +31,7 @@ func (a Adapter) AdaptDays() float64 {
 
 // Migrate retains old earned days and fractions, not the retired smoothed
 // multiplier or incomplete daily wound tally. The first 30 days have a
-// nonpositive growth ceiling (wiki: Raid points, Adaption factor).
+// nonpositive growth ceiling (wiki: Raid points, Adaption factor; NG-2).
 func (a *Adapter) Migrate(elapsedDays int) {
 	if a.Precise {
 		return

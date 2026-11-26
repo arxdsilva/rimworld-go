@@ -40,6 +40,16 @@ lines = [
     "// Saved Kind numbers stay in mood.go; this data is from definitions.json.",
     "var defs = [numKinds]Def{",
 ]
+# WIKI_FAMILY maps each cited wiki page to the CLEAN_ROOM.md exception row
+# that admits its numbers; a page with no row fails generation.
+WIKI_FAMILY = {
+    "Anesthetic": "MED-*", "Body modder": "MED-*", "Body purist": "MED-*", "Joywire": "MED-*",
+    "Apparel": "GEAR-*",
+    "Food": "FOOD-*", "Human meat": "FOOD-*", "Insect meat": "FOOD-*", "Meals": "FOOD-*", "Saturation": "FOOD-*",
+    "Temperature": "TEMP-*", "Toxic fallout": "TEMP-*",
+    "Mood": "SIM-071", "Thoughts": "SIM-071", "Thoughts/Memory Misc": "SIM-071", "Wealth": "SIM-071",
+    "Thoughts/Memory Social": "ENG-003",
+}
 ordered = []
 for idx, row in enumerate(rows):
     if row["id"] != idx or row["kind"] != names[idx]:
@@ -47,6 +57,11 @@ for idx, row in enumerate(rows):
     src = row["source"]
     if src != "original tuning" and not src.startswith("wiki: "):
         raise ValueError(f"unknown provenance for {row['kind']}")
+    if src.startswith("wiki: "):
+        family = WIKI_FAMILY.get(src[len("wiki: "):])
+        if family is None:
+            raise ValueError(f"{row['kind']}: wiki page {src!r} has no CLEAN_ROOM.md exception family")
+        src = f"{src} ({family})"
     group = row["group"]
     if not re.fullmatch(r"group[A-Za-z]+", group):
         raise ValueError(f"invalid group for {row['kind']}")

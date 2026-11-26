@@ -153,8 +153,8 @@ func live(h Host, id entity.EntityID) bool {
 }
 
 // Candidate reports the non-caravan off-map pawns owned by this pass.
-// Prisoners are deliberately included: vanilla WorldPawns does not exclude
-// them from its tick or auto-tend pass. Animals, caravan members, and pawns
+// Prisoners are deliberately included (original design): every living
+// off-map pawn the colony owns is ticked and tended. Animals, caravan members, and pawns
 // that have left the planet are separate owners/terminal states.
 func Candidate(h Host, id entity.EntityID) bool {
 	return live(h, id) && h.Owned(id)
@@ -192,7 +192,7 @@ func prepareMothballs(h Host, m *Mothballed, ids []entity.EntityID) {
 	}
 }
 
-// finishMothballs matches the vanilla boundary: existing mothballed pawns
+// finishMothballs keeps the interval boundary: existing mothballed pawns
 // have already received their lightweight interval tick; active safe pawns
 // are moved into the mothballed set afterward.
 func finishMothballs(h Host, m *Mothballed, ids []entity.EntityID) {
@@ -209,10 +209,10 @@ func finishMothballs(h Host, m *Mothballed, ids []entity.EntityID) {
 	}
 }
 
-// ShouldMothball is the core equivalent of WorldPawns.ShouldMothball plus
-// DefPreventingMothball. Non-caravan stashed pawns are low-priority world
-// pawns; chronic conditions are the current body's equivalent of defs
-// explicitly allowing low-priority world-pawn mothballing.
+// ShouldMothball reports that an off-map pawn's body will not change while it
+// is away, so it can move to the slow cadence (original design): nothing
+// bleeds, no wound is still healing, no replacement part is damaged, and only
+// chronic conditions remain.
 func ShouldMothball(h Host, id entity.EntityID) bool {
 	if !Candidate(h, id) || h.Pod(id) {
 		return false

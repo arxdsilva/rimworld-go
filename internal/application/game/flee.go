@@ -20,10 +20,9 @@ import (
 // to flee or ignore (CBT-4, combat/response.go).
 func (g *Game) fightsBack(id entity.EntityID) bool {
 	_, armed := g.equip[id]
-	// Vanilla JobGiver_ConfigurableHostilityResponse.TryGetAttackNearbyEnemyJob:
-	// a colonist whose hostility response is explicitly Attack meets a hostile
-	// in melee even without a weapon (AttackMelee with its hands). The
-	// default response stays Flee for an unarmed colonist.
+	// Original rule: a colonist whose hostility response is explicitly Attack
+	// meets a hostile in melee even without a weapon (AttackMelee with its
+	// hands). The default response stays Flee for an unarmed colonist.
 	if g.combat.Drafts.Response(id) == combat.RespondAttack {
 		armed = true
 	}

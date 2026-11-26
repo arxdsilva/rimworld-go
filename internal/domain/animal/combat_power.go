@@ -10,7 +10,7 @@ import (
 
 // CombatPower gives the public natural species combat power table.
 // Original species are not assigned invented vanilla values.
-// https://rimworldwiki.com/wiki/List_of_animals/Additional
+// https://rimworldwiki.com/wiki/List_of_animals/Additional (wiki numbers, SIM-047)
 func CombatPower(s Species) int {
 	switch s {
 	case Deer:
