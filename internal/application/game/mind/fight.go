@@ -35,7 +35,11 @@ func (m *Mind) StartFight(starter, other entity.EntityID) {
 	until := h.Now() + social.FightMinTicks
 	for _, p := range [2][2]entity.EntityID{{starter, other}, {other, starter}} {
 		h.Seize(p[0])
-		m.forget(p[0]) // a spree that ends in a fight
+		if k, _, ok := h.Break(p[0]); ok && k != mentalbreak.SocialFight {
+			m.hold(p[0]) // a spree that ends in a fight: its retry window opens
+		} else if t, held := m.track[p[0]]; held && t.Target != 0 {
+			m.forget(p[0]) // a stale victim goes; a retry window outlasts the fight
+		}
 		h.SetBreak(p[0], mentalbreak.SocialFight, until)
 		h.Brawl(p[0], p[1])
 	}

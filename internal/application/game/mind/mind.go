@@ -33,12 +33,21 @@ const (
 	// 45 000 ticks) but no eating rate: original tuning, so a whole binge
 	// eats roughly 6 to 16 sittings, never an unbounded stream.
 	BingeGap = clock.TicksPerHour
+	// BreakRetryTicks: once a break ends (natural recovery, an arrest or
+	// the player's End, being downed, a spree that turns into a fight) the
+	// colonist starts no new mood break for this long. Original tuning: a
+	// retry cooldown (hysteresis) under the 3-day catharsis, so a break cut
+	// short (no catharsis) or a brittle colonist whose thresholds sit above
+	// catharsis' +40 does not break again at the next hourly check.
+	BreakRetryTicks = clock.TicksPerDay
 )
 
 // Track is what mind keeps about one break: whom it is aimed at (the
 // fixed target of a targeted insult or a murderous rage, or the current
 // victim of a spree or a berserker) and the tick before which it picks no
-// new victim and lands no new insult.
+// new victim and lands no new insult. With no break in progress, a track
+// is the retry window after one: Next is the first tick a new break may
+// start (BreakRetryTicks), so it is saved with no new save field.
 type Track struct {
 	Target entity.EntityID
 	Next   uint64
@@ -46,8 +55,9 @@ type Track struct {
 	X, Y int
 }
 
-// Save keeps break targets and inspirations. Calm remains an old gob
-// field, accepted from historical saves but no longer imposes immunity.
+// Save keeps break targets, retry windows (in Track) and inspirations.
+// Calm remains an old gob field, accepted from historical saves but no
+// longer imposes immunity.
 type Save struct {
 	Track map[entity.EntityID]Track
 	Calm  map[entity.EntityID]uint64
@@ -115,11 +125,16 @@ func (m *Mind) Tick(id entity.EntityID, j job.Record) bool {
 	now := h.Now()
 	k, until, ok := h.Break(id)
 	if !ok {
-		m.forget(id)
 		if (now+uint64(id)*checkStagger)%clock.TicksPerHour != 0 || !h.Awake(id) {
 			return false
 		}
 		m.Inspire.Check(id) // inspiration.go (PRD-2)
+		if t, held := m.track[id]; held {
+			if now < t.Next {
+				return false // the retry window after a break (BreakRetryTicks)
+			}
+			delete(m.track, id)
+		}
 		return m.maybeBreak(id)
 	}
 	if k == mentalbreak.SocialFight {
@@ -147,6 +162,7 @@ func (m *Mind) Downed(id entity.EntityID) {
 	h := m.h
 	if !h.Alive(id) {
 		m.Inspire.end(id)
+		m.forget(id) // a retry window dies with its colonist
 	}
 	k, until, ok := h.Break(id)
 	if !ok {
@@ -185,10 +201,17 @@ func (m *Mind) forget(id entity.EntityID) {
 	}
 }
 
+// hold replaces id's break track with a fresh retry window.
+func (m *Mind) hold(id entity.EntityID) {
+	m.track[id] = Track{Next: m.h.Now() + BreakRetryTicks}
+}
+
 // end clears the break. Natural recovery and an interrupted Berserk
-// grant catharsis; other interrupted breaks do not.
+// grant catharsis; other interrupted breaks do not. Every end opens the
+// retry window: a track with no target whose Next is the first tick a new
+// break may start (saved with the tracks).
 func (m *Mind) end(id entity.EntityID, k mentalbreak.Kind, natural bool) {
-	m.forget(id)
+	m.hold(id)
 	m.h.ClearBreak(id)
 	if k == mentalbreak.Catatonic {
 		m.h.StandUp(id)

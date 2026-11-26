@@ -5,7 +5,7 @@ Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds
 
 ## Owns
 - `Mind` (mind.go): built by `New(Host)`; `Tick(id, j)` (the AI phase, standing colonists), `Downed(id)` (the AI phase's downed branch and every blow), `End(id)` (an arrest), `Force(id, k)` (dev tools), `Target(id)` (read model), `Thresholds(id)`, `Export`/`Import`, `StartFight`/`EndFight`/`InFight`/`Brawl` (fight.go; `Brawl` runs the brawl job in the game's job phase).
-- Tracks break targets and cooldowns in progress. The saved Calm field is read for old gob compatibility and ignored for new breaks; catharsis is a real timed mood memory.
+- Tracks break targets and cooldowns in progress, and after any break ends a retry window (a target-less `Track` whose `Next` is the first tick a new break may start; saved in `Track`, no new save field). The saved Calm field is read for old gob compatibility and ignored for new breaks; catharsis is a real timed mood memory.
 - `Hostile(k)`: berserk and murderous rage make a colonist a fair attack target (the game's `standingRaider`/`raiderAt`).
 - Tantrum (CBT-4, tantrum.go): a major break (wiki: 8000-12000 ticks, commonality 0.333, the 20 % threshold and 0.8-day MTB of its tier; violent colonists only): it picks a building or item stack at random within `TantrumRadius` (8, original), walks beside it and punches it on its fist's cycle until it breaks (`Smash` role: `Breakable`, `GoBeside`, `Smash`; `Track.X/Y`). Read model: `PawnView.MentalBreak` "tantrum".
 
@@ -18,15 +18,15 @@ Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds
 ## Contracts
 - `deps.go` (CBT-4 adds Smash (3)): `Host` embeds six roles, each ≤ 8 value-only methods: Pawns (8), Breaks (4), Acts (8), Aggression (6), Brawls (8), Events (4). The game implements them in `internal/application/game/mind_host.go`; none adds a method to `game.Game`.
 - The break record (kind, until) stays on the game (`g.breaks`, saved as `Breaks`), since dementia writes it too; mind's own state is the save's `Mind` field.
-- Numbers: thresholds 35/20/5, MTB 4/0.8/0.5 days, durations and weights come from `mentalbreak` (wiki, ENG-003 extended). `RetargetTicks`, `InsultGap`, `InsultRange`, `BerserkRadius` and `BingeGap` (FOOD-6: a food binger sits down at most once an hour, one meal a sitting) are original tuning.
+- Numbers: thresholds 35/20/5, MTB 4/0.8/0.5 days, durations and weights come from `mentalbreak` (wiki, ENG-003 extended). `RetargetTicks`, `InsultGap`, `InsultRange`, `BerserkRadius`, `BingeGap` (FOOD-6: a food binger sits down at most once an hour, one meal a sitting) and `BreakRetryTicks` (one day: no new break after any break ends) are original tuning.
 
 ## Invariants
 - Every roll comes from `Host.Roll` (the game's social stream); no map iteration.
-- Hysteresis: a break lasts its drawn duration; retargeting and insults keep their own cooldowns. Natural recovery grants timed catharsis. Interrupting Berserk (arrest or downing) also grants catharsis; other forced interruptions do not. Sleeping pawns skip break and inspiration checks.
+- Hysteresis: a break lasts its drawn duration; retargeting and insults keep their own cooldowns. Natural recovery grants timed catharsis. Interrupting Berserk (arrest or downing) also grants catharsis; other forced interruptions do not. Every end (natural, End, downed, a spree that turns into a fight) opens a `BreakRetryTicks` retry window with no break check and no roll; a social fight keeps a running window; `Force` ignores it. Sleeping pawns skip break and inspiration checks.
 
 ## Hot paths
 - `Tick` runs per standing colonist per tick: off its hourly check tick a calm colonist costs one map lookup and no roll. `Downed` runs per downed pawn per tick: one map lookup. `Brawl` runs per fighter per tick: value host calls only.
 
 ## Tests
-- Unit tests here run against `fakeHost` (host_test.go); no-flap tests `TestSpreeDoesNotFlap`, `TestBerserkDoesNotFlap`, `TestInterruptedBreakDoesNotForceImmunity, TestSleepingPawnSkipsBreakAndInspirationChecks`, `TestTantrumDoesNotFlap` (tantrum_test.go).
+- Unit tests here run against `fakeHost` (host_test.go); no-flap tests `TestSpreeDoesNotFlap`, `TestBerserkDoesNotFlap`, `TestInterruptedBreakDoesNotForceImmunity`, `TestBreakRetryCooldownDoesNotFlap`, `TestBreakRetryWindowOutlastsAFight` (retry_test.go), `TestSleepingPawnSkipsBreakAndInspirationChecks`, `TestTantrumDoesNotFlap` (tantrum_test.go).
 - Whole-game tests: `internal/application/game/mental_targets_test.go`, `mental_test.go`, `fight_test.go`.

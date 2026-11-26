@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -92,6 +93,9 @@ func TestThresholdsFollowTheTraitShift(t *testing.T) {
 	}
 }
 
+// TestInterruptedBreakDoesNotForceImmunity: a forced end gives no
+// catharsis, only the short retry window (BreakRetryTicks, well under
+// catharsis' days); a low mood pawn is susceptible again right after it.
 func TestInterruptedBreakDoesNotForceImmunity(t *testing.T) {
 	f := newFake(1)
 	m := New(f)
@@ -101,9 +105,16 @@ func TestInterruptedBreakDoesNotForceImmunity(t *testing.T) {
 	if len(f.recovered) != 1 || len(f.catharsisRecover) != 0 {
 		t.Fatal("forced end must not award catharsis")
 	}
+	open := f.now + BreakRetryTicks
 	toCheck(f, 1)
-	if !m.Tick(1, job.Record{}) {
-		t.Fatal("a low mood pawn must remain susceptible to a new break")
+	if m.Tick(1, job.Record{}) {
+		t.Fatal("an interrupted break must still keep the retry window")
+	}
+	for f.now < open {
+		toCheck(f, 1)
+	}
+	if open >= mood.DefOf(mood.Catharsis).Duration || !m.Tick(1, job.Record{}) {
+		t.Fatal("a low mood pawn must remain susceptible to a new break after the retry window")
 	}
 }
 
