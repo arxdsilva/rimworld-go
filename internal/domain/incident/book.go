@@ -132,3 +132,25 @@ func (b Book) Pick(c Category, st State, now uint64, bi biome.ID, o Odds, roll i
 func (b Book) Total(c Category, st State, now uint64, bi biome.ID, o Odds, ok func(ID) bool) int {
 	return totalOdds(b.list(), c, st, now, bi, o, ok)
 }
+
+// LastFired is the category's def that fired last (State.Last) and the
+// tick it fired at, on State.Last's clock; false: none has fired. On a tie the UnderRaid
+// def wins (the ship part or mechs the raid face became), else the higher ID.
+// State.Last holds ticks, not call order: when two threats of a Dice double
+// fire in the same tick it names the one this rule picks, not necessarily
+// the later call.
+func (b Book) LastFired(st State, c Category) (Def, uint64, bool) {
+	var best Def
+	var at uint64
+	found := false
+	for _, d := range b.list() {
+		t, ok := st.Last[d.ID]
+		if d.Category != c || !ok {
+			continue
+		}
+		if !found || t > at || t == at && (d.UnderRaid || !best.UnderRaid) {
+			best, at, found = d, t, true
+		}
+	}
+	return best, at, found
+}

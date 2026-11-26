@@ -49,6 +49,12 @@ func (p *Panel) storyLines() []string {
 	default:
 		out = append(out, fmt.Sprintf("next threat: t%d (in %d ticks)", v.NextThreat, v.NextThreat-now))
 	}
+	if v.LastThreat.Key == "" {
+		out = append(out, "last threat: none")
+	} else {
+		out = append(out, fmt.Sprintf("last threat: %s  t%d  (min %d pts, spends %d%%)",
+			v.LastThreat.Name, v.LastThreatAt, v.LastThreat.MinPoints, v.LastThreat.Spend(100)))
+	}
 	if len(v.Queue) == 0 {
 		return append(out, "queue: empty")
 	}

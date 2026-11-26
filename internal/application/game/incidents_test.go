@@ -313,8 +313,10 @@ func TestMadAnimalGoesManhunter(t *testing.T) {
 	far, _ := g.SpawnAnimal("deer", 99, 99) // beyond madRadius of home
 	pet, _ := g.SpawnAnimal("labrador", 51, 51)
 	setAnimal(g, pet, func(a *animal.State) { a.Tame, a.Name = true, "Rex" })
-	if raid.PickThreat(raid.MadRoll, 6, false) != raid.ThreatMad || raid.PickThreat(raid.MadRoll, 5, true) != raid.ThreatRaid {
-		t.Fatal("the mad animal joins the threat die from day 6")
+	// the legacy die and the def agree on the first day (the whole die:
+	// raid/raid_test.go TestThreatDefsMatchDie)
+	if md := incident.DefOf(incident.MadAnimal).MinDay; raid.PickThreat(raid.MadRoll, md, false) != raid.ThreatMad || raid.PickThreat(raid.MadRoll, md-1, true) != raid.ThreatRaid {
+		t.Fatalf("the mad animal joins the threat die from its def's day %d", md)
 	}
 	now := uint64(g.clock.Now())
 	if !g.madAnimal(now, false) {

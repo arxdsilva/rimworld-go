@@ -53,3 +53,23 @@ func TestStoryPanelLists(t *testing.T) {
 		t.Error("the entry reads hide while the panel is up")
 	}
 }
+
+// TestStoryPanelLastThreat: the panel shows the last fired threat with its
+// point budget, or "none" before any fired.
+func TestStoryPanelLastThreat(t *testing.T) {
+	t.Parallel()
+	def := incident.DefOf(incident.CrashedShipPart)
+	def.MinPoints = 400
+	lines := func(v game.StoryDebugView) string {
+		f := &fakeShell{layout: devLayouts()["idle 1280x720"]}
+		f.env = Env{On: true, Game: storyGame{v}}
+		return strings.Join(New(f).storyLines(), "\n")
+	}
+	got := lines(game.StoryDebugView{LastThreat: def, LastThreatAt: 1200})
+	if want := "last threat: Crashed ship part  t1200  (min 400 pts, spends 100%)"; !strings.Contains(got, want) {
+		t.Errorf("lacks %q:\n%s", want, got)
+	}
+	if got := lines(game.StoryDebugView{}); !strings.Contains(got, "last threat: none") {
+		t.Errorf("zero view lacks none line:\n%s", got)
+	}
+}

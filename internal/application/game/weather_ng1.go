@@ -56,9 +56,10 @@ func climateFits(g *Game, id incident.ID, now uint64) bool {
 }
 
 // natureOdds is the nature pool's odds: the disease frequency (disease.go)
-// scaled by the biome's (WG-05); the wizard's Extreme weather triples the climate events.
+// scaled by the biome's (WG-05), the threat points and season a plugin's budget reads; the wizard's Extreme weather triples the climate events.
 func natureOdds(g *Game) incident.Odds {
-	o := incident.Odds{Disease: g.diseasePct() * biome.DiseaseOdds(g.biome) / 100, Climate: incident.FullFreq}
+	o := incident.Odds{Disease: g.diseasePct() * biome.DiseaseOdds(g.biome) / 100, Climate: incident.FullFreq,
+		Points: g.queuePoints(uint64(g.clock.Now())), Winter: g.season(uint64(g.clock.Now())) == "Winter"}
 	if g.hasSetup() && g.ng.setup.Difficulty.ExtremeWeather {
 		o.Climate = incident.ExtremeClimatePct
 	}

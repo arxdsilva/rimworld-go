@@ -35,9 +35,11 @@ const (
 // 3/8 in winter, once hives can come). SIM-025 takes one more raid face
 // in every season for a mad animal from day 6 (raids 4/8 outside winter,
 // 2/8 in it, from day 12); a mad animal that cannot happen (cooling down,
-// no wild animal near home) is a raid after all.
+// no wild animal near home) is a raid after all. Only the legacy
+// storyteller (Fire) rolls it: a setup colony picks its threats by the
+// incident defs, whose die this is (TestThreatDefsMatchDie).
 const (
-	ThreatRolls  = 8
+	ThreatRolls  = incident.ThreatRolls
 	HiveFirstDay = 12
 	MadRoll      = ThreatRolls - 2
 )
@@ -107,24 +109,25 @@ const (
 	MajorShipPart              // a crashed ship part (shippart.go)
 )
 
-// Big-threat weights. wiki: Events, among the big threats a raid weighs
-// 7.4 and each of the two crashed ship parts (defoliator and droner) 2.0:
-// the one ship part here takes both, 4.0. Every hostile human faction
-// weighs 1 as a raider and the mechanoids 1 from MechRaidMinPoints (0
-// below). The ship part's own 400-point gate is the incident's.
-const (
-	raidWeight     = 74
-	shipPartWeight = 40
-)
-
 // Major splits a raid face for a raid of points with humans hostile human
-// factions (a legacy colony: one): a crashed ship part (raidWeight :
-// shipPartWeight), then mechanoids against the factions, else people.
-func (t *Threats) Major(points, humans int) Major {
-	if t.h.Roll(raidWeight+shipPartWeight) < shipPartWeight {
-		return MajorShipPart
+// factions (a legacy colony: one) by the incident defs def gives (the
+// numbers live there): a crashed ship part (its Weight against the raid's,
+// from its MinPoints of the points spent, checked after the draw), then
+// mechanoids (their Weight against one per faction, from their MinPoints),
+// else people. Weights summing to 0 give people with no draw.
+func (t *Threats) Major(points, humans int, def func(incident.ID) incident.Def) Major {
+	ship, mech := def(incident.CrashedShipPart), def(incident.MechRaid)
+	w := def(incident.Raid).Weight + ship.Weight
+	if w <= 0 {
+		return MajorRaid
 	}
-	if points >= MechRaidMinPoints && t.h.Roll(max(humans, 1)+1) == 0 {
+	if t.h.Roll(w) < ship.Weight {
+		if points >= ship.MinPoints {
+			return MajorShipPart
+		}
+		return MajorRaid
+	}
+	if mech.Weight > 0 && points >= mech.MinPoints && t.h.Roll(max(humans, 1)+mech.Weight) < mech.Weight {
 		return MajorMechs
 	}
 	return MajorRaid
@@ -144,7 +147,7 @@ func (t *Threats) MechRaid(points int, now uint64) int {
 // people raid.
 func (t *Threats) bigRaid(day int, now uint64) {
 	pts := t.s.RaidPoints(day)
-	switch t.Major(pts, 1) {
+	switch t.Major(pts, 1, incident.DefOf) {
 	case MajorShipPart:
 		if t.s.ShipPart() {
 			return

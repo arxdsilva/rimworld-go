@@ -117,10 +117,10 @@ func scriptClock(g *Game, now uint64) {
 	fireScripts(g, scripting.Event{Hook: scripting.OnHour, Tick: now})
 }
 
-// scriptFired runs on_incident for incident id once fireIncident made it
-// happen (*fired).
+// scriptFired runs on_incident for incident id once fireIncident made it happen (*fired); not for a
+// raid face: its people raid is core.rival_raid (raidFrom), its ship part or mechs report their own.
 func scriptFired(g *Game, id incident.ID, fired *bool) {
-	if *fired {
+	if *fired && g.sk.content.Incidents.Like(id) != incident.Raid {
 		scriptIncident(g, id)
 	}
 }

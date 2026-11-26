@@ -295,7 +295,7 @@ func TestBlightStrikesOneRoomAndSpreadsFourTiles(t *testing.T) {
 		g.clock.Advance(1)
 		now = uint64(g.clock.Now())
 	}
-	if !g.fireIncident(incident.CropBlight, now) {
+	if !g.fireIncident(incident.CropBlight, 0, now) {
 		t.Fatal("no blight")
 	}
 	struck := 0

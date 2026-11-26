@@ -17,6 +17,8 @@ const IncidentClass = incident.Class
 const (
 	icMaxWeight = 10000
 	icMaxDays   = 3650
+	icMaxPoints = 100000
+	icMaxPct    = 1000
 	icMaxLabel  = 60 // runes
 )
 
@@ -50,6 +52,9 @@ func EncodeIncidents(b incident.Book) []Def {
 		if d.Like != id {
 			body["like"] = b.Key(d.Like)
 		}
+		rcPut(body, "min_points", d.MinPoints > 0, float64(d.MinPoints))
+		rcPut(body, "points_pct", d.PointsPct > 0, float64(d.PointsPct))
+		rcPut(body, "season", d.Season != incident.AnySeason, icSeasonKey(d.Season))
 		rcPut(body, "helpful", d.Helpful, true)
 		rcPut(body, "disease", d.Disease, true)
 		rcPut(body, "biomes", d.Biomes != 0, icBiomeKeys(d.Biomes))
@@ -57,6 +62,13 @@ func EncodeIncidents(b incident.Book) []Def {
 		out = append(out, Def{Class: IncidentClass, Key: key, Plugin: plugin, Body: body})
 	}
 	return out
+}
+
+func icSeasonKey(s incident.Season) string {
+	if s == incident.WinterOnly {
+		return "winter"
+	}
+	return "not_winter"
 }
 
 func icCategory(c incident.Category) string {
@@ -173,6 +185,12 @@ func (id *icDecoder) field(d *incident.Def, k string, v any, isCore bool) {
 		d.Cooldown = id.num(k, v, 0, icMaxDays)
 	case "min_day":
 		d.MinDay = id.num(k, v, 0, icMaxDays)
+	case "min_points":
+		d.MinPoints = id.num(k, v, 0, icMaxPoints)
+	case "points_pct":
+		d.PointsPct = id.num(k, v, 0, icMaxPct)
+	case "season":
+		d.Season = id.season(v)
 	case "helpful":
 		d.Helpful = id.flag(k, v)
 	case "disease":
@@ -201,7 +219,7 @@ func (id *icDecoder) category(d *incident.Def, v any, isCore bool) {
 	case s == "threat" && isCore:
 		d.Category = incident.Threat
 	case s == "threat":
-		id.fail("category", "a plugin incident is a nature incident (the storyteller draws only those)")
+		id.fail("category", "a plugin incident is a nature incident")
 	default:
 		id.fail("category", "unknown category %q", s)
 	}
@@ -222,6 +240,23 @@ func (id *icDecoder) like(v any) incident.ID {
 		id.fail("like", "core.rival_raid is queued by the story, not drawn: pick another")
 	}
 	return l
+}
+
+func (id *icDecoder) season(v any) incident.Season {
+	s, ok := v.(string)
+	switch {
+	case !ok:
+		id.fail("season", "want a string, got %s", bsJSONType(v))
+	case s == "any":
+		return incident.AnySeason
+	case s == "winter":
+		return incident.WinterOnly
+	case s == "not_winter":
+		return incident.NotWinter
+	default:
+		id.fail("season", "unknown season %q (any, winter or not_winter)", s)
+	}
+	return incident.AnySeason
 }
 
 func (id *icDecoder) flag(field string, v any) bool {

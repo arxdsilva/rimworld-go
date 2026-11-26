@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/rage"
-	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/setupview"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -625,12 +624,17 @@ func TestScheduledAndDisabledIncidents(t *testing.T) {
 			t.Fatal("a disabled herd crossing happened")
 		}
 	}
-	// and a disabled threat is never picked
-	for roll := 0; roll < raid.ThreatRolls; roll++ {
-		for _, winter := range []bool{false, true} {
-			if k, ok := g.allowedThreat(roll, 30, winter); ok && k == raid.ThreatManhunters {
-				t.Fatal("disabled manhunter pack picked")
-			}
+	// and a disabled threat is never picked (the sweep of the threat pick,
+	// story_threat_test.go), the mad animal too (N4)
+	for _, winter := range []bool{false, true} {
+		if faces, n := threatFaces(g, 30, winter); n <= 0 || faces[incident.ManhunterPack] > 0 {
+			t.Fatalf("winter %v: %v of %d: disabled manhunter pack picked", winter, faces, n)
+		}
+	}
+	g.ng.fx.Disabled["mad_animal"] = true
+	for _, winter := range []bool{false, true} {
+		if faces, _ := threatFaces(g, 30, winter); faces[incident.MadAnimal] > 0 {
+			t.Fatalf("winter %v: %v: disabled mad animal picked", winter, faces)
 		}
 	}
 }
@@ -760,7 +764,7 @@ func TestRaidsAttributedToFaction(t *testing.T) {
 	hostileOnly(g.ng.factions, idx)
 	f := &g.ng.factions[idx]
 	before := f.Goodwill
-	g.storyRaid(20, 400)
+	g.storyRaid(20, g.threatPoints()*4) // points, no longer a pct (was 400 %)
 	grp := g.raidGroups[len(g.raidGroups)-1]
 	if grp.Faction != idx+1 || grp.Size == 0 {
 		t.Fatalf("raid group %+v, want faction %d", grp, idx+1)
@@ -802,20 +806,22 @@ func TestNoHostileFactionConvertsRaid(t *testing.T) {
 	t.Parallel()
 	g := buildSetup(t, setupFor(t, "ember_clan", nil))
 	hostileOnly(g.ng.factions, -1)
-	for roll := 0; roll < raid.ThreatRolls; roll++ {
-		for _, winter := range []bool{false, true} {
-			k, ok := g.allowedThreat(roll, 30, winter)
-			if !ok || k == raid.ThreatRaid {
-				t.Fatalf("roll %d winter %v: %v %v", roll, winter, k, ok)
-			}
+	// the raid leaves the draw (the sweep of the threat pick,
+	// story_threat_test.go) and something is still picked on day 30
+	for _, winter := range []bool{false, true} {
+		if faces, n := threatFaces(g, 30, winter); n <= 0 || faces[incident.Raid] > 0 {
+			t.Fatalf("winter %v: %v of %d", winter, faces, n)
 		}
 	}
 	// Wanderer: no raids, hives or packs at all
 	g.ng.setup.Difficulty = difficulty.Of(difficulty.Wanderer)
 	hostileOnly(g.ng.factions, 0)
-	for roll := 0; roll < raid.ThreatRolls; roll++ {
-		if k, ok := g.allowedThreat(roll, 30, true); ok && k != raid.ThreatManhunters && k != raid.ThreatMad {
-			t.Fatalf("wanderer roll %d: %v", roll, k)
+	for _, winter := range []bool{false, true} {
+		faces, _ := threatFaces(g, 30, winter)
+		for id := range faces {
+			if id != incident.ManhunterPack && id != incident.MadAnimal {
+				t.Fatalf("wanderer winter %v: %v", winter, faces)
+			}
 		}
 	}
 }

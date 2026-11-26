@@ -6,7 +6,6 @@ package game
 import (
 	"testing"
 
-	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/armor"
@@ -14,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -190,7 +190,7 @@ func TestShipPartNeedsPoints(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 2, Width: 40, Height: 30})
 	_, _ = g.SpawnNamedPawn(20, 15, "Ada")
-	if g.raidPoints(0) >= raid.ShipPartMinPoints {
+	if g.raidPoints(0) >= incident.DefOf(incident.CrashedShipPart).MinPoints {
 		t.Skipf("a bare colony at %d points", g.raidPoints(0))
 	}
 	if g.FireIncident("crashed_ship_part") || g.raid.Ships.Parts() != 0 {

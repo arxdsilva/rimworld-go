@@ -32,8 +32,8 @@ import (
 // A legacy colony never reaches this file: raids.go keeps today's
 // scheduler for it. Here the chosen storyteller's Plan decides when the
 // next threat comes and how strong (the legacy profile makes exactly the
-// pre-NG-1 draws), raid.PickThreat's die is filtered by the difficulty, the
-// scenario's disabled incidents and whether any hostile faction can raid,
+// pre-NG-1 draws), the incident framework picks the Threat def among those
+// the difficulty, the scenario and the hostile factions allow (SIM-025),
 // and raid points come from difficulty.ThreatPoints with adaptation.
 // Colony time (rel, relDay) counts from the landing day.
 
@@ -80,49 +80,43 @@ func (g *Game) setPlan(d storyteller.Decision) {
 // fireStoryThreat fires the pending threat (two on a Dice double) and
 // plans the next.
 func (g *Game) fireStoryThreat(now uint64) {
-	day := g.relDay(now)
-	winter := g.season(now) == "Winter"
 	pct := g.ng.plan.PointsPct
 	if pct <= 0 {
 		pct = 100
 	}
 	second := g.ng.plan.Second != storyteller.None
-	g.storyThreat(g.rng.IntN(raid.ThreatRolls), day, winter, pct, now)
+	g.storyThreat(pct, now)
 	if second {
-		g.storyThreat(g.rng.IntN(raid.ThreatRolls), day, winter, pct, now)
+		g.storyThreat(pct, now)
 	}
 	g.setPlan(storyteller.Plan(g.storyProfile(), &g.ng.story, g.rel(now), g.rng))
 }
 
-// storyThreat fires the threat a roll of the die gives, if any is allowed.
-func (g *Game) storyThreat(roll, day int, winter bool, pct int, now uint64) {
-	k, ok := g.allowedThreat(roll, day, winter)
-	if !ok {
+// storyThreat picks a face by the book at pct of the threat points (one g.rng draw, none
+// when nothing is allowed) and fires it with its share; one that cannot happen (no hive
+// spot, no mad candidate) is a people raid when a raid is allowed.
+func (g *Game) storyThreat(pct int, now uint64) {
+	book := g.sk.content.Incidents
+	o := incident.Odds{Disease: incident.FullFreq, Climate: incident.FullFreq, Points: g.threatPoints() * pct / 100, Winter: g.season(now) == "Winter"}
+	t := book.Total(incident.Threat, g.incidents, g.rel(now), g.biome, o, g.threatOK)
+	if t <= 0 {
 		return
 	}
-	switch k {
-	case raid.ThreatPack: // packs sized by the threat points (animal.PackSize, EAI-005), as a raid is
-		g.raid.Threats.WolfPack(g.threatPoints() * pct / 100)
-	case raid.ThreatManhunters:
-		rageOf(g).ManhunterPack(g.threatPoints() * pct / 100)
-	case raid.ThreatHive:
-		if !g.raid.Hives.Infest() { // raid/hive.go (EAI-035): no hive spot, a raid instead
-			g.storyRaid(day, pct)
-		}
-	case raid.ThreatMad:
-		if !g.madAnimal(now, false) && g.threatOK(raid.ThreatRaid) { // incidents.go
-			g.storyRaid(day, pct)
-		}
+	id, _ := book.Pick(incident.Threat, g.incidents, g.rel(now), g.biome, o, g.rng.IntN(t), g.threatOK)
+	switch pts := book.DefOf(id).Spend(o.Points); {
+	case g.fireIncident(id, pts, now):
+	case id != incident.Raid && g.threatOK(incident.Raid):
+		g.storyRaid(g.relDay(now), pts)
+		id = incident.Raid
 	default:
-		if !storyMajor(g, g.threatPoints()*pct/100, now) {
-			g.storyRaid(day, pct)
-		}
+		return
 	}
+	g.incidentFired(id, now)
 }
 
-// storyMajor turns a raid face into a crashed ship part or a mechanoid raid
-// of pts by the wiki's big-threat weights (raid/threats.go Major, DEF-4);
-// false: a people raid comes instead.
+// storyMajor turns a raid face into a crashed ship part or a mechanoid raid of pts by
+// the book's big-threat defs (raid/threats.go Major, DEF-4), each recorded as its own
+// incident; false: a people raid comes instead.
 func storyMajor(g *Game, pts int, now uint64) bool {
 	humans := 0 // each hostile human faction weighs 1 as a raider (wiki: Events)
 	for _, f := range g.ng.factions {
@@ -130,51 +124,33 @@ func storyMajor(g *Game, pts int, now uint64) bool {
 			humans++
 		}
 	}
-	switch g.raid.Threats.Major(pts, humans) {
+	book, id := g.sk.content.Incidents, incident.MechRaid
+	switch g.raid.Threats.Major(pts, humans, book.DefOf) {
 	case raid.MajorShipPart:
-		return g.FireIncident("crashed_ship_part")
-	case raid.MajorMechs:
-		return g.raid.Threats.MechRaid(pts, now) > 0
+		id = incident.CrashedShipPart
+	case raid.MajorRaid:
+		return false
+	}
+	if g.incidentFits(id, now) && g.fireIncident(id, book.DefOf(id).Spend(pts), now) {
+		g.incidentFired(id, now)
+		return true
 	}
 	return false
 }
 
-// allowedThreat is pickThreat filtered for the colony: a threat the
-// difficulty or scenario rules out (or a raid with no hostile faction to
-// send it) becomes a pack, manhunters or a hive swarm by the same die,
-// whichever is allowed first; ok is false when nothing is.
-func (g *Game) allowedThreat(roll, day int, winter bool) (raid.Threat, bool) {
-	k := raid.PickThreat(roll, day, winter)
-	if g.threatOK(k) {
-		return k, true
+// threatOK: the scenario, the difficulty and the factions allow threat id.
+func (g *Game) threatOK(id incident.ID) bool {
+	book, s := g.sk.content.Incidents, g.ng.setup.Difficulty
+	ok := !g.incidentDisabled(book.DefOf(id).Key) // setup.go: the scenario's (the mad animal's too)
+	switch book.Like(id) {
+	case incident.Raid:
+		return ok && s.BigThreats && hostileRaider(g)
+	case incident.HiveSwarm:
+		return ok && s.BigThreats
+	case incident.PredatorPack:
+		return ok && s.PredatorsHuntColonists
 	}
-	alts := [...]raid.Threat{raid.ThreatPack, raid.ThreatManhunters, raid.ThreatHive}
-	for i := range alts {
-		a := alts[(roll+i)%len(alts)]
-		if a == raid.ThreatHive && day < raid.HiveFirstDay {
-			continue
-		}
-		if g.threatOK(a) {
-			return a, true
-		}
-	}
-	return 0, false
-}
-
-// threatOK: the difficulty, the scenario and the factions allow threat k.
-func (g *Game) threatOK(k raid.Threat) bool {
-	s := g.ng.setup.Difficulty
-	switch k {
-	case raid.ThreatRaid:
-		return s.BigThreats && !g.incidentDisabled("raid") && hostileRaider(g)
-	case raid.ThreatHive:
-		return s.BigThreats && !g.incidentDisabled("hive_swarm")
-	case raid.ThreatPack:
-		return s.PredatorsHuntColonists && !g.incidentDisabled("predator_pack")
-	case raid.ThreatManhunters:
-		return !g.incidentDisabled("manhunter_pack")
-	}
-	return true
+	return ok
 }
 
 // standingColonists counts the colonists on their feet.
@@ -204,11 +180,10 @@ func (g *Game) maxRaiders() int {
 }
 
 // storyRaid sends a raid from a hostile faction (unattributed when none),
-// sized by threat points times pct and the faction's own multiplier, and
-// armed by its tech level.
-func (g *Game) storyRaid(day, pct int) {
-	fi := faction.PickRaider(g.ng.factions, g.rng)
-	factionRaid(g, fi, g.threatPoints()*pct/100, day)
+// sized by pts threat points times the faction's own multiplier, and armed
+// by its tech level.
+func (g *Game) storyRaid(day, pts int) {
+	factionRaid(g, faction.PickRaider(g.ng.factions, g.rng), pts, day)
 }
 
 // factionRaid sends faction fi's raid (index; -1: unattributed) at pts
@@ -330,7 +305,7 @@ func (g *Game) scheduledIncidents(now uint64) {
 func (g *Game) fireScheduled(key string, now uint64) {
 	switch key {
 	case "raid":
-		g.storyRaid(g.relDay(now), 100)
+		g.storyRaid(g.relDay(now), g.threatPoints())
 	case "predator_pack": // sized by the day's threat points (animal.PackSize, EAI-005)
 		g.raid.Threats.WolfPack(g.raidPoints(g.relDay(now)))
 	case "manhunter_pack":
@@ -453,7 +428,7 @@ func (h shipHost) Raid(mech bool) {
 	case g.hasSetup() && !g.ng.setup.Difficulty.BigThreats: // the difficulty's no big threats holds
 	case mech && g.raid.Threats.MechRaid(g.raidPoints(day), now) > 0:
 	case g.hasSetup():
-		g.storyRaid(g.relDay(now), 100) // the storyteller's raid, at its threat points
+		g.storyRaid(g.relDay(now), g.threatPoints()) // the storyteller's raid, at its threat points
 	default:
 		g.scaledRaid(day)
 	}
@@ -526,18 +501,23 @@ func wealthPart(g *Game, i, ni, nb, na int) int {
 	return 0
 }
 
-// StoryDebugView is the storyteller's state for the developer overlay
-// (EAI-0): the current map's queued events, the tick the next threat is
-// due, today's threat points and the wealth.
+// StoryDebugView is the developer overlay's storyteller state (EAI-0): queued
+// events, the tick the next threat is due, the last fired Threat def (zero:
+// none) and its absolute tick on that clock, today's threat points, wealth.
 type StoryDebugView struct {
-	Queue      []incident.Queued
-	NextThreat uint64
-	Points     int
-	Wealth     int
+	Queue                    []incident.Queued
+	NextThreat, LastThreatAt uint64
+	LastThreat               incident.Def
+	Points                   int
+	Wealth                   int
 }
 
 // StoryDebug is the storyteller's state now (read only).
 func (g *Game) StoryDebug() StoryDebugView {
-	return StoryDebugView{Queue: slices.Clone(g.incidents.Queue), NextThreat: g.nextThreat,
+	v := StoryDebugView{Queue: slices.Clone(g.incidents.Queue), NextThreat: g.nextThreat,
 		Points: g.raidPoints(int(uint64(g.clock.Now()) / clock.TicksPerDay)), Wealth: g.wealth.Value()}
+	if d, at, ok := g.sk.content.Incidents.LastFired(g.incidents, incident.Threat); ok {
+		v.LastThreat, v.LastThreatAt = d, at+g.dayOff() // colony time (incidentFired) on NextThreat's clock, as setPlan
+	}
+	return v
 }

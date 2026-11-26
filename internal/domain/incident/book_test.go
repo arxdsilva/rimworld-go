@@ -48,3 +48,41 @@ func TestBookPicksLikePackage(t *testing.T) {
 		t.Fatal("its own cooldown holds")
 	}
 }
+
+func TestLastFired(t *testing.T) {
+	t.Parallel()
+	b := Core()
+	var st State
+	if _, _, ok := b.LastFired(st, Threat); ok {
+		t.Fatal("nothing fired")
+	}
+	st.Fired(HerdCrossing, 900)
+	if _, _, ok := (Book{}).LastFired(st, Threat); ok {
+		t.Fatal("other category ignored")
+	}
+	st.Fired(MadAnimal, 100)
+	st.Fired(HiveSwarm, 200)
+	if d, at, ok := b.LastFired(st, Threat); !ok || d.ID != HiveSwarm || at != 200 {
+		t.Fatalf("latest by tick: %v %d %v", d.ID, at, ok)
+	}
+	st.Fired(Raid, 300)
+	st.Fired(CrashedShipPart, 300)
+	if d, _, _ := b.LastFired(st, Threat); d.ID != CrashedShipPart {
+		t.Fatalf("under-raid wins a tie: %v", d.ID)
+	}
+	st.Fired(MechRaid, 300)
+	if d, _, _ := b.LastFired(st, Threat); d.ID != MechRaid {
+		t.Fatalf("higher id among under-raid: %v", d.ID)
+	}
+	st.Fired(PredatorPack, 300)
+	if d, _, _ := b.LastFired(st, Threat); d.ID != MechRaid {
+		t.Fatalf("under-raid still wins: %v", d.ID)
+	}
+	list, keys := b.All(), b.Keys()
+	pl := NewBook(append(list, Def{Key: "x", Category: Threat, Weight: 1}), append(keys, "p.x"))
+	id, _ := pl.IDOf("p.x")
+	st.Fired(id, 400)
+	if d, at, ok := pl.LastFired(st, Threat); !ok || d.ID != id || at != 400 {
+		t.Fatalf("plugin book: %v %d", d.ID, at)
+	}
+}

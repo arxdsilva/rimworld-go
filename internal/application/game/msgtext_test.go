@@ -69,10 +69,13 @@ func TestPostsCarryTheirFormat(t *testing.T) {
 	c := &msgCheck{keyed: map[string]bool{}, plain: map[string]bool{}}
 	g.Step(500)
 	c.checkPosts(t, g)
-	fired := 0
+	fired, faces := 0, 0
 	for _, d := range incident.All() {
 		if g.FireIncident(d.Key) {
 			fired++
+			if d.ID == incident.PredatorPack || d.ID == incident.ManhunterPack || d.ID == incident.Raid {
+				faces++ // the threat faces post through the same checks (a legacy colony fits them all)
+			}
 		}
 		c.checkPosts(t, g)
 		g.Step(20)
@@ -91,8 +94,8 @@ func TestPostsCarryTheirFormat(t *testing.T) {
 	g.worldNote("A note at %d%%.", 7)
 	g.notice(1, 1, 0, "%d deer and %s.", 3, "a hare")
 	c.checkPosts(t, g)
-	if fired < 5 || c.letters == 0 || len(c.keyed) < 8 {
-		t.Fatalf("too little posted to check: %d incidents fired, %d letters, %d keyed formats", fired, c.letters, len(c.keyed))
+	if fired < 5 || faces != 3 || c.letters == 0 || len(c.keyed) < 8 {
+		t.Fatalf("too little posted to check: %d incidents fired (%d of 3 threat faces), %d letters, %d keyed formats", fired, faces, c.letters, len(c.keyed))
 	}
 	t.Logf("%d incidents fired; %d keyed formats, %d finished texts", fired, len(c.keyed), len(c.plain))
 }

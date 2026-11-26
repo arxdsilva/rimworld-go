@@ -10,7 +10,6 @@ import (
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/letters"
-	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/incident"
@@ -138,7 +137,7 @@ func (g *Game) threatActive(now uint64) bool {
 
 // rollNature picks and fires one nature event.
 func (g *Game) rollNature(now uint64) {
-	if id, picked := g.pickNature(now); picked && g.fireIncident(id, now) {
+	if id, picked := g.pickNature(now); picked && g.fireIncident(id, 0, now) {
 		g.incidentFired(id, now)
 	}
 }
@@ -241,8 +240,10 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.caravanFits(now) // trade_caravan.go (PLAY-024)
 	case incident.OrbitalTrader:
 		return g.orbitalFits(now) // trade_orbital.go (PLAY-024)
-	case incident.CrashedShipPart: // raid/shippart.go (DEF-4): one at a time, from 400 raid points
-		return g.raid.Ships.Parts() == 0 && g.raidPoints(int(now/clock.TicksPerDay)) >= raid.ShipPartMinPoints
+	case incident.CrashedShipPart: // raid/shippart.go (DEF-4): one at a time, from its MinPoints raid points
+		return g.raid.Ships.Parts() == 0 && g.raidPoints(int(now/clock.TicksPerDay)) >= g.sk.content.Incidents.DefOf(id).MinPoints
+	case incident.PredatorPack, incident.ManhunterPack, incident.HiveSwarm, incident.Raid, incident.MechRaid:
+		return !g.hasSetup() || g.threatOK(id) // story.go: the difficulty's and scenario's flags
 	case incident.RefugeeChased:
 		return g.refugeeFits() // incident_queue.go (EAI-031)
 	case incident.CropBlight: // farm (FOOD-2): a healthy zone crop to strike
@@ -256,12 +257,30 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 	return false
 }
 
-// fireIncident makes event id happen; false when it could not (no tile,
-// no animal).
-func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
-	defer scriptFired(g, id, &fired)     // scripts.go (PLG-060): on_incident with the key that fired
-	id = g.sk.content.Incidents.Like(id) // a plugin incident runs its like's behaviour (PLG-026)
+// fireIncident makes event id happen, a threat spending pts threat points (0: its
+// share, Def.Spend, of a queued raid's); false when it could not (no tile, no animal).
+func (g *Game) fireIncident(id incident.ID, pts int, now uint64) (fired bool) {
+	defer scriptFired(g, id, &fired)                                              // scripts.go (PLG-060): on_incident with the key that fired
+	def, id := g.sk.content.Incidents.DefOf(id), g.sk.content.Incidents.Like(id)  // a plugin incident runs its like's behaviour (PLG-026)
+	if pts <= 0 && g.sk.content.Incidents.DefOf(id).Category == incident.Threat { // a nature event spends none
+		pts = def.Spend(g.queuePoints(now))
+	}
 	switch id {
+	case incident.PredatorPack: // packs sized by the points (animal.PackSize, EAI-005), as a raid is
+		g.raid.Threats.WolfPack(pts)
+		return true
+	case incident.ManhunterPack:
+		rageOf(g).ManhunterPack(pts)
+		return true
+	case incident.HiveSwarm:
+		return g.raid.Hives.Infest() // raid/hive.go (EAI-035): false with no hive spot
+	case incident.Raid: // story.go: a ship part or mechs by the big-threat split, else people
+		if !storyMajor(g, pts, now) {
+			g.storyRaid(g.relDay(now), pts)
+		}
+		return true
+	case incident.MechRaid:
+		return g.raid.Threats.MechRaid(pts, now) > 0
 	case incident.Party:
 		return g.throwParty(now) // gathering.go (M5)
 	case incident.VisitorGroup:
@@ -291,7 +310,7 @@ func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
 	case incident.OrbitalTrader:
 		return g.orbitalArrive(now) // trade_orbital.go (PLAY-024)
 	case incident.CrashedShipPart:
-		return g.raid.Ships.Crash(g.raidPoints(int(now/clock.TicksPerDay)), now) // raid/shippart.go (DEF-4)
+		return g.raid.Ships.Crash(pts, now) // raid/shippart.go (DEF-4): sized by the points the threat spends
 	case incident.RefugeeChased:
 		return g.refugeeChased(now) // incident_queue.go (EAI-031)
 	case incident.CropBlight: // farm (FOOD-2, wiki: Blight)
@@ -314,7 +333,7 @@ func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
 func (g *Game) FireIncident(key string) bool {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	now := uint64(g.clock.Now())
-	if d, ok := g.sk.content.Incidents.ByName(key); ok && g.incidentFits(d.ID, now) && g.fireIncident(d.ID, now) {
+	if d, ok := g.sk.content.Incidents.ByName(key); ok && g.incidentFits(d.ID, now) && g.fireIncident(d.ID, 0, now) {
 		g.incidentFired(d.ID, now)
 		return true
 	}

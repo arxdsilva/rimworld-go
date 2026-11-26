@@ -16,6 +16,20 @@ const (
 	Threat
 )
 
+// Season limits the time of year a def can fire in (Def.Season). The zero
+// value allows any season.
+type Season uint8
+
+const (
+	AnySeason  Season = iota // any time of year
+	WinterOnly               // only while it is winter
+	NotWinter                // never while it is winter
+)
+
+// ThreatRolls is the threat pick's total while the filler is eligible
+// (Def.Fill): today's die (SIM-019). It lives here only.
+const ThreatRolls = 8
+
 // ID is an event. Saved: append only.
 type ID uint8
 
@@ -76,6 +90,15 @@ const (
 	// RivalRaid (EAI-030, in no pool): a raid the story queued for a later
 	// tick (State.Queue): a rival faction's, or the refugee's pursuers'.
 	RivalRaid
+	// The threat faces (Threat pool): a predator pack in winter, a
+	// manhunter pack outside it, a hive swarm, a people raid (the filler,
+	// Def.Fill) and a mechanoid raid drawn within the raid's split
+	// (Def.UnderRaid).
+	PredatorPack
+	ManhunterPack
+	HiveSwarm
+	Raid
+	MechRaid
 	NumIDs
 )
 
@@ -100,6 +123,19 @@ type Def struct {
 	// event, the core event a plugin's names (PLG-026). Code that switches on
 	// an event reads Like; odds, cooldowns and messages keep ID.
 	Like ID
+	// MinPoints: not eligible below this many threat points (Odds.Points).
+	MinPoints int
+	// PointsPct is the share of the points it spends, percent (0: 100; Spend).
+	PointsPct int
+	// Season is the time of year it can fire in (zero: any).
+	Season Season
+	// Fill, when > 0, makes this def the category's filler: its pick weight
+	// is Fill minus the other structurally eligible weights of the
+	// category, never below 0.
+	Fill int
+	// UnderRaid: drawn only inside the raid face's split (raid.Threats.Major),
+	// never by Pick or Total.
+	UnderRaid bool
 }
 
 // Odds scales two families' weights, percent (FullFreq keeps the
@@ -109,6 +145,10 @@ type Def struct {
 type Odds struct {
 	Disease, Climate int
 	Helpful          bool
+	// Points are the threat points this pick carries (Def.MinPoints);
+	// Winter: it is winter now (Def.Season). Zero: 0 points, not winter.
+	Points int
+	Winter bool
 }
 
 var (
@@ -146,10 +186,12 @@ var defs = [NumIDs]Def{
 	// PLAY-024: original tuning (.agents/handoffs/PLAY.md#play024_plan).
 	TraderCaravan: {Key: "trader_caravan", Name: "Trader caravan", Category: Nature, Helpful: true, Weight: 14, Cooldown: 9, MinDay: 4},
 	OrbitalTrader: {Key: "orbital_trader", Name: "Orbital trader", Category: Nature, Helpful: true, Weight: 12, Cooldown: 7, MinDay: 6},
-	// DEF-4, wiki: Events (base weight 2.00 against a raid's 7.40; it
-	// needs 400 raid points, the game's own check). Cooldown and first day
-	// are original tuning (the wiki gives none).
-	CrashedShipPart: {Key: "crashed_ship_part", Name: "Crashed ship part", Category: Threat, Weight: 2, Cooldown: 15, MinDay: 10},
+	// DEF-4, wiki: Events (2.0 on top of the ship part's own 2.0 chance
+	// against the raid's 7.4, so 40 on the raid's 74 scale; it needs
+	// 400 raid points). It is drawn only inside the raid face's split
+	// (UnderRaid). Cooldown and first day are original tuning (the wiki gives
+	// none).
+	CrashedShipPart: {Key: "crashed_ship_part", Name: "Crashed ship part", Category: Threat, Weight: 40, Cooldown: 15, MinDay: 10, MinPoints: 400, UnderRaid: true},
 	// FOOD-2, wiki: Events (chance 2.5 against the solar flare's 1.5, so 10
 	// against our flare's 6; it does not recur for 30 days). The first day
 	// is original tuning.
@@ -171,12 +213,44 @@ var defs = [NumIDs]Def{
 	// EAI-031: original tuning, a few a year, once the colony has a footing.
 	RefugeeChased: {Key: "refugee_chased", Name: "Refugee chased", Category: Nature, Weight: 3, Cooldown: 30, MinDay: 12},
 	RivalRaid:     {Key: "rival_raid", Name: "Rival raid", Category: Threat},
+	// The threat faces reproduce the storyteller's die of ThreatRolls (8):
+	// the raid is the filler and takes what the others leave. Weights and
+	// first days are original tuning (SIM-019, SIM-025); no cooldown, so a
+	// Dice double's second pick is unaffected.
+	PredatorPack:  {Key: "predator_pack", Name: "Predator pack", Category: Threat, Weight: 4, Season: WinterOnly},
+	ManhunterPack: {Key: "manhunter_pack", Name: "Manhunter pack", Category: Threat, Weight: 2, Season: NotWinter, MinDay: 8},
+	HiveSwarm:     {Key: "hive_swarm", Name: "Hive swarm", Category: Threat, Weight: 1, MinDay: 12},
+	// wiki: Events (a people raid weighs 7.4: its weight inside the raid
+	// face's split, where it meets the ship part's 40).
+	Raid: {Key: "raid", Name: "Raid", Category: Threat, Weight: 74, Fill: ThreatRolls},
+	// wiki: Events (mechanoids raid from 300 points), drawn within the raid
+	// face's split.
+	MechRaid: {Key: "mech_raid", Name: "Mechanoid raid", Category: Threat, Weight: 1, MinPoints: 300, UnderRaid: true},
 }
 
 func init() {
 	for i := range defs {
 		defs[i].ID, defs[i].Like = ID(i), ID(i)
 	}
+}
+
+// Spend is the share of points this def spends (PointsPct; 0 is 100).
+func (d Def) Spend(points int) int {
+	if d.PointsPct <= 0 {
+		return points
+	}
+	return points * d.PointsPct / 100
+}
+
+// Allows reports whether a def of this season can fire now.
+func (s Season) Allows(winter bool) bool {
+	switch s {
+	case WinterOnly:
+		return winter
+	case NotWinter:
+		return !winter
+	}
+	return true
 }
 
 // DefOf is event id's definition.
@@ -279,7 +353,9 @@ func (d Def) WeightOdds(o Odds) int {
 }
 
 // Pick chooses among the core events of category c allowed now (and passing
-// ok, the caller's situational check), weighted; roll is a random number
+// ok, the caller's situational check; Odds carries the points and season the
+// point minimum and Season gate read, and a Fill def, the filler, weighs what
+// the other eligible defs leave of its Fill), weighted; roll is a random number
 // in [0, total weight) supplied by the caller, who asks Total first. It
 // is pure and deterministic. Diseases keep their catalogue weights
 // (PickAt sets the frequency). Book has the same over a run's book.
@@ -300,8 +376,9 @@ func PickOdds(c Category, st State, now uint64, b biome.ID, o Odds, roll int, ok
 }
 
 func pickOdds(list []Def, c Category, st State, now uint64, b biome.ID, o Odds, roll int, ok func(ID) bool) (ID, bool) {
-	for _, d := range eligible(list, c, st, now, b, o, ok) {
-		w := d.WeightOdds(o)
+	rem := fillerLeft(list, c, st, now, b, o)
+	for _, d := range list {
+		w := drawWeight(d, c, st, now, b, o, rem, ok)
 		if roll < w {
 			return d.ID, true
 		}
@@ -327,23 +404,62 @@ func TotalOdds(c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID)
 }
 
 func totalOdds(list []Def, c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) int {
+	rem := fillerLeft(list, c, st, now, b, o)
 	t := 0
-	for _, d := range eligible(list, c, st, now, b, o, ok) {
-		t += d.WeightOdds(o)
+	for _, d := range list {
+		t += drawWeight(d, c, st, now, b, o, rem, ok)
 	}
 	return t
 }
 
-// eligible is the events of list in category c allowed now with a weight at
-// odds o, passing ok (asked only for those).
-func eligible(list []Def, c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) []Def {
-	var out []Def
+// structural reports whether d is eligible by its own data: category, the
+// Helpful filter, not under the raid, the day, biome and cooldown, the point
+// minimum and the season. The caller's flag (ok) is not part of it.
+func structural(d Def, c Category, st State, now uint64, b biome.ID, o Odds) bool {
+	return d.Category == c && (!o.Helpful || d.Helpful) && !d.UnderRaid &&
+		d.MinPoints <= o.Points && d.Season.Allows(o.Winter) && d.Allowed(st, now, b)
+}
+
+// fillerLeft is what the category's filler weighs: its Fill minus the
+// weights of the other structurally eligible defs (a face that fails the
+// caller's flag still counts, so its weight leaves the draw), never below 0.
+// Several Fill defs each get the same remainder (core has one: the raid).
+// With no Fill def it is 0 and unused.
+func fillerLeft(list []Def, c Category, st State, now uint64, b biome.ID, o Odds) int {
+	fill, sum := 0, 0
 	for _, d := range list {
-		if d.Category == c && (!o.Helpful || d.Helpful) && d.WeightOdds(o) > 0 && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
-			out = append(out, d)
+		if d.Category != c {
+			continue
+		}
+		if d.Fill > 0 {
+			fill = max(fill, d.Fill)
 		}
 	}
-	return out
+	if fill == 0 {
+		return 0
+	}
+	for _, d := range list {
+		if d.Fill == 0 && structural(d, c, st, now, b, o) {
+			sum += d.WeightOdds(o)
+		}
+	}
+	return max(fill-sum, 0)
+}
+
+// drawWeight is d's share of the draw: 0 unless it is structurally eligible
+// and passes ok (asked only for those with a weight). A filler weighs rem.
+func drawWeight(d Def, c Category, st State, now uint64, b biome.ID, o Odds, rem int, ok func(ID) bool) int {
+	if !structural(d, c, st, now, b, o) {
+		return 0
+	}
+	w := d.WeightOdds(o)
+	if d.Fill > 0 {
+		w = rem
+	}
+	if w <= 0 || ok != nil && !ok(d.ID) {
+		return 0
+	}
+	return w
 }
 
 // Fired records that id happened at tick now.

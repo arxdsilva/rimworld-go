@@ -70,7 +70,7 @@ func (g *Game) fireQueued(q incident.Queued, now uint64) {
 		g.queuedRaid(q.Points, now)
 		return
 	}
-	if g.fireIncident(q.ID, now) {
+	if g.fireIncident(q.ID, q.Points, now) { // a queued threat spends the points it was queued with
 		g.incidentFired(q.ID, now)
 	}
 }
