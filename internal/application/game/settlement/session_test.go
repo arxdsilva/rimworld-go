@@ -217,6 +217,39 @@ func TestSettlementRestockLazy(t *testing.T) {
 // TestSettlementLiveness: once the visit ends, the caravan heads home (and
 // leaves the tile) or the faction turns hostile, View is not ok and
 // Propose changes nothing.
+// TestSettlementRevisitIsANewSession: the caravan leaves and later visits
+// the same tile again (a later Until). The old session stays dead and Open
+// starts a new one with the negotiator picked again.
+func TestSettlementRevisitIsANewSession(t *testing.T) {
+	t.Parallel()
+	s, h, c := opened(t)
+	if s.sess.negotiator != 5 {
+		t.Fatalf("negotiator %d, want 5", s.sess.negotiator)
+	}
+	v := h.caravans[testCid]
+	v.Visiting = false
+	h.caravans[testCid] = v
+	if s.Live(h) {
+		t.Fatal("live after the visit ended")
+	}
+	h.now += 4 * clock.TicksPerDay
+	v.Visiting, v.Until = true, h.now+2*clock.TicksPerDay
+	h.caravans[testCid] = v
+	h.pawns[3] = pawnRec{"Ada", 15} // the best negotiator now
+	if s.Live(h) {
+		t.Fatal("the old session revived on the new visit")
+	}
+	if _, ok := s.View(h, c); ok {
+		t.Fatal("the old session's view is back")
+	}
+	if why := s.Open(h, c, testCid, ""); why != "" {
+		t.Fatalf("Open on the new visit: %q", why)
+	}
+	if !s.Live(h) || s.sess.negotiator != 3 {
+		t.Fatalf("live %v, negotiator %d (want 3)", s.Live(h), s.sess.negotiator)
+	}
+}
+
 func TestSettlementLiveness(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

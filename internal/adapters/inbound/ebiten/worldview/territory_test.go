@@ -85,7 +85,9 @@ func pair(t *testing.T, v *View) (owned, free int) {
 		}
 	}
 	if owned < 0 || free < 0 {
-		t.Skipf("owned %d free %d", owned, free)
+		// The fixture planet is deterministic and populated: no owned or no
+		// free tile means territory generation broke, not an environment gap.
+		t.Fatalf("territory fixture missing: owned %d free %d", owned, free)
 	}
 	return owned, free
 }

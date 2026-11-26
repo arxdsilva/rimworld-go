@@ -55,7 +55,7 @@ func (s *State) Open(h Host, c Cargo, cid uint64, busy string) string {
 	} else {
 		s.markets = slices.Insert(s.markets, i, trade.NewMarket(b, f.Type, seed, v.Tile, fi, now))
 	}
-	s.sess = &session{cid: cid, negotiator: negotiator(h, v.Members), tile: v.Tile}
+	s.sess = &session{cid: cid, negotiator: negotiator(h, v.Members), tile: v.Tile, until: v.Until}
 	return ""
 }
 
@@ -73,14 +73,17 @@ func negotiator(h Host, members []uint64) uint64 {
 }
 
 // Live reports whether a settlement session is open and still valid: the
-// caravan can trade where it stands (Reason with no busy) and it still
-// stands on the session's tile.
+// caravan can trade where it stands (Reason with no busy), it still stands
+// on the session's tile and it is still on the visit the session opened in
+// (same Until). Each visit sets a later Until, so a session never revives
+// when its caravan leaves and comes back: the new visit goes through Open,
+// which picks the negotiator again and restocks when due.
 func (s *State) Live(h Host) bool {
 	if s == nil || s.sess == nil {
 		return false
 	}
 	v, ok := h.Caravan(s.sess.cid)
-	return ok && v.Tile == s.sess.tile && s.Reason(h, s.sess.cid, "") == ""
+	return ok && v.Tile == s.sess.tile && v.Until == s.sess.until && s.Reason(h, s.sess.cid, "") == ""
 }
 
 // deal is a live session's parts: its market, the settlement's faction

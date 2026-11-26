@@ -28,6 +28,7 @@ type State struct {
 type session struct {
 	cid, negotiator uint64
 	tile            int
+	until           uint64 // the visit's Until: a later visit is a new session
 	reason          string
 }
 
@@ -121,7 +122,9 @@ func Import(s *Save) *State {
 	for i := range ms {
 		ms[i].Stock = cleanStock(ms[i].Stock)
 	}
-	return &State{markets: slices.Clip(ms)}
+	// Clone, not Clip: a copy lets the truncated markets (and their stock)
+	// past maxMarkets be collected instead of staying in ms's backing array.
+	return &State{markets: slices.Clone(ms)}
 }
 
 // cleanStock is st bounded for Import: a fresh, sorted copy.

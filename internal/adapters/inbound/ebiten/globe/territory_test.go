@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
 )
 
@@ -97,5 +98,34 @@ func TestGlobeTerritoryOff(t *testing.T) {
 	g.SetTerritory(nil, 0, nil)
 	if !slices.Equal(g.Base, before) {
 		t.Fatal("tint not removed")
+	}
+}
+
+// TestGlobeTerritoryTintsSeaIce: sea ice is land to the territory model
+// (planet.Land), so an owned sea-ice tile is tinted like any owned land. The
+// planet is built cold and private (the shared test planet has no sea ice).
+func TestGlobeTerritoryTintsSeaIce(t *testing.T) {
+	t.Parallel()
+	p := planet.Build(planet.Params{SeedText: "amber-hollow", Coverage: 30, Rain: 2, Temp: 1, Pop: 1,
+		Factions: faction.DefaultSlots(), Version: planet.CurrentVersion})
+	ice := -1
+	for i := 0; i < p.TileCount() && ice < 0; i++ {
+		if p.Water[i] == planet.Land && p.Biome[i] == biome.SeaIce {
+			ice = i
+		}
+	}
+	if ice < 0 {
+		t.Fatal("cold fixture has no sea-ice land tile")
+	}
+	g := New(p, nil)
+	before := slices.Clone(g.Base)
+	owner := make([]int16, p.TileCount())
+	for i := range owner {
+		owner[i] = -1
+	}
+	owner[ice] = 1
+	g.SetTerritory(owner, 1, terrTypes)
+	if g.Base[ice] == before[ice] {
+		t.Fatalf("owned sea-ice tile %d not tinted", ice)
 	}
 }

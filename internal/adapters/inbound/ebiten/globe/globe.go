@@ -482,7 +482,8 @@ func (g *View) recolour() {
 	g.Base = g.Base[:n]
 	for i := 0; i < n; i++ {
 		c := g.tileColour(i)
-		if g.geom.terr.owner != nil && isLand(g.P, i) {
+		// g.P.Land, not isLand: the territory model counts sea ice as land.
+		if g.geom.terr.owner != nil && g.P.Land(i) {
 			c = tintOf(&g.geom.terr, i, c)
 		}
 		g.Base[i] = c
