@@ -217,10 +217,7 @@ func (g *Game) masterDuty(id entity.EntityID, a *animal.State, now uint64) bool 
 // masterAttack is drafted master m's attack target (0: none, or one no
 // longer worth fighting).
 func (g *Game) masterAttack(m entity.EntityID) entity.EntityID {
-	if !g.drafted(m) {
-		return 0
-	}
-	if j, ok := g.jobs.Get(m); ok && j.Kind == job.Attack && j.Active() && rageOf(g).CombatAlive(j.Target) {
+	if j, ok := g.jobs.Get(m); ok && g.drafted(m) && j.Kind == job.Attack && j.Active() && rageOf(g).CombatAlive(j.Target) {
 		return j.Target
 	}
 	return 0
@@ -285,8 +282,7 @@ func decayAnimalTraining(g *Game, id entity.EntityID, a *animal.State, now uint6
 		return
 	}
 	g.onAnimalLost(id)
-	a.Trained = [training.LegacySkills]uint8{}
-	a.TrainDecay = 0
+	a.Trained, a.TrainDecay = [training.LegacySkills]uint8{}, 0
 	herd.CancelHaul(animalHaulHost{haulHost{g}}, g.reserve, id, a, &m)
 	saveTraining(g, id, training.Maintenance{})
 	a.Master, a.Bond = 0, 0
@@ -306,10 +302,21 @@ func (g *Game) resetAnimalTameness(id entity.EntityID, a *animal.State, now uint
 	a.TrainDecay = now
 	m := trainingAt(g, id)
 	m.TameLoss, m.DecayAt = 0, 0
-	if herd.NeedsMaintenance(*a, m) {
-		m.DecayAt = now + training.DecayInterval(animal.Wildness(a.Species))
+	saveTraining(g, id, herd.StartDecay(*a, m, now))
+}
+
+// seedLegacyTrainingDecay: a pre-v21 save's tame animals, on a map or off it, start decay at load.
+func seedLegacyTrainingDecay(g *Game) {
+	seed := func(id entity.EntityID, a *animal.State) bool {
+		saveTraining(g, id, herd.StartDecay(*a, trainingAt(g, id), uint64(g.clock.Now())))
+		return false // every tame animal
 	}
-	saveTraining(g, id, m)
+	eachMap(g, func() { g.animals.AnyTame(seed) })
+	for _, r := range g.worldS().stashed {
+		if r.Beast != nil && r.Beast.Tame {
+			seed(r.ID, r.Beast)
+		}
+	}
 }
 
 func trainingAt(g *Game, id entity.EntityID) training.Maintenance {

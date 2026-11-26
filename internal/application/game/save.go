@@ -942,6 +942,9 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 		g.warmIndexes(true)
 		haul.MigrateLimits(limitMigrationHost{haulHost{g}}, g.reserve)
 	}) // jobindex.go: indexes, rooms and regions now, not on the first tick
+	if info.Version < 21 {
+		seedLegacyTrainingDecay(g) // train_animals.go: decay starts at load, not backdated
+	}
 	if v := mapByID(g, s.View); v != nil {
 		g.view = v
 	}

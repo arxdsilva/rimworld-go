@@ -40,8 +40,8 @@ func AdvanceTraining(a *animal.State, m *training.Maintenance, now uint64) bool 
 	}
 	for now >= m.DecayAt {
 		if skill, trained := OutermostSkill(*a, *m); trained {
-			progress := *TrainingSlot(a, m, skill)
-			*TrainingSlot(a, m, skill) = progress&TrainToggled | (progress &^ TrainToggled) - 1
+			progress := *TrainingSlot(a, m, skill) // steps >= 1 here: keep the toggle bit, drop one step
+			*TrainingSlot(a, m, skill) = (progress & TrainToggled) | ((progress &^ TrainToggled) - 1)
 		} else if wildness > 101 {
 			m.TameLoss++
 			if m.TameLoss >= 5 {
@@ -54,6 +54,17 @@ func AdvanceTraining(a *animal.State, m *training.Maintenance, now uint64) bool 
 		m.DecayAt += interval
 	}
 	return false
+}
+
+// StartDecay starts m's missing decay timer one interval after now when a
+// can decay. A save from before training decay starts it at load: the
+// TrainDecay base in AdvanceTraining would settle every interval since the
+// last session, then tameness, on the first decide slot after load.
+func StartDecay(a animal.State, m training.Maintenance, now uint64) training.Maintenance {
+	if m.DecayAt == 0 && NeedsMaintenance(a, m) {
+		m.DecayAt = now + training.DecayInterval(animal.Wildness(a.Species))
+	}
+	return m
 }
 
 // NeedsMaintenance is true only for a non-penned animal that can lose a
