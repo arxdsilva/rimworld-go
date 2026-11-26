@@ -392,6 +392,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SIM-064-feeding-patients | Feeding patients, downed hunger | 2026-10-29 | [SIM.md](SIM.md#sim-064-feeding-patients) |
 | SIM-065-visit-sick-strip | Visiting the sick, strip | 2026-10-29 | [SIM.md](SIM.md#sim-065-visit-sick-strip) |
 | SIM-066-mental-breaks | Mental breaks that target others; W3 integration (SIM-063…066) | 2026-10-29 | [SIM.md](SIM.md#sim-066-mental-breaks) |
+| SIM-067-incident-point-budget | Incident point budget, season and threat picks on setup colonies | 2026-11-25 | [SIM.md](SIM.md#sim-067-incident-point-budget) |
 | SND-001-audio-runtime | Audio runtime | 2026-10-21 | [SND.md](SND.md#snd-001-audio-runtime) |
 | SND-002-audio-asset-pipeline | Audio asset pipeline | 2026-10-21 | [SND.md](SND.md#snd-002-audio-asset-pipeline) |
 | SND-003-animal-voices | Animal voices (281 ElevenLabs clips) | 2026-10-21 | [SND.md](SND.md#snd-003-animal-voices) |

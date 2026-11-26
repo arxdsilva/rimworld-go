@@ -14,7 +14,7 @@ in path order, plugins in load order.
 |---|---|
 | `on_hour(ctx)` | each in-game hour, at its first tick |
 | `on_day(ctx)` | each day at 00:00, before that hour's `on_hour` |
-| `on_incident(ctx, incident)` | an incident fired: `incident.key` (`"core.herd_crossing"`), `incident.category` (`"nature"` or `"threat"`); a raid is `"core.rival_raid"`. Storyteller threats that are not incidents (wolf packs, manhunter packs, infestations, the threat pool's mad animal) don't call it yet. |
+| `on_incident(ctx, incident)` | an incident fired: `incident.key` (`"core.herd_crossing"`), `incident.category` (`"nature"` or `"threat"`); a threat reports its key (`"core.predator_pack"`, `"core.manhunter_pack"`, `"core.hive_swarm"`, `"core.mad_animal"`, `"core.crashed_ship_part"`, `"core.mech_raid"`); a people raid is `"core.rival_raid"`, and the raid face itself is not reported. |
 | `on_colonist_died(ctx, name)` | a colonist died |
 | `on_pawns(ctx, pawns)` | cadence: every tick, the colonists due on it (a tuple of pawns, id ascending) |
 | `on_pawn(ctx, pawn)` | cadence: every tick, once for each colonist due on it, by id |
