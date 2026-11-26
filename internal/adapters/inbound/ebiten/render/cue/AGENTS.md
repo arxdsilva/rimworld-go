@@ -5,6 +5,7 @@ The sound cues the world raises: one-shot cues from world diffs, animal calls an
 
 ## Owns
 - `Bus` (15 methods, 13 exported) built by `New() *Bus`: `Cue`, `Global`, `Take`, `ListenWorld`, `ListenAnimals`, `ListenArrivals`, `ListenThunder`, `Machines`, `WaterOnScreen`, `Audible`, `TraceSound`.
+- The machine ambience loops, among them the turret fuse hiss (`turret_fuse_sounds.go`: `amb.turret_fuse_hiss` under `fuse:<id>`, one per sparking turret, nearest `MaxMachineLoops`, powered or not, no memo).
 - `Cue` (one queued sound), `Voice` (an animal's voice group entry), `Loop` (a running ambience loop), `Memo` (the last-seen world state for diffs).
 - `Host` (6 methods): `Terrain`, `IsWater`, `PlantsOn`, `Chopping`, `AnimalAt`, `ListenCaskets`.
 - `animal_sounds.go` keeps its name: `cmd/audiogen` reads `VoiceGroups` from it as source (a text read, not an import).
@@ -30,7 +31,7 @@ The sound cues the world raises: one-shot cues from world diffs, animal calls an
 - `Bus` runs per frame over the world diff and the visible creatures; `Memo` holds the last-seen state the diff compares against.
 
 ## Tests
-- 4 source files, 2 test files, 13 `Test*` functions.
+- 9 source files, 7 test files, 35 `Test*` functions.
 - Coverage 81.5 % (ARCH-004).
 
 ## Notes
