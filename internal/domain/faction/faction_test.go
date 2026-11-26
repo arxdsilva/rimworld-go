@@ -10,6 +10,29 @@ import (
 	"rimworld-go/pkg/randx"
 )
 
+func TestWelcomes(t *testing.T) {
+	t.Parallel()
+	rows := []struct {
+		name string
+		f    Faction
+		want bool
+	}{
+		{"friendly", Faction{Type: Settlers, Relation: Friendly}, true},
+		{"neutral", Faction{Type: Clans, Relation: Neutral}, true},
+		{"hostile", Faction{Type: Freebooters, Relation: Hostile}, false},
+		{"defeated friendly", Faction{Type: Settlers, Relation: Friendly, Defeated: true}, false},
+		{"defeated neutral", Faction{Type: Clans, Defeated: true}, false},
+		{"player is not human", Faction{Type: Player, Relation: Friendly}, false},
+		{"swarm is not human", Faction{Type: Swarm, Relation: Neutral}, false},
+		{"unknown type", Faction{Type: NumTypes, Relation: Friendly}, false},
+	}
+	for _, r := range rows {
+		if got := r.f.Welcomes(); got != r.want {
+			t.Errorf("%s: Welcomes() = %v, want %v", r.name, got, r.want)
+		}
+	}
+}
+
 func TestDefTable(t *testing.T) {
 	t.Parallel()
 	type row struct {

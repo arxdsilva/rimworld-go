@@ -330,3 +330,9 @@ func PickRaider(fs []Faction, rng *randx.Rand) int {
 	}
 	return -1
 }
+
+// Welcomes reports whether f trades with the player's caravans and hosts
+// them (#11: human, not hostile, not defeated).
+func (f Faction) Welcomes() bool {
+	return f.Type.Human() && f.Relation != Hostile && !f.Defeated
+}

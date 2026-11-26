@@ -4,6 +4,7 @@
 package planet
 
 import (
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
 )
@@ -11,7 +12,8 @@ import (
 // extData is the planet's derived query tables and the WG (v1) data, kept
 // in one field so Planet stays inside its field budget. Everything here
 // is written once by the builder (or finish) and read-only afterwards,
-// except hops, the scratch behind the non-concurrent Hops.
+// except hops, the scratch behind the non-concurrent Hops, and territory,
+// which Unsettle rebuilds (a Fork shares it).
 type extData struct {
 	landCum  []uint32 // RandomLanding cumulative weights
 	landTile []int32
@@ -22,6 +24,8 @@ type extData struct {
 	features  []Feature   // v1: named world features
 	featureAt []int32     // v1: tile -> primary feature index, -1 none
 	name      string      // v1: the planet's name
+
+	territory *faction.Territory // #11: the planet's own territory index (territory.go)
 }
 
 // Fork is a shallow copy of p: it shares every table (tiles, roads,

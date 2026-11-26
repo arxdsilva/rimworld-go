@@ -9,6 +9,7 @@ import (
 	"math"
 	"sort"
 
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/site"
@@ -399,6 +400,8 @@ func finish(p *Planet) {
 	for _, r := range p.Roads {
 		p.ext.roadAt[r[0]], p.ext.roadAt[r[1]] = true, true
 	}
+	p.ext.territory = &faction.Territory{}
+	BuildTerritory(p, p.ext.territory, nil)
 }
 
 // RandomLanding picks a valid tile deterministically from the planet seed
