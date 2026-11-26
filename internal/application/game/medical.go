@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/pathstage"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/body"
@@ -110,24 +111,13 @@ func buildableByName(name string) (construction.Kind, bool) {
 }
 
 // besideSpot is the reachable walkable tile next to (x, y), nearest to
-// pawn id, that is not under a bed (doctors stand beside patients).
+// pawn id, that is not under a bed or in a doorway (a pawn standing in a
+// doorway holds the door open).
 func (g *Game) besideSpot(id entity.EntityID, x, y int) (int, int, bool) {
 	pos, _ := g.positions.Get(id)
-	best, bx, by := 1<<30, 0, 0
-	for _, d := range [][2]int{{0, 1}, {1, 0}, {-1, 0}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
-		nx, ny := x+d[0], y+d[1]
-		if !g.grid.Walkable(nx, ny) || g.bedCovering(nx, ny) {
-			continue
-		}
-		dd := manhattan(pos.X, pos.Y, nx, ny)
-		if dd < best && g.reachable(id, nx, ny) {
-			best, bx, by = dd, nx, ny
-		}
-	}
-	if best == 1<<30 {
-		return x, y, g.reachable(id, x, y)
-	}
-	return bx, by, true
+	return pathstage.NearestBeside(pos.X, pos.Y, x, y, func(nx, ny int) bool {
+		return cellStandable(g, nx, ny) && !g.bedCovering(nx, ny) && !doorway(g, nx, ny)
+	}, func(nx, ny int) bool { return g.reachable(id, nx, ny) }, func(nx, ny int) bool { return cellStandable(g, nx, ny) })
 }
 
 func (g *Game) bedCovering(x, y int) bool {
@@ -142,7 +132,8 @@ func (g *Game) bedCovering(x, y int) bool {
 
 func (g *Game) bedCoveringScan(x, y int) bool {
 	for _, bid := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(bid); ok && b.Kind.Sleeps() && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
+		if b, ok := g.bldgs.Get(bid); ok && (b.Kind.Sleeps() || b.Kind.AnimalSleeps()) &&
+			construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
 			return true
 		}
 	}
@@ -161,18 +152,7 @@ func (g *Game) DefaultCare() [medcare.NumGroups]uint8 {
 // healingInjury is the part of a pawn's injury (body b, vital v) rest
 // can still heal: its open wounds, plus any Injury set past the body from
 // outside (all of it with no body yet). Scars and lost parts never heal.
-func healingInjury(b *body.Body, v health.Record) int {
-	if b == nil {
-		return v.Injury
-	}
-	n := max(0, v.Injury-b.Damage())
-	for _, w := range b.Wounds {
-		if !w.Permanent {
-			n += w.Dmg
-		}
-	}
-	return n
-}
+func healingInjury(b *body.Body, v health.Record) int { return body.HealingDamage(b, v.Injury) }
 
 // lyingInBed: id lies in bed bid (b) now: asleep in it, or down on its
 // sleeping cell (a check that needs no index, for loading).
@@ -181,7 +161,7 @@ func (g *Game) lyingInBed(id, bid entity.EntityID, b construction.Building) bool
 		return true
 	}
 	v, _ := g.vital.Get(id)
-	slot := b.SlotOf(uint64(id))
+	slot := construction.BedSlot(b, uint64(id))
 	if v.Status != health.Downed || slot < 0 {
 		return false
 	}
@@ -208,9 +188,55 @@ func (g *Game) migrateMedicalBeds() {
 			case g.lyingInBed(cid, bid, b):
 				g.care.Rest.Hold(cid, bid)
 			default:
-				b = b.Release(c)
+				b = construction.ReleaseBed(b, c)
 			}
 		}
 		g.bldgs.Set(bid, b)
+	}
+}
+
+// crawlDowned has no persistent path: the existing saved downed tick and
+// step timing determine the next retry; a stale bed is never claimed.
+func crawlDowned(g *Game, id entity.EntityID, m motionRec, now uint64) {
+	v, ok := g.vital.Get(id)
+	b := g.bodies[id]
+	if !ok || v.Status != health.Downed || now < v.DownedTick+care.CrawlDelay || b == nil || !care.CrawlReady(v, now, b.Capacity(body.Consciousness), b.Capacity(body.Manipulation)) {
+		return
+	}
+	if g.care.Carry.Carrier(id) != 0 || g.inBed(id) {
+		return
+	}
+	if _, held := g.reserve.EntityOwner(id); held {
+		return
+	}
+	from, ok := g.positions.Get(id)
+	if !ok {
+		return
+	}
+	q := g.pathQuery(id)
+	free := func(x, y int) bool { return q.Walkable(x, y) && cellStandable(g, x, y) && !g.fireNear(x, y, 0) }
+	next, move, settled := g.care.CrawlBed(id)
+	if !move && !settled && !g.prison.Is(id) {
+		kinds := uint8(ckRaider | ckAnimal)
+		if g.isRaider(id) {
+			kinds = ckPawn
+		}
+		_, threat, found := g.nearestWhere(from.X, from.Y, 12, kinds, func(o entity.EntityID, _ Position) bool {
+			if a, ok := g.animals.Get(o); ok {
+				return g.hostile(a)
+			}
+			if g.isRaider(id) {
+				return g.standingPawn(o)
+			}
+			return g.standingRaider(o)
+		})
+		if found {
+			next, move = care.FleeCrawl(from.X, from.Y, threat.X, threat.Y, free)
+		}
+	}
+	if move && free(next.X, next.Y) {
+		g.stepPawn(id, &m, 0, from, Position{X: next.X, Y: next.Y}, now)
+		m.stepped(now, care.CrawlStepTicks)
+		g.motion.Set(id, m)
 	}
 }

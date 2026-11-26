@@ -31,11 +31,15 @@ func (l Lifecycle) Apply(c command.Command) {
 	case command.AttackSettlement:
 		l.Attack(c) // settle.go (MAP-05)
 	case command.SettleHere:
-		if why := f.Found(c.Target); why != "" { // found.go (MAP-06)
+		if why := l.Found(c.Target); why != "" { // found.go (MAP-06)
 			f.h.Note("%s", why)
 		}
 	case command.EncounterAnswer:
 		f.Answer(c.Target, c.Mode) // encounter.go (MAP-08)
+	case command.CaravanSplit:
+		if _, why := f.Split(c.Target, c.Quote, c.Name); why != "" {
+			f.h.Note("%s", why)
+		}
 	case command.CaravanTravel:
 		f.Travel(entity.EntityID(c.Target), c.Count) // road.go
 	case command.EnterMap:
@@ -158,7 +162,7 @@ func (l Lifecycle) open(r Request, now uint64) (uint32, bool) {
 	a, h := l.f.a, l.f.h
 	id := a.newID()
 	side := SizeFor(r.Kind, h.ColonySide())
-	o, ok := h.Open(id, r.Tile, side, side, SeedFor(h.Seed(), r.Tile, id), r.Lump, r.Qty)
+	o, ok := h.Open(id, r.Tile, side, side, SeedFor(h.Seed(), r.Tile, id), r.Lump, r.Qty, r.Cells)
 	if !ok {
 		return 0, false
 	}

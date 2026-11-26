@@ -24,6 +24,7 @@ type fakeHost struct {
 	ids     []entity.EntityID
 	sv      uint64
 	off     map[entity.EntityID]bool
+	covered bool
 	drops   map[item.Kind]int
 	letters []string
 	started []job.Kind
@@ -63,13 +64,15 @@ func (f *fakeHost) Start(worker, bench entity.EntityID, k job.Kind, sx, sy, tick
 	f.started = append(f.started, k)
 	return true
 }
-func (f *fakeHost) Work(id entity.EntityID, mining bool) int { return f.unit }
-func (f *fakeHost) Seed() uint64                             { return f.seed }
-func (f *fakeHost) Drop(k item.Kind, n, x, y int)            { f.drops[k] += n }
+func (f *fakeHost) Work(id entity.EntityID, mining bool) int   { return f.unit }
+func (f *fakeHost) MiningYield(_ entity.EntityID, qty int) int { return qty }
+func (f *fakeHost) Seed() uint64                               { return f.seed }
+func (f *fakeHost) DropDrilled(k item.Kind, n, x, y int)       { f.drops[k] += n }
 func (f *fakeHost) Letter(title string, x, y int, _ string, _ ...any) {
 	f.letters = append(f.letters, title)
 }
-func (f *fakeHost) Changed() {}
+func (f *fakeHost) Changed()                            {}
+func (f *fakeHost) SkyClear(construction.Building) bool { return !f.covered }
 
 // A find lays a lump of the wiki's size for its ore, the same for the
 // same seed, and a deep drill brings it up portion by portion until the
@@ -347,5 +350,24 @@ func TestStoveSmithyFuelSpec(t *testing.T) {
 	}
 	if s, _ := FuelSpec(construction.Campfire); s.WorkBurn != 0 {
 		t.Errorf("a campfire burns per worked tick: %+v", s)
+	}
+}
+
+func TestRoofBlocksGroundScannerButNotDrill(t *testing.T) {
+	f := newFake(30, 30)
+	f.add(1, construction.Building{Kind: construction.GroundScanner, X: 5, Y: 5})
+	f.add(2, construction.Building{Kind: construction.DeepDrill, X: 10, Y: 10})
+	s := &State{}
+	o := s.Ops(f)
+	f.covered = true
+	if o.Assign(3, false, 2) || o.Do(3, 1) != Blocked || o.Cycle(1, construction.GroundScanner) != 0 {
+		t.Fatal("roofed scanner worked")
+	}
+	if !o.Assign(3, true, 2) || o.Do(3, 2) != Continue {
+		t.Fatal("covered drill must remain usable")
+	}
+	f.covered = false
+	if !o.Assign(3, false, 2) || o.Do(3, 1) != Continue {
+		t.Fatal("open-sky scanner did not resume")
 	}
 }

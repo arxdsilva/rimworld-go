@@ -197,7 +197,7 @@ func TestRopeLeadsCowIntoPen(t *testing.T) {
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	handlerOnly(g, ada)
-	if g.penTarget(cow, g.animals.Ref(cow), Position{X: 8, Y: 18}) != m {
+	if g.penTarget(cow, g.animals.Ref(cow).SnapshotRef(), Position{X: 8, Y: 18}) != m {
 		t.Fatal("the cow belongs in the pen")
 	}
 	c := g.penRegion(m)
@@ -266,7 +266,7 @@ func TestPenSettingsFilterAndReRope(t *testing.T) {
 	cow := tameAt(t, g, "cow", "Bess", 24, 8)
 	setAnimal(g, cow, func(a *animal.State) { a.HasSex, a.Female = true, true })
 	a := g.animals.Ref(cow)
-	if g.penTarget(cow, a, Position{X: 24, Y: 8}) != m {
+	if g.penTarget(cow, a.SnapshotRef(), Position{X: 24, Y: 8}) != m {
 		t.Fatal("standing in an accepting pen, that is its pen")
 	}
 	// males only in pen 1: the cow belongs in pen 2
@@ -282,7 +282,7 @@ func TestPenSettingsFilterAndReRope(t *testing.T) {
 	if got := penOf(g, m).Settings; len(got.Species) != len(s.Species) {
 		t.Fatalf("settings applied (bad payload ignored): %+v", got)
 	}
-	if g.penTarget(cow, a, Position{X: 24, Y: 8}) != m2 {
+	if g.penTarget(cow, a.SnapshotRef(), Position{X: 24, Y: 8}) != m2 {
 		t.Fatal("a pen that no longer takes her: the next accepting pen")
 	}
 	ada, _ := g.SpawnNamedPawn(30, 16, "Ada")

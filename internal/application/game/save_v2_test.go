@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/savefmt"
+	"rimworld-go/internal/application/game/setupview"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/statehash"
@@ -211,7 +212,7 @@ func TestSaveInfoFields(t *testing.T) {
 
 func TestSupportedSaveVersions(t *testing.T) {
 	t.Parallel()
-	for v, ok := range map[int]bool{0: false, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true, 10: true, 11: true, 12: true, 13: true, 14: true, 15: true, 16: true, 17: true, 18: true, 19: true, 20: true, 21: false} { // v5: PLAY-021, v6: MED-02, v7: FOOD-1, v8: TEMP-*, v9: RSCH-1, v10: STK-BN, v11: AX-0, v12: MAP-0, v13: NST, CSE, v14: GEAR-3, v15: QST-1, v16: SAV-003, v17: EAI-0, v18: PLG-063, v19: DEF 3.1, v20: SHT-007
+	for v, ok := range map[int]bool{0: false, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true, 10: true, 11: true, 12: true, 13: true, 14: true, 15: true, 16: true, 17: true, 18: true, 19: true, 20: true, 21: true, 22: false} { // v5: PLAY-021, v6: MED-02, v7: FOOD-1, v8: TEMP-*, v9: RSCH-1, v10: STK-BN, v11: AX-0, v12: MAP-0, v13: NST, CSE, v14: GEAR-3, v15: QST-1, v16: SAV-003, v17: EAI-0, v18: PLG-063, v19: DEF 3.1, v20: extended labor masks, v21: Artistic and versioned skill-bearing save fields
 		if SupportedSaveVersion(v) != ok {
 			t.Errorf("version %d supported = %v", v, !ok)
 		}
@@ -319,5 +320,46 @@ func TestSaveHeaderWorldSeedOldHeaders(t *testing.T) {
 		if again.WorldSeed != "amber-hollow" {
 			t.Fatalf("re-saved header seed %q, want the setup's phrase", again.WorldSeed)
 		}
+	}
+}
+
+// A legacy colony has no setup to carry its factions. Save its actual
+// goodwill, relations and independently copied war ledger.
+func TestLegacyColonyFactionsSurviveASaveAndLoad(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 7, Width: 24, Height: 16})
+	g.DevAddFactions()
+	idx := slices.IndexFunc(g.ng.factions, func(f faction.Faction) bool { return f.Type.Human() })
+	if idx < 0 {
+		t.Fatal("no visiting human faction")
+	}
+	g.ng.factions[idx].Goodwill = -77
+	g.ng.factions[idx].Relation = faction.Hostile
+	want := setupview.CloneFactions(g.ng.factions)
+	h, _ := saveLoadInfo(t, g)
+	if !reflect.DeepEqual(h.ng.factions, want) {
+		t.Fatalf("legacy faction diplomacy lost: got %+v, want %+v", h.ng.factions, want)
+	}
+	h.DevAddFactions()
+	if !reflect.DeepEqual(h.ng.factions, want) || h.hasSetup() {
+		t.Fatal("legacy faction roster was redrawn or promoted to wizard setup")
+	}
+	h.ng.factions[idx].Enemies = append(h.ng.factions[idx].Enemies, -99)
+	if reflect.DeepEqual(h.ng.factions, g.ng.factions) {
+		t.Fatal("loaded war graph aliases the original state")
+	}
+}
+
+func TestLegacyColonyWithoutSavedFactionsGetsDefaultDraw(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 7, Width: 24, Height: 16})
+	h, _ := saveLoadInfo(t, g)
+	if h.hasSetup() || len(h.ng.factions) != 0 {
+		t.Fatal("legacy empty faction slot was manufactured during load")
+	}
+	h.DevAddFactions()
+	g.DevAddFactions()
+	if len(h.ng.factions) == 0 || !reflect.DeepEqual(h.ng.factions, g.ng.factions) {
+		t.Fatal("default faction draw changed across legacy checkpoint")
 	}
 }

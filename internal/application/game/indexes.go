@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"rimworld-go/internal/application/game/haul"
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/application/game/idindex"
 	"rimworld-go/internal/application/game/memo"
 	"rimworld-go/internal/application/game/postpone"
@@ -45,7 +46,7 @@ var selfCheckEvery uint64 = 1
 // checkIndex: is this lookup of g checked against the scan? Counted per game (one owner, no atomic),
 // only while the check is on and never during a parallel path stage: a search writes nothing shared.
 func checkIndex(g *Game) bool {
-	if !indexSelfCheck || g.regs.paths.Frozen() {
+	if !indexSelfCheck || pathsFrozen(g) {
 		return false
 	}
 	g.idx.checkN++
@@ -538,6 +539,7 @@ type seedCache struct {
 
 // indexes are the derived lookup structures above (never saved).
 type indexes struct {
+	animalHaul            herd.HaulIndex // shared derived animal transport availability
 	plants, bldgs, frames cellSlots
 	jobs                  jobIndexes  // jobindex.go
 	ground                haul.Ground // loose stacks per cell (STO-1)

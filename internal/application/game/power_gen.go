@@ -14,6 +14,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/geology"
+	miningrules "rimworld-go/internal/domain/world/mining"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
@@ -150,8 +151,13 @@ func (h industryHost) SetTerrain(x, y int, t terrain.Type) { h.g.setTerrain(x, y
 func (h industryHost) Ocean(x, y int) bool                 { return h.g.isOcean(x, y) }
 func (h industryHost) StoneAt(x, y int) geology.Stone      { return h.g.stoneAt(x, y) }
 func (h industryHost) Seed() uint64                        { return h.g.streams.seed }
-func (h industryHost) Drop(k item.Kind, n, x, y int)       { h.g.dropStack(k, n, x, y) }
-func (h industryHost) Changed()                            { h.g.viewGen++ }
+func (h industryHost) DropDrilled(k item.Kind, n, x, y int) {
+	h.g.dropStackOf(item.Stack{Kind: k, Qty: n, Forbidden: true}, x, y)
+}
+func (h industryHost) SkyClear(b construction.Building) bool {
+	return industry.SkyClear(b, func(x, y int) bool { return h.g.roofAt(x, y).Roofed() })
+}
+func (h industryHost) Changed() { h.g.viewGen++ }
 func (h industryHost) Pos(id entity.EntityID) (int, int) {
 	p, _ := h.g.positions.Get(id)
 	return p.X, p.Y
@@ -161,6 +167,9 @@ func (h industryHost) Work(id entity.EntityID, mining bool) int {
 		return h.g.workProgress(id, skMining, true) // skills.go: trains Mining
 	}
 	return h.g.workProgress(id, skIntellectual, true)
+}
+func (h industryHost) MiningYield(id entity.EntityID, qty int) int {
+	return miningrules.Amount(h.g.diffYield(DiffMine, qty), h.g.miningYieldPermil(id))
 }
 func (h industryHost) Letter(title string, x, y int, format string, args ...any) {
 	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Letter: true, Title: title, Kind: letters.Good})

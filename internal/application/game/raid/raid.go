@@ -58,7 +58,7 @@ func New(h Host, r Roles) *Raid {
 	kid := &Kidnaps{h: h, k: r.Kidnap}
 	kid.t = r.Tactics
 	rs := &Raiders{h: h, m: r.Mischief, sg: r.Siege, ch: r.Chronicle, t: r.Tactics, a: r.Arrive, kid: kid,
-		eye: eyes{h: h, s: r.Senses}}
+		eye: eyes{h: h, s: r.Senses}, exit: r.Escape}
 	ms, ships := newMechs(h, r) // mech.go
 	pods := &Pods{h: h, a: r.Arrive, ch: r.Chronicle, mechs: ms}
 	ms.hives, ms.drops = hv, pods // nest.go: saved with the mechanoids; their drop pods
@@ -207,3 +207,18 @@ const (
 	// (original tuning).
 	siegeRange = 32
 )
+
+// EdgeDir names the nearest edge, with the original stable tie order.
+func EdgeDir(w, h, x, y int) string {
+	best, dir := y, "north"
+	if d := h - 1 - y; d < best {
+		best, dir = d, "south"
+	}
+	if x < best {
+		best, dir = x, "west"
+	}
+	if d := w - 1 - x; d < best {
+		dir = "east"
+	}
+	return dir
+}

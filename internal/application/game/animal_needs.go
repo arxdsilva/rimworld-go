@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -95,16 +96,6 @@ func (g *Game) pruneCropRaids(now uint64) {
 	g.wl.CropRaids = kept
 }
 
-// rateStep is this tick's share of per units over period ticks: the
-// difference of a running total, so the sum over a period is exact.
-func rateStep(now uint64, per, period int) int {
-	if now == 0 {
-		return 0
-	}
-	p, q := uint64(per), uint64(period)
-	return int(now*p/q - (now-1)*p/q)
-}
-
 // sleeping: an animal lying down (resting and not walking to its bed).
 func sleeping(a animal.State) bool { return a.Mode == animal.Rest && a.PathI >= len(a.Path) }
 
@@ -119,7 +110,7 @@ func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 			g.animalMedicalDeath(id, a) // animal_health.go
 			return false
 		case bodytemp.Changed:
-			reconcileAnimalBody(a)
+			animal.ReconcileBody(a)
 			g.checkAnimalDowned(id, a, now)
 			if a.Body != nil {
 				g.markAnimalPatient(id)
@@ -130,13 +121,15 @@ func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 		a.Food, a.Rest = animal.Full, animal.Full
 		return true
 	}
-	food := animal.FoodPerDay * animal.AgeHunger(a.Species, animal.AgeDays(a.Born, now, a.Species)) / 1000
+	food := animal.FoodPerDay * animal.AgeHunger(a.Species, animal.AgeDays(a.Born, now, a.Species, g.clock.Calendar())) / 1000
 	if lyingDown(*a) { // animal_health.go: asleep or downed
-		a.Food -= rateStep(now, food/2, clock.TicksPerDay)
-		a.Rest = min(animal.Full, a.Rest+rateStep(now, g.rest.Animals.SleepRate(id, a.Tame, animal.SleepPerHour), clock.TicksPerHour)) // BED-1: rest/animals.go
+		a.Food -= animal.RateStep(now, food/2, clock.TicksPerDay)
+		rate := g.rest.Animals.SleepRate(id, a.Tame, animal.SleepPerHour)
+		rate = rate * int(body.RestRateMultiplier(a.Body)) / 1000
+		a.Rest = min(animal.Full, a.Rest+animal.RateStep(now, rate, clock.TicksPerHour))
 	} else {
-		a.Food -= rateStep(now, food, clock.TicksPerDay)
-		a.Rest = max(0, a.Rest-rateStep(now, animal.RestPerDay, clock.TicksPerDay))
+		a.Food -= animal.RateStep(now, food, clock.TicksPerDay)
+		a.Rest = max(0, a.Rest-animal.RateStep(now, animal.RestPerDay, clock.TicksPerDay))
 	}
 	if a.Food > 0 {
 		a.Starving = 0
@@ -160,15 +153,10 @@ func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 	return false
 }
 
-// nextDecide is the next tick of id's decision cycle after now.
-func nextDecide(id entity.EntityID, now uint64) uint64 {
-	return now + animal.DecideEvery - (now+uint64(id))%animal.DecideEvery
-}
-
 // decideAnimal is an animal's full decision (T1-T3, T6, T7): rest, feed or
 // wander. Fleeing, fighting and leaving animals never get here.
 func (g *Game) decideAnimal(id entity.EntityID, a *animal.State, pos Position, now uint64) {
-	a.NextDecide = nextDecide(id, now)
+	a.NextDecide = animal.NextDecision(uint64(id), now)
 	g.bondDecide(id, a, pos, now) // bonds.go: healing and the proximity bond, tame animals only
 	if animal.NeedsFree(a.Species) || a.Enraged(now) {
 		return
@@ -229,11 +217,11 @@ func (g *Game) nothingToEat(id entity.EntityID, a *animal.State, pos Position, n
 func (g *Game) startRest(id entity.EntityID, a *animal.State, pos Position) {
 	a.Mode, a.Path, a.PathI = animal.Rest, nil, 0
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
-	if penned(a) {
+	if animal.Penned(a) {
 		return // livestock sleep in their pen or where they roam
 	}
 	if a.Tame { // BED-1: a pet goes to its animal bed (rest/animals.go), else sleeps where it is
-		if bx, by, ok := g.rest.Animals.Bed(id, pos.X, pos.Y); ok {
+		if bx, by, ok := g.rest.Animals.RestBed(id, pos.X, pos.Y, a.Injury > 0); ok {
 			g.animalGoTo(id, a, bx, by)
 		}
 		return
@@ -355,7 +343,7 @@ func (g *Game) pickFeed(id entity.EntityID, a *animal.State, pos Position, now u
 	// animal's pen and the troughs beside it
 	far := max(pos.X, g.grid.Width()-1-pos.X, pos.Y, g.grid.Height()-1-pos.Y)
 	if m, c := g.penAt(pos.X, pos.Y); m != 0 { // pens.go
-		if penned(a) {
+		if animal.Penned(a) {
 			far = min(far, max(pos.X-c.minX, c.maxX-pos.X, pos.Y-c.minY, c.maxY-pos.Y)+1)
 		}
 		inPen := func(x, y int) bool { return g.inPenCells(c, x, y) }
@@ -367,7 +355,7 @@ func (g *Game) pickFeed(id entity.EntityID, a *animal.State, pos Position, now u
 		}
 	}
 	var allow func(x, y int) bool
-	if !penned(a) {
+	if !animal.Penned(a) {
 		allow = func(x, y int) bool { return g.inArea(id, x, y) } // areas.go: an area animal eats inside it
 	}
 	return g.tameMeal(id, a, pos, diet, allow, far, now)
@@ -391,21 +379,9 @@ func (g *Game) tameMeal(id entity.EntityID, a *animal.State, pos Position, diet 
 }
 
 func (g *Game) startFeed(a *animal.State, t animal.FeedTarget, now uint64) bool {
-	a.Mode, a.Feed, a.FeedLeft = animal.Feed, t, eatTicks(t.Kind)
+	a.Mode, a.Feed, a.FeedLeft = animal.Feed, t, animal.EatTicks(t.Kind)
 	a.Path, a.PathI, a.NextFeed = nil, 0, now+feedWalkLimit
 	return true
-}
-
-func eatTicks(k animal.FeedKind) int {
-	switch k {
-	case animal.FeedTree:
-		return animal.TreeTicks
-	case animal.FeedCarcass:
-		return animal.CarcassTicks
-	case animal.FeedItem, animal.FeedTrough:
-		return animal.ItemTicks
-	}
-	return animal.GrazeTicks
 }
 
 // feedBest is the best candidate of one food kind so far.
@@ -674,7 +650,7 @@ func (g *Game) tameMayEat(a *animal.State, t animal.FeedTarget, st item.Stack) b
 // berries", "eating from the stockpile", or its mode.
 func (g *Game) tameFeedState(id entity.EntityID, a animal.State) string {
 	t := a.Feed
-	if p, _ := g.positions.Get(id); g.wl.Forage.IsFar(id) && weapon.Distance(p.X, p.Y, t.X, t.Y) > feedReach(t) {
+	if p, _ := g.positions.Get(id); g.wl.Forage.IsFar(id) && weapon.Distance(p.X, p.Y, t.X, t.Y) > animal.FeedReach(t) {
 		return "searching far for food"
 	}
 	switch t.Kind {
@@ -772,15 +748,6 @@ func (g *Game) feedThere(a *animal.State, t animal.FeedTarget) bool {
 	return false
 }
 
-// feedReach is how close an animal stands to eat t: on the grass tile, or
-// beside anything else.
-func feedReach(t animal.FeedTarget) int {
-	if t.Kind == animal.FeedGrass {
-		return 0
-	}
-	return 1
-}
-
 // feedSpot is the tile an animal walks to for t: the tile itself when it
 // can stand there, else the walkable neighbour nearest to pos.
 func (g *Game) feedSpot(pos Position, t animal.FeedTarget) (int, int, bool) {
@@ -808,7 +775,7 @@ func (g *Game) feedStep(id entity.EntityID, a *animal.State, pos Position, now u
 		a.Feed, a.FeedLeft, a.NextDecide = animal.FeedTarget{}, 0, now // gone: look again
 		return
 	}
-	if weapon.Distance(pos.X, pos.Y, t.X, t.Y) > feedReach(t) {
+	if weapon.Distance(pos.X, pos.Y, t.X, t.Y) > animal.FeedReach(t) {
 		switch {
 		case a.PathI < len(a.Path):
 		case now > a.NextFeed: // can't get there: a tame one skips the spot a while (FEED-001)
@@ -960,7 +927,7 @@ func (g *Game) fillAnimalNeeds(av *AnimalView, a animal.State) {
 	av.Hunts = a.Tame && animal.DefOf(a.Species).Predator
 	av.Leaving = a.Leaving || a.Mode == animal.Leave
 	av.Herd = a.Herd
-	days := animal.AgeDays(a.Born, now, a.Species)
+	days := animal.AgeDays(a.Born, now, a.Species, g.clock.Calendar())
 	av.AgeDays, av.Adult = days, animal.Adult(a.Species, days)
 	av.Stage, av.Scale = animal.Stage(a.Species, av.Adult), animal.GrowthScale(a.Species, days)
 	g.fillAnimalLife(av, a, now) // animal_life.go

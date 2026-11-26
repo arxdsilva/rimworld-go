@@ -59,7 +59,7 @@ func (m *MortarAim) Step(sh ports.Commands, crew entity.EntityID, tx, ty int, on
 		return true
 	}
 	if left && onMap {
-		sh.Enqueue(command.Command{Kind: command.SetMortarTarget, X: m.X, Y: m.Y, X2: tx, Y2: ty, Pawn: uint64(crew)})
+		sh.Enqueue(command.Command{Kind: command.SetMortarTarget, Target: uint64(m.Bid), X: m.X, Y: m.Y, X2: tx, Y2: ty, Pawn: uint64(crew)})
 		m.On = false
 	}
 	return true

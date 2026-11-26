@@ -31,8 +31,9 @@ type fakeHost struct {
 	pos                  map[entity.EntityID][2]int
 	animals              map[entity.EntityID]animal.State
 	weapons              map[entity.EntityID]weapon.Kind
-	pawns                map[entity.EntityID]bool // standing colonists
+	pawns                map[entity.EntityID]bool // colonists
 	raiders              map[entity.EntityID]bool // raiders (value: standing)
+	fleeing              map[entity.EntityID]bool // raiders in raid.Fleeing
 	drafted              map[entity.EntityID]bool
 	pacific              map[entity.EntityID]bool
 	animalIDs, raiderIDs []entity.EntityID
@@ -85,14 +86,16 @@ type fakeHost struct {
 	// CBT-2: melee numbers (default a healthy skill-5 fighter: it never dodges), downed
 	// humanlikes, the sky and roofs, experience given, the hands and the
 	// released drafts.
-	melee     map[entity.EntityID]attack.Melee
-	lying     map[entity.EntityID]bool
-	sky       weather.Kind
-	roofed    map[[2]int]bool
-	xp        []int
-	wield     map[entity.EntityID]item.Kind
-	putDown   []string
-	undrafted []entity.EntityID
+	implantTools map[entity.EntityID][]weapon.Tool
+	fistCounts   map[entity.EntityID]int
+	melee        map[entity.EntityID]attack.Melee
+	lying        map[entity.EntityID]bool
+	sky          weather.Kind
+	roofed       map[[2]int]bool
+	xp           []int
+	wield        map[entity.EntityID]item.Kind
+	putDown      []string
+	undrafted    []entity.EntityID
 
 	worn   map[entity.EntityID][]armor.Layer
 	aims   map[entity.EntityID][2]int // per-tile ppm and Shooting level; default a perfect shooter at 20
@@ -116,7 +119,7 @@ func newFake(w, h int) *fakeHost {
 		w: w, h: h, now: 1000,
 		pos: map[entity.EntityID][2]int{}, animals: map[entity.EntityID]animal.State{},
 		weapons: map[entity.EntityID]weapon.Kind{}, pawns: map[entity.EntityID]bool{},
-		raiders: map[entity.EntityID]bool{}, drafted: map[entity.EntityID]bool{}, pacific: map[entity.EntityID]bool{},
+		raiders: map[entity.EntityID]bool{}, fleeing: map[entity.EntityID]bool{}, drafted: map[entity.EntityID]bool{}, pacific: map[entity.EntityID]bool{},
 		rock: map[[2]int]bool{}, objs: map[[2]int]entity.EntityID{}, bldgs: map[entity.EntityID]construction.Building{},
 		jobs: map[entity.EntityID]job.Record{}, damage: map[entity.EntityID]int{},
 		struck: map[entity.EntityID]entity.EntityID{}, hits: map[entity.EntityID]int{},
@@ -130,7 +133,7 @@ func newFake(w, h int) *fakeHost {
 }
 
 func (f *fakeHost) combat() *Combat {
-	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f})
+	return New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f})
 }
 
 func (f *fakeHost) pawn(id entity.EntityID, x, y int, wk weapon.Kind) {
@@ -164,22 +167,24 @@ func (f *fakeHost) Animal(id entity.EntityID) (animal.State, bool) {
 }
 func (f *fakeHost) Weapon(id entity.EntityID) weapon.Kind { return f.weapons[id] }
 func (f *fakeHost) StandingPawn(id entity.EntityID) bool {
-	return f.pawns[id] || f.raiders[id] || f.guests[id]
+	return !f.lying[id] && (f.pawns[id] || f.raiders[id] || f.guests[id])
 }                                                          // raiders are named humanlikes too
 func (f *fakeHost) StandingRaider(id entity.EntityID) bool { return f.raiders[id] }
+func (f *fakeHost) FleeingRaider(id entity.EntityID) bool  { return f.fleeing[id] }
 func (f *fakeHost) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 	j := f.jobs[t]
-	if !f.raiders[t] || j.Kind != job.Attack || j.Target != id {
+	if !f.raiders[t] || f.fleeing[t] || j.Kind != job.Attack || j.Target != id {
 		return 0, 0, false
 	}
 	p := f.pos[t]
 	return p[0], p[1], true
 }
-func (f *fakeHost) Hostile(a animal.State) bool     { return a.Mode == animal.Attack && f.pawns[a.Target] }
-func (f *fakeHost) AnimalIDs() []entity.EntityID    { return f.animalIDs }
-func (f *fakeHost) RaiderIDs() []entity.EntityID    { return f.raiderIDs }
-func (f *fakeHost) Drafted(id entity.EntityID) bool { return f.drafted[id] }
-func (f *fakeHost) Name(id entity.EntityID) string  { return fmt.Sprintf("p%d", id) }
+func (f *fakeHost) PackEnemy(source, target entity.EntityID) bool { return false }
+func (f *fakeHost) Hostile(a animal.State) bool                   { return a.Mode == animal.Attack && f.pawns[a.Target] }
+func (f *fakeHost) AnimalIDs() []entity.EntityID                  { return f.animalIDs }
+func (f *fakeHost) RaiderIDs() []entity.EntityID                  { return f.raiderIDs }
+func (f *fakeHost) Drafted(id entity.EntityID) bool               { return f.drafted[id] }
+func (f *fakeHost) Name(id entity.EntityID) string                { return fmt.Sprintf("p%d", id) }
 func (f *fakeHost) Near(x, y, r int, who Who, buf []Seen) []Seen {
 	for id, p := range f.pos {
 		_, beast := f.animals[id]
@@ -228,6 +233,17 @@ func (f *fakeHost) PlaceFrame(k construction.Kind, _ item.Kind, _ construction.F
 func (f *fakeHost) DigRock(_, _, dmg int) { f.dug += dmg }
 
 // Skills
+func (f *fakeHost) ImplantTools(id entity.EntityID) (out [2]weapon.Tool, n int) {
+	n = copy(out[:], f.implantTools[id])
+	return
+}
+func (f *fakeHost) NaturalFists(id entity.EntityID) int {
+	if n, ok := f.fistCounts[id]; ok {
+		return n
+	}
+	return 2
+}
+
 func (f *fakeHost) Melee(id entity.EntityID) attack.Melee {
 	if m, ok := f.melee[id]; ok {
 		return m
@@ -242,6 +258,10 @@ func (f *fakeHost) ShotAim(id entity.EntityID) (int, int) {
 		return a[0], a[1]
 	}
 	return attack.PerfectShooter, 20
+}
+func (f *fakeHost) MortarMissRadius(id entity.EntityID) int {
+	_, l := f.ShotAim(id)
+	return MissRadius(l)
 }
 func (f *fakeHost) Learn(_ entity.EntityID, _ bool, xp int) { f.learn++; f.xp = append(f.xp, xp) }
 func (f *fakeHost) AimTicks(id entity.EntityID, ticks int) int {
@@ -269,6 +289,10 @@ func (f *fakeHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) 
 		return nil, false
 	}
 	return []pathing.Point{{X: x, Y: y}}, true
+}
+
+func (f *fakeHost) FlightPath(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
+	return f.PathTo(id, x, y)
 }
 
 // Harm
@@ -339,6 +363,10 @@ func (f *fakeHost) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 }
 
 // Flight
+func (f *fakeHost) AnimalOn(t, id entity.EntityID) (bool, bool) {
+	a, ok := f.animals[t]
+	return ok, ok && a.Mode == animal.Attack && a.Target == id
+}
 func (f *fakeHost) Reachable(entity.EntityID, int, int) bool  { return !f.cornered }
 func (f *fakeHost) InHome(int, int) bool                      { return false }
 func (f *fakeHost) DropForFlight(entity.EntityID, job.Record) { f.dropped++ }

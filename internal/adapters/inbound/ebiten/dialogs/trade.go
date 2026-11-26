@@ -49,7 +49,10 @@ func tradeSig(v game.TradeView) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%d/%d", v.ColonySilver, v.TraderSilver)
 	for _, r := range v.Rows {
-		fmt.Fprintf(&b, "|%s:%d:%d", r.Kind, r.ColonyQty, r.TraderQty)
+		fmt.Fprintf(&b, "|%s:%d:%d:%d:%d", r.Kind, r.ColonyQty, r.TraderQty, r.BuyC, r.SellC)
+	}
+	for _, r := range v.GiftRows {
+		fmt.Fprintf(&b, "|%s:%d:%d:%d", r.Kind, r.ColonyQty, r.StackID, r.GiftC)
 	}
 	return b.String()
 }
@@ -62,9 +65,17 @@ func (d *tradeDraft) refresh(v game.TradeView) {
 		d.sig = s
 		clear(d.net)
 	}
-	for _, r := range v.Rows {
+	for _, r := range d.rows() {
 		d.set(r, d.net[r.Kind])
 	}
+}
+
+// rows switches between paid trade and selected physical gift inventory.
+func (d *tradeDraft) rows() []game.TradeRowView {
+	if d.gift && d.view.GiftRows != nil {
+		return d.view.GiftRows
+	}
+	return d.view.Rows
 }
 
 // bounds is the amount range of row r: negative sells (to the colony's
@@ -96,11 +107,7 @@ func (d *tradeDraft) step(r game.TradeRowView, delta int) { d.set(r, d.net[r.Kin
 // setGift switches gift mode; buying amounts are dropped.
 func (d *tradeDraft) setGift(on bool) {
 	d.gift = on
-	if on {
-		for _, r := range d.view.Rows {
-			d.set(r, d.net[r.Kind])
-		}
-	}
+	clear(d.net) // the two modes expose different physical stock rows
 }
 
 // totalC is what the colony pays (negative: it is paid), hundredths of a
@@ -118,32 +125,40 @@ func (d *tradeDraft) totalC() int {
 	return t
 }
 
-// giftSilver is the value, in whole silver, of what a gift gives.
-func (d *tradeDraft) giftSilver() int {
-	v := 0
-	for _, r := range d.view.Rows {
+// giftSilver prices the physical item rows in the authoritative read model.
+func (d *tradeDraft) giftSilver(b item.Book) int {
+	if d.view.GiftRows == nil {
+		return trade.GiftValue(b, d.offer(b), trade.Terms{Social: d.view.Social})
+	}
+	centi := 0
+	for _, r := range d.view.GiftRows {
 		if n := d.net[r.Kind]; n < 0 {
-			v += -n * r.SellC
+			centi -= n * r.GiftC
 		}
 	}
-	return v / 100
+	return centi / 100
 }
 
 // colonyAfterC and traderAfterC are the silver on each side after the
 // deal, hundredths.
-func (d *tradeDraft) colonyAfterC() int { return d.view.ColonySilver*100 - d.totalC() }
-func (d *tradeDraft) traderAfterC() int { return d.view.TraderSilver*100 + d.totalC() }
+func (d *tradeDraft) colonyAfterC() int {
+	return (d.view.ColonySilver + trade.RoundedSilver(-d.totalC())) * 100
+}
+func (d *tradeDraft) traderAfterC() int {
+	return (d.view.TraderSilver - trade.RoundedSilver(-d.totalC())) * 100
+}
 
 // offer is the deal as trade.EncodeOffer takes it (zero lines out).
 func (d *tradeDraft) offer(b item.Book) []trade.Delta {
 	var out []trade.Delta
-	for _, r := range d.view.Rows {
+	for _, r := range d.rows() {
 		n := d.net[r.Kind]
 		if n == 0 {
 			continue
 		}
-		if g, ok := trade.ParseGoods(b, r.Kind); ok { // AX-1: a crated building's row names its building
-			out = append(out, trade.Delta{Kind: g.Kind, Qty: n, Building: g.Building})
+		key, _, _ := strings.Cut(r.Kind, "@")
+		if g, ok := trade.ParseGoods(b, key); ok {
+			out = append(out, trade.Delta{Kind: g.Kind, Qty: n, Building: g.Building, StackID: r.StackID})
 		}
 	}
 	return out
@@ -265,7 +280,7 @@ func (dl *Dealings) proposeTrade(d *tradeDraft) {
 	if d.reason() != "" {
 		return
 	}
-	dl.sh.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer(d.offer(dl.sh.Items())), Enabled: d.gift})
+	dl.sh.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer(d.offer(dl.sh.Items())), Enabled: d.gift, ExactLots: true})
 }
 
 // TradeLine is one row of the table: a category header or a goods row.
@@ -319,8 +334,8 @@ var tradeHeadDX = [tradeColN]float32{0, 4, 0, 8, 0, 2, 4, 0}
 
 // tradeColumns declares the eight columns; the header reads their titles and
 // tradeCells places them.
-func tradeColumns(sh interface{ T(string) string }) [tradeColN]uikit.TableCol {
-	return [tradeColN]uikit.TableCol{
+func tradeColumns(sh interface{ T(string) string }, gift bool) [tradeColN]uikit.TableCol {
+	cols := [tradeColN]uikit.TableCol{
 		{ID: "sell", Title: sh.T("Sell for")},
 		{ID: "colony", Title: sh.T("Colony")},
 		{ID: "give", Title: sh.T("Give to trader")},
@@ -330,6 +345,13 @@ func tradeColumns(sh interface{ T(string) string }) [tradeColN]uikit.TableCol {
 		{ID: "buy", Title: sh.T("Buy for")},
 		{ID: "goods", Title: sh.T("Goods")},
 	}
+	if gift {
+		cols[tcSell].Title = sh.T("Gift value")
+		// Preserve the paid-table slots: gifts suppress trader quantities
+		// and prices, and the take controls remain disabled.
+		cols[tcTake].Title, cols[tcTrader].Title, cols[tcBuy].Title = "", "", ""
+	}
+	return cols
 }
 
 // tradeCells appends the eight cells of a trade row in body, in column
@@ -372,13 +394,15 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 	// the columns, shared by the headers and the rows
 	var cellBuf [tradeColN]uikit.TableCell
 	cells := tradeCells(cellBuf[:0], body)
-	cols := tradeColumns(dl.sh)
+	cols := tradeColumns(dl.sh, d.gift)
 	hd := gfx.WithColor(gfx.Small, uikit.TextDim)
 	for i, c := range cols {
-		dl.kit().Label(cells[i].R.X+tradeHeadDX[i], top+4, c.Title, hd)
+		if c.Title != "" {
+			dl.kit().Label(cells[i].R.X+tradeHeadDX[i], top+4, c.Title, hd)
+		}
 	}
 
-	lines := TradeLines(v.Rows)
+	lines := TradeLines(d.rows())
 	if len(lines) == 0 {
 		dl.kit().Label(table.X, table.Y+6, dl.sh.T("Neither side has anything to trade."), uikit.DimText())
 	}
@@ -398,18 +422,23 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 	}
 
 	// summary
-	total := d.totalC()
-	verb := dl.sh.T("You pay")
-	if total < 0 {
-		verb = dl.sh.T("You receive")
+	if d.gift {
+		dl.kit().Label(sum.X, sum.Y, dl.sh.Tf("Gift value: %s", SilverText(d.giftSilver(dl.sh.Items())*100)), gfx.Label)
+	} else {
+		total := d.totalC()
+		verb := dl.sh.T("You pay")
+		if total < 0 {
+			verb = dl.sh.T("You receive")
+		}
+		dl.kit().Label(sum.X, sum.Y, dl.sh.Tf("%s %s silver", verb, SilverText(mathx.Abs(trade.RoundedSilver(total))*100)), gfx.Label)
 	}
-	dl.kit().Label(sum.X, sum.Y, dl.sh.Tf("%s %s silver", verb, SilverText(mathx.Abs(total))), gfx.Label)
 	if dl.kit().Check("trade.gift", gfx.Rect{X: sum.X, Y: sum.Y + 26, W: 220, H: 22}, dl.sh.T("Gift (no payment)"), &d.gift,
 		uikit.CheckOpts{Tip: dl.sh.T("Gift\nGive goods away for goodwill instead of trading.")}) {
 		d.setGift(d.gift)
 	}
 	if d.gift {
-		dl.kit().Label(sum.X+240, sum.Y+30, dl.sh.Tf("Goodwill %d -> %d", v.Goodwill, v.Goodwill+faction.GiftGoodwill(d.giftSilver())), gfx.Body)
+		dl.kit().Label(sum.X+240, sum.Y+30, dl.sh.Tf("Goodwill %d -> %d", v.Goodwill, v.Goodwill+faction.GiftGoodwill(faction.Faction{Type: v.FactionType, Goodwill: v.Goodwill},
+			d.giftSilver(dl.sh.Items()))), gfx.Body)
 	} else {
 		after := gfx.WithColor(gfx.Body, uikit.Text)
 		if d.colonyAfterC() < 0 {
@@ -431,17 +460,25 @@ func (dl *Dealings) tradeRow(d *tradeDraft, r game.TradeRowView, y float32, cell
 	mid := y + 6
 	dl.kit().Label(cName.X, mid, uikit.FitText(r.Label, gfx.Body, cName.W), gfx.Body)
 	if r.WillSell {
-		dl.kit().Label(cPrice.X, mid, SilverText(r.SellC), gfx.Body)
+		unit := r.SellC
+		if d.gift && d.view.GiftRows != nil {
+			unit = r.GiftC
+		}
+		dl.kit().Label(cPrice.X, mid, SilverText(unit), gfx.Body)
 	} else {
 		dl.kit().Label(cPrice.X, mid, "-", uikit.DimText())
 	}
-	if r.WillBuy {
-		dl.kit().Label(cTPrice.X+4, mid, SilverText(r.BuyC), gfx.Body)
-	} else {
-		dl.kit().Label(cTPrice.X+4, mid, "-", uikit.DimText())
+	if !d.gift {
+		if r.WillBuy {
+			dl.kit().Label(cTPrice.X+4, mid, SilverText(r.BuyC), gfx.Body)
+		} else {
+			dl.kit().Label(cTPrice.X+4, mid, "-", uikit.DimText())
+		}
 	}
 	dl.kit().Label(cQty.X+4, mid, uikit.Num(r.ColonyQty), gfx.Body)
-	dl.kit().Label(cTQty.X+2, mid, uikit.Num(r.TraderQty), gfx.Body)
+	if !d.gift {
+		dl.kit().Label(cTQty.X+2, mid, uikit.Num(r.TraderQty), gfx.Body)
+	}
 	amt := gfx.WithColor(gfx.Body, uikit.TextDim)
 	switch {
 	case n > 0:

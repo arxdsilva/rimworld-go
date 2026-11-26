@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -190,5 +191,30 @@ func TestWaveDPoweredKinds(t *testing.T) {
 		if bv.PowerRole != "consumer" || !bv.Powered {
 			t.Errorf("%s: role %q powered %v (%s)", k, bv.PowerRole, bv.Powered, bv.NoPowerReason)
 		}
+	}
+}
+
+func TestArtPriorityControlsNativeBillAdmission(t *testing.T) {
+	g := New(Config{Seed: 3, Width: 20, Height: 12})
+	artist, _ := g.SpawnNamedPawn(1, 1, "Ada")
+	bench := buildNow(t, g, construction.ArtBench, item.Wood, construction.South, 8, 4)
+	g.SpawnStack(item.Wood, 20, 1, 8)
+	g.craft.Bills.Set(bench, []recipe.Bill{{Recipe: recipe.SculptSmall, Mode: recipe.DoCount, Target: 1}})
+	if g.assignWorkType(artist, work.Craft) {
+		t.Fatal("general Craft admitted a sculpture")
+	}
+	for ty := work.Type(0); ty < work.NumTypes; ty++ {
+		g.setPriority(artist, ty, 0)
+	}
+	if g.assignWorkByPriority(artist) {
+		t.Fatal("disabled Art accepted")
+	}
+	g.setPriority(artist, work.Art, 1)
+	if !g.assignWorkByPriority(artist) {
+		t.Fatal("Art failed to admit the available sculpture")
+	}
+	j, _ := g.jobs.Get(artist)
+	if j.Dest != bench || workTypeOfJob(g, j) != int(work.Art) {
+		t.Fatalf("wrong native job/read model: %+v", j)
 	}
 }

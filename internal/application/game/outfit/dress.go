@@ -5,6 +5,7 @@ package outfit
 
 import (
 	"slices"
+	"sync"
 
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
@@ -41,6 +42,13 @@ const (
 	// apparel kind of the busiest slot, the outer layer; more only allocate).
 	maxOpts = 10
 )
+
+type planScratch struct {
+	buf  [craft.Slots][maxOpts]craft.Option
+	opts [craft.Slots][]craft.Option
+}
+
+var planBuffers = sync.Pool{New: func() any { return new(planScratch) }}
 
 // Slots are the slots garments go in, in slot order (the views').
 var Slots = [...]item.Slot{item.Body, item.Head, item.Legs, item.Belt, item.SkinTorso, item.SkinLegs, item.Middle} // CBT-3: belts only by order
@@ -127,10 +135,11 @@ func (d Dresser) Plan(id entity.EntityID, full bool) (craft.Plan, bool) {
 	locked := d.locked(id, cur)
 	pol := d.policy(id)
 	off, shedding := shed(cur, locked, pol)
-	var buf [craft.Slots][maxOpts]craft.Option
-	var opts [craft.Slots][]craft.Option
+	scratch := planBuffers.Get().(*planScratch)
+	defer planBuffers.Put(scratch)
+	opts := &scratch.opts
 	for _, s := range Slots {
-		if opts[s] = buf[s][:0]; s != off || !shedding {
+		if opts[s] = scratch.buf[s][:0]; s != off || !shedding {
 			opts[s] = append(opts[s], craft.Option{Kind: cur.Kind(s)}) // keep it on
 		}
 		if cur.Kind(s) != 0 && !locked[s] {
@@ -138,7 +147,7 @@ func (d Dresser) Plan(id entity.EntityID, full bool) (craft.Plan, bool) {
 		}
 	}
 	if full {
-		d.candidates(id, cur, locked, pol, &opts)
+		d.candidates(id, cur, locked, pol, opts)
 	} else {
 		for _, k := range d.Kinds() {
 			if s := k.Slot(); !locked[s] && k != cur.Kind(s) && pol.Kind(k) {
@@ -148,7 +157,7 @@ func (d Dresser) Plan(id entity.EntityID, full bool) (craft.Plan, bool) {
 	}
 	mean := d.r.Weather.DailyMean()
 	c, h := d.r.Weather.Comfort(id)
-	best := craft.Best(&opts, Shifted(exposure.Everyday, c, h), mean)
+	best := craft.Best(opts, Shifted(exposure.Everyday, c, h), mean)
 	return best, shedding || cur.Naked() && !best.Naked || craft.DayFit(Shifted(cur.Bands(), c, h), mean)-best.Miss >= Gain
 }
 

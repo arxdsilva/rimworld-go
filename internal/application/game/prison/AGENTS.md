@@ -1,7 +1,7 @@
 # internal/application/game/prison
 
 ## Purpose
-The colony's prisoners: each one's state (interaction mode, resistance, next visit), a prisoner's life on the raid roster (needs, healing, sleeping in its bed, pottering about its room, a released pawn or visitor walking out), and the warden's work (meals, visits, resistance, recruiting, release, execution). A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10); capture and arrest stay in `care` (SIM-062), the prisoner read models and `makePrisoner` in the game's `prisoners.go`.
+The colony's prisoners: each one's state (interaction mode, resistance, next visit), a prisoner's life on the raid roster (needs, healing, sleeping in its bed, pottering about its room, a released pawn or visitor walking out), and the warden's work (meals, visits, resistance, recruiting, release, execution). Physical upkeep runs once in the common needs phase; an inspired recruiter may use its inspiration on a recruitment visit. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10); capture and arrest stay in `care` (SIM-062), the detached prisoner view in `view.go` and `makePrisoner` in the game's `prisoners.go`.
 
 ## Owns
 - `Prison` (prison.go): built by `New(Host)`; `Is`, `State` (the tab's read model and tests), `Take` (a new prisoner), `Release`, `Drop`, `SetMode`, `Export`/`Import` (the save's `Prisoners` field, copied by the game in id order).
@@ -17,7 +17,7 @@ The colony's prisoners: each one's state (interaction mode, resistance, next vis
 - `internal/application/game` or its other sub-packages: the roles in `deps.go` are the only way in.
 
 ## Contracts
-- `deps.go`: `Host` embeds seven roles, each ≤ 8 value-only methods: Bodies (6), Roster (7), Life (7), Cells (7), Wardens (5), Talk (6), Fate (4), Escapes (5, CBT-4). The game implements them in `internal/application/game/prison_host.go`, reusing its care adapters where the methods match; none adds a method to `game.Game`.
+- `deps.go`: `Host` embeds seven roles, each ≤ 8 value-only methods: Bodies (6), Roster (7), Life (2), Cells (7), Wardens (5), Talk (7), Fate (4), Escapes (5, CBT-4). The game implements them in `internal/application/game/prison_host.go`, reusing its care adapters where the methods match; none adds a method to `game.Game`.
 - Numbers: resistance, recruit chance and visit interval come from `pawn/prisoner` (wiki, ENG-003). The work ticks, food band and stroll tuning are original.
 
 ## Invariants

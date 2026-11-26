@@ -9,10 +9,8 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/caravan"
 	"rimworld-go/pkg/mathx"
 )
 
@@ -36,23 +34,13 @@ type Pack struct {
 	Tied    []entity.EntityID
 }
 
-// caravanKg is what a caravan of members people and animals can carry
-// (wiki: body size x 35 kg).
-func caravanKg(members int, animals []animal.Species) int {
-	kg := members * caravan.PersonCarryKg
-	for _, s := range animals {
-		kg += caravan.PackKg(animal.BodySize(s))
-	}
-	return kg
-}
-
 // Pack registers forming caravan cid's goods and animals from list (the
 // FormCaravan entries: "id" for an animal, "stack:qty" for goods; the
 // members, people, are the game's), trimmed to what members people and
 // the animals can carry (a message names what is left behind).
 func (o Ops) Pack(cid uint64, list string, members int) {
 	pk := &Pack{}
-	var species []animal.Species
+	var roster TradeCarriers
 	tame := o.tame()
 	var goods []item.Stack
 	for _, f := range strings.Split(list, ",") {
@@ -70,12 +58,12 @@ func (o Ops) Pack(cid uint64, list string, members int) {
 		case slices.Contains(tame, id) && !slices.Contains(pk.Animals, id):
 			a, _ := o.h.Animal(id)
 			pk.Animals = append(pk.Animals, id)
-			species = append(species, a.Species)
+			roster.Stashed = append(roster.Stashed, Beast{ID: id, State: a})
 		}
 	}
-	room, left := caravanKg(members, species)*1000, 0
+	room, left := carrierCapacity(members, nil, roster), 0
 	for _, st := range goods {
-		g := st.Qty * o.h.Items().MassGrams(st.Kind)
+		g := int64(st.Qty) * int64(o.h.Items().MassGrams(st.Kind))
 		if g > room {
 			left++
 			continue
@@ -126,20 +114,31 @@ func (o packing) finish(cid uint64) {
 // Pace is caravan cid's speed factor (permille) from its cargo against
 // what members people and its animals carry: 1000 empty, 250 full.
 func (o Ops) Pace(cid uint64, members int) int {
+	load, _ := o.CarrierPace(cid, members, members, TradeCarriers{})
+	return max(250, 1000-750*int(load)/1000)
+}
+
+// CarrierPace uses the same eligible carrier roster as trade and split,
+// with the mass of the committed physical cargo, not an inverted speed.
+func (o Ops) CarrierPace(cid uint64, members, riders int, roster TradeCarriers) (load, mount int32) {
 	h := o.s.cargo[cid]
+	capacity, mount, mounts := carrierStats(members, h, roster)
+	if riders == 0 || mounts < riders {
+		mount = 0
+	}
 	if h == nil {
-		return 1000
+		return 0, mount
 	}
-	var species []animal.Species
-	for _, b := range h.Animals {
-		species = append(species, b.State.Species)
+	book := item.Book{}
+	if o.h != nil {
+		book = o.h.Items()
 	}
-	g := 0
+	var grams int64
 	for _, st := range h.Items {
-		g += st.Qty * o.h.Items().MassGrams(st.Kind)
+		grams += int64(st.Qty) * int64(book.MassGrams(st.Kind))
 	}
-	c := max(1, caravanKg(members, species)*1000)
-	return max(250, 1000-750*min(g, c)/c)
+	capacity = max(1, capacity)
+	return int32(min(grams, capacity) * 1000 / capacity), mount
 }
 
 // spotOf is caravan cid's gathering spot (ok false: not gathering).

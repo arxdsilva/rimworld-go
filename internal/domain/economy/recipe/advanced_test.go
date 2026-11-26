@@ -61,6 +61,7 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 		// MED-05: the servo tier asks for crafting 8, the valve heart 5.
 		recipe.MakeServoArm: 8, recipe.MakeServoLeg: 8, recipe.MakeOpticImplant: 8, recipe.MakeCochlearImplant: 8,
 		recipe.MakeSpinalBrace: 8, recipe.MakePumpHeart: 8, recipe.MakeSynthStomach: 8, recipe.MakeValveHeart: 5,
+		recipe.MakeAcousticImplant: 5, recipe.MakeServoJaw: 8, recipe.MakeSynthTongue: 8,
 		// MED-07: prophyl tablets ask for crafting 4.
 		recipe.PressProphyl: 4,
 		// PRD-3 (wiki weapon pages): bows, the pila and the guns.
@@ -81,6 +82,9 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 		want, ok := skill.ForWork(d.Skill)
 		if !ok {
 			t.Fatalf("%s: work type %v trains no skill", d.Name, d.Skill)
+		}
+		if d.ID == recipe.SculptSmall || d.ID == recipe.SculptLarge || d.ID == recipe.SculptGrand {
+			want = skill.Artistic // sculpture remains Craft work and uses independent Artistic proficiency
 		}
 		if d.Learn != want {
 			t.Errorf("%s learns %s, want %s", d.Name, d.Learn.Key(), want.Key())

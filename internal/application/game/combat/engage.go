@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -75,7 +76,7 @@ func (s *Strikes) Ordered(id entity.EntityID) bool { return s.h.StandingRaider(i
 // or a hostile animal (foe).
 func (s *Strikes) foeID(id entity.EntityID, now uint64) bool {
 	if a, ok := s.h.Animal(id); ok {
-		return s.foe(a, now)
+		return s.foe(a, now) || !a.Downed && !a.Dead() && s.h.PackEnemy(0, id)
 	}
 	return s.h.StandingRaider(id)
 }
@@ -87,7 +88,8 @@ func (s *Strikes) foe(a animal.State, now uint64) bool {
 	if a.Dead() || a.Tame && a.Manhunter <= now || a.Dormant { // a tame manhunter is a foe (EAI-0)
 		return false
 	}
-	return s.h.Hostile(a) || a.Manhunter > now || animal.IsMech(a.Species) || animal.DefOf(a.Species).Hive
+	_, hidden := faction.Creature(a.Species)
+	return s.h.Hostile(a) || a.Manhunter > now || hidden
 }
 
 // Threatened reports a hostile anywhere on the map: a raider on its feet,
@@ -102,7 +104,7 @@ func (s *Strikes) Threatened(now uint64) bool {
 		}
 	}
 	for _, aid := range h.AnimalIDs() {
-		if a, ok := h.Animal(aid); ok && s.foe(a, now) {
+		if s.foeID(aid, now) {
 			return true
 		}
 	}

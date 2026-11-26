@@ -219,6 +219,9 @@ func TestShipSleeperWakes(t *testing.T) {
 		}
 		g.Step(1)
 	}
+	if !g.isStashed(ada) || shipOf(g).Sleeper(casket) != ada {
+		t.Fatal("Ada never boarded before the wake order")
+	}
 	g.Enqueue(command.Command{Kind: command.LeaveShip, Target: uint64(casket)})
 	g.Step(1)
 	if g.isStashed(ada) || shipOf(g).Sleeper(casket) != 0 || !slices.Contains(g.pawnIDs, ada) {

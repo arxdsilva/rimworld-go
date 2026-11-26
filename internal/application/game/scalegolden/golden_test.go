@@ -189,13 +189,59 @@ import (
 // Re-pinned (CBT multi-part hits, 2026-11-24): multi-part hit rules for scratch, stab and bullet (W1) and animal blows through PickPart + dealSpread (W0b): they add body-stream draws, which
 // shift every run where a scratch, stab, bullet or animal blow lands.
 // 48x40/seed42 and 120x120/seed1 move; the other four are bit-identical.
+// Re-pinned (V3 ecosystem-weight wildlife): each generated colony
+// has a new, deterministic wild-animal roster. The biome density/area
+// budget and species weights replace head counts, changing animal actions,
+// their RNG use and dependent saved game state after 20,000 ticks.
+// All six original map/seed fixtures were run unshort at 5a1960ba7.
+// Re-pinned (WRK-101/102, v20): all founders now have five new work
+// priorities. Basic owns switch/casket jobs; Smith and Tailor take their
+// corresponding bills before general Craft. The labor flags are also
+// saved in the wide field. Map sizes, seeds and 20k-tick duration unchanged.
+// Artistic and Brawler integration:
+// Generated founders now draw one additional Artistic skill, preserving
+// all original skill IDs and appending ID 11. The extra generation draw
+// changes downstream generation streams, and the newly saved 12-skill
+// arrays change the authoritative world hash. All six existing seeded
+// worlds ran the original 20,000 ticks, full native engine under -race.
+// The legacy-pawn hash (0x833d997dc5201ca7) independently
+// pins the intended character-generator change. No world/tick/seed
+// dimension or assertion is removed.
+// SIM-071: Mood Base, 6 wealth-expectation
+// bands and natural-only catharsis make intentional changes to the
+// simulated pawn moods, break schedules, RNG and initial wealth snapshot.
+// All six real worlds were rerun unshort for 20,000 ticks under x86 -race;
+// no fixtures, seeds or hash checks were removed.
+// Semantic event letters: 48x40/seed7 preserves
+// the same 20,000-tick simulated world and raid text, while a posted
+// letter now saves its stable source Code and typed Fields. All other
+// five seeds have their prior canonical hashes unchanged. No RNG,
+// tick count, map size, source rule or assertion was changed.
+// Re-pinned (C6 R2 Guard flight): 120x120/seed7 changes at the 18,900
+// tick sample after retaining safe native flight choices and rejecting
+// dangerous routes. A baseline-Guard overlay reproduced the old pin.
+// Only Animals, Carried, Claims, Jobs, Motion and Positions differ at
+// tick 20,000. RNG and the other five pins are unchanged.
+// Public-source correction: body-size wildlife budgeting changes seeded
+// species composition and RNG evolution; corrected need and mood rules
+// change simulation decisions. Two full 20k-tick runs for every existing
+// size/seed produced the same new pins. No dimensions or assertions removed.
+// Residual wildlife budget correction: starting groups now select a species
+// that fits the remaining budget and stop when none can fit, instead of
+// consuming unproductive retries. This intentionally changes the generated
+// roster and subsequent RNG. Reverting only animal/ecosystem.go to the
+// preceding candidate restored all six original 20,000-tick hashes on the
+// combined corrected source. The same sizes, seeds and assertions remain.
+// The upstream CBT 3.4b/c reconciliation (2026-11-25) keeps all six
+// pins below unchanged in the Core candidate; the new forms have their
+// own native split regression tests.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xa7d602efa9a46d1e,
-	"48x40/seed7":    0x67bd5ef1a52e30f6,
-	"48x40/seed42":   0xac9b158176fd600f,
-	"120x120/seed1":  0xa13f46ae1f98d661,
-	"120x120/seed7":  0xc0d088d53929de1e,
-	"120x120/seed42": 0x3289ef2592a0ea67,
+	"48x40/seed1":    0x4360e3bf00250daa,
+	"48x40/seed7":    0x79fdb5e8da22cef6,
+	"48x40/seed42":   0x26f08275d1f48917,
+	"120x120/seed1":  0x683fdf5f5fdb73b3,
+	"120x120/seed7":  0x4c006521f85ce75e,
+	"120x120/seed42": 0xd17e5235177a34c8,
 }
 
 const scaleGoldenTicks = 20000

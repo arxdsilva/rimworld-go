@@ -269,7 +269,44 @@ func TestGrownGolden(t *testing.T) {
 	//
 	// Re-pinned (CBT multi-part hits, 2026-11-24): multi-part hit rules for scratch, stab and bullet (W1) and animal blows through PickPart + dealSpread (W0b): they add body-stream draws
 	// (scratch 2 parts x 67 %, stab retarget and chain, bullet parent bonus).
-	const want uint64 = 0xf0617391bfc235a2
+	// Re-pinned (AX-2/3/4): admitted native structure material costs and
+	// work alter the grown colony simulation. The old hash holds through
+	// 9e0236efac; f1c5f2ada alone moves it to the value below.
+	// Re-pinned (native movement/occupancy, f1a251f4e): pass-through-only
+	// buildings are passable but cannot be rest/route destinations, and
+	// blocked movers choose a standable neighboring cell. Bisection: the
+	// pre-movement eec2ab8a8 still has 0x615483cfd00c9c16; f1a251f4e
+	// first yields the new hash, unchanged by later gameplay commits.
+	// Re-pinned (V3 ecosystem-weight wildlife): deterministic spawned
+	// wildlife and its subsequent actions now use the vanilla weight budget.
+	// The old born-animal count affects the simulation and final state.
+	// Re-pinned (animal training maintenance): trained pets now save the
+	// next maintenance tick and tameness-loss stage. Earlier snapshots
+	// only saved a training-session timestamp for read-time decay.
+	// The same 5000-tick seeded colony yields the new hash on both runs.
+	// v20: five new work columns change the seeded colony's default
+	// priorities, with Basic handling flicks and specialist craft work
+	// assigned to Smith and Tailor. The site now generates its river/lakes,
+	// while mining skill and trainability use the explicit vanilla curves.
+	// PRD-6: Artistic appends a twelfth skill with an
+	// additional deterministic pawn-generation draw. Its generated
+	// level/passion and downstream saved state change the colony hash.
+	// Original seed 7, 120x120 map and 5,000-tick duration are retained.
+	// SIM-071: new mood baseline and wealth expectation
+	// thoughts alter authoritative pawn mood and mental-break decisions;
+	// the original seeded 5000-tick colony was measured under x86 -race.
+	// MED-14: Core prosthetic catalogue, surgical rules,
+	// damageable replacements and chronic disease change this seeded
+	// 5000-tick colony. Two independent x86 runs agreed; the other six
+	// 20000-tick native scale goldens stayed unchanged.
+	// Public-source wildlife and mood corrections intentionally change
+	// this scenario. Two complete independent runs yielded the same hash.
+	// Residual wildlife allocation and initial tameness-maintenance
+	// deadlines intentionally change this scenario. Reverting only the
+	// ecosystem change and TameAnimal's new deadline reset recovers the
+	// preceding pin exactly; the new 5000-tick hash repeats unchanged.
+	// Upstream CBT 3.4b/c reconciliation leaves this pin unchanged.
+	const want uint64 = 0xcfa56683bd605b4c
 	g, _, err := Build(7, 120, 120, DefaultColonists)
 	if err != nil {
 		t.Fatal(err)

@@ -6,6 +6,8 @@ package game
 import (
 	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/mapview"
+	"rimworld-go/internal/application/game/viewmodel"
 	"slices"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -41,12 +43,12 @@ func (g *Game) fillItemViews(w *WorldView) {
 	var t itemCounts
 	if !g.views.on {
 		w.Items = g.appendItemViews(make([]ItemView, 0, len(g.itemIDs)), &t)
-		t.apply(w, t.foodByKind(), storedRows(&t.stored, g.sk.content.Items))
+		t.apply(w, t.foodByKind(), mapview.StoredRows(&t.stored, g.sk.content.Items, itemLabel))
 		return
 	}
 	m := &g.views.items
 	m.scratch = g.appendItemViews(m.scratch[:0], &t)
-	if !m.ok || !slices.EqualFunc(m.scratch, m.views, sameItemView) {
+	if !m.ok || !slices.EqualFunc(m.scratch, m.views, viewmodel.EqualItem) {
 		m.views = make([]ItemView, len(m.scratch))
 		copy(m.views, m.scratch)
 	}
@@ -54,22 +56,11 @@ func (g *Game) fillItemViews(w *WorldView) {
 		m.foodByKind = t.foodByKind()
 	}
 	if !m.ok || t.stored != m.totals.stored {
-		m.stored = storedRows(&t.stored, g.sk.content.Items)
+		m.stored = mapview.StoredRows(&t.stored, g.sk.content.Items, itemLabel)
 	}
 	m.totals, m.ok = t, true
 	w.Items = m.views
 	t.apply(w, m.foodByKind, m.stored)
-}
-
-// sameItemView is a == b field by field (Ingredients keeps ItemView from
-// ==); TestSameItemViewSeesEveryField fails on a field left out.
-func sameItemView(a, b ItemView) bool {
-	return a.ID == b.ID && a.Kind == b.Kind && a.Qty == b.Qty && a.X == b.X && a.Y == b.Y && a.Carried == b.Carried &&
-		a.FreshDays == b.FreshDays && a.Rotten == b.Rotten && a.RotRate == b.RotRate && a.Dried == b.Dried && a.Of == b.Of &&
-		a.OfName == b.OfName && a.Animal == b.Animal && a.Wreck == b.Wreck && a.Catch == b.Catch && a.Forbidden == b.Forbidden &&
-		a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked && a.PoisonPermille == b.PoisonPermille &&
-		a.Quality == b.Quality && a.Stuff == b.Stuff && a.HP == b.HP && a.MaxHP == b.MaxHP && a.Tainted == b.Tainted &&
-		a.Urgent == b.Urgent && slices.Equal(a.Ingredients, b.Ingredients) && a.Meat == b.Meat && a.AX == b.AX && a.Store == b.Store && a.Slot == b.Slot
 }
 
 // appendItemViews appends every visible stack's view to out and counts it
@@ -140,4 +131,16 @@ func (t *itemCounts) foodByKind() map[string]int {
 func (t *itemCounts) apply(w *WorldView, foodByKind map[string]int, stored []StoredResourceView) {
 	w.Food, w.Wood, w.Stone, w.Steel, w.Silver, w.Gold = t.food, t.wood, t.stone, t.steel, t.silver, t.gold
 	w.FoodByKind, w.Stored, w.FoodDays = foodByKind, stored, t.nutrition // food.go fillDietView makes it days
+}
+
+// countStored adds stack st to qty when it lies on a stockpile cell and
+// nobody carries it. One zone lookup per stack (zones.At is a cell index),
+// never a scan of the cells.
+func (g *Game) countStored(qty *[256]int, st item.Stack) {
+	if st.Carrier != 0 {
+		return
+	}
+	if _, ok := g.storageAt(st.X, st.Y); ok { // stockpiles and dumps (PLAY-023)
+		qty[st.Kind] += st.Qty
+	}
 }

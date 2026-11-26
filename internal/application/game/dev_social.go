@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/social"
@@ -134,8 +135,9 @@ func (g *Game) DevSpawnImplants(near entity.EntityID) bool {
 		return false
 	}
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	used := make([][2]int, 0, len(implantKinds))
-	for _, k := range implantKinds {
+	kinds := item.ImplantKinds()
+	used := make([][2]int, 0, len(kinds))
+	for _, k := range kinds {
 		x, y, ok := g.freeLandNear(pos.X, pos.Y, 8, used) // arrival.go
 		if !ok {
 			x, y = pos.X, pos.Y // crowded: they pile on the pawn's tile

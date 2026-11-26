@@ -372,3 +372,51 @@ func TestBuyCratedBigScreenFromOrbitalTrader(t *testing.T) {
 		t.Fatal("the bought crate takes a reinstall blueprint")
 	}
 }
+
+func TestBedrollUninstallAndReinstallNative(t *testing.T) {
+	for _, kind := range []construction.Kind{construction.Bedroll, construction.DoubleBedroll} {
+		g := New(Config{Seed: 1, Width: 24, Height: 16})
+		bid := buildNow(t, g, kind, item.Cloth, construction.South, 4, 4)
+		b, _ := g.bldgs.Get(bid)
+		b.Quality, b.Damage = 5, 7
+		g.bldgs.Set(bid, b)
+		bob := builder(t, g, 1, 1)
+		ax1Cmd(g, ax1Rect(command.DesignateUninstall, 4, 4, 4, 4, true))
+		if !runCare(g, 4000, func() bool { cid, _ := crateOf(g); return cid != 0 }, bob) {
+			t.Fatal("bedroll not packed")
+		}
+		cid, st := crateOf(g)
+		if construction.Kind(st.Building) != kind || st.Stuff != item.Cloth || st.Quality != 5 || st.Wear != 7 || g.bldgs.Has(bid) {
+			t.Fatalf("wrong crate %+v", st)
+		}
+		ax1Cmd(g, command.Command{Kind: command.Reinstall, Target: uint64(cid), X: 12, Y: 7, Facing: uint8(construction.East)})
+		for i := 0; i < 6000 && g.layerBldgAt(12, 7, construction.LayerObject) == 0; i++ {
+			g.Step(1) // inspect the install before automatic repair can change wear
+			if i%100 == 0 {
+				g.SetNeeds(bob, needs.Full, needs.Full)
+			}
+		}
+		if g.layerBldgAt(12, 7, construction.LayerObject) == 0 {
+			t.Fatal("bedroll not reinstalled")
+		}
+		nb, _ := g.bldgs.Get(g.layerBldgAt(12, 7, construction.LayerObject))
+		if nb.Kind != kind || nb.Stuff != item.Cloth || nb.Quality != 5 || nb.Damage != 7 || nb.Facing != construction.East {
+			t.Fatalf("wrong bedroll %+v", nb)
+		}
+	}
+}
+
+func TestOccupiedBedCannotBePacked(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 12})
+	bid := buildNow(t, g, construction.Bedroll, item.Cloth, construction.South, 4, 4)
+	id, _ := g.SpawnNamedPawn(4, 4, "Sleeper")
+	b, _ := g.bldgs.Get(bid)
+	b.Claimant = uint64(id)
+	g.bldgs.Set(bid, b)
+	if sid := (ordersHost{g}).Pack(bid, orders.CrateOf(b)); sid != 0 || !g.bldgs.Has(bid) {
+		t.Fatal("occupied bed was packed")
+	}
+	if sid, _ := crateOf(g); sid != 0 {
+		t.Fatal("failed pack created crate")
+	}
+}

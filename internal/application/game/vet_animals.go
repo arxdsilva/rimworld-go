@@ -38,14 +38,14 @@ func (g *Game) needsVet(id entity.EntityID, a *animal.State, now uint64) bool {
 // assignTendAnimal sends doctor id to tend the nearest hurt tame animal.
 func (g *Game) assignTendAnimal(id entity.EntityID) bool {
 	now := uint64(g.clock.Now())
-	if !g.anyAnimal(func(aid entity.EntityID, a *animal.State) bool { return g.needsVet(aid, a, now) }) {
+	if !g.animals.AnyTame(func(aid entity.EntityID, a *animal.State) bool { return g.needsVet(aid, a, now) }) {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
 	for _, aid := range g.animalIDs {
-		if a := g.animals.Ref(aid); a == nil || !g.needsVet(aid, a, now) {
+		if a := g.animals.Ref(aid); a == nil || !g.needsVet(aid, a.SnapshotRef(), now) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(aid); taken {
@@ -122,11 +122,11 @@ func (g *Game) naturalHeal(id entity.EntityID, a *animal.State, now uint64) {
 		return
 	}
 	every := uint64(animalHealEvery)
-	if g.tended(id) {
+	if g.tended(id) || a.Body == nil && lyingDown(*a) && g.rest.Animals.MedicalLying(id) {
 		every /= 2
 	}
 	if (now+uint64(id))%every == 0 {
 		a.Injury--
-		reconcileAnimalBody(a) // animal_health.go: the wounds follow
+		animal.ReconcileBody(a) // animal_health.go: the wounds follow
 	}
 }

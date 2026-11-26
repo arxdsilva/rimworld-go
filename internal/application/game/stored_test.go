@@ -92,13 +92,13 @@ func TestStoredRowsLabelledAndSorted(t *testing.T) {
 	spawn(t, g, item.FertileEgg, 1, 17, 2)
 	spawn(t, g, item.Tuque, 1, 18, 2)
 	want := []StoredResourceView{ // FOOD-3: a fertile egg is food
-		{"fertile egg", "Fertile egg", "Food", 1}, {"meal", "Meal", "Food", 4}, {"meat", "Meat", "Food", 6},
-		{"steel", "Steel", "Materials", 3}, {"wood", "Wood", "Materials", 5},
-		{"herbal medicine", "Herbal medicine", "Medicine", 7},
-		{"tuque", "Tuque", "Apparel", 1},
-		{"rifle", "Rifle", "Weapons", 1},
-		{"components", "Components", "Manufactured", 2},
-		{"human corpse", "Human corpse", "Corpses", 1},
+		{Kind: "fertile egg", Label: "Fertile egg", Category: "Food", Qty: 1}, {Kind: "meal", Label: "Meal", Category: "Food", Qty: 4}, {Kind: "meat", Label: "Meat", Category: "Food", Qty: 6},
+		{Kind: "steel", Label: "Steel", Category: "Materials", Qty: 3}, {Kind: "wood", Label: "Wood", Category: "Materials", Qty: 5},
+		{Kind: "herbal medicine", Label: "Herbal medicine", Category: "Medicine", Qty: 7},
+		{Kind: "tuque", Label: "Tuque", Category: "Apparel", Qty: 1},
+		{Kind: "rifle", Label: "Rifle", Category: "Weapons", Qty: 1},
+		{Kind: "components", Label: "Components", Category: "Manufactured", Qty: 2},
+		{Kind: "human corpse", Label: "Human corpse", Category: "Corpses", Qty: 1},
 	}
 	if got := g.World().Stored; !reflect.DeepEqual(got, want) {
 		t.Fatalf("stored\n got %+v\nwant %+v", got, want)

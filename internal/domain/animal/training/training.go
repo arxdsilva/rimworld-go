@@ -3,6 +3,8 @@
 
 package training
 
+import "rimworld-go/internal/domain/sim/entity"
+
 // Skill is a trainable behaviour (append only, saved).
 type Skill uint8
 
@@ -10,22 +12,39 @@ const (
 	Obedience Skill = iota
 	Guard
 	Release
+	Haul
 	NumSkills
 )
 
 // Steps is how many successful steps it takes to learn each skill.
-var Steps = [NumSkills]uint8{Obedience: 3, Guard: 3, Release: 2}
+const LegacySkills = int(Haul) // historical fixed-width save array
+
+var Steps = [NumSkills]uint8{Obedience: 3, Guard: 3, Release: 2, Haul: 7}
+
+// Maintenance belongs to the world roster across map and caravan travel.
+type Maintenance struct {
+	DecayAt      uint64
+	TameLoss     uint8
+	HaulProgress uint8
+	Task         HaulTask
+}
+
+// HaulTask owns two physical reservations and the exact carried stack.
+type HaulTask struct {
+	Source, Carry entity.EntityID
+	X, Y, Qty     int
+	Until         uint64
+}
 
 // Bond chances, permille per event (Proximity per BondCheckTicks check).
 const (
-	BondTame       int32 = 10
-	BondTrain      int32 = 7
-	BondTend       int32 = 4
-	BondProximity  int32 = 1
-	BondCheckTicks       = 2500
-	// DecayTicks is how long a skill goes unpracticed before it loses a
-	// step (10 days).
-	DecayTicks uint64 = 10 * 60000
+	BondTame       int32  = 10
+	BondTrain      int32  = 7
+	BondTend       int32  = 4
+	BondProximity  int32  = 1
+	BondCheckTicks        = 2500
+	DecayMaxTicks  uint64 = 12 * 60000
+	DecayMinTicks  uint64 = 6 * 60000
 	// BondedFactor multiplies the step chance for a bonded trainer, permille.
 	BondedFactor int32 = 5000
 )
@@ -56,19 +75,8 @@ func StepChance(animalsSkill int, bonded bool) int32 {
 	return min(c, 1000)
 }
 
-// Decay returns steps after sinceTrained ticks without practice: one step
-// is lost per DecayTicks; a learned Obedience never drops below 1.
-func Decay(s Skill, steps uint8, sinceTrained uint64) uint8 {
-	if s >= NumSkills || steps == 0 {
-		return steps
-	}
-	lost := sinceTrained / DecayTicks
-	floor := uint8(0)
-	if Learned(s, steps) && s == Obedience {
-		floor = 1
-	}
-	if lost >= uint64(steps) || uint8(lost) > steps-floor {
-		return floor
-	}
-	return steps - uint8(lost)
+// DecayInterval interpolates vanilla's 12-to-6-day training interval.
+func DecayInterval(wildness int) uint64 {
+	w := uint64(min(max(wildness, 0), 1000))
+	return DecayMaxTicks - (DecayMaxTicks-DecayMinTicks)*w/1000
 }

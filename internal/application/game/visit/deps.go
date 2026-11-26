@@ -33,6 +33,15 @@ type Host interface {
 type Leaving interface {
 	Turning  // turn.go
 	Carrying // carry.go
+	Escaping // escape.go
+}
+
+// Escaping runs the existing breach job and checks whether a structural
+// path to an edge remains possible when ordinary walking has failed.
+type Escaping interface {
+	Breach(id entity.EntityID, j job.Record)
+	StartBreach(id entity.EntityID, tx, ty int) bool
+	BreachRoute(id entity.EntityID, tx, ty int) bool
 }
 
 // Bodies is a visitor as a person on the map.
@@ -46,18 +55,33 @@ type Bodies interface {
 	Hold(id entity.EntityID, now uint64)
 	// GuestStep runs a rescued guest's care (true: care has it);
 	// GuestDied notes a guest that died while down.
-	GuestStep(id entity.EntityID) bool
-	GuestDied(id entity.EntityID)
+	GuestCare
 	// Depart takes id off the map; it stays a known person.
 	Depart(id entity.EntityID)
 	Standing(id entity.EntityID) bool
 	Name(id entity.EntityID) string
 }
 
+// GuestCare keeps life and medical decisions separate from physical
+// presence and departure.
+type GuestCare interface {
+	GuestStep(id entity.EntityID) bool
+	NeedsStep(id entity.EntityID, now uint64)
+	RestStep(id entity.EntityID, now uint64) bool
+	GuestDied(id entity.EntityID)
+}
+
 // Records is where the visitor records live: nil while there are none
 // and create is false; create makes the store.
 type Records interface {
 	Records(create bool) *[]Rec
+	Groups(create bool) *[]Group
+	GroupID() uint64
+	MemberGone(id entity.EntityID, animal bool) (gone, harmed bool)
+	GroupDanger(id entity.EntityID) bool
+	PackStep(id entity.EntityID, group Group, now uint64)
+	GroupGift(group Group)
+	GroupClosed(id uint64)
 }
 
 // Movers is the visitors' jobs and walking.
@@ -94,6 +118,7 @@ type Arrivals interface {
 	NewPerson(ref int, f *faction.Faction) entity.EntityID
 	// Place stands registered person id on (x, y) as a visitor of ref.
 	Place(id entity.EntityID, ref, x, y int, now uint64)
+	PackAnimal(x, y int) (entity.EntityID, bool)
 	// RelativeRoll and RelativeFor: now and then a visitor is a
 	// colonist's relative (relative_world.go), announced by
 	// RelativeLetter.

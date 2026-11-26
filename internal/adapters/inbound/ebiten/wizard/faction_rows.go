@@ -68,7 +68,7 @@ func FactionRows(fs []faction.Faction) []FacRow {
 		r := FacRow{
 			ID: f.ID, Name: f.Name, Type: f.Type, TypeLabel: d.Label,
 			Goodwill: f.Goodwill, Relation: f.Relation, Settlements: len(f.Settlements),
-			Tech: techLabel(lang.English{}, d.Tech), TechKind: d.Tech, Emblem: "ui_icon/faction_" + d.Key,
+			Tech: techLabel(lang.English{}, d.Tech), TechKind: d.Tech, Emblem: d.Emblem(),
 			Accent: globe.Accent(f.Type), Capital: -1,
 		}
 		if f.Leader.Name != "" {
@@ -98,7 +98,7 @@ func GoodwillText(g int) string { return fmt.Sprintf("%+d", g) }
 func HostileCapable(slots []faction.Slot) bool {
 	for _, s := range slots {
 		d := faction.DefOf(s.Type)
-		if s.Count <= 0 || !s.Type.Human() {
+		if s.Count <= 0 || !s.Type.HasWorldSettlements() {
 			continue
 		}
 		if d.GoodwillMin <= faction.HostileAt {
@@ -123,7 +123,7 @@ func SlotIndex(slots []faction.Slot, t faction.Type) int {
 func AddableTypes(slots []faction.Slot) []faction.Type {
 	var out []faction.Type
 	for _, d := range faction.All() {
-		if d.Hidden || !d.Type.Human() || d.MaxCount <= 0 {
+		if !d.Type.HasWorldSettlements() || d.MaxCount <= 0 {
 			continue
 		}
 		if i := SlotIndex(slots, d.Type); i >= 0 && slots[i].Count >= d.MaxCount {

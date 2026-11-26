@@ -22,7 +22,7 @@ var condInfo = [numConditions]struct {
 	OldFracture: {"Old leg fracture", "A badly set break that still aches in the cold.",
 		[]stat.Mod{{Stat: stat.MoveSpeed, Mul: 920}}, nil},
 	Nearsighted: {"Nearsighted", "Anything past arm's length is a blur.",
-		[]stat.Mod{{Stat: stat.ShootAcc, Add: -6}}, nil}, // original tuning: Sight 50 % × 12
+		[]stat.Mod{{Stat: stat.ShootAcc, Add: -15}}, nil}, // original tuning
 	HandTremor: {"Hand tremor", "A faint, constant shake that fine work makes worse.",
 		nil, map[skill.ID]int16{skill.Crafting: -10, skill.Medicine: -10}},
 	Exhausted: {"Exhausted", "Arrived worn out, with nothing but bare hands.", nil, nil},

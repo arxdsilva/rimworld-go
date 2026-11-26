@@ -4,6 +4,8 @@
 package rest
 
 import (
+	"maps"
+
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -24,6 +26,11 @@ import (
 type Beds struct {
 	h       Host
 	holders map[entity.EntityID]bool // Bedded's reused set
+	// The last claim pass and the buildings key it was read at.
+	passHolders map[entity.EntityID]bool
+	passFree    int
+	passKey     [2]uint64
+	passOK      bool
 }
 
 // Bedded is which of ids has a bed (BED-3, the read model's
@@ -39,23 +46,14 @@ func (r *Beds) Bedded(ids []entity.EntityID) map[entity.EntityID]bool {
 	if r.holders == nil {
 		r.holders = make(map[entity.EntityID]bool)
 	}
-	clear(r.holders)
-	free := 0
-	for _, bid := range r.h.BuildingIDs() {
-		b, ok := r.h.Building(bid)
-		if !ok || !b.Kind.Sleeps() {
-			continue
-		}
-		claimable := !b.Forbidden && !b.ForPrisoners && !care.IsMedicalBed(b)
-		for slot := range b.Kind.Sleepers() {
-			switch c := slotOwner(b, slot); {
-			case c != 0:
-				r.holders[entity.EntityID(c)] = true
-			case claimable:
-				free++
-			}
-		}
+	key, keyed := r.buildingsKey()
+	if !keyed || !r.passOK || r.passKey != key {
+		r.passHolders, r.passFree = r.claimPass(r.passHolders)
+		r.passKey, r.passOK = key, keyed
 	}
+	clear(r.holders)
+	maps.Copy(r.holders, r.passHolders)
+	free := r.passFree
 	for _, id := range ids {
 		if free > 0 && !r.holders[id] && r.h.MayOwnBed(id) {
 			r.holders[id] = true
@@ -63,6 +61,43 @@ func (r *Beds) Bedded(ids []entity.EntityID) map[entity.EntityID]bool {
 		}
 	}
 	return r.holders
+}
+
+// buildingsKey is the host's version of the building records, when it keeps one:
+// the claim pass below reads only building records, so it is redone only when
+// the key moves (Buildings Ver covers Kind, Claimant, Claimant2, Forbidden,
+// ForPrisoners and Medical, with an arrival or a removal).
+func (r *Beds) buildingsKey() ([2]uint64, bool) {
+	if k, ok := r.h.(interface{ BuildingsKey() [2]uint64 }); ok {
+		return k.BuildingsKey(), true
+	}
+	return [2]uint64{}, false
+}
+
+// claimPass is one pass over the buildings: who holds a slot of a bed, and how
+// many free slots a colonist could still claim. into is reused.
+func (r *Beds) claimPass(into map[entity.EntityID]bool) (map[entity.EntityID]bool, int) {
+	if into == nil {
+		into = make(map[entity.EntityID]bool)
+	}
+	clear(into)
+	free := 0
+	for _, bid := range r.h.BuildingIDs() {
+		b, ok := r.h.Building(bid)
+		if !ok || !b.Kind.Sleeps() {
+			continue
+		}
+		claimable := !b.Forbidden && !b.Uninstall && !b.Deconstruct && !b.ForPrisoners && !care.IsMedicalBed(b)
+		for slot := range b.Kind.Sleepers() {
+			switch c := slotOwner(b, slot); {
+			case c != 0:
+				into[entity.EntityID(c)] = true
+			case claimable:
+				free++
+			}
+		}
+	}
+	return into, free
 }
 
 // slotOwner is who holds slot of bed b (0: free).
@@ -96,17 +131,21 @@ func (r *Beds) SleepIn(id entity.EntityID) bool {
 	bestD := 1 << 30
 	for _, bid := range r.h.BuildingIDs() {
 		b, ok := r.h.Building(bid)
-		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || b.Forbidden || care.IsMedicalBed(b) { // prison beds: prisoners only
+		if !ok || !b.Kind.Sleeps() || !construction.CanClaimBed(b, uint64(id)) || b.ForPrisoners || b.Forbidden || b.Uninstall || b.Deconstruct || care.IsMedicalBed(b) { // prison beds: prisoners only
 			continue
 		}
 		if !r.h.AreaAllows(id, b.X, b.Y) || r.h.HeldByOther(id, bid) {
 			continue // a bed outside the allowed area, or one a carrier reserved for a patient (RES-1)
 		}
 		d := pathing.Dist(x, y, b.X, b.Y)
-		if b.SlotOf(uint64(id)) >= 0 {
+		if construction.BedSlot(b, uint64(id)) >= 0 {
 			d = -1 // its own bed first
 		}
 		if d < bestD || (d == bestD && bid < best) {
+			sx, sy := r.h.SleepCell(id, construction.ClaimBed(b, uint64(id)))
+			if !r.h.PatientBedSafe(id, bid, sx, sy) {
+				continue
+			}
 			best, bestD = bid, d
 		}
 	}
@@ -114,15 +153,15 @@ func (r *Beds) SleepIn(id entity.EntityID) bool {
 		return false
 	}
 	b, _ := r.h.Building(best)
-	if b.SlotOf(uint64(id)) < 0 {
+	if construction.BedSlot(b, uint64(id)) < 0 {
 		r.h.ReleaseBed(id) // moving to a new bed gives up the old one
 	}
-	b = b.Claim(uint64(id))
+	b = construction.ClaimBed(b, uint64(id))
 	r.h.SetBuilding(best, b)
 	r.h.SetSleptAt(id, best)
 	sx, sy := r.h.SleepCell(id, b)
 	if !r.h.StartJob(id, job.Record{Kind: job.Sleep, Target: best, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
-		r.h.SetBuilding(best, b.Release(uint64(id)))
+		r.h.SetBuilding(best, construction.ReleaseBed(b, uint64(id)))
 		return false // the bed is out of reach
 	}
 	return true
@@ -140,16 +179,16 @@ func (r *Beds) partnerBed(id entity.EntityID) (entity.EntityID, int, bool) {
 	ownSlot, freeD := 0, 1<<30
 	for _, bid := range r.h.BuildingIDs() {
 		b, ok := r.h.Building(bid)
-		if !ok || b.Kind.Sleepers() != 2 || b.ForPrisoners || b.Forbidden || care.IsMedicalBed(b) {
+		if !ok || b.Kind.Sleepers() != 2 || b.ForPrisoners || b.Forbidden || b.Uninstall || b.Deconstruct || care.IsMedicalBed(b) {
 			continue // medical beds are for patients (care/rest.go)
 		}
-		if ps := b.SlotOf(uint64(p)); ps >= 0 {
+		if ps := construction.BedSlot(b, uint64(p)); ps >= 0 {
 			if o := slotOwner(b, 1-ps); o == 0 || o == uint64(id) {
 				return bid, 1 - ps, true
 			}
 			continue
 		}
-		if s := b.SlotOf(uint64(id)); s >= 0 && own == 0 {
+		if s := construction.BedSlot(b, uint64(id)); s >= 0 && own == 0 {
 			own, ownSlot = bid, s
 			continue
 		}
@@ -180,11 +219,11 @@ func (r *Beds) sleepInPartnerBed(id, bid entity.EntityID, slot int) bool {
 	}
 	orig := b
 	prev, hadPrev := r.h.SleptAt(id)
-	b = withSlot(b.Release(uint64(id)), slot, uint64(id))
+	b = withSlot(construction.ReleaseBed(b, uint64(id)), slot, uint64(id))
 	r.h.SetBuilding(bid, b)
 	r.h.SetSleptAt(id, bid)
 	sx, sy := construction.SleepCell(b.Kind, b.Facing, b.X, b.Y, slot)
-	if !r.h.StartJob(id, job.Record{Kind: job.Sleep, Target: bid, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
+	if !r.h.PatientBedSafe(id, bid, sx, sy) || !r.h.StartJob(id, job.Record{Kind: job.Sleep, Target: bid, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
 		r.h.SetBuilding(bid, orig)
 		if hadPrev {
 			r.h.SetSleptAt(id, prev)
@@ -197,8 +236,8 @@ func (r *Beds) sleepInPartnerBed(id, bid entity.EntityID, slot int) bool {
 		if other == bid {
 			continue
 		}
-		if ob, ok := r.h.Building(other); ok && ob.SlotOf(uint64(id)) >= 0 {
-			r.h.SetBuilding(other, ob.Release(uint64(id)))
+		if ob, ok := r.h.Building(other); ok && construction.BedSlot(ob, uint64(id)) >= 0 {
+			r.h.SetBuilding(other, construction.ReleaseBed(ob, uint64(id)))
 		}
 	}
 	return true
@@ -209,11 +248,28 @@ func (r *Beds) sleepInPartnerBed(id, bid entity.EntityID, slot int) bool {
 // no owner (care/rest.go). The command.AssignBedOwner handler.
 func (r *Beds) AssignOwner(bed, owner entity.EntityID, slot int) {
 	b, ok := r.h.Building(bed)
-	if !ok || !b.Kind.Sleeps() || slot < 0 || slot >= b.Kind.Sleepers() {
+	if !ok {
+		return
+	}
+	if b.Kind.AnimalSleeps() {
+		if slot != 0 || b.Medical || b.Forbidden || b.Uninstall || b.Deconstruct || r.h.HeldByOther(owner, bed) ||
+			(b.Claimant != 0 && r.h.HeldBed(entity.EntityID(b.Claimant)) == bed) ||
+			(owner != 0 && (!r.h.TameAnimal(owner) || r.h.HeldBed(owner) != 0)) {
+			return
+		}
+		if owner != 0 && b.Claimant != uint64(owner) {
+			r.h.ReleaseBed(owner)
+			b, _ = r.h.Building(bed)
+		}
+		b.Claimant = uint64(owner)
+		r.h.SetBuilding(bed, b)
+		return
+	}
+	if !b.Kind.Sleeps() || slot < 0 || slot >= b.Kind.Sleepers() {
 		return
 	}
 	if owner != 0 {
-		if care.IsMedicalBed(b) || !r.h.MayOwnBed(owner) {
+		if b.Forbidden || b.Uninstall || b.Deconstruct || care.IsMedicalBed(b) || !r.h.MayOwnBed(owner) {
 			return
 		}
 		if slotOwner(b, slot) == uint64(owner) {

@@ -118,7 +118,7 @@ func factionName(t Type, rng *randx.Rand) string {
 			return "the " + pick(rng, adjectives) + " Compact"
 		}
 		return placeName(rng) + " Commonwealth"
-	case Clans:
+	case Clans, FierceClans, SavageClans:
 		if alt {
 			if rng.IntN(100) < 40 {
 				return pick(rng, nouns) + "-" + pick(rng, bodyParts) + " Clan"
@@ -138,6 +138,12 @@ func factionName(t Type, rng *randx.Rand) string {
 		return pick(rng, adjectives) + " Knives"
 	case Swarm:
 		return "The Swarm"
+	case AncientQuiet:
+		return "the Quiet Archive"
+	case AncientHostile:
+		return "the Lost Watch"
+	case MechHive:
+		return "the Iron Chorus"
 	}
 	return ""
 }

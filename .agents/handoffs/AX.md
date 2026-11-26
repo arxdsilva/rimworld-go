@@ -165,3 +165,11 @@ Art for the escape ship (A8) and caskets, pods, scanner, hitching spot (A9) · 2
 - Changed: clean-room original art, families `starship.py` (A8) and `transit.py` (A9 and world markers), no `shadow:` blocks and no new palette; `make art FAMILIES="starship transit"`. ART doc: new §42 lists every key, Wave 8/9 rows updated. `make art-check` passes (6753 sprites, 0 errors); no orphan_allow lines.
 - Keys: A8 `structure/ship_beam_<facing>` (2x6, lamp glow, not an autotile; end flanges read as joined), `ship_casket_<facing>` (empty, no glow) and `ship_casket_occupied_<facing>`, `ship_core`, `ship_sensor` (2x2, glow), `ship_reactor` (6x7; `ship_reactor_glow` is the started state), `ship_engine_<facing>` (3x4, throat glow), `item/mind_core`, `effect/launch_flare`, icons. A9 `furniture/stasis_casket_<facing>` and `_occupied_<facing>` (glow), `structure/transport_pod`, `pod_launcher_<facing>` (`gauge0`/`gauge1` as on the battery so `overlay.BatteryBarRect` is reusable), `power/mineral_scanner_<facing>` (glow = working), `overlay/hitching_spot`, world markers `ui_icon/pod_flight`, `ui_icon/mining_site` (caravan badge style), icons.
 - Open: in-game review pending (ART rows `[-]`); victory presentation: the ending screen has no art yet (ART Wave 9 `[ ]`); a rising-pod streak could reuse `effect/pod_fall` flipped vertically. No HUD/UI of its own.
+
+## AX-A4-core-material-basis
+Construction material accounting and historical frames · 2026-11-25 · this commit
+- Changed: absolute incomplete-frame requirements preserve delivered material, IDs and work; completed buildings refund verified historical paid-material basis. Deconstruction view exposes actual remaining labour.
+- Decisions: idempotent migration, no fabricated refunds or duplicate material creation; unknown historical swap basis handled conservatively. Preserve active bill identity and material ownership.
+- Save/HUD: historical v20 construction and floor-swap fixtures; typed BuildingView read-only progress; canonical save stays compatible.
+- Boxes: vanilla **Deconstruction** [x]; no spec-backlog issue closure claimed for this slice.
+- Open: AX-A4 historical unknown paid basis cannot be reconstructed beyond durable evidence.

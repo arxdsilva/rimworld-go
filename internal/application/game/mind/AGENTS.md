@@ -5,7 +5,7 @@ Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds
 
 ## Owns
 - `Mind` (mind.go): built by `New(Host)`; `Tick(id, j)` (the AI phase, standing colonists), `Downed(id)` (the AI phase's downed branch and every blow), `End(id)` (an arrest), `Force(id, k)` (dev tools), `Target(id)` (read model), `Thresholds(id)`, `Export`/`Import`, `StartFight`/`EndFight`/`InFight`/`Brawl` (fight.go; `Brawl` runs the brawl job in the game's job phase).
-- `Track`: a break's target and its next-retarget / next-insult tick; `Save` also keeps each colonist's calm window (no new break during the catharsis day).
+- Tracks break targets and cooldowns in progress. The saved Calm field is read for old gob compatibility and ignored for new breaks; catharsis is a real timed mood memory.
 - `Hostile(k)`: berserk and murderous rage make a colonist a fair attack target (the game's `standingRaider`/`raiderAt`).
 - Tantrum (CBT-4, tantrum.go): a major break (wiki: 8000-12000 ticks, commonality 0.333, the 20 % threshold and 0.8-day MTB of its tier; violent colonists only): it picks a building or item stack at random within `TantrumRadius` (8, original), walks beside it and punches it on its fist's cycle until it breaks (`Smash` role: `Breakable`, `GoBeside`, `Smash`; `Track.X/Y`). Read model: `PawnView.MentalBreak` "tantrum".
 
@@ -22,11 +22,11 @@ Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds
 
 ## Invariants
 - Every roll comes from `Host.Roll` (the game's social stream); no map iteration.
-- Hysteresis: a break lasts its drawn duration; a spree or berserker retargets at most every `RetargetTicks`; insults are `InsultGap` apart; no new break during the calm window after one ends.
+- Hysteresis: a break lasts its drawn duration; retargeting and insults keep their own cooldowns. Natural recovery grants timed catharsis. Interrupting Berserk (arrest or downing) also grants catharsis; other forced interruptions do not. Sleeping pawns skip break and inspiration checks.
 
 ## Hot paths
 - `Tick` runs per standing colonist per tick: off its hourly check tick a calm colonist costs one map lookup and no roll. `Downed` runs per downed pawn per tick: one map lookup. `Brawl` runs per fighter per tick: value host calls only.
 
 ## Tests
-- Unit tests here run against `fakeHost` (host_test.go); no-flap tests `TestSpreeDoesNotFlap`, `TestBerserkDoesNotFlap`, `TestCatharsisBlocksANewBreak`, `TestTantrumDoesNotFlap` (tantrum_test.go).
+- Unit tests here run against `fakeHost` (host_test.go); no-flap tests `TestSpreeDoesNotFlap`, `TestBerserkDoesNotFlap`, `TestInterruptedBreakDoesNotForceImmunity, TestSleepingPawnSkipsBreakAndInspirationChecks`, `TestTantrumDoesNotFlap` (tantrum_test.go).
 - Whole-game tests: `internal/application/game/mental_targets_test.go`, `mental_test.go`, `fight_test.go`.

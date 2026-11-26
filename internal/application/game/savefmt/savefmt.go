@@ -10,6 +10,8 @@ package savefmt
 
 import (
 	"compress/gzip"
+	"encoding/gob"
+	"fmt"
 	"io"
 )
 
@@ -32,12 +34,27 @@ func NewReader(r io.Reader) (*gzip.Reader, error) { return gzip.NewReader(r) }
 
 // Compress writes raw, a save's gob stream (game.EncodeSave), to dst as a
 // save file: what (*game.Game).Save writes, byte for byte. The autosave
-// queue encodes on the simulation's goroutine and compresses here, on its
-// own (MASTER §46).
+// queue captures Gob on the simulation's goroutine, then canonicalizes and
+// compresses on its own (MASTER §46).
 func Compress(dst io.Writer, raw []byte) error {
 	zw := NewWriter(dst)
 	if _, err := zw.Write(raw); err != nil {
 		return err
 	}
 	return zw.Close()
+}
+
+// ReadInfo reads just the compressed save header.
+func ReadInfo(r io.Reader) (Info, error) {
+	zr, err := NewReader(r)
+	if err != nil {
+		return Info{}, fmt.Errorf("not a save file: %w", err)
+	}
+	defer zr.Close()
+	var info Info
+	if err := gob.NewDecoder(zr).Decode(&info); err != nil {
+		return Info{}, fmt.Errorf("read save header: %w", err)
+	}
+	info.Upgrade()
+	return info, nil
 }

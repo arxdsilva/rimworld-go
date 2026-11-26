@@ -174,6 +174,10 @@ func (h windowsHost) DrawPassion(dst *ebiten.Image, p int, x, y, size float64, s
 	h.a.insp.Tabs().DrawPassion(dst, p, x, y, size, st, ty)
 }
 
+func (h windowsHost) DrawWorkStatus(dst *ebiten.Image, p game.PawnView, x, y, size float32) {
+	h.a.chrome.Bar().DrawStatusMark(dst, p, x, y, size)
+}
+
 func (h windowsHost) DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, ht float64) bool {
 	return drawLookPortrait(dst, h.a.art, l, x, y, w, ht)
 }

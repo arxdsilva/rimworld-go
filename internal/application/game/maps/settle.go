@@ -102,7 +102,7 @@ func (l Lifecycle) AttackReason(id entity.EntityID) string {
 // Attack is command.AttackSettlement: caravan Target attacks the
 // settlement on its tile, entering at its map's edge.
 func (l Lifecycle) Attack(c command.Command) {
-	if why := l.f.Assault(c.Target, false); why != "" {
+	if why := l.Assault(c.Target, false); why != "" {
 		l.f.h.Note("%s", why)
 	}
 }
@@ -110,8 +110,8 @@ func (l Lifecycle) Attack(c command.Command) {
 // Assault has caravan cid attack the settlement on its tile, entering at
 // the map's edge or centre at the end of the tick: why it cannot ("" it
 // does). The first attack on a settlement costs its faction's goodwill.
-func (f Fleet) Assault(cid uint64, centre bool) string {
-	id, l := entity.EntityID(cid), f.Life()
+func (l Lifecycle) Assault(cid uint64, centre bool) string {
+	id, f := entity.EntityID(cid), l.f
 	if why := l.AttackReason(id); why != "" {
 		return why
 	}
@@ -159,7 +159,7 @@ func (l Lifecycle) populate(m *Meta, fi int) {
 	tech := faction.DefOf(f.h.Factions()[fi].Type).Tech
 	seed := SeedFor(f.h.Seed(), m.Tile, m.ID) ^ settleSalt
 	c := mapgen.Settlement(mapgen.CompoundConfig{W: SiteSide, H: SiteSide, Tech: tech, Seed: seed})
-	arms := kit.Pick(defenderPoints(tech, f.h.ThreatScale()), defenderMax, tech, randx.New(seed).IntN)
+	arms := kit.PickLimited(defenderPoints(tech, f.h.ThreatScale()), defenderMax, tech, randx.New(seed).IntN)
 	f.h.Settle(c, fi+1, arms, seed)
 	m.Faction = fi + 1
 }
@@ -241,6 +241,7 @@ func (l Lifecycle) destroy(fi, t int) string {
 			fa.SettlementNames = slices.Delete(slices.Clone(fa.SettlementNames), k, k+1)
 		}
 	}
+	f.Market().clear(t)
 	if p := f.h.Planet(); p != nil && t >= 0 && t < len(p.Settlement) && p.Settlement[t] >= 0 {
 		p.Settlement[t] = -1
 	}
@@ -258,23 +259,17 @@ func (l Lifecycle) destroy(fi, t int) string {
 	return fa.Name
 }
 
-// Enemies reports human faction a hostile to another human faction b
-// (original tuning: factions have no relations of their own here). Freebooters are
-// everyone's enemies, and two factions hostile to the colony are rivals,
-// as raiders of two such factions fight on the map (game raids' Rival).
+// Enemies uses the same persistent inter-faction war ledger as the
+// world simulation, independent of goodwill toward the colony.
 func Enemies(a, b faction.Faction) bool {
-	if !a.Type.Human() || !b.Type.Human() || a.Defeated {
-		return false
-	}
-	return a.Type == faction.Freebooters || b.Type == faction.Freebooters ||
-		a.Relation == faction.Hostile && b.Relation == faction.Hostile
+	return faction.Enemies(a, b)
 }
 
 // factionAt is the index of the human faction whose settlement stands on
 // tile t (-1: none, or a defeated one).
 func (l Lifecycle) factionAt(t int) int {
 	for i, fa := range l.f.h.Factions() {
-		if fa.Type.Human() && !fa.Defeated && slices.Contains(fa.Settlements, t) {
+		if fa.Type.HasWorldSettlements() && !fa.Defeated && slices.Contains(fa.Settlements, t) {
 			return i
 		}
 	}

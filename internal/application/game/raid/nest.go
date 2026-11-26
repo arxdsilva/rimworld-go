@@ -28,6 +28,8 @@ type Nest interface {
 	// HiveSpot: a hive mound may rise on (x, y): dry, open ground under
 	// a roof, dark, and warmer than -17 °C (wiki: Infestation).
 	HiveSpot(x, y int) bool
+	// InfestationWeight is the live storyteller admission and relative likelihood.
+	InfestationWeight(x, y int) int
 	// PlaceHive raises a hive mound on (x, y) (0: no room).
 	PlaceHive(x, y int) entity.EntityID
 	// HiveStands: hive mound id still stands.

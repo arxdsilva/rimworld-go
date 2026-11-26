@@ -161,7 +161,7 @@ func TestJourneyMapsLetterAndMessageJump(t *testing.T) {
 	j.update(2)
 	var letter game.LetterView
 	for _, l := range j.g.World().Letters {
-		if l.Map == away {
+		if game.MapID(l.Map) == away {
 			letter = l
 		}
 	}

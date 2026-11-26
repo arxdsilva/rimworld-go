@@ -6,6 +6,8 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/tradeview"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -27,12 +29,13 @@ import (
 // Comms order and action refusals.
 const (
 	ReasonNoPower      = "no power"
-	ReasonNoBeacon     = "needs a powered trade beacon"
-	ReasonNoSilver     = "no silver near a trade beacon"
+	ReasonNoBeacon     = tradeview.ReasonNoBeacon
+	ReasonNoSilver     = tradeview.ReasonNoSilver
 	ReasonOnTheWay     = "a caravan is on its way"
 	ReasonCaravanHere  = "a caravan is already here"
 	ReasonNotTraders   = "they don't trade"
 	ReasonGiftTooSmall = "too little silver to matter"
+	ReasonNoGiftGain   = tradeview.ReasonNoGiftGain
 )
 
 // CommsView is the open comms session (ok false while none is open).
@@ -45,7 +48,7 @@ func (g *Game) CommsView() (CommsView, bool) {
 	v := CommsView{Operator: s.operator, OperatorName: g.name(s.operator), Console: s.console, Orbital: g.orbitalView(now)}
 	beacons := len(g.beaconIDs()) > 0
 	if beacons {
-		v.BeaconSilver = g.colonyGoods(true).counts[item.Silver]
+		v.BeaconSilver = g.colonyGoods(true).Counts()[item.Silver]
 	}
 	for _, f := range g.ng.factions {
 		if faction.DefOf(f.Type).Hidden {
@@ -59,20 +62,7 @@ func (g *Game) CommsView() (CommsView, bool) {
 // commsFaction is faction f's comms row.
 func (g *Game) commsFaction(f faction.Faction, beacons bool, silver int, now uint64) CommsFactionView {
 	fv := factionView(f) // factions.go: the relation label
-	row := CommsFactionView{ID: f.ID, Name: f.Name, Type: f.Type.String(), Goodwill: f.Goodwill, Relation: fv.Relation}
-	row.Gift = CommsActionView{Cost: faction.GiftSilverPerGoodwill}
-	switch {
-	case f.Defeated:
-		row.Gift.Reason = faction.ReasonGone
-	case f.Besieged:
-		row.Gift.Reason = faction.ReasonBesieged
-	case !beacons:
-		row.Gift.Reason = ReasonNoBeacon
-	case silver < faction.GiftSilverPerGoodwill:
-		row.Gift.Reason = ReasonNoSilver
-	default:
-		row.Gift.Allowed = true
-	}
+	row := tradeview.FactionRow(f, fv.Relation, beacons, silver)
 	row.Caravan = CommsActionView{Cost: faction.CaravanCost}
 	row.Caravan.Allowed, row.Caravan.Reason = g.caravanRequestOK(f, now)
 	row.Aid = CommsActionView{Cost: faction.AidCost}
@@ -83,7 +73,7 @@ func (g *Game) commsFaction(f faction.Faction, beacons bool, silver int, now uin
 // caravanRequestOK reports whether faction f sends a caravan if asked
 // now, or why not.
 func (g *Game) caravanRequestOK(f faction.Faction, now uint64) (bool, string) {
-	if !f.Type.Human() {
+	if !f.Type.HasWorldSettlements() {
 		return false, ReasonNotTraders
 	}
 	if ok, why := faction.CanRequestCaravan(f, g.cooldownOf(f.ID), now); !ok {
@@ -92,8 +82,10 @@ func (g *Game) caravanRequestOK(f faction.Faction, now uint64) (bool, string) {
 	if g.requestPending(f.ID) {
 		return false, ReasonOnTheWay
 	}
-	if c := g.trade.caravan; c != nil && c.Faction == f.ID {
-		return false, ReasonCaravanHere
+	for _, c := range caravansOf(&g.trade) {
+		if c.Faction == f.ID {
+			return false, ReasonCaravanHere
+		}
 	}
 	return true, ""
 }
@@ -117,9 +109,9 @@ func (g *Game) cmdCommsGift(id, silver int) {
 	if c == nil || f == nil || f.Defeated || f.Besieged || faction.DefOf(f.Type).Hidden || silver <= 0 {
 		return
 	}
-	gw := faction.GiftGoodwill(silver)
+	gw := faction.GiftGoodwill(*f, silver)
 	gd := g.colonyGoods(true)
-	if gw <= 0 || gd.counts[item.Silver] < silver {
+	if gw <= 0 || gd.Counts()[item.Silver] < silver {
 		return
 	}
 	g.takeGoods(gd, item.Silver, silver)
@@ -128,8 +120,7 @@ func (g *Game) cmdCommsGift(id, silver int) {
 	g.worldNote("%s received %d silver (%+d goodwill).", f.Name, silver, gw)
 }
 
-// cmdCommsRequestCaravan asks faction id for a trade caravan: it costs
-// goodwill, starts the cooldown and the caravan comes in 6-12 hours.
+// cmdCommsRequestCaravan asks faction id for an arrival two days after paying goodwill.
 func (g *Game) cmdCommsRequestCaravan(id int) {
 	f := g.factionByID(id)
 	now := uint64(g.clock.Now())

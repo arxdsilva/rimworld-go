@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/pkg/randx"
+	"slices"
 )
 
 // Condition is a starting health condition (append only, saved).
@@ -318,6 +319,13 @@ func rollSkills(rng *randx.Rand, b backstory.Book, tb trait.Book, p Pawn, years 
 		}
 	}
 	var capable []skill.ID
+	brawler := false
+	for _, t := range p.Traits {
+		if t == trait.Scrapper {
+			brawler = true
+			break
+		}
+	}
 	for id := skill.ID(0); id < skill.NumSkills; id++ {
 		if !inc.DisablesSkill(id) {
 			capable = append(capable, id)
@@ -343,6 +351,10 @@ func rollSkills(rng *randx.Rand, b backstory.Book, tb trait.Book, p Pawn, years 
 		if s[i].Level < skill.MaxLevel {
 			s[i].XP = int32(rng.IntN(int(skill.Cost(s[i].Level))))
 		}
+	}
+	// Passions exclude Shooting for Scrapper; ordinary age bonuses do not.
+	if brawler {
+		capable = slices.DeleteFunc(capable, func(id skill.ID) bool { return id == skill.Shooting })
 	}
 	// Passions: 1-4 picks weighted by level+2 over capable skills.
 	for range 1 + rng.IntN(4) {
@@ -532,6 +544,14 @@ func (p Pawn) RemappedTraits(to func(trait.ID) trait.ID) Pawn {
 
 // AgeYears is p's age in whole years.
 func (p Pawn) AgeYears() int { return int(p.AgeDays) / DaysPerYear }
+
+// DisplayName is the nickname shown on the map, or the first name.
+func (p Pawn) DisplayName() string {
+	if p.Nick != "" {
+		return p.Nick
+	}
+	return p.First
+}
 
 // FullName is "First 'Nick' Last", or "First Last" when the nickname is
 // the first name (legacy pawns: just the name).

@@ -166,3 +166,9 @@ func BodyDowns(cons, moving, pain, shock int32) bool {
 func BodyRecovered(cons, moving, pain, shock int32) bool {
 	return cons >= RecoverConsciousness && moving >= RecoverMoving && pain <= shock-PainShockBand
 }
+
+// EnemyDownedDeathPermille is original Core balance, not a claimed
+// published vanilla number. Only an actual combat down invokes this roll.
+const EnemyDownedDeathPermille = 500
+
+func EnemyDiesOnDowned(roll func(int) int) bool { return roll(1000) < EnemyDownedDeathPermille }

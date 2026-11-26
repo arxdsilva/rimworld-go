@@ -5,6 +5,7 @@ package game
 
 import (
 	"reflect"
+	"rimworld-go/internal/application/game/viewmodel"
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -54,7 +55,7 @@ func fieldsAllCompared[T any](t *testing.T, base T, clone func(T) T, eq func(a, 
 	}
 }
 
-// TestBuildingViewEqual: equalBuildingView compares every field, Bills by
+// TestBuildingViewEqual: viewmodel.EqualBuilding compares every field, Bills by
 // element and MovingTo by the cell it points at.
 func TestBuildingViewEqual(t *testing.T) {
 	t.Parallel()
@@ -69,20 +70,20 @@ func TestBuildingViewEqual(t *testing.T) {
 		}
 		return v
 	}
-	fieldsAllCompared(t, base, clone, equalBuildingView)
+	fieldsAllCompared(t, base, clone, viewmodel.EqualBuilding)
 	b := clone(base)
 	b.Bills[0].Done++
-	if equalBuildingView(&base, &b) {
+	if viewmodel.EqualBuilding(&base, &b) {
 		t.Fatal("a bill's progress is not compared")
 	}
 	b = clone(base)
 	b.MovingTo[0]++
-	if equalBuildingView(&base, &b) {
+	if viewmodel.EqualBuilding(&base, &b) {
 		t.Fatal("the move target's cell is not compared")
 	}
 }
 
-// TestFrameViewEqual: equalFrameView compares every field, Haulers by
+// TestFrameViewEqual: viewmodel.EqualFrame compares every field, Haulers by
 // element.
 func TestFrameViewEqual(t *testing.T) {
 	t.Parallel()
@@ -91,7 +92,7 @@ func TestFrameViewEqual(t *testing.T) {
 		v.Haulers = append([]string(nil), v.Haulers...)
 		return v
 	}
-	fieldsAllCompared(t, base, clone, equalFrameView)
+	fieldsAllCompared(t, base, clone, viewmodel.EqualFrame)
 }
 
 // viewGame is a bare 40x40 map with the view cache on.
@@ -101,6 +102,26 @@ func viewGame(t *testing.T) *Game {
 	bareGround(g)
 	g.SetViewCache(true)
 	return g
+}
+
+func TestBuildingViewDeconstructionWork(t *testing.T) {
+	t.Parallel()
+	g := viewGame(t)
+	id := buildNow(t, g, construction.Wall, item.Wood, construction.South, 18, 12)
+	b, ok := g.bldgs.Get(id)
+	if !ok {
+		t.Fatal("missing wall")
+	}
+	var v BuildingView
+	g.fillBuildingView(&v, id, b)
+	if got := v.DeconWork; got != construction.DeconstructTicks(b.Kind) {
+		t.Fatalf("undesignated wall work = %d", got)
+	}
+	b.Deconstruct, b.WorkLeft = true, 13
+	g.fillBuildingView(&v, id, b)
+	if got := v.DeconWork; got != 13 {
+		t.Fatalf("marked wall has %d work, want 13", got)
+	}
 }
 
 // TestBuildingViewsKeepIdentity: the building list is handed out again
@@ -161,6 +182,34 @@ func TestZoneViewsShared(t *testing.T) {
 	b := g.zoneViews()
 	if sameSlice(a, b) || b[0].Name != "Pantry" || a[0].Name != "" {
 		t.Fatalf("renamed zone: old %+v, new %+v", a, b)
+	}
+}
+
+// TestZoneViewsWithoutTheViewCache: with the cache off (a headless host) the
+// zone formatting is not redone for an unchanged zone map, yet a zone edit and a
+// stack moving into the zone are both seen at once.
+func TestZoneViewsWithoutTheViewCache(t *testing.T) {
+	t.Parallel()
+	g := viewGame(t)
+	g.views.on = false
+	zid := g.paintZone(zone.KindStockpile, zone.Zone{Food: true}, 2, 2, 4, 4)
+	a := g.zoneViews()
+	if len(a) != 1 || a[0].Name != "" {
+		t.Fatalf("zones %+v", a)
+	}
+	if fresh := g.buildZoneViews(); !reflect.DeepEqual(countZones(g, fresh, nil), g.zoneViews()) {
+		t.Fatal("the memoised zone list differs from a fresh build")
+	}
+	g.zones.Update(zid, func(z *zone.Zone) { z.Name = "Pantry" })
+	if b := g.zoneViews(); b[0].Name != "Pantry" {
+		t.Fatalf("a rename was not seen: %+v", b)
+	}
+	before := g.zoneViews()[0].Stored
+	if _, err := g.SpawnStack(item.Berries, 10, 3, 3); err != nil {
+		t.Fatal("no stack")
+	}
+	if after := g.zoneViews()[0].Stored; reflect.DeepEqual(before, after) {
+		t.Fatal("a stack in the zone was not counted")
 	}
 }
 

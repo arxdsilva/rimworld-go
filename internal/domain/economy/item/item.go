@@ -253,8 +253,22 @@ const (
 	// Fish (FISH-*, append only, saved) is netted from a fish tank: raw meat
 	// in every way, by the same tables as Meat (nutrition, mass, rot, storage).
 	Fish
+	// MED-14 append-only items: attached implants and artificial part replacements.
+	BlissCircuit
+	NerveDampener
+	AcidFailsafe
+	ApexArm
+	ApexLeg
+	ApexEye
+	ServoClaw
+	ServoJaw
+	SynthTongue
+	AcousticImplant
 	numKinds
 )
+
+// NumKinds is the bound of the stable, append-only item IDs.
+const NumKinds = int(numKinds)
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
 	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
@@ -284,7 +298,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"rice", "strawberries", "hay", "hops", "human meat", "insect meat", "agave fruit",
 	"t-shirt", "button-down shirt", "pants", "jacket", "cowboy hat", "bowler hat", "tribalwear",
 	"crated building", "antimatter warhead", "foam shells", "novel", "textbook", "schematic", "jade", "mind core",
-	"fish"}
+	"fish", "bliss circuit", "nerve dampener", "acid failsafe",
+	"apex arm", "apex leg", "apex eye", "servo claw", "servo jaw", "synth tongue", "acoustic implant"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -404,11 +419,27 @@ func (k Kind) IsDrug() bool {
 		k >= AshFlake && k <= BattleTonic
 }
 
-// IsImplant reports a prosthetic installed by surgery (ENG-003; the
-// servo tier and the valve heart from MED-05). Natural organs are not
-// implants: see IsOrgan.
-func (k Kind) IsImplant() bool {
-	return k >= PegLeg && k <= HearingTrumpet || k >= ProstheticFoot && k <= WoodenNose || k >= ServoArm && k <= ValveHeart
+// IsReplacement reports an artificial part that replaces natural tissue.
+func (k Kind) IsReplacement() bool {
+	return k >= PegLeg && k <= HearingTrumpet || k >= ProstheticFoot && k <= WoodenNose || k >= ServoArm && k <= ValveHeart ||
+		k >= ApexArm && k <= AcousticImplant
+}
+
+// IsAddedImplant reports a device attached to an existing body part.
+func (k Kind) IsAddedImplant() bool { return k >= BlissCircuit && k <= AcidFailsafe }
+
+// IsImplant includes both replacement parts and additive devices.
+func (k Kind) IsImplant() bool { return k.IsReplacement() || k.IsAddedImplant() }
+
+// ImplantKinds returns all body part replacements and attached implants.
+func ImplantKinds() []Kind {
+	var out []Kind
+	for k := Kind(1); k != 0; k++ {
+		if k.IsImplant() {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 // IsOrgan reports a natural organ, harvested from one body and installed
@@ -678,6 +709,8 @@ type Stack struct {
 	// Building (AX-0 contract, 0 until A1 crates one) is a MinifiedBuilding
 	// stack's construction kind (construction.Kind; item cannot import it).
 	Building uint8
+	// MaterialBasis is the paid construction catalogue of a minified building.
+	MaterialBasis MaterialBasis
 	// Book (A7) is a book's seed: its generated title, the skills a
 	// textbook teaches or the projects a schematic covers (game/books);
 	// 0 for anything else.
@@ -793,8 +826,7 @@ func DryRate(tenthsC int) int {
 // CanMerge reports whether a and b may combine on the same tile.
 // Rotten corpses never merge with fresh ones, one person's body (or
 // bones) never merges with another's, and animal corpses stack by species;
-// fertile eggs stack by species and by whose they are (Tame), and the
-// merged stack keeps the incubation of the one it joins. Made items
+// fertile eggs stack by species, ownership and incubation progress. Made items
 // stack only with their own quality, material and wear (PRD-2); food
 // stacks merge whatever their wear (MergeFood averages it, FOOD-4).
 func CanMerge(a, b Stack) bool {
@@ -807,7 +839,7 @@ func CanMerge(a, b Stack) bool {
 // CanMerge without the place, carrier and mark checks.
 func SameLoad(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of &&
-		a.Animal == b.Animal && a.Tame == b.Tame && a.Quality == b.Quality && a.Stuff == b.Stuff && (a.Wear == b.Wear || a.Kind.IsFood()) &&
+		a.Animal == b.Animal && a.Tame == b.Tame && a.Building == b.Building && a.MaterialBasis == b.MaterialBasis && a.Hatch == b.Hatch && a.Quality == b.Quality && a.Stuff == b.Stuff && (a.Wear == b.Wear || a.Kind.IsFood()) &&
 		a.Yield == b.Yield && a.Book == b.Book // A7: two books are never one load
 }
 

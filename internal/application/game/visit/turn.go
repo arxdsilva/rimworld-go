@@ -58,6 +58,12 @@ func (v Visits) turnGroup(list []Rec, ref int, first entity.EntityID, name strin
 			list[i].Turned = true
 		}
 	}
+	for i := range *v.h.Groups(true) {
+		gr := &(*v.h.Groups(true))[i]
+		if gr.Faction == ref {
+			gr.Phase, gr.Reason = PhaseLeaving, LeaveHostile
+		}
+	}
 	text := fmt.Sprintf("%s has turned on you. Its people here have stopped visiting and are making for the edge of the map, ready to defend themselves. Your colonists and turrets may treat them as enemies.", name)
 	if v.h.TraderTurned(ref) {
 		text += " Its trader will not deal with you now."

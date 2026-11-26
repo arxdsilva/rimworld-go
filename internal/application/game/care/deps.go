@@ -48,6 +48,16 @@ type Bodies interface {
 // Roster answers who a pawn is. The id slices are the host's own, read
 // only.
 type Roster interface {
+	PeopleRoster
+	AnimalRoster
+}
+
+type AnimalRoster interface {
+	AnimalIDs() []entity.EntityID
+	TameAnimal(id entity.EntityID) bool
+}
+
+type PeopleRoster interface {
 	PawnIDs() []entity.EntityID
 	RaiderIDs() []entity.EntityID
 	IsPrisoner(id entity.EntityID) bool
@@ -89,8 +99,16 @@ type Reach interface {
 	Claim(owner, target entity.EntityID) bool
 	// BedHazard: bed is no safe place to lay a patient now (burning, or
 	// its room at a deadly temperature; SIM-063).
-	BedHazard(bed entity.EntityID) bool
+	BedEnvironment
 	Climate
+}
+
+// BedEnvironment admits actual destinations, including the carrier's
+// safe range and the enclosed prison requirement.
+type BedEnvironment interface {
+	BedHazard(bed entity.EntityID) bool
+	BedWhy(bed, carrier entity.EntityID) string
+	PrisonRoom(bed entity.EntityID) bool
 }
 
 // Climate is the air a patient's hypothermia or heatstroke heals in
@@ -103,6 +121,10 @@ type Climate interface {
 	// HealingSpot is the nearest reachable tile, not under a bed, whose air
 	// heals patient (ok false: none).
 	HealingSpot(patient entity.EntityID) (x, y int, ok bool)
+	// GroundSafe checks live physical and thermal admission for a carried patient.
+	GroundSafe(patient, carrier entity.EntityID, x, y int) bool
+	// HealingSpotFor uses the actual carrier's reach and own reservations.
+	HealingSpotFor(patient, carrier entity.EntityID) (x, y int, ok bool)
 	// ExposureWait is the tick before which no exposure move of patient is
 	// tried again; SetExposureWait sets it.
 	ExposureWait(patient entity.EntityID) uint64
@@ -197,9 +219,6 @@ type Prison interface {
 	IsVisitor(id entity.EntityID) bool
 	// PersonName names anyone, colonist, raider or visitor.
 	PersonName(id entity.EntityID) string
-	// PrisonBedFor is the free prisoner bed nearest (x, y) target may be
-	// laid in.
-	PrisonBedFor(target entity.EntityID, x, y int) (entity.EntityID, bool)
 	// DropGear leaves target's weapon on the ground (a captive keeps none).
 	DropGear(target entity.EntityID)
 	// MakePrisoner turns target into the colony's prisoner, taken by captor.

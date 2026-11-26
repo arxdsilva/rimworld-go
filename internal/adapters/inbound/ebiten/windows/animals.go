@@ -417,7 +417,7 @@ func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 		if an.Penned { // area animals have the dropdown widget (animalsTabUI)
 			clip(cArea, 2, -2, animalAreaCell(w.sh, an, ""))
 		}
-		clip(cTrain, 0, 0, AnimalTrainingCell(an))
+		clip(cTrain, 0, 0, AnimalTrainingCell(w.sh, an))
 		clip(cDoing, 0, 0, animalDoing(w.sh, an))
 	}
 	if len(list) == 0 {
@@ -604,11 +604,11 @@ func AnimalMasterCell(an game.AnimalView) string {
 
 // AnimalTrainingCell is the Colony list's Training column: each skill
 // handlers train, with its steps ("Obedience 2/3, Guard 0/3"), or "-".
-func AnimalTrainingCell(an game.AnimalView) string {
+func AnimalTrainingCell(tr lang.Tr, an game.AnimalView) string {
 	var parts []string
 	for _, t := range an.Training {
 		if t.Allowed && (t.On || t.Steps > 0) {
-			parts = append(parts, fmt.Sprintf("%s %d/%d", t.Label, t.Steps, t.Needed))
+			parts = append(parts, lang.Tf(tr, "%s %d/%d", tr.T(t.Label), t.Steps, t.Needed))
 		}
 	}
 	if len(parts) == 0 {

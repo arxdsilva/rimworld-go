@@ -713,8 +713,8 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 	track := uikit.SliderTrackRect(w.R)
 	f.press(t, a, int(track.Right()), int(w.R.Y+9))
 	f.letGo(t, a, int(track.Right()), int(w.R.Y+9))
-	if ng.Cd.S.ThreatScale != 400 {
-		t.Fatalf("dragged threat scale = %d, want 400", ng.Cd.S.ThreatScale)
+	if ng.Cd.S.ThreatScale != 500 {
+		t.Fatalf("dragged threat scale = %d, want 500", ng.Cd.S.ThreatScale)
 	}
 	press(t, a, f, "modal.diff.custom.cancel")
 	f.Frame(t, a)
@@ -783,12 +783,19 @@ func TestDependentFieldsDisabled(t *testing.T) {
 		}
 		return w.Disabled, w.Reason
 	}
-	if dis, _ := off("diff.f.as"); !dis {
-		t.Error("adaptation strength must be disabled while adaptation is off")
+	for _, id := range []string{"diff.f.as", "diff.f.ag"} {
+		if dis, _ := off(id); !dis {
+			t.Errorf("%s must be disabled while adaptation is off", id)
+		}
 	}
 	if dis, why := off("diff.f.ep"); !dis || why != "Only used with time-based escalation" {
 		t.Errorf("escalation per year: disabled=%v reason=%q", dis, why)
 	}
+	// The additional adaptation slider extends the left column below the
+	// initial viewport; inspect the scrolled widget rather than assuming
+	// every form control stays on screen at once.
+	a.uiSt().Scroll["modal.diff.scroll"] = 180
+	f.Frame(t, a)
 	if dis, _ := off("diff.f.iw"); !dis {
 		t.Error("ignore wealth needs time-based escalation")
 	}
@@ -796,14 +803,22 @@ func TestDependentFieldsDisabled(t *testing.T) {
 		t.Error("turning time escalation off clears ignore wealth")
 	}
 
-	// Switch both on through the checkboxes.
+	// Revisit the initial controls, toggle them and check both sections
+	// including the lower rows of the scrollable modal.
+	a.uiSt().Scroll["modal.diff.scroll"] = 0
+	f.Frame(t, a)
 	click(t, a, "diff.f.ad")
 	click(t, a, "diff.f.te")
 	f.Frame(t, a)
-	for _, id := range []string{"diff.f.as", "diff.f.ep", "diff.f.iw"} {
+	for _, id := range []string{"diff.f.as", "diff.f.ag", "diff.f.ep"} {
 		if dis, why := off(id); dis {
 			t.Errorf("%s still disabled: %q", id, why)
 		}
+	}
+	a.uiSt().Scroll["modal.diff.scroll"] = 180
+	f.Frame(t, a)
+	if dis, why := off("diff.f.iw"); dis {
+		t.Errorf("diff.f.iw still disabled: %q", why)
 	}
 	if !ng.Cd.S.Adaptation || !ng.Cd.S.TimeEscalation {
 		t.Fatalf("toggles did not apply: %+v", ng.Cd.S)

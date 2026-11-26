@@ -22,6 +22,7 @@ const (
 	Medicine
 	Social
 	Intellectual
+	Artistic
 	NumSkills
 )
 
@@ -73,6 +74,7 @@ var names = [NumSkills]struct{ key, label string }{
 	Medicine:     {"medicine", "Medicine"},
 	Social:       {"social", "Social"},
 	Intellectual: {"intellectual", "Intellectual"},
+	Artistic:     {"artistic", "Artistic"},
 }
 
 // Key is the stable name ("shooting"); Label the display name.
@@ -117,8 +119,10 @@ func ForWork(t work.Type) (ID, bool) {
 		return Plants, true
 	case work.Handle:
 		return Animals, true
-	case work.Craft:
+	case work.Craft, work.Smith, work.Tailor:
 		return Crafting, true
+	case work.Art:
+		return Artistic, true
 	case work.Doctor:
 		return Medicine, true
 	case work.Research:
@@ -217,19 +221,15 @@ var decayXP = [MaxLevel + 1]int32{10: 30, 11: 60, 12: 120, 13: 180, 14: 300, 15:
 	16: 840, 17: 1200, 18: 1800, 19: 2400, 20: 3600}
 
 // DecayDay applies one day of decay above level 9: the decayXP table. The
-// no-flap band: XP may go negative and the level only drops once XP is
-// below -Cost(L-1)/2; after a drop XP restarts at 75% of Cost(L-1), so a
-// pawn hovering at a boundary needs a whole quarter level of learning to
-// climb back and half a level of neglect to fall again.
+// XP can go 1000 below zero before the level drops; retain the lost XP.
 func DecayDay(s *Skill) {
 	if s.Level <= DecayFloor || s.Level > MaxLevel {
 		return
 	}
 	s.XP -= decayXP[s.Level]
-	below := Cost(s.Level - 1)
-	if s.XP < -below/2 {
+	if s.XP < -1000 { // wiki: Skills (decay hysteresis)
 		s.Level--
-		s.XP = below * 3 / 4
+		s.XP += Cost(s.Level)
 	}
 }
 

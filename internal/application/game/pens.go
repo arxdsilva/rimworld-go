@@ -5,13 +5,16 @@ package game
 
 import (
 	"fmt"
+	"rimworld-go/internal/application/game/animalview"
 	"slices"
 
 	"rimworld-go/internal/application/game/cadence"
+	penrules "rimworld-go/internal/application/game/pen"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/pkg/mathx"
@@ -75,49 +78,10 @@ type penState struct {
 	since map[entity.EntityID]uint64
 }
 
-// penned reports tame livestock: kept in pens rather than areas.
-func penned(a *animal.State) bool {
-	return a.Tame && animal.RosterOf(a.Species).Penned
-}
-
-// defaultPenSettings: every penned species, both sexes; auto-cut trees,
-// cacti and brambles.
-func defaultPenSettings() PenSettings {
-	var s PenSettings
-	for _, sp := range animal.All() {
-		if animal.RosterOf(sp).Penned {
-			s.Species = append(s.Species, PenSpecies{Key: sp.String(), Allow: true, Male: true, Female: true})
-		}
-	}
-	s.AutoCut = defaultAutoCut()
-	return s
-}
-
-// defaultAutoCut is the auto-cut list a new pen starts with.
-func defaultAutoCut() []string {
-	var out []string
-	for s := plant.Species(0); ; s++ {
-		d := plant.DefOf(s)
-		if d.Name == "" {
-			break
-		}
-		if d.Trunk || s == plant.Bramble || s == plant.Cactus || s == plant.BallCactus {
-			out = append(out, d.Name)
-		}
-	}
-	return out
-}
-
-// penAccepts reports that settings s take an animal of species sp and sex
-// female. A species the list doesn't name is taken.
+func defaultPenSettings() PenSettings { return penrules.DefaultSettings() }
+func defaultAutoCut() []string        { return penrules.DefaultAutoCut() }
 func penAccepts(s PenSettings, sp animal.Species, female bool) bool {
-	key := sp.String()
-	for _, e := range s.Species {
-		if e.Key == key {
-			return e.Allow && (female && e.Female || !female && e.Male)
-		}
-	}
-	return true
+	return penrules.Accepts(s, sp, female)
 }
 
 // penMarkers is the standing pen markers, ascending, with g.pens synced:
@@ -220,41 +184,11 @@ func (g *Game) penStand(x, y int, doors tileSet) bool {
 	return !doors.has(y*g.grid.Width() + x)
 }
 
-// fillPen floods from (x, y) over penStand cells (4-connected: no
-// animal cuts a corner).
+// fillPen adapts the map's walkability and doors to the native pen fill.
 func (g *Game) fillPen(x, y int) *penCache {
-	c := &penCache{x: x, y: y}
-	w, h := g.grid.Width(), g.grid.Height()
 	doors := g.buildingCells(construction.DoorKinds[:]...)
-	if !g.grid.InBounds(x, y) || !g.penStand(x, y, doors) {
-		return c
-	}
-	bits := make([]uint64, (w*h+63)/64)
-	set := func(i int) { bits[i>>6] |= 1 << (uint(i) & 63) }
-	has := func(i int) bool { return bits[i>>6]&(1<<(uint(i)&63)) != 0 }
-	queue := []int32{int32(y*w + x)}
-	set(y*w + x)
-	c.minX, c.minY, c.maxX, c.maxY = x, y, x, y
-	for qi := 0; qi < len(queue); qi++ {
-		i := int(queue[qi])
-		cx, cy := i%w, i/w
-		if cx == 0 || cy == 0 || cx == w-1 || cy == h-1 || len(queue) > penMaxCells {
-			return &penCache{x: x, y: y} // open: the edge, or open country
-		}
-		c.minX, c.maxX = min(c.minX, cx), max(c.maxX, cx)
-		c.minY, c.maxY = min(c.minY, cy), max(c.maxY, cy)
-		for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-			nx, ny := cx+d[0], cy+d[1]
-			j := ny*w + nx
-			if has(j) || !g.penStand(nx, ny, doors) {
-				continue
-			}
-			set(j)
-			queue = append(queue, int32(j))
-		}
-	}
-	c.enclosed, c.bits, c.cells = true, bits, len(queue)
-	return c
+	r := penrules.Fill(x, y, g.grid.Width(), g.grid.Height(), penMaxCells, func(x, y int) bool { return g.penStand(x, y, doors) })
+	return &penCache{x: x, y: y, enclosed: r.Enclosed, bits: r.Bits, cells: r.Cells, minX: r.MinX, minY: r.MinY, maxX: r.MaxX, maxY: r.MaxY}
 }
 
 // inPenCells reports cell (x, y) inside pen c.
@@ -280,7 +214,7 @@ func (g *Game) penAt(x, y int) (entity.EntityID, *penCache) {
 // none).
 func (g *Game) homePen(id entity.EntityID, a *animal.State, pos Position) (entity.EntityID, *penCache) {
 	m, c := g.penAt(pos.X, pos.Y)
-	if m == 0 || !penAccepts(g.penSettings(m), a.Species, animalFemale(id, *a)) {
+	if m == 0 || !penAccepts(g.penSettings(m), a.Species, animalview.Female(id, *a)) {
 		return 0, nil
 	}
 	return m, c
@@ -293,7 +227,7 @@ func (g *Game) penTarget(id entity.EntityID, a *animal.State, pos Position) enti
 	if m, _ := g.homePen(id, a, pos); m != 0 {
 		return m
 	}
-	female := animalFemale(id, *a)
+	female := animalview.Female(id, *a)
 	q := g.animalPathQuery(true, false) // led: gates and doors open
 	best, bestD := entity.EntityID(0), 1<<30
 	for _, m := range g.penMarkers() {
@@ -326,18 +260,21 @@ func (g *Game) anyEnclosedPen() bool {
 }
 
 // setPenSettings applies a SetPenSettings command.
-func (g *Game) setPenSettings(marker entity.EntityID, enc string) {
+func (g *Game) setPenSettings(marker entity.EntityID, enc string) command.ConfigEdit {
 	s, ok := DecodePenSettings(enc)
 	if !ok {
-		return
+		return command.ConfigEdit{}
 	}
 	g.penMarkers()
 	i := g.penIndex(marker)
 	if i < 0 {
-		return
+		return command.ConfigEdit{}
 	}
-	g.pens[i].Settings = s
+	p := &g.pens[i]
+	p.Settings = s
+	p.Edit = command.ConfigEdit{Revision: p.Edit.Revision + 1, Tick: uint64(g.Tick()), Kind: command.SetPenSettings}
 	g.pen.ver++
+	return p.Edit
 }
 
 // penTick is the pen bookkeeping pass (phaseAnimals): unpenned days and
@@ -386,7 +323,7 @@ func (g *Game) penUnpenned(now uint64) {
 	ps := &g.pen
 	for id := range cadence.Each(now, penThinkEvery, cadence.OffPen, g.entities.Peek()) {
 		a := g.animals.Ref(id)
-		if a == nil || !penned(a) {
+		if a == nil || !animal.Penned(a.SnapshotRef()) {
 			delete(ps.since, id)
 			continue
 		} else if a.Dead() {
@@ -394,7 +331,7 @@ func (g *Game) penUnpenned(now uint64) {
 		}
 		day := cadence.Due(now, clock.TicksPerDay, cadence.OffPen, id)
 		pos, _ := g.positions.Get(id)
-		if g.ropeHandler(id) != 0 || g.penTarget(id, a, pos) != 0 {
+		if g.ropeHandler(id) != 0 || g.penTarget(id, a.SnapshotRef(), pos) != 0 {
 			delete(ps.since, id)
 			continue
 		}
@@ -414,7 +351,7 @@ func (g *Game) penUnpenned(now uint64) {
 		}
 		ex, ey := g.nearestEdge(pos)
 		g.startLeaving(id, ex, ey)
-		g.message(pos.X, pos.Y, "%s wandered off.", g.animalName(id, a))
+		g.message(pos.X, pos.Y, "%s wandered off.", g.animalName(id, a.SnapshotRef()))
 	}
 }
 
@@ -578,11 +515,11 @@ func (g *Game) penHerds() map[entity.EntityID][]entity.EntityID {
 	}
 	for _, id := range g.animalIDs {
 		a := g.animals.Ref(id)
-		if a == nil || !penned(a) || a.Dead() {
+		if a == nil || !animal.Penned(a.SnapshotRef()) || a.Dead() {
 			continue
 		}
 		pos, _ := g.positions.Get(id)
-		if m := g.penTarget(id, a, pos); m != 0 {
+		if m := g.penTarget(id, a.SnapshotRef(), pos); m != 0 {
 			out[m] = append(out[m], id)
 		}
 	}
@@ -630,7 +567,7 @@ func (g *Game) penLabel(id entity.EntityID, a *animal.State, pos Position) strin
 
 // fillAnimalPen fills AnimalView.Penned and Pen.
 func (g *Game) fillAnimalPen(av *AnimalView, id entity.EntityID, a *animal.State) {
-	if !penned(a) {
+	if !animal.Penned(a) {
 		return
 	}
 	av.Penned = true

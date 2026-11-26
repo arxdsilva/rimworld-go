@@ -282,64 +282,14 @@ func (g *Game) postponedLines(id entity.EntityID) []string {
 	return g.postponedLinesIn(g.postponedTops(nil), id)
 }
 
-// postponedTops is, per pawn, the postponed work a view shows (not
-// expired, not about to clear, target still there), its first
-// postpone.ViewLines entries only, in one pass over the map (no sort): the
-// snapshot gathers it once for every colonist. It reuses buf.
+// postponedTops projects the existing store without clearing it.
 func (g *Game) postponedTops(buf []postpone.Top) []postpone.Top {
-	p := &g.postponed
-	buf = buf[:0]
-	if p.Len() == 0 {
-		return buf
-	}
-	now := uint64(g.clock.Now())
-	stale := p.Rev != g.grid.Version() // out-of-reach entries about to clear
-	p.All(func(k postpone.Key, v postpone.Val) {
-		if now >= v.Until || v.Unreach && stale || g.postTargetGone(k) || k.Kind == job.Equip && k.Target == 0 {
-			return // (an Equip with no target: a dress cooldown, not work)
-		}
-		var t *postpone.Top
-		for i := range buf {
-			if buf[i].Pawn == k.Pawn {
-				t = &buf[i]
-				break
-			}
-		}
-		if t == nil {
-			buf = append(buf, postpone.Top{Pawn: k.Pawn})
-			t = &buf[len(buf)-1]
-		}
-		t.Add(postpone.Entry{Key: k, Until: v.Until, Unreach: v.Unreach})
-	})
-	return buf
+	return g.postponed.Tops(buf, uint64(g.clock.Now()), g.grid.Version(), g.postTargetGone)
 }
 
 // postponedLinesIn is postponedLines over tops, postponedTops' result.
 func (g *Game) postponedLinesIn(tops []postpone.Top, id entity.EntityID) []string {
-	var t *postpone.Top
-	for i := range tops {
-		if tops[i].Pawn == id {
-			t = &tops[i]
-			break
-		}
-	}
-	if t == nil || t.N == 0 {
-		return nil
-	}
-	now := uint64(g.clock.Now())
-	var out []string
-	for _, e := range t.E[:t.N] {
-		if len(out) == postpone.ViewLines {
-			break
-		}
-		if e.Unreach {
-			out = append(out, g.postLabel(e.Key)+": can't reach")
-			continue
-		}
-		secs := (e.Until - now + 59) / 60 // seconds at 1x speed
-		out = append(out, fmt.Sprintf("%s: blocked, retry in %d s", g.postLabel(e.Key), secs))
-	}
-	return out
+	return postpone.Lines(tops, id, uint64(g.clock.Now()), g.postLabel)
 }
 
 // postLabel names postponed work for the view.

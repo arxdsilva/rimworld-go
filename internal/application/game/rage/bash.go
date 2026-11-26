@@ -79,7 +79,7 @@ func (r *Rage) breaker(a animal.State, def animal.Def, now uint64) bool {
 	case !def.Predator || a.Target == 0:
 		return false
 	}
-	if o := r.h.Ref(a.Target); o != nil {
+	if o, ok := r.h.Animal(a.Target); ok {
 		return o.Tame
 	}
 	return r.h.IsPawn(a.Target)

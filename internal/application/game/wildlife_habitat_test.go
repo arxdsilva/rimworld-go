@@ -96,14 +96,14 @@ func TestHabitatPointsKeepFromLanding(t *testing.T) {
 		g := habitatFixture(seed)
 		h := g.newHabitat()
 		for i := 0; i < 40; i++ {
-			x, y, ok := h.pick(animal.Deer)
+			x, y, ok := h.Pick(animal.Deer)
 			if !ok {
 				continue
 			}
 			if chebyshev(Position{X: x, Y: y}, Position{X: 10, Y: 45}) < habitatMinDist {
 				t.Fatalf("seed %d: point %d,%d within %d of the landing", seed, x, y, habitatMinDist)
 			}
-			if !h.open(x, y) {
+			if !h.Open(x, y) {
 				t.Fatalf("seed %d: point %d,%d not open", seed, x, y)
 			}
 		}
@@ -120,7 +120,7 @@ func TestHabitatUnreachableLandAndFog(t *testing.T) {
 	h := g.newHabitat()
 	for y := 0; y < habH; y++ {
 		for x := 59; x < habW; x++ {
-			if h.open(x, y) {
+			if h.Open(x, y) {
 				t.Fatalf("east bank %d,%d reachable behind a wall", x, y)
 			}
 		}
@@ -130,7 +130,7 @@ func TestHabitatUnreachableLandAndFog(t *testing.T) {
 	g.fog.hidden = make([]uint64, (habW*habH+63)/64)
 	i := 50*habW + 30
 	g.fog.hidden[i>>6] |= 1 << (uint(i) & 63)
-	if h := g.newHabitat(); h.open(30, 50) || !h.open(31, 50) {
+	if h := g.newHabitat(); h.Open(30, 50) || !h.Open(31, 50) {
 		t.Fatal("fog should hide exactly the fogged cell")
 	}
 }
@@ -142,14 +142,14 @@ func TestHabitatGrazersLeanToGrass(t *testing.T) {
 		g := habitatFixture(seed)
 		h := g.newHabitat()
 		for i := 0; i < 20; i++ {
-			if x, y, ok := h.pick(animal.Deer); ok {
-				picked += h.forage(x, y)
+			if x, y, ok := h.Pick(animal.Deer); ok {
+				picked += h.Forage(x, y)
 				np++
 			}
 			for try := 0; try < 50; try++ {
 				x, y := g.rng.IntN(habW), g.rng.IntN(habH)
-				if chebyshev(Position{X: x, Y: y}, Position{X: 10, Y: 45}) >= habitatMinDist && h.open(x, y) {
-					uniform += h.forage(x, y)
+				if chebyshev(Position{X: x, Y: y}, Position{X: 10, Y: 45}) >= habitatMinDist && h.Open(x, y) {
+					uniform += h.Forage(x, y)
 					nu++
 					break
 				}
@@ -170,14 +170,14 @@ func TestHabitatPredatorsSpreadOut(t *testing.T) {
 	h := g.newHabitat()
 	var pts [][2]int
 	for i := 0; i < 4; i++ {
-		x, y, ok := h.pick(animal.TimberWolf)
+		x, y, ok := h.Pick(animal.TimberWolf)
 		if !ok {
 			t.Fatal("no predator point")
 		}
 		pts = append(pts, [2]int{x, y})
 	}
-	if len(h.preds) != 4 {
-		t.Fatalf("predator spawns not recorded: %d", len(h.preds))
+	if h.PredatorCount() != 4 {
+		t.Fatalf("predator spawns not recorded: %d", h.PredatorCount())
 	}
 	for i := range pts {
 		for j := i + 1; j < len(pts); j++ {
@@ -193,7 +193,7 @@ func TestHabitatNoDomesticWild(t *testing.T) {
 	for seed := uint64(1); seed <= 40; seed++ {
 		g := habitatFixture(seed)
 		for i := 0; i < 60; i++ {
-			if s, ok := g.pickSpecies(anySpecies); ok && !isWildSpecies(s) {
+			if s, ok := g.pickSpecies(anySpecies); ok && !animal.WildEligible(s) {
 				t.Fatalf("seed %d: %v drawn wild", seed, s)
 			}
 		}
@@ -202,7 +202,7 @@ func TestHabitatNoDomesticWild(t *testing.T) {
 	g.spawnWildlife()
 	for _, id := range g.animalIDs {
 		a, _ := g.animals.Get(id)
-		if !isWildSpecies(a.Species) {
+		if !animal.WildEligible(a.Species) {
 			t.Fatalf("%v spawned wild", a.Species)
 		}
 	}
@@ -254,11 +254,11 @@ func TestHabitatArrivalsEnterAtEdgeReachable(t *testing.T) {
 			if min(p.X, p.Y, habW-1-p.X, habH-1-p.Y) > 2 {
 				t.Fatalf("seed %d: arrival mid-map at %v", seed, p)
 			}
-			if !h.reach[p.Y*habW+p.X] {
+			if !h.Reachable(p.X, p.Y) {
 				t.Fatalf("seed %d: arrival at %v not reachable", seed, p)
 			}
 		}
-		if x, y, ok := h.pickEdge(animal.Deer); ok && min(x, y, habW-1-x, habH-1-y) != 0 {
+		if x, y, ok := h.PickEdge(animal.Deer); ok && min(x, y, habW-1-x, habH-1-y) != 0 {
 			t.Fatalf("seed %d: pickEdge %d,%d not on the edge", seed, x, y)
 		}
 	}

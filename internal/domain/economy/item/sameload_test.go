@@ -41,3 +41,38 @@ func TestSameLoad(t *testing.T) {
 		t.Error("rotten meat joined a fresh load")
 	}
 }
+
+// Market goods merge according to their physical identity. The source
+// of an otherwise identical commodity never changes its stackability.
+func TestStackIdentityForMarketGoods(t *testing.T) {
+	cloth := Stack{Kind: Cloth, Qty: 2}
+	more := cloth
+	more.Qty = 3
+	if !SameLoad(cloth, more) || !CanMerge(cloth, more) {
+		t.Fatal("identical commodities should stack regardless of where they were bought")
+	}
+	crate := Stack{Kind: MinifiedBuilding, Qty: 1, Building: 4, Stuff: Steel}
+	otherCrate := crate
+	otherCrate.Building = 5
+	if SameLoad(crate, otherCrate) || CanMerge(crate, otherCrate) {
+		t.Fatal("different minified buildings shared a stack")
+	}
+	egg := Stack{Kind: FertileEgg, Qty: 2, Animal: 4, Hatch: 150, Tame: true}
+	otherEgg := egg
+	otherEgg.Hatch = 300
+	if SameLoad(egg, otherEgg) || CanMerge(egg, otherEgg) {
+		t.Fatal("different egg incubation stages shared a stack")
+	}
+	book := Stack{Kind: Novel, Qty: 1, Book: 11, Quality: 3}
+	otherBook := book
+	otherBook.Book = 12
+	if SameLoad(book, otherBook) || CanMerge(book, otherBook) {
+		t.Fatal("different books shared a stack")
+	}
+	apparel := Stack{Kind: Parka, Qty: 1, Stuff: Cloth, Quality: 3}
+	otherApparel := apparel
+	otherApparel.Quality = 4
+	if SameLoad(apparel, otherApparel) {
+		t.Fatal("different-quality goods shared a stack")
+	}
+}

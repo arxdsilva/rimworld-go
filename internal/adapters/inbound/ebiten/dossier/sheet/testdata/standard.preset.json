@@ -52,6 +52,11 @@
               {
                 "k": "fun_bar",
                 "who": "c"
+              },
+              {
+                "k": "stat",
+                "who": "c",
+                "def": "work_speed"
               }
             ]
           },
@@ -145,8 +150,8 @@
                 "def": "social"
               },
               {
-                "k": "stat",
-                "def": "work_speed"
+                "k": "skill",
+                "def": "artistic"
               }
             ],
             "who": "c"
@@ -165,6 +170,10 @@
               {
                 "k": "train",
                 "def": "release"
+              },
+              {
+                "k": "train",
+                "def": "haul"
               }
             ],
             "who": "p"
@@ -218,6 +227,11 @@
               {
                 "k": "fun_bar",
                 "who": "c"
+              },
+              {
+                "k": "stat",
+                "who": "c",
+                "def": "work_speed"
               }
             ]
           },
@@ -342,8 +356,8 @@
                 "def": "intellectual"
               },
               {
-                "k": "stat",
-                "def": "work_speed"
+                "k": "skill",
+                "def": "artistic"
               }
             ]
           }
@@ -364,6 +378,10 @@
           {
             "k": "train",
             "def": "release"
+          },
+          {
+            "k": "train",
+            "def": "haul"
           }
         ],
         "who": "p"

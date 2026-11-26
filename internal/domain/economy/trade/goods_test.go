@@ -43,7 +43,7 @@ func TestCratePriceSettleAndCodec(t *testing.T) {
 	if tv.Value(item.Book{}) != 1485 || CrateValue(construction.Telescope) != 350 || CrateValue(construction.Bed) != 0 {
 		t.Fatal("wiki crate values")
 	}
-	if PriceOf(item.Book{}, tv, CurioMerchant, Buy, Terms{}) != 1485*100*(100+BuyMarkupPct)/100 {
+	if PriceOf(item.Book{}, tv, CurioMerchant, Buy, Terms{}) != 1485*BuyBasePct {
 		t.Fatalf("buy price %d", PriceOf(item.Book{}, tv, CurioMerchant, Buy, Terms{}))
 	}
 	if Wants(item.Book{}, CurioMerchant, item.MinifiedBuilding) {

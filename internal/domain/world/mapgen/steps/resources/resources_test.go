@@ -136,8 +136,8 @@ func TestOreRules(t *testing.T) {
 				}
 			}
 		}
-		for _, o := range []geology.Ore{geology.Steel, geology.Silver, geology.Gold, geology.Machinery} {
-			sp := spec[o]
+		for _, sp := range oreSpecs {
+			o := sp.ore
 			want := deep / sp.per
 			if want == 0 && sp.minDeep > 0 && deep >= sp.minDeep {
 				want = 1
@@ -188,7 +188,7 @@ func TestOreDepthRule(t *testing.T) {
 	if err := (Ores{}).Run(c); err != nil {
 		t.Fatal(err)
 	}
-	for _, o := range []geology.Ore{geology.Silver, geology.Gold, geology.Machinery} {
+	for _, o := range []geology.Ore{geology.Silver, geology.Gold, geology.Machinery, geology.Uranium, geology.Jade, geology.Plasteel} {
 		if len(oreCells(c, o)) != 0 {
 			t.Fatalf("%v placed without depth", o)
 		}
@@ -201,8 +201,8 @@ func TestOreCellsStayDistinct(t *testing.T) {
 		t.Fatal(err)
 	}
 	total := 0
-	for _, o := range []geology.Ore{geology.Steel, geology.Silver, geology.Gold, geology.Machinery} {
-		total += len(oreCells(c, o))
+	for _, sp := range oreSpecs {
+		total += len(oreCells(c, sp.ore))
 	}
 	if total == 0 {
 		t.Fatal("no ore")

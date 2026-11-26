@@ -55,15 +55,6 @@ func techTag(f *faction.Faction) backstory.Tag {
 	return backstory.TagIndustrial
 }
 
-// bioName is what a bio is called on the map: the nickname, else the
-// first name.
-func bioName(p pawngen.Pawn) string {
-	if p.Nick != "" {
-		return p.Nick
-	}
-	return p.First
-}
-
 // homeColonists lists the living colonists at home, ascending.
 func (g *Game) homeColonists() []entity.EntityID {
 	var out []entity.EntityID

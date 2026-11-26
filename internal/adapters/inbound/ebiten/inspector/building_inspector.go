@@ -432,7 +432,15 @@ func bedSlots(b game.BuildingView) int {
 	if !ok {
 		return 0
 	}
+	if k.AnimalSleeps() {
+		return 1
+	}
 	return k.Sleepers()
+}
+
+func isAnimalBed(b game.BuildingView) bool {
+	k, ok := construction.Parse(b.Kind)
+	return ok && k.AnimalSleeps()
 }
 
 // bedOwner is who holds slot of b (0: nobody).
@@ -451,6 +459,13 @@ func (a Building) bedOwnerName(b game.BuildingView, slot int) string {
 	if id == 0 {
 		return a.shell.T("nobody")
 	}
+	if isAnimalBed(b) {
+		for _, animal := range a.shell.World().Animals {
+			if animal.ID == id {
+				return AnimalTitle(a.shell, animal)
+			}
+		}
+	}
 	if who := a.PawnName(id); who != "" {
 		return who
 	}
@@ -463,12 +478,15 @@ func (a Building) bedLines(b game.BuildingView) []string {
 	var out []string
 	for slot := range n {
 		label := "Owner: " + a.bedOwnerName(b, slot)
+		if isAnimalBed(b) && b.Medical {
+			label = "Patient: " + a.bedOwnerName(b, slot)
+		}
 		if n > 1 {
 			label = fmt.Sprintf("Owner %d: %s", slot+1, a.bedOwnerName(b, slot))
 		}
 		out = append(out, label)
 	}
-	if rd, ok := a.sim().(bedPrisonReader); ok && n > 0 && rd.BedForPrisoners(b.ID) {
+	if rd, ok := a.sim().(bedPrisonReader); ok && n > 0 && !isAnimalBed(b) && rd.BedForPrisoners(b.ID) {
 		out = append(out, "For prisoners")
 	}
 	if n > 0 && b.Medical {
@@ -495,8 +513,15 @@ func (a Building) bedCommands(b game.BuildingView) []Button {
 			Desc: a.shell.T("Choose who sleeps here. Now: ") + a.bedOwnerName(b, slot) + "."}
 		if b.Medical {
 			owner.Disabled, owner.Reason = true, "Medical beds have no owner"
+		} else if isAnimalBed(b) && b.Forbidden {
+			owner.Disabled, owner.Reason = true, "This bed is forbidden"
 		}
 		out = append(out, owner)
+	}
+	if isAnimalBed(b) {
+		med := Button{ID: BedMedicalID, Label: a.shell.T("Medical"), Icon: "hospital_bed", Toggle: true, On: b.Medical,
+			Desc: a.shell.T("Reserve this bed for injured animals.")}
+		return append(out, med)
 	}
 	pr := Button{ID: "bldg.bed.prisoners", Label: a.shell.T("Prisoners"), Toggle: true,
 		Desc: a.shell.T("Only prisoners sleep here.")}
@@ -525,7 +550,7 @@ func (a Building) applyBedClick(id string, b game.BuildingView) bool {
 	if bedSlots(b) == 0 {
 		return false
 	}
-	if id == "bldg.bed.prisoners" {
+	if id == "bldg.bed.prisoners" && !isAnimalBed(b) {
 		rd, ok := a.sim().(bedPrisonReader)
 		if ok {
 			a.shell.Enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(b.ID), Enabled: !rd.BedForPrisoners(b.ID)})
@@ -541,16 +566,18 @@ func (a Building) applyBedClick(id string, b game.BuildingView) bool {
 		return false
 	}
 	if slot, err := strconv.Atoi(s); err == nil && slot >= 0 && slot < bedSlots(b) {
-		a.openBedOwnerPicker(b.ID, slot)
+		if !b.Medical {
+			a.openBedOwnerPicker(b.ID, slot, isAnimalBed(b))
+		}
 	}
 	return true
 }
 
 // openBedOwnerPicker lists the living colonists (and nobody) for slot.
-func (a Building) openBedOwnerPicker(bed entity.EntityID, slot int) {
+func (a Building) openBedOwnerPicker(bed entity.EntityID, slot int, animalBed bool) {
 	a.kit().Push(uikit.Modal{
 		ID: BedOwnerModalID, Title: a.shell.T("Bed owner"), W: 320, H: 420,
-		Draw:    func(body gfx.Rect) { a.bedOwnerBody(body, bed, slot) },
+		Draw:    func(body gfx.Rect) { a.bedOwnerBody(body, bed, slot, animalBed) },
 		Buttons: []uikit.ModalButton{{ID: "close", Label: a.shell.T("Cancel"), Style: uikit.BtnNormal, Closes: true}},
 	})
 }
@@ -560,20 +587,30 @@ func BedOwnerPickID(owner entity.EntityID) string {
 	return "bed.owner.pick." + strconv.FormatUint(uint64(owner), 10)
 }
 
-func (a Building) bedOwnerBody(body gfx.Rect, bed entity.EntityID, slot int) {
+func (a Building) bedOwnerBody(body gfx.Rect, bed entity.EntityID, slot int, animalBed bool) {
 	if a.sim() == nil {
 		return
 	}
-	rows := []struct {
+	if live, ok := a.BuildingView(bed); !ok || live.Medical || isAnimalBed(live) != animalBed || animalBed && live.Forbidden {
+		a.kit().Label(body.X, body.Y, a.shell.T("Bed is unavailable"), gfx.Body)
+		return
+	}
+	type ownerRow struct {
 		id   entity.EntityID
 		name string
-	}{{0, "Nobody"}}
-	for _, p := range a.shell.Pawns() {
-		if p.Status != "dead" {
-			rows = append(rows, struct {
-				id   entity.EntityID
-				name string
-			}{p.ID, a.shell.PawnLabel(p)})
+	}
+	rows := []ownerRow{{0, a.shell.T("Nobody")}}
+	if animalBed {
+		for _, an := range a.shell.World().Animals {
+			if an.Tame {
+				rows = append(rows, ownerRow{an.ID, AnimalTitle(a.shell, an)})
+			}
+		}
+	} else {
+		for _, p := range a.shell.Pawns() {
+			if p.Status != "dead" {
+				rows = append(rows, ownerRow{p.ID, a.shell.PawnLabel(p)})
+			}
 		}
 	}
 	area := a.kit().ScrollArea("bed.owner.rows", body, float32(len(rows)*bedRowH), uikit.ScrollOpts{Step: bedRowH * 2})

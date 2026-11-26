@@ -18,7 +18,7 @@ func TestCapacityTipPegLeg(t *testing.T) {
 	t.Parallel()
 	var b body.Body
 	b.Missing |= 1 << uint(body.LegL)
-	b.SetImplant(body.LegL, item.PegLeg)
+	b.SetReplacement(body.LegL, item.PegLeg)
 	tip := roster.CapacityTip(&b, body.Moving)
 	t.Log("\n" + tip)
 	if !strings.HasPrefix(tip, "Moving\n") || !strings.Contains(tip, "peg leg") || !strings.Contains(tip, "\n= ") {

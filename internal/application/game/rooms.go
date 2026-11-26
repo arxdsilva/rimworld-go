@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/application/game/rest"
+	"rimworld-go/internal/application/game/viewmodel"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -14,17 +15,16 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/trait"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/internal/domain/world/terrain"
 )
 
-// ThoughtView is one line of a pawn's mood.
-type ThoughtView struct {
-	Label string
-	Value int
-}
+// ThoughtView is a detached pawn-mood read model.
+type ThoughtView = viewmodel.ThoughtView
 
 // roomStats is a rebuild's count per room (filth, items, bed flags: live).
 type roomStats struct {
@@ -45,9 +45,7 @@ func (g *Game) isBoundary(x, y int) bool {
 	return false
 }
 
-// roomWall reports a building that bounds rooms: a wall, a door, or a
-// cooler or vent standing in a wall gap (PLAY-021, TEMP-0: they move heat
-// or air between the two rooms they separate).
+// roomWall recognizes walls, doors and wall-mounted air transfer buildings.
 func roomWall(k construction.Kind) bool {
 	return k == construction.Wall || k.IsDoor() || k.WallMounted()
 }
@@ -66,8 +64,7 @@ func (g *Game) ensureRooms() {
 	g.rebuildRoomsIncremental()
 }
 
-// rebuildRoomsFull detects every room and recounts its contents from
-// scratch (the reference the incremental rebuild must match).
+// rebuildRoomsFull is the reference room-state rebuild.
 func (g *Game) rebuildRoomsFull() {
 	w, h := g.grid.Width(), g.grid.Height()
 	grid, sizes := room.Detect(w, h, g.isBoundary)
@@ -79,7 +76,7 @@ func (g *Game) rebuildRoomsFull() {
 	g.afterRoomsRebuilt() // roof.go
 }
 
-// roomStatsFull scores every room of a detected grid by a full scan.
+// roomStatsFull counts the detected rooms.
 func (g *Game) roomStatsFull(grid []int, sizes []int) []roomStats {
 	w := g.grid.Width()
 	stats := make([]roomStats, len(sizes))
@@ -181,6 +178,12 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	n, _ := g.need.Get(id)
 	var stateBuf [12]mood.Kind
 	states := stateBuf[:0]
+	if g.colonist(id) || g.prison.Is(id) {
+		states = append(states, mood.ExpectationsForWealth(g.wealth.MoodValue()))
+	}
+	if g.prison.Is(id) {
+		states = append(states, mood.Imprisoned)
+	}
 	switch n.Settle().Band { // FOOD-1, wiki: Saturation (with hysteresis)
 	case needs.Hungry:
 		states = append(states, mood.Hungry)
@@ -192,14 +195,19 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	if n.Tired() {
 		states = append(states, mood.Tired)
 	}
-	if k, ok := recreate.Mood(g.joy[id]); ok { // game/recreate: starved, bored, entertained
+	if k, ok := recreate.Mood(g.joy[id]); ok && recreationEligible(g, id) { // game/recreate: starved, bored, entertained
 		states = append(states, k)
 	}
 	if g.feelsSick(id) { // disease.go: infections (MED-02), diseases and parasites (MED-04)
 		states = append(states, mood.Sick)
 	}
+	if b := g.bodies[id]; b != nil && body.AnestheticWoozy(b) {
+		states = append(states, mood.AnestheticWoozy)
+	}
 	if v, _ := g.vital.Get(id); v.Injury >= painInjury {
-		states = append(states, mood.InPain)
+		if b := g.bodies[id]; b == nil || b.Pain() > 0 {
+			states = append(states, mood.InPain)
+		}
 	}
 	pos, _ := g.positions.Get(id)
 	if k, ok := g.bandsOf(id).Thought(int(g.temperatureAt(pos.X, pos.Y))); ok { // TEMP-3: the 4-rung ladders (exposure)
@@ -208,21 +216,33 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	if g.apparel[id].Naked() { // TEMP-4, craft/garment.go: no torso or leg cover (wiki: Naked)
 		states = append(states, mood.Naked)
 	}
+	if hasRanged(g, id) && g.sk.stats[id].hasTrait(trait.Scrapper) {
+		states = append(states, mood.BrawlerRanged)
+	}
 	if v, _ := g.vital.Get(id); v.Status != health.Dead && g.unburiedNear(pos) {
 		states = append(states, mood.UnburiedCorpse)
 	}
 	if g.incidents.Fallout(uint64(g.clock.Now())) && !g.roofAt(pos.X, pos.Y).Roofed() { // FOOD-6, wiki: Toxic fallout
 		states = append(states, mood.ToxicFallout)
 	}
-	ts := g.traitThoughts(id, mood.AppendActive(dst, g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
-	ts = append(ts, g.bodyThoughts(id)...)                                                                    // body.go
-	ts = append(ts, doseOf(g).Thoughts(id)...)                                                                // game/dose
-	return append(ts, g.socialThoughts(id)...)                                                                // social_mood.go
+	ts := g.traitThoughts(id, mood.AppendActiveAt(dst, g.memories[id], uint64(g.clock.Now()), states...))
+	ts = append(ts, g.bodyThoughts(id)...)
+	ts = append(ts, doseOf(g).Thoughts(id)...)
+	ts = append(ts, g.socialThoughts(id)...)
+	if chance := body.AlzheimerThoughtNullification(g.bodies[id]); chance > 0 {
+		ts = mood.NullifyConditional(ts, chance, g.streams.seed, uint64(id), uint64(g.clock.Now())/clock.TicksPerHour)
+	}
+	return ts
 }
 
 // moodOf is the colonist's mood: the level its thoughts add up to, as the
 // social layer smooths it (social_mood.go).
-func (g *Game) moodOf(id entity.EntityID) int { return g.smoothedMood(id, g.thoughtLevel(id)) }
+func (g *Game) moodOf(id entity.EntityID) int {
+	if m, ok := g.smoothedMood(id); ok {
+		return m
+	}
+	return g.thoughtLevel(id)
+}
 
 // afterEat records what pawn id ate from stack st (game/diet: the wiki's
 // meal thoughts) and where (no table -3; a patient or prisoner fed in bed
@@ -240,15 +260,6 @@ func (g *Game) afterEat(id entity.EntityID, st item.Stack, fed bool) {
 		g.remember(id, mood.AteWithoutTable)
 	}
 	g.rollFoodPoison(id, st)
-}
-
-// workTick reports whether a work job progresses this tick: unhappy
-// pawns lose one tick in four (deterministic on the clock).
-func (g *Game) workTick(id entity.EntityID) bool {
-	if uint64(g.clock.Now())%4 != 0 {
-		return true
-	}
-	return g.moodOf(id) >= mood.LowMood
 }
 
 func thoughtViews(ts []mood.Thought) []ThoughtView {

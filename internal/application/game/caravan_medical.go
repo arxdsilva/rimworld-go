@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -141,36 +142,15 @@ func (h mapsRoad) Tend(medic, id entity.EntityID, now uint64) {
 	}
 }
 
-// caravanMemberStatus is a member's short health note for the caravan
-// list: "dead", "bleeding", "down", its diseases, "food poisoning",
-// "injured", or "" when well.
-func (g *Game) caravanMemberStatus(id entity.EntityID) string {
-	v, ok := g.vital.Get(id)
-	if !ok {
-		return ""
+// caravanMemberFacts uses only live authoritative need and sampled mood values;
+// it does not evaluate map-local thoughts at a stashed pawn's absent position.
+func (g *Game) caravanMemberFacts(id entity.EntityID) travel.CaravanMemberFacts {
+	n, nok := g.need.Get(id)
+	m, mok := g.smoothedMood(id)
+	v := travel.MemberFacts(id, g.personName(id), n, nok, m, mok, g.breaking(id), g.breakOffset(id))
+	if hp, ok := g.vital.Get(id); ok {
+		_, infected := g.worstInfection(id)
+		v.Health = travel.MemberHealth(hp.Status, g.bodies[id], g.diseaseLabel(id), infected)
 	}
-	if v.Status == health.Dead {
-		return "dead"
-	}
-	var out []string
-	b := g.bodies[id]
-	if b != nil && b.BleedPerDay() > 0 {
-		out = append(out, "bleeding")
-	}
-	if v.Status == health.Downed {
-		out = append(out, "down")
-	}
-	if d := g.diseaseLabel(id); d != "" {
-		out = append(out, d)
-	}
-	if _, ok := b.Poisoned(); ok {
-		out = append(out, "food poisoning")
-	}
-	if _, ok := g.worstInfection(id); ok {
-		out = append(out, "infection")
-	}
-	if len(out) == 0 && b != nil && hasOpenWound(b) {
-		out = append(out, "injured")
-	}
-	return strings.Join(out, ", ")
+	return v
 }

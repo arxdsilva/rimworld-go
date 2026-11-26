@@ -6,6 +6,7 @@ package raid
 import (
 	"cmp"
 	"fmt"
+	"rimworld-go/internal/application/game/leave"
 
 	raiddef "rimworld-go/internal/domain/raid"
 	"rimworld-go/internal/domain/sim/clock"
@@ -31,6 +32,7 @@ type Raiders struct {
 	a     Arrive
 	spots []Spot
 	kid   *Kidnaps // kidnap.go
+	exit  leave.Host
 	// tl: the raiders standing, per group and faction, counted once a
 	// tick (tally.go, EAI-020); eye: sight and memory (sight.go, EAI-010).
 	tl  tally
@@ -120,12 +122,18 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 	if rs.kid.Try(id, x, y, now) || rs.grab(id, r, j, x, y, now) { // kidnap.go; tactics.go: loot on the way out
 		return
 	}
-	if !j.Active() || (now+uint64(id))%120 == 0 && j.Kind != job.Move {
-		ex, ey := h.NearestEdge(x, y)
-		if tx, ty, ok := h.WalkableNear(ex, ey, 3); ok {
-			h.StartJob(id, job.Record{Kind: job.Move, TX: tx, TY: ty})
-		}
+	if j.Kind == job.Breach && j.Active() {
+		h.Breach(id, j)
+		return
 	}
+	if j.Active() || now < r.RetryAt {
+		return
+	}
+	if rs.exit != nil && leave.Try(rs.exit, id, x, y, 0, j) {
+		return
+	}
+	r.RetryAt = now + RaiderRetry
+	h.SetRaider(id, r)
 }
 
 // fight runs a raider that is arriving or assaulting, standing on (x, y)

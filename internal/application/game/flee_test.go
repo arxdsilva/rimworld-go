@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
@@ -334,4 +335,96 @@ func TestFleeViewWithoutThreatInSight(t *testing.T) {
 	if fleeing(g, ada).Fleeing {
 		t.Fatal("shaken but standing with no threat about is not fleeing")
 	}
+}
+
+func TestArmedForcedMoveSurvivesGuard(t *testing.T) {
+	g := New(Config{Seed: 3, Width: 50, Height: 20})
+	ada, _ := g.SpawnNamedPawn(25, 10, "Ada")
+	freeTime(g)
+	fullNeeds(g, ada)
+	g.Arm(ada, item.Club)
+	wolf, _ := g.SpawnAnimal("ridgewolf", 28, 10)
+	holdAttacker(g, wolf, ada, 28, 10)
+	g.Step(1)
+	if j, _ := g.jobs.Get(ada); j.Kind != job.Attack {
+		t.Fatalf("expected automatic defense: %+v", j)
+	}
+	g.Apply(command.Command{Kind: command.MovePawn, Pawn: uint64(ada), X: 5, Y: 10})
+	for i := 0; i < 600; i++ {
+		g.Step(1)
+		p, _ := g.positions.Get(ada)
+		if p.X == 5 && p.Y == 10 {
+			holdAttacker(g, wolf, ada, 8, 10)
+			g.Step(1)
+			if next, _ := g.jobs.Get(ada); next.Kind != job.Attack || next.Target != wolf || next.Forced {
+				t.Fatalf("automatic defense did not resume after evacuation: %+v", next)
+			}
+			return
+		}
+		j, _ := g.jobs.Get(ada)
+		if j.Kind != job.Move || !j.Forced || j.TX != 5 {
+			t.Fatalf("tick %d: forced evacuation replaced: %+v at %+v", i, j, p)
+		}
+	}
+	t.Fatal("forced move never arrived")
+}
+
+func TestFleePackAtMapCorner(t *testing.T) {
+	g := New(Config{Seed: 3, Width: 40, Height: 30})
+	ada, _ := g.SpawnNamedPawn(39, 0, "Ada")
+	freeTime(g)
+	fullNeeds(g, ada)
+	g.Arm(ada, item.Club)
+	g.Apply(command.Command{Kind: command.SetThreatResponse, Pawn: uint64(ada), X: 1})
+	a, _ := g.SpawnAnimal("ridgewolf", 34, 5)
+	b, _ := g.SpawnAnimal("ridgewolf", 39, 8)
+	holdAttacker(g, a, ada, 34, 5)
+	holdAttacker(g, b, ada, 39, 8)
+	g.Step(1)
+	j, _ := g.jobs.Get(ada)
+	if j.Kind != job.Move || j.Forced || j.TX >= 39 || len(j.Path) == 0 {
+		t.Fatalf("no escape along clear edge: %+v", j)
+	}
+	for _, p := range j.Path {
+		if weapon.Distance(p.X, p.Y, 34, 5) < 2 || weapon.Distance(p.X, p.Y, 39, 8) < 2 {
+			t.Fatalf("path runs into pack: %+v", j)
+		}
+	}
+	for i := 0; i < 120; i++ {
+		g.Step(1)
+		p, _ := g.positions.Get(ada)
+		if p.X < 35 {
+			return
+		}
+	}
+	p, _ := g.positions.Get(ada)
+	t.Fatalf("failed to move away from corner: %+v", p)
+}
+
+func TestFleeRechecksNewThreatOnRunningRoute(t *testing.T) {
+	g := New(Config{Seed: 3, Width: 50, Height: 30})
+	ada, _ := g.SpawnNamedPawn(25, 15, "Ada")
+	freeTime(g)
+	fullNeeds(g, ada)
+	a, _ := g.SpawnAnimal("ridgewolf", 34, 15)
+	holdAttacker(g, a, ada, 34, 15)
+	g.Step(1)
+	j, _ := g.jobs.Get(ada)
+	if j.Kind != job.Move || j.PathI >= len(j.Path) {
+		t.Fatalf("flight missing: %+v", j)
+	}
+	p := j.Path[j.PathI]
+	b, _ := g.SpawnAnimal("ridgewolf", p.X, p.Y)
+	holdAttacker(g, b, ada, p.X, p.Y)
+	g.Step(1)
+	j, _ = g.jobs.Get(ada)
+	if j.Kind != job.Move || j.PathI >= len(j.Path) || j.Path[j.PathI] == p {
+		t.Fatalf("did not replan immediately away from new attacker: %+v", j)
+	}
+	h := saveLoad(t, g)
+	for i := 0; i < 150; i++ {
+		g.Step(1)
+		h.Step(1)
+	}
+	sameState(t, "flight after new threat/save", g, h)
 }

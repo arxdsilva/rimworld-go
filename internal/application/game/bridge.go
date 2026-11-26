@@ -41,6 +41,27 @@ func (g *Game) cellWalkable(x, y int) bool {
 	return !g.filledGraveAt(x, y)
 }
 
+// cellStandable is the native pawn stopping rule: completed PassThroughOnly
+// objects permit passage but are not valid destinations. A blueprint or
+// construction frame does not change passability; pawn occupancy does not
+// change any building's definition.
+func cellStandable(g *Game, x, y int) bool {
+	if !g.grid.Walkable(x, y) {
+		return false
+	}
+	if id := g.layerBldgAt(x, y, construction.LayerObject); id != 0 {
+		if b := g.bldgs.Ref(id); b != nil && construction.DefOf(b.Kind).PassThroughOnly {
+			return false
+		}
+	}
+	return true
+}
+
+func doorway(g *Game, x, y int) bool {
+	b, ok := g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerObject))
+	return ok && b.Kind.IsDoor()
+}
+
 // filledGraveAt reports a filled grave covering (x, y): a mound that
 // blocks movement (burial.go).
 func (g *Game) filledGraveAt(x, y int) bool {

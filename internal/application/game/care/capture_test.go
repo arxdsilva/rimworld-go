@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -59,7 +60,7 @@ func TestCaptureCarriesToThePrisonBed(t *testing.T) {
 		t.Fatalf("log %v, want %v", h.log, want)
 	}
 	if h.jobs[doc].State != job.Complete || c.Carry.Len() != 0 || !h.prisoners[captive] ||
-		h.sleptAt[captive] != cellBed || h.pos[captive] != [2]int{8, 8} || h.bldgs[cellBed].SlotOf(uint64(captive)) < 0 {
+		h.sleptAt[captive] != cellBed || h.pos[captive] != [2]int{8, 8} || construction.BedSlot(h.bldgs[cellBed], uint64(captive)) < 0 {
 		t.Fatalf("laid in the prisoner bed: job %+v pos %v", h.jobs[doc], h.pos[captive])
 	}
 	// a prisoner bed that is medical is still not held for a stay
@@ -259,5 +260,32 @@ func TestArrestChasesRollsAndCarriesOff(t *testing.T) {
 	if _, busy := h.jobs[patient]; busy || !h.prisoners[patient] || j.Kind != job.Capture || !j.Forced ||
 		j.Dest != cellBed || j.State != job.Goto || c.Carry.Patient(doc) != patient {
 		t.Fatalf("carried off as a capture: %+v", j)
+	}
+}
+
+func TestCaptureChecksReachablePrisonDestination(t *testing.T) {
+	_, h, pr := prisonScene()
+	ch := newCutHost(h)
+	c := New(ch, Roles{Prison: pr})
+	ch.cut[cutWay{doc, [2]int{8, 8}}] = true
+	if why := c.StartCapture(doc, captive, true); why != ReasonUnreachable {
+		t.Fatalf("capture preflight: %q", why)
+	}
+	if why := c.Force(doc, command.OrderCapture, captive); why != ReasonUnreachable {
+		t.Fatalf("forced capture preflight: %q", why)
+	}
+	if h.jobs[doc].Active() || !pr.armed[captive] || c.Carry.Len() != 0 {
+		t.Fatal("failed capture changed physical custody")
+	}
+	h.bed(cellBed+1, construction.Building{Kind: construction.Bed, X: 15, Y: 15, ForPrisoners: true})
+	if why := c.StartCapture(doc, captive, true); why != "" {
+		t.Fatal(why)
+	}
+	j := h.jobs[doc]
+	h.pos[doc] = [2]int{4, 0}
+	j.State = job.Do
+	c.DoCapture(doc, j)
+	if h.jobs[doc].Dest != cellBed+1 {
+		t.Fatal("carrier did not choose reachable prison bed")
 	}
 }

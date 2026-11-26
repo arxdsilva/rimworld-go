@@ -183,22 +183,13 @@ func (g *Game) diseaseLetter(k body.CondKind, victims []entity.EntityID) {
 		pos.X, pos.Y = g.home()
 		focus = 0
 	}
+	fields := letters.DiseaseFields(k, who, len(victims))
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: m, X: pos.X, Y: pos.Y, Focus: focus,
-		Letter: true, Title: title, Kind: letters.Caution})
+		Letter: true, Title: title, Code: letters.DiseaseCode(k), Fields: &fields, Kind: letters.Caution})
 }
 
 // hasDisease reports a disease on b.
-func hasDisease(b *body.Body) bool {
-	if b == nil {
-		return false
-	}
-	for _, c := range b.Conds {
-		if body.IsDisease(c.Kind) {
-			return true
-		}
-	}
-	return false
-}
+func hasDisease(b *body.Body) bool { return body.HasDisease(b) }
 
 // stepDiseases runs an hour of every disease on the patients, in id order
 // (phaseMedical, after stepCare).

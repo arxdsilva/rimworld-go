@@ -22,7 +22,6 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/caravan"
-	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/pkg/mathx"
 )
 
@@ -172,7 +171,11 @@ func ax9Free(t *testing.T, g *Game) (int, int) {
 				}
 			}
 			if ok {
-				return x, y
+				pod, _ := g.canPlaceStuffAt(construction.TransportPod, item.Steel, construction.South, x+1, y)
+				launcher, _ := g.canPlaceStuffAt(construction.PodLauncher, item.Steel, construction.South, x, y)
+				if pod && launcher {
+					return x, y
+				}
 			}
 		}
 	}
@@ -223,7 +226,11 @@ func TestTransportPodsLoadLaunchVisit(t *testing.T) {
 	if pods := g.World().AX.Pods; len(pods) != 1 || int(pods[0].To) != dest || pods[0].Count != 1 {
 		t.Fatalf("pods in flight %+v", pods)
 	}
-	g.Step(2*caravan.PodTicksPerTile + 260)
+	g.Step(caravan.PodTicksPerTile)
+	if len(g.World().AX.Pods) != 1 {
+		t.Fatal("the pods arrived before completing the two-tile flight")
+	}
+	g.Step(caravan.PodTicksPerTile + 260)
 	if len(g.World().AX.Pods) != 0 {
 		t.Fatal("the pods never landed")
 	}
@@ -233,6 +240,9 @@ func TestTransportPodsLoadLaunchVisit(t *testing.T) {
 	}
 	if h := g.worldSt.ax9.Export(); h == nil || len(h.Cargo) != 1 || h.Cargo[0].Hold.Items[0].Qty != 30 {
 		t.Fatalf("cargo %+v", h)
+	}
+	if want := int32(30 * g.sk.content.Items.MassGrams(item.Steel) / int(caravan.PersonCarryKg)); c.C.Load != want {
+		t.Fatalf("pod cargo load %d want %d", c.C.Load, want)
 	}
 	steelOnMap := func() (n int) {
 		g.stacks.All(func(_ entity.EntityID, st item.Stack) {
@@ -274,6 +284,7 @@ func TestTransportPodsGiftAndRange(t *testing.T) {
 	ax9Stock(g, pod, item.Silver, 300)
 	fac := g.factionOf(g.settlementFaction(dest))
 	before := fac.Goodwill
+	recipient := *fac
 	g.setFuel(launcher, 2*chemfuelTicks) // 2 chemfuel: under a tile
 	g.Enqueue(command.Command{Kind: command.LaunchPods, Target: uint64(pod), Count: dest, Mode: command.PodArriveGift})
 	g.Step(1)
@@ -283,7 +294,7 @@ func TestTransportPodsGiftAndRange(t *testing.T) {
 	g.setFuel(launcher, 150*chemfuelTicks)
 	g.Enqueue(command.Command{Kind: command.LaunchPods, Target: uint64(pod), Count: dest, Mode: command.PodArriveGift})
 	g.Step(2*caravan.PodTicksPerTile + 260)
-	want := faction.GiftGoodwill(300 * item.Silver.Value())
+	want := faction.GiftGoodwill(recipient, 300*item.Silver.Value())
 	if got := g.factionOf(g.settlementFaction(dest)).Goodwill - before; want <= 0 || got != want {
 		t.Fatalf("goodwill +%d, want +%d", got, want)
 	}
@@ -336,7 +347,7 @@ func TestMineralSiteFoundAndMined(t *testing.T) {
 		t.Fatalf("the caravan did not claim the site: %+v", c.C)
 	}
 	g.Step(1)
-	if len(g.maps) != 2 || len(w.atlas.Maps) != 1 || w.atlas.Maps[0].Lump != item.Gold || len(w.atlas.Maps[0].Cells) < 320/OreYield[geology.Gold] {
+	if len(g.maps) != 2 || len(w.atlas.Maps) != 1 || w.atlas.Maps[0].Lump != item.Gold || len(w.atlas.Maps[0].Cells) < travel.Minerals()[4].CellsMin {
 		t.Fatalf("no gold site map: %d maps, atlas %+v", len(g.maps), w.atlas.Maps)
 	}
 }
@@ -631,5 +642,66 @@ func TestCaravanPacksGoodsAndAnimals(t *testing.T) {
 	travelOf(g2).Pack(99, entityStr(sid2)+":1000", 1)
 	if s := g2.worldSt.ax9.Export(); s != nil && len(s.Packs) != 0 {
 		t.Fatalf("an overweight pick was packed: %+v", s.Packs)
+	}
+}
+
+// Scanner deposits use the same per-cell yield as the native mining job.
+func TestMineralScannerSiteCellCounts(t *testing.T) {
+	t.Parallel()
+	for _, want := range travel.Minerals() {
+		g := worldGame(t)
+		if !travelOf(g).Find(want.Kind) {
+			t.Fatalf("mineral %d: no site found", want.Kind)
+		}
+		save := g.worldS().ax9.Export()
+		if save == nil || len(save.Sites) != 1 {
+			t.Fatalf("mineral %d: saved sites %+v", want.Kind, save)
+		}
+		site := save.Sites[0]
+		if site.Qty%want.Yield != 0 {
+			t.Fatalf("mineral %d: qty %d is not divisible by yield %d", want.Kind, site.Qty, want.Yield)
+		}
+		cells := site.Cells
+		if cells != site.Qty/want.Yield {
+			t.Fatalf("saved cell count %d differs from discovery quantity %d", cells, site.Qty)
+		}
+		if cells < want.CellsMin || cells > want.CellsMax {
+			t.Fatalf("mineral %d: %d cells, want %d..%d", want.Kind, cells, want.CellsMin, want.CellsMax)
+		}
+		g, _ = saveLoadInfo(t, g)
+		g.worldS().planet, g.worldS().planetTried = testPlanet().Fork(), true
+		w := g.worldS()
+		arriveAt(t, g, int(site.Tile), g.pawnIDs[0])
+		g.Step(1)
+		if len(g.maps) != 2 || len(w.atlas.Maps) != 1 {
+			t.Fatalf("mineral %d: site map did not open", want.Kind)
+		}
+		meta := w.atlas.Maps[0]
+		if meta.Lump != want.Kind || len(meta.Cells) != cells {
+			t.Fatalf("mineral %d: map lump=%v cells=%d, want lump=%v cells=%d", want.Kind, meta.Lump, len(meta.Cells), want.Kind, cells)
+		}
+	}
+}
+
+// A failed site placement does not consume the next find number; the next
+// successful commit advances it exactly once.
+func TestMineralScannerFindAdvancesOnlyOnCommit(t *testing.T) {
+	t.Parallel()
+	g := worldGame(t)
+	w := g.worldS()
+	p, tried := w.planet, w.planetTried
+	w.planet, w.planetTried = nil, true
+	if travelOf(g).Find(item.Steel) {
+		t.Fatal("find succeeded without a planet")
+	}
+	if s := w.ax9.Export(); s != nil && s.Finds != 0 {
+		t.Fatalf("failed find advanced counter: %+v", s)
+	}
+	w.planet, w.planetTried = p, tried
+	if !travelOf(g).Find(item.Steel) {
+		t.Fatal("site find did not commit after restoring the planet")
+	}
+	if s := w.ax9.Export(); s == nil || s.Finds != 1 {
+		t.Fatalf("successful find counter = %+v, want 1", s)
 	}
 }

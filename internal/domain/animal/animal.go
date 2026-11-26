@@ -693,7 +693,7 @@ type State struct {
 	// bond roll; ConfusedUntil ends Confused; Mother the animal's mother.
 	Master        uint64
 	Bond          uint64
-	Trained       [training.NumSkills]uint8
+	Trained       [training.LegacySkills]uint8
 	TrainDecay    uint64
 	NextBondCheck uint64
 	ConfusedUntil uint64

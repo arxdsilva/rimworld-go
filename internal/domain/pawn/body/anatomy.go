@@ -3,7 +3,7 @@
 
 package body
 
-import "rimworld-go/internal/domain/economy/item"
+import "math/bits"
 
 // Part is a body part (append only, saved).
 type Part uint8
@@ -36,6 +36,7 @@ const (
 	KidneyR
 	Liver
 	Spine
+	Tongue
 	NumParts
 )
 
@@ -65,7 +66,7 @@ var defs = [NumParts]Def{
 	EarL:    {"left ear", Brain, 10, 10, false, true, Hearing, true},
 	EarR:    {"right ear", Brain, 10, 10, false, true, Hearing, true},
 	Nose:    {"nose", Brain, 10, 10, false, true, 0, false},
-	Jaw:     {"jaw", Brain, 20, 20, false, true, Talking, true},
+	Jaw:     {"jaw", Brain, 20, 12, false, true, Talking, true},
 	Torso:   {"torso", Torso, 60, 296, true, false, 0, false},
 	Heart:   {"heart", Torso, 25, 20, true, false, BloodPumping, true},
 	LungL:   {"left lung", Torso, 25, 30, false, false, Breathing, true},
@@ -86,6 +87,8 @@ var defs = [NumParts]Def{
 	KidneyR: {"right kidney", Torso, 50, 17, false, false, BloodFiltration, true},
 	Liver:   {"liver", Torso, 50, 25, false, false, BloodFiltration, true},
 	Spine:   {"spine", Torso, 40, 25, false, false, Moving, true},
+	// original tuning: tongue HP and coverage; added part preserves humanlike coverage totals.
+	Tongue: {"tongue", Jaw, 10, 8, false, true, Talking, true},
 }
 
 // DefOf returns the humanlike definition of p (the zero Def for an
@@ -118,15 +121,15 @@ func (b *Body) LossKills(p Part) bool {
 		}
 	}
 	c := Body{Wounds: b.Wounds, Missing: b.Missing, Conds: b.Conds, Anatomy: b.Anatomy, Scale: b.Scale}
-	if len(b.Fitted) > 0 {
-		c.Fitted = append([]item.Kind(nil), b.Fitted...)
-	}
+	c.Replacements = append([]Replacement(nil), b.Replacements...)
+	c.Implants = append([]Implant(nil), b.Implants...)
 	for q := Part(0); q < n; q++ {
 		if b.under(q, p) {
 			c.Missing |= bit(q)
-			c.SetImplant(q, 0)
+			c.SetReplacement(q, 0)
 		}
 	}
+	dropImplantsUnder(&c, p)
 	return !b.OrganFailure() && c.OrganFailure()
 }
 
@@ -157,31 +160,75 @@ func (b *Body) under(p, ancestor Part) bool {
 	return false
 }
 
-// PickPart chooses a non-missing part by coverage with roll, which
-// returns a value in [0, n). It returns false when nothing is left.
+// Replacement parts cover their own former children when the natural
+// anatomy underneath is missing. All other replacements use their own area.
+func replacementCoverage(p Part) int {
+	switch p {
+	case ArmL, ArmR:
+		return defs[p].Coverage + defs[HandL].Coverage
+	case LegL, LegR:
+		return defs[p].Coverage + defs[FootL].Coverage
+	case Jaw:
+		return defs[p].Coverage + defs[Tongue].Coverage
+	default:
+		return defs[p].Coverage
+	}
+}
+
+// PickPart draws a hit location by current coverage. A fitted replacement
+// takes the original coverage of its missing child parts. All anatomy plans
+// fit in the 32-element stack buffer, with no allocation on a combat tick.
 func (b *Body) PickPart(roll func(int) int) (Part, bool) {
 	t := b.table()
-	total := 0
-	for p := range t {
-		if !b.isMissing(Part(p)) {
-			total += t[p].Coverage
+	missing := b.Missing
+	replacements := b.Replacements
+	total := 1000 // all body plans have 1000 units of base coverage
+	for mask := missing; mask != 0; mask &= mask - 1 {
+		p := bits.TrailingZeros32(mask)
+		if p >= len(t) {
+			continue
+		}
+		total -= t[p].Coverage
+		if p < len(replacements) && replacements[p].Kind != 0 {
+			if b.Anatomy == Humanlike {
+				total += replacementCoverage(Part(p))
+			} else {
+				total += t[p].Coverage
+			}
 		}
 	}
-	if total == 0 {
+	if total <= 0 {
 		return b.Root(), false
 	}
 	r := roll(total)
 	if r < 0 {
 		r = 0
 	}
-	for p := range t {
-		if b.isMissing(Part(p)) {
-			continue
+	if missing == 0 {
+		for i, d := range t {
+			if r < d.Coverage {
+				return Part(i), true
+			}
+			r -= d.Coverage
 		}
-		if r < t[p].Coverage {
-			return Part(p), true
+		return b.Root(), false
+	}
+	for i, d := range t {
+		weight := d.Coverage
+		if missing&(1<<i) != 0 {
+			weight = 0
+			if i < len(replacements) && replacements[i].Kind != 0 {
+				if b.Anatomy == Humanlike {
+					weight = replacementCoverage(Part(i))
+				} else {
+					weight = d.Coverage
+				}
+			}
 		}
-		r -= t[p].Coverage
+		if r < weight {
+			return Part(i), true
+		}
+		r -= weight
 	}
 	return b.Root(), false
 }

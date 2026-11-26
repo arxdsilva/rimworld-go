@@ -26,8 +26,9 @@ func (b *Body) Parts() []PartStatus {
 	for p := Part(0); p < Part(len(t)); p++ {
 		s := PartStatus{Part: p, Label: t[p].Label, MaxHP: b.maxHP(p), Missing: b.isMissing(p), Tended: true}
 		if s.Missing {
-			if b.fitted(p) {
-				s.Implant, s.Fitted = b.Implant(p), true
+			if b.hasReplacement(p) {
+				s.Implant, s.Fitted = b.ReplacementAt(p), true
+				s.HP = max(s.MaxHP-int(replacementDamage(b, p)), 0)
 			}
 			out = append(out, s)
 			continue

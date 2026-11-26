@@ -92,11 +92,14 @@ func (o *Orders) AssignConstruct(id entity.EntityID) bool {
 	return o.Uninstall.Assign(id) || o.Install.Assign(id)
 }
 
-// AssignHaul is the hauler's giver for the basic chores: open marked
-// containers, then strip marked people (vanilla's basic work, which the
-// colony's haulers do here).
+// AssignBasic opens graves, sarcophagi and marked sleeper caskets.
+func (o *Orders) AssignBasic(id entity.EntityID) bool {
+	return o.Open.Assign(id) || o.assignCasket(id)
+}
+
+// AssignHaul strips marked people.
 func (o *Orders) AssignHaul(id entity.EntityID) bool {
-	return o.Open.Assign(id) || o.Strip.Assign(id)
+	return o.Strip.Assign(id)
 }
 
 // sortedSet is ids sorted, without repeats or zeros.

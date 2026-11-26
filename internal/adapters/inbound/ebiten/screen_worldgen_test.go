@@ -174,8 +174,9 @@ func TestFactionTableAddRemoveReset(t *testing.T) {
 		}
 		return -1
 	}
-	if count(faction.Settlers) != 2 || count(faction.Freebooters) != 1 {
-		t.Fatalf("defaults = %+v", ng.World.Factions)
+	if count(faction.Settlers) != 1 || count(faction.Freebooters) != 1 ||
+		count(faction.FierceClans) != 1 || count(faction.SavageClans) != 1 {
+		t.Fatalf("six-type Core world defaults = %+v", ng.World.Factions)
 	}
 	click(t, a, "world.fac.settlers.inc")
 	click(t, a, "world.fac.settlers.inc")

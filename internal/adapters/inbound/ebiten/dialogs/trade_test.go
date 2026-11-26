@@ -4,11 +4,13 @@
 package dialogs
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -76,8 +78,9 @@ func TestTradeDialogGiftMode(t *testing.T) {
 		t.Fatalf("gift cannot buy: %v", d.net)
 	}
 	d.step(wood, -4)
-	if d.giftSilver() != 4 || d.reason() != "" {
-		t.Fatalf("gift value %d reason %q", d.giftSilver(), d.reason())
+	value := trade.GiftValue(item.Book{}, d.offer(item.Book{}), trade.Terms{Social: d.view.Social})
+	if value != 2 || d.reason() != "" {
+		t.Fatalf("gift selling value %d reason %q", value, d.reason())
 	}
 	d.view.ColonySilver = 0 // a gift needs no silver
 	if d.reason() != "" {
@@ -176,5 +179,90 @@ func TestTradeStepsFollowCtrlAndShift(t *testing.T) {
 	press("trade."+wood+".give.1", input.ModCtrl|input.ModShift)
 	if got := dl.trade.net[wood]; got != -30 {
 		t.Fatalf("give clamps to the colony's stock: %d", got)
+	}
+}
+
+func TestTradeDialogWholeOfferRoundingMatchesSettlement(t *testing.T) {
+	d := newTradeDraft(game.TradeView{ColonySilver: 3, TraderSilver: 0,
+		Rows: []game.TradeRowView{{Kind: item.Steel.String(), TraderQty: 1,
+			BuyC: 349, WillBuy: true}}})
+	d.step(d.view.Rows[0], 1)
+	if d.totalC() != 349 || d.colonyAfterC() != 0 || d.reason() != "" {
+		t.Fatalf("3.49 centi-silver quote settles as 3: net %d, balance %d, reason %q",
+			d.totalC(), d.colonyAfterC(), d.reason())
+	}
+	d.view.ColonySilver = 2
+	if d.reason() == "" {
+		t.Fatal("two silver cannot buy a rounded three-silver purchase")
+	}
+}
+
+// TestTradeDialogGiftPhysicalSelection verifies named items and their
+// individual values survive the gift UI and command boundary.
+func TestTradeDialogGiftPhysicalSelection(t *testing.T) {
+	t.Parallel()
+	v := testTradeView()
+	v.GiftRows = []game.TradeRowView{
+		{Kind: item.Rifle.String() + "@111", Label: "Rifle (poor)", ColonyQty: 1, WillSell: true, StackID: 111, GiftC: 700},
+		{Kind: item.Rifle.String() + "@222", Label: "Rifle (excellent)", ColonyQty: 1, WillSell: true, StackID: 222, GiftC: 3100},
+	}
+	d := newTradeDraft(v)
+	d.setGift(true)
+	d.step(v.GiftRows[1], -1)
+	if got := d.giftSilver(item.Book{}); got != 31 {
+		t.Fatalf("physical gift preview %d, want 31", got)
+	}
+	offer := d.offer(item.Book{})
+	if len(offer) != 1 || offer[0] != (trade.Delta{Kind: item.Rifle, Qty: -1, StackID: 222}) {
+		t.Fatalf("physical gift offer: %+v", offer)
+	}
+	d.setGift(false)
+	if len(d.net) != 0 || len(d.rows()) != len(v.Rows) {
+		t.Fatal("changing modes reused selected physical gift")
+	}
+}
+
+// TestPaidDialogSelectsPhysicalBuyAndSellInOneOffer uses separate item IDs
+// of the same kind in both directions without collapsing the codec rows.
+func TestPaidDialogSelectsPhysicalBuyAndSellInOneOffer(t *testing.T) {
+	t.Parallel()
+	v := testTradeView()
+	v.ColonySilver, v.TraderSilver = 1000, 5000
+	v.Rows = []game.TradeRowView{
+		{Kind: item.Longsword.String() + "@c345", Label: "Worn wood longsword",
+			ColonyQty: 1, SellC: 1019, StackID: 345, WillSell: true},
+		{Kind: item.Longsword.String() + "@t6", Label: "Excellent gold longsword",
+			TraderQty: 1, BuyC: 18351, StackID: 6, WillBuy: true},
+	}
+	d := newTradeDraft(v)
+	d.step(v.Rows[0], -1)
+	d.step(v.Rows[1], 1)
+	if d.totalC() != 18351-1019 || d.reason() != "" {
+		t.Fatalf("physical buy/sell mismatch: %d, reason %q", d.totalC(), d.reason())
+	}
+	offer := d.offer(item.Book{})
+	if len(offer) != 2 || offer[0].Qty != -1 || offer[0].StackID != 345 ||
+		offer[1].Qty != 1 || offer[1].StackID != 6 {
+		t.Fatalf("mixed physical offer collapsed by kind: %+v", offer)
+	}
+	decoded, err := trade.DecodeOffer(item.Book{}, trade.EncodeOffer(offer))
+	if err != nil || !reflect.DeepEqual(decoded, offer) {
+		t.Fatalf("command boundary lost exact IDs: %+v, %v", decoded, err)
+	}
+	d.setGift(true)
+	if len(d.net) != 0 {
+		t.Fatal("physical paid selections remained in gift mode")
+	}
+}
+
+func TestTradeDialogRefreshesChangedPhysicalPrice(t *testing.T) {
+	t.Parallel()
+	v := testTradeView()
+	d := newTradeDraft(v)
+	d.step(v.Rows[0], -1)
+	v.Rows[0].SellC += 100
+	d.refresh(v)
+	if len(d.net) != 0 {
+		t.Fatal("stale quote remained after physical market repriced")
 	}
 }

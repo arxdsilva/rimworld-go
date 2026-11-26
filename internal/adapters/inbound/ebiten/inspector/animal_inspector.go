@@ -8,6 +8,8 @@ import (
 	"image/color"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -70,12 +72,16 @@ func AnimalLabel(an game.AnimalView) string {
 	return "animal"
 }
 
-func AnimalTitle(an game.AnimalView) string {
-	l := AnimalLabel(an)
-	if an.Tame && an.Name != "" {
-		return an.Name + " (tame " + l + ")"
+func AnimalTitle(tr lang.Tr, an game.AnimalView) string {
+	l := tr.T(AnimalLabel(an))
+	if l == "" {
+		l = tr.T("animal")
 	}
-	return strings.ToUpper(l[:1]) + l[1:]
+	if an.Tame && an.Name != "" {
+		return lang.Tf(tr, "%s (tame %s)", an.Name, l)
+	}
+	first, size := utf8.DecodeRuneInString(l)
+	return string(unicode.ToUpper(first)) + l[size:]
 }
 
 // animalInitial is the letter shown on the fallback icon disc.
@@ -260,8 +266,8 @@ func animalTrainable(an game.AnimalView) []game.AnimalTrainingView {
 }
 
 // trainLabel is a training checkbox's label: "Obedience 2/3".
-func trainLabel(t game.AnimalTrainingView) string {
-	return fmt.Sprintf("%s %d/%d", t.Label, t.Steps, t.Needed)
+func trainLabel(tr lang.Tr, t game.AnimalTrainingView) string {
+	return lang.Tf(tr, "%s %d/%d", tr.T(t.Label), t.Steps, t.Needed)
 }
 
 // toggleTraining flips one training checkbox (SetTraining).
@@ -352,7 +358,7 @@ func (a Animal) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, 
 	}
 	y += float64(2*gfx.LineStep(gfx.Small)) + 8
 	for _, t := range animalTrainable(an) {
-		gfx.Text(screen, t.Label, x, gfx.CenterTop(y, animalTrainRowH, gfx.Body), gfx.Body)
+		gfx.Text(screen, a.shell.T(t.Label), x, gfx.CenterTop(y, animalTrainRowH, gfx.Body), gfx.Body)
 		bx, by := float32(x)+animalTrainLblW, float32(y)+(animalTrainRowH-animalTrainBarH)/2
 		uikit.FillRect(screen, gfx.Rect{X: bx, Y: by, W: animalTrainBarW, H: animalTrainBarH}, uikit.ScrollTrack)
 		if t.Needed > 0 {
@@ -362,7 +368,7 @@ func (a Animal) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, 
 			}
 			uikit.FillRect(screen, gfx.Rect{X: bx, Y: by, W: animalTrainBarW * float32(min(t.Steps, t.Needed)) / float32(t.Needed), H: animalTrainBarH}, fill)
 		}
-		gfx.Text(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(a.shell, t)), float64(bx)+animalTrainBarW+10, gfx.CenterTop(y, animalTrainRowH, gfx.Small), dim)
+		gfx.Text(screen, lang.Tf(a.shell, "%d/%d  %s", t.Steps, t.Needed, trainState(a.shell, t)), float64(bx)+animalTrainBarW+10, gfx.CenterTop(y, animalTrainRowH, gfx.Small), dim)
 		y += animalTrainRowH
 	}
 }
@@ -394,6 +400,12 @@ func AnimalHealthRows(an game.AnimalView) []string {
 			s += " (losing)"
 		}
 		rows = append(rows, s)
+	}
+	for _, a := range an.Asthma {
+		rows = append(rows, fmt.Sprintf("Asthma (%s) %d%%", a.Lung, a.SeverityPct))
+	}
+	if len(an.Asthma) > 0 {
+		rows = append(rows, fmt.Sprintf("Breathing %d%%", an.BreathingPct))
 	}
 	if an.NeedsTend {
 		rows = append(rows, "Needs tending")
@@ -439,7 +451,9 @@ func AnimalPartRows(an game.AnimalView) []string {
 
 // animalHealthAlarm reports a bleeding or infected animal (the Animals
 // table marks its Health cell).
-func animalHealthAlarm(an game.AnimalView) bool { return an.BleedPerDay > 0 || an.InfectionPct > 0 }
+func animalHealthAlarm(an game.AnimalView) bool {
+	return an.BleedPerDay > 0 || an.InfectionPct > 0 || len(an.Asthma) > 0
+}
 
 // animalHealthCell is the Animals table's Health cell: "62%", with a "!"
 // while the animal bleeds or fights an infection.

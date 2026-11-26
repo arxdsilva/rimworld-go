@@ -104,3 +104,21 @@ Animal repaths as a decide-then-apply path stage on an 8-lane pool (GAR-035, GAR
 - Limits: game root at its 51828-line budget; no Game fields or methods added. Loads and dev scenes stay serial: wiring them needs lines in `New` the root lacks.
 - HUD: none; nothing the player sees changes.
 - Open: job-start searches as the second consumer (GAR-035); the first-tick threats build in a warm step after load (GAR-031); per-search node budget (GAR-103); the pool on loaded games.
+
+## ARCH-019-core-animal-save-canonical
+Grouped animal ownership and deterministic canonical saves · 2026-11-25 · this commit
+- Changed: typed grouped live/home/extra-map and off-map animal ownership, canonical Gob bytes for equal state/metadata, independent logical StateHash and standard historical decode.
+- Decisions: original saved IDs and version 21 remain; deterministic ordered serialization and strict record identity checks. No mod API or server protocol changes.
+- Save/HUD: legacy flat records load, grouped native save/replay tested, existing save UI unchanged; detached worker details in OPS CI-002.
+- Limits: existing SOLID ratchet preserved.
+- Boxes: vanilla **Schema migration**, **Save/replay deterministic equality tests** [x]; no new spec-backlog issue closure claimed.
+- Open: none within tested persistence scope; no universal cross-architecture parity guarantee.
+
+## ARCH-020-core-native-path-stage
+Native path planning and allocation reduction · 2026-11-25 · this commit
+- Changed: static-obstruction pawn replans use the existing pure pool stage, sorted requests, guarded application and serial fallback; remove profiled callback/reach allocations and lazy-materialize tame compatibility records.
+- Decisions: simulation mutation stays on its owner; preserve existing batch threshold and stale-result guards, RNG and serial-equivalence checks.
+- Limits: Game root ratcheted to 52650, actual 52633; no raised ceiling.
+- HUD: no new UI; existing position/jobs reflect the same native outcomes.
+- Boxes: GAME_ARCHITECTURE_GAP GAR-035 partial (ordinary job-start searches remain serial); no new spec-backlog issue closure claimed.
+- Open: GAR-035 job-start search stage; no duplicate worker or separate scheduler introduced.

@@ -66,7 +66,7 @@ func TestInsultingSpreeInsultsAndCanStartAFight(t *testing.T) {
 }
 
 // TestBerserkAttacksAndEndsWhenDowned: a berserker attacks the colonist
-// next to it; colonists may attack it; downed, it calms with catharsis.
+// next to it; colonists may attack it; downing ends the break with catharsis.
 func TestBerserkAttacksAndEndsWhenDowned(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
@@ -92,7 +92,7 @@ func TestBerserkAttacksAndEndsWhenDowned(t *testing.T) {
 	g.hurt(ada, health.DownedInjury+10, bo)
 	g.Step(1)
 	if g.Breaking(ada) != "" || !hasCatharsis(g, ada) {
-		t.Fatalf("downed, the berserker calms: %q", g.Breaking(ada))
+		t.Fatalf("downed berserker must calm with catharsis: %q", g.Breaking(ada))
 	}
 	if g.standingRaider(ada) || g.raiderAt(pos.X, pos.Y) == ada {
 		t.Fatal("calm again, it is no attack target")

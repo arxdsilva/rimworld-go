@@ -257,3 +257,18 @@ func TestBillWithoutIngredientsDoesNotRescanEveryTick(t *testing.T) {
 		t.Fatalf("club done %v at tick %d, cooldown to %d", done(), g.clock.Now(), at)
 	}
 }
+
+func TestBillConditionRangeCommandSaveRoundTrip(t *testing.T) {
+	g, _, bench := clubGame(t)
+	g.Enqueue(command.Command{Kind: command.SetBillRange, X: 5, Y: 2, Index: 0, Mode: command.BillRangeHP, X2: 44, Y2: 88})
+	g.Enqueue(command.Command{Kind: command.SetBillRange, X: 5, Y: 2, Index: 0, Mode: command.BillRangeQuality, X2: 2, Y2: 4})
+	g.ApplyPending()
+	want := item.ConditionRange{}.WithHP(44, 88).WithQuality(2, 4)
+	if v := g.craft.Bills.Of(bench)[0].Condition; v != want {
+		t.Fatalf("command range %+v", v)
+	}
+	h := saveLoad(t, g)
+	if v := h.craft.Bills.Of(bench)[0].Condition; v != want {
+		t.Fatalf("saved range %+v", v)
+	}
+}

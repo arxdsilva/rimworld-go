@@ -76,8 +76,8 @@ func TestRaidRelativeLinkedToAColonist(t *testing.T) {
 	if p.Where != whereRaider || p.Faction != fac || !g.isRaider(kin) || !g.onMap(kin) {
 		t.Fatalf("relative raider %d: %+v", kin, p)
 	}
-	if name, _ := g.names.Get(kin); name != bioName(p.Bio) {
-		t.Fatalf("map name %q, bio %q", name, bioName(p.Bio))
+	if name, _ := g.names.Get(kin); name != p.Bio.DisplayName() {
+		t.Fatalf("map name %q, bio %q", name, p.Bio.DisplayName())
 	}
 	c, k, _ := g.closestKin(kin)
 	if ks := social.KinOf(social.ID(c), social.ID(kin), famGraph{g}); !slices.Contains(ks, k) {

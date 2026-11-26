@@ -4,9 +4,11 @@
 package maps
 
 import (
+	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/social"
@@ -22,6 +24,39 @@ type Host interface {
 	Travellers
 	Surroundings
 	Cartography
+	MarketActors
+	SplitActors
+}
+
+// SplitActors supplies the authoritative owners for an atomic caravan split.
+type SplitActors interface {
+	SplitCargo() SplitFreight
+	// HeldMember verifies a living human stash and whether it can lead a caravan.
+	HeldMember(id, holder entity.EntityID) (held, leader bool)
+	// TransferHeld changes only the holder, preserving prisoner and animal roles.
+	TransferHeld(id, holder entity.EntityID)
+}
+
+type SplitFreight interface {
+	SplitAnimals(cid uint64) []travel.SplitAnimal
+	PlanSplit(cid uint64, selected travel.SplitSelection, members, moved int, roster travel.TradeCarriers) (travel.SplitPlan, string)
+	CommitSplit(cid, newID uint64, plan travel.SplitPlan)
+}
+
+// MarketActors supplies a caravan's settlement negotiation through native owner ports.
+type MarketActors interface {
+	MarketTerms(id entity.EntityID, f *faction.Faction) trade.Terms
+	UseTradeInspiration(id entity.EntityID)
+	MarketCargo() MarketFreight
+	MarketItems() item.Book
+	MarketCarriers(*Caravan) travel.TradeCarriers
+}
+
+// MarketFreight changes caravan cargo after complete pricing and capacity checks.
+type MarketFreight interface {
+	TradeCounts(cid uint64) map[item.Kind]int
+	PlanTrade(cid uint64, members int, result trade.Result, incoming []item.Stack, carriers ...travel.TradeCarriers) (travel.TradePlan, string)
+	CommitTrade(cid uint64, plan travel.TradePlan)
 }
 
 // Travellers is the people on the road.
@@ -137,13 +172,13 @@ type Freight interface {
 	Pack(cid uint64, list string, members int)
 	Hitch(cid uint64, member entity.EntityID, i int) bool
 	Gather(cid uint64, members []entity.EntityID, formed, now uint64) bool
-	Pace(cid uint64, members int) int
+	CarrierPace(cid uint64, members, riders int, roster travel.TradeCarriers) (load, mount int32)
 	// Goods is what caravan cid carries; Yield gives qty of k up (false:
 	// it has less).
 	Goods(cid uint64) []item.Stack
 	Yield(cid uint64, k item.Kind, qty int) bool
 	// Claim takes the mineral site on t off the world: its lump.
-	Claim(t int) (item.Kind, int, bool)
+	Claim(t int) (travel.Site, bool)
 	Home(cid uint64, x, y int)
 }
 
@@ -190,7 +225,7 @@ type Opener interface {
 	// Open makes map id (w×h, seed) on world tile and lays qty of the
 	// lump on it as ore near the centre; false when it cannot. The current
 	// map is unchanged.
-	Open(id uint32, tile, w, h int, seed uint64, lump item.Kind, qty int) (Opened, bool)
+	Open(id uint32, tile, w, h int, seed uint64, lump item.Kind, qty, cells int) (Opened, bool)
 	// Close removes map id and forgets everything left on it.
 	Close(id uint32)
 	// Current is the map being stepped; Switch makes map id current

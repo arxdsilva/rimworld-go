@@ -85,3 +85,25 @@ func TestSleepTickAt(t *testing.T) {
 		t.Fatalf("clamped: %d", p.Rest)
 	}
 }
+
+func TestAnythingJoyPriorityAndNativeWorkCoexist(t *testing.T) {
+	for _, c := range []struct {
+		activity schedule.Activity
+		joy      int
+		want     bool
+	}{
+		{schedule.Anything, 3499, true},
+		{schedule.Anything, 3500, false},
+		{schedule.Anything, 9000, false},
+		{schedule.Work, 0, false},
+		{schedule.Recreation, 0, false},
+		{schedule.Sleep, 0, false},
+	} {
+		if got := JoyPriority(c.activity, c.joy); got != c.want {
+			t.Fatalf("activity=%s joy=%d priority=%v want=%v", c.activity, c.joy, got, c.want)
+		}
+	}
+	if !WorkScheduled(schedule.Anything) || !WorkScheduled(schedule.Work) {
+		t.Fatal("Anything or Work cannot schedule native work when joy permits")
+	}
+}

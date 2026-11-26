@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/world/geology"
 	"slices"
 	"testing"
 
@@ -48,7 +49,7 @@ func TestOreSiteOpensWithItsThreat(t *testing.T) {
 			g.streams.seed++
 		}
 		w := g.worldS()
-		w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Steel, Qty: 200, Expires: 1 << 40}}})
+		w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Steel, Qty: 200, Cells: 200 / OreYield[geology.Steel], Expires: 1 << 40}}})
 		arriveAt(t, g, tile, g.pawnIDs[0], g.pawnIDs[1])
 		g.Step(1)
 		if len(g.maps) != 2 || w.atlas.Maps[0].ID != 1 {

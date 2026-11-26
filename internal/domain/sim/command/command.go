@@ -462,6 +462,29 @@ const (
 	// at the colony's drop spot; an unknown key does nothing.
 	ScriptMessage
 	ScriptSpawn
+	// RenamePawn updates the first, nick and last name of a resident (Name: RenameName payload).
+	RenamePawn
+	// DismissVisitorGroup has colonist Pawn ask visiting leader Target to leave.
+	// Appended to preserve existing command kinds in script and save protocols.
+	DismissVisitorGroup
+	// WorldCaravanTrade trades from a visiting caravan at its actual settlement.
+	WorldCaravanTrade
+	// RecoverCargoToCaravan loads an owned, unreserved source on the
+	// same world tile as an arrived caravan. MapSet/Map identifies the
+	// source map, Target the stack, Pawn its expected carrier (0 loose),
+	// Zone the caravan, Count the amount (0 all). Local player command.
+	RecoverCargoToCaravan
+	// CaravanSplit partitions a live caravan Target using Name (travel.SplitSelection JSON)
+	// and the exact nonzero Quote from its native split view.
+	CaravanSplit
+	// SetBillRange sets the condition range for bill Index at X,Y.
+	// Mode selects BillRangeHP or BillRangeQuality; X2,Y2 are inclusive bounds.
+	SetBillRange
+)
+
+const (
+	BillRangeHP uint8 = iota
+	BillRangeQuality
 )
 
 // ScriptMessage modes (Command.Mode).
@@ -533,6 +556,12 @@ const (
 	WorkFirefight
 	// WorkPlantCut (FOOD-2): cutting marked plants and felling trees.
 	WorkPlantCut
+	WorkPatient
+	WorkBedRest
+	WorkBasic
+	WorkSmith
+	WorkTailor
+	WorkArt
 )
 
 // Order is a player-forced job for Prioritize.
@@ -600,7 +629,21 @@ const (
 	// OrderOfferHelp (QST-5): walk to the quest's downed refugee Target and
 	// offer help, which takes them into the colony; it acts on a pawn.
 	OrderOfferHelp
+	// OrderDoBill works bill Index at the bench on X,Y (-1: first ready).
+	OrderDoBill
+	// OrderDeliverItem transfers pack entry Index, up to Count, to Target.
+	OrderDeliverItem
+	// OrderHaulMulti carries 1–4 ordered legs in Name: stack:count@x,y;...
+	OrderHaulMulti
 )
+
+// PrioritizeInterrupt resumes the interrupted player order after this one.
+const PrioritizeInterrupt uint8 = 1
+
+// NativeOrder identifies explicit bill, pack delivery and multi-haul orders.
+func (o Order) NativeOrder() bool {
+	return o == OrderDoBill || o == OrderDeliverItem || o == OrderHaulMulti
+}
 
 // TargetsPawn reports an order that acts on the pawn in Command.Target
 // rather than on the tile (SIM-062, QST-2f, QST-5).
@@ -645,6 +688,10 @@ type Command struct {
 	// acts on the map viewed when it is applied.
 	Map    uint32
 	MapSet bool
+	// Quote is the expected live WorldCaravanTrade offer identity (zero for legacy commands).
+	Quote uint64
+	// ExactLots marks an offer from separate ordinary and physical trade rows.
+	ExactLots bool
 	// Tick is the target tick (a clock.Tick value) the command applies on;
 	// 0, or any tick already past, means as soon as possible (#8).
 	Tick uint64

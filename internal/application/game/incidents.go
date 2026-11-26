@@ -11,8 +11,13 @@ import (
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/travel"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -208,7 +213,7 @@ func (g *Game) pickNature(now uint64) (incident.ID, bool) {
 func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 	id = g.sk.content.Incidents.Like(id) // a plugin incident runs its like's checks (PLG-026)
 	switch id {
-	case incident.Party, incident.VisitorGroup, incident.WandererJoins, incident.TraderCaravan, incident.OrbitalTrader,
+	case incident.Party, incident.VisitorGroup, incident.TravelerGroup, incident.WandererJoins, incident.TraderCaravan, incident.OrbitalTrader,
 		incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter:
 		if !primary(g) {
 			return false
@@ -229,8 +234,11 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return len(g.madCandidates(now)) > 0
 	case incident.Party:
 		return g.partyFits(now) // gathering.go (M5)
-	case incident.VisitorGroup:
+	case incident.VisitorGroup, incident.TravelerGroup:
 		return g.visitorsFit(now) // visitors.go (M9)
+	case incident.TransportPodCrash:
+		_, _, _, _, ok := crashSite(g)
+		return g.standingColonists() > 0 && ok
 	case incident.WandererJoins:
 		return g.wandererFits(now) // visitors.go (M9)
 	case incident.SolarFlare, incident.ShortCircuit:
@@ -243,6 +251,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.orbitalFits(now) // trade_orbital.go (PLAY-024)
 	case incident.CrashedShipPart: // raid/shippart.go (DEF-4): one at a time, from 400 raid points
 		return g.raid.Ships.Parts() == 0 && g.raidPoints(int(now/clock.TicksPerDay)) >= raid.ShipPartMinPoints
+	case incident.RivalRaid:
+		return primary(g) && g.standingColonists() > 0
 	case incident.RefugeeChased:
 		return g.refugeeFits() // incident_queue.go (EAI-031)
 	case incident.CropBlight: // farm (FOOD-2): a healthy zone crop to strike
@@ -259,13 +269,19 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 // fireIncident makes event id happen; false when it could not (no tile,
 // no animal).
 func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
-	defer scriptFired(g, id, &fired)     // scripts.go (PLG-060): on_incident with the key that fired
+	if id != incident.RivalRaid {
+		defer scriptFired(g, id, &fired) // retain the original event key; raids notify on arrival
+	}
 	id = g.sk.content.Incidents.Like(id) // a plugin incident runs its like's behaviour (PLG-026)
 	switch id {
 	case incident.Party:
 		return g.throwParty(now) // gathering.go (M5)
 	case incident.VisitorGroup:
-		return g.visitorsArrive(now) // visitors.go (M9)
+		return visitorIncidentArrive(g, now)
+	case incident.TravelerGroup:
+		return visitsOf(g).ArriveKind(visit.KindTraveler, now) // visitors.go (M9)
+	case incident.TransportPodCrash:
+		return crashPod(g, now)
 	case incident.WandererJoins:
 		return g.wandererJoins(now) // visitors.go (M9)
 	case incident.HerdCrossing:
@@ -292,6 +308,8 @@ func (g *Game) fireIncident(id incident.ID, now uint64) (fired bool) {
 		return g.orbitalArrive(now) // trade_orbital.go (PLAY-024)
 	case incident.CrashedShipPart:
 		return g.raid.Ships.Crash(g.raidPoints(int(now/clock.TicksPerDay)), now) // raid/shippart.go (DEF-4)
+	case incident.RivalRaid:
+		return g.queuedRaid(0, now)
 	case incident.RefugeeChased:
 		return g.refugeeChased(now) // incident_queue.go (EAI-031)
 	case incident.CropBlight: // farm (FOOD-2, wiki: Blight)
@@ -381,7 +399,7 @@ func crosser(s animal.Species) bool {
 func (g *Game) hasWildSpecies(keep func(animal.Species) bool) bool {
 	season := g.season(uint64(g.clock.Now())) // setup.go: the map's own calendar
 	for _, s := range animal.All() {
-		if keep(s) && wildWeight(s, g.biome, season) > 0 {
+		if keep(s) && animal.WildWeight(s, g.biome, season) > 0 {
 			return true
 		}
 	}
@@ -492,6 +510,11 @@ func (g *Game) strayJoins() bool {
 	a, _ := g.animals.Get(id)
 	a.Female = g.rng.IntN(2) == 0
 	g.joinColony(id, &a, evlog.Joined)
+	// A stray arrives as a colony animal and follows the same native
+	// walking path to home as any other tame creature, including livestock
+	// that would otherwise roam indefinitely along the entry edge.
+	hx, hy := g.home()
+	g.animalGoTo(id, &a, hx, hy)
 	g.animals.Set(id, a)
 	g.notice(x, y, id, "A stray %s, %s, has joined the colony.", s.Label(), a.Name)
 	return true
@@ -764,7 +787,7 @@ func stepToxic(g *Game, now uint64) {
 	fallout, h, roll := g.incidents.Fallout(now), now/clock.TicksPerHour, g.stream(streamMedical).IntN
 	var ids []entity.EntityID
 	g.need.All(func(id entity.EntityID, _ needs.Pair) {
-		if (fallout || body.ToxicBuildup(g.bodies[id]) > 0) && owns(g, id) { // MAP-0: on its own map's pass, under its own sky
+		if (fallout || body.ToxicBuildup(g.bodies[id]) > 0) && owns(g, id) && !worldPawnCandidate(g, id) { // MAP-0: on its own map's pass, under its own sky
 			ids = append(ids, id)
 		}
 	})
@@ -818,7 +841,7 @@ func stepToxic(g *Game, now uint64) {
 			g.animalMedicalDeath(id, &a)
 			continue
 		}
-		reconcileAnimalBody(&a)
+		animal.ReconcileBody(&a)
 		g.checkAnimalDowned(id, &a, now)
 		g.animals.Set(id, a)
 		if a.Body != nil {
@@ -835,4 +858,50 @@ func toxicRot(g *Game, corpse entity.EntityID, sev int32) {
 		st.Rot = st.Shelf()
 		g.stacks.Set(corpse, st)
 	}
+}
+
+// crashSite is a read-only, deterministic landing preflight: the shell
+// and victim's adjacent dry cells must both be free under open sky.
+func crashSite(g *Game) (x, y, vx, vy int, ok bool) {
+	hx, hy := g.home()
+	x, y, ok = travel.Ring(hx, hy, 2*podRadius, func(x, y int) bool {
+		if !g.podFree(x, y, nil) || g.roofAt(x, y).Roofed() {
+			return false
+		}
+		if _, _, occupied := g.nearestWhere(x, y, 0, ckAll, nil); occupied {
+			return false
+		}
+		vx, vy, ok = travel.Ring(x, y, 1, func(nx, ny int) bool {
+			if nx == x && ny == y || !g.dryWalkable(nx, ny) || !cellStandable(g, nx, ny) || g.roofAt(nx, ny).Roofed() || g.fireNear(nx, ny, 0) {
+				return false
+			}
+			_, _, occupied := g.nearestWhere(nx, ny, 0, ckAll, nil)
+			return !occupied
+		})
+		return ok
+	})
+	return
+}
+
+func crashPod(g *Game, now uint64) bool {
+	x, y, vx, vy, ok := crashSite(g)
+	if !ok || !g.BuildNow(construction.DefOf(construction.PodShell).Name, item.Steel.String(), "south", x, y) {
+		return false
+	}
+	ref := incident.CrashFaction(g.ng.factions, g.rng.IntN)
+	f := g.factionOf(ref)
+	var id entity.EntityID
+	if f != nil && f.Relation == faction.Hostile {
+		group := len(g.raidGroups)
+		g.raidGroups = append(g.raidGroups, raid.Group{Faction: ref, Size: 1, Over: true})
+		id = spawnRaider(g, 0, group, item.Club, vx, vy)
+		delete(g.equip, id)
+		delete(g.apparel, id)
+	} else {
+		id = g.spawnVisitor(ref, f, vx, vy, now)
+	}
+	// Real crash trauma must keep the victim down under the native recovery rule.
+	g.hurtAs(id, health.DownedInjury+10, 0, body.Cut, health.CauseInjury)
+	g.post(MessageView{Tick: now, X: x, Y: y, Focus: id, Letter: true, Title: "Transport pod crash", Kind: letters.Info, Msg: msgfmt.Of("A transport pod crashed. %s lies injured nearby.", g.name(id))})
+	return true
 }

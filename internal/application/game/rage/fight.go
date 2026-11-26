@@ -102,11 +102,12 @@ func (r *Rage) validPrey(self, t entity.EntityID) bool {
 		return false
 	}
 	if o := r.h.Ref(t); o != nil {
-		me := r.h.Ref(self)
-		if me == nil {
-			me = &animal.State{}
+		var species animal.Species
+		var tame bool
+		if me := r.h.Ref(self); me != nil {
+			species, tame = me.Species, me.Tame
 		}
-		return !o.Dead() && (o.Species != me.Species || o.Tame != me.Tame)
+		return !o.Dead() && (o.Species != species || o.Tame != tame)
 	}
 	return r.h.StandingPawn(t) || r.h.DownedPawn(t) && r.h.PredatorsHuntColonists()
 }
@@ -169,12 +170,15 @@ func (r *Rage) Huntable(self, t entity.EntityID) bool {
 	if !r.validPrey(self, t) {
 		return false
 	}
-	o, ok := r.h.Animal(t)
-	if !ok {
+	o := r.h.Ref(t)
+	if o == nil {
 		return false
 	}
-	me, _ := r.h.Animal(self)
-	od, md := animal.DefOf(o.Species), animal.DefOf(me.Species)
+	var mine animal.Species // preserve the zero-species fallback for a missing self
+	if me := r.h.Ref(self); me != nil {
+		mine = me.Species
+	}
+	od, md := animal.DefOf(o.Species), animal.DefOf(mine)
 	if od.Hive || od.Legendary || od.Predator && !o.Downed {
 		return false
 	}
@@ -182,7 +186,7 @@ func (r *Rage) Huntable(self, t entity.EntityID) bool {
 	if md.SmallPrey || !md.Predator {
 		return size <= animal.SizeS
 	}
-	return o.Downed || size <= animal.RosterOf(me.Species).Size // a downed animal of any size is easy prey
+	return o.Downed || size <= animal.RosterOf(mine).Size // a downed animal of any size is easy prey
 }
 
 // callPack sets idle wild pack mates of id's species within packRadius on

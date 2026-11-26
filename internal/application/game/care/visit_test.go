@@ -25,7 +25,7 @@ func visitScene() (*Care, *fakeHost, *fakeSocial) {
 	h := newFakeHost()
 	h.pawn(visitor1, 3, 3)
 	h.pawn(bedded, 8, 8)
-	b := construction.Building{Kind: construction.Bed, X: 8, Y: 8}.Claim(uint64(bedded))
+	b := construction.ClaimBed(construction.Building{Kind: construction.Bed, X: 8, Y: 8}, uint64(bedded))
 	h.bed(bedID, b)
 	h.tend[bedded] = true
 	h.now = visitAt

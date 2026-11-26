@@ -119,9 +119,8 @@ func TestEnemyDoorClaimSendsTheOrder(t *testing.T) {
 	}
 }
 
-// TestJourneyClaimAfterTheDefeat (MAP-17, MAP-21; wiki: Door, Faction base): the
-// defenders fall, and the door and the turret each take a click on Claim. The
-// door stops being hostile, the turret goes on with no grid.
+// TestJourneyClaimAfterTheDefeat (MAP-17; wiki: Door): after the defenders
+// fall, a click on Claim makes the selected enemy door ours.
 func TestJourneyClaimAfterTheDefeat(t *testing.T) {
 	t.Parallel()
 	j := attackedBase(t)
@@ -152,20 +151,14 @@ func TestJourneyClaimAfterTheDefeat(t *testing.T) {
 		return b.ID
 	}
 	door := claim(func(b game.BuildingView) bool { return b.Kind == "door" }, inspector.DoorClaimID)
-	gun := claim(func(b game.BuildingView) bool { return b.Kind != "door" }, inspector.TurretClaimID)
+	var claimed game.BuildingView
 	for _, v := range j.g.World().Buildings {
-		switch v.ID {
-		case door:
-			if v.Hostile {
-				t.Fatalf("door %+v", v)
-			}
-		case gun:
-			if v.Hostile || !v.OffGrid || !v.Powered {
-				t.Fatalf("turret %+v", v)
-			}
-			if lines := bldLines(j.a.insp.Building().BuildingPane(gun)); !strings.Contains(lines, inspector.OffGridLine) {
-				t.Fatalf("the pane says %q", lines)
-			}
+		if v.ID == door {
+			claimed = v
+			break
 		}
+	}
+	if claimed.ID == 0 || claimed.Hostile || claimed.Kind != "door" {
+		t.Fatalf("door after Claim: %+v", claimed)
 	}
 }

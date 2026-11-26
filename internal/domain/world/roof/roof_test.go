@@ -3,13 +3,9 @@
 
 package roof
 
-import (
-	"testing"
+import "testing"
 
-	"rimworld-go/pkg/mathx"
-)
-
-func TestSupportFieldChebyshevSix(t *testing.T) {
+func TestSupportFieldCircularSix(t *testing.T) {
 	const w, h = 30, 20
 	sx, sy := 10, 8
 	f := SupportField(w, h, func(x, y int) bool { return x == sx && y == sy })
@@ -18,15 +14,15 @@ func TestSupportFieldChebyshevSix(t *testing.T) {
 	}
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			d := max(mathx.Abs(x-sx), mathx.Abs(y-sy))
-			if want := d <= SupportRange; f[y*w+x] != want {
-				t.Fatalf("(%d,%d) chebyshev %d: supported=%v, want %v", x, y, d, f[y*w+x], want)
+			d := (x-sx)*(x-sx) + (y-sy)*(y-sy)
+			if want := d <= SupportRange*SupportRange; f[y*w+x] != want {
+				t.Fatalf("(%d,%d) distance squared %d: supported=%v, want %v", x, y, d, f[y*w+x], want)
 			}
 		}
 	}
 	// the diagonal corner of the range is supported, one past it is not
-	if !f[(sy+6)*w+sx+6] || f[(sy+7)*w+sx+6] || f[(sy+6)*w+sx+7] {
-		t.Fatal("range must be exactly 6 Chebyshev tiles")
+	if f[(sy+6)*w+sx+6] || !f[sy*w+sx+6] || f[sy*w+sx+7] {
+		t.Fatal("range must be exactly circular radius 6")
 	}
 }
 
@@ -40,7 +36,7 @@ func TestSupportFieldMultiSourceAndEdges(t *testing.T) {
 			n++
 		}
 	}
-	if want := 2 * 7 * h; n != want {
+	if want := 2 * (7 + 6 + 6); n != want {
 		t.Fatalf("supported tiles %d, want %d", n, want)
 	}
 	if f[1*w+20] {

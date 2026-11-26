@@ -36,16 +36,16 @@ func TestDefenceLines(t *testing.T) {
 func TestDefenceCommandsToggle(t *testing.T) {
 	t.Parallel()
 	var a Building
-	door := a.defenceCommands(game.BuildingView{Kind: "door", X: 2, Y: 3, HoldOpen: true})
-	if len(door) != 1 || door[0].Cmds[0].Kind != command.SetDoorHoldOpen || door[0].Cmds[0].Enabled || !door[0].On {
+	door := a.defenceCommands(game.BuildingView{ID: 4, Kind: "door", X: 2, Y: 3, HoldOpen: true})
+	if len(door) != 1 || door[0].Cmds[0].Kind != command.SetDoorHoldOpen || door[0].Cmds[0].Target != 4 || door[0].Cmds[0].Enabled || !door[0].On {
 		t.Errorf("door hold = %+v", door)
 	}
-	tur := a.defenceCommands(game.BuildingView{Kind: "autocannon", X: 1, Y: 1})
-	if len(tur) != 1 || tur[0].Cmds[0].Kind != command.SetTurretHold || !tur[0].Cmds[0].Enabled {
+	tur := a.defenceCommands(game.BuildingView{ID: 5, Kind: "autocannon", X: 1, Y: 1})
+	if len(tur) != 1 || tur[0].Cmds[0].Kind != command.SetTurretHold || tur[0].Cmds[0].Target != 5 || !tur[0].Cmds[0].Enabled {
 		t.Errorf("turret hold = %+v", tur)
 	}
-	mo := a.defenceCommands(game.BuildingView{Kind: "mortar"})
-	if len(mo) != 2 || mo[0].ID != MortarAimID || !mo[1].Disabled || mo[1].Cmds[0].Kind != command.ClearMortarTarget {
+	mo := a.defenceCommands(game.BuildingView{ID: 6, Kind: "mortar"})
+	if len(mo) != 2 || mo[0].ID != MortarAimID || !mo[1].Disabled || mo[1].Cmds[0].Kind != command.ClearMortarTarget || mo[1].Cmds[0].Target != 6 {
 		t.Errorf("mortar buttons = %+v", mo)
 	}
 	if got := a.defenceCommands(game.BuildingView{Kind: "wall"}); got != nil {

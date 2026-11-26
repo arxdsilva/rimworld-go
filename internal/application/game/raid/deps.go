@@ -4,6 +4,7 @@
 package raid
 
 import (
+	"rimworld-go/internal/application/game/leave"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -47,6 +48,7 @@ type Roles struct {
 	Kidnap Kidnap
 	// Senses (roles.go, EAI-010): what raiders see (sight.go).
 	Senses Senses
+	Escape leave.Host
 }
 
 // Roster is the raider records and raid groups, which stay on the game.

@@ -3,7 +3,13 @@
 
 package game
 
-import "testing"
+import (
+	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/roof"
+	"testing"
+)
 
 // TestInfestationDarkRoofedWarm (EAI-035): an infestation looks over the
 // whole map, not only by the rock face: a roofed, dark cave far from home
@@ -11,8 +17,9 @@ import "testing"
 func TestInfestationDarkRoofedWarm(t *testing.T) {
 	t.Parallel()
 	g, _ := def4Game(t, 80, 40, 60, 20)
-	roofOver(g, 0, 0, 9, 9)   // a far cave
-	roofOver(g, 20, 5, 25, 9) // a nearer one
+	roofOver(g, 0, 0, 9, 9) // thin roof cannot seed
+	thickCave(g, 20, 5, 25, 9)
+	buildNow(t, g, construction.Wall, item.Wood, construction.South, 27, 8)
 	g.Step(1)
 	if !g.raid.Hives.Infest() {
 		t.Fatal("a roofed, dark, warm spot exists: the infestation takes it")
@@ -34,7 +41,8 @@ func TestInfestationDarkRoofedWarm(t *testing.T) {
 func TestInfestationSkipsFreezing(t *testing.T) {
 	t.Parallel()
 	g, _ := def4Game(t, 80, 40, 60, 20)
-	roofOver(g, 20, 5, 25, 9)
+	thickCave(g, 20, 5, 25, 9)
+	buildNow(t, g, construction.Wall, item.Wood, construction.South, 27, 8)
 	g.Step(1)
 	g.climate.YearMean = -600
 	if g.raid.Hives.Infest() {
@@ -46,5 +54,35 @@ func TestInfestationSkipsFreezing(t *testing.T) {
 	g2, _ := def4Game(t, 40, 30, 20, 15) // no roof at all
 	if g2.raid.Hives.Infest() {
 		t.Fatal("no roof, no spot")
+	}
+}
+
+func thickCave(g *Game, x0, y0, x1, y1 int) {
+	g.ensureRoofGrid()
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			g.setRoof(y*g.grid.Width()+x, roof.Natural|roof.NaturalThick)
+		}
+	}
+}
+
+func TestInfestationColonyDistanceAndSavedCooldown(t *testing.T) {
+	g, _ := def4Game(t, 80, 40, 60, 20)
+	thickCave(g, 2, 2, 5, 5)
+	buildNow(t, g, construction.Wall, item.Wood, construction.South, 60, 20)
+	if g.raid.Hives.Infest() {
+		t.Fatal("distant cave admitted")
+	}
+	buildNow(t, g, construction.Wall, item.Wood, construction.South, 8, 8)
+	g.Step(1)
+	if !g.raid.Hives.Infest() {
+		t.Fatal("eligible cave refused")
+	}
+	h, _ := saveLoadInfo(t, g)
+	if h.raid.Hives.Infest() || g.raid.Hives.Infest() {
+		t.Fatal("cooldown lost")
+	}
+	if h.raid.Mechs.Export().InfestAfter != g.raid.Mechs.Export().InfestAfter || g.raid.Mechs.Export().InfestAfter < 20*clock.TicksPerDay {
+		t.Fatal("saved deadline mismatch")
 	}
 }

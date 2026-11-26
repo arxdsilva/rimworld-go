@@ -74,6 +74,7 @@ type occupancy struct {
 	cells   []entity.EntityID              // standing blocker (wild animal, raider) per cell, 0 = none
 	near    []uint8                        // per cell: blocker cells in its 3×3 (crowdCost's fast path)
 	marked  []int                          // cells written since the last rebuild
+	batch   spatial.OccupancyBatch         // net neighbour changes across a rebuild
 	stacked []stackedRec                   // blockers sharing a cell with a lower ID
 	carried spatial.IDSet[entity.EntityID] // patients being carried, as of the last rebuild
 	// partner layer (PLAY-010): colonists and tame animals, several per
@@ -89,12 +90,8 @@ type occupancy struct {
 	// two or more partners, creatures to move off, one cell's partners
 	mixed, shared []int
 	moveOff, here []entity.EntityID
-	// repath cache: the path enter() planned with a stepRepath verdict,
-	// handed out by pathAround in the same tick.
-	rpID   entity.EntityID
-	rpAt   uint64
-	rpPath []pathing.Point
-	rpMiss entity.EntityID // repathEvery's inline search for it failed (a pawn's: tests count searches)
+	// Path planned by enter(), handed to pathAround in the same tick.
+	repath repathCache
 	// dirty: the movement phase started and the index is not rebuilt yet
 	// (it is rebuilt on first use, or by the periodic stack sweep); builds
 	// counts the rebuilds (at most one a map a tick: occupancy_builds_test.go).
@@ -106,6 +103,12 @@ type occupancy struct {
 	hostile    pathing.Query
 	hostileOK  bool
 	hostileGen uint64 // bumped whenever hostile is rebuilt
+}
+
+type repathCache struct {
+	id, miss entity.EntityID
+	at       uint64
+	path     []pathing.Point
 }
 
 type stackedRec struct {
@@ -128,7 +131,7 @@ const (
 // yieldRetry ticks it is rebuilt anyway, to sweep for stacks.
 func (g *Game) buildOccupancy() {
 	o := &g.occ
-	o.dirty, o.rpID, o.hostileOK = true, 0, false
+	o.dirty, o.repath.id, o.hostileOK = true, 0, false
 	if uint64(g.clock.Now())%yieldRetry == 0 {
 		g.rebuildOccupancy()
 	}
@@ -151,12 +154,12 @@ func (g *Game) rebuildOccupancy() {
 		o.pfirst = make([]entity.EntityID, w*h)
 		o.pcount = make([]uint16, w*h)
 		o.pnear = make([]uint8, w*h)
+		o.batch.Resize(w * h)
 		o.marked = o.marked[:0]
 	}
+	o.batch.Begin(o.marked, o.cells, o.pfirst)
 	for _, i := range o.marked {
-		o.put(i, 0)
-		o.pput(i, 0)
-		o.pcount[i] = 0
+		o.cells[i], o.pfirst[i], o.pcount[i] = 0, 0, 0
 	}
 	o.marked = o.marked[:0]
 	o.stacked = o.stacked[:0]
@@ -200,6 +203,7 @@ func (g *Game) rebuildOccupancy() {
 			}
 		}
 	}
+	o.batch.End(o.marked, o.cells, o.pfirst, o.near, o.pnear, o.w, o.h)
 	slices.SortFunc(o.stacked, func(a, b stackedRec) int { return cmp.Compare(a.id, b.id) })
 	g.unstack()
 }
@@ -329,8 +333,8 @@ func (o *occupancy) dropPartner(id entity.EntityID, fi int, inMap bool) bool {
 func (o *occupancy) pput(i int, id entity.EntityID) {
 	was := o.pfirst[i] != 0
 	o.pfirst[i] = id
-	if was != (id != 0) {
-		bump(o.pnear, o.w, o.h, i, was)
+	if !o.batch.Active() && was != (id != 0) {
+		spatial.BumpNear(o.pnear, o.w, o.h, i, was)
 	}
 }
 
@@ -346,22 +350,8 @@ func (o *occupancy) index(x, y int) (int, bool) {
 func (o *occupancy) put(i int, id entity.EntityID) {
 	was := o.cells[i] != 0
 	o.cells[i] = id
-	if was != (id != 0) {
-		bump(o.near, o.w, o.h, i, was)
-	}
-}
-
-// bump adds one (or, with down, removes one) to near across cell i's 3×3.
-func bump(near []uint8, w, h, i int, down bool) {
-	var d uint8 = 1
-	if down {
-		d = 255 // -1
-	}
-	x, y := i%w, i/w
-	for ny := max(y-1, 0); ny <= min(y+1, h-1); ny++ {
-		for nx := max(x-1, 0); nx <= min(x+1, w-1); nx++ {
-			near[ny*w+nx] += d
-		}
+	if !o.batch.Active() && was != (id != 0) {
+		spatial.BumpNear(o.near, o.w, o.h, i, was)
 	}
 }
 
@@ -440,7 +430,10 @@ func (g *Game) partner(id entity.EntityID) bool {
 // colonist or raider on its feet who is neither asleep nor carried.
 func (g *Game) standing(id entity.EntityID) bool {
 	if a := g.animals.Ref(id); a != nil {
-		return !a.Dead()
+		// A downed animal cannot step aside. Like a downed colonist it
+		// must not occupy a blocking movement cell indefinitely: otherwise
+		// even a reachable food doorway traps a hungry resident behind it.
+		return !a.Dead() && !a.Downed
 	}
 	return g.standingWalker(id)
 }
@@ -470,6 +463,11 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 		o.move(id, mp, from, to)
 		return stepGo, to
 	}
+	// A visit can begin from the adjacent doorway when the prisoner
+	// itself blocks the only path into a small cell. Do rechecks reach.
+	if j, _ := g.jobs.Get(id); j.Kind == job.Warden && j.Target == occ {
+		return stepArriveNear, from
+	}
 	m := g.motionOf(id)
 	if g.targetOf(id) == occ {
 		// a hostile closing on its target stops next to it (melee reach)
@@ -480,6 +478,16 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 			// head-on swap (a 2-cycle) or a longer ring: the highest ID
 			// in the ring gives way, everyone else waits for it
 			if yielder != id {
+				// Ordinarily the highest ID yields deterministically. In a
+				// narrow route it may have nowhere to sidestep (for example
+				// a fleeing wild animal confronting an eater in a doorway).
+				// Once this cycle has demonstrably stalled, let the other
+				// walker back off using the SAME native free-cell checks.
+				if m.BlockedTicks >= stuckFailTicks && m.BlockedTicks%yieldRetry == 0 {
+					if v, alt := g.giveWay(id, mp, from, to, occ, m.BlockedTicks); v == stepSidestep {
+						return v, alt
+					}
+				}
 				return g.repathEvery(id, from, to, m, true)
 			}
 			return g.giveWay(id, mp, from, to, occ, m.BlockedTicks)
@@ -622,7 +630,7 @@ func (g *Game) repathEvery(id entity.EntityID, from, to Position, m motionRec, b
 	if g.planAround(id, from, to) {
 		return stepRepath, from
 	}
-	g.occ.rpMiss = id
+	g.occ.repath.miss = id
 	return stepWait, from
 }
 
@@ -643,7 +651,7 @@ func (g *Game) planAround(id entity.EntityID, from, to Position) bool {
 	if first.X == to.X && first.Y == to.Y || g.holderFor(id, g.partner(id), Position{X: first.X, Y: first.Y}) != 0 {
 		return false
 	}
-	o.rpID, o.rpAt, o.rpPath = id, uint64(g.clock.Now()), path
+	o.repath.id, o.repath.at, o.repath.path = id, uint64(g.clock.Now()), path
 	return true
 }
 
@@ -1098,7 +1106,7 @@ func (g *Game) asideRoute(id entity.EntityID, pos Position, avoid []Position, wc
 // doors, tame ones use them; pawns plan as pathTo does.
 func (g *Game) queryFor(id entity.EntityID) pathing.Query {
 	if a := g.animals.Ref(id); a != nil {
-		if g.gatesOpen(id, a) { // rope.go: livestock only when led
+		if g.gatesOpen(id, a.SnapshotRef()) { // rope.go: livestock only when led
 			return g.animalPathQuery(true, false) // fences.go: gates open, fences shut
 		}
 		return g.animalPathQuery(false, true)
@@ -1173,9 +1181,9 @@ func (g *Game) costedQuery(id entity.EntityID) pathing.Query {
 // else to the cheapest free-standing neighbour.
 func (g *Game) pathAround(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 	o := &g.occ
-	if o.rpID == id && o.rpAt == uint64(g.clock.Now()) {
-		p := o.rpPath
-		o.rpID, o.rpPath = 0, nil
+	if o.repath.id == id && o.repath.at == uint64(g.clock.Now()) {
+		p := o.repath.path
+		o.repath.id, o.repath.path = 0, nil
 		return p, true
 	}
 	pos, _ := g.positions.Get(id)
@@ -1183,7 +1191,7 @@ func (g *Game) pathAround(id entity.EntityID, tx, ty int) ([]pathing.Point, bool
 		return nil, true
 	}
 	q := g.costedQuery(id)
-	if q.Walkable(tx, ty) {
+	if q.Walkable(tx, ty) && cellStandable(g, tx, ty) {
 		return g.findPath(id, q, pos.X, pos.Y, tx, ty) // paths.go: long ones in the region corridor
 	}
 	if pathing.Adjacent(pos.X, pos.Y, tx, ty) {
@@ -1193,7 +1201,7 @@ func (g *Game) pathAround(id entity.EntityID, tx, ty int) ([]pathing.Point, bool
 	bestOK, bestCost := false, 0
 	for _, d := range stepDirs {
 		ax, ay := tx+d[0], ty+d[1]
-		if !q.Walkable(ax, ay) {
+		if !q.Walkable(ax, ay) || !cellStandable(g, ax, ay) {
 			continue
 		}
 		p, ok := g.findPath(id, q, pos.X, pos.Y, ax, ay)
@@ -1209,16 +1217,7 @@ func (g *Game) pathAround(id entity.EntityID, tx, ty int) ([]pathing.Point, bool
 
 // routeCost is the octile cost of walking p from pos under q's extras.
 func routeCost(q pathing.Query, pos Position, p []pathing.Point) int {
-	c, _ := q.(pathing.Coster)
-	cost, px, py := 0, pos.X, pos.Y
-	for _, s := range p {
-		cost += pathing.Octile(px, py, s.X, s.Y)
-		if c != nil {
-			cost += max(c.ExtraCost(s.X, s.Y), 0)
-		}
-		px, py = s.X, s.Y
-	}
-	return cost
+	return pathing.RouteCost(q, pos.X, pos.Y, p)
 }
 
 // occupantAt reports the standing creature on (x, y), if any, as of the

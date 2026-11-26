@@ -100,6 +100,7 @@ func (s *Sense) Import(in *Save) {
 	for _, e := range in.Resume {
 		s.Resume[e.Pawn] = e.Job
 	}
+	s.foodDonorsValid = false
 	s.Packs = make(map[entity.EntityID]inventory.Pack, len(in.Packs))
 	for _, e := range in.Packs {
 		s.Packs[e.Pawn] = e.Pack

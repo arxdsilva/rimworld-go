@@ -161,6 +161,27 @@ func TestDownedPawnDoesNotBlock(t *testing.T) {
 	}
 }
 
+func TestDownedWildAnimalDoesNotBlockFoodRoute(t *testing.T) {
+	t.Parallel()
+	g := occTestGame()
+	eater := mustPawn(t, g, 2, 5)
+	wolf := wildAt(t, g, 3, 5)
+	a, _ := g.animals.Get(wolf)
+	a.Downed = true
+	g.animals.Set(wolf, a)
+	walkTo(g, eater, job.Eat, straight(2, 5, 5)...)
+	rebuild(g)
+	if g.standing(wolf) {
+		t.Fatal("downed animal must not own an occupancy cell")
+	}
+	if occupant, occupied := g.occupantAt(3, 5); occupied {
+		t.Fatalf("downed animal blocked food route: occupant %d", occupant)
+	}
+	if verdict, next := g.enter(eater, Position{2, 5}, Position{3, 5}); verdict != stepGo || next != (Position{3, 5}) {
+		t.Fatalf("eater cannot step over downed wildlife: verdict %v next %v", verdict, next)
+	}
+}
+
 func TestCarriedPawnDoesNotBlock(t *testing.T) {
 	t.Parallel()
 	g := occTestGame()
@@ -318,6 +339,37 @@ func TestHeadOnSwapResolves(t *testing.T) {
 	setBlocked(h, b, 7, a)
 	if v, _ := h.enter(b, Position{4, 5}, Position{3, 5}); v != stepWait {
 		t.Fatalf("off-retry verdict %v, want wait", v)
+	}
+}
+
+// A one-cell head-on swap can strand a fleeing wild animal on its side of
+// a doorway with no legal sidestep. The lower-ID hungry walker must be
+// allowed to back off *after* the normal yielder has had time to resolve it.
+// This remains physical occupancy movement; neither pawn crosses the other.
+func TestHeadOnAnimalWithNoEscapeLetsWaitingPawnBackOff(t *testing.T) {
+	g := corridorGame()
+	walker := mustPawn(t, g, 3, 5)
+	beast := wildAt(t, g, 4, 5)
+	g.grid.SetWalkable(5, 5, false) // no step behind the higher-ID animal
+	walkTo(g, walker, job.Eat, pathing.Point{X: 4, Y: 5}, pathing.Point{X: 6, Y: 5})
+	animalWalk(g, beast, pathing.Point{X: 3, Y: 5}, pathing.Point{X: 2, Y: 5})
+	rebuild(g)
+	if v, _ := g.enter(walker, Position{3, 5}, Position{4, 5}); v != stepWait {
+		t.Fatalf("ordinary lower-ID priority changed: %v", v)
+	}
+	if v, _ := g.enter(beast, Position{4, 5}, Position{3, 5}); v != stepWait {
+		t.Fatalf("animal bypassed an occupied cell in a sealed corridor: %v", v)
+	}
+	setBlocked(g, walker, stuckFailTicks, beast)
+	v, alt := g.enter(walker, Position{3, 5}, Position{4, 5})
+	if v != stepSidestep || alt != (Position{2, 5}) {
+		t.Fatalf("stalled animal cycle did not back off the lower walker: %v at %v", v, alt)
+	}
+	if id, _ := g.occupantAt(3, 5); id != 0 {
+		t.Fatalf("lower walker failed to leave animal's requested cell: %d", id)
+	}
+	if v, _ := g.enter(beast, Position{4, 5}, Position{3, 5}); v != stepGo {
+		t.Fatalf("animal could not exit cycle through legitimately freed cell: %v", v)
 	}
 }
 

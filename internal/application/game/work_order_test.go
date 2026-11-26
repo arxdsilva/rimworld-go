@@ -6,6 +6,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
@@ -351,8 +352,9 @@ func TestPlantWorkProgress(t *testing.T) {
 		got += g.workProgress(id, skill.Mining, true)
 		g.clock.Advance(1)
 	}
-	if got != 1000 {
-		t.Errorf("Mining 7: %d units in 1000 ticks, want 1000", got)
+	want := roster.LevelSpeed(skill.Mining, skill.Neutral)
+	if got != want {
+		t.Errorf("Mining %d: %d units in 1000 ticks, want %d", skill.Neutral, got, want)
 	}
 }
 

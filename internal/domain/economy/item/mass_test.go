@@ -13,7 +13,7 @@ func TestEveryKindHasAMass(t *testing.T) {
 			t.Errorf("%s has no mass", k)
 		}
 	}
-	for k, want := range map[Kind]int{Steel: 500, Silver: 8, Wood: 400, GraniteChunk: 25000, MarbleBlocks: 1000} {
+	for k, want := range map[Kind]int{Steel: 500, Silver: 8, Wood: 400, GraniteChunk: 25000, MarbleChunk: 25000, LimestoneChunk: 22000, SandstoneChunk: 20000, SlateChunk: 18000, MarbleBlocks: 1000} {
 		if got := k.MassGrams(); got != want {
 			t.Errorf("%s weighs %d g, want %d", k, got, want)
 		}

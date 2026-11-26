@@ -68,7 +68,7 @@ func TestRescueCarriesToTheMedicalBed(t *testing.T) {
 		h.sleptAt[patient] != bedID+1 || h.pos[patient] != [2]int{6, 6} || h.log[len(h.log)-1] != "rescued" {
 		t.Fatalf("laid in bed: job %+v held %v pos %v log %v", h.jobs[doc], c.Rest.HeldBed(patient), h.pos[patient], h.log)
 	}
-	if b := h.bldgs[bedID+1]; b.SlotOf(uint64(patient)) < 0 {
+	if b := h.bldgs[bedID+1]; construction.BedSlot(b, uint64(patient)) < 0 {
 		t.Fatal("the bed is claimed for the patient")
 	}
 }

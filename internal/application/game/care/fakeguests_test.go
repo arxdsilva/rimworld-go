@@ -4,6 +4,7 @@
 package care
 
 import (
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -55,8 +56,8 @@ func (g *fakeGuestHost) JoinOffer(id entity.EntityID) {
 // unbed gives back every bed slot id holds.
 func (g *fakeGuestHost) unbed(id entity.EntityID) {
 	for _, bid := range g.h.bldgIDs {
-		if b := g.h.bldgs[bid]; b.SlotOf(uint64(id)) >= 0 {
-			g.h.bldgs[bid] = b.Release(uint64(id))
+		if b := g.h.bldgs[bid]; construction.BedSlot(b, uint64(id)) >= 0 {
+			g.h.bldgs[bid] = construction.ReleaseBed(b, uint64(id))
 		}
 	}
 }

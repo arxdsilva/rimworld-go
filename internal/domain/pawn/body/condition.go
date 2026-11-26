@@ -150,6 +150,9 @@ func (b *Body) RemoveCond(k CondKind) bool {
 func (b *Body) condPain(look condLookup) int32 {
 	var n int32
 	for _, c := range b.Conds {
+		if c.Kind == CondCarcinoma && c.Rate < 0 {
+			continue
+		}
 		if st, ok := stageOf(c, look); ok {
 			n += st.PainAdd
 		}

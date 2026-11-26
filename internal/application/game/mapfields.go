@@ -20,9 +20,6 @@ type (
 	MapFieldLayer = mapfields.Layer
 )
 
-// mapFieldCache is the generated (non-live) layers.
-type mapFieldCache struct{ layers []MapFieldLayer }
-
 // ErrMapFieldsOld is returned for a map the current generator cannot rebuild.
 var ErrMapFieldsOld = errors.New("map made by an older generator")
 
@@ -35,15 +32,10 @@ func (g *Game) MapFieldLayers() ([]MapFieldLayer, error) {
 	if g.ng.setup.GenVersion != mapgen.Version {
 		return nil, ErrMapFieldsOld
 	}
-	w, h := g.grid.Width(), g.grid.Height()
 	if g.mapFields == nil {
-		layers, err := mapfields.Generate(g.ng.setup.Seed, w, h, g.ng.setup.Site)
-		if err != nil {
-			return nil, err
-		}
-		g.mapFields = &mapFieldCache{layers}
+		g.mapFields = &mapfields.Cache{}
 	}
-	out := append([]MapFieldLayer(nil), g.mapFields.layers...)
-	return append(out, mapfields.Roofs(w, h, g.roofs), mapfields.Fog(w, h, g.fogged),
-		mapfields.Regions(w, h, func(x, y int) bool { return g.terr.At(x, y).Walkable() })), nil
+	return g.mapFields.Layers(g.ng.setup.Seed, g.grid.Width(), g.grid.Height(),
+		g.ng.setup.Site, g.roofs, g.fogged,
+		func(x, y int) bool { return g.terr.At(x, y).Walkable() })
 }

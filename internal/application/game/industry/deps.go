@@ -19,6 +19,7 @@ type Host interface {
 	Ground
 	Workers
 	Colony
+	SkyClear(construction.Building) bool
 }
 
 // Sites is the buildings, in building order (the id slice is the host's
@@ -59,6 +60,8 @@ type Workers interface {
 	// Work is one working tick of id: the work units done (0 on a tick a
 	// low mood idles), trained on Mining (mining) or Intellectual.
 	Work(id entity.EntityID, mining bool) int
+	// MiningYield scales ore output for the actual miner and difficulty.
+	MiningYield(id entity.EntityID, qty int) int
 }
 
 // Colony is the colony-wide inputs and outputs.
@@ -66,7 +69,7 @@ type Colony interface {
 	// Seed is the colony's base seed (deep ore finds hash it).
 	Seed() uint64
 	// Drop sets n items of kind k down at (x, y), or beside it.
-	Drop(k item.Kind, n, x, y int)
+	DropDrilled(k item.Kind, n, x, y int)
 	// Letter posts a letter (and its message) at (x, y), its text a
 	// format and args (the catalog's key, OPT-001).
 	Letter(title string, x, y int, format string, args ...any)

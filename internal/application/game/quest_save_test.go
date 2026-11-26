@@ -21,15 +21,16 @@ func TestSaveV14GetsQuestDifficulty(t *testing.T) {
 		}))
 		stepUntilLanded(t, g)
 		old := loadAsVersionWith(t, g, 14, func(s *saveState) {
-			d := &s.NG1.Setup.Difficulty
+			d := &s.NG121.Setup.Difficulty
 			d.QuestRewardPct, d.QuestThreats = 0, false // a v14 save has neither
 		})
 		got, want := old.ng.setup.Difficulty, difficulty.Of(p)
+		want.FriendlyFire = 100 // Pre-v20 saves preserve full friendly fire.
 		if got.QuestRewardPct != 100 || got.QuestThreats != want.BigThreats || got != want {
 			t.Fatalf("%v: a v14 save migrates to %+v, want %+v", p, got, want)
 		}
-		if difficulty.Match(got) != p {
-			t.Fatalf("%v: the migrated settings still match their preset", p)
+		if difficulty.Match(got) != difficulty.Custom {
+			t.Fatalf("%v: the historical full friendly-fire setting must not be replaced by the new preset", p)
 		}
 	}
 }

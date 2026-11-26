@@ -65,7 +65,7 @@ const (
 // one of its ancestors (a foot under a prosthetic leg).
 func coveredByImplant(b *body.Body, p body.Part) bool {
 	for q, i := body.DefOf(p).Parent, 0; i < int(body.NumParts); q, i = body.DefOf(q).Parent, i+1 {
-		if b.Implant(q).IsImplant() {
+		if b.ReplacementAt(q).IsImplant() {
 			return true
 		}
 		if body.DefOf(q).Parent == q {
@@ -79,6 +79,9 @@ func coveredByImplant(b *body.Body, p body.Part) bool {
 func PartStatus(b *body.Body, s body.PartStatus) string {
 	switch {
 	case s.Missing && s.Fitted:
+		if s.HP < s.MaxHP {
+			return fmt.Sprintf("%s: %s (%d/%d HP)", PartArtificial, s.Implant, s.HP, s.MaxHP)
+		}
 		return PartArtificial + ": " + s.Implant.String()
 	case s.Missing && coveredByImplant(b, s.Part):
 		return PartReplaced

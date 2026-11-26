@@ -46,6 +46,12 @@ func (k Kind) MassGrams() int {
 		return g
 	}
 	switch {
+	case k == LimestoneChunk:
+		return 22000 // wiki: Limestone chunks
+	case k == SandstoneChunk:
+		return 20000 // wiki: Sandstone chunks
+	case k == SlateChunk:
+		return 18000 // wiki: Slate chunks
 	case IsChunk(k):
 		return 25000 // wiki: a stone chunk
 	case IsStoneBlocks(k):

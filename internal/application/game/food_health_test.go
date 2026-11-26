@@ -55,7 +55,7 @@ func TestSynthStomachHalvesPoisoning(t *testing.T) {
 		v, _ := g.vital.Get(id)
 		b := g.ensureBody(id, &v)
 		if synth {
-			b.SetImplant(body.Stomach, item.SynthStomach)
+			b.SetReplacement(body.Stomach, item.SynthStomach)
 		}
 		n := 0
 		for range 400 {

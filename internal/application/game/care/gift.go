@@ -53,7 +53,7 @@ func giftHash(now uint64, v, p entity.EntityID) uint64 {
 // chosen: the draw makes this visit a gift of k.
 func (g *Giving) chosen(draw uint64, patient entity.EntityID, k item.Kind) bool {
 	gift := giftWeight * max(100-g.r.Tolerance(patient, k), 0)
-	return draw>>32%uint64(gift+visitWeight*100) < uint64(gift)
+	return (draw>>32)%uint64(gift+visitWeight*100) < uint64(gift)
 }
 
 // Try makes visitor's visit to patient a gift, when the draw says so and there

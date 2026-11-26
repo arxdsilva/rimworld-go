@@ -187,3 +187,17 @@ func SmallFootprint(k Kind, f Facing, x, y int) (cells [4][2]int, n int) {
 	}
 	return cells, n
 }
+
+// BedImmunityGain is the actual occupied bed's factor, in permille.
+// Wiki: Immunity Gain Speed Factor. Quality does not change this factor.
+func BedImmunityGain(k Kind) int32 {
+	switch k {
+	case Bed, DoubleBed, AnimalBed:
+		return 1070
+	case Bedroll, DoubleBedroll, AnimalSleepingBox:
+		return 1050
+	case HospitalBed:
+		return 1110
+	}
+	return 1000
+}

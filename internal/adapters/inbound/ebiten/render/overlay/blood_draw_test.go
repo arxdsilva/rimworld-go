@@ -185,3 +185,12 @@ func TestBloodMaskGrowsWithCoverage(t *testing.T) {
 		}
 	}
 }
+
+func TestCausticResidueColour(t *testing.T) {
+	if got := rgb8(StainColour("caustic residue", 0)); got != [3]int{0x6d, 0x89, 0x50} {
+		t.Fatalf("fresh caustic residue = %x", got)
+	}
+	if got := rgb8(StainColour("caustic residue", StainDryTicks)); got != [3]int{0x4b, 0x5c, 0x34} {
+		t.Fatalf("dried caustic residue = %x", got)
+	}
+}

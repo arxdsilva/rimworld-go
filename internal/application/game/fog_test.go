@@ -105,7 +105,7 @@ func TestFogMiningOpensCave(t *testing.T) {
 	}
 	ver := g.World().FogVer
 	g.Enqueue(command.Command{Kind: command.DesignateMine, X: 10, Y: 8, X2: 10, Y2: 8})
-	g.Step(TicksPerCell*20 + MineWork + 10)
+	g.Step(TicksPerCell*20 + g.mineWorkAt(10, 8)*2 + 10)
 	if g.TerrainAt(10, 8) != "stone" {
 		t.Fatalf("not mined: %s", g.TerrainAt(10, 8))
 	}

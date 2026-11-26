@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -144,7 +145,13 @@ func exposureNoted(g *Game, id entity.EntityID, downed bool) (hypo, heat, frost 
 func (h careReach) AirHeals(id entity.EntityID, x, y, margin int) bool {
 	return !h.g.exposure[id].Held(exposure.Trivial, int(h.g.temperatureAt(x, y)), h.g.bandsOf(id).Inset(margin))
 }
-func (h careReach) HealingSpot(id entity.EntityID) (int, int, bool)  { return h.g.warmSpot(id) }
+func (h careReach) HealingSpot(id entity.EntityID) (int, int, bool) { return h.g.warmSpot(id) }
+func (h careReach) HealingSpotFor(patient, carrier entity.EntityID) (int, int, bool) {
+	return thermalSpot(h.g, patient, carrier)
+}
+func (h careReach) GroundSafe(patient, carrier entity.EntityID, x, y int) bool {
+	return thermalGround(h.g, patient, carrier, x, y)
+}
 func (h careReach) ExposureWait(id entity.EntityID) uint64           { return h.g.noComfort[id] }
 func (h careReach) SetExposureWait(id entity.EntityID, until uint64) { h.g.noComfort[id] = until }
 
@@ -163,25 +170,89 @@ func (g *Game) nameOf(id entity.EntityID) string {
 	return n
 }
 
-// needsComfort reports a colonist suffering exposure where it stands
-// (from the trivial stage: hysteresis with doWarm's stop at none left).
+// needsComfort includes serious injury even after entering healing air.
 func (g *Game) needsComfort(id entity.EntityID) bool {
-	return g.exposure[id].Held(exposure.Mild, chillHost{g}.AirAt(id), g.bandsOf(id))
+	return g.exposureDanger(id) || g.exposure[id].Held(exposure.Mild, chillHost{g}.AirAt(id), g.bandsOf(id))
 }
 
-// warmSpot: the nearest reachable spot whose air (a room's or the open air,
-// AIL-003) is bearable for a colonist suffering exposure; ok false if none.
+func safeThermalCell(g *Game, id entity.EntityID, x, y int) bool {
+	return g.bandsOf(id).Comfortable(int(g.temperatureAt(x, y))) && !g.fireNear(x, y, 1)
+}
+
+// warmSpot finds reachable comfortable air, not merely the right side of
+// one temperature limit. Fire and a blocked/reserved cell remain unsafe.
 func (g *Game) warmSpot(id entity.EntityID) (int, int, bool) {
+	return thermalSpot(g, id, id)
+}
+
+// thermalGround is shared by discovery and final clinical admission. The
+// patient's or carrier's own tile reservation does not obstruct the trip.
+func thermalGround(g *Game, patient, carrier entity.EntityID, x, y int) bool {
+	owner, taken := g.reserve.TileOwner(x, y)
+	return g.grid.Walkable(x, y) && !g.bedCovering(x, y) && (!taken || owner == patient || owner == carrier) && safeThermalCell(g, patient, x, y)
+}
+
+func thermalSpot(g *Game, patient, reacher entity.EntityID) (int, int, bool) {
 	g.ensureRooms()
-	pos, _ := g.positions.Get(id)
-	cold, bands, out := g.exposure[id].Hypo >= g.exposure[id].Heat, g.bandsOf(id), g.climate.Outdoor(g.clock.Now())
+	pos, _ := g.positions.Get(reacher)
+	bands, out := g.bandsOf(patient), g.climate.Outdoor(g.clock.Now())
 	return g.thermo.Spot(pos.X, pos.Y, func(r int) bool {
 		t, ok := g.thermo.Air(r, out)
-		return ok && (cold && int(t) >= bands.Min || !cold && int(t) <= bands.Max)
+		return ok && bands.Comfortable(int(t))
 	}, func(x, y int) bool {
-		owner, taken := g.reserve.TileOwner(x, y)
-		return g.grid.Walkable(x, y) && !g.bedCovering(x, y) && (!taken || owner == id)
-	}, func(x, y int) bool { return g.reachable(id, x, y) })
+		return thermalGround(g, patient, reacher, x, y)
+	}, func(x, y int) bool { return g.reachable(reacher, x, y) })
+}
+
+// thermalRecovery reuses Warm; no additional saved job or priority state.
+// Explicit orders and emergency responses have priority, and safe sleeping
+// or self-tending already provides recovery without another interruption.
+func thermalRecovery(g *Game, id entity.EntityID, j job.Record) bool {
+	if j.Kind.Eating() {
+		return false
+	}
+	if j.Kind == job.Warm && j.Active() {
+		if safeThermalCell(g, id, j.TX, j.TY) {
+			return false
+		}
+		g.interrupt(id, job.Interrupted)
+		j = job.Record{}
+		delete(g.noComfort, id)
+	}
+	if !g.needsComfort(id) {
+		return false
+	}
+	pos, _ := g.positions.Get(id)
+	safe := safeThermalCell(g, id, pos.X, pos.Y)
+	if j.Kind == job.Sleep && (!g.exposureDanger(id) || safe && j.State == job.Do) || safe && j.Kind == job.Tend && j.Target == id && j.State == job.Do {
+		return false
+	}
+	if n, _ := g.need.Get(id); n.Hunger <= needs.RavenousAt && !(j.Forced && j.Active()) && g.seekFood(id) {
+		return false
+	}
+	x, y := pos.X, pos.Y
+	if !safe {
+		if g.noComfortUntil(id) {
+			return false
+		}
+		var ok bool
+		x, y, ok = g.warmSpot(id)
+		if !ok {
+			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
+			return false
+		}
+	}
+	if j.Forced && j.Active() {
+		return false
+	}
+	if j.Active() {
+		g.interrupt(id, job.Interrupted)
+	}
+	if g.startJob(id, job.Record{Kind: job.Warm, TX: x, TY: y, WorkLeft: warmWait}) {
+		return true
+	}
+	g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
+	return false
 }
 
 // exposureDanger: hypothermia or heatstroke bad enough to get a sleeper
@@ -203,7 +274,8 @@ func (g *Game) noComfortUntil(id entity.EntityID) bool {
 func (g *Game) doWarm(id entity.EntityID, j job.Record) {
 	e := g.exposure[id]
 	j.WorkLeft--
-	if j.WorkLeft <= 0 || e == (bodytemp.Sev{}) {
+	pos, _ := g.positions.Get(id)
+	if j.WorkLeft <= 0 || e == (bodytemp.Sev{}) || !safeThermalCell(g, id, pos.X, pos.Y) {
 		j.State = job.Complete
 	}
 	g.jobs.Set(id, j)

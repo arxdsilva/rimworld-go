@@ -15,6 +15,7 @@ package herd
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/mathx"
 )
@@ -120,8 +121,12 @@ func (hd *Herd) CarryKill(id entity.EntityID) bool {
 func (hd *Herd) Careful(aid entity.EntityID) bool { return aid != 0 && hd.careful == aid }
 
 // grown reports a grown animal at tick now.
-func grown(a animal.State, now uint64) bool {
-	return animal.Adult(a.Species, animal.AgeDays(a.Born, now, a.Species))
+func grown(h Host, a animal.State, now uint64) bool {
+	var policy clock.CalendarPolicy
+	if c, ok := h.(interface{ Calendar() clock.CalendarPolicy }); ok {
+		policy = c.Calendar()
+	}
+	return animal.Adult(a.Species, animal.AgeDays(a.Born, now, a.Species, policy))
 }
 
 // claimed reports an animal someone holds.

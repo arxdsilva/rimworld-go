@@ -111,15 +111,15 @@ func DiseaseText(b biome.ID) string {
 
 // WildlifeLevel is the animal density label of a biome.
 func WildlifeLevel(b biome.ID) string {
-	w := biome.DefOf(b).Wildlife
+	w := biome.DefOf(b).AnimalDensity100
 	switch {
-	case w <= 15:
+	case w <= 40:
 		return "Sparse"
-	case w <= 45:
+	case w <= 110:
 		return "Low"
-	case w <= 85:
+	case w <= 280:
 		return "Moderate"
-	case w < 100:
+	case w < 430:
 		return "Plentiful"
 	}
 	return "Abundant"
@@ -248,7 +248,7 @@ func BuildTileInfoWith(p *planet.Planet, i int, o Opts) TileInfo {
 		Row{"Caravan per tile", strings.Join(travel, ", "), "Caravan travel\nHours a caravan spends crossing this tile in each season (" +
 			fmt.Sprintf("%.2f", hoursPerTileDay) + " days times the movement difficulty).", uikit.Text},
 		Row{"Forage", ForageText(p.Biome[i]), "Forage\nHow much wild food foraging finds here, as a share of the best biome.", uikit.Text},
-		Row{"Wildlife", WildlifeLevel(p.Biome[i]), "Wildlife\nHow many wild animals live here.", uikit.Text},
+		Row{"Wildlife", WildlifeLevel(p.Biome[i]), "Wildlife\nEcosystem density of wild animals.", uikit.Text},
 		Row{"Disease", DiseaseText(p.Biome[i]), "Disease\nThe average time between outbreaks that sicken a colonist here.", uikit.Text},
 	)
 	if p.Water[i] != planet.Land {

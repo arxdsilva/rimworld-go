@@ -217,8 +217,14 @@ func TestJourneyRschBuildHiTechBenchAndAnalyzer(t *testing.T) {
 	}
 	pos := entity.EntityID(0)
 	_ = pos
-	for i, k := range []item.Kind{item.Steel, item.Components} {
-		if _, err := j.g.SpawnStack(k, 80, ox+i, oy+5); err != nil {
+	for i, st := range []struct {
+		kind item.Kind
+		qty  int
+	}{
+		{item.Steel, 600}, {item.Components, 80},
+		{item.Plasteel, 60}, {item.Gold, 30},
+	} {
+		if _, err := j.g.SpawnStack(st.kind, st.qty, ox+i, oy+5); err != nil {
 			t.Fatal(err)
 		}
 	}

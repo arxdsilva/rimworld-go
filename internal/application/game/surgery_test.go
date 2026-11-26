@@ -22,14 +22,14 @@ import (
 // ENG-003 M1: queued operations, the surgeon's job and its outcome.
 
 // legless is a colonist missing its left leg, with a bed, a skilled
-// doctor and a peg leg in stock.
+// doctor and wood ready for a makeshift leg.
 func legless(t *testing.T, medicine uint8) (*Game, entity.EntityID, entity.EntityID) {
 	t.Helper()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(10, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
 	placeBuilt(t, g, construction.Bed, construction.South, 12, 2)
-	g.SpawnStack(item.PegLeg, 1, 2, 9)
+	g.SpawnStack(item.Wood, 1, 2, 9)
 	g.SpawnStack(item.HerbalMedicine, 6, 3, 9) // MED-06: every operation uses medicine
 	(*g.sk.skills[doc])[skill.Medicine].Level = medicine
 	v := g.VitalOf(patient)
@@ -90,11 +90,11 @@ func TestSurgeryInstallsAPegLeg(t *testing.T) {
 	addPegLeg(g, patient)
 	operateUntil(t, g, patient, doc)
 	b := g.bodies[patient]
-	if b.Implant(body.LegL) != item.PegLeg {
+	if b.ReplacementAt(body.LegL) != item.PegLeg {
 		t.Fatalf("the peg leg is fitted: %+v", b)
 	}
-	if g.stockOf(item.PegLeg) != 0 {
-		t.Fatal("the peg leg is used up")
+	if g.stockOf(item.Wood) != 0 || g.stockOf(item.PegLeg) != 0 {
+		t.Fatal("the peg leg operation consumes one wood without creating an item")
 	}
 	if !g.UnderAnaesthetic(patient) || g.VitalOf(patient).Status != health.Downed {
 		t.Fatalf("the patient is under an anaesthetic: %+v", g.VitalOf(patient))
@@ -106,9 +106,9 @@ func TestSurgeryInstallsAPegLeg(t *testing.T) {
 	if !found {
 		t.Fatal("the patient remembers the surgery")
 	}
-	for i := 0; i < 50 && g.UnderAnaesthetic(patient); i++ {
+	for i := 0; i < 80 && g.UnderAnaesthetic(patient); i++ {
 		g.SetNeeds(patient, needs.Full, needs.Full)
-		g.Step(clock.TicksPerHour / 2) // MED-06: the anaesthetic wears off over 20 hours
+		g.Step(clock.TicksPerHour / 2) // MED-06: the anesthetic wears off after its rolled 45000-75000 ticks
 	}
 	if g.UnderAnaesthetic(patient) || g.VitalOf(patient).Status != health.Alive {
 		t.Fatalf("the patient wakes after the anaesthetic: %+v", g.VitalOf(patient))
@@ -123,7 +123,7 @@ func TestSurgeryInstallsAPegLeg(t *testing.T) {
 
 func TestBotchedSurgeryWoundsAndReports(t *testing.T) {
 	t.Parallel()
-	g, patient, doc := legless(t, 0)
+	g, patient, doc := legless(t, 3)
 	v := g.VitalOf(doc)
 	db := g.ensureBody(doc, &v)
 	db.Missing |= 1<<body.EyeL | 1<<body.EyeR // a blind surgeon cannot succeed
@@ -135,7 +135,7 @@ func TestBotchedSurgeryWoundsAndReports(t *testing.T) {
 	before := g.VitalOf(patient).Injury
 	operateUntil(t, g, patient, doc)
 	b := g.bodies[patient]
-	if b.Implant(body.LegL).IsImplant() {
+	if b.ReplacementAt(body.LegL).IsImplant() {
 		t.Fatal("a botched operation fits nothing")
 	}
 	surgical := false
@@ -179,19 +179,22 @@ func TestSurgeryWaitDoesNotFlap(t *testing.T) {
 	_ = doc
 }
 
-func TestCrafterMakesAPegLegFromABill(t *testing.T) {
+func TestCoreWoodProsthesesHaveNoCraftingBills(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
-	id, _ := g.SpawnNamedPawn(1, 1, "Bo")
+	g.SpawnNamedPawn(1, 1, "Bo")
 	placeBuilt(t, g, construction.Workbench, construction.South, 5, 2)
 	g.SpawnStack(item.Wood, 20, 1, 4)
-	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.MakePegLeg), Mode: uint8(recipe.DoCount), Count: 1})
-	g.Step(1)
-	for i := 0; i < 40 && g.stockOf(item.PegLeg) == 0; i++ {
-		g.SetNeeds(id, needs.Full, needs.Full)
-		g.Step(TicksPerCell * 10)
+	for _, id := range []recipe.ID{recipe.MakePegLeg, recipe.MakeWoodenHand, recipe.MakeDenture, recipe.MakeProstheticFoot} {
+		if !recipe.Core().DefOf(id).Legacy {
+			t.Fatalf("%s remains craftable", recipe.Core().DefOf(id).Name)
+		}
+		g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(id), Mode: uint8(recipe.DoCount), Count: 1})
 	}
-	if g.stockOf(item.PegLeg) != 1 {
-		t.Fatalf("peg legs = %d", g.stockOf(item.PegLeg))
+	g.Step(1)
+	for _, bills := range g.craft.Bills.Export() {
+		if len(bills) != 0 {
+			t.Fatalf("legacy Core body parts were queued as crafting bills: %+v", bills)
+		}
 	}
 }

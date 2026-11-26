@@ -44,9 +44,10 @@ type Beasts interface {
 	SetAnimal(id entity.EntityID, a animal.State)
 	// Pos is a creature's tile (ok false: none).
 	Pos(id entity.EntityID) (x, y int, ok bool)
-	// AnyAnimal reports an animal keep accepts (the job index first: no
-	// scan when nothing can match).
-	AnyAnimal(keep func(entity.EntityID, *animal.State) bool) bool
+	// AnyTameAnimal reports a tame animal accepted by the pure predicate.
+	AnyTameAnimal(keep func(entity.EntityID, *animal.State) bool) bool
+	// AnyTameMarked reports a wild animal marked for taming.
+	AnyTameMarked() bool
 	// Nearest is the animal keep accepts nearest id, and its tile.
 	Nearest(id entity.EntityID, keep func(entity.EntityID, *animal.State) bool) (entity.EntityID, int, int, bool)
 	// Kill kills animal aid, by colonist by.
@@ -92,6 +93,8 @@ type Events interface {
 	// Tamed: handler id tamed animal aid (the animal is made tame, named,
 	// logged and may bond).
 	Tamed(id, aid entity.EntityID)
+	UseTameInspiration(id entity.EntityID) bool
+	ForeignOwned(id entity.EntityID) bool
 	// TameFailed: id failed to tame aid (logged; aid waits out its
 	// retry, and may go manhunter at its revenge chance).
 	TameFailed(id, aid entity.EntityID)

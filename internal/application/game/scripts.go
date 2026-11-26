@@ -246,15 +246,7 @@ func scriptPawn(g *Game, id entity.EntityID) scripting.Pawn {
 	name, _ := g.names.Get(id)
 	n, _ := g.need.Get(id)
 	v, _ := g.vital.Get(id)
-	md, smoothed := 0, false
-	if g.soc != nil {
-		_, smoothed = g.soc.moodM[id]
-	}
-	if smoothed {
-		md = g.smoothedMood(id, 0)
-	} else {
-		md = g.thoughtLevel(id)
-	}
+	md := g.moodOf(id)
 	return scripting.Pawn{ID: uint64(id), Name: name, X: pos.X, Y: pos.Y, Food: needs.Percent(n.Hunger), Rest: needs.Percent(n.Rest),
 		Mood: md, Downed: v.Status == health.Downed, Drafted: g.draft[id]}
 }

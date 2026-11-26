@@ -150,7 +150,7 @@ func (f Fleet) fight(c *Caravan, k Trouble, fac int) {
 func (f Fleet) hostile() int {
 	var out []int
 	for i, fa := range f.h.Factions() {
-		if fa.Type.Human() && fa.Relation == faction.Hostile && !fa.Defeated {
+		if faction.Raider(fa) {
 			out = append(out, i+1)
 		}
 	}
@@ -193,6 +193,7 @@ func (f Fleet) Answer(letter uint64, mode uint8) {
 		c.Ask = Ask{}
 		f.h.DropLetter(letter)
 		if mode == 0 && f.h.Cargo().Yield(c.C.ID, a.Kind, a.Qty) {
+			f.pace(c)
 			f.h.Note("The caravan gave up %d %s and was let through.", a.Qty, a.Kind)
 			return
 		}

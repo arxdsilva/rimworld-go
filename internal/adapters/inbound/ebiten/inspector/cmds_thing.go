@@ -308,7 +308,7 @@ func (a Animal) AnimalCommands(id entity.EntityID) []Button {
 		out = append(out, a.animalMasterCmd(an))
 		out = append(out, a.animalCareCmd(an)) // animal_inspector.go (MED-09)
 		for _, t := range animalTrainable(an) {
-			out = append(out, animalTrainCmd(t))
+			out = append(out, animalTrainCmd(a.shell, t))
 		}
 		return out
 	}
@@ -390,12 +390,13 @@ func (a Animal) animalMasterCmd(an game.AnimalView) Button {
 }
 
 // animalTrainCmd is one training skill's toggle ("Obedience 2/3").
-func animalTrainCmd(t game.AnimalTrainingView) Button {
-	desc := fmt.Sprintf("Handlers train it in %s while this is on. %d of %d steps", strings.ToLower(t.Label), t.Steps, t.Needed)
+func animalTrainCmd(tr lang.Tr, t game.AnimalTrainingView) Button {
+	label := strings.ToLower(tr.T(t.Label))
+	desc := lang.Tf(tr, "Handlers train it in %s while this is on. %d of %d steps.", label, t.Steps, t.Needed)
 	if t.Learned {
-		desc += ", learned"
+		desc = lang.Tf(tr, "Handlers train it in %s while this is on. %d of %d steps, learned.", label, t.Steps, t.Needed)
 	}
-	return Button{ID: "animal.train." + strconv.Itoa(t.Skill), Label: trainLabel(t), Toggle: true, On: t.On, Desc: desc + "."}
+	return Button{ID: "animal.train." + strconv.Itoa(t.Skill), Label: trainLabel(tr, t), Toggle: true, On: t.On, Desc: desc}
 }
 
 // animalTabs are the animal's pane tabs: its Log and, for a tame one that

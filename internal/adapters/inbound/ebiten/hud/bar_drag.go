@@ -82,7 +82,7 @@ func (c ColonistBar) HandleRight(f *inputframe.Frame) bool {
 			return false
 		}
 		f.Take(inputframe.Right)
-		*d = barDrag{on: true, id: pawns[i].ID, m: pawns[i].Map, x: x, y: y, cx: x, cy: y}
+		*d = barDrag{on: true, id: pawns[i].ID, m: game.MapID(pawns[i].Map), x: x, y: y, cx: x, cy: y}
 		return true
 	}
 	d.cx, d.cy = x, y
@@ -114,7 +114,7 @@ func (c ColonistBar) finishDrag(g barDrag, x, y int) {
 				d.Do(ports.OpenWorld{Select: "map:" + strconv.FormatUint(uint64(g.m), 10)})
 			}
 		}
-	case over.Map != g.m:
+	case game.MapID(over.Map) != g.m:
 		c.Toast(BarCrossMapDragHint)
 	default:
 		c.sh.Enqueue(command.Command{Kind: command.SetColonistOrder, Pawn: uint64(g.id), Count: over.BarOrder}) // one rank across every map; i counts this list's groups
@@ -136,7 +136,7 @@ func (c ColonistBar) drawDrag(screen *ebiten.Image, pawns []game.PawnView) {
 		return
 	}
 	l := c.sh.Layout()
-	if i, ok := c.barSlotAt(pawns, d.cx, d.cy); ok && pawns[i].ID != d.id && pawns[i].Map == d.m {
+	if i, ok := c.barSlotAt(pawns, d.cx, d.cy); ok && pawns[i].ID != d.id && game.MapID(pawns[i].Map) == d.m {
 		s := l.BarSlots[i]
 		gfx.FillRect(screen, s.X-2, s.Y, 3, s.H, uikit.Accent, false)
 	}

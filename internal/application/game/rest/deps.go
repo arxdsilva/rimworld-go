@@ -69,6 +69,9 @@ type Bedding interface {
 
 // Claims answers who may hold which bed.
 type Claims interface {
+	// PatientBedSafe checks the existing clinical fire/air safety of a
+	// candidate when the sleeper is on bed rest.
+	PatientBedSafe(id, bed entity.EntityID, x, y int) bool
 	// AreaAllows: (x, y) lies inside id's allowed area (true when
 	// unrestricted).
 	AreaAllows(id entity.EntityID, x, y int) bool
@@ -108,10 +111,16 @@ type Routine interface {
 
 // Patients is what sleep asks the care package about a sleeper.
 type Patients interface {
+	// wiki: Rest Rate Multiplier; the body's factor while sleeping.
+	RestFactor(id entity.EntityID) int32
 	// OnBedRest: id is on bed rest (care/rest.go).
 	OnBedRest(id entity.EntityID) bool
 	// MayUseMedicalBed: id may lie in a medical bed (a patient).
 	MayUseMedicalBed(id entity.EntityID) bool
+	// Animal clinical stays use the same authoritative temporary bed holds.
+	HeldBed(id entity.EntityID) entity.EntityID
+	Hold(id, bed entity.EntityID)
+	RecoveredAnimal(id entity.EntityID)
 	// SurgeryWait: a patient on bed rest whose sleep job has workLeft
 	// left; one that waited for a surgeon who never came gives up.
 	SurgeryWait(id entity.EntityID, workLeft int)

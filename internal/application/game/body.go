@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/saveutil"
 	"slices"
 
 	"rimworld-go/internal/application/game/combat"
@@ -12,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game/gearview"
 	"rimworld-go/internal/application/game/hit"
 	"rimworld-go/internal/application/game/roster"
+	"rimworld-go/internal/application/game/savefmt"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/armor"
@@ -22,6 +24,7 @@ import (
 	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/stat"
+	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -73,11 +76,15 @@ func (g *Game) woundBody(b *body.Body, bl hit.Blow, now uint64) {
 	body.Spread(b, bl.Dmg, bl.Kind, rng.IntN, now)
 }
 
-// bodyKey is the capacities the stat sheet was built from: Moving,
-// Manipulation, Sight (permille).
+// bodyKey contains all body capacities that affect shooting or stat sheets:
+// Moving, Manipulation and Sight (permille).
 type bodyKey [3]int32
 
+// bodyStatKey excludes Sight because the shooting capacity offset is cached separately.
+type bodyStatKey [2]int32
+
 var healthyKey = bodyKey{1000, 1000, 1000}
+var healthyStatKey = bodyStatKey{1000, 1000}
 
 func keyOf(b *body.Body) bodyKey {
 	if b == nil {
@@ -86,44 +93,38 @@ func keyOf(b *body.Body) bodyKey {
 	return bodyKey{b.Capacity(body.Moving), b.Capacity(body.Manipulation), b.Capacity(body.Sight)}
 }
 
-// bodyMods is the body's step of id's stat sheet: Moving scales MoveSpeed,
-// Manipulation WorkSpeed and shooting accuracy, and Sight costs shooting accuracy (nil when
-// healthy).
-func bodyMods(k bodyKey) []stat.Mod {
-	if k == healthyKey {
-		return nil
-	}
-	var ms []stat.Mod
-	if k[0] != 1000 {
-		ms = append(ms, stat.Mod{Stat: stat.MoveSpeed, Mul: max(k[0], 1)})
-	}
-	if k[1] != 1000 {
-		ms = append(ms, stat.Mod{Stat: stat.WorkSpeed, Mul: max(k[1], 1)})
-		if p := attack.ManipPoints(int(k[1])); p != 0 {
-			ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: int32(p)})
-		}
-	}
-	if k[2] != 1000 {
-		ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: int32(attack.SightPoints(int(k[2])))})
-	}
-	return ms
+func statKeyOf(k bodyKey) bodyStatKey { return bodyStatKey{k[0], k[1]} }
+
+func bodyAimOf(k bodyKey) int32 {
+	return int32(attack.ManipPoints(int(k[1])) + attack.SightPoints(int(k[2])))
 }
+
+// bodyMods changes movement and work speeds. Shooting capacity offsets
+// are cached separately without rebuilding the stat sheet.
+func bodyMods(k bodyStatKey) []stat.Mod { return stat.BodyMods(k) }
 
 // bodyChanged follows a change to id's body: Injury is re-derived, the
 // stat sheet is rebuilt only when a capacity it uses moved, and a pawn
 // with no consciousness left goes down.
 func (g *Game) bodyChanged(id entity.EntityID, b *body.Body, v *health.Record) {
-	v.Injury = b.Damage()
+	damage := b.Damage()
+	v.Injury = damage
 	g.vital.Set(id, *v)
-	cur := healthyKey
+	cur := healthyStatKey
 	if fx := g.sk.stats[id]; fx != nil {
 		cur = fx.body
 	}
-	if keyOf(b) != cur {
+	k := keyOf(b)
+	if statKeyOf(k) != cur || g.sk.stats[id] == nil && bodyAimOf(k) != 0 {
 		g.sk.ensure()
-		g.rebuildStats(id) // skills.go: the body layer
+		g.rebuildStats(id)
+	} else if fx := g.sk.stats[id]; fx != nil {
+		fx.bodyAim = bodyAimOf(k)
 	}
-	g.syncPatient(id, b) // patients.go (MED-00)
+	g.syncPatient(id, b)
+	if g.soc != nil {
+		g.refreshSig(id)
+	}
 }
 
 // consciousEnough: id is awake enough to be spoken to (no body, or
@@ -134,35 +135,21 @@ func (g *Game) consciousEnough(id entity.EntityID) bool {
 	return b == nil || b.Capacity(body.Consciousness) >= consciousRecover
 }
 
-// hasOpenWound reports a wound on b that can still heal, or a fresh
-// stump a tend must close (MED-01).
-func hasOpenWound(b *body.Body) bool {
-	if b.Fresh != 0 {
-		return true
-	}
-	for _, w := range b.Wounds {
-		if !w.Permanent {
-			return true
-		}
-	}
-	return false
-}
-
 // legacyParts is how many parts the fixed implant array of saves before
 // MED-00 held (body.NumParts may grow; this never does).
 const legacyParts = 20
 
-// savedBody is a body in the save (MED-00). Implants is the fixed array
-// saves up to version 5 wrote, read only: a body saved with Fitted
-// (always written now, nil when nothing is fitted) ignores it. gob
-// matches fields by name, so an older save's body.Body decodes into it.
+// savedBody reads pre-v18 Fitted and the older fixed Implants array.
+// New saves write Replacements and Added only.
 type savedBody struct {
-	Wounds    []body.Wound
-	Missing   uint32
-	Implants  [legacyParts]item.Kind // legacy read only
-	Fitted    []item.Kind
-	BloodLoss int32
-	Conds     []body.Condition
+	Wounds       []body.Wound
+	Missing      uint32
+	Implants     [legacyParts]item.Kind // pre-v6, read only
+	Fitted       []item.Kind            // v6-v17, read only
+	Replacements []body.Replacement
+	Added        []body.Implant
+	BloodLoss    int32
+	Conds        []body.Condition
 	// BloodStage is the blood loss stage's hysteresis memory and Fresh
 	// the untended stumps (MED-01).
 	BloodStage uint8
@@ -170,77 +157,47 @@ type savedBody struct {
 }
 
 // exportBodies is the Bodies save field in id order (nil: none).
-func (g *Game) exportBodies() []entry[savedBody] {
-	es := exportMap(g.bodies)
+func (g *Game) exportBodies(owned ...bool) []entry[savedBody] {
+	es := saveutil.ExportMap[entry[body.Body]](g.bodies)
 	if es == nil {
 		return nil
 	}
 	out := make([]entry[savedBody], len(es))
 	for i, e := range es {
-		b := e.V
-		out[i] = entry[savedBody]{e.ID, savedBody{Wounds: b.Wounds, Missing: b.Missing, Fitted: b.Fitted, BloodLoss: b.BloodLoss, Conds: b.Conds,
+		b := saveutil.OwnBody(len(owned) > 0 && owned[0], e.V)
+		out[i] = entry[savedBody]{e.ID, savedBody{Wounds: savefmt.CanonicalSlice(b.Wounds), Missing: b.Missing,
+			Replacements: savefmt.CanonicalSlice(b.Replacements), Added: savefmt.CanonicalSlice(b.Implants),
+			BloodLoss: b.BloodLoss, Conds: savefmt.CanonicalSlice(b.Conds),
 			BloodStage: b.BloodStage, Fresh: b.Fresh}}
 	}
 	return out
 }
 
-// importBodies restores exportBodies' state (an older save's implant
-// array becomes Fitted), rebuilds the stat sheets the bodies change and
-// the patients index (both derived, not saved). The vital records must be
-// loaded first.
+// importBodies converts old prosthetics at the save boundary and rebuilds
+// derived stats and patient indexes after vital records load.
 func (g *Game) importBodies(es []entry[savedBody]) {
 	bs := make([]entry[body.Body], len(es))
 	for i, e := range es {
 		sb := e.V
-		fitted := sb.Fitted
-		if fitted == nil {
-			fitted = body.FittedFrom(sb.Implants[:])
+		replacements := sb.Replacements
+		if replacements == nil {
+			legacy := sb.Fitted
+			if legacy == nil {
+				legacy = sb.Implants[:]
+			}
+			replacements = body.ReplacementsFrom(legacy)
 		}
-		bs[i] = entry[body.Body]{e.ID, body.Body{Wounds: sb.Wounds, Missing: sb.Missing, Fitted: fitted, BloodLoss: sb.BloodLoss, Conds: sb.Conds,
-			BloodStage: sb.BloodStage, Fresh: sb.Fresh}}
+		bs[i] = entry[body.Body]{e.ID, body.Body{Wounds: sb.Wounds, Missing: sb.Missing, Replacements: replacements,
+			Implants: sb.Added, BloodLoss: sb.BloodLoss, Conds: sb.Conds, BloodStage: sb.BloodStage, Fresh: sb.Fresh}}
 	}
-	g.bodies = importMap(bs)
+	g.bodies = saveutil.ImportMap(bs)
 	for _, e := range es {
-		if keyOf(g.bodies[e.ID]) != healthyKey {
+		if k := keyOf(g.bodies[e.ID]); statKeyOf(k) != healthyStatKey || bodyAimOf(k) != 0 {
 			g.sk.ensure()
 			g.rebuildStats(e.ID)
 		}
 	}
 	g.rebuildPatients() // patients.go (MED-00)
-}
-
-// exportMap lists a pointer map's entries in id order (nil when empty).
-func exportMap[T any](m map[entity.EntityID]*T) []entry[T] {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make([]entry[T], 0, len(m))
-	for id, v := range m {
-		out = append(out, entry[T]{id, *v})
-	}
-	slices.SortFunc(out, func(a, b entry[T]) int {
-		switch {
-		case a.ID < b.ID:
-			return -1
-		case a.ID > b.ID:
-			return 1
-		}
-		return 0
-	})
-	return out
-}
-
-// importMap rebuilds exportMap's map (nil when there are no entries).
-func importMap[T any](es []entry[T]) map[entity.EntityID]*T {
-	if len(es) == 0 {
-		return nil
-	}
-	m := make(map[entity.EntityID]*T, len(es))
-	for _, e := range es {
-		v := e.V
-		m[e.ID] = &v
-	}
-	return m
 }
 
 // Part status words of the Health tab (PartView.Status starts with one).
@@ -266,17 +223,6 @@ func (g *Game) viewBody(id entity.EntityID) *body.Body {
 	}
 	return b
 }
-
-// implantKinds are the implant item kinds in kind order.
-var implantKinds = func() []item.Kind {
-	var out []item.Kind
-	for k := item.Kind(1); k != 0; k++ {
-		if k.IsImplant() {
-			out = append(out, k)
-		}
-	}
-	return out
-}()
 
 // healthView builds the Health tab: capacities, pain, every part in
 // body.Part order (Parts[i] is body.Part(i)), queued operations with what
@@ -310,6 +256,11 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 		if s.Fitted {
 			pv.Implant = s.Implant.String()
 		}
+		for _, imp := range b.Implants {
+			if imp.Part == s.Part {
+				pv.Implants = append(pv.Implants, imp.Kind.String())
+			}
+		}
 		hv.Parts = append(hv.Parts, pv)
 	}
 	for i, op := range g.operationsOf(id) {
@@ -330,39 +281,19 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 // that can't be started yet (research, stock, reach, no other doctor:
 // opBlocked) is Disabled with its reason, and can still be queued.
 func (g *Game) operationOptions(id entity.EntityID, b *body.Body) []OperationOptionView {
-	q := g.operationsOf(id)
+	queued := g.operationsOf(id)
 	var out []OperationOptionView
-	add := func(op body.Operation) {
-		if !b.CanOperate(op) {
-			return
+	for _, op := range body.AvailableOperations(b) {
+		if slices.ContainsFunc(queued, func(q body.Operation) bool {
+			return body.OperationsConflict(q, op)
+		}) {
+			continue
 		}
-		for _, x := range q {
-			if x.Kind == op.Kind && x.Part == op.Part {
-				return
-			}
-		}
-		why, _ := g.opBlocked(id, 0, b, op, false) // surgery.go
-		out = append(out, OperationOptionView{Label: body.OperationLabel(b, op), Kind: uint8(op.Kind), Part: uint8(op.Part),
-			Item: uint8(op.Item), Disabled: why != "", Reason: why})
+		why, _ := g.opBlocked(id, 0, b, op, false)
+		out = append(out, OperationOptionView{Label: body.OperationLabel(b, op),
+			Kind: uint8(op.Kind), Part: uint8(op.Part), Item: uint8(op.Item),
+			Disabled: why != "", Reason: why})
 	}
-	for p := body.Part(0); p < body.NumParts; p++ {
-		for _, k := range implantKinds {
-			if body.Fits(k, p) {
-				add(body.Operation{Kind: body.InstallImplant, Part: p, Item: k})
-			}
-		}
-	}
-	for p := body.Part(0); p < body.NumParts; p++ {
-		if !body.DefOf(p).Vital { // taking out an artificial heart kills (organs.go)
-			add(body.Operation{Kind: body.RemoveImplant, Part: p})
-		}
-	}
-	for p := body.Part(0); p < body.NumParts; p++ {
-		if !body.Inner(p) { // organs are harvested (MED-06), not amputated
-			add(body.Operation{Kind: body.Amputate, Part: p})
-		}
-	}
-	g.moreOperationOptions(b, add) // surgery.go (MED-06): harvest, transplant, anaesthesia, euthanasia
 	return out
 }
 
@@ -376,6 +307,17 @@ func missingPart(b *body.Body) bool {
 // its place). Being disfigured has no thought of its own (others see it).
 func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
 	ts := g.apparel[id].AppendThoughts(nil) // craft/garment.go (PRD-2): ratty, tattered and tainted apparel
+	if b := g.bodies[id]; b != nil && body.HasImplant(b, body.Brain, item.BlissCircuit) {
+		d := mood.DefOf(mood.BlissCircuit)
+		ts = append(ts, mood.Thought{Kind: mood.BlissCircuit, Label: d.Label, Value: d.Value})
+	}
+	if bio, ok := g.bioFor(id); ok {
+		count := 0
+		if b := g.bodies[id]; b != nil {
+			count = b.ArtificialParts()
+		}
+		ts = trait.AppendImplantThoughts(ts, bio.Traits, count)
+	}
 	if !missingPart(g.bodies[id]) {
 		return ts
 	}

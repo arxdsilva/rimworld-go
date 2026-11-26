@@ -33,10 +33,10 @@ func repathJam(t *testing.T, w, blockX int, xs ...int) (g *Game, blocker entity.
 		walkers = append(walkers, id)
 	}
 	g.enterHook = func(id entity.EntityID, from, to Position) (stepVerdict, Position) {
-		g.occ.rpMiss = 0 // a colonist's is never read
+		g.occ.repath.miss = 0 // a colonist's is never read
 		queued := len(g.regs.paths.Requests())
 		v, alt := g.enter(id, from, to)
-		if v == stepRepath || g.occ.rpMiss == id || len(g.regs.paths.Requests()) > queued {
+		if v == stepRepath || g.occ.repath.miss == id || len(g.regs.paths.Requests()) > queued {
 			searches[id]++
 		}
 		return v, alt

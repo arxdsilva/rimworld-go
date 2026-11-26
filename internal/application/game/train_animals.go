@@ -14,43 +14,23 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Animal training (ENG-003, M10; Handle work). A handler trains a tame
-// animal's first enabled, unlearned skill (Obedience before Guard and
-// Release) once its session is due: herd.TrainCooldown (plus a per-animal
-// stagger) after the last one, success or not, so neither handler nor
-// animal flaps between sessions. A session succeeds with
-// training.StepChance (x5 for the bonded trainer) and a success may bond
-// them (training.BondTrain). Skills decay from the last session
-// (training.Decay, read on demand: the saved steps are those of the last
-// session, so a learned Obedience keeps its floor). An animal that has
-// learned Obedience (or Guard, or Release) follows its drafted master.
-// Guard: it defends its master from a hostile within guardMasterRadius of
-// them, or from whoever just hit them. Release: it joins its drafted
-// master's attack. A duty target is looked for once per
-// animal.DecideEvery ticks (staggered by id, through the creature index);
-// one it has engaged is kept, with a cheap check each tick, until the foe
-// falls, the master's attack moves on, or a guard's foe is farther than
-// guardKeepRadius from the master (enter 5, leave 8: no flapping).
-//
-// Which skills are on lives in the high bit of animal.State.Trained:
-// herd.TrainToggled marks a skill the player flipped away from its default
-// (Obedience on, the others off), so older saves and new animals need no
-// extra field.
+// Animal training uses the Handle job for Obedience, Guard and Release.
+// Each session attempts a step, may form a bond and resets saved maintenance.
+// Periodic maintenance lowers the outermost trained skill at a wildness-based
+// interval, and eventually removes tameness from neglected wild animals.
+// Guard and Release follow the drafted master and defend its current target.
+// The high bit of Trained stores each player-selected training toggle.
 
 const (
 	// trainWork: the ticks one session takes (like a taming).
 	trainWork = animal.TameWork
-	// followFar: an obedient animal walks to its drafted master once it
-	// is farther than this; it then goes right up to them (followNear).
+	// Follow its drafted master once more than followFar away.
 	followFar  = 3
 	followNear = 1
-	// guardMasterRadius: a guard animal takes on a hostile this close to
-	// its master; guardKeepRadius: it keeps at it until the hostile is
-	// farther than this from the master.
+	// Guard engagement and disengagement radii.
 	guardMasterRadius = 5
 	guardKeepRadius   = 8
-	// guardHitWindow: a hit on the master this recent calls its guard to
-	// whoever struck from there.
+	// Guard reacts to a recent hit on its master.
 	guardHitWindow = 2 * animal.DecideEvery
 )
 
@@ -60,8 +40,8 @@ func (g *Game) trainable(id entity.EntityID, a *animal.State, now uint64) bool {
 		a.Mode == animal.Flee || a.Mode == animal.Attack || a.Mode == animal.Confused || !herd.TrainDue(id, *a, now) {
 		return false
 	}
-	_, ok := herd.NextTrainSkill(*a, now)
-	return ok
+	_, ok := herd.NextTrainSkill(*a, now, trainingAt(g, id))
+	return ok || maintenanceDue(g, id, *a, now)
 }
 
 // cmdSetTraining turns training skill on or off for animal.
@@ -82,26 +62,28 @@ func (g *Game) cmdSetTraining(id entity.EntityID, s int, on bool) {
 		return
 	}
 	sk := training.Skill(s)
+	m := trainingAt(g, id)
 	if on == herd.TrainDefault(sk) {
-		a.Trained[sk] &^= herd.TrainToggled
+		*herd.TrainingSlot(&a, &m, sk) &^= herd.TrainToggled
 	} else {
-		a.Trained[sk] |= herd.TrainToggled
+		*herd.TrainingSlot(&a, &m, sk) |= herd.TrainToggled
 	}
 	g.animals.Set(id, a)
+	saveTraining(g, id, m)
 }
 
 // assignTrain sends handler id to train the nearest tame animal whose
 // session is due.
 func (g *Game) assignTrain(id entity.EntityID) bool {
 	now := uint64(g.clock.Now())
-	if !g.anyAnimal(func(aid entity.EntityID, a *animal.State) bool { return g.trainable(aid, a, now) }) {
+	if !g.animals.AnyTame(func(aid entity.EntityID, a *animal.State) bool { return g.trainable(aid, a, now) }) {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
 	for _, aid := range g.animalIDs {
-		if a := g.animals.Ref(aid); a == nil || !g.trainable(aid, a, now) {
+		if a := g.animals.Ref(aid); a == nil || !g.trainable(aid, a.SnapshotRef(), now) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(aid); taken {
@@ -149,37 +131,35 @@ func (g *Game) doTrain(id entity.EntityID, j job.Record) {
 	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
-	s, ok := herd.NextTrainSkill(a, now)
-	if !ok {
+	s, ok := herd.NextTrainSkill(a, now, trainingAt(g, j.Target))
+	if ok {
+		g.trainSession(id, j.Target, &a, s, now)
+	} else if maintenanceDue(g, j.Target, a, now) {
+		g.resetAnimalTameness(j.Target, &a, now)
+	} else {
 		return
 	}
-	g.trainSession(id, j.Target, &a, s, now)
 	g.animals.Set(j.Target, a)
 }
 
-// trainSession is one finished session of trainer on skill s: the decayed
-// steps are settled, the clock restarts, and a success adds a step and
-// may bond them.
+// trainSession resets maintenance, rolls a training step and may bond.
 func (g *Game) trainSession(trainer, id entity.EntityID, a *animal.State, s training.Skill, now uint64) {
-	for k := training.Skill(0); k < training.NumSkills; k++ {
-		a.Trained[k] = a.Trained[k]&herd.TrainToggled | herd.TrainSteps(*a, k, now)
-	}
-	a.TrainDecay = now
+	g.resetAnimalTameness(id, a, now)
 	chance := training.StepChance(int(g.skillOf(trainer, skill.Animals).Level), a.Bond == uint64(trainer))
 	if int32(g.stream(streamBond).IntN(1000)) >= chance {
 		return
 	}
-	a.Trained[s]++
-	if training.Learned(s, a.Trained[s]&^herd.TrainToggled) {
+	m := trainingAt(g, id)
+	*herd.TrainingSlot(a, &m, s)++
+	saveTraining(g, id, m)
+	if training.Learned(s, *herd.TrainingSlot(a, &m, s)&^herd.TrainToggled) {
 		p, _ := g.positions.Get(id)
 		g.message(p.X, p.Y, "%s trained %s the %s in %s.", g.name(trainer), a.Name, a.Species.Label(), herd.TrainLabel(s))
 	}
 	g.tryBond(id, a, trainer, training.BondTrain)
 }
 
-// followMaster: an animal that has learned Obedience stays by its drafted
-// master, walking up to them once they are more than followFar away. It
-// reports true while it follows.
+// followMaster keeps an obedient animal near its drafted master.
 func (g *Game) followMaster(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
 	if a.Master == 0 || !a.Tame || a.NoFollow || !herd.TrainLearned(*a, training.Obedience, now) &&
 		!herd.TrainLearned(*a, training.Guard, now) && !herd.TrainLearned(*a, training.Release, now) {
@@ -246,9 +226,7 @@ func (g *Game) masterAttack(m entity.EntityID) entity.EntityID {
 	return 0
 }
 
-// guardFoe reports o is a threat a guard animal fights: a standing raider,
-// or a wild animal attacking the colony, or a tame one gone manhunter
-// (EAI-006: a grieving pet).
+// guardFoe recognizes raiders and hostile animals, including manhunters.
 func (g *Game) guardFoe(id, o entity.EntityID, now uint64) bool {
 	if g.isRaider(o) {
 		return g.standingRaider(o)
@@ -257,9 +235,7 @@ func (g *Game) guardFoe(id, o entity.EntityID, now uint64) bool {
 	return o != id && ok && (!a.Tame || a.Enraged(now)) && !a.Dead() && (g.hostile(a) || a.Enraged(now))
 }
 
-// dutyKeeps reports engaged foe t is still the animal's business: its
-// master's attack target (release), or a threat still near the master
-// (guard, with the wider keep radius).
+// dutyKeeps retains the engaged release target or a nearby guard target.
 func (g *Game) dutyKeeps(m entity.EntityID, mp Position, t entity.EntityID, guard, release bool) bool {
 	if !rageOf(g).CombatAlive(t) {
 		return false
@@ -274,9 +250,7 @@ func (g *Game) dutyKeeps(m entity.EntityID, mp Position, t entity.EntityID, guar
 	return weapon.Distance(mp.X, mp.Y, tp.X, tp.Y) <= guardKeepRadius
 }
 
-// dutyTarget picks the foe animal id should fight for master m at mp:
-// the master's own attack target (release); else a threat within
-// guardMasterRadius of them, or whoever just hit them (guard).
+// dutyTarget picks the master's attack target, a nearby foe or recent attacker.
 func (g *Game) dutyTarget(id, m entity.EntityID, mp Position, guard, release bool, now uint64) entity.EntityID {
 	if release {
 		if t := g.masterAttack(m); t != 0 && t != id {
@@ -298,15 +272,66 @@ func (g *Game) dutyTarget(id, m entity.EntityID, mp Position, guard, release boo
 	return 0
 }
 
-// trainViews is a's training rows for the view: every skill, with whether
-// it can be learned, is on, and its steps.
-func trainViews(a animal.State, now uint64) ([]bool, []AnimalTrainingView) {
-	learned := make([]bool, training.NumSkills)
-	rows := make([]AnimalTrainingView, training.NumSkills)
-	for s := training.Skill(0); s < training.NumSkills; s++ {
-		learned[s] = herd.TrainLearned(a, s, now)
-		rows[s] = AnimalTrainingView{Skill: int(s), Label: herd.TrainLabel(s), Allowed: herd.CanLearn(a.Species, s),
-			On: herd.TrainOn(a, s), Learned: learned[s], Steps: int(herd.TrainSteps(a, s, now)), Needed: int(training.Needed(s))}
+// decayAnimalTraining advances the persistent global maintenance of a tame animal.
+func decayAnimalTraining(g *Game, id entity.EntityID, a *animal.State, now uint64) {
+	m := trainingAt(g, id)
+	before, haulBefore := a.Trained, m.HaulProgress
+	feral := herd.AdvanceTraining(a, &m, now)
+	saveTraining(g, id, m)
+	if a.Trained != before || m.HaulProgress != haulBefore {
+		g.viewGen++
 	}
-	return learned, rows
+	if !feral {
+		return
+	}
+	g.onAnimalLost(id)
+	a.Trained = [training.LegacySkills]uint8{}
+	a.TrainDecay = 0
+	herd.CancelHaul(animalHaulHost{haulHost{g}}, g.reserve, id, a, &m)
+	saveTraining(g, id, training.Maintenance{})
+	a.Master, a.Bond = 0, 0
+	g.endMating(id, a)
+	a.Tame, a.NoFollow = false, false
+	a.Mode, a.Target, a.Path, a.PathI = animal.Wander, 0, nil, 0
+	g.reserve.ReleaseOwner(id)
+	g.reserve.ReleaseTarget(id)
+	g.viewGen++
+	if p, ok := g.positions.Get(id); ok {
+		g.message(p.X, p.Y, "%s the %s became wild again.", a.Name, a.Species.Label())
+	}
+}
+
+// resetAnimalTameness starts a new deadline without changing learned skills.
+func (g *Game) resetAnimalTameness(id entity.EntityID, a *animal.State, now uint64) {
+	a.TrainDecay = now
+	m := trainingAt(g, id)
+	m.TameLoss, m.DecayAt = 0, 0
+	if herd.NeedsMaintenance(*a, m) {
+		m.DecayAt = now + training.DecayInterval(animal.Wildness(a.Species))
+	}
+	saveTraining(g, id, m)
+}
+
+func trainingAt(g *Game, id entity.EntityID) training.Maintenance {
+	if g.worldSt == nil {
+		return training.Maintenance{}
+	}
+	return g.worldSt.trainingMaintenance[id]
+}
+func saveTraining(g *Game, id entity.EntityID, m training.Maintenance) {
+	if m == (training.Maintenance{}) {
+		if g.worldSt != nil {
+			delete(g.worldSt.trainingMaintenance, id)
+		}
+		return
+	}
+	w := g.worldS()
+	if w.trainingMaintenance == nil {
+		w.trainingMaintenance = make(map[entity.EntityID]training.Maintenance)
+	}
+	w.trainingMaintenance[id] = m
+}
+
+func maintenanceDue(g *Game, id entity.EntityID, a animal.State, now uint64) bool {
+	return g.worldSt != nil && herd.MaintenanceDue(a, g.worldSt.trainingMaintenance[id], now)
 }

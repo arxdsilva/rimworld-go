@@ -182,6 +182,9 @@ const (
 	// AX-5 (append only, saved): the foam shell at the machining table
 	// (the foam charge's load and a mortar shell; wiki: Firefoam shell).
 	MakeFoamShells
+	MakeAcousticImplant
+	MakeServoJaw
+	MakeSynthTongue
 	numRecipes
 )
 
@@ -344,41 +347,45 @@ var defs = [numRecipes]Def{
 	PressTablet: {ID: PressTablet, Name: "press_tablet", Label: "Press spark tablet", Bench: construction.DrugTable,
 		Input: Input{Kind: item.AshleafLeaf, Qty: 6}, Output: item.SparkTablet, OutQty: 1, Work: 900, Skill: work.Craft,
 		Learn: skill.Crafting, MinSkill: 4},
-	MakePegLeg: {ID: MakePegLeg, Name: "make_peg_leg", Label: "Carve peg leg", Bench: construction.Workbench,
+	// wiki: Peg leg, Wooden hand, Wooden foot, Denture. These surgeries
+	// consume raw wood or medicine; old recipes are retained for saved
+	// bill IDs and are retired from new crafting menus.
+	MakePegLeg: {ID: MakePegLeg, Name: "make_peg_leg", Label: "Carve peg leg", Bench: construction.Workbench, Legacy: true,
 		Input: Input{Kind: item.Wood, Qty: 10}, Output: item.PegLeg, OutQty: 1, Work: 600, Skill: work.Craft, Learn: skill.Crafting},
-	MakeProstheticLeg: {ID: MakeProstheticLeg, Name: "make_prosthetic_leg", Label: "Make prosthetic leg",
-		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 20}, Output: item.ProstheticLeg, OutQty: 1,
-		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5, Also: machining},
-	MakeProstheticArm: {ID: MakeProstheticArm, Name: "make_prosthetic_arm", Label: "Make prosthetic arm",
-		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 20}, Output: item.ProstheticArm, OutQty: 1,
-		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5, Also: machining},
-	MakeWoodenHand: {ID: MakeWoodenHand, Name: "make_wooden_hand", Label: "Carve wooden hand", Bench: construction.Workbench,
+	// wiki: Prosthetic leg and Prosthetic arm (machining, Crafting 5,
+	// 15,000 work, 40 steel and 4 components).
+	MakeProstheticLeg: made(MakeProstheticLeg, "make_prosthetic_leg", "Make prosthetic leg",
+		construction.MachiningTable, item.ProstheticLeg, 15000, 5, in(item.Steel, 40), in(item.Components, 4)),
+	MakeProstheticArm: made(MakeProstheticArm, "make_prosthetic_arm", "Make prosthetic arm",
+		construction.MachiningTable, item.ProstheticArm, 15000, 5, in(item.Steel, 40), in(item.Components, 4)),
+	MakeWoodenHand: {ID: MakeWoodenHand, Name: "make_wooden_hand", Label: "Carve wooden hand", Bench: construction.Workbench, Legacy: true,
 		Input: Input{Kind: item.Wood, Qty: 8}, Output: item.WoodenHand, OutQty: 1, Work: 500, Skill: work.Craft, Learn: skill.Crafting},
-	MakeDenture: {ID: MakeDenture, Name: "make_denture", Label: "Carve denture", Bench: construction.Workbench,
+	MakeDenture: {ID: MakeDenture, Name: "make_denture", Label: "Carve denture", Bench: construction.Workbench, Legacy: true,
 		Input: Input{Kind: item.Wood, Qty: 4}, Output: item.Denture, OutQty: 1, Work: 400, Skill: work.Craft, Learn: skill.Crafting},
 	MakeHearingTrumpet: {ID: MakeHearingTrumpet, Name: "make_hearing_trumpet", Label: "Make hearing trumpet",
-		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 6}, Output: item.HearingTrumpet, OutQty: 1,
+		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 6}, Legacy: true, Output: item.HearingTrumpet, OutQty: 1,
 		Work: 500, Skill: work.Craft, Learn: skill.Crafting},
-	MakeProstheticFoot: {ID: MakeProstheticFoot, Name: "make_prosthetic_foot", Label: "Carve prosthetic foot", Bench: construction.Workbench,
+	MakeProstheticFoot: {ID: MakeProstheticFoot, Name: "make_prosthetic_foot", Label: "Carve prosthetic foot", Bench: construction.Workbench, Legacy: true,
 		Input: Input{Kind: item.Wood, Qty: 6}, Output: item.ProstheticFoot, OutQty: 1, Work: 450, Skill: work.Craft, Learn: skill.Crafting},
 	MakeGlassEye: {ID: MakeGlassEye, Name: "make_glass_eye", Label: "Make glass eye", Bench: construction.Workbench,
-		Input: Input{Kind: item.Steel, Qty: 2}, Output: item.GlassEye, OutQty: 1, Work: 400, Skill: work.Craft, Learn: skill.Crafting,
+		Input: Input{Kind: item.Steel, Qty: 2}, Legacy: true, Output: item.GlassEye, OutQty: 1, Work: 400, Skill: work.Craft, Learn: skill.Crafting,
 		MinSkill: 4},
 	MakeWoodenNose: {ID: MakeWoodenNose, Name: "make_wooden_nose", Label: "Carve wooden nose", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 3}, Output: item.WoodenNose, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Wood, Qty: 3}, Legacy: true, Output: item.WoodenNose, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
 	// MED-05 (original tuning: a recipe takes one input, so components,
 	// our top-tier material, stand in for plasteel and advanced
 	// components). Crafting 8 for the servo tier, 5 for the valve heart.
-	MakeServoArm:        servo(MakeServoArm, "make_servo_arm", "Make servo arm", item.ServoArm, 8),
-	MakeServoLeg:        servo(MakeServoLeg, "make_servo_leg", "Make servo leg", item.ServoLeg, 8),
-	MakeOpticImplant:    servo(MakeOpticImplant, "make_optic_implant", "Make optic implant", item.OpticImplant, 8),
-	MakeCochlearImplant: servo(MakeCochlearImplant, "make_cochlear_implant", "Make cochlear implant", item.CochlearImplant, 6),
-	MakeSpinalBrace:     servo(MakeSpinalBrace, "make_spinal_brace", "Make spinal brace", item.SpinalBrace, 8),
-	MakePumpHeart:       servo(MakePumpHeart, "make_pump_heart", "Make pump heart", item.PumpHeart, 8),
-	MakeSynthStomach:    servo(MakeSynthStomach, "make_synth_stomach", "Make synth stomach", item.SynthStomach, 6),
-	MakeValveHeart: {ID: MakeValveHeart, Name: "make_valve_heart", Label: "Make valve heart", Bench: construction.Workbench,
-		Input: Input{Kind: item.Steel, Qty: 25}, Output: item.ValveHeart, OutQty: 1, Work: 1400, Skill: work.Craft,
-		Learn: skill.Crafting, MinSkill: 5},
+	MakeServoArm:        bionic(MakeServoArm, "make_servo_arm", "Make servo arm", item.ServoArm, 15, 4),
+	MakeServoLeg:        bionic(MakeServoLeg, "make_servo_leg", "Make servo leg", item.ServoLeg, 15, 4),
+	MakeOpticImplant:    bionic(MakeOpticImplant, "make_optic_implant", "Make optic implant", item.OpticImplant, 15, 4),
+	MakeCochlearImplant: bionic(MakeCochlearImplant, "make_cochlear_implant", "Make cochlear implant", item.CochlearImplant, 10, 3),
+	MakeSpinalBrace:     bionic(MakeSpinalBrace, "make_spinal_brace", "Make spinal brace", item.SpinalBrace, 15, 4),
+	MakePumpHeart:       bionic(MakePumpHeart, "make_pump_heart", "Make pump heart", item.PumpHeart, 15, 4),
+	MakeSynthStomach:    bionic(MakeSynthStomach, "make_synth_stomach", "Make synth stomach", item.SynthStomach, 10, 3),
+	// wiki: Prosthetic heart (machining, Crafting 5, 15,000 work,
+	// 25 steel and 4 components).
+	MakeValveHeart: made(MakeValveHeart, "make_valve_heart", "Make valve heart",
+		construction.MachiningTable, item.ValveHeart, 15000, 5, in(item.Steel, 25), in(item.Components, 4)),
 	// MED-07 (original tuning; a recipe takes one input): numbroot
 	// tincture steeped from herbal medicine, prophyl tablets pressed from
 	// industrial medicine (two per unit), both at the drug table.
@@ -388,6 +395,13 @@ var defs = [numRecipes]Def{
 	PressProphyl: {ID: PressProphyl, Name: "press_prophyl", Label: "Press prophyl tablets", Bench: construction.DrugTable,
 		Input: Input{Kind: item.IndustrialMedicine, Qty: 1}, Output: item.ProphylTablet, OutQty: 2, Work: 700, Skill: work.Craft,
 		Learn: skill.Crafting, MinSkill: 4},
+	// wiki: Cochlear implant (machining, 15,000 work, Crafting 5, 20 steel and 4 components).
+	MakeAcousticImplant: made(MakeAcousticImplant, "make_acoustic_implant", "Make acoustic implant",
+		construction.MachiningTable, item.AcousticImplant, 15000, 5, in(item.Steel, 20), in(item.Components, 4)),
+	// wiki: Bionic jaw (fabrication, Crafting 8, 26,000 work, 10 plasteel and 3 advanced components).
+	MakeServoJaw: bionic(MakeServoJaw, "make_servo_jaw", "Make servo jaw", item.ServoJaw, 10, 3),
+	// wiki: Bionic tongue (fabrication, Crafting 8, 26,000 work, 8 plasteel and 2 advanced components).
+	MakeSynthTongue:        bionic(MakeSynthTongue, "make_synth_tongue", "Make synth tongue", item.SynthTongue, 8, 2),
 	MakeMace:               smith(MakeMace, "make_mace", "Forge mace", item.Mace, 5, 600),
 	MakeGladius:            smith(MakeGladius, "make_gladius", "Forge gladius", item.Gladius, 5, 1200),
 	MakeLongsword:          smith(MakeLongsword, "make_longsword", "Forge longsword", item.Longsword, 10, 1800),
@@ -472,27 +486,20 @@ var defs = [numRecipes]Def{
 	MakeFoamShells: made(MakeFoamShells, "make_foam_shells", "Make foam shell", construction.MachiningTable, item.FoamShells, 80, 0, in(item.Steel, 3)),
 }
 
-// servoSkill and servoWork are the servo tier's crafting level and work
-// (original tuning).
-const (
-	servoSkill = 8
-	servoWork  = 2600
-)
-
-// servo is a servo-tier recipe at the workbench: comps components make
-// one out.
-func servo(id ID, name, label string, out item.Kind, comps int) Def {
-	return Def{ID: id, Name: name, Label: label, Bench: construction.Workbench, Input: Input{Kind: item.Components, Qty: comps},
-		Output: out, OutQty: 1, Work: servoWork, Skill: work.Craft, Learn: skill.Crafting, MinSkill: servoSkill, Also: fabrication}
+// wiki: Bionic arm (fabrication ingredients); original tuning: amounts,
+// work 26000 and skill 8 for this project's crafting model.
+func bionic(id ID, name, label string, out item.Kind, plasteel, advanced int) Def {
+	return made(id, name, label, construction.FabricationBench, out, 26000, 8,
+		in(item.Plasteel, plasteel), in(item.AdvancedComponents, advanced))
 }
 
 // CutYield is how many blocks one chunk makes at the stonecutter table.
-const CutYield = 10
+const CutYield = 20 // wiki: Stone chunk
 
 func cut(id ID, s geology.Stone) Def {
 	return Def{ID: id, Name: "cut_" + s.String(), Label: "Cut " + s.String() + " blocks",
 		Bench: construction.StonecutterTable, Input: Input{Kind: item.ChunkOf(s), Qty: 1},
-		Output: item.BlocksOf(s), OutQty: CutYield, Work: 300, Skill: work.Craft, Learn: skill.Crafting}
+		Output: item.BlocksOf(s), OutQty: CutYield, Work: 1600, Skill: work.Craft, Learn: skill.Crafting}
 }
 
 // RackCapacity is how many items one drying rack holds.
@@ -683,6 +690,11 @@ type Bill struct {
 	// zone or storage group the bill takes its ingredients from, besides
 	// the radius (0: anywhere).
 	Source uint64
+	// Identity is assigned by the bench owner on the first recorded command
+	// touching this row. Revision is that row's latest configuration edit.
+	// Zero in a historical or untouched default bill means unknown.
+	Identity, Revision uint64
+	Condition          item.ConditionRange
 }
 
 // StoreMode is where a finished bill's product goes.
@@ -739,6 +751,9 @@ func (b Bill) Allows(k item.Kind) bool {
 	_, found := slices.BinarySearch(b.Forbid, k)
 	return !found
 }
+
+// AllowsStack combines the material policy with the actual condition.
+func (b Bill) AllowsStack(st item.Stack) bool { return b.Allows(st.Kind) && b.Condition.Takes(st) }
 
 // Stuffed reports a recipe whose product is made of a chosen material
 // (PRD-2: its product's Stack.Stuff is the material it took).

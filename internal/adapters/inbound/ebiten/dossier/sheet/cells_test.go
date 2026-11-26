@@ -174,33 +174,35 @@ func TestSkillTipLines(t *testing.T) {
 
 func TestTrainCell(t *testing.T) {
 	t.Parallel()
-	if c := TrainCell(en, game.AnimalTrainingView{Skill: int(training.Obedience), Label: "Obedience", Allowed: false}); c != (Cell{}) {
+	if c := TrainCell(en, game.AnimalView{}, game.AnimalTrainingView{Skill: int(training.Obedience), Label: "Obedience", Allowed: false}); c != (Cell{}) {
 		t.Errorf("a species that cannot learn it hides the row: %+v", c)
 	}
-	c := TrainCell(en, game.AnimalTrainingView{Skill: int(training.Obedience), Label: "Obedience", Allowed: true, On: true, Steps: 2, Needed: 3})
+	c := TrainCell(en, game.AnimalView{}, game.AnimalTrainingView{Skill: int(training.Obedience), Label: "Obedience", Allowed: true, On: true, Steps: 2, Needed: 3})
 	if c.Value != "2 of 3" || c.Pct != 66 || c.Tone != ToneText || c.Active {
 		t.Errorf("in progress: %+v", c)
 	}
-	c = TrainCell(en, game.AnimalTrainingView{Label: "Guard", Allowed: true, On: false, Steps: 0, Needed: 3})
+	c = TrainCell(en, game.AnimalView{}, game.AnimalTrainingView{Label: "Guard", Allowed: true, On: false, Steps: 0, Needed: 3})
 	if c.Tone != ToneOff {
 		t.Errorf("not wanted reads off: %+v", c)
 	}
-	c = TrainCell(en, game.AnimalTrainingView{Label: "Guard", Allowed: true, On: true, Learned: true, Steps: 3, Needed: 3})
+	c = TrainCell(en, game.AnimalView{}, game.AnimalTrainingView{Label: "Guard", Allowed: true, On: true, Learned: true, Steps: 3, Needed: 3})
 	if c.Tone != ToneGood || !c.Active || c.Value != "Learned" || c.Pct != 100 {
 		t.Errorf("learned: %+v", c)
 	}
-	c = TrainCell(en, game.AnimalTrainingView{Label: "Guard", Allowed: true, On: false, Learned: true, Steps: 3, Needed: 3})
+	c = TrainCell(en, game.AnimalView{}, game.AnimalTrainingView{Label: "Guard", Allowed: true, On: false, Learned: true, Steps: 3, Needed: 3})
 	if c.Tone != ToneGood {
 		t.Errorf("learned beats not wanted: %+v", c)
 	}
-	if !strings.Contains(c.Tip, "Fades one step after 10d") {
+	if !strings.Contains(c.Tip, "Fades one step after 12d") {
 		t.Errorf("tip %q", c.Tip)
 	}
-	if c := TrainCell(en, game.AnimalTrainingView{Allowed: true, Steps: 5, Needed: 0}); c.Pct != 0 {
+	if c := TrainCell(en, game.AnimalView{}, game.AnimalTrainingView{Allowed: true, Steps: 5, Needed: 0}); c.Pct != 0 {
 		t.Errorf("no needed steps: %+v", c)
 	}
-	if DecayDays() != 10 {
-		t.Errorf("decay days %d", DecayDays())
+	wild := TrainCell(en, game.AnimalView{Wildness: 100},
+		game.AnimalTrainingView{Label: "Guard", Allowed: true, On: true, Steps: 3, Needed: 3})
+	if !strings.Contains(wild.Tip, "Fades one step after 6d") {
+		t.Errorf("wildness-dependent maintenance: %q", wild.Tip)
 	}
 }
 

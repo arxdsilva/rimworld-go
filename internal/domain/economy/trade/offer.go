@@ -36,6 +36,10 @@ func EncodeOffer(offer []Delta) string {
 			b.WriteByte('/')
 			b.WriteString(strconv.Itoa(int(d.Building)))
 		}
+		if d.StackID != 0 {
+			b.WriteByte('@')
+			b.WriteString(strconv.FormatUint(d.StackID, 10))
+		}
 		b.WriteByte(':')
 		b.WriteString(strconv.Itoa(d.Qty))
 	}
@@ -46,16 +50,56 @@ func EncodeOffer(offer []Delta) string {
 // text, item kinds outside the run's book b, zero or out-of-bound (|qty| > MaxOfferQty) quantities and a kind
 // listed twice.
 func DecodeOffer(b item.Book, s string) ([]Delta, error) {
+	return decodeOffer(b.Len(), s)
+}
+
+// RemapOffer restores numeric offer kinds using the saved book's key map.
+// Any missing key or malformed line invalidates the whole offer. Local
+// exact IDs are persistent entity/lot IDs; world IDs instead hash the
+// entire numeric payload, so they cannot be safely reused after remapping.
+func RemapOffer(s string, savedKinds int, remap func(item.Kind) item.Kind, world bool) (string, bool) {
+	offer, err := decodeOffer(savedKinds, s)
+	if err != nil {
+		return "", false
+	}
+	for i := range offer {
+		d := &offer[i]
+		k := remap(d.Kind)
+		if k == item.None || world && d.StackID != 0 {
+			return "", false
+		}
+		d.Kind = k
+	}
+	return EncodeOffer(offer), true
+}
+
+func decodeOffer(kinds int, s string) ([]Delta, error) {
 	if s == "" {
 		return nil, nil
 	}
+	// Client text is untrusted: cap parsing work before allocating parts.
+	if len(s) > 65536 || strings.Count(s, ",") >= 2048 {
+		return nil, errOfferSyntax
+	}
 	parts := strings.Split(s, ",")
 	out := make([]Delta, 0, len(parts))
-	seen := make(map[Goods]bool, len(parts))
+	seen := make(map[struct {
+		Goods
+		StackID uint64
+	}]bool, len(parts))
 	for _, p := range parts {
 		ks, qs, ok := strings.Cut(p, ":")
 		if !ok {
 			return nil, errOfferSyntax
+		}
+		ks, is, selected := strings.Cut(ks, "@")
+		var stackID uint64
+		if selected {
+			var err error
+			stackID, err = strconv.ParseUint(is, 10, 64)
+			if err != nil || stackID == 0 {
+				return nil, errOfferSyntax
+			}
 		}
 		ks, bs, crated := strings.Cut(ks, "/")
 		k, err := strconv.ParseUint(ks, 10, 8)
@@ -73,11 +117,15 @@ func DecodeOffer(b item.Book, s string) ([]Delta, error) {
 			return nil, errOfferSyntax
 		}
 		g := Goods{item.Kind(k), uint8(bld)}
-		if q == 0 || q < -MaxOfferQty || q > MaxOfferQty || int(g.Kind) >= b.Len() || seen[g] {
+		key := struct {
+			Goods
+			StackID uint64
+		}{g, stackID}
+		if q == 0 || q < -MaxOfferQty || q > MaxOfferQty || int(g.Kind) >= kinds || seen[key] {
 			return nil, errOfferLine
 		}
-		seen[g] = true
-		out = append(out, Delta{Kind: g.Kind, Qty: q, Building: g.Building})
+		seen[key] = true
+		out = append(out, Delta{Kind: g.Kind, Qty: q, Building: g.Building, StackID: stackID})
 	}
 	return out, nil
 }

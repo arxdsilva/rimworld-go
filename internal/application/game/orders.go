@@ -11,10 +11,12 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/application/game/industry"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
@@ -242,8 +244,8 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if care.IsMedicalBed(b) && !g.care.Rest.MayUseMedicalBed(id) {
 			return job.Record{}, ReasonMedicalBed // care/rest.go: for patients only
 		}
-		if !b.CanClaim(uint64(id)) {
-			return job.Record{}, ReasonOwned + g.name(entity.EntityID(b.Owner(uint64(id))))
+		if !construction.CanClaimBed(b, uint64(id)) {
+			return job.Record{}, ReasonOwned + g.name(entity.EntityID(construction.BedOwner(b, uint64(id))))
 		}
 		sx, sy := g.sleepCellFor(id, b)
 		return job.Record{Kind: job.Sleep, Target: bid, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}, ""
@@ -411,12 +413,12 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 	}
 	if o == command.OrderSleep {
 		if b, _ := g.bldgs.Get(rec.Target); care.IsMedicalBed(b) {
-			g.bldgs.Set(rec.Target, b.Claim(uint64(id)))
+			g.bldgs.Set(rec.Target, construction.ClaimBed(b, uint64(id)))
 			g.care.Rest.Hold(id, rec.Target) // care/rest.go: a patient's stay; its own bed stays its own
 		} else {
 			g.releaseBed(id)
 			b, _ := g.bldgs.Get(rec.Target)
-			g.bldgs.Set(rec.Target, b.Claim(uint64(id)))
+			g.bldgs.Set(rec.Target, construction.ClaimBed(b, uint64(id)))
 		}
 		g.sleptAt[id] = rec.Target
 	}
@@ -589,6 +591,18 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	}
 	for _, o := range g.care.PawnOrders(pawn, x, y) { // care/orders.go (MED-03): drafted "Tend <name>"
 		out = append(out, OrderOption(o))
+	}
+	if target := g.raiderAt(x, y); target != 0 {
+		if gr, ok := visitsOf(g).GroupOf(target); ok && gr.Leader == target &&
+			(gr.Kind == visit.KindVisitor || gr.Kind == visit.KindSmallTrader || gr.Kind == visit.KindCaravan) &&
+			gr.Phase != visit.PhaseLeaving {
+			op := OrderOption{Label: "Ask " + g.name(target) + " to leave",
+				Cmd: command.Command{Kind: command.DismissVisitorGroup, Pawn: uint64(pawn), Target: uint64(target)}}
+			if g.drafted(pawn) || !g.alive(pawn) || g.capacity(pawn, body.Talking) <= 0 {
+				op.Disabled, op.Reason = true, ReasonCantTalk
+			}
+			out = append(out, op)
+		}
 	}
 	g.tradeOrders(add, x, y)                                                                               // trade_session.go (PLAY-024): "Trade with <name>"
 	g.commsOrders(add, x, y)                                                                               // comms.go (PLAY-024): "Use radio console"

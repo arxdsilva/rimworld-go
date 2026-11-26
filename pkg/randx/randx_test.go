@@ -79,3 +79,23 @@ func TestMixersNeverChange(t *testing.T) {
 		}
 	}
 }
+
+// Optional draws must preserve the parent stream after forking.
+func TestCloneForkPreservesParentSequence(t *testing.T) {
+	t.Parallel()
+	parent, control := New(107), New(107)
+	for range 33 {
+		if parent.IntN(119) != control.IntN(119) {
+			t.Fatal("initial stream mismatch")
+		}
+	}
+	fork := parent.Clone()
+	for range 73 {
+		_ = fork.IntN(131)
+	}
+	for range 211 {
+		if parent.IntN(97) != control.IntN(97) {
+			t.Fatal("a fork advanced its parent")
+		}
+	}
+}

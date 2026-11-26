@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/pkg/randx"
@@ -22,7 +23,7 @@ func allKinds() []item.Kind {
 
 func TestPriceBuyAboveSell(t *testing.T) {
 	for _, k := range []TraderKind{BulkHauler, Quartermaster, CurioMerchant} {
-		if b, s := Price(item.Book{}, item.Rifle, k, Buy, Terms{}), Price(item.Book{}, item.Rifle, k, Sell, Terms{}); b != 17400 || s >= b || s <= 0 {
+		if b, s := Price(item.Book{}, item.Rifle, k, Buy, Terms{}), Price(item.Book{}, item.Rifle, k, Sell, Terms{}); b != 16800 || s >= b || s <= 0 {
 			t.Fatalf("kind %d rifle buy %d sell %d", k, b, s)
 		}
 	}
@@ -38,7 +39,7 @@ func TestNoArbitrageAllKinds(t *testing.T) {
 				for gw := -100; gw <= 100; gw += 5 {
 					tm := Terms{Social: soc, Goodwill: gw}
 					b, s := Price(item.Book{}, it, k, Buy, tm), Price(item.Book{}, it, k, Sell, tm)
-					if s >= b || s*100 > b*SellCapPct {
+					if s > b {
 						t.Fatalf("%v kind %d social %d gw %d: buy %d sell %d", it, k, soc, gw, b, s)
 					}
 				}
@@ -59,18 +60,29 @@ func TestPriceSocialMonotonic(t *testing.T) {
 	}
 }
 
-func TestPriceGoodwillMonotonic(t *testing.T) {
-	pb, ps := 1<<30, 0
-	for gw := -100; gw <= 100; gw++ {
-		b := Price(item.Book{}, item.Parka, BulkHauler, Buy, Terms{Goodwill: gw})
-		s := Price(item.Book{}, item.Parka, BulkHauler, Sell, Terms{Goodwill: gw})
-		if b > pb || s < ps {
-			t.Fatalf("goodwill %d: buy %d sell %d", gw, b, s)
+func TestPublishedCoreTradeSocialTable(t *testing.T) {
+	for _, tc := range []struct{ social, buy, sell int }{
+		{0, 140000, 60000},
+		{1, 137900, 60900},
+		{10, 119000, 69000},
+		{20, 98000, 78000},
+	} {
+		terms := Terms{Social: tc.social}
+		buy := PriceMarket(Goods{Kind: item.Lung}, 1000, BulkHauler, Buy, terms)
+		sell := PriceMarket(Goods{Kind: item.Lung}, 1000, BulkHauler, Sell, terms)
+		if buy != tc.buy || sell != tc.sell {
+			t.Fatalf("social %d: buy/sell %d/%d, want %d/%d", tc.social, buy, sell, tc.buy, tc.sell)
 		}
-		pb, ps = b, s
+		terms.Goodwill = -100
+		if b, s := PriceMarket(Goods{Kind: item.Lung}, 1000, Quartermaster, Buy, terms),
+			PriceMarket(Goods{Kind: item.Lung}, 1000, Quartermaster, Sell, terms); b != buy || s != sell {
+			t.Fatalf("goodwill changed price: %d/%d", b, s)
+		}
 	}
-	if Price(item.Book{}, item.Parka, BulkHauler, Buy, Terms{Goodwill: 1000, Social: 20}) != item.Parka.Value()*106 { // TEMP-4: the wiki value
-		t.Fatal("buy floor is 6%")
+	terms := Terms{Social: 20, ImproveCenti: 200}
+	if b, s := PriceMarket(Goods{Kind: item.Lung}, 1000, BulkHauler, Buy, terms),
+		PriceMarket(Goods{Kind: item.Lung}, 1000, BulkHauler, Sell, terms); b != 95200 || s != 79200 {
+		t.Fatalf("faction settlement price %d/%d", b, s)
 	}
 }
 
@@ -87,10 +99,10 @@ func TestSilverAtPar(t *testing.T) {
 	}
 }
 
-func TestSpecialtyPaysMore(t *testing.T) {
-	// Steel is bulk-hauler specialty (Materials), not the curio's.
-	if Price(item.Book{}, item.Steel, BulkHauler, Sell, Terms{}) <= Price(item.Book{}, item.Steel, CurioMerchant, Sell, Terms{}) {
-		t.Fatal("specialty should pay more")
+func TestTraderStockSpecialtyDoesNotInventSellBonus(t *testing.T) {
+	if a, b := Price(item.Book{}, item.Steel, BulkHauler, Sell, Terms{}),
+		Price(item.Book{}, item.Steel, CurioMerchant, Sell, Terms{}); a != b {
+		t.Fatalf("inventory category changed base price: %d/%d", a, b)
 	}
 }
 
@@ -169,23 +181,23 @@ func TestSettleBuyAndSell(t *testing.T) {
 	if r.SilverCenti != want || len(r.Buy) != 1 || len(r.Sell) != 1 {
 		t.Fatalf("%+v want %d", r, want)
 	}
-	// Colony pays: rounded up, away from the colony.
-	if r.Silver > 0 || r.Silver != -((-want+99)/100) {
+	// The whole signed net is rounded to nearest whole silver.
+	if r.Silver > 0 || r.Silver != RoundedSilver(want) {
 		t.Fatalf("silver %d", r.Silver)
 	}
 	// Colony receives.
 	r = Settle(item.Book{}, []Delta{{Kind: item.Club, Qty: -5}}, col, stock(), Terms{}, false)
-	if !r.OK() || r.Silver != r.SilverCenti/100 || r.Silver <= 0 {
+	if !r.OK() || r.Silver != RoundedSilver(r.SilverCenti) || r.Silver <= 0 {
 		t.Fatalf("%+v", r)
 	}
 }
 
 func TestSettleRejectsUnaffordable(t *testing.T) {
-	col := map[item.Kind]int{item.Silver: 10, item.Club: 100}
+	col := map[item.Kind]int{item.Silver: 10, item.Club: 1000}
 	if r := Settle(item.Book{}, []Delta{{Kind: item.Rifle, Qty: 1}}, col, stock(), Terms{}, false); r.Reject != RejectUnaffordable {
 		t.Fatalf("colony: %v", r.Reject)
 	}
-	if r := Settle(item.Book{}, []Delta{{Kind: item.Club, Qty: -100}}, col, stock(), Terms{}, false); r.Reject != RejectUnaffordable {
+	if r := Settle(item.Book{}, []Delta{{Kind: item.Club, Qty: -1000}}, col, stock(), Terms{}, false); r.Reject != RejectUnaffordable {
 		t.Fatalf("trader: %v", r.Reject)
 	}
 }
@@ -228,12 +240,12 @@ func TestSettleHostileEmpty(t *testing.T) {
 func TestSettleGiftNoSilver(t *testing.T) {
 	col := map[item.Kind]int{item.Silver: 300, item.Wood: 500}
 	// Gifts need not be wanted and pay nothing back.
-	r := Settle(item.Book{}, []Delta{{Kind: item.Silver, Qty: -200}, {Kind: item.Wood, Qty: -100}}, col, stock(), Terms{}, true)
-	if !r.OK() || r.SilverCenti != 0 || r.Silver != 0 || r.Goodwill != faction.GiftGoodwill(300) || len(r.Sell) != 2 {
+	r := Settle(item.Book{}, []Delta{{Kind: item.Silver, Qty: -200}, {Kind: item.Wood, Qty: -100}}, col, stock(), Terms{FactionType: faction.Settlers}, true)
+	if !r.OK() || r.SilverCenti != 0 || r.Silver != 0 || r.Goodwill != faction.GiftGoodwill(faction.Faction{Type: faction.Settlers}, 260) || len(r.Sell) != 2 {
 		t.Fatalf("%+v", r)
 	}
-	if GiftValue(item.Book{}, []Delta{{Kind: item.Silver, Qty: -200}, {Kind: item.Wood, Qty: -100}, {Kind: item.Rifle, Qty: 4}}) != 300 {
-		t.Fatal("gift value counts only what the colony gives")
+	if GiftValue(item.Book{}, []Delta{{Kind: item.Silver, Qty: -200}, {Kind: item.Wood, Qty: -100}, {Kind: item.Rifle, Qty: 4}}, Terms{FactionType: faction.Settlers}) != 260 {
+		t.Fatal("gift value uses Social-dependent selling value for outgoing goods only")
 	}
 	if r := Settle(item.Book{}, []Delta{{Kind: item.Rifle, Qty: 1}}, col, stock(), Terms{}, true); r.Reject != RejectUnwanted {
 		t.Fatal("cannot take from a gift")
@@ -243,5 +255,73 @@ func TestSettleGiftNoSilver(t *testing.T) {
 	}
 	if r := Settle(item.Book{}, []Delta{{Kind: item.Bones, Qty: -1}}, map[item.Kind]int{item.Bones: 1}, stock(), Terms{}, true); r.Reject != RejectUnwanted {
 		t.Fatal("worthless gift")
+	}
+}
+
+func TestInspirationImprovesQuoteAndHonorsFloor(t *testing.T) {
+	b := item.Core()
+	normal := Terms{Social: 8}
+	inspired := Terms{Social: 8, Inspired: true}
+	buy0 := Price(b, item.Parka, Quartermaster, Buy, normal)
+	buy1 := Price(b, item.Parka, Quartermaster, Buy, inspired)
+	sell0 := Price(b, item.Parka, Quartermaster, Sell, normal)
+	sell1 := Price(b, item.Parka, Quartermaster, Sell, inspired)
+	if buy1 >= buy0 || sell1 <= sell0 {
+		t.Fatalf("inspired quote unchanged: buy %d -> %d, sell %d -> %d", buy0, buy1, sell0, sell1)
+	}
+	if got := Price(b, item.Parka, Quartermaster, Buy, Terms{Social: 20, Inspired: true}); got <= 0 {
+		t.Fatalf("high-skill inspired quote invalid: %d", got)
+	}
+}
+
+func TestWholeOfferRoundTripNearestSilver(t *testing.T) {
+	for _, tc := range []struct{ cents, silver int }{
+		{-3360, -34}, {-3349, -33}, {-50, -1}, {-49, 0},
+		{0, 0}, {49, 0}, {50, 1}, {3349, 33}, {3360, 34},
+	} {
+		if got := RoundedSilver(tc.cents); got != tc.silver {
+			t.Fatalf("%d centi -> %d, want %d", tc.cents, got, tc.silver)
+		}
+	}
+}
+
+func TestInspiredCoreTradeTPIWithCap(t *testing.T) {
+	ordinary := TradePriceImprovementCenti(Terms{Social: 8})
+	inspired := TradePriceImprovementCenti(Terms{Social: 8, Inspired: true})
+	if inspired-ordinary != 1800 || inspired != 3000 {
+		t.Fatalf("inspired trade TPI %d vs %d", inspired, ordinary)
+	}
+	if got := TradePriceImprovementCenti(Terms{Social: 20, Inspired: true}); got != MaxTradeImprovementCenti {
+		t.Fatalf("inspiration exceeded normal TPI cap: %d", got)
+	}
+	if got := TradePriceImprovementCenti(Terms{Social: 20, Inspired: true, ImproveCenti: 200}); got != MaxTradeImprovementCenti+200 {
+		t.Fatalf("settlement supplement lost: %d", got)
+	}
+}
+
+func TestCoreSellPriceMultipliersForWeaponsAndCrates(t *testing.T) {
+	book := item.Book{}
+	base := PriceMarket(Goods{Kind: item.Lung}, 1000, BulkHauler, Sell, Terms{})
+	weapon := PriceMarket(Goods{Kind: item.Rifle}, 1000, Quartermaster, Sell, Terms{})
+	furniture := PriceMarket(Goods{Kind: item.MinifiedBuilding, Building: uint8(construction.BigScreenTV)},
+		1000, CurioMerchant, Sell, Terms{})
+	art := PriceMarket(Goods{Kind: item.MinifiedBuilding, Building: uint8(construction.SmallSculpture)},
+		1000, CurioMerchant, Sell, Terms{})
+	if base != 60000 || weapon != 12000 || furniture != 42000 || art != 66000 {
+		t.Fatalf("Core sell multipliers: base=%d weapon=%d furniture=%d art=%d", base, weapon, furniture, art)
+	}
+	if price := PriceOf(book, Goods{Kind: item.MinifiedBuilding, Building: uint8(construction.BigScreenTV)},
+		CurioMerchant, Buy, Terms{}); price != 1485*BuyBasePct {
+		t.Fatalf("actual crated television buy price %d", price)
+	}
+}
+
+func TestTradePricesRejectUnrepresentablePluginValue(t *testing.T) {
+	const maxInt = int(^uint(0) >> 1)
+	goods := Goods{Kind: item.Lung}
+	for _, side := range []Side{Buy, Sell} {
+		if got := PriceMarket(goods, maxInt, Quartermaster, side, Terms{}); got != -1 {
+			t.Fatalf("side %d accepted impossible market value: %d", side, got)
+		}
 	}
 }

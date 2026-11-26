@@ -151,7 +151,7 @@ func TestFreshStumpHurtsAndBleedsUntilTended(t *testing.T) {
 	if !b.FreshStump(EarL) || b.FreshStump(NumParts) {
 		t.Fatal("ear stump")
 	}
-	b.SetImplant(EarL, 1)
+	b.SetReplacement(EarL, 1)
 	if b.FreshStump(EarL) || b.PartBleedPerDay(NumParts) != 0 {
 		t.Fatal("an implant closes the stump")
 	}

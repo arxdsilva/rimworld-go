@@ -102,7 +102,7 @@ func TestBuildFloorAndTableOnSameTile(t *testing.T) {
 	if c.Facing != "west" || c.Floor {
 		t.Fatalf("chair = %+v", c)
 	}
-	if g.World().Wood != 10-1-2 {
+	if g.World().Wood != 10-construction.CostFor(construction.Floor, item.Wood)-construction.CostFor(construction.Chair, item.Wood) {
 		t.Fatalf("wood left = %d", g.World().Wood)
 	}
 }

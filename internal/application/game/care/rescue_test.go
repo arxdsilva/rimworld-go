@@ -55,7 +55,7 @@ func TestRescueStarvedColonistToItsOwnBed(t *testing.T) {
 	j.State = job.Do
 	c.Doctor.DoRescue(doc, j)
 	if h.jobs[doc].State != job.Complete || c.Rest.HeldBed(patient) != 0 || slices.Contains(h.log, "release") ||
-		h.bldgs[bedID+1].SlotOf(uint64(patient)) < 0 {
+		construction.BedSlot(h.bldgs[bedID+1], uint64(patient)) < 0 {
 		t.Fatalf("laid in its own bed: nothing held, nothing released: held %d log %v", c.Rest.HeldBed(patient), h.log)
 	}
 }
@@ -76,7 +76,7 @@ func TestRescueOtherBedHeldThenGivenBack(t *testing.T) {
 	}
 	h.vital[patient] = health.Record{Status: health.Alive}
 	c.Rest.Update(patient)
-	if c.Rest.HeldBed(patient) != 0 || h.bldgs[bedID].SlotOf(uint64(patient)) >= 0 || h.bldgs[bedID+1] != own {
+	if c.Rest.HeldBed(patient) != 0 || construction.BedSlot(h.bldgs[bedID], uint64(patient)) >= 0 || h.bldgs[bedID+1] != own {
 		t.Fatalf("up again: the stay is given back, its own bed kept: %+v", h.bldgs[bedID])
 	}
 }
@@ -135,5 +135,50 @@ func TestPatientDiedIsDropped(t *testing.T) {
 	c.Doctor.PatientDied(patient)
 	if c.Carry.Len() != 0 || h.pos[patient] != [2]int{3, 4} || h.log[0] != "interrupt" {
 		t.Fatalf("dropped on the carrier's tile, the carrier stopped: pos %v log %v", h.pos[patient], h.log)
+	}
+}
+
+func TestRescuePreAdmissionRejectsInaccessibleDestination(t *testing.T) {
+	h := newFakeHost()
+	h.pawn(doc, 0, 0)
+	h.pawn(patient, 5, 5)
+	h.doctors[doc] = true
+	ch := newCutHost(h)
+	c := New(ch, Roles{Prison: newFakePrison(h)})
+	h.downed(patient, 30)
+	h.bed(bedID, construction.Building{Kind: construction.Bed, X: 8, Y: 8})
+	ch.cut[cutWay{doc, [2]int{8, 8}}] = true
+	for range 10 {
+		if c.Doctor.assignRescue(doc) {
+			t.Fatal("assigned a rescue with inaccessible destination")
+		}
+		if offer, why := c.judge(doc, command.OrderRescue, patient); !offer || why != ReasonUnreachable {
+			t.Fatalf("forced preflight: %v %q", offer, why)
+		}
+		if why := c.Force(doc, command.OrderRescue, patient); why != ReasonUnreachable {
+			t.Fatal(why)
+		}
+	}
+	if h.jobs[doc].Active() || c.Carry.Len() != 0 || len(h.owners) != 0 {
+		t.Fatal("blocked admission changed owners")
+	}
+	h.bed(bedID+1, construction.Building{Kind: construction.Bed, X: 9, Y: 9})
+	if !c.Doctor.assignRescue(doc) {
+		t.Fatal("reachable alternative not admitted")
+	}
+	j := h.jobs[doc]
+	j.State = job.Do
+	c.Doctor.DoRescue(doc, j)
+	j = h.jobs[doc]
+	if j.Dest != bedID+1 {
+		t.Fatal("wrong reachable destination")
+	}
+	b := h.bldgs[bedID+1]
+	b.Forbidden = true
+	h.bldgs[bedID+1] = b
+	j.State = job.Do
+	c.Doctor.DoRescue(doc, j)
+	if h.jobs[doc].State != job.Fail || construction.BedSlot(h.bldgs[bedID+1], uint64(patient)) >= 0 || c.Carry.Len() != 0 {
+		t.Fatal("patient delivered into forbidden bed")
 	}
 }

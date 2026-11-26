@@ -38,6 +38,7 @@ type fakeHost struct {
 	messages            []string
 	fakeEscapes         // escape_test.go (CBT-4)
 	failStart           bool
+	inspiredRecruit     bool
 }
 
 func newFake() *fakeHost {
@@ -128,11 +129,18 @@ func (f *fakeHost) Chase(_, _ entity.EntityID, _ job.Record, _ int) { f.chases++
 func (f *fakeHost) SocialWork(entity.EntityID) int                  { return 100 }
 func (f *fakeHost) ConsciousEnough(entity.EntityID) bool            { return true }
 
-func (f *fakeHost) Meet(_, _ entity.EntityID)           {}
-func (f *fakeHost) Opinion(_, _ entity.EntityID) int32  { return f.opinion }
-func (f *fakeHost) Mood(entity.EntityID) int            { return f.mood }
-func (f *fakeHost) Negotiation(entity.EntityID) int32   { return f.negotiation }
-func (f *fakeHost) SocialLevel(entity.EntityID) int     { return f.social }
+func (f *fakeHost) Meet(_, _ entity.EntityID)          {}
+func (f *fakeHost) Opinion(_, _ entity.EntityID) int32 { return f.opinion }
+func (f *fakeHost) Mood(entity.EntityID) int           { return f.mood }
+func (f *fakeHost) Negotiation(entity.EntityID) int32  { return f.negotiation }
+func (f *fakeHost) SocialLevel(entity.EntityID) int    { return f.social }
+func (f *fakeHost) UseRecruitInspiration(entity.EntityID) bool {
+	if !f.inspiredRecruit {
+		return false
+	}
+	f.inspiredRecruit = false
+	return true
+}
 func (f *fakeHost) Chat(_, _ entity.EntityID, _ uint64) { f.chats++ }
 func (f *fakeHost) Recruit(p, _ entity.EntityID)        { f.recruited = append(f.recruited, p) }
 func (f *fakeHost) Execute(p, _ entity.EntityID)        { f.executed = append(f.executed, p) }

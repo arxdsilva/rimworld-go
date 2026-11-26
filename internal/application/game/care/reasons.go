@@ -7,8 +7,11 @@ package care
 // option's label in the right-click menu. Shared by the order builder
 // (orders.go), the forced jobs (forced.go) and capture (capture.go).
 const (
-	ReasonNoBed       = "no free bed"
-	ReasonNoPrisonBed = "no free prisoner bed"
-	ReasonCarried     = "carried by "
-	ReasonSelf        = "cannot target itself"
+	ReasonNoBed          = "no free bed"
+	ReasonNoPrisonBed    = "no free prisoner bed"
+	ReasonBedBurning     = "bed is burning"
+	ReasonBedTemperature = "bed temperature is unsafe"
+	ReasonPrisonRoom     = "prison bed needs an enclosed room"
+	ReasonCarried        = "carried by "
+	ReasonSelf           = "cannot target itself"
 )

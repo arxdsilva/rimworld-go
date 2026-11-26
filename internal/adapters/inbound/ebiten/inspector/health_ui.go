@@ -164,7 +164,7 @@ func healthCapColor(pct int) color.RGBA {
 func hurtParts(ps []game.PartView) []int {
 	var out []int
 	for i, p := range ps {
-		if p.Status != game.PartHealthy {
+		if p.Status != game.PartHealthy || len(p.Implants) > 0 {
 			out = append(out, i)
 		}
 	}
@@ -429,6 +429,9 @@ func (a Tabs) healthCaps(r gfx.Rect, h game.HealthView) {
 
 // healthPartLine is a part row's plain text (its accessible label).
 func healthPartLine(p game.PartView) string {
+	if len(p.Implants) > 0 {
+		return p.Label + ": " + p.Status + " (" + strings.Join(p.Implants, ", ") + ")"
+	}
 	return p.Label + ": " + p.Status
 }
 
@@ -498,7 +501,11 @@ func paintPartRow(dst *ebiten.Image, row gfx.Rect, p game.PartView, stripe bool)
 		st.Color = uikit.TextDim
 	}
 	sy := gfx.CenterTop(float64(row.Y), float64(row.H), st)
-	gfx.Text(dst, uikit.FitText(p.Status, st, row.W-labelW-4), float64(row.X+labelW), sy, st)
+	status := p.Status
+	if len(p.Implants) > 0 {
+		status += " (" + strings.Join(p.Implants, ", ") + ")"
+	}
+	gfx.Text(dst, uikit.FitText(status, st, row.W-labelW-4), float64(row.X+labelW), sy, st)
 }
 
 // healthOps is the operations block: the queue with a cancel button per
@@ -635,10 +642,33 @@ func HealthOptions(h game.HealthView) []HealthOption {
 			break
 		}
 		part := body.Part(i)
+		for k := item.Kind(1); k != 0; k++ {
+			if !k.IsAddedImplant() || !body.FitsImplant(k, part) {
+				continue
+			}
+			present := false
+			for _, name := range pv.Implants {
+				if name == k.String() {
+					present = true
+					break
+				}
+			}
+			if !present && pv.Status == game.PartHealthy {
+				add(HealthOption{Label: fmt.Sprintf("Install %s (%s)", k, pv.Label), Op: body.InstallImplant, Part: part, Item: k})
+			} else if present && k == item.NerveDampener {
+				add(HealthOption{Label: lang.Tf(lang.English{}, "Remove %s (%s)", k, pv.Label), Op: body.RemoveImplant, Part: part, Item: k})
+			}
+		}
+	}
+	for i, pv := range h.Parts {
+		if i >= int(body.NumParts) {
+			break
+		}
+		part := body.Part(i)
 		switch {
 		case pv.Status == game.PartMissing:
 			for k := item.Kind(1); k != 0; k++ {
-				if k.IsImplant() && body.Fits(k, part) {
+				if k.IsReplacement() && body.ListedArtificial(k) && body.FitsReplacement(k, part) {
 					add(HealthOption{Label: fmt.Sprintf("Install %s (%s)", k, pv.Label), Op: body.InstallImplant, Part: part, Item: k})
 				}
 			}

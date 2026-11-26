@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/application/game/cadence"
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/wealth"
@@ -16,10 +17,8 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/incident"
-	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/sim/clock"
@@ -42,8 +41,6 @@ const (
 	scheduledHour = 10
 	// raiderNameSalt keeps generated raider names apart from colonists'.
 	raiderNameSalt = 0x7261696465 // "raide"
-	// maxRaidersCap caps the raid size on the biggest maps.
-	maxRaidersCap = 24
 )
 
 // storyProfile is the colony's storyteller (legacy if the key is unknown).
@@ -126,7 +123,7 @@ func (g *Game) storyThreat(roll, day int, winter bool, pct int, now uint64) {
 func storyMajor(g *Game, pts int, now uint64) bool {
 	humans := 0 // each hostile human faction weighs 1 as a raider (wiki: Events)
 	for _, f := range g.ng.factions {
-		if f.Type.Human() && f.Relation == faction.Hostile && !f.Defeated {
+		if faction.Raider(f) {
 			humans++
 		}
 	}
@@ -190,17 +187,100 @@ func (g *Game) standingColonists() int {
 
 // threatPoints is a setup colony's threat points (NG-1 §3.3).
 func (g *Game) threatPoints() int {
-	years := float64(g.rel(uint64(g.clock.Now()))) / float64(clock.TicksPerYear)
-	return difficulty.ThreatPoints(g.ng.setup.Difficulty, g.Wealth(), g.standingColonists(), years, int(g.ng.adapt.Value))
+	return weightedThreat(g, threatBase(g, false), g.rel(uint64(g.clock.Now())))
 }
 
-// maxRaiders is the largest raid: 8 on a legacy colony; a setup colony's
-// grows with the map (8 + area/40000, at most 24).
-func (g *Game) maxRaiders() int {
-	if !g.hasSetup() {
-		return maxScaledRaiders
+// threatBase returns the selected map's base (or the sum of assets for
+// census reads). Quest sizing evaluates each scope independently.
+func threatBase(g *Game, all bool) difficulty.ThreatBase {
+	return threatCensusOf(g, all).ThreatBase
+}
+
+func threatCensusOf(g *Game, all bool) (total wealth.Census) {
+	eachThreatScope(g, all, total.Add)
+	return total
+}
+
+// eachThreatScope reads the actual native owners. Each map and caravan
+// contributes once; travel cargo is separate from its former home.
+func eachThreatScope(g *Game, all bool, use func(wealth.Census)) {
+	cur := g.mapState
+	defer func() { g.mapState = cur }()
+	addPawn := func(c *wealth.Census, id entity.EntityID, asleep bool) {
+		v, ok := g.vital.Get(id)
+		if !ok || v.Status == health.Dead || g.prison.Is(id) {
+			return
+		}
+		if p := g.personOf(id); p != nil && (p.Faction != 0 || p.Where != whereColony && p.Where != whereCaravan) {
+			return
+		}
+		bio, known := g.personBio(id)
+		c.AddPawn(bio, known, v, g.bodies[id], asleep)
 	}
-	return min(maxScaledRaiders+g.grid.Width()*g.grid.Height()/40000, maxRaidersCap)
+	home, road := map[uint32][]*stashRec{}, map[uint64][]*stashRec{}
+	if w := g.worldSt; w != nil {
+		for i := range w.stashed {
+			r := &w.stashed[i]
+			if r.Prisoner {
+				continue
+			}
+			if w.ax9.Sleeper(r.Holder) == r.ID || w.ship != nil && w.ship.Sleeper(r.Holder) == r.ID {
+				home[r.Map] = append(home[r.Map], r)
+			} else if all {
+				road[uint64(r.Holder)] = append(road[uint64(r.Holder)], r)
+			}
+		}
+	}
+	for _, m := range g.maps {
+		if all && (g.worldSt != nil && !maps.IsColony(&g.worldSt.atlas, m.id)) || !all && m != cur {
+			continue
+		}
+		g.mapState = m
+		c := wealth.Census{ThreatBase: wealth.StorytellerBase(g, len(g.itemIDs), len(g.bldgIDs))}
+		for _, id := range g.pawnIDs {
+			if colonistHere(g, id) {
+				addPawn(&c, id, false)
+			}
+		}
+		for _, id := range g.animalIDs {
+			if a, ok := g.animals.Get(id); ok {
+				c.AnimalPower += animal.ThreatPower(a)
+			}
+		}
+		for _, r := range home[m.id] {
+			if r.Beast != nil {
+				wealth.AddStashedAnimal(&c.ThreatBase, *r.Beast)
+			} else {
+				addPawn(&c, r.ID, true)
+			}
+		}
+		use(c)
+	}
+	g.mapState = cur
+	if !all || g.worldSt == nil {
+		return
+	}
+	for _, cv := range g.worldSt.caravans {
+		var c wealth.Census
+		seen := map[entity.EntityID]bool{}
+		for _, r := range road[cv.C.ID] {
+			if r.Beast != nil {
+				wealth.AddStashedAnimal(&c.ThreatBase, *r.Beast)
+				seen[r.ID] = true
+			} else {
+				addPawn(&c, r.ID, false)
+			}
+		}
+		g.worldSt.ax9.CargoThreat(cv.C.ID, g.sk.content.Items, &c.ThreatBase, seen)
+		if c.Residents > 0 || c.Wealth > 0 || c.AnimalPower > 0 {
+			use(c)
+		}
+	}
+}
+
+func weightedThreat(g *Game, b difficulty.ThreatBase, ticks uint64) int {
+	s := g.ng.setup.Difficulty
+	return difficulty.ThreatPointsWeighted(s, b, ticks, g.clock.Calendar().YearDays(), g.ng.adapt.Factor(s))
 }
 
 // storyRaid sends a raid from a hostile faction (unattributed when none),
@@ -208,68 +288,35 @@ func (g *Game) maxRaiders() int {
 // armed by its tech level.
 func (g *Game) storyRaid(day, pct int) {
 	fi := faction.PickRaider(g.ng.factions, g.rng)
-	factionRaid(g, fi, g.threatPoints()*pct/100, day)
+	factionRaid(g, fi, difficulty.ScaleRaidPoints(g.threatPoints(), pct), day)
 }
 
 // factionRaid sends faction fi's raid (index; -1: unattributed) at pts
 // times the faction's multiplier, armed by its tech level.
-func factionRaid(g *Game, fi, pts, day int) {
+func factionRaid(g *Game, fi, pts, day int) bool {
 	tech := faction.Industrial
 	if fi >= 0 {
 		d := faction.DefOf(g.ng.factions[fi].Type)
 		if d.PointsPct > 0 {
-			pts = pts * d.PointsPct / 100
+			pts = difficulty.ScaleRaidPoints(pts, d.PointsPct)
 		}
 		tech = d.Tech
 	}
 	kit := g.raidKitOf(pts, tech)
-	g.raidFrom(kit, g.raid.Threats.Plan(day), fi+1)
+	return g.raidFrom(kit, g.raid.Threats.Plan(day), fi+1)
 }
 
 // raiderName is a generated name for a faction's raider (no g.rng draw).
 func (g *Game) raiderName(id entity.EntityID, f *faction.Faction) string {
-	tag := backstory.TagIndustrial
-	if faction.DefOf(f.Type).Tech == faction.Neolithic {
-		tag = backstory.TagNeolithic
-	}
-	p := pawngen.Generate(g.worldSeed()^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: tag, Backstories: backstoriesOf(g), Traits: traitsOf(g)})
-	if p.Nick != "" {
-		return p.Nick
-	}
-	return p.First
-}
-
-// edgeDir names the map edge nearest (x, y): "north", "south", ...
-func (g *Game) edgeDir(x, y int) string {
-	w, h := g.grid.Width(), g.grid.Height()
-	best, dir := y, "north"
-	if d := h - 1 - y; d < best {
-		best, dir = d, "south"
-	}
-	if x < best {
-		best, dir = x, "west"
-	}
-	if d := w - 1 - x; d < best {
-		dir = "east"
-	}
-	return dir
+	return pawngen.Generate(g.worldSeed()^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: techTag(f), Backstories: backstoriesOf(g), Traits: traitsOf(g)}).DisplayName()
 }
 
 // raidMessage is the arrival message of a faction's raid.
 func (g *Game) raidMessage(ex, ey, n int, plan raid.Plan, f *faction.Faction) {
-	noun, verb := "raiders", "are"
-	if n == 1 {
-		noun, verb = "raider", "is"
-	}
-	from := g.edgeDir(ex, ey)
-	switch plan {
-	case raid.Siege:
-		g.threat("Siege", ex, ey, "Raid! %d %s of %s %s coming from the %s. They look ready to dig in for a siege.", n, noun, f.Name, verb, from)
-	case raid.Sappers:
-		g.threat("Sappers", ex, ey, "Sappers! %d %s of %s %s tunnelling in through the walls from the %s.", n, noun, f.Name, verb, from)
-	default:
-		g.threat("Raid", ex, ey, "Raid! %d %s of %s %s coming from the %s.", n, noun, f.Name, verb, from)
-	}
+	title, format, noun, verb := raid.FactionWarning(plan, n)
+	from := raid.EdgeDir(g.grid.Width(), g.grid.Height(), ex, ey)
+	fields := letters.RaidFields(n, f.Name, "faction", from)
+	threatWithFields(g, letters.RaidCode(plan), title, ex, ey, format, fields, n, noun, f.Name, verb, from)
 }
 
 // --- the colony's hourly and daily upkeep -----------------------------------
@@ -279,6 +326,12 @@ func (g *Game) raidMessage(ex, ey, n int, plan raid.Plan, f *faction.Faction) {
 // first map's pass): quest timers, the day rollover in the day's first
 // slot and the scenario's scheduled incidents.
 func storyHour(g *Game, now uint64) {
+	// Run on the existing colony-only story cadence, twice per game day.
+	// The scheduled boundary, rather than its offset slot, marks elapsed time.
+	elapsed := g.rel(now + cadence.OffStory)
+	if elapsed >= clock.TicksPerDay/2 && elapsed%(clock.TicksPerDay/2) == 0 {
+		g.ng.adapt.HalfDay(g.ng.setup.Difficulty, int(elapsed/clock.TicksPerDay))
+	}
 	questTick(g, now, false) // quest_host.go (QST-1): due timers and offers
 	switch (now + cadence.OffStory) % clock.TicksPerDay {
 	case 0:
@@ -289,8 +342,8 @@ func storyHour(g *Game, now uint64) {
 }
 
 // checkLosses notes colonists who died since the last check: the
-// storyteller eases the pending threat (OnLoss) and adaptation counts
-// the loss at the day rollover.
+// storyteller eases the pending threat (OnLoss). Adaptation is charged
+// at the actual health transition, not in this periodic scan.
 func (g *Game) checkLosses(now uint64) {
 	for _, id := range g.pawnIDs {
 		if g.isStashed(id) {
@@ -308,9 +361,8 @@ func (g *Game) checkLosses(now uint64) {
 	}
 }
 
-// dayRollover: adaptation, faction goodwill drift.
+// dayRollover handles the existing loss signal, goodwill and offers.
 func (g *Game) dayRollover(now uint64) {
-	g.ng.adapt.Day(g.ng.setup.Difficulty, g.ng.lost)
 	g.ng.lost = false
 	g.factionsDay()         // factions.go
 	questTick(g, now, true) // quest_host.go (QST-1): the offer cadence
@@ -506,15 +558,11 @@ func wealthPart(g *Game, i, ni, nb, na int) int {
 	switch {
 	case i < ni:
 		if st, ok := g.stacks.Get(g.itemIDs[i]); ok {
-			return g.sk.content.Items.Value(st.Kind) * st.Qty // a plugin's or patched value (PLG-026)
+			return g.sk.content.Items.StackValue(st) * st.Qty // physical condition and patched price
 		}
 	case i < ni+nb:
 		if b, ok := g.bldgs.Get(g.bldgIDs[i-ni]); ok && !notColonyPiece(b) { // ruins and vents are no one's wealth
-			v := construction.WoodCost(b.Kind)*2 + construction.WorkTicks(b.Kind)/20
-			if item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone {
-				v = v * 3 / 2
-			}
-			return v
+			return wealth.BuildingValue(b)
 		}
 	case i < ni+nb+na:
 		if a, ok := g.animals.Get(g.animalIDs[i-ni-nb]); ok && a.Tame {
@@ -540,4 +588,58 @@ type StoryDebugView struct {
 func (g *Game) StoryDebug() StoryDebugView {
 	return StoryDebugView{Queue: slices.Clone(g.incidents.Queue), NextThreat: g.nextThreat,
 		Points: g.raidPoints(int(uint64(g.clock.Now()) / clock.TicksPerDay)), Wealth: g.wealth.Value()}
+}
+
+// adaptationMember is a living player resident or travelling member.
+// Core has no distinct quest-lodger or baby roster; ordinary visitors
+// and prisoners are not treated as player colonists.
+func adaptationMember(g *Game, id entity.EntityID) bool {
+	v, ok := g.vital.Get(id)
+	if !ok || v.Status == health.Dead || g.prison.Is(id) {
+		return false
+	}
+	if p := g.personOf(id); p != nil {
+		return p.Faction == 0 && (p.Where == whereColony || p.Where == whereCaravan)
+	}
+	return g.isPawn(id)
+}
+
+func adaptationLoss(g *Game, id entity.EntityID, cause health.Cause, death bool) {
+	if !g.hasSetup() || cause == health.CauseExecution || cause == health.CauseEuthanasia || !adaptationMember(g, id) {
+		return
+	}
+	v, _ := g.vital.Get(id)
+	if !death && v.Status != health.Alive {
+		return
+	}
+	// Stashing removes the resident from its map roster; the lists are
+	// disjoint. Count only live eligible members at the event boundary.
+	population, present := 0, false
+	count := func(pid entity.EntityID) {
+		if adaptationMember(g, pid) {
+			population++
+			present = present || pid == id
+		}
+	}
+	for _, m := range g.maps {
+		for _, pid := range m.pawnIDs {
+			count(pid)
+		}
+	}
+	if w := g.worldSt; w != nil {
+		for _, r := range w.stashed {
+			if r.Beast == nil && !r.Prisoner {
+				count(r.ID)
+			}
+		}
+	}
+	if !present {
+		return
+	}
+	g.ng.adapt.Lose(population, death, g.relDay(uint64(g.clock.Now())))
+}
+
+func canonicalAdaptation(a difficulty.Adapter, day int) difficulty.Adapter {
+	a.Migrate(day)
+	return a
 }

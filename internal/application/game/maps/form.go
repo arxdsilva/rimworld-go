@@ -51,8 +51,11 @@ func (f Fleet) Form(members string, dest int) {
 	for _, id := range ids {
 		f.h.SetDraft(id, true) // AX-9: a hitching spot first
 		if !cargo.Hitch(c.C.ID, id, len(c.C.Members)) && !f.h.StartExit(id) {
-			f.h.SetDraft(id, false)
-			continue
+			j, _ := f.h.Job(id)
+			if j.Kind != job.ExitMap || j.State != job.Fail || j.Fail != job.Reserved {
+				f.h.SetDraft(id, false)
+				continue
+			}
 		}
 		c.C.Members = append(c.C.Members, uint64(id))
 		c.Exiting = append(c.Exiting, id)
@@ -102,8 +105,14 @@ func (f Fleet) CheckForming(now uint64) {
 			case !f.h.Standing(id) || f.h.Breaking(id) || !f.h.Drafted(id) || now-c.Formed >= formLimit:
 			case j.Kind == job.ExitMap && j.Active():
 				continue
-			case j.Kind == job.ExitMap && j.State == job.Fail && j.Fail == job.Reserved && f.h.StartExit(id):
-				continue // a deferred search: tried again
+			case j.Kind == job.ExitMap && j.State == job.Fail && j.Fail == job.Reserved:
+				if f.h.StartExit(id) {
+					continue
+				}
+				if next, ok := f.h.Job(id); ok && next.Kind == job.ExitMap &&
+					next.State == job.Fail && next.Fail == job.Reserved {
+					continue // still awaiting a path-search slot
+				}
 			case j.Kind != job.ExitMap && f.h.StartExit(id):
 				continue // an order or a shot in between: back on the way
 			}
@@ -156,17 +165,28 @@ func (f Fleet) pace(c *Caravan) {
 		}
 	}
 	c.C.Slowest = max(slowest, 1)
-	c.C.Load = int32((1000 - min(max(f.h.Cargo().Pace(c.C.ID, len(c.C.Members)), 250), 1000)) * 1000 / 750)
-	mounts, best := 0, int32(0)
-	for _, a := range c.C.Animals {
-		if s, ok := f.h.Species(entity.EntityID(a)); ok && caravan.MountFactor(s) > 0 {
-			mounts, best = mounts+1, max(best, caravan.MountFactor(s))
+	c.C.Load, c.C.Mount = f.h.Cargo().CarrierPace(c.C.ID, CarrierCount(c.C.Members, f.h.Alive), len(c.C.Members), f.h.MarketCarriers(c))
+}
+
+// RefreshPace refreshes a committed caravan after an external native
+// cargo or roster mutation. Forming caravans derive their pace at departure.
+func RefreshPace(f Fleet, id entity.EntityID) {
+	if c := f.At(id); c != nil && c.C.State != caravan.Forming && c.C.State != caravan.Home {
+		f.pace(c)
+	}
+}
+
+// CarrierCount is the native living/able member admission shared by
+// market, split, recovery and committed pace. Downed riders do not add
+// carrying capacity; they remain members for food and mount admission.
+func CarrierCount(ids []uint64, alive func(entity.EntityID) bool) int {
+	n := 0
+	for _, id := range ids {
+		if alive(entity.EntityID(id)) {
+			n++
 		}
 	}
-	c.C.Mount = 0
-	if mounts > 0 && mounts >= len(c.C.Members) {
-		c.C.Mount = best
-	}
+	return n
 }
 
 // Return sends caravan id home: a forming one is called off (its members

@@ -7,8 +7,10 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -87,5 +89,75 @@ func TestItemKindsWalk(t *testing.T) {
 		{Kind: command.SetBillIngredient, Stuff: uint8(bell)}, {Kind: command.DesignateBuild, Stuff: uint8(cup)}})
 	if len(cmds) != 2 || cmds[0].Stuff != uint8(nb) || cmds[1].Stuff != uint8(cup) {
 		t.Fatalf("commands %+v", cmds)
+	}
+}
+
+func TestItemKindsTradeCommandsAndRecursiveState(t *testing.T) {
+	old := imBook("a.cup", "b.bell")
+	cup, bell := item.Kind(item.CoreKinds), item.Kind(item.CoreKinds+1)
+	m := Keys{item.Class: old.Keys()}.Items(imBook("b.bell", "a.cup"))
+	type order struct{ Cmd command.Command }
+	type state struct {
+		Extra   []state
+		Pending []command.Command
+		Orders  map[uint64][]order
+	}
+	local := command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer([]trade.Delta{{Kind: cup, Qty: 1, StackID: 17}}), ExactLots: true}
+	world := command.Command{Kind: command.WorldCaravanTrade, Name: trade.EncodeOffer([]trade.Delta{{Kind: cup, Qty: -1, StackID: 21}}), Quote: 9}
+	ordinary := command.Command{Kind: command.WorldCaravanTrade, Name: trade.EncodeOffer([]trade.Delta{{Kind: cup, Qty: -1}, {Kind: bell, Qty: 1}}), Quote: 12}
+	s := state{Extra: []state{{Pending: []command.Command{ordinary}}}, Pending: []command.Command{local, world, ordinary}, Orders: map[uint64][]order{1: {{Cmd: local}, {Cmd: world}}}}
+	m.Walk(&s)
+	if len(s.Pending) != 2 || len(s.Orders[1]) != 1 || len(s.Extra[0].Pending) != 1 {
+		t.Fatalf("wrong saved intent removal: %+v", s)
+	}
+	wantLocal := trade.EncodeOffer([]trade.Delta{{Kind: bell, Qty: 1, StackID: 17}})
+	wantOrdinary := trade.EncodeOffer([]trade.Delta{{Kind: bell, Qty: -1}, {Kind: cup, Qty: 1}})
+	if s.Pending[0].Name != wantLocal || s.Orders[1][0].Cmd.Name != wantLocal || s.Pending[1].Name != wantOrdinary || s.Extra[0].Pending[0].Name != wantOrdinary || s.Pending[1].Quote != 12 {
+		t.Fatalf("wrong restored intent: %+v", s)
+	}
+}
+
+// The typed inventory owners need canonical Goods order after a remap.
+// A reward sequence that happened to have that order must retain its order.
+func TestItemKindsSortOnlyTradeLedgers(t *testing.T) {
+	old := imBook("a.cup", "b.bell")
+	cup, bell := item.Kind(item.CoreKinds), item.Kind(item.CoreKinds+1)
+	m := Keys{item.Class: old.Keys()}.Items(imBook("b.bell", "a.cup"))
+	lines := func() []trade.Line {
+		return []trade.Line{{Kind: cup, Qty: 2}, {Kind: bell, Qty: 3}}
+	}
+	s := struct {
+		Stock   trade.Stock
+		Carrier visit.Cargo
+		Rewards []trade.Line
+	}{Stock: trade.Stock{Lines: lines()}, Carrier: visit.Cargo{Lines: lines()}, Rewards: lines()}
+	m.Walk(&s)
+	for _, ls := range [][]trade.Line{s.Stock.Lines, s.Carrier.Lines} {
+		if len(ls) != 2 || ls[0].Kind != cup || ls[0].Qty != 3 || ls[1].Kind != bell || ls[1].Qty != 2 {
+			t.Fatalf("inventory order/quantity changed incorrectly: %+v", ls)
+		}
+	}
+	if len(s.Rewards) != 2 || s.Rewards[0].Kind != bell || s.Rewards[0].Qty != 2 || s.Rewards[1].Kind != cup || s.Rewards[1].Qty != 3 {
+		t.Fatalf("reward sequence was reordered: %+v", s.Rewards)
+	}
+}
+
+func TestHistoricalFilterNamespace(t *testing.T) {
+	old := append(slices.Clone(item.Core().Keys()[:165]), "a.cup", "b.bell", "gone")
+	book := imBook("b.bell", "a.cup")
+	f := (zone.Filter{}).With(item.Wood, true).With(165, true).With(166, true).With(167, true).With(item.None, true)
+	s := struct{ Filter zone.Filter }{f}
+	(Keys{}).Items(book).Walk(&s)
+	if s.Filter != f {
+		t.Fatal("no keys must preserve numeric identity")
+	}
+	MigrateConstructionStacks(&s, 20)
+	if s.Filter != f {
+		t.Fatal("construction migration changed filter")
+	}
+	(Keys{item.Class: old}).Items(book).Walk(&s)
+	want := (zone.Filter{}).With(item.Wood, true).With(item.Kind(item.CoreKinds), true).With(item.Kind(item.CoreKinds+1), true).With(item.None, true)
+	if s.Filter != want {
+		t.Fatalf("got %v want %v", s.Filter, want)
 	}
 }

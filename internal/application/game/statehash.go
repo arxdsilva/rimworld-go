@@ -4,96 +4,96 @@
 package game
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
-	"maps"
 	"reflect"
 	"slices"
 
+	"rimworld-go/internal/application/game/animalstate"
 	"rimworld-go/internal/application/game/savefmt"
+	"rimworld-go/internal/application/game/saveutil"
+	"rimworld-go/internal/application/game/visit"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/statehash"
 	"rimworld-go/internal/domain/world/temperature"
 )
 
-// StateHash fingerprints the complete authoritative state: everything Save
-// writes, decoded and hashed in a normalised, format-independent form
-// (statehash.OfFields: fields by name, zero-valued ones skipped, map
-// entries ordered by key — Go's random map order makes raw gob bytes vary
-// run to run). Research is hashed as one progress list without trailing
-// zeros, whichever save fields carry it. So an additive save field (at its
-// zero value) or a re-encoding does not move a golden pin; a change of
-// behaviour does. It reads the state only.
+// StateHash hashes authoritative save fields without a gob round trip.
+// Canonical normalization excludes representation-only fields and caches.
 func (g *Game) StateHash() uint64 {
-	var buf bytes.Buffer
-	if err := encodeSave(g, &buf, savefmt.Stamp{Name: "statehash"}, nil); err != nil { // raw gob; no mod state (never runs mod code)
+	info, s, err := snapshotForSave(g, savefmt.Stamp{Name: "statehash"}, nil)
+	if err != nil {
 		panic(fmt.Errorf("state hash: %w", err))
 	}
-	dec := gob.NewDecoder(&buf)
-	var info SaveInfo
-	var s saveState
-	if err := dec.Decode(&info); err != nil {
-		panic(fmt.Errorf("state hash: %w", err))
-	}
-	if err := dec.Decode(&s); err != nil {
-		panic(fmt.Errorf("state hash: %w", err))
-	}
-	return statehash.OfFields(normalisedFields(info, &s))
+	return statehash.OfFields(normalisedFields(info, s))
 }
 
-// normalisedFields is the save as named fields, with research folded into
-// one "Research" progress list (the newest field that holds it).
-//
-// The header is hashed as its v1 shape (Version pinned to 1): its newer
-// fields (map size, biome, storyteller, difficulty, save mode) are derived
-// from state hashed below, and the version is format. The blocked tiles
-// are hashed as the v1 index list whichever field carries them.
+// normalisedFields folds old save representations into stable named fields.
+// The header uses its v1 identity; per-map state is hashed recursively.
 func normalisedFields(info SaveInfo, s *saveState) map[string]any {
-	f := map[string]any{"Info": infoV1{1, info.Name, info.Date, info.Day, info.Colonists}}
-	v, t := reflect.ValueOf(s).Elem(), reflect.TypeOf(s).Elem()
-	for i := 0; i < t.NumField(); i++ {
-		if t.Field(i).IsExported() {
-			f[t.Field(i).Name] = v.Field(i).Interface()
+	// The active animal registry writes grouped components. Hash the same
+	// detached animal.State representation as the existing native Core.
+	normal := *s
+	if s.AnimalFormat == 1 {
+		normal.Animals = make([]entry[animal.State], 0, len(s.AnimalRecords))
+		for _, r := range s.AnimalRecords {
+			normal.Animals = append(normal.Animals, entry[animal.State]{ID: r.ID, V: r.State.State()})
+		}
+		normal.AnimalFormat, normal.AnimalRecords = 0, nil
+		if s.World != nil {
+			world := *s.World
+			world.Stashed = slices.Clone(s.World.Stashed)
+			world.AX9 = animalstate.CloneTravel(s.World.AX9)
+			if err := animalstate.ImportWorld(true, worldAnimalRefs(&world), world.AX9, s.WorldAnimalRecords); err != nil {
+				panic(fmt.Errorf("state hash off-map animals: %w", err))
+			}
+			normal.World = &world
+			normal.WorldAnimalRecords = nil
 		}
 	}
-	research := ints(f["ResearchAll"])
-	if research == nil {
-		research = ints(f["Research"])
+	normal.Bills = saveutil.NilEmptyMapValues(s.Bills)
+	normal.OrderQueue = saveutil.NilEmptyMapValues(s.OrderQueue)
+	normal.PrioList = saveutil.NilEmptyMapValues(s.PrioList)
+	normal.Logs = saveutil.NilEmptyMapValues(s.Logs)
+	normal.Deliveries = saveutil.NilEmptyMapValues(s.Deliveries)
+	normal.RNGStreams = saveutil.NilEmptyMapValues(s.RNGStreams)
+	s = &normal
+	f := saveutil.ExportedFields(s, infoV1{1, info.Name, info.Date, info.Day, info.Colonists})
+	// Grouped save records and their marker are wire representations.
+	delete(f, "AnimalFormat")
+	delete(f, "AnimalRecords")
+	delete(f, "WorldAnimalRecords")
+	// Preserve logical state-hash field names across v21's gob changes.
+	f["Bios"], f["Skills"], f["SkillLive"] = s.Bios21, s.Skills21, s.SkillLive21
+	f["NG1"], f["People"] = s.NG121, s.People21
+	for _, key := range [...]string{"Bios21", "Skills21", "SkillLive21", "NG121", "People21"} {
+		delete(f, key)
 	}
-	delete(f, "ResearchAll")
-	for len(research) > 0 && research[len(research)-1] == 0 {
-		research = research[:len(research)-1]
-	}
-	f["Research"] = research
+	saveutil.HashLabor[legacyLaborMask, entry[legacyLaborMask]](f, s.LaborWide, s.PrioList)
 	f["Blocked"] = s.blockedTiles()
-	delete(f, "BlockedBits")
-	// Bookkeeping first saved in v2 (it existed before, unsaved): hashed
-	// through its effects on the state above, so the pins taken before v2
-	// still hold (TestSaveV2RoundTripSetup); CmdSeq (#8): commands carry Seq.
-	for _, k := range [...]string{"SkillLive", "StainDrip", "PostSweep", "CmdSeq"} {
-		delete(f, k)
+	f["Roofs"] = saveutil.LegacyRoofHashCells(s.W, s.H, s.Terr, s.Bldgs, s.Roofs)
+	wildlife := s.Wildlife
+	wildlife.WeightSchema = false
+	wildlife.Forage.Skip = saveutil.NilEmptyMapValues(wildlife.Forage.Skip)
+	// Gob drops runtime creature indexes and behavior hosts.
+	wildlife.herd, wildlife.rage = nil, nil
+	wildlife.idx, wildlife.food, wildlife.ids = creatureIndex{}, foodIndex{}, nil
+	f["Wildlife"] = wildlife
+	saveutil.CanonicalHashFields(f, streamSeedKey)
+	delete(f, "CmdSeq") // #8: pending envelopes carry their own sequence
+	if s.Trade != nil {
+		t := *s.Trade
+		t.Version = 1 // the ledger's wire version is not gameplay state
+		if t.Caravan != nil {
+			c := *t.Caravan
+			// The initial per-member manifest is derivable from saved Stock
+			// and Members; only changes to that distribution affect replay.
+			if reflect.DeepEqual(c.Cargo, visit.AssignCargo(c.Stock, c.Members)) {
+				c.Cargo = nil
+			}
+			t.Caravan = &c
+		}
+		f["Trade"] = &t
 	}
-	// DoorsOriented (PLAY-011) only marks the save format: door facings
-	// are hashed through the buildings themselves.
-	delete(f, "DoorsOriented")
-	// ContentKeys (PLG-044) describes the content the indexes refer to, not
-	// the state: the header's content fingerprint covers it.
-	delete(f, "ContentKeys")
-	// ENG-003: priorities are saved as slices (PrioList) now; they are
-	// hashed as the fixed-size arrays they were (a new work type at its
-	// zero value leaves the sparse encoding alone). The streams' base seed
-	// is configuration: the streams themselves are hashed once used.
-	if l := s.PrioList; l != nil {
-		delete(f, "PrioList")
-		f["Prios"] = importPrios(l)
-	}
-	if st := maps.Clone(s.RNGStreams); st != nil {
-		delete(st, streamSeedKey)
-		f["RNGStreams"] = st
-	}
-	// MAP-0: each extra map's state hashed the same way (none: nothing
-	// added); the viewed map is presentation.
-	delete(f, "View")
 	if len(s.ExtraMaps) > 0 {
 		hs := make([]extraHash, len(s.ExtraMaps))
 		for i := range s.ExtraMaps {
@@ -119,17 +119,4 @@ type infoV1 struct {
 	Version        int
 	Name, Date     string
 	Day, Colonists int
-}
-
-// ints is an int array or slice as a fresh []int (nil for anything else).
-func ints(x any) []int {
-	v := reflect.ValueOf(x)
-	if !v.IsValid() || (v.Kind() != reflect.Array && v.Kind() != reflect.Slice) || v.Type().Elem().Kind() != reflect.Int {
-		return nil
-	}
-	out := make([]int, v.Len())
-	for i := range out {
-		out[i] = int(v.Index(i).Int())
-	}
-	return slices.Clip(out)
 }

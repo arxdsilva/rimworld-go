@@ -81,3 +81,20 @@ The docked card in 30 % of the screen · 2026-11-04 · 12f9913bc
 - Decisions: VSync on by default (user decision, PERF-003): third kernel panic of 2026-11-04 came with the client pacing frames on an external display in a scaled mode; presets set it, the v9 migration turns it on unless the player chose off; frame cap stays 120 for VSync off.
 - Tests: `TestDockedForTable`, `TestEachBuiltInFitsEveryScreen`, `TestJourneyDossierCompact` (resizes 1280x720 -> 1920x1080 -> 1024x768: pane + tabs <= 30 %); geometry journeys re-pinned.
 - Open: captures are always 1280x720 logical, so 1024x768 and true 1080p are checked by hand only; the gear covers the last 21 px of the identity line under the pointer (tooltip kept). Animal card's two tabs sit right-aligned by design (`inspector.PaneSpec.TabW`).
+
+## DOS-11-haul-localization
+Haul training and translated adapter contract · 2026-11-25 · this commit
+- Changed: the card editor lists all four native training skills, including Haul, with stable English-derived keys, translated labels and a Haul description. Haul cells use the native progress and eligibility projection; an empty key cannot resolve to a skill.
+- Changed: Work name/column sort labels and animal bed-owner titles use the existing translation formats; the English catalog is regenerated rather than the guard suppressed. Translated species title capitalization is rune-safe.
+- Decisions: unchanged English display and native training IDs; no simulation, save, command, content or mod changes. Adapter-only localization and training-key correction.
+- Boxes: RHUD-270 excluded to done; OPT-001 translation guard/catalog repaired, existing partial species/simulation translation scope remains partial.
+- Open: separate Rescue training and ineligibility explanation.
+
+## DOS-12-default-haul-training
+Default training and complete localization · 2026-11-26 · this commit
+- Changed: both default Dossier trees and every built-in preset include all four training skills, subject to the native Allowed projection. Standard preset golden adds exactly two Haul nodes; the serialization version and stored custom trees remain unchanged.
+- Changed: Training tab, toggle label/description (including learned state), and Animals list now use the active translator and translatable progress formats. English remains unchanged. Catalog regeneration and real loaded non-English catalog tests cover the actual tab draw and command/list text.
+- Verification: native Haul toggle journey preserves ID 3 and actual enabled/disabled read models; both default card render journeys and existing screen-size/preset tests. Family summary regression recounts all twelve RimHUD families from item rows. No Native code, save schema, command, mod or architecture budget change.
+- Boxes: UI/UX §19.2 **Haul** [x], MAIN_UI §25 Training clarified, RHUD-270 done and family C 193/47; overall 432/72. SOCIAL contract and MASTER domestication text reflect appended Haul. Historical FOOD-3 baseline labelled as such. OPT-001 scope remains partial outside this repair.
+- Regression coverage: the capture/arrest/strip/carry journeys now use an actual enclosed prison room; capture and arrest first prove that an outdoor prisoner bed disables the menu and sends no command. The audio temp-WAV test resolves POSIX find before narrowing PATH (NixOS portability; unchanged 0600 assertion). Staticcheck cleanup converts equivalent care host types directly and removes two unused roof aliases. No gameplay, audio production, save, ABI or budget change.
+- Open: separate Rescue skill and ineligibility explanation unchecked; MAP-24/25 (#36/#55), roof-risk overlay and other explicitly deferred presentation scopes remain partial. Default layouts, native toggles and translated labels are covered by regression tests.

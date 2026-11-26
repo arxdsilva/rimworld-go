@@ -15,6 +15,15 @@ import (
 
 type tile struct{ X, Y int }
 
+// A bounded derived change history lets consumers ignore irrelevant claims.
+// Target zero denotes a tile change; revision gaps conservatively invalidate.
+const changeHistory = 256
+
+type change struct {
+	target entity.EntityID
+	cell   tile
+}
+
 // part is one count claim: owner takes n of the target.
 type part struct {
 	owner entity.EntityID
@@ -24,6 +33,8 @@ type part struct {
 // Table maps reserved entities and tiles to their owner pawns. A target
 // holds either one whole claim or count claims, never both.
 type Table struct {
+	ver         uint64 // derived availability revision, never exported
+	changes     [changeHistory]change
 	entityOwner map[entity.EntityID]entity.EntityID
 	counts      map[entity.EntityID][]part // count claims per target, in claim order
 	tileOwner   map[tile]entity.EntityID
@@ -40,6 +51,30 @@ func NewTable() *Table {
 		ownedEnt:    make(map[entity.EntityID][]entity.EntityID),
 		ownedTile:   make(map[entity.EntityID][]tile),
 	}
+}
+
+// Ver changes when claim availability changes.
+func (t *Table) Ver() uint64 { return t.ver }
+
+func (t *Table) record(target entity.EntityID, cell tile) {
+	t.changes[t.ver%changeHistory] = change{target, cell}
+	t.ver++
+}
+
+// ChangedSince reports whether any claim change after rev is relevant to
+// the caller. If the bounded history cannot cover rev, return true rather
+// than accidentally retaining a stale availability result.
+func (t *Table) ChangedSince(rev uint64, relevant func(target entity.EntityID, x, y int) bool) bool {
+	if rev > t.ver || t.ver-rev > changeHistory {
+		return true
+	}
+	for ; rev < t.ver; rev++ {
+		c := t.changes[rev%changeHistory]
+		if relevant(c.target, c.cell.X, c.cell.Y) {
+			return true
+		}
+	}
+	return false
 }
 
 // TryEntity claims the whole of target for owner. False if another pawn
@@ -62,6 +97,7 @@ func (t *Table) TryEntity(owner, target entity.EntityID) bool {
 	}
 	delete(t.counts, target)
 	t.entityOwner[target] = owner
+	t.record(target, tile{})
 	return true
 }
 
@@ -89,10 +125,14 @@ func (t *Table) TryCount(owner, target entity.EntityID, n, total int) bool {
 		return false
 	}
 	if mine >= 0 {
-		ps[mine].n = n
+		if ps[mine].n != n {
+			ps[mine].n = n
+			t.record(target, tile{})
+		}
 		return true
 	}
 	t.addCount(owner, target, n)
+	t.record(target, tile{})
 	return true
 }
 
@@ -132,6 +172,7 @@ func (t *Table) TryTile(owner entity.EntityID, x, y int) bool {
 		return cur == owner
 	}
 	t.tileOwner[k] = owner
+	t.record(0, k)
 	t.ownedTile[owner] = append(t.ownedTile[owner], k)
 	return true
 }
@@ -164,14 +205,16 @@ func (t *Table) ReleaseOwner(owner entity.EntityID) {
 	for _, e := range t.ownedEnt[owner] {
 		if t.entityOwner[e] == owner {
 			delete(t.entityOwner, e)
-		} else {
-			t.dropCount(e, owner)
+			t.record(e, tile{})
+		} else if t.dropCount(e, owner) {
+			t.record(e, tile{})
 		}
 	}
 	delete(t.ownedEnt, owner)
 	for _, k := range t.ownedTile[owner] {
 		if t.tileOwner[k] == owner {
 			delete(t.tileOwner, k)
+			t.record(0, k)
 		}
 	}
 	delete(t.ownedTile, owner)
@@ -200,6 +243,7 @@ func (t *Table) ReleaseEntity(owner, target entity.EntityID) {
 	} else if !t.dropCount(target, owner) {
 		return
 	}
+	t.record(target, tile{})
 	t.forget(owner, target)
 }
 
@@ -216,6 +260,9 @@ func (t *Table) forget(owner, target entity.EntityID) {
 // ReleaseTarget drops every claim on target (it left the map): its owners'
 // jobs then find it gone.
 func (t *Table) ReleaseTarget(target entity.EntityID) {
+	if _, ok := t.EntityOwner(target); ok {
+		t.record(target, tile{})
+	}
 	if cur, ok := t.entityOwner[target]; ok {
 		delete(t.entityOwner, target)
 		t.forget(cur, target)
@@ -235,6 +282,7 @@ func (t *Table) ReleaseTile(x, y int) {
 		return
 	}
 	delete(t.tileOwner, k)
+	t.record(0, k)
 	kept := slices.DeleteFunc(t.ownedTile[owner], func(o tile) bool { return o == k })
 	if len(kept) == 0 {
 		delete(t.ownedTile, owner)
@@ -298,6 +346,7 @@ func Import(claims []Claim) *Table {
 				t.dropCount(c.Target, c.Owner)
 				t.forget(c.Owner, c.Target)
 				t.addCount(c.Owner, c.Target, c.Count)
+				t.record(c.Target, tile{})
 			}
 		default:
 			t.TryEntity(c.Owner, c.Target)

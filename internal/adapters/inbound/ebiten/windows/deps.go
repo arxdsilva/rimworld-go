@@ -100,6 +100,7 @@ type Host interface {
 	// DrawPortrait draws look l's portrait fitted into (x, y, w, h); false
 	// while the art is missing (QST-137: a pawn reward's chip).
 	DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, h float64) bool
+	DrawWorkStatus(dst *ebiten.Image, p game.PawnView, x, y, size float32)
 }
 
 // Shell composes the roles the feature calls with its Host.
@@ -140,7 +141,8 @@ type Set struct {
 	// replacing tab click change those, never this field.
 	modal *uikit.Modal
 
-	paint painter // the left button's drag over a window's cells
+	paint    painter       // the left button's drag over a window's cells
+	workView workViewState // presentation only; never stored in simulation
 
 	// The Wild list, read again only when the simulation tick moves.
 	wildRows []game.WildlifeRow

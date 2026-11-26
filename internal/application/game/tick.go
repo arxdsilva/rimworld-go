@@ -4,6 +4,8 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/pathstage"
+	"rimworld-go/internal/application/game/sense"
 	"slices"
 
 	"rimworld-go/internal/application/commands"
@@ -26,7 +28,6 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
-	"rimworld-go/pkg/mathx"
 )
 
 // ApplyPending applies every queued command now, in order: what the next
@@ -35,10 +36,16 @@ import (
 // paused actions show at once).
 func (g *Game) ApplyPending() {
 	g.viewGen++ // view cache (indexes.go): commands may change the state
+	g.configEdits = g.configEdits[:0]
 	g.phaseCommands()
 }
 
 func (g *Game) phaseCommands() {
+	if w := g.worldSt; primary(g) && w != nil && (len(w.caravans) != 0 || w.markets.RestorationPending()) {
+		market := fleetOf(g).Market()
+		market.RestoreVisits(uint64(g.clock.Now()))
+		market.RefreshVisits(uint64(g.clock.Now()))
+	}
 	route := func(c command.Command) commands.Route {
 		switch m := cmdMap(g, c); {
 		case m == g.mapState:
@@ -67,14 +74,24 @@ func (g *Game) applyOne(c command.Command) {
 		return
 	}
 	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.DraftPawn {
+		if !slices.Contains(g.pawnIDs, entity.EntityID(c.Pawn)) || !g.onMap(entity.EntityID(c.Pawn)) {
+			return
+		}
 		if _, breaking := g.breaks[entity.EntityID(c.Pawn)]; breaking {
 			return // a colonist in a mental break won't take orders
 		}
+	}
+	if c.Kind == command.Prioritize && c.Order == command.OrderDoBill && !g.craft.Bills.BindOrder(&c) {
+		return
 	}
 	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.EmergencyTend || c.Kind == command.DropGear && c.Queue { // GEAR-1: a plain drop leaves the queue alone
 		id := entity.EntityID(c.Pawn)
 		if c.Queue {
 			g.queueOrder(id, c)
+			return
+		}
+		if c.Kind == command.Prioritize && (c.Order.NativeOrder() || c.Mode == command.PrioritizeInterrupt) {
+			g.replaceOrder(id, c)
 			return
 		}
 		delete(g.orderQueue, id)        // a plain order replaces the queue
@@ -83,7 +100,7 @@ func (g *Game) applyOne(c command.Command) {
 	switch c.Kind {
 	case command.AddOperation, command.RemoveOperation, command.SetDrugPolicy, command.AssignBedOwner,
 		command.SetAnimalMaster, command.SetTraining, command.GiftAnimal, command.Capture, command.Arrest,
-		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap, command.SetTankStock, command.NewWanderers,
+		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.WorldCaravanTrade, command.RecoverCargoToCaravan, command.CaravanSplit, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap, command.SetTankStock, command.NewWanderers,
 		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
 		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
 		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)
@@ -96,13 +113,15 @@ func (g *Game) applyOne(c command.Command) {
 		command.EmergencyTend, command.ReorderOperation, // care package, surgery.go
 		command.SetZonePriority, // haul_priority.go (PLAY-023)
 		command.ProposeTrade, command.CloseTrade, command.CommsCallTrader, command.CommsGift,
-		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms, // trade_session.go, comms.go (PLAY-024)
+		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms, command.DismissVisitorGroup, // trade_session.go, comms.go (PLAY-024)
 		command.AcceptQuest, command.DismissQuest, command.RestoreQuest, command.FulfilRequest, command.Negotiate, command.SetRewardPref, command.DevOfferQuest: // quest_host.go (QST-1)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetGameplayToggle, command.SetGameplayLimit, command.SetBenchClean, command.MarkUnload, command.DropGear, command.ConsumeFromPack, command.SetApparelForced:
 		senseOf(g).Apply(c) // game/sense (CSE)
 	case command.SetName:
 		applySetName(g, c) // bio_view.go (RHUD-025)
+	case command.RenamePawn:
+		applyRenamePawn(g, c)
 	case command.SetColonistOrder:
 		g.sk.bar.Move(barColonists(g), entity.EntityID(c.Pawn), c.Count) // game/roster (CTL-011)
 	case command.SetStoryteller:
@@ -158,8 +177,10 @@ func (g *Game) applyOne(c command.Command) {
 		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateSmooth:
 		g.markSmooth(c.X, c.Y, c.X2, c.Y2, true) // smooth.go
-	case command.AddBill, command.SetBill, command.RemoveBill, command.ConfigureBill, command.SetBillIngredient, command.ReorderBill, command.SetStorageSource:
-		g.craft.Bills.Apply(c) // craft/bills.go, craft/settings.go (PRD-1; RES-1: a bill's ingredient source)
+	case command.AddBill, command.SetBill, command.RemoveBill, command.ConfigureBill, command.SetBillIngredient, command.ReorderBill, command.SetStorageSource, command.SetBillRange:
+		id, stamp := g.craft.Bills.Apply(c)
+		remapSuspendedBill(g, c, id, stamp)
+		recordConfigEdit(g, c, id, stamp)
 	case command.DesignateGrowZone:
 		if !g.cropLocked(plant.Species(c.Build)) {
 			g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
@@ -172,14 +193,14 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DesignateTame:
 		g.markTame(c.X, c.Y, c.X2, c.Y2, true)
 	case command.SetPenSettings:
-		g.setPenSettings(entity.EntityID(c.Target), c.Name) // pens.go
+		recordConfigEdit(g, c, entity.EntityID(c.Target), g.setPenSettings(entity.EntityID(c.Target), c.Name))
 	case command.DesignatePen:
 		g.paintZone(zone.KindPen, zone.Zone{}, c.X, c.Y, c.X2, c.Y2)
 		g.autoHomeRect(c.X, c.Y, c.X2, c.Y2) // home.go
 	case command.ReleaseAnimal:
 		g.releaseAnimal(entity.EntityID(c.Pawn))
 	case command.SetTroughFilter:
-		g.setTroughFilter(entity.EntityID(c.Target), c.Mode)
+		recordConfigEdit(g, c, entity.EntityID(c.Target), g.setTroughFilter(entity.EntityID(c.Target), c.Mode))
 	case command.CancelFrame:
 		g.cancelFrame(entity.EntityID(c.Target)) // frame_view.go
 	case command.SetAutoRefuel: // REF-1: a burner's Auto refuel switch; fish tanks, beds, hostile burners ignore it
@@ -365,36 +386,49 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 
 func (g *Game) phaseNeeds() {
 	now := uint64(g.clock.Now())
-	for _, id := range g.pawnIDs {
-		v, _ := g.vital.Get(id)
-		if v.Status == health.Dead {
-			continue
-		}
-		g.wakeFromAnaesthetic(id, &v, now) // surgery.go
-		g.heal(id, &v, now)
-		doseOf(g).Tick(id, now) // game/dose: hourly, staggered
-		if v, _ = g.vital.Get(id); v.Status == health.Dead {
-			continue // an overdose killed it; the stale record must not undo that
-		}
-		if v.Status == health.Downed {
-			g.stainDowned(id, now) // stains.go: an untended body pools
-			dj, _ := g.jobs.Get(id)
-			g.downedHunger(id, now, dj.Kind == job.Sleep && dj.State == job.Do) // care_host_prison.go (SIM-064)
-			continue
-		}
-		j, _ := g.jobs.Get(id)
-		n, _ := g.need.Get(id)
-		if j.Kind != job.Sleep || j.State != job.Do {
-			n = g.decayNeeds(id, n, now) // skills.go: HungerRate, RestRate
-			g.need.Set(id, n)
-			g.drainJoy(id, now)        // skills.go: RecreationRate, passion work
-			g.rest.Needs.Tick(id, now) // rest/needs.go (BED-3): comfort, beauty, outdoors
-		}
-		g.skillsDaily(id, now) // skills.go: decay, age, birthdays
-		if n.Exhausted() {
-			// collapse: drop and sleep right here, this tick
-			g.down(id, health.CauseNoBed)
-			g.rest.InPlace(id)
+	for roster, ids := range [...][]entity.EntityID{g.pawnIDs, g.raiderIDs} {
+		for _, id := range ids {
+			if roster == 1 && !g.onMap(id) {
+				continue
+			}
+			v, ok := g.vital.Get(id)
+			if !ok || v.Status == health.Dead {
+				continue
+			}
+			g.wakeFromAnaesthetic(id, &v, now)
+			g.heal(id, &v, now)
+			doseOf(g).Tick(id, now)
+			if v, _ = g.vital.Get(id); v.Status == health.Dead {
+				continue
+			}
+			if roster == 1 && (now+uint64(id)*moodStagger)%moodPeriod == 0 {
+				g.stepMood(id)
+			}
+			if v.Status == health.Downed {
+				g.stainDowned(id, now)
+				j, _ := g.jobs.Get(id)
+				g.downedHunger(id, now, j.Kind == job.Sleep && j.State == job.Do && !g.care.BeingCaptured(id))
+				continue
+			}
+			j, _ := g.jobs.Get(id)
+			n, _ := g.need.Get(id)
+			if j.Kind != job.Sleep || j.State != job.Do {
+				n = g.decayNeeds(id, n, now)
+				g.need.Set(id, n)
+				if roster == 0 {
+					g.drainJoy(id, now)
+				}
+				if roster == 0 || g.prison.Is(id) {
+					g.rest.Needs.Tick(id, now)
+				}
+			}
+			if roster == 0 {
+				g.skillsDaily(id, now)
+			}
+			if n.Exhausted() {
+				g.down(id, health.CauseNoBed)
+				g.rest.InPlace(id)
+			}
 		}
 	}
 }
@@ -408,6 +442,7 @@ func (g *Game) down(id entity.EntityID, cause health.Cause) {
 	}
 	delete(g.calm, id) // lying down ends any flight
 	v, _ := g.vital.Get(id)
+	adaptationLoss(g, id, cause, false)
 	v.Status, v.Cause, v.DownedTick = health.Downed, cause, uint64(g.clock.Now())
 	g.vital.Set(id, v)
 }
@@ -415,19 +450,19 @@ func (g *Game) down(id entity.EntityID, cause health.Cause) {
 func (g *Game) releaseBed(id entity.EntityID) {
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.SlotOf(uint64(id)) < 0 {
+		if !ok || construction.BedSlot(b, uint64(id)) < 0 {
 			continue
 		}
-		g.bldgs.Set(bid, b.Release(uint64(id)))
+		g.bldgs.Set(bid, construction.ReleaseBed(b, uint64(id)))
 	}
 }
 
 // sleepCellFor is where pawn id lies in bed b: its own slot's head cell
 // (the slot it holds, else the slot it would get).
 func (g *Game) sleepCellFor(id entity.EntityID, b construction.Building) (int, int) {
-	slot := b.SlotOf(uint64(id))
+	slot := construction.BedSlot(b, uint64(id))
 	if slot < 0 {
-		slot = b.Claim(uint64(id)).SlotOf(uint64(id))
+		slot = construction.BedSlot(construction.ClaimBed(b, uint64(id)), uint64(id))
 	}
 	return construction.SleepCell(b.Kind, b.Facing, b.X, b.Y, slot)
 }
@@ -483,6 +518,9 @@ func (g *Game) phaseAI() {
 	g.postSweep() // postpone.go: hourly
 	for _, id := range g.pawnIDs {
 		act := g.activityOf(id)
+		if act == schedule.Recreation && !recreationEligible(g, id) {
+			act = schedule.Anything
+		}
 		if act != schedule.Sleep {
 			g.rest.Unmark(id) // free time ends with the Sleep block
 		}
@@ -521,7 +559,7 @@ func (g *Game) phaseAI() {
 			}
 		}
 		g.releaseStaleDelivery(id, j) // a delivery swapped out without an interrupt
-		g.care.Rest.Update(id)        // care/rest.go: starts and ends bed rest
+		g.updateRestWork(id)          // care/rest.go: starts and ends bed rest
 		if g.mind.Tick(id, j) {
 			continue // acting out: no orders, no work
 		}
@@ -551,21 +589,10 @@ func (g *Game) phaseAI() {
 		if g.fightsBack(id) && g.combat.Guard.Defend(id, j) {
 			continue
 		}
-		// Warmth only wakes a sleeper when the exposure turns dangerous, and
-		// nothing is interrupted unless a bearable spot was actually found.
-		if j.Kind != job.Warm && !j.Kind.Eating() && g.needsComfort(id) && !g.noComfortUntil(id) &&
-			(j.Kind != job.Sleep || g.exposureDanger(id)) {
-			if x, y, ok := g.warmSpot(id); ok {
-				if j.Kind != job.None && j.State != job.Idle {
-					g.interrupt(id, job.Interrupted)
-				}
-				if g.startJob(id, job.Record{Kind: job.Warm, TX: x, TY: y, WorkLeft: warmWait}) {
-					continue
-				}
-				j, _ = g.jobs.Get(id)
-			}
-			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
+		if thermalRecovery(g, id, j) {
+			continue
 		}
+		j, _ = g.jobs.Get(id)
 		if g.care.Rest.On(id) {
 			if g.care.Rest.Slot(id, j) { // care/rest.go: in bed until well again
 				continue
@@ -639,11 +666,11 @@ func (g *Game) phaseAI() {
 		if j.Kind.IsIdle() && j.Active() {
 			idling = j
 		}
-		if !needs.WorkScheduled(act) {
+		if !needs.WorkScheduled(act) || needs.JoyPriority(act, joyForScheduling(g, id)) {
 			if g.assignWear(id) || doseOf(g).Assign(id) { // game/dose: a drink or a craving first
 				continue
 			}
-			if !senseOf(g).TopOff.Wants(id, g.joy[id]) && g.assignWorkByPriority(id) { // game/sense (CSE-002)
+			if !senseOf(g).TopOff.Wants(id, joyForScheduling(g, id)) && g.assignWorkByPriority(id) { // game/sense (CSE-002)
 				continue
 			}
 			g.keepIdling(id, idling) // recreation: free time
@@ -679,6 +706,12 @@ func (g *Game) keepIdling(id entity.EntityID, idling job.Record) {
 }
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
+	return startJobWithPath(g, id, rec, nil, false)
+}
+
+// startJobWithPath consumes a route already admitted by the forced-order
+// owner. Normal autonomous work still uses the ordinary budgeted search.
+func startJobWithPath(g *Game, id entity.EntityID, rec job.Record, path []pathing.Point, prepared bool) bool {
 	if r, ok := senseOf(g).Tidy.Before(id, rec); ok { // game/sense (CSE-017)
 		rec = r
 	}
@@ -697,6 +730,7 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	}
 	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !claimJobTarget(g, id, rec) ||
 		!haul.ClaimAll(g.reserve, haulHost{g}, id, rec.Pickups) {
+		g.reserve.ReleaseOwner(id)
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
 		g.jobs.Set(id, rec)
@@ -720,7 +754,10 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 		g.jobs.Set(id, rec)
 		return false
 	}
-	path, ok := g.pathToJob(id, rec.TX, rec.TY) // paths.go: long searches are budgeted
+	ok := prepared
+	if !prepared {
+		path, ok = g.pathToJob(id, rec.TX, rec.TY) // paths.go: long searches are budgeted
+	}
 	if !ok && g.pathDeferred() {
 		g.reserve.ReleaseOwner(id)
 		rec.State = job.Fail
@@ -767,8 +804,8 @@ func (g *Game) pathToVia(id entity.EntityID, tx, ty int, regions bool) ([]pathin
 	if !regions {
 		q = plainSoft(q) // area_soft.go: a plain search (self-check reference), same costs
 	}
-	if q.Walkable(tx, ty) {
-		if !reach.ok(tx, ty) {
+	if q.Walkable(tx, ty) && cellStandable(g, tx, ty) {
+		if !reach.OK(tx, ty) {
 			return nil, false
 		}
 		return g.findPathVia(id, q, regions, pos.X, pos.Y, tx, ty)
@@ -776,35 +813,10 @@ func (g *Game) pathToVia(id entity.EntityID, tx, ty int, regions bool) ([]pathin
 	if pathing.Adjacent(pos.X, pos.Y, tx, ty) {
 		return nil, true
 	}
-	var best []pathing.Point
-	bestOK := false
-	bestLen := 1 << 30
-	bestY, bestX := 1<<30, 1<<30
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if dx == 0 && dy == 0 {
-				continue
-			}
-			ax, ay := tx+dx, ty+dy
-			if !q.Walkable(ax, ay) || !reach.ok(ax, ay) {
-				continue
-			}
-			p, ok := g.findPathVia(id, q, regions, pos.X, pos.Y, ax, ay)
-			if !ok {
-				continue
-			}
-			endY, endX := ay, ax
-			if len(p) == bestLen && (endY > bestY || (endY == bestY && endX >= bestX)) {
-				continue
-			}
-			if len(p) > bestLen {
-				continue
-			}
-			best, bestOK, bestLen = p, true, len(p)
-			bestY, bestX = endY, endX
-		}
-	}
-	return best, bestOK
+	return pathstage.BestAdjacent(tx, ty, q.Walkable, func(x, y int) bool { return cellStandable(g, x, y) },
+		reach.OK, func(x, y int) ([]pathing.Point, bool) {
+			return g.findPathVia(id, q, regions, pos.X, pos.Y, x, y)
+		})
 }
 
 // hasEdible reports free food anywhere; corpses count for a pawn that
@@ -830,7 +842,21 @@ const foodRetry = 500
 
 // seekFood reports whether pawn id should go looking for food now.
 func (g *Game) seekFood(id entity.EntityID) bool {
-	return uint64(g.clock.Now()) >= g.noFood[id] && (g.hasEdible(body.Malnutrition(g.bodies[id]) > 0) || g.haul.store.Paste.Ready(haulHost{g}, haulHost{g}))
+	if uint64(g.clock.Now()) < g.noFood[id] {
+		return false
+	}
+	if g.hasEdible(body.Malnutrition(g.bodies[id]) > 0) || g.haul.store.Paste.Ready(haulHost{g}, haulHost{g}) {
+		return true
+	}
+	if len(senseOf(g).Gear.FoodDonors()) == 0 {
+		return false
+	}
+	donor, entry, x, y, ok := g.peerPackedMeal(id, id)
+	if !ok {
+		return false
+	}
+	g.haul.peerMeal = sense.PeerChoice{Eater: id, Donor: donor, Entry: entry, X: x, Y: y, At: uint64(g.clock.Now())}
+	return true
 }
 
 func (g *Game) assignEat(id entity.EntityID) {
@@ -839,7 +865,15 @@ func (g *Game) assignEat(id entity.EntityID) {
 		return
 	}
 	if best == 0 || paste {
-		g.noFood[id] = uint64(g.clock.Now()) + foodRetry // areas.go: all the food lies outside the allowed area
+		if donor, entry, px, py, ok := g.peerMealForAssignment(id); ok && g.startJob(id, job.Record{
+			Kind: job.EatFromPeerPack, Target: donor, BillIndex: int(entry), TX: px, TY: py,
+		}) {
+			return
+		}
+		// Only the ordinary search may impose the historical general retry.
+		if paste || g.hasEdible(body.Malnutrition(g.bodies[id]) > 0) {
+			g.noFood[id] = uint64(g.clock.Now()) + foodRetry
+		}
 		return
 	}
 	if !g.startJob(id, job.Record{
@@ -1010,6 +1044,8 @@ func (h haulHost) MapSize() (int, int)                         { return h.g.grid
 func (h haulHost) SelfCheck() bool                             { return checkIndex(h.g) }
 func (h haulHost) DeleteItem(id entity.EntityID)               { h.g.deleteItem(id) }
 func (h haulHost) Release(owner, target entity.EntityID)       { h.g.reserve.ReleaseEntity(owner, target) }
+func (h haulHost) Visible(x, y int) bool                       { return h.g.grid.InBounds(x, y) && !h.g.fogged(x, y) }
+func (h haulHost) Walkable(x, y int) bool                      { return h.g.grid.Walkable(x, y) && cellStandable(h.g, x, y) }
 func (h haulHost) MealRule() item.MealRule                     { return item.RuleOf(senseOf(h.g).Rules) }
 func (h haulHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
 	return h.g.pathTo(id, x, y)
@@ -1058,7 +1094,7 @@ func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity
 	}
 	for _, bid := range g.bldgIDs {
 		b := g.bldgs.Ref(bid)
-		if b == nil || !b.Deconstruct {
+		if b == nil || !b.Deconstruct || b.Kind == construction.SleeperCasket && b.Occupant != 0 {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(bid); taken {
@@ -1105,6 +1141,19 @@ func (h haulHost) StartHarvest(id, t entity.EntityID) bool {
 
 func (g *Game) phaseJobs() {
 	now := uint64(g.clock.Now())
+	// The sleep job has a single physical executor, even on the raid roster.
+	for _, id := range g.raiderIDs {
+		if v, ok := g.vital.Get(id); ok && v.Status != health.Dead && !g.care.BeingCaptured(id) {
+			if j, ok := g.jobs.Get(id); ok && j.Kind == job.Sleep && j.State == job.Do {
+				if g.prison.Is(id) && j.Target != 0 {
+					if b, ok := g.bldgs.Get(j.Target); ok && b.ForPrisoners && construction.BedSlot(b, uint64(id)) >= 0 {
+						g.sleptAt[id] = j.Target
+					}
+				}
+				g.rest.Do(id, j, now)
+			}
+		}
+	}
 	for _, id := range g.pawnIDs {
 		v, _ := g.vital.Get(id)
 		if v.Status == health.Dead {
@@ -1125,6 +1174,8 @@ func (g *Game) phaseJobs() {
 		}
 		g.dirtWork(id, j, now) // filth.go: field work soils the boots
 		switch j.Kind {
+		case job.EatFromPeerPack:
+			doEatFromPeerPack(g, id, j)
 		case job.Eat:
 			g.doEat(id, j)
 		case job.Sleep:
@@ -1181,7 +1232,7 @@ func (g *Game) phaseJobs() {
 			g.doClearSnow(id, j) // game/snow
 		case job.Clean:
 			cleaningOf(g).Do(id, j) // game/sense
-		case job.CleanRoom, job.UnloadPack, job.TakeSpare:
+		case job.CleanRoom, job.UnloadPack, job.TakeSpare, job.GiveItem:
 			senseOf(g).Do(id, j) // game/sense (CSE)
 		case job.FightFire:
 			g.doFightFire(id, j) // firefight.go
@@ -1234,6 +1285,8 @@ func (g *Game) phaseJobs() {
 			g.care.Doctor.DoEmergencyTend(id, j) // care package (MED-03)
 		case job.Trade:
 			g.doTrade(id, j) // trade_session.go (PLAY-024)
+		case job.DismissVisitorGroup:
+			dismissVisitorJob(g, id, j)
 		case job.UseComms:
 			g.doUseComms(id, j) // comms.go (PLAY-024)
 		case job.DispensePaste:
@@ -1248,14 +1301,14 @@ func (g *Game) phaseJobs() {
 }
 
 func (g *Game) doEat(id entity.EntityID, j job.Record) {
-	if j.Count == 0 && j.Carry == 0 {
+	if j.Count == 0 {
 		if g.carryToTable(id, j) {
 			return // walking to a table with the food
 		}
 		j.Count = 2 // no table in reach: eat right here
 	}
-	if s, now := uint64(body.FoodPoisonEatSpeed(g.bodies[id])), uint64(g.clock.Now()); (now+1)*s/1000 != now*s/1000 {
-		j.WorkLeft-- // food poisoning slows eating: work x1000/speed (wiki: Food poisoning)
+	if s, now := uint64(body.EatingSpeed(g.bodies[id])), uint64(g.clock.Now()); s > 0 {
+		j.WorkLeft -= int((now+1)*s/1000 - now*s/1000)
 	}
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
@@ -1312,6 +1365,9 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			if need := fr.Need - fr.Wood; need > 0 && take > need {
 				take = need
 			}
+		}
+		if j.Forced && g.postponed.orders[id].cmd.Order == command.OrderHaulMulti {
+			take = min(take, haul.ExplicitFirstShare(j))
 		}
 		carry := j.Target
 		if take < st.Qty { // split off one load, leave the rest
@@ -1409,6 +1465,11 @@ func (g *Game) doConstruct(id entity.EntityID, j job.Record) {
 	if !ok {
 		j.State = job.Fail
 		j.Fail = job.TargetGone
+		g.jobs.Set(id, j)
+		return
+	}
+	if !fr.Ready() || g.replacedStanding(fr) != 0 {
+		j.State, j.Fail = job.Fail, job.Blocked
 		g.jobs.Set(id, j)
 		return
 	}
@@ -1574,6 +1635,7 @@ func (g *Game) phaseMovement() {
 	movers := g.movers()
 	g.pruneMotion(movers)
 	g.buildOccupancy()
+	preplanPawnPaths(g, movers, now)
 	g.regs.paths.Open() // animal repaths queue, then run after the loop (paths.go runRepaths)
 	var raiders []entity.EntityID
 	for _, mv := range movers {
@@ -1583,8 +1645,12 @@ func (g *Game) phaseMovement() {
 		}
 		if mv.animal {
 			g.moveAnimal(mv.id, m, now)
-		} else if g.alive(mv.id) && g.movePawn(mv.id, m, now) && g.isRaider(mv.id) {
-			raiders = append(raiders, mv.id)
+		} else if g.alive(mv.id) {
+			if g.movePawn(mv.id, m, now) && g.isRaider(mv.id) {
+				raiders = append(raiders, mv.id)
+			}
+		} else {
+			crawlDowned(g, mv.id, m, now)
 		}
 	}
 	runRepaths(g)
@@ -1606,8 +1672,11 @@ func (g *Game) movePawn(id entity.EntityID, m motionRec, now uint64) bool {
 	}
 	next := j.Path[j.PathI]
 	tx, ty := walkTarget(j)
-	if !g.grid.Walkable(next.X, next.Y) || g.isRaider(id) && g.doorAt(next.X, next.Y) {
-		path, ok := g.pathTo(id, tx, ty)
+	if !g.grid.Walkable(next.X, next.Y) || g.isRaider(id) && g.doorAt(next.X, next.Y) || j.PathI == len(j.Path)-1 && !cellStandable(g, next.X, next.Y) {
+		path, ok, ready := preplannedPawnPath(g, id, j, tx, ty)
+		if !ready {
+			path, ok = g.pathTo(id, tx, ty)
+		}
 		if !ok {
 			j.State = job.Fail
 			j.Fail = job.Unreachable
@@ -1746,6 +1815,16 @@ type spillStep struct{ x, y, qty int }
 // found. Chains that end on their own never revisit a tile that way, so
 // they are unchanged.
 func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillStep) {
+	// A spill may reach a smaller cap than its original cell (e.g. a hopper).
+	// Place the existing entity's part first, then the remainder.
+	if cap := cellCap(g, st.Kind, st.X, st.Y); st.Qty > cap {
+		rest := st
+		rest.Qty, st.Qty = st.Qty-cap, cap
+		g.mergeOrSetFrom(id, st, seen)
+		g.dropStackOf(rest, rest.X, rest.Y)
+		return
+	}
+
 	here := spillStep{st.X, st.Y, st.Qty}
 	if slices.Contains(seen, here) {
 		g.putStack(id, st)
@@ -1803,27 +1882,17 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 // spillTile is the nearest walkable tile around (x, y) with no stack or
 // a same-kind stack that still has room.
 func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
-	for r := 1; r <= 4; r++ {
-		for dy := -r; dy <= r; dy++ {
-			for dx := -r; dx <= r; dx++ {
-				if max(mathx.Abs(dx), mathx.Abs(dy)) != r {
-					continue
-				}
-				nx, ny := x+dx, y+dy
-				if !g.dryWalkable(nx, ny) {
-					continue // nothing is dropped in the water
-				}
-				oid := g.itemAt(nx, ny)
-				if oid == 0 {
-					return nx, ny, true
-				}
-				if o, _ := g.stacks.Get(oid); o.Kind == k && o.Qty < cellCap(g, k, nx, ny) {
-					return nx, ny, true
-				}
-			}
+	return haul.NearbySpill(x, y, 4, func(nx, ny int) bool {
+		if !g.dryWalkable(nx, ny) {
+			return false
 		}
-	}
-	return 0, 0, false
+		oid := g.itemAt(nx, ny)
+		if oid == 0 {
+			return true
+		}
+		o, _ := g.stacks.Get(oid)
+		return o.Kind == k && o.Qty < cellCap(g, k, nx, ny)
+	})
 }
 
 // Ate reports whether the pawn completed an Eat job (fixture helper).

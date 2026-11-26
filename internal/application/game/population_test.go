@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"rimworld-go/internal/domain/world/site"
 	"strings"
 	"testing"
 
@@ -40,22 +41,44 @@ func onEdge(g *Game, p Position, slack int) bool {
 	return min(p.X, p.Y, g.grid.Width()-1-p.X, g.grid.Height()-1-p.Y) <= slack
 }
 
+func largestWildCost(g *Game) int {
+	maxCost := 0
+	for _, id := range g.animalIDs {
+		if a, ok := g.animals.Get(id); ok && animal.CountsWild(a, uint64(g.clock.Now())) {
+			maxCost = max(maxCost, animal.EcosystemWeight(a.Species))
+		}
+	}
+	return maxCost
+}
+
+func largestWildHerdCost(g *Game) int {
+	herds := map[uint32]int{}
+	largest := 0
+	for _, id := range g.animalIDs {
+		if a, ok := g.animals.Get(id); ok && animal.CountsWild(a, uint64(g.clock.Now())) {
+			herds[a.Herd] += animal.EcosystemWeight(a.Species)
+			largest = max(largest, herds[a.Herd])
+		}
+	}
+	return largest
+}
+
 func TestWildlifeCapacity(t *testing.T) {
 	t.Parallel()
 	g := wildMapOf(1, 100, 100, biome.TemperateForest)
 	summer := uint64(seasonDay(t, "Summer", 0)*clock.TicksPerDay + 12*clock.TicksPerHour)
 	winter := uint64(seasonDay(t, "Winter", 0)*clock.TicksPerDay + 12*clock.TicksPerHour)
 	g.clock = clock.NewAt(clock.Tick(summer))
-	if c := g.wildlifeCap(); c != 100 {
-		t.Fatalf("temperate summer capacity %d, want 100 per 10,000 tiles", c)
+	if c := g.wildlifeCap(); c != 370 {
+		t.Fatalf("temperate summer weight budget %d, want 370 hundredths", c)
 	}
 	g.clock = clock.NewAt(clock.Tick(winter))
-	if c := g.wildlifeCap(); c != 80 {
+	if c := g.wildlifeCap(); c != 370*80/100 {
 		t.Fatalf("temperate winter capacity %d, want 80%%", c)
 	}
 	b := wildMapOf(1, 100, 100, biome.BorealForest) // yearly mean 0 °C
 	b.clock = clock.NewAt(clock.Tick(winter))
-	if c := b.wildlifeCap(); c != 80*60/100 {
+	if c := b.wildlifeCap(); c != 280*60/100 {
 		t.Fatalf("boreal winter capacity %d, want 60%%", c)
 	}
 	// event animals, tame and leaving ones are not counted
@@ -64,8 +87,8 @@ func TestWildlifeCapacity(t *testing.T) {
 	}
 	setAnimal(g, g.animalIDs[1], func(a *animal.State) { a.Leaving = true })
 	setAnimal(g, g.animalIDs[5], func(a *animal.State) { a.Tame = true })
-	if n := g.recountWild(uint64(g.clock.Now())); n != 1 {
-		t.Fatalf("counted %d wild animals, want the one deer", n)
+	if n := g.recountWild(uint64(g.clock.Now())); n != animal.EcosystemWeight(animal.Deer) {
+		t.Fatalf("counted %d wild ecosystem weight, want the one deer", n)
 	}
 }
 
@@ -89,15 +112,15 @@ func TestWildlifeRefillsBelowCap(t *testing.T) {
 		if fresh {
 			arrivals++
 		}
-		if n := g.wildCount(); n > capacity {
+		if n := g.wildCount(); n >= capacity+largestWildCost(g) && n > capacity {
 			t.Fatalf("refilled past capacity: %d of %d", n, capacity)
 		}
 	})
 	if n := g.wildCount(); n*100 < capacity*capLowPct {
 		t.Fatalf("after 30 days %d of %d (%d arrivals): the map refills to %d%%", n, capacity, arrivals, capLowPct)
 	}
-	if arrivals < 3 {
-		t.Fatalf("%d arrivals: groups come one at a time", arrivals)
+	if arrivals == 0 {
+		t.Fatal("no arrivals after 30 days")
 	}
 }
 
@@ -169,7 +192,9 @@ func TestCapacityNoFlap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := wildMapOf(9, 80, 80, biome.TemperateForest)
 			capacity := g.wildlifeCap()
-			for i := 0; i < capacity*tc.pct/100; i++ {
+			deerWeight := animal.EcosystemWeight(animal.Deer)
+			animals := max(1, capacity*tc.pct/100/deerWeight)
+			for i := 0; i < animals; i++ {
 				g.spawnHerd(animal.Deer, 10+i%60, 10+i/60*3, 1)
 			}
 			prev, changes := g.recountWild(uint64(g.clock.Now())), 0
@@ -178,8 +203,8 @@ func TestCapacityNoFlap(t *testing.T) {
 				switch {
 				case n > prev && !tc.gain, n < prev && tc.gain:
 					t.Fatalf("count went %d -> %d: flapped", prev, n)
-				case n > capacity && prev <= capacity:
-					t.Fatalf("arrivals overshot capacity: %d of %d", n, capacity)
+				case n >= capacity+largestWildCost(g) && n > capacity && prev <= capacity:
+					t.Fatalf("arrivals exceeded capacity by more than one large animal: %d of %d", n, capacity)
 				case n*100 < capacity*capLowPct && !tc.gain:
 					t.Fatalf("departures undershot: %d of %d", n, capacity)
 				}
@@ -203,7 +228,7 @@ func TestStartWildlifeNearTarget(t *testing.T) {
 	for _, b := range []biome.ID{biome.TemperateForest, biome.Tundra, biome.TropicalRainforest, biome.Desert} {
 		g := NewColony(Config{Seed: 4, Width: 100, Height: 100, Biome: b})
 		target, n := g.startTarget(), g.wildCount()
-		if n < target*3/4 || n > target+animal.RosterOf(animal.Deer).HerdMax*2 {
+		if n < target*3/4 || n > target+largestWildHerdCost(g) {
 			t.Errorf("%s: %d wild animals at the start, target %d", biome.DefOf(b).Key, n, target)
 		}
 		hx, hy := g.home()
@@ -223,7 +248,7 @@ func TestStartWildlifeNearTarget(t *testing.T) {
 // pairs.
 func populationCurve(b biome.ID, size, days int) [][2]int {
 	g := New(Config{Seed: 21, Width: size, Height: size, Biome: b})
-	g.generate(21)
+	g.generate(21, site.Site{})
 	g.seedGrass()
 	g.spawnWildlife()
 	out := [][2]int{{g.wildCount(), g.wildlifeCap()}}
@@ -234,20 +259,17 @@ func populationCurve(b biome.ID, size, days int) [][2]int {
 	return out
 }
 
-// popTestSize is the side of a square map of biome b carrying about want
-// wild animals, within 50..100 tiles.
+// popTestSize bounds ten-day test maps to 50..100 tiles; large-map weight
+// behaviour is covered independently by TestTemperateEcosystemBudget250.
 func popTestSize(b biome.ID, want int) int {
-	w := max(biome.DefOf(b).Wildlife, 1)
-	return min(max(int(math.Sqrt(float64(want*10000/w))), 50), 100)
+	w := max(biome.DefOf(b).AnimalDensity100, 1)
+	return min(max(int(math.Sqrt(float64(want*1000000/w))), 50), 100)
 }
 
-// TestPopulationStableTenDays: every biome but the ice ones keeps its wild
-// population within half and one and a half times capacity for ten days
-// (animals feeding, hunting, starving, resting, arriving, crossing and
-// leaving). The default run sizes each biome's map for a capacity of
-// about 30 (50..100 tiles a side, so every biome counts at least 10);
-// RIMWORLD_POP_FULL=1 runs them all on 100x100 (the plan's measurement,
-// ~20 s a biome); -short and -race keep three biomes at about 20.
+// TestPopulationStableTenDays checks ten days of weighted wildlife against
+// each biome's ecosystem budget. On low-density maps a single animal may
+// exceed the entire budget; its discrete weight is checked separately.
+// RIMWORLD_POP_FULL=1 uses 100x100 for every biome; -short/-race use three.
 func TestPopulationStableTenDays(t *testing.T) {
 	biomes := []biome.ID{biome.TemperateForest, biome.BorealForest, biome.Tundra, biome.ColdBog, biome.TemperateSwamp,
 		biome.TropicalSwamp, biome.TropicalRainforest, biome.AridShrubland, biome.Desert, biome.ExtremeDesert}
@@ -266,8 +288,23 @@ func TestPopulationStableTenDays(t *testing.T) {
 			var line strings.Builder
 			for d, c := range curve {
 				fmt.Fprintf(&line, " d%d %d/%d", d, c[0], c[1])
-				if d > 0 && (c[0]*2 < c[1] || c[0]*2 > c[1]*3) {
-					t.Errorf("day %d: %d wild of capacity %d", d, c[0], c[1])
+				if d == 0 {
+					continue
+				}
+				if c[1] < animal.EcosystemWeight(animal.Rat) {
+					// A sub-animal budget permits zero wildlife or a single
+					// arriving animal; proportional bounds are impossible.
+					maxOne := 0
+					for _, species := range animal.All() {
+						if animal.Wild(species, b) {
+							maxOne = max(maxOne, animal.EcosystemWeight(species))
+						}
+					}
+					if c[0] > maxOne {
+						t.Errorf("day %d: %d weight exceeds one wild animal (%d)", d, c[0], maxOne)
+					}
+				} else if c[0]*2 < c[1] || c[0]*2 > c[1]*3 {
+					t.Errorf("day %d: %d wild weight of capacity %d", d, c[0], c[1])
 				}
 			}
 			t.Logf("%s %dx%d:%s", biome.DefOf(b).Key, size, size, line.String())

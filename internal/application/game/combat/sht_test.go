@@ -30,7 +30,7 @@ func (r fakeRules) Colonist(id entity.EntityID) bool { return r.col[id] }
 
 // ruled is f's combat with friendly-fire rules r (nil: none, as f.combat).
 func (f *fakeHost) ruled(r Rules) *Combat {
-	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f, Rules: r})
+	return New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f, Rules: r})
 }
 
 // rifleShot is owner's aimed (or wild) rifle shot from (fx, fy) at target,
@@ -60,7 +60,7 @@ func TestDownedInterceptor(t *testing.T) {
 	if BodySize(animal.State{Species: animal.Deer}) != 1000 || attack.InterceptChance(1000) != 400 {
 		t.Fatal("the test assumes a deer of size 1000 and a 400 permille interception")
 	}
-	const want = 100 // 400 x 250 / 1000, 12 tiles out (full scale)
+	const want = 40 // 400 x 100 / 1000, 12 tiles out (full scale)
 	for _, tc := range []struct {
 		name string
 		put  func(f *fakeHost)

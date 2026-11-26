@@ -4,11 +4,14 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/sim/clock"
 	"slices"
 
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/herd"
+	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/rage"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -16,7 +19,6 @@ import (
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/mathx"
@@ -24,15 +26,8 @@ import (
 	"rimworld-go/pkg/randx"
 )
 
-// Animal handling. Hunters also tame: an animal marked for taming holds
-// still while a handler coaxes it, then is tamed (or not; a botched try
-// can enrage it). Tame animals have names; livestock live in pens (pens.go)
-// and the rest around the colony; they pass through the colony's doors and
-// never spring its traps; tame ridgewolves guard the colony against
-// raiders and hostile animals. Wild animals hurt by colonists may go
-// manhunter, hunting every colonist for a day; the storyteller also sends
-// whole manhunter packs. Rage, guards, hunts, charges, flight and chase
-// warnings live in game/rage, reached through rageOf (end of this file).
+// Animal handling, taming, pens, allowed areas and colony pet behavior.
+// Predator combat, manhunter rage and other reflexes live in game/rage.
 
 const (
 	// pathRetry: after a failed path search an animal waits this long
@@ -47,7 +42,7 @@ func (g *Game) markTame(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
 	for _, id := range g.animalIDs {
 		a, ok := g.animals.Get(id)
-		if !ok || on && (a.Tame || animal.DefOf(a.Species).TameChance == 0) {
+		if !ok || on && (a.Tame || animal.DefOf(a.Species).TameChance == 0 || foreignPackAnimal(g, id)) {
 			continue // hive insects are never tamed
 		}
 		if p, _ := g.positions.Get(id); p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY && !g.fogged(p.X, p.Y) {
@@ -86,6 +81,8 @@ func (g *Game) herdOf() *herd.Herd {
 // herdHost implements herd.Host over the game.
 type herdHost struct{ g *Game }
 
+func (h herdHost) Calendar() clock.CalendarPolicy { return h.g.clock.Calendar() }
+
 func (h herdHost) Now() uint64                                  { return uint64(h.g.clock.Now()) }
 func (h herdHost) Roll(n int) int                               { return h.g.rng.IntN(n) }
 func (h herdHost) Message(x, y int, format string, args ...any) { h.g.message(x, y, format, args...) }
@@ -100,15 +97,18 @@ func (h herdHost) Pos(id entity.EntityID) (int, int, bool) {
 	p, ok := h.g.positions.Get(id)
 	return p.X, p.Y, ok
 }
-func (h herdHost) AnyAnimal(keep func(entity.EntityID, *animal.State) bool) bool {
-	return h.g.anyAnimal(keep) // jobindex.go
+func (h herdHost) AnyTameAnimal(keep func(entity.EntityID, *animal.State) bool) bool {
+	return h.g.animals.AnyTame(keep)
+}
+func (h herdHost) AnyTameMarked() bool {
+	return h.g.animals.AnyLive(func(_ entity.EntityID, a *animal.Live) bool { return a.TameMark && !a.Tame })
 }
 func (h herdHost) Nearest(id entity.EntityID, keep func(entity.EntityID, *animal.State) bool) (entity.EntityID, int, int, bool) {
 	g := h.g
 	pos, _ := g.positions.Get(id)
 	aid, p, ok := g.nearestWhere(pos.X, pos.Y, max(g.grid.Width(), g.grid.Height()), ckAnimal, func(o entity.EntityID, _ Position) bool {
 		a := g.animals.Ref(o)
-		return a != nil && keep(o, a)
+		return a != nil && keep(o, a.SnapshotRef())
 	})
 	return aid, p.X, p.Y, ok
 }
@@ -173,12 +173,20 @@ func (h herdHost) Drop(st item.Stack) {
 	}
 }
 
+func (h herdHost) UseTameInspiration(id entity.EntityID) bool {
+	return h.g.mind.Inspire.Use(id, mind.Taming)
+}
+
 // Tamed: handler id tamed animal aid: it joins the colony, named, and may
 // bond with its tamer.
 func (h herdHost) Tamed(id, aid entity.EntityID) {
 	g := h.g
 	a, _ := g.animals.Get(aid)
 	ap, _ := g.positions.Get(aid)
+	if foreignPackAnimal(g, aid) {
+		return
+	}
+	g.resetAnimalTameness(aid, &a, uint64(g.clock.Now()))
 	a.Tame, a.TameMark, a.Designated = true, false, false
 	k := randx.NewKeyed(g.streams.seed, uint64(g.clock.Now()), opTameName, uint64(aid), 0) // #8: keyed, not g.rng
 	a.Name = petNames[k.IntN(len(petNames))]
@@ -218,13 +226,19 @@ func (g *Game) wanderTame(id entity.EntityID, a *animal.State, pos Position, def
 		return
 	}
 	a.NextThink = now + 240 + uint64(g.rng.IntN(480))
-	if penned(a) {
+	if animal.Penned(a) {
 		r := penRoamRadius
 		_, c := g.homePen(id, a, pos)
 		if c != nil {
 			r = def.WanderRadius
 		}
 		x, y := pos.X+g.rng.IntN(2*r+1)-r, pos.Y+g.rng.IntN(2*r+1)-r
+		if c == nil {
+			hx, hy := g.home()
+			if weapon.Distance(pos.X, pos.Y, hx, hy) > 12 {
+				x, y = hx+g.rng.IntN(7)-3, hy+g.rng.IntN(7)-3
+			}
+		}
 		x, y = mathx.Clamp(x, 0, g.grid.Width()-1), mathx.Clamp(y, 0, g.grid.Height()-1)
 		if c != nil && !g.inPenCells(c, x, y) { // pens need not be rectangles
 			return
@@ -270,7 +284,7 @@ func (g *Game) home() (int, int) {
 // building order, read from the cached bed list (the claimant is live).
 func (g *Game) bedOf(id entity.EntityID) entity.EntityID {
 	for _, bid := range bedsOf(g) {
-		if b := g.bldgs.Ref(bid); b != nil && b.SlotOf(uint64(id)) >= 0 {
+		if b := g.bldgs.Ref(bid); b != nil && construction.BedSlot(*b, uint64(id)) >= 0 {
 			return bid
 		}
 	}
@@ -293,7 +307,7 @@ func bedsOf(g *Game) []entity.EntityID {
 
 func scanBeds(g *Game, into []entity.EntityID) []entity.EntityID {
 	for _, id := range g.bldgIDs {
-		if b := g.bldgs.Ref(id); b != nil && b.Kind.Sleeps() {
+		if b := g.bldgs.Ref(id); b != nil && (b.Kind.Sleeps() || b.Kind.AnimalSleeps()) {
 			into = append(into, id)
 		}
 	}
@@ -316,14 +330,22 @@ func (g *Game) releaseAnimal(id entity.EntityID) {
 	p, _ := g.positions.Get(id)
 	g.message(p.X, p.Y, "%s the %s was released into the wild.", a.Name, a.Species.Label())
 	g.unbondReleased(id, &a) // bonds.go: the bonded colonist's regret
+	g.endMating(id, &a)
 	a.Tame, a.Name, a.Target, a.Mode = false, "", 0, animal.Wander
+	a.TrainDecay = 0
+	if g.worldSt != nil {
+		delete(g.worldSt.trainingMaintenance, id)
+	}
 	g.animals.Set(id, a)
 }
 
 // TameAnimal makes an animal tame on the spot (dev scenarios, fixtures).
 func (g *Game) TameAnimal(id entity.EntityID, name string) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	if a, ok := g.animals.Get(id); ok {
+	if a, ok := g.animals.Get(id); ok && !foreignPackAnimal(g, id) {
+		if !a.Tame {
+			g.resetAnimalTameness(id, &a, uint64(g.clock.Now()))
+		}
 		a.Tame, a.Name, a.TameMark, a.Manhunter = true, name, false, 0
 		g.animals.Set(id, a)
 	}
@@ -359,7 +381,7 @@ func (h rageLook) Name(id entity.EntityID) string                 { return h.g.n
 func (h rageLook) CreatureName(id entity.EntityID) string         { return h.g.creatureName(id) }
 func (h rageLook) KillerName(id entity.EntityID) string           { return h.g.killerName(id) }
 func (h rageLook) Animal(id entity.EntityID) (animal.State, bool) { return h.g.animals.Get(id) }
-func (h rageLook) Ref(id entity.EntityID) *animal.State           { return h.g.animals.Ref(id) }
+func (h rageLook) Ref(id entity.EntityID) *animal.Live            { return h.g.animals.Ref(id) }
 func (h rageLook) SetAnimal(id entity.EntityID, a animal.State)   { h.g.animals.Set(id, a) }
 func (h rageLook) Grown(a animal.State, now uint64) bool          { return h.g.grown(a, now) }
 func (h rageLook) Asleep(a animal.State) bool                     { return sleeping(a) }
@@ -370,9 +392,12 @@ func (h rageLook) StandingPawn(id entity.EntityID) bool           { return h.g.s
 func (h rageLook) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h rageLook) Colonist(id entity.EntityID) bool               { return slices.Contains(h.g.pawnIDs, id) }
 
+func (h rageLook) PackAnimal(id entity.EntityID) bool {
+	return foreignPackAnimal(h.g, id)
+}
+
 func (h rageLook) DownedPawn(id entity.EntityID) bool {
-	v, ok := h.g.vital.Get(id)
-	return ok && v.Status == health.Downed && h.g.isPawn(id)
+	return rage.DownedHuman(h.g.vital.Ref(id)) && h.g.isPawn(id)
 }
 
 func (h rageLook) Log(subject entity.EntityID, kind uint8, other entity.EntityID, name string) {
@@ -470,3 +495,9 @@ func (h rageAct) Bash(id, b entity.EntityID, wk weapon.Kind, dmg int) bool {
 	d.Damage, d.Ranged = dmg, false
 	return h.g.combat.Tactics.Bash(id, b, d)
 }
+
+// foreignPackAnimal consults the existing visit group owner.
+func foreignPackAnimal(g *Game, id entity.EntityID) bool {
+	return g.worldSt != nil && visit.PackFaction(g.worldSt.visitGroups, id) != 0
+}
+func (h herdHost) ForeignOwned(id entity.EntityID) bool { return foreignPackAnimal(h.g, id) }

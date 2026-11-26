@@ -15,7 +15,7 @@ import (
 
 // TestStoryOptionsFriendlyFire (SHT-007): the in-game Custom difficulty
 // dialog has the Friendly fire slider; dragging it to the left end and
-// accepting sends SetDifficulty with FriendlyFirePct 0 and every other
+// accepting sends SetDifficulty with FriendlyFire 0 and every other
 // value unchanged.
 func TestStoryOptionsFriendlyFire(t *testing.T) {
 	t.Parallel()
@@ -40,7 +40,7 @@ func TestStoryOptionsFriendlyFire(t *testing.T) {
 	}
 	got, err := difficulty.Decode(strings.TrimPrefix(cs[0].Name, "custom:"))
 	want := difficulty.Of(difficulty.Settled)
-	want.FriendlyFirePct = 0
+	want.FriendlyFire = 0
 	if err != nil || got != want {
 		t.Fatalf("custom values = %+v (%v), want Settled with friendly fire 0", got, err)
 	}

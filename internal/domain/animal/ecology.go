@@ -359,7 +359,7 @@ func SleepHours(s Species, h int) bool {
 // an adult from before ages were kept). Born may lie before tick 0 (a
 // start herd's old animals): it is then stored wrapped (BornAt), and the
 // difference still comes out right in uint64 arithmetic.
-func AgeDays(born, now uint64, s Species) int {
+func AgeDays(born, now uint64, s Species, policy ...clock.CalendarPolicy) int {
 	if born == 0 {
 		return LifeOf(s).AdultDays * 2
 	}
@@ -367,7 +367,7 @@ func AgeDays(born, now uint64, s Species) int {
 	if age < 0 {
 		return 0
 	}
-	return int(age / clock.TicksPerDay)
+	return int(clock.Policy(policy...).BiologicalDays(uint64(age) / clock.TicksPerDay))
 }
 
 // BornAt is the Born tick of an animal ageTicks old at tick now (it may

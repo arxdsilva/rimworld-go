@@ -116,23 +116,28 @@ func cardStats() []stat.ID {
 }
 
 // TrainLabel is a trainable behaviour's name.
-func TrainLabel(s training.Skill) string {
+func TrainLabel(tr lang.Tr, s training.Skill) string {
 	switch s {
 	case training.Obedience:
-		return "Obedience"
+		return tr.T("Obedience")
 	case training.Guard:
-		return "Guard"
+		return tr.T("Guard")
 	case training.Release:
-		return "Release"
+		return tr.T("Release")
+	case training.Haul:
+		return tr.T("Haul")
 	}
 	return ""
 }
 
 // TrainKey is a trainable behaviour's stable key.
-func TrainKey(s training.Skill) string { return strings.ToLower(TrainLabel(s)) }
+func TrainKey(s training.Skill) string { return strings.ToLower(TrainLabel(lang.English{}, s)) }
 
 // TrainByKey finds a trainable behaviour by key.
 func TrainByKey(key string) (training.Skill, bool) {
+	if key == "" {
+		return 0, false
+	}
 	for s := training.Skill(0); s < training.NumSkills; s++ {
 		if TrainKey(s) == key {
 			return s, true
@@ -151,7 +156,7 @@ func Defs(tr lang.Tr, key string) []Def {
 		}
 	case "train":
 		for s := training.Skill(0); s < training.NumSkills; s++ {
-			out = append(out, Def{TrainKey(s), TrainLabel(s)})
+			out = append(out, Def{TrainKey(s), TrainLabel(tr, s)})
 		}
 	case "stat":
 		for _, id := range cardStats() {

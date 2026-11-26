@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/pawn/health"
 )
 
 // The chase warning's words (moved from the game's chase_test.go).
@@ -66,5 +67,13 @@ func TestFightBackAndHurtBlind(t *testing.T) {
 	}
 	if DistSq(Pos{X: 1, Y: 1}, Pos{X: 4, Y: 5}) != 25 {
 		t.Fatal("distance")
+	}
+}
+
+func TestDownedHumanRead(t *testing.T) {
+	t.Parallel()
+	if DownedHuman(nil) || DownedHuman(&health.Record{Status: health.Alive}) ||
+		!DownedHuman(&health.Record{Status: health.Downed}) {
+		t.Fatal("downed pawn predicate changed")
 	}
 }

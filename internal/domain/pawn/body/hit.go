@@ -27,6 +27,10 @@ func WoundOf(f damage.Form) WoundKind {
 	return woundOf[f]
 }
 
+func remainingHP(b *Body, p Part) int {
+	return b.maxHP(p) - b.partDmg(p) - int(replacementDamage(b, p))
+}
+
 // Strike wounds b's part p with a hit of dmg of kind (CBT-1). A hit p's hit
 // points can hold wounds it; one that overkills it destroys it (with
 // what lies under it) at damage.DestroyChance of the overkill, in
@@ -35,11 +39,11 @@ func WoundOf(f damage.Form) WoundKind {
 // at 1 hit point and the rest of the hit is lost. A missing part takes
 // nothing. It reports p destroyed. wiki: Injury
 func Strike(b *Body, p Part, dmg int, kind WoundKind, lo, hi int, roll func(int) int, now uint64) bool {
-	if p >= b.numParts() || b.isMissing(p) || dmg <= 0 {
+	if p >= b.numParts() || b.isMissing(p) && !b.hasReplacement(p) || dmg <= 0 {
 		return false
 	}
 	mx := b.maxHP(p)
-	left := mx - b.partDmg(p)
+	left := remainingHP(b, p)
 	if dmg < left {
 		b.hurtPart(p, dmg, kind, now)
 		return false

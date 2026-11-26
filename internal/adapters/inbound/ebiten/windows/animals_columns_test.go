@@ -290,3 +290,59 @@ func TestColonyIconKeepsWholePixelRow(t *testing.T) { //nolint:paralleltest // c
 		t.Errorf("icons %+v, want %+v", icons, want)
 	}
 }
+
+// The actual Colony draw (not just the formatter) must read the active
+// catalog and place the translated Haul progress in the QA-002 cell.
+// At the small screen its declared drop must also remove its draw.
+type trainingColumnShell struct{ colonyDrawShell }
+
+func (s trainingColumnShell) T(key string) string {
+	if key == "Haul" {
+		return "Portage"
+	}
+	if key == "%s %d/%d" {
+		return "%[2]d/%[3]d %[1]s"
+	}
+	return s.fakeShell.T(key)
+}
+
+func TestColonyHaulUsesTranslatedCell(t *testing.T) { //nolint:paralleltest // canvas-global trace
+	for _, sc := range uikit.ColumnScreens() {
+		_, win := windowsMainTabRect(t, func(w *Set) { w.ToggleAnimals() }, sc.W, sc.H)
+		fs, _ := newFake()
+		fs.env.Game = fakeReader{}
+		fs.world.Animals = []game.AnimalView{{ID: 1, Species: "husky", Name: "Thistle", Tame: true,
+			Training: []game.AnimalTrainingView{{Skill: 3, Label: "Haul", Allowed: true, On: true, Steps: 2, Needed: 7}}}}
+		var icons []gfx.Rect
+		w := New(trainingColumnShell{colonyDrawShell{fs, &icons}})
+		var got []gfx.TraceEvent
+		func() {
+			gfx.SetDrawTrace(func(e gfx.TraceEvent) {
+				if e.Kind == "text" {
+					got = append(got, e)
+				}
+			})
+			defer gfx.SetDrawTrace(nil)
+			w.Animals().drawColony(ebiten.NewImage(sc.W, sc.H), uikit.Button{X: win.X, Y: win.Y, W: win.W, H: win.H})
+		}()
+		cell := colonyCell(colonyCells(nil, win, 0), cTrain)
+		scale := float32(gfx.UIScale())
+		found := false
+		for _, e := range got {
+			if e.Text == "Haul 2/7" {
+				t.Fatal("untranslated Haul rendered in Colony")
+			}
+			if e.Text != "2/7 Portage" {
+				continue
+			}
+			if cell.Empty() || e.X != cell.X*scale || e.X+e.W > cell.Right()*scale+0.01 ||
+				e.Y < cell.Y*scale || e.Y+e.H > (cell.Y+animalRowH)*scale+0.01 {
+				t.Fatalf("%dx%d: translated training text outside its cell: %+v, cell %+v", sc.W, sc.H, e, cell)
+			}
+			found = true
+		}
+		if found == cell.Empty() {
+			t.Fatalf("%dx%d: training cell %+v, translated draw found=%t", sc.W, sc.H, cell, found)
+		}
+	}
+}

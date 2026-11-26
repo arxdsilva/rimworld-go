@@ -406,3 +406,7 @@ Shared-file notes: `craft/view.go` is touched by WP6 and WP9; the lead gives it 
 - Whether a walking-speed urgency exists for the jog in CSE-041.
 - That a nil `Sense` field leaves the state hash unchanged: expected from `normalisedFields` and from earlier additive fields, proved by WP0's hash check.
 - Golden movement is predicted from reading the code; no run was made.
+
+### Independent native review correction (2026-11-25)
+
+Final physical ingredient admission checks live forbidden state on laid stacks, not only pickup; a failed bill commits neither product nor ingredient deletion and uses the native terminal cleanup owner. No unrelated gap is closed by this correction.

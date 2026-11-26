@@ -183,3 +183,47 @@ func TestLogSurvivesSaveAndAnimalRemovalDeletes(t *testing.T) {
 		t.Fatal("removed animal keeps its log")
 	}
 }
+
+// Log lines are immutable once appended by the native event writer.
+// Their detached view can be reused even when the expensive world cache is off.
+func TestLogLinesMemoWithoutWorldCache(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 24, Width: 25, Height: 16})
+	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	g.SetViewCache(false)
+	for range 12 {
+		g.logEvent(id, logEntry{Kind: logAte, Name: "meal"})
+	}
+	first := g.logLines(id)
+	again := g.logLines(id)
+	if len(first) != 12 || len(again) != 12 || &first[0] != &again[0] {
+		t.Fatal("unchanged log should reuse the same read-only view")
+	}
+	g.logEvent(id, logEntry{Kind: logAte, Name: "new meal"})
+	changed := g.logLines(id)
+	if len(changed) != 13 || &changed[0] == &first[0] || !strings.Contains(changed[0].Text, "new meal") {
+		t.Fatalf("appended event was not reflected: %+v", changed)
+	}
+	for range maxLogEntries {
+		g.logEvent(id, logEntry{Kind: logAte, Name: "final meal"})
+	}
+	capped := g.logLines(id)
+	if len(capped) != maxLogEntries || !strings.Contains(capped[0].Text, "final meal") {
+		t.Fatalf("truncated event log is stale: len=%d", len(capped))
+	}
+}
+
+// A repeated inspector read should avoid rebuilding hundreds of unchanged lines.
+func BenchmarkLogLinesWorldCacheOff(b *testing.B) {
+	g := New(Config{Seed: 24, Width: 25, Height: 16})
+	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	g.SetViewCache(false)
+	for range maxLogEntries {
+		g.logEvent(id, logEntry{Kind: logAte, Name: "meal"})
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		_ = g.logLines(id)
+	}
+}

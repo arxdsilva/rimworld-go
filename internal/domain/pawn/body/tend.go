@@ -221,7 +221,7 @@ const (
 // leaves a scar.
 func ScarOdds(k WoundKind, dmg int) int32 {
 	switch k {
-	case Cut, Bite, Scratch, Burn, Stab, Gunshot:
+	case Cut, Bite, Scratch, Burn, CorrosiveBurn, Stab, Gunshot:
 	case Frostbite:
 		return FrostbiteScar
 	default:
@@ -238,6 +238,22 @@ func ScarOdds(k WoundKind, dmg int) int32 {
 func (b *Body) HealHour(roll func(int) int, lying int32) (scarred []Part) {
 	if Malnutrition(b) > 0 {
 		return nil // wiki: Malnutrition: wounds don't heal
+	}
+	// Artificial parts recover structural damage without pain, bleeding,
+	// scars or doctor tending. Use the same hourly fixed-point healing rate.
+	for i := range b.Replacements {
+		r := &b.Replacements[i]
+		if r.Kind == 0 || r.Damage == 0 {
+			continue
+		}
+		r.HealAcc += HealRate(Wound{}, lying)
+		for r.HealAcc >= healUnit && r.Damage > 0 {
+			r.HealAcc -= healUnit
+			r.Damage--
+		}
+		if r.Damage == 0 {
+			r.HealAcc = 0
+		}
 	}
 	kept := b.Wounds[:0]
 	for _, w := range b.Wounds {

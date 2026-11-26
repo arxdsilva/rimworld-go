@@ -20,22 +20,23 @@ import (
 // fakeHost is a tiny world: one handler (id 1) at (0, 0), animals and
 // stacks by id, every tile reachable, claims by target.
 type fakeHost struct {
-	now     uint64
-	roll    int // Roll's answer
-	skill   int
-	animals map[entity.EntityID]animal.State
-	pos     map[entity.EntityID][2]int
-	stacks  map[entity.EntityID]item.Stack
-	jobs    map[entity.EntityID]job.Record
-	claims  map[entity.EntityID]entity.EntityID
-	next    entity.EntityID
-	banned  item.Kind // Policy forbids it (FOOD-4)
-	msgs    []string
-	killed  []entity.EntityID
-	tamed   []entity.EntityID
-	failed  []entity.EntityID
-	fed     []entity.EntityID
-	hauled  []entity.EntityID
+	now          uint64
+	roll         int // Roll's answer
+	inspiredTame bool
+	skill        int
+	animals      map[entity.EntityID]animal.State
+	pos          map[entity.EntityID][2]int
+	stacks       map[entity.EntityID]item.Stack
+	jobs         map[entity.EntityID]job.Record
+	claims       map[entity.EntityID]entity.EntityID
+	next         entity.EntityID
+	banned       item.Kind // Policy forbids it (FOOD-4)
+	msgs         []string
+	killed       []entity.EntityID
+	tamed        []entity.EntityID
+	failed       []entity.EntityID
+	fed          []entity.EntityID
+	hauled       []entity.EntityID
 }
 
 const handler entity.EntityID = 1
@@ -74,8 +75,12 @@ func (f *fakeHost) AnimalIDs() []entity.EntityID {
 	slices.Sort(ids)
 	return ids
 }
-func (f *fakeHost) AnyAnimal(keep func(entity.EntityID, *animal.State) bool) bool {
-	_, _, _, ok := f.Nearest(handler, keep)
+func (f *fakeHost) AnyTameAnimal(keep func(entity.EntityID, *animal.State) bool) bool {
+	_, _, _, ok := f.Nearest(handler, func(id entity.EntityID, a *animal.State) bool { return a.Tame && keep(id, a) })
+	return ok
+}
+func (f *fakeHost) AnyTameMarked() bool {
+	_, _, _, ok := f.Nearest(handler, func(_ entity.EntityID, a *animal.State) bool { return a.TameMark && !a.Tame })
 	return ok
 }
 func (f *fakeHost) Nearest(id entity.EntityID, keep func(entity.EntityID, *animal.State) bool) (entity.EntityID, int, int, bool) {
@@ -165,6 +170,13 @@ func (f *fakeHost) Drop(st item.Stack) {
 }
 func (f *fakeHost) HaulToStorage(id, sid entity.EntityID) bool {
 	f.hauled = append(f.hauled, sid)
+	return true
+}
+func (f *fakeHost) UseTameInspiration(entity.EntityID) bool {
+	if !f.inspiredTame {
+		return false
+	}
+	f.inspiredTame = false
 	return true
 }
 func (f *fakeHost) Tamed(id, aid entity.EntityID) {
@@ -376,3 +388,23 @@ func TestHunterCarriesItsKill(t *testing.T) {
 		t.Fatalf("carried once: %v", f.hauled)
 	}
 }
+
+func TestInspiredTamingConsumesOnValidAttempt(t *testing.T) {
+	f := newFake()
+	hd := New(f, &Settings{})
+	f.add(10, animal.State{Species: animal.Goat, TameMark: true, Food: 1000, HasSex: true}, 9, 0)
+	f.stacks[51] = item.Stack{Kind: item.Potatoes, Qty: 50, X: 3, Y: 3}
+	f.roll = 999
+	f.inspiredTame = true
+	if !hd.Taming.Assign(handler) {
+		t.Fatal("missing tame job")
+	}
+	if j := run(f, hd, handler, 50); j.State != job.Complete {
+		t.Fatalf("inspired tame job incomplete: %+v", j)
+	}
+	if len(f.tamed) != 1 || len(f.failed) != 0 || f.inspiredTame {
+		t.Fatalf("taming inspiration failed: tamed=%v failed=%v", f.tamed, f.failed)
+	}
+}
+
+func (f *fakeHost) ForeignOwned(entity.EntityID) bool { return false }

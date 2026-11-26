@@ -46,11 +46,11 @@ func TestVisitorsArriveSocialiseAndLeave(t *testing.T) {
 	if !g.visitorsArrive(now) {
 		t.Fatal("visitors did not arrive")
 	}
-	if g.visitorsFit(now) {
-		t.Fatal("a second group fits while the first is here")
+	if !g.visitorsFit(now) {
+		t.Fatal("a second independent visitor group should fit")
 	}
 	vs := g.visitorIDs()
-	if len(vs) < 2 || len(vs) > 4 {
+	if len(vs) < 1 || len(vs) > 4 {
 		t.Fatalf("%d visitors", len(vs))
 	}
 	for _, v := range vs {
@@ -222,6 +222,30 @@ func TestWandererLapsedThenTurnedAway(t *testing.T) {
 	for _, c := range g.pawnIDs {
 		if !slices.ContainsFunc(g.memories[c], func(m mood.Memory) bool { return m.Kind == mood.TurnedAwayWanderer }) {
 			t.Fatalf("colonist %d does not remember turning the wanderer away", c)
+		}
+	}
+}
+
+// Player decisions at expiry must not act before the hourly lapse pass.
+func TestExpiredWandererDecisionBeforeLapse(t *testing.T) {
+	for _, kind := range []command.Kind{command.AcceptLetter, command.DismissLetter} {
+		g := visitorGame(t)
+		g.wandererJoins(uint64(g.clock.Now()))
+		offer := wandererOffer(t, g)
+		before := len(g.pawnIDs)
+		g.clock.Advance(int(offer.Until - uint64(g.clock.Now())))
+		g.Enqueue(command.Command{Kind: kind, Target: offer.ID})
+		g.ApplyPending()
+		if len(g.pawnIDs) != before {
+			t.Fatal("expired offer admitted a colonist")
+		}
+		if _, ok := g.letters.Get(offer.ID); ok {
+			t.Fatal("expired letter retained")
+		}
+		for _, id := range g.pawnIDs {
+			if slices.ContainsFunc(g.memories[id], func(m mood.Memory) bool { return m.Kind == mood.TurnedAwayWanderer }) {
+				t.Fatal("expiry caused refusal memory")
+			}
 		}
 	}
 }

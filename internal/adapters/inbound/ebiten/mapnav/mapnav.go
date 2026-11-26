@@ -30,7 +30,7 @@ func Groups(maps []game.MapView, colonists []game.PawnView, cur game.MapID) []Gr
 		at[m.ID] = i
 	}
 	for _, p := range colonists {
-		if i, ok := at[p.Map]; ok {
+		if i, ok := at[game.MapID(p.Map)]; ok {
 			out[i].Pawns = append(out[i].Pawns, p)
 		}
 	}

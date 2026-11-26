@@ -288,11 +288,11 @@ func letterHasPlace(l game.LetterView) bool {
 
 // jumpToLetter takes the camera to the letter's creature, or else its tile.
 func (c Right) jumpToLetter(l game.LetterView) {
-	if c.focusEntity(l.Focus, l.Map, l.X, l.Y) {
+	if c.focusEntity(l.Focus, game.MapID(l.Map), l.X, l.Y) {
 		return
 	}
 	if l.X >= 0 && l.Y >= 0 {
-		c.sh.Jump(ports.Spot{Map: l.Map, X: l.X, Y: l.Y})
+		c.sh.Jump(ports.Spot{Map: game.MapID(l.Map), X: l.X, Y: l.Y})
 	}
 }
 

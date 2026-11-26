@@ -4,9 +4,12 @@
 package game
 
 import (
-	"cmp"
 	"slices"
 
+	"rimworld-go/internal/application/game/beacon"
+	"rimworld-go/internal/application/game/store"
+	"rimworld-go/internal/application/game/tradeview"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
@@ -26,7 +29,7 @@ import (
 // while there is nothing to do.
 
 const (
-	tradeSaveVersion = 1
+	tradeSaveVersion = 3
 	// tradeWait is how long a negotiator or radio operator stands at the
 	// trader or console before the session opens.
 	tradeWait = 60
@@ -44,14 +47,17 @@ const (
 
 // tradeState is the colony's trade.
 type tradeState struct {
-	caravan   *traderCaravan
-	orbital   *orbitalShip
-	pods      []tradePod        // by landing tick, then position
-	cooldowns []factionCooldown // ascending faction id
-	requests  []caravanRequest  // by arrival tick, then faction
-	aid       []aidCall         // military aid, by request (allies.go)
-	session   *tradeSession
-	comms     *commsSession
+	caravan       *traderCaravan
+	others        []*traderCaravan // other active visiting parties
+	retired       *traderCaravan   // surviving guards after the trader's loss
+	retiredOthers []*traderCaravan // other former traders with guards still present
+	orbital       *orbitalShip
+	pods          []tradePod        // by landing tick, then position
+	cooldowns     []factionCooldown // ascending faction id
+	requests      []caravanRequest  // by arrival tick, then faction
+	aid           []aidCall         // military aid, by request (allies.go)
+	session       *tradeSession
+	comms         *commsSession
 }
 
 // traderCaravan is a trader caravan on the map (saved). Trader is the
@@ -67,6 +73,8 @@ type traderCaravan struct {
 	Stock   trade.Stock
 	LeaveAt uint64
 	Turned  bool
+	GroupID uint64
+	Cargo   []visit.Cargo
 }
 
 // orbitalShip is an orbital trader in radio range until Until (saved).
@@ -119,23 +127,34 @@ type commsSession struct {
 // nothing to keep, so older saves and colonies that never traded hash as
 // before.
 type tradeSave struct {
-	Version   int
-	Caravan   *traderCaravan
-	Orbital   *orbitalShip
-	Pods      []tradePod
-	Cooldowns []factionCooldown
-	Requests  []caravanRequest
-	Aid       []aidCall // allies.go (Phase 4): nil without aid
+	Version         int
+	Caravan         *traderCaravan
+	Retired         *traderCaravan
+	Caravans        []*traderCaravan
+	RetiredCaravans []*traderCaravan
+	Orbital         *orbitalShip
+	Pods            []tradePod
+	Cooldowns       []factionCooldown
+	Requests        []caravanRequest
+	Aid             []aidCall // allies.go (Phase 4): nil without aid
 }
 
 // exportTrade is the Trade save field (nil: nothing to keep).
 func (g *Game) exportTrade() *tradeSave {
 	t := &g.trade
-	if t.caravan == nil && t.orbital == nil && len(t.pods) == 0 && len(t.cooldowns) == 0 && len(t.requests) == 0 && len(t.aid) == 0 {
+	if t.caravan == nil && len(t.others) == 0 && t.retired == nil && len(t.retiredOthers) == 0 && t.orbital == nil && len(t.pods) == 0 && len(t.cooldowns) == 0 && len(t.requests) == 0 && len(t.aid) == 0 {
 		return nil
 	}
-	return &tradeSave{Version: tradeSaveVersion, Caravan: cloneCaravan(t.caravan), Orbital: cloneShip(t.orbital),
+	s := &tradeSave{Version: tradeSaveVersion, Caravan: cloneCaravan(t.caravan),
+		Retired: cloneCaravan(t.retired), Orbital: cloneShip(t.orbital),
 		Pods: clonePodsT(t.pods), Cooldowns: slices.Clone(t.cooldowns), Requests: slices.Clone(t.requests), Aid: slices.Clone(t.aid)}
+	for _, c := range t.others {
+		s.Caravans = append(s.Caravans, cloneCaravan(c))
+	}
+	for _, c := range t.retiredOthers {
+		s.RetiredCaravans = append(s.RetiredCaravans, cloneCaravan(c))
+	}
+	return s
 }
 
 // importTrade restores exportTrade's state (nil: none); open sessions
@@ -145,14 +164,22 @@ func (g *Game) importTrade(s *tradeSave) {
 	if s == nil {
 		return
 	}
-	g.trade = tradeState{caravan: cloneCaravan(s.Caravan), orbital: cloneShip(s.Orbital), pods: clonePodsT(s.Pods),
+	g.trade = tradeState{caravan: cloneCaravan(s.Caravan), retired: cloneCaravan(s.Retired),
+		orbital: cloneShip(s.Orbital), pods: clonePodsT(s.Pods),
 		cooldowns: slices.Clone(s.Cooldowns), requests: slices.Clone(s.Requests), aid: slices.Clone(s.Aid)}
+	for _, c := range s.Caravans {
+		g.trade.others = append(g.trade.others, cloneCaravan(c))
+	}
+	for _, c := range s.RetiredCaravans {
+		g.trade.retiredOthers = append(g.trade.retiredOthers, cloneCaravan(c))
+	}
+	if s.Version < 2 && g.trade.caravan != nil {
+		c := g.trade.caravan
+		c.Cargo = visit.AssignCargo(c.Stock, c.Members)
+	}
 }
 
-func cloneStock(s trade.Stock) trade.Stock {
-	s.Lines = slices.Clone(s.Lines)
-	return s
-}
+func cloneStock(s trade.Stock) trade.Stock { return s.Clone() }
 
 func cloneCaravan(c *traderCaravan) *traderCaravan {
 	if c == nil {
@@ -161,6 +188,7 @@ func cloneCaravan(c *traderCaravan) *traderCaravan {
 	out := *c
 	out.Members = slices.Clone(c.Members)
 	out.Stock = cloneStock(c.Stock)
+	out.Cargo = visit.CloneCargo(c.Cargo)
 	return &out
 }
 
@@ -187,7 +215,7 @@ func clonePodsT(ps []tradePod) []tradePod {
 func (g *Game) tradeTick(now uint64) {
 	wanderersTick(g, now) // world_stash.go (MAP-19)
 	t := &g.trade
-	if t.caravan == nil && t.orbital == nil && len(t.pods) == 0 && len(t.requests) == 0 && len(t.aid) == 0 && t.session == nil && t.comms == nil {
+	if t.caravan == nil && len(t.others) == 0 && t.orbital == nil && len(t.pods) == 0 && len(t.requests) == 0 && len(t.aid) == 0 && t.session == nil && t.comms == nil {
 		return
 	}
 	if len(t.aid) > 0 {
@@ -210,12 +238,7 @@ func (g *Game) tradeTick(now uint64) {
 func (g *Game) checkSessions() {
 	t := &g.trade
 	if s := t.session; s != nil {
-		ok := g.holdingJob(s.negotiator)
-		if s.trader != 0 {
-			ok = ok && g.traderOpen(s.trader)
-		} else {
-			ok = ok && t.orbital != nil
-		}
+		_, ok := liveTradeParty(g, s)
 		if !ok {
 			t.session = nil
 		}
@@ -236,38 +259,16 @@ func (g *Game) TradeStatus() (OrbitalView, bool) {
 		if f := g.factionByID(c.Faction); f != nil {
 			v.CaravanFaction = f.Name
 		}
-		v.CaravanHoursLeft = hoursLeft(c.LeaveAt, uint64(g.clock.Now()))
+		v.CaravanHoursLeft = tradeview.HoursLeft(c.LeaveAt, uint64(g.clock.Now()))
 	}
 	return v, v.Present || v.CaravanVisiting
 }
 
-// hoursLeft is the whole hours (rounded up) from now until end.
-func hoursLeft(end, now uint64) int {
-	if end <= now {
-		return 0
-	}
-	return int((end - now + clock.TicksPerHour - 1) / clock.TicksPerHour)
-}
+// factionByID resolves the live diplomacy record by saved faction ID.
+func (g *Game) factionByID(id int) *faction.Faction { return faction.FindByID(g.ng.factions, id) }
 
-// factionByID is the faction whose ID is id (nil: none).
-func (g *Game) factionByID(id int) *faction.Faction {
-	for i := range g.ng.factions {
-		if g.ng.factions[i].ID == id {
-			return &g.ng.factions[i]
-		}
-	}
-	return nil
-}
-
-// factionRef is faction id's visitor/raid reference (1 + index; 0: none).
-func (g *Game) factionRef(id int) int {
-	for i := range g.ng.factions {
-		if g.ng.factions[i].ID == id {
-			return i + 1
-		}
-	}
-	return 0
-}
+// factionRef is the 1-based faction index for visitor and raid records.
+func (g *Game) factionRef(id int) int { return faction.RefByID(g.ng.factions, id) }
 
 // cooldownOf is faction id's request cooldowns.
 func (g *Game) cooldownOf(id int) faction.Cooldowns {
@@ -291,80 +292,42 @@ func (g *Game) setCooldown(id int, cd faction.Cooldowns) {
 
 // beaconIDs lists the powered trade beacons, ascending.
 func (g *Game) beaconIDs() []entity.EntityID {
-	var out []entity.EntityID
-	for _, id := range g.bldgIDs {
-		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.TradeBeacon && g.powered(id) {
-			out = append(out, id)
-		}
-	}
-	return out
+	return slices.Collect(beacon.Powered(g.bldgIDs, construction.TradeBeacon, g.bldgs.Ref, g.powered))
 }
 
-// tradeGoods is what the colony can trade: for a caravan the unforbidden
-// loose stacks on stockpile cells, for the orbital ship those in a
-// trade beacon's reach (beaconCells; one pass over those cells, so it stays
-// bounded by the reach). ids are ascending per kind.
-type tradeGoods struct {
-	ids    map[item.Kind][]entity.EntityID
-	counts map[item.Kind]int
-}
-
-func (g *Game) colonyGoods(orbital bool) tradeGoods {
+// colonyGoods selects the colony's tradeable stockpile, or the orbital
+// beacon inventory when an orbital ship is negotiating.
+func (g *Game) colonyGoods(orbital bool) store.TradeGoods {
 	if orbital {
 		return beaconGoods(g)
 	}
 	return g.collectGoods(g.stockpiled)
 }
 
-// collectGoods is the unforbidden, unfogged loose stacks whose cell
-// passes in (one pass over the items).
-func (g *Game) collectGoods(in func(x, y int) bool) tradeGoods {
-	gd := tradeGoods{ids: map[item.Kind][]entity.EntityID{}, counts: map[item.Kind]int{}}
-	for _, iid := range g.itemIDs {
-		st := g.stacks.Ref(iid)
-		if st == nil || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 || g.fogged(st.X, st.Y) || !in(st.X, st.Y) {
-			continue
-		}
-		gd.ids[st.Kind] = append(gd.ids[st.Kind], iid)
-		gd.counts[st.Kind] += st.Qty
-	}
-	for k := range gd.ids {
-		slices.Sort(gd.ids[k])
-	}
-	return gd
+// collectGoods delegates physical stack selection and ordering to store.
+func (g *Game) collectGoods(in func(x, y int) bool) store.TradeGoods {
+	return store.CollectTrade(g.itemIDs, g.stacks.Get, func(st item.Stack) bool {
+		return !g.fogged(st.X, st.Y) && in(st.X, st.Y)
+	})
 }
 
-// takeGoods removes n of kind k from gd's stacks, ascending id first.
-func (g *Game) takeGoods(gd tradeGoods, k item.Kind, n int) {
-	for _, iid := range gd.ids[k] {
-		if n <= 0 {
-			return
-		}
-		st, ok := g.stacks.Get(iid)
-		if !ok {
-			continue
-		}
-		take := min(n, st.Qty)
-		g.takeItems(iid, st, take) // animal_needs.go: deletes an emptied stack
-		n -= take
-	}
+// takeGoods spends the selected physical stacks against their live state.
+func (g *Game) takeGoods(gd store.TradeGoods, k item.Kind, n int) {
+	gd.Take(k, n, g.stacks.Get, func(id entity.EntityID, st item.Stack, qty int) {
+		g.takeItems(id, st, qty)
+	})
 }
 
-// dropGoods puts line l down at (x, y) in stacks of at most its kind's
-// book stack limit (spilling), forbidden when forbid; a crate keeps its
-// kind, in its default material (AX-1); a gone kind (item.None) drops none.
+// dropGoods puts exact traded physical lots down in map stack limits,
+// keeping quality, material, wear and book identity after a purchase.
 func (g *Game) dropGoods(l trade.Line, x, y int, forbid bool) {
-	b := g.sk.content.Items
-	for qty := l.Qty; qty > 0 && int(l.Kind) < b.Len(); {
-		n := min(qty, b.StackLimit(l.Kind))
-		qty -= n
-		sid, err := g.SpawnStack(l.Kind, n, x, y)
+	for _, physical := range trade.DropStacks(g.sk.content.Items, l) {
+		sid, err := g.SpawnStack(physical.Kind, physical.Qty, x, y)
 		if err != nil {
 			return
 		}
-		if s, ok := g.stacks.Get(sid); ok {
-			s.Forbidden, s.Building, s.Stuff = forbid, l.Building, cmp.Or(trade.CrateStuff(l.Building), s.Stuff)
-			g.mergeOrSet(sid, s)
-		}
+		physical.X, physical.Y = x, y
+		physical.Forbidden = forbid
+		g.mergeOrSet(sid, physical)
 	}
 }

@@ -32,10 +32,11 @@ type Hives struct {
 	// CBT-4: n places hive mounds and m tells a colonist near (nil:
 	// none); hives are the mounds standing, ascending ids (saved in
 	// MechSave).
-	n     Nest
-	m     MechHost
-	hives []Hive
-	now   uint64 // the tick Step last ran (an infestation's clock)
+	n           Nest
+	m           MechHost
+	hives       []Hive
+	now         uint64 // the tick Step last ran (an infestation's clock)
+	infestAfter uint64 // saved successful storyteller infestation cooldown
 }
 
 // exitCache is Exit's last answer and the structure it was for.
@@ -66,12 +67,25 @@ func (hv *Hives) Swarm() { hv.swarm(true) }
 // dark, roofed, warm spot nearest home anywhere on the map. It reports
 // false, having changed nothing, when no spot exists, and the caller sends
 // a raid instead.
-func (hv *Hives) Infest() bool { return hv.swarm(false) }
+func (hv *Hives) Infest() bool {
+	if hv.now < hv.infestAfter || hv.n == nil || len(hv.hives) >= HiveCap {
+		return false
+	}
+	return hv.swarm(false)
+}
 
 // swarm is Swarm and Infest: fallback lets a swarm burst from the rock face
 // (or a map edge) when no hive spot exists.
 func (hv *Hives) swarm(fallback bool) bool {
-	hive, nested := hv.infestHome(hv.now)
+	hive, nested := 0, false
+	if fallback {
+		hive, nested = hv.infestHome(hv.now)
+	} else {
+		hive, nested = hv.infestStrict(hv.now)
+	}
+	if nested && !fallback {
+		hv.infestAfter = hv.now + InfestationGap
+	}
 	if !nested && !fallback {
 		return false
 	}

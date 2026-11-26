@@ -48,7 +48,7 @@ func TestBedPartnersShareDoubleBed(t *testing.T) {
 	if g.sleptAt[a] != double {
 		t.Fatalf("a sleeps in %d, want the double bed %d", g.sleptAt[a], double)
 	}
-	if bb, _ := g.bldgs.Get(s1); bb.SlotOf(uint64(a)) >= 0 {
+	if bb, _ := g.bldgs.Get(s1); construction.BedSlot(bb, uint64(a)) >= 0 {
 		t.Fatal("a kept its old single bed")
 	}
 	tireOut(g, b)
@@ -56,7 +56,7 @@ func TestBedPartnersShareDoubleBed(t *testing.T) {
 		t.Fatalf("b sleeps in %d, want the double bed", g.sleptAt[b])
 	}
 	bb, _ := g.bldgs.Get(double)
-	if bb.SlotOf(uint64(a)) < 0 || bb.SlotOf(uint64(b)) < 0 || bb.SlotOf(uint64(a)) == bb.SlotOf(uint64(b)) {
+	if construction.BedSlot(bb, uint64(a)) < 0 || construction.BedSlot(bb, uint64(b)) < 0 || construction.BedSlot(bb, uint64(a)) == construction.BedSlot(bb, uint64(b)) {
 		t.Fatalf("double bed slots %d / %d", bb.Claimant, bb.Claimant2)
 	}
 	if _, found := moodOfKind(g, a, mood.SleptAlone); found {
@@ -212,12 +212,12 @@ func TestBedAssignOwnerCommand(t *testing.T) {
 	if db.Claimant2 != uint64(a) {
 		t.Fatalf("slot 1 = %d, want %d", db.Claimant2, a)
 	}
-	if sb, _ := g.bldgs.Get(s1); sb.SlotOf(uint64(a)) >= 0 {
+	if sb, _ := g.bldgs.Get(s1); construction.BedSlot(sb, uint64(a)) >= 0 {
 		t.Fatal("old bed kept")
 	}
 	g.rest.Beds.AssignOwner(double, b, 1) // b takes a's slot
 	db, _ = g.bldgs.Get(double)
-	if db.Claimant2 != uint64(b) || db.SlotOf(uint64(a)) >= 0 {
+	if db.Claimant2 != uint64(b) || construction.BedSlot(db, uint64(a)) >= 0 {
 		t.Fatalf("slot 1 = %d after reassigning", db.Claimant2)
 	}
 	g.rest.Beds.AssignOwner(double, 0, 1)

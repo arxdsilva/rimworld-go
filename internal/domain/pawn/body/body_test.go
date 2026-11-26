@@ -79,9 +79,9 @@ func TestHurtWoundAndNoop(t *testing.T) {
 func TestDestroyCascade(t *testing.T) {
 	var b Body
 	b.Hurt(fixed(rollFor(HandL)), 5, Cut, 1)
-	b.SetImplant(HandL, item.WoodenHand)
+	b.SetReplacement(HandL, item.WoodenHand)
 	b.Hurt(fixed(rollFor(ArmL)), 35, Cut, 2)
-	if !b.isMissing(ArmL) || !b.isMissing(HandL) || len(b.Wounds) != 0 || b.Implant(HandL) != 0 {
+	if !b.isMissing(ArmL) || !b.isMissing(HandL) || len(b.Wounds) != 0 || b.ReplacementAt(HandL) != 0 {
 		t.Fatalf("cascade %b %v", b.Missing, b.Wounds)
 	}
 	if b.Damage() != 35 {
@@ -128,7 +128,7 @@ func TestDamageMapping(t *testing.T) {
 	if b.Damage() != 70 {
 		t.Fatalf("damage %d", b.Damage())
 	}
-	b.SetImplant(LegL, item.PegLeg)
+	b.SetReplacement(LegL, item.PegLeg)
 	if b.Damage() != 30 {
 		t.Fatalf("replaced leg should not count: %d", b.Damage())
 	}
@@ -143,7 +143,7 @@ func TestTendAndPain(t *testing.T) {
 		t.Fatalf("tended pain %d", b.Pain())
 	}
 	b.Wounds = []Wound{{Part: Torso, Dmg: 500, Kind: Cut}}
-	if b.Pain() != 1000 || b.Capacity(Consciousness) != 500 {
+	if b.Pain() != 1000 || b.Capacity(Consciousness) != 600 {
 		t.Fatal("pain cap")
 	}
 }
@@ -156,19 +156,19 @@ func TestCapacities(t *testing.T) {
 		}
 	}
 	b.destroy(EyeL)
-	if b.Capacity(Sight) != 500 {
+	if b.Capacity(Sight) != 750 {
 		t.Fatal("one eye")
 	}
 	b.destroy(LegL)
 	if b.Capacity(Moving) != 500 {
 		t.Fatalf("one leg %d", b.Capacity(Moving))
 	}
-	b.SetImplant(LegL, item.ProstheticLeg)
+	b.SetReplacement(LegL, item.ProstheticLeg)
 	if b.Capacity(Moving) != (850+1000)/2 {
 		t.Fatalf("prosthetic leg %d", b.Capacity(Moving))
 	}
 	b.destroy(ArmR)
-	b.SetImplant(HandL, 0)
+	b.SetReplacement(HandL, 0)
 	if b.Capacity(Manipulation) != 500 {
 		t.Fatal("one arm")
 	}
@@ -177,14 +177,14 @@ func TestCapacities(t *testing.T) {
 		t.Fatal("no arms")
 	}
 	b.destroy(HandL)
-	b.SetImplant(HandL, item.WoodenHand)
+	b.SetReplacement(HandL, item.WoodenHand)
 	b.destroy(LungL)
 	if b.Capacity(Breathing) != 500 {
 		t.Fatal("lung")
 	}
 	b.destroy(EarL)
-	b.SetImplant(EarL, item.HearingTrumpet)
-	if b.Capacity(Hearing) != 800 {
+	b.SetReplacement(EarL, item.HearingTrumpet)
+	if b.Capacity(Hearing) != 900 {
 		t.Fatalf("trumpet %d", b.Capacity(Hearing))
 	}
 }
@@ -192,8 +192,8 @@ func TestCapacities(t *testing.T) {
 func TestWoodenHandOnlyHand(t *testing.T) {
 	var b Body
 	b.destroy(HandL)
-	b.SetImplant(HandL, item.WoodenHand)
-	if b.Capacity(Manipulation) != (WoodenHandEff+1000)/2 {
+	b.SetReplacement(HandL, item.WoodenHand)
+	if b.Capacity(Manipulation) != (600+1000)/2 {
 		t.Fatalf("%d", b.Capacity(Manipulation))
 	}
 }
@@ -204,7 +204,7 @@ func TestJawAndDenture(t *testing.T) {
 	if b.Capacity(Talking) != 0 || !b.Disfigured() {
 		t.Fatal("no jaw")
 	}
-	if !b.Install(Jaw, item.Denture) || b.Capacity(Talking) != 800 {
+	if !b.InstallReplacement(Jaw, item.Denture) || b.Capacity(Talking) != 800 {
 		t.Fatalf("denture %d", b.Capacity(Talking))
 	}
 	b.Wounds = []Wound{{Part: Brain, Dmg: 24, Kind: Cut}}
@@ -215,7 +215,7 @@ func TestJawAndDenture(t *testing.T) {
 
 func TestConsciousnessPain(t *testing.T) {
 	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 25, Kind: Cut}}} // pain 312 (12.5 per HP)
-	if b.Capacity(Consciousness) != 844 || b.Capacity(Moving) != 844 || b.Capacity(Manipulation) != 844 {
+	if b.Capacity(Consciousness) != 906 || b.Capacity(Moving) != 906 || b.Capacity(Manipulation) != 906 {
 		t.Fatalf("%d", b.Capacity(Consciousness))
 	}
 }
@@ -242,26 +242,26 @@ func TestDisfigured(t *testing.T) {
 
 func TestImplants(t *testing.T) {
 	var b Body
-	if b.Install(LegL, item.PegLeg) {
+	if b.InstallReplacement(LegL, item.PegLeg) {
 		t.Fatal("Install needs a missing part")
 	}
 	b.destroy(LegL)
-	if b.Install(LegL, item.WoodenHand) || b.Install(NumParts, item.PegLeg) {
+	if b.InstallReplacement(LegL, item.WoodenHand) || b.InstallReplacement(NumParts, item.PegLeg) {
 		t.Fatal("wrong implant")
 	}
-	if !b.Install(LegL, item.PegLeg) || b.Install(LegL, item.ProstheticLeg) || b.Install(FootL, item.PegLeg) {
+	if !b.InstallReplacement(LegL, item.PegLeg) || b.InstallReplacement(LegL, item.ProstheticLeg) || b.InstallReplacement(FootL, item.PegLeg) {
 		t.Fatal("install rules")
 	}
 	if b.ArtificialParts() != 1 || b.Capacity(Moving) != (600+1000)/2 {
 		t.Fatalf("%d %d", b.ArtificialParts(), b.Capacity(Moving))
 	}
-	if k, ok := b.Remove(LegL); !ok || k != item.PegLeg || b.ArtificialParts() != 0 {
+	if k, ok := b.RemoveReplacement(LegL); !ok || k != item.PegLeg || b.ArtificialParts() != 0 {
 		t.Fatal("remove")
 	}
-	if _, ok := b.Remove(LegL); ok {
+	if _, ok := b.RemoveReplacement(LegL); ok {
 		t.Fatal("double remove")
 	}
-	if _, ok := b.Remove(NumParts); ok {
+	if _, ok := b.RemoveReplacement(NumParts); ok {
 		t.Fatal("bad part")
 	}
 	if ImplantEfficiency(item.Food) != 0 || ImplantEfficiency(item.ProstheticArm) != 500 {
@@ -286,7 +286,7 @@ func TestApply(t *testing.T) {
 	if len(b.Wounds) != 1 || b.Wounds[0].Part != Torso || b.Wounds[0].Dmg != 15 || b.Wounds[0].Kind != Surgical {
 		t.Fatalf("%+v", b.Wounds)
 	}
-	if !b.Apply(install, Success, fixed(0), 6) || b.Implant(LegL) != item.PegLeg {
+	if !b.Apply(install, Success, fixed(0), 6) || b.ReplacementAt(LegL) != item.PegLeg {
 		t.Fatal("install")
 	}
 	if !b.Apply(Operation{Kind: RemoveImplant, Part: LegL}, Success, fixed(0), 7) || b.ArtificialParts() != 0 {
@@ -312,7 +312,7 @@ func TestApply(t *testing.T) {
 func TestPartsAndGob(t *testing.T) {
 	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 10, Kind: Cut, Tended: true}, {Part: Torso, Dmg: 1, Permanent: true}, {Part: ArmL, Dmg: 99}}}
 	b.destroy(LegL)
-	b.SetImplant(LegL, item.PegLeg)
+	b.SetReplacement(LegL, item.PegLeg)
 	ps := b.Parts()
 	if len(ps) != int(NumParts) || ps[Torso].HP != 49 || ps[Torso].Wounds != 1 || ps[Torso].Scars != 1 || !ps[Torso].Tended {
 		t.Fatalf("%+v", ps[Torso])
@@ -325,7 +325,7 @@ func TestPartsAndGob(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got Body
-	if err := gob.NewDecoder(&buf).Decode(&got); err != nil || got.Missing != b.Missing || !slices.Equal(got.Fitted, b.Fitted) || len(got.Wounds) != 3 {
+	if err := gob.NewDecoder(&buf).Decode(&got); err != nil || got.Missing != b.Missing || !slices.Equal(got.Replacements, b.Replacements) || len(got.Wounds) != 3 {
 		t.Fatalf("%v %+v", err, got)
 	}
 }
@@ -340,8 +340,8 @@ func TestReplaceHealthyLeg(t *testing.T) {
 	if !b.Apply(op, Success, fixed(0), 1) {
 		t.Fatal("apply")
 	}
-	if !b.isMissing(LegL) || !b.isMissing(FootL) || b.Implant(LegL) != item.ProstheticLeg || b.ArtificialParts() != 1 {
-		t.Fatalf("%b %v", b.Missing, b.Fitted)
+	if !b.isMissing(LegL) || !b.isMissing(FootL) || b.ReplacementAt(LegL) != item.ProstheticLeg || b.ArtificialParts() != 1 {
+		t.Fatalf("%b %v", b.Missing, b.Replacements)
 	}
 	if len(b.Wounds) != 1 || b.Wounds[0].Part != LegR {
 		t.Fatalf("wounds %+v", b.Wounds)
@@ -349,8 +349,8 @@ func TestReplaceHealthyLeg(t *testing.T) {
 	if got := b.Capacity(Moving); got != (850+950)/2 {
 		t.Fatalf("moving %d", got)
 	}
-	if b.CanOperate(Operation{InstallImplant, FootL, item.ProstheticFoot}) || b.CanOperate(op) {
-		t.Fatal("covered/occupied")
+	if b.CanOperate(Operation{InstallImplant, FootL, item.ProstheticFoot}) || !b.CanOperate(op) {
+		t.Fatal("covered foot or replaceable leg")
 	}
 	if b.MissingUncovered() != 0 {
 		t.Fatal("prosthetic leg covers leg and foot")
@@ -364,7 +364,7 @@ func TestReplaceFailureKeepsPart(t *testing.T) {
 		if b.Apply(op, o, fixed(0), 1) {
 			t.Fatal("failure must not install")
 		}
-		if b.Implant(LegL) != 0 || len(b.Wounds) != 1 || b.Wounds[0].Kind != Surgical {
+		if b.ReplacementAt(LegL) != 0 || len(b.Wounds) != 1 || b.Wounds[0].Kind != Surgical {
 			t.Fatalf("%v %+v", o, b.Wounds)
 		}
 		if o == MinorFail && b.isMissing(LegL) {
@@ -398,10 +398,10 @@ func TestProstheticFoot(t *testing.T) {
 	if !b.Apply(Operation{InstallImplant, FootL, item.ProstheticFoot}, Success, fixed(0), 1) {
 		t.Fatal("foot")
 	}
-	if got := b.Capacity(Moving); got != (750+1000)/2 {
+	if got := b.Capacity(Moving); got != (800+1000)/2 {
 		t.Fatalf("moving %d", got)
 	}
-	if Fits(item.ProstheticFoot, LegL) || ImplantEfficiency(item.ProstheticFoot) != 750 {
+	if FitsReplacement(item.ProstheticFoot, LegL) || ImplantEfficiency(item.ProstheticFoot) != 800 {
 		t.Fatal("fit/eff")
 	}
 }
@@ -411,7 +411,7 @@ func TestCosmeticImplants(t *testing.T) {
 	if !b.Apply(Operation{InstallImplant, EyeL, item.GlassEye}, Success, fixed(0), 1) {
 		t.Fatal("eye")
 	}
-	if b.ArtificialParts() != 1 || b.Capacity(Sight) != 500 || b.MissingUncovered() != 0 {
+	if b.ArtificialParts() != 1 || b.Capacity(Sight) != 875 || b.MissingUncovered() != 0 {
 		t.Fatalf("%d %d %d", b.ArtificialParts(), b.Capacity(Sight), b.MissingUncovered())
 	}
 	if !b.Disfigured() {
@@ -420,7 +420,7 @@ func TestCosmeticImplants(t *testing.T) {
 	if !b.Apply(Operation{InstallImplant, Nose, item.WoodenNose}, Success, fixed(0), 1) || b.ArtificialParts() != 2 {
 		t.Fatal("nose")
 	}
-	if Fits(item.WoodenNose, EyeL) || Fits(item.GlassEye, Nose) {
+	if FitsReplacement(item.WoodenNose, EyeL) || FitsReplacement(item.GlassEye, Nose) {
 		t.Fatal("fits")
 	}
 	b.destroy(EarL)

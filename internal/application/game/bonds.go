@@ -213,7 +213,7 @@ func (g *Game) bondsOnDeath(dead entity.EntityID) {
 		if ar == nil || ar.Master != uint64(dead) && ar.Bond != uint64(dead) {
 			continue
 		}
-		a := *ar
+		a := ar.State()
 		if a.Master == uint64(dead) {
 			a.Master = 0
 		}

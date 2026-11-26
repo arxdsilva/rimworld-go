@@ -23,7 +23,8 @@ func newPrisonBeds(c *Care) *PrisonBeds { return &PrisonBeds{c: c} }
 // back to one.
 func (p *PrisonBeds) Lying(id entity.EntityID) bool {
 	c := p.c
-	return c.h.IsPrisoner(id) && c.Doctor.InjuredDowned(id) && c.h.BedUnder(id) == 0
+	return c.h.IsPrisoner(id) && c.Doctor.InjuredDowned(id) &&
+		(c.h.BedUnder(id) == 0 || !arrivalBedOK(c, 0, id, c.h.BedUnder(id), tripPrisoner))
 }
 
 // Assign gives warden id the job of carrying the nearest such prisoner
@@ -48,7 +49,7 @@ func (p *PrisonBeds) Assign(id entity.EntityID) bool {
 		if d >= bestD {
 			continue
 		}
-		if _, ok := c.pr.PrisonBedFor(pid, px, py); !ok {
+		if tripWhy(c, id, pid, tripPrisoner) != "" {
 			continue
 		}
 		sx, sy, ok := h.BesideSpot(id, px, py)
@@ -92,7 +93,7 @@ func (p *PrisonBeds) Judge(doer, target entity.EntityID) (bool, string) {
 	if !p.Lying(target) {
 		return false, ReasonNoLonger
 	}
-	return true, firstWhy(c.doerWhy(doer, false), c.holdWhy(doer, target), c.prisonBedWhy(target), c.reachWhy(doer, target))
+	return true, firstWhy(c.doerWhy(doer, false), c.holdWhy(doer, target), tripWhy(c, doer, target, tripPrisoner), c.reachWhy(doer, target))
 }
 
 // Force starts the order once Judge allowed it (Care.Force checks first):

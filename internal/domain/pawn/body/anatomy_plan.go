@@ -389,6 +389,18 @@ func planOf(a Anatomy) *plan {
 // DefsOf is a copy of anatomy a's part table, at a human's scale.
 func DefsOf(a Anatomy) []Def { return append([]Def(nil), planOf(a).defs...) }
 
+// AsthmaLungs returns the breathing organs in a body plan (at most two).
+// Insect plans have no lungs and therefore cannot develop lung asthma.
+func AsthmaLungs(a Anatomy) (lungs [2]Part, n int) {
+	for p, d := range planOf(a).defs {
+		if d.HasCap && d.Cap == Breathing {
+			lungs[n] = Part(p)
+			n++
+		}
+	}
+	return
+}
+
 // RootOf is anatomy a's root part: the torso, a snake's body, an
 // insect's thorax.
 func RootOf(a Anatomy) Part { return planOf(a).root }
@@ -480,6 +492,9 @@ func (b *Body) planCapacity(c Capacity, look condLookup) int32 {
 	}
 	r := &planOf(b.Anatomy).caps[c]
 	if r.empty() {
+		if c == Manipulation {
+			return b.condCap(c, b.consciousness(look), look)
+		}
 		return b.condCap(c, 1000, look)
 	}
 	ch, mul := b.ruleEff(r)
@@ -488,6 +503,7 @@ func (b *Body) planCapacity(c Capacity, look condLookup) int32 {
 	case Moving:
 		v = limbs(ch, b.consciousness(look)) * mul / 1000
 		v = weighted(v, b.pumping(look), pumpingWeight)
+		v = weighted(v, b.capacity(Breathing, look), 200) // wiki: Breathing
 	case Manipulation:
 		v = limbs(ch, b.consciousness(look)) * mul / 1000
 	case Talking:

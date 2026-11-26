@@ -4,11 +4,10 @@
 package game
 
 import (
-	"math/bits"
-	"slices"
-
 	"rimworld-go/internal/application/game/beacon"
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/store"
+	"rimworld-go/internal/application/game/tradeview"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
@@ -18,8 +17,9 @@ import (
 )
 
 // Orbital traders (PLAY-024, agent S2): incident.OrbitalTrader puts a
-// curio merchant's ship in radio range for orbitalStay; it fits only while
-// a radio console is powered. A colonist at a powered console calls it
+// curio merchant's ship in radio range for orbitalStay. A constructed
+// radio console admits the event even during an outage; only a powered
+// console can discover and call the ship. A colonist at the console calls it
 // from the comms dialog (comms.go); only goods a trade beacon reaches
 // (beaconCells) can be traded, and purchases come down in a drop pod near
 // the first beacon tradePodFall ticks later (streamTrade picks the spot).
@@ -29,22 +29,10 @@ const orbitalStay = 40000 // wiki: Trade (orbital traders remain 40,000 ticks)
 
 // beaconGoods is what the orbital ship can trade: the loose stacks on the
 // cells a trade beacon reaches (the ground index; nothing without one).
-func beaconGoods(g *Game) tradeGoods {
-	gd, w := tradeGoods{ids: map[item.Kind][]entity.EntityID{}, counts: map[item.Kind]int{}}, g.grid.Width()
-	for wi, word := range beaconCells(g) {
-		for ; word != 0; word &= word - 1 {
-			c := wi<<6 + bits.TrailingZeros64(word)
-			for _, iid := range g.idx.ground.Loose(haulHost{g}, c%w, c/w) {
-				if st := g.stacks.Ref(iid); st != nil && st.Carrier == 0 && !st.Forbidden && st.Qty > 0 && !g.fogged(c%w, c/w) {
-					gd.ids[st.Kind], gd.counts[st.Kind] = append(gd.ids[st.Kind], iid), gd.counts[st.Kind]+st.Qty
-				}
-			}
-		}
-	}
-	for k := range gd.ids {
-		slices.Sort(gd.ids[k])
-	}
-	return gd
+func beaconGoods(g *Game) store.TradeGoods {
+	return store.CollectBeacon(beaconCells(g), g.grid.Width(),
+		func(x, y int) []entity.EntityID { return g.idx.ground.Loose(haulHost{g}, x, y) },
+		g.stacks.Get, g.fogged)
 }
 
 // beaconCells is the powered beacons' reach (beacon.Reach; rock and built walls cut it),
@@ -67,10 +55,18 @@ var shipNames = [...]string{
 	"Patient Ember", "Long Wake", "Tin Albatross", "Second Dawn", "Velvet Anchor",
 }
 
-// orbitalFits is the map's check for an orbital trader: people, a
-// powered radio console, and no ship already in range.
+// orbitalFits admits a passing ship when a radio exists, even during
+// an outage. The arrival is silent until console power is restored.
 func (g *Game) orbitalFits(now uint64) bool {
-	return g.trade.orbital == nil && len(g.pawnIDs) > 0 && g.poweredConsole() != 0
+	if g.trade.orbital != nil || len(g.pawnIDs) == 0 {
+		return false
+	}
+	for _, id := range g.bldgIDs {
+		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.RadioConsole {
+			return true
+		}
+	}
+	return false
 }
 
 // orbitalArrive puts an orbital trader in range; false when it could not.
@@ -82,8 +78,10 @@ func (g *Game) orbitalArrive(now uint64) bool {
 	name := shipNames[r.IntN(len(shipNames))]
 	stock := trade.Generate(g.sk.content.Items, trade.CurioMerchant, faction.Spacer, r)
 	g.trade.orbital = &orbitalShip{Name: name, Kind: trade.CurioMerchant, Stock: stock, Until: now + orbitalStay}
-	letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about 16 hours. Call it from a powered radio console; only goods within reach of a powered trade beacon can be traded.",
-		name, lower(trade.DefOf(trade.CurioMerchant).Label))
+	if g.poweredConsole() != 0 {
+		letterf(g, letters.Info, "Trade ship", 0, "The %s, a %s, is in radio range for about 16 hours. Call it from a powered radio console; only goods within reach of a powered trade beacon can be traded.",
+			name, tradeview.LowerLabel(trade.DefOf(trade.CurioMerchant).Label))
+	}
 	return true
 }
 
@@ -95,10 +93,8 @@ func (g *Game) orbitalLeaves() {
 
 // poweredConsole is the first radio console running on power (0: none).
 func (g *Game) poweredConsole() entity.EntityID {
-	for _, id := range g.bldgIDs {
-		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.RadioConsole && g.powered(id) {
-			return id
-		}
+	for id := range beacon.Powered(g.bldgIDs, construction.RadioConsole, g.bldgs.Ref, g.powered) {
+		return id
 	}
 	return 0
 }
@@ -108,13 +104,9 @@ func (g *Game) poweredConsole() entity.EntityID {
 func (g *Game) orbitalView(now uint64) OrbitalView {
 	o := g.trade.orbital
 	if o == nil {
-		return OrbitalView{CallReason: "no ship in range"}
+		return tradeview.OrbitalStatus("", 0, 0, now, false, false, false)
 	}
-	v := OrbitalView{Present: true, Ship: o.Name, Kind: lower(trade.DefOf(o.Kind).Label), HoursLeft: hoursLeft(o.Until, now), CallOK: true}
-	if len(g.beaconIDs()) == 0 {
-		v.CallOK, v.CallReason = false, ReasonNoBeacon
-	}
-	return v
+	return tradeview.OrbitalStatus(o.Name, o.Kind, o.Until, now, true, g.poweredConsole() != 0, len(g.beaconIDs()) != 0)
 }
 
 // sendTradePod sends lines down in a drop pod near the first trade beacon

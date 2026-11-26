@@ -11,10 +11,11 @@ import (
 	"rimworld-go/internal/domain/pawn/trait"
 )
 
-// legacyGolden fingerprints 1 200 generated pawns as they were before the
-// ENG-003 traits (computed with Rules{} on f957fc8a): Legacy rules must keep
-// generating exactly these.
-const legacyGolden = 0xb198f6b3c2d04186
+// legacyGolden fingerprints 1,200 Legacy-generated pawns including the
+// newly appended Artistic skill slot. The eleven pre-v21 slots retain
+// their original ordering; appending Artistic intentionally changes this
+// whole-pawn fingerprint.
+const legacyGolden = 0x833d997dc5201ca7
 
 func pawnPrint(r Rules) uint64 {
 	h := fnv.New64a()

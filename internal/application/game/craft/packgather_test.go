@@ -239,18 +239,21 @@ func TestPackOnlyForColonistsAndWhatFits(t *testing.T) {
 // A reordered or removed bill is followed while the pack gathering walks.
 func TestPackGatherFollowsItsBill(t *testing.T) {
 	t.Parallel()
-	bills := []recipe.Bill{{Recipe: recipe.Club}, {Recipe: recipe.Cremate}}
-	if i := billOf(job.Record{BillIndex: 0, SpareX: int(recipe.Club)}, bills); i != 0 {
-		t.Fatalf("in place: %d", i)
+	bills := []recipe.Bill{{Recipe: recipe.Club, Identity: 1}, {Recipe: recipe.Club, Identity: 2}}
+	for _, tc := range []struct {
+		index    int
+		identity uint64
+		want     int
+	}{
+		{0, 1, 0}, {1, 1, 0}, {5, 1, 0}, {0, 2, 1}, {0, 3, 2}, {5, 0, 2},
+	} {
+		j := job.Record{Kind: job.PackIngredients, BillIndex: tc.index, BillIdentity: tc.identity, SpareX: int(recipe.Club)}
+		if i := billOf(j, bills); i != tc.want {
+			t.Fatalf("identity %d index %d: got %d want %d", tc.identity, tc.index, i, tc.want)
+		}
 	}
-	if i := billOf(job.Record{BillIndex: 1, SpareX: int(recipe.Club)}, bills); i != 0 {
-		t.Fatalf("moved: %d", i)
-	}
-	if i := billOf(job.Record{BillIndex: 5, SpareX: int(recipe.Club)}, bills); i != 0 {
-		t.Fatalf("past the end: %d", i)
-	}
-	if i := billOf(job.Record{BillIndex: 0, SpareX: int(recipe.Club)}, bills[1:]); i != 1 {
-		t.Fatalf("removed: %d", i)
+	if i := billOf(job.Record{Kind: job.PackIngredients, BillIndex: 0, BillIdentity: 1, SpareX: int(recipe.Club)}, bills[1:]); i != 1 {
+		t.Fatal("removed identity substituted")
 	}
 	f, c := woodBench(t, gameplay.HaulAllIngredients)
 	c.Shop.Assign(pawn, crafting)
@@ -264,7 +267,7 @@ func TestPackGatherFollowsItsBill(t *testing.T) {
 func TestPendingCountsAPackGathering(t *testing.T) {
 	t.Parallel()
 	f, c := clubBench(t, recipe.Bill{})
-	f.jobs[pawn] = job.Record{Kind: job.PackIngredients, State: job.Goto, Dest: 1}
+	f.jobs[pawn] = job.Record{Kind: job.PackIngredients, State: job.Goto, Dest: 1, SpareX: int(recipe.Club)}
 	bl := recipe.Bill{Recipe: recipe.Club, Mode: recipe.UntilHave}
 	if c.Shop.pending(bl, recipe.Core().DefOf(recipe.Club)) != recipe.Core().DefOf(recipe.Club).OutQty {
 		t.Fatal("two crafters would both start the last club")

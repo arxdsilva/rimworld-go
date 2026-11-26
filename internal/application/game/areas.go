@@ -78,7 +78,7 @@ func (g *Game) restrictedRef(id entity.EntityID) int {
 		return 0
 	}
 	if a := g.animals.Ref(id); a != nil {
-		if !areaAnimal(*a) || a.Master != 0 && g.drafted(entity.EntityID(a.Master)) {
+		if !areaAnimal(a.State()) || a.Master != 0 && g.drafted(entity.EntityID(a.Master)) {
 			return 0
 		}
 		return r
@@ -196,7 +196,9 @@ func (g *Game) areaAnimalsTick(now uint64) {
 			continue
 		}
 		if x, y, ok := g.nearestRefCell(r, p); ok {
-			g.animalGoTo(id, a, x, y)
+			state := a.State()
+			g.animalGoTo(id, &state, x, y)
+			g.animals.Set(id, state)
 		}
 	}
 }
@@ -371,7 +373,7 @@ func (g *Game) cmdAssignArea(pawn entity.EntityID, r int) {
 	a := g.animals.Ref(pawn)
 	switch {
 	case a != nil:
-		if !areaAnimal(*a) {
+		if !areaAnimal(a.State()) {
 			return // wild, dead, or penned livestock (pens hold those)
 		}
 	case !g.isPawn(pawn) || g.isRaider(pawn) || !g.alive(pawn) && !g.isStashed(pawn):
@@ -396,7 +398,7 @@ func (g *Game) cmdAssignArea(pawn entity.EntityID, r int) {
 // importAreaRef is a saved assignment as an area ref: a Version 1 save
 // held area positions, which import as ids 1..n (area.Import).
 func importAreaRef(version uint8, v int) int {
-	if version < worldSaveVersion && v >= 0 {
+	if version < 2 && v >= 0 {
 		return v + 1
 	}
 	return v

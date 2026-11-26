@@ -66,10 +66,10 @@ func TestPlainOutputsRollNothing(t *testing.T) {
 	f.pawns = []entity.EntityID{pawn}
 	f.build(1, construction.Workbench, 4, 4)
 	f.put(50, item.Stack{Kind: item.Wood, Qty: 20})
-	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.MakePegLeg, Mode: recipe.DoCount, Target: 1}})
+	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.MakeWoodCarpet, Mode: recipe.DoCount, Target: 1}})
 	runBill(t, f, c, craftOnly, 2000)
-	if leg := made(t, f, item.PegLeg); leg.Quality != 0 || leg.Stuff != 0 || f.rolls != 0 {
-		t.Fatalf("peg leg %+v, %d rolls", leg, f.rolls)
+	if carpet := made(t, f, item.CarpetWood); carpet.Quality != 0 || carpet.Stuff != 0 || f.rolls != 0 {
+		t.Fatalf("wood carpet %+v, %d rolls", carpet, f.rolls)
 	}
 }
 
@@ -161,5 +161,17 @@ func TestStuffedAvailability(t *testing.T) {
 	f.put(60, item.Stack{Kind: item.Steel, Qty: 1, X: 2})
 	if st := c.Bills.AppendViews(nil, 1)[0].Status; st == BillNoInput {
 		t.Fatal("4 steel in two piles make a club")
+	}
+}
+
+func TestGrenadeRecipesRollPhysicalQuality(t *testing.T) {
+	for _, rid := range []recipe.ID{recipe.MakeFragGrenades, recipe.MakeMolotovs, recipe.MakeEMPGrenades} {
+		f := newFake()
+		c := New(f)
+		d := recipe.Core().DefOf(rid)
+		st, ok := c.Shop.quality.Product(pawn, d, item.Steel, 3, 4)
+		if !ok || st.Kind != d.Output || st.Qty != 1 || st.Quality == 0 || st.MaxHP() <= 0 || f.rolls != 1 {
+			t.Fatalf("%v: made %+v, ok=%v rolls=%d", rid, st, ok, f.rolls)
+		}
 	}
 }

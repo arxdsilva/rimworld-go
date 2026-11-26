@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -127,8 +128,8 @@ func TestHandDrawnWindowsButtonsAndClicks(t *testing.T) {
 		t.Fatal("buttons with no window open")
 	}
 	w.Show("work")
-	if got := len(w.Buttons()); got != 3*len(WorkLive) { // cells, then a header per column (CTL-014)
-		t.Fatalf("work buttons %d, want %d", got, 3*len(WorkLive))
+	if got := len(w.Buttons()); got != 3*len(WorkLive)+2 { // cells, headers, mode and name sort
+		t.Fatalf("work buttons %d, want %d", got, 3*len(WorkLive)+2)
 	}
 	if ww, wh := w.Want(); ww <= 0 || wh <= 0 {
 		t.Fatalf("work wants %vx%v", ww, wh)
@@ -363,6 +364,58 @@ func TestWorkColumnsFollowOrderForHeadersAndCells(t *testing.T) {
 			if b.X != workHeadRect(uikit.Button{X: r.X, Y: r.Y, W: r.W, H: r.H}, col).X { // UIS-061: centred on the box
 				t.Fatalf("header %s at %v", b.ID, b.X)
 			}
+		}
+	}
+}
+
+func TestWorkSimpleAndSortedRows(t *testing.T) {
+	sh, w := workFixture()
+	w.Work().Click(ids.WorkMode)
+	w.Work().Click(cellID(1, 3))
+	if len(sh.cmds) != 1 || sh.cmds[0].Kind != command.SetWorkEnabled || sh.cmds[0].Enabled {
+		t.Fatalf("simple toggle %+v", sh.cmds)
+	}
+	w.Work().set(sh.pawns[1], 3, work.DefaultPriority)
+	if len(sh.cmds) != 1 {
+		t.Fatal("painting enabled cell overwrote its priority")
+	}
+	w.Work().Click(ids.WorkNameSort)
+	w.Work().Click(ids.WorkNameSort)
+	if rows := w.Work().rows(); rows[0].ID != 3 || sh.pawns[0].ID != 1 {
+		t.Fatal("sort changed source order or was not applied")
+	}
+	w.Work().HeadClick(ids.PrefixWorkHead+"3", false, false)
+	if rows := w.Work().rows(); rows[0].ID != 1 || rows[1].ID != 2 {
+		t.Fatal("priority sort incorrect")
+	}
+}
+
+type sortLabelTranslation struct{}
+
+func (sortLabelTranslation) T(src string) string {
+	switch src {
+	case "%s v":
+		return "v %s"
+	case "%s ^":
+		return "^ %s"
+	}
+	return src
+}
+
+func TestWorkSortLabelTranslation(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		tr      lang.Tr
+		reverse bool
+		want    string
+	}{
+		{lang.English{}, false, "Art ^"},
+		{lang.English{}, true, "Art v"},
+		{sortLabelTranslation{}, false, "^ Art"},
+		{sortLabelTranslation{}, true, "v Art"},
+	} {
+		if got := workSortLabel(tc.tr, "Art", tc.reverse); got != tc.want {
+			t.Errorf("reverse %v: got %q, want %q", tc.reverse, got, tc.want)
 		}
 	}
 }

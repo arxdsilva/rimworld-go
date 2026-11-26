@@ -8,7 +8,6 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
-	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -47,12 +46,12 @@ type Track struct {
 	X, Y int
 }
 
-// Save is mind's saved state: the tracks of breaks in progress, and the
-// tick each colonist that broke is calm until.
+// Save keeps break targets and inspirations. Calm remains an old gob
+// field, accepted from historical saves but no longer imposes immunity.
 type Save struct {
 	Track map[entity.EntityID]Track
 	Calm  map[entity.EntityID]uint64
-	// PRD-2 (inspiration.go): inspirations and the calm after one.
+	// Legacy cooldown is accepted from older saves; the Core allows the next roll on the next eligible check.
 	Inspire     map[entity.EntityID]Inspiration
 	InspireCalm map[entity.EntityID]uint64
 }
@@ -61,16 +60,14 @@ type Save struct {
 type Mind struct {
 	h     Host
 	track map[entity.EntityID]Track
-	// calm: no new break before this tick (the catharsis after one).
-	calm map[entity.EntityID]uint64
-	buf  []entity.EntityID // victim candidates, reused
+	buf   []entity.EntityID // victim candidates, reused
 	// Inspire is the inspiration component (inspiration.go, PRD-2).
 	Inspire *Inspirations
 }
 
 // New builds a Mind over h.
 func New(h Host) *Mind {
-	return &Mind{h: h, track: map[entity.EntityID]Track{}, calm: map[entity.EntityID]uint64{}, Inspire: newInspirations(h)}
+	return &Mind{h: h, track: map[entity.EntityID]Track{}, Inspire: newInspirations(h)}
 }
 
 // Hostile reports a break that makes a colonist a fair target (colonists
@@ -89,16 +86,15 @@ func (m *Mind) Target(id entity.EntityID) entity.EntityID {
 
 // Export is mind's state for the save.
 func (m *Mind) Export() Save {
-	s := Save{Track: maps.Clone(m.track), Calm: maps.Clone(m.calm)}
+	s := Save{Track: maps.Clone(m.track)}
 	s.Inspire, s.InspireCalm = m.Inspire.export()
 	return s
 }
 
 // Import restores Export's state (empty: none, or an older save).
 func (m *Mind) Import(s Save) {
-	m.track, m.calm = map[entity.EntityID]Track{}, map[entity.EntityID]uint64{}
+	m.track = map[entity.EntityID]Track{}
 	maps.Copy(m.track, s.Track)
-	maps.Copy(m.calm, s.Calm)
 	m.Inspire.load(s.Inspire, s.InspireCalm)
 }
 
@@ -120,7 +116,7 @@ func (m *Mind) Tick(id entity.EntityID, j job.Record) bool {
 	k, until, ok := h.Break(id)
 	if !ok {
 		m.forget(id)
-		if (now+uint64(id)*checkStagger)%clock.TicksPerHour != 0 {
+		if (now+uint64(id)*checkStagger)%clock.TicksPerHour != 0 || !h.Awake(id) {
 			return false
 		}
 		m.Inspire.Check(id) // inspiration.go (PRD-2)
@@ -130,11 +126,14 @@ func (m *Mind) Tick(id entity.EntityID, j job.Record) bool {
 		return m.fight(id, j, now, until) // fight.go
 	}
 	if now >= until {
-		m.end(id, k)
+		m.end(id, k, true)
 		return false
 	}
-	if j.Active() && j.Kind == job.Eat && k != mentalbreak.Catatonic {
+	if j.Active() && j.Kind.Eating() && k != mentalbreak.Catatonic {
 		return true // a break never starves anyone
+	}
+	if j.Active() && j.Kind == job.Sleep && (k == mentalbreak.SadWander || k == mentalbreak.HideInRoom) {
+		return true
 	}
 	m.act(id, k, j, now, until)
 	return true
@@ -146,6 +145,9 @@ func (m *Mind) Tick(id entity.EntityID, j job.Record) bool {
 // pawn can't act out; the dead keep no break.
 func (m *Mind) Downed(id entity.EntityID) {
 	h := m.h
+	if !h.Alive(id) {
+		m.Inspire.end(id)
+	}
 	k, until, ok := h.Break(id)
 	if !ok {
 		return
@@ -160,17 +162,17 @@ func (m *Mind) Downed(id entity.EntityID) {
 		h.ClearBreak(id)
 	case k == mentalbreak.Catatonic:
 		if h.Now() >= until {
-			m.end(id, k)
+			m.end(id, k, true)
 		}
 	case !h.Standing(id):
-		m.end(id, k)
+		m.end(id, k, false)
 	}
 }
 
-// End ends id's break now (an arrest): it calms down as after any break.
+// End interrupts a mental break (arrest, control change or failed action).
 func (m *Mind) End(id entity.EntityID) {
 	if k, _, ok := m.h.Break(id); ok && k != mentalbreak.SocialFight {
-		m.end(id, k)
+		m.end(id, k, false)
 	}
 }
 
@@ -183,14 +185,13 @@ func (m *Mind) forget(id entity.EntityID) {
 	}
 }
 
-// end finishes break k: the record and the track go, a catatonic pawn
-// gets up, and the colonist calms down with catharsis.
-func (m *Mind) end(id entity.EntityID, k mentalbreak.Kind) {
+// end clears the break. Natural recovery and an interrupted Berserk
+// grant catharsis; other interrupted breaks do not.
+func (m *Mind) end(id entity.EntityID, k mentalbreak.Kind, natural bool) {
 	m.forget(id)
 	m.h.ClearBreak(id)
-	m.calm[id] = m.h.Now() + mood.DefOf(mood.Catharsis).Duration
 	if k == mentalbreak.Catatonic {
 		m.h.StandUp(id)
 	}
-	m.h.Recovered(id, k)
+	m.h.Recovered(id, k, natural || k == mentalbreak.Berserk)
 }

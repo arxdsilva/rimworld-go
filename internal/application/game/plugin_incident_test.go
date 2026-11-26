@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/scripting"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -36,7 +37,8 @@ func TestPluginIncidentRunsItsLike(t *testing.T) {
 	t.Parallel()
 	book := incidentBookWith(false, "frontier.dark_noon")
 	id, _ := book.IDOf("frontier.dark_noon")
-	g := New(Config{Seed: 3, Width: 20, Height: 20, Content: Content{Incidents: book}})
+	f := &fakeScripts{}
+	g := New(Config{Seed: 3, Width: 20, Height: 20, Content: Content{Incidents: book}, Scripts: f})
 	if got := g.PluginIncidents(); len(got) != 1 || got[0] != (PluginIncident{Key: "frontier.dark_noon", Label: "Dark noon", Like: "Eclipse"}) {
 		t.Fatalf("PluginIncidents %+v", got)
 	}
@@ -45,6 +47,10 @@ func TestPluginIncidentRunsItsLike(t *testing.T) {
 	}
 	if g.incidents.EclipseUntil == 0 {
 		t.Fatal("it did not run the eclipse's behaviour")
+	}
+	if len(f.events) != 1 || f.events[0].Hook != scripting.OnIncident ||
+		f.events[0].Incident != (scripting.Incident{Key: "frontier.dark_noon", Category: "nature"}) {
+		t.Fatalf("expected one notification with the original incident key: %+v", f.events)
 	}
 	if _, ok := g.incidents.Last[id]; !ok {
 		t.Fatalf("its own cooldown not recorded: %v", g.incidents.Last)

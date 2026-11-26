@@ -5,6 +5,7 @@ package rest
 
 import (
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
@@ -72,7 +73,7 @@ func (l *Lovin) Bed(a, b entity.EntityID) (entity.EntityID, bool) {
 		return 0, false
 	}
 	bed, ok := l.h.Building(bid)
-	if !ok || bed.Kind.Sleepers() != 2 || bed.SlotOf(uint64(a)) < 0 || bed.SlotOf(uint64(b)) < 0 {
+	if !ok || bed.Kind.Sleepers() != 2 || construction.BedSlot(bed, uint64(a)) < 0 || construction.BedSlot(bed, uint64(b)) < 0 {
 		return 0, false
 	}
 	for _, x := range [2]entity.EntityID{a, b} {

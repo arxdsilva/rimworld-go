@@ -48,13 +48,13 @@ func TestDockedTreeKeepsEveryWidget(t *testing.T) {
 	t.Parallel()
 	old := map[Who][]string{
 		WhoColonist: {"area_pick", "body_state", "diet_pick", "doing", "fun_bar", "hour_pick", "hunger_bar", "identity",
-			"in_hand", "mind_state", "mood_bar", "next_up", "rest_bar", "rule", "skill:animals", "skill:construction",
+			"in_hand", "mind_state", "mood_bar", "next_up", "rest_bar", "rule", "skill:animals", "skill:artistic", "skill:construction",
 			"skill:cooking", "skill:crafting", "skill:intellectual", "skill:medicine", "skill:melee", "skill:mining",
 			"skill:plants", "skill:shooting", "skill:social", "standing", "stat:work_speed", "vigour_bar"},
 		WhoStranger: {"body_state", "captive", "doing", "hunger_bar", "identity", "in_hand", "mind_state", "mood_bar",
 			"rest_bar", "rule", "standing", "vigour_bar"},
 		WhoPrisoner: {"area_pick", "body_state", "diet_pick", "doing", "hunger_bar", "identity", "keeper", "rest_bar",
-			"rule", "standing", "train:guard", "train:obedience", "train:release", "vigour_bar"},
+			"rule", "standing", "train:guard", "train:haul", "train:obedience", "train:release", "vigour_bar"},
 		WhoWild: {"body_state", "doing", "hunger_bar", "identity", "rest_bar", "rule", "standing", "vigour_bar"},
 	}
 	for w := WhoColonist; w <= WhoWild; w++ {
@@ -94,6 +94,14 @@ func TestDefaultTargetsShowTheRightRows(t *testing.T) {
 		return found
 	}
 	col, str, tame, wild := Default(false, WhoColonist), Default(false, WhoStranger), Default(false, WhoPrisoner), Default(false, WhoWild)
+	for _, docked := range []bool{true, false} {
+		for w := WhoColonist; w <= WhoWild; w++ {
+			hasWorkSpeed := slices.Contains(widgetKeys(Default(docked, w)), "stat:work_speed")
+			if hasWorkSpeed != (w == WhoColonist) {
+				t.Errorf("work speed in docked=%t target %c: got %t", docked, w.Letter(), hasWorkSpeed)
+			}
+		}
+	}
 	for _, k := range []string{"skill", "hour_pick", "fun_bar", "traits", "mood_bar"} {
 		if !has(col, k) {
 			t.Errorf("colonist lacks %s", k)
@@ -147,6 +155,28 @@ func TestEachBuiltInFitsItsOwnSize(t *testing.T) {
 			}
 			if h := Measure(Prune(*p.Floating, w), m, 0); h > float32(p.FloatH-16) {
 				t.Errorf("%s floating %c: %v in %d", p.Name, w.Letter(), h, p.FloatH)
+			}
+		}
+	}
+}
+
+// Every built-in offers the same four definitions in the two animal cards;
+// custom stored trees are not rewritten when the built-in gains a row.
+func TestDefaultTrainingKeys(t *testing.T) {
+	t.Parallel()
+	want := []string{"guard", "haul", "obedience", "release"}
+	for _, p := range BuiltIns() {
+		for _, layout := range []*config.HUDNode{p.Docked, p.Floating} {
+			var keys []string
+			walk(*layout, func(n config.HUDNode) config.HUDNode {
+				if n.Kind == "train" {
+					keys = append(keys, n.Def)
+				}
+				return n
+			})
+			slices.Sort(keys)
+			if !slices.Equal(keys, want) {
+				t.Errorf("%s training keys: %v", p.Name, keys)
 			}
 		}
 	}

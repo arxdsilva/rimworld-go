@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -30,7 +31,8 @@ type Tactics struct {
 	shots  *Shots
 	drafts *Drafts
 	seen   []Seen
-	out    []Seen // Colonists' answer, reused
+	out    []Seen // raid candidates, reused
+	foes   []Seen // foreign faction candidates, reused
 	// danger is the explosive shots in flight, rebuilt once a tick.
 	danger   []projectile.Shot
 	dangerAt uint64
@@ -158,6 +160,69 @@ func (t *Tactics) Colonists(x, y, r int) []Seen {
 	t.out = t.h.Near(x, y, r, Pawns, t.out[:0])
 	t.out = slices.DeleteFunc(t.out, func(s Seen) bool { return !t.h.StandingPawn(s.ID) })
 	return t.out
+}
+
+// RaidFoes adds visible hostile mechanoids, insects and raiders to the
+// usual colonist candidates, using the existing spatial index. A source
+// of zero requests colonists only (guarding a downed prisoner).
+func (t *Tactics) RaidFoes(source entity.EntityID, x, y, radius int) []Seen {
+	t.Colonists(x, y, radius)
+	if source == 0 {
+		return t.out
+	}
+	hidden := false
+	if a, ok := t.h.Animal(source); ok {
+		_, hidden = faction.Creature(a.Species)
+		if !hidden || a.Dead() || a.Dormant {
+			return t.out
+		}
+	} else if !t.h.StandingRaider(source) {
+		return t.out
+	}
+	t.foes = t.h.Near(x, y, radius, Raiders|Animals, t.foes[:0])
+	for _, s := range t.foes {
+		if s.ID == source || !t.sight.Line(x, y, s.X, s.Y) {
+			continue
+		}
+		if _, ok := t.h.Animal(s.ID); ok {
+			if !t.RaidAnimalFoe(source, s.ID) {
+				continue
+			}
+		} else if !hidden || !t.h.StandingRaider(s.ID) {
+			continue
+		}
+		t.out = append(t.out, s)
+	}
+	return t.out
+}
+
+// RaidAnimalFoe is the current eligibility of a living animal for an
+// automatic raid attack. Sight and memory are separate policies.
+func (t *Tactics) RaidAnimalFoe(source, target entity.EntityID) bool {
+	if source == target || source == 0 {
+		return false
+	}
+	a, ok := t.h.Animal(target)
+	if !ok || a.Dead() || a.Downed || a.Dormant {
+		return false
+	}
+	mine, hidden := faction.Player, false
+	if src, ok := t.h.Animal(source); ok {
+		mine, hidden = faction.Creature(src.Species)
+		if !hidden || src.Dead() || src.Downed || src.Dormant {
+			return false
+		}
+	} else if !t.h.StandingRaider(source) {
+		return false
+	}
+	other, foreign := faction.Creature(a.Species)
+	if a.Tame {
+		other, foreign = faction.Player, hidden
+	}
+	if !foreign {
+		return t.h.PackEnemy(source, target)
+	}
+	return faction.HiddenEnemies(mine, other)
 }
 
 // Block is the first wall or shut door (one not held open) on creature

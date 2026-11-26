@@ -21,7 +21,10 @@ func TestKeysLabelsParse(t *testing.T) {
 			t.Fatalf("Parse(%q) = %d,%v", k, got, ok)
 		}
 	}
-	if NumSkills.Key() != "" || NumSkills.Label() != "" {
+	if NumSkills != 12 || Artistic != 11 {
+		t.Fatal("Artistic ID must append after eleven legacy skills")
+	}
+	if NumSkills.Key() != "" || NumSkills.Label() != "" || Artistic.Key() != "artistic" {
 		t.Fatal("out of range skill has a name")
 	}
 	if _, ok := Parse("juggling"); ok {
@@ -33,7 +36,8 @@ func TestForWork(t *testing.T) {
 	want := map[work.Type]ID{
 		work.Hunt: Shooting, work.Construct: Construction, work.Mine: Mining,
 		work.Cook: Cooking, work.Grow: Plants, work.PlantCut: Plants, work.Handle: Animals,
-		work.Craft: Crafting, work.Doctor: Medicine, work.Research: Intellectual, work.Warden: Social,
+		work.Craft: Crafting, work.Smith: Crafting, work.Tailor: Crafting, work.Art: Artistic,
+		work.Doctor: Medicine, work.Research: Intellectual, work.Warden: Social,
 	}
 	for wt := work.Type(0); wt < work.NumTypes; wt++ {
 		got, ok := ForWork(wt)
@@ -135,14 +139,14 @@ func TestDecay(t *testing.T) {
 	if s.XP != -120 || s.Level != 12 {
 		t.Fatalf("decay at 12: %+v", s)
 	}
-	// Falls only below -Cost(L-1)/2, then restarts at 75% of Cost(L-1).
-	s = Skill{Level: 11, XP: -Cost(10)/2 + 100}
+	// Falls only below -1000, preserving XP loss.
+	s = Skill{Level: 11, XP: -900}
 	DecayDay(&s)
 	if s.Level != 11 {
 		t.Fatalf("dropped inside the band: %+v", s)
 	}
 	DecayDay(&s)
-	if s.Level != 10 || s.XP != Cost(10)*3/4 {
+	if s.Level != 10 || s.XP != Cost(10)-1020 {
 		t.Fatalf("drop: %+v", s)
 	}
 }
@@ -220,10 +224,10 @@ func TestDecayTable(t *testing.T) {
 	want := map[uint8]int32{10: 30, 11: 60, 12: 120, 13: 180, 14: 300, 15: 540,
 		16: 840, 17: 1200, 18: 1800, 19: 2400, 20: 3600}
 	for l := uint8(0); l <= MaxLevel; l++ {
-		s := Skill{Level: l, XP: 7}
+		s := Skill{Level: l, XP: 5000}
 		DecayDay(&s)
-		if s.Level != l || s.XP != 7-want[l] {
-			t.Fatalf("level %d: %+v, want XP %d", l, s, 7-want[l])
+		if s.Level != l || s.XP != 5000-want[l] {
+			t.Fatalf("level %d: %+v, want XP %d", l, s, 5000-want[l])
 		}
 	}
 }

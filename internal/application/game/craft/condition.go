@@ -34,8 +34,8 @@ type loss struct {
 // Spoiled food is destroyed; a rotten corpse lingers unbutcherable until
 // it has rotted as long again, then decays away, except a human corpse,
 // which becomes the deceased's bones (SIM-017). Stacks being carried or
-// reserved for a job keep rotting but are only removed once they are
-// free.
+// reserved on the ground remain until released; food carried by a pawn
+// must disappear when rotten, even when a job has claimed it.
 func (c *Condition) Rot(interval int) {
 	h := c.h
 	c.gone, c.lost = c.gone[:0], c.lost[:0]
@@ -56,7 +56,7 @@ func (c *Condition) Rot(interval int) {
 		}
 		h.SetStack(id, st)
 		gone := st.Rotten() && !st.Kind.IsCorpse() || st.Kind.IsCorpse() && st.Rot >= 2*st.Shelf()
-		if gone && st.Carrier == 0 && c.free(id) {
+		if gone && (st.Carrier != 0 || c.free(id)) {
 			c.remove(id, st.Kind, st.Qty, x, y)
 		}
 	}

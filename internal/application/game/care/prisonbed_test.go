@@ -44,7 +44,7 @@ func TestWardenCarriesADownedPrisonerToBed(t *testing.T) {
 	j.State = job.Do
 	c.PrisonBeds.Do(doc, j)
 	if h.jobs[doc].State != job.Complete || c.Carry.Len() != 0 || h.pos[raider] != [2]int{8, 8} ||
-		h.bldgs[bedID+1].SlotOf(uint64(raider)) < 0 || h.sleptAt[raider] != bedID+1 {
+		construction.BedSlot(h.bldgs[bedID+1], uint64(raider)) < 0 || h.sleptAt[raider] != bedID+1 {
 		t.Fatalf("laid in the prison bed: job %+v pos %v", h.jobs[doc], h.pos[raider])
 	}
 	if slices.Contains(h.log, "prisoner") || slices.Contains(h.log, "rescued") || slices.Contains(h.log, "drop gear") {

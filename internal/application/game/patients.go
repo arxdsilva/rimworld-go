@@ -6,9 +6,16 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/diet"
+	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mentalbreak"
+	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // The patients index (MED-00): every living pawn whose body needs care —
@@ -46,7 +53,7 @@ func (g *Game) indexedPatient(id entity.EntityID) bool {
 // needsCare reports b has something to treat: an open wound, a condition
 // or blood loss.
 func needsCare(b *body.Body) bool {
-	return b != nil && (hasOpenWound(b) || len(b.Conds) > 0 || b.BloodLoss > 0)
+	return body.NeedsCare(b)
 }
 
 // isPatient reports id, with body b, belongs in the index: it needs care
@@ -89,9 +96,9 @@ func (g *Game) syncPatient(id entity.EntityID, b *body.Body) {
 // on none (a caravan member).
 func ownPatients(g *Game) []entity.EntityID {
 	ids := slices.Clone(g.med.patients)
-	if len(g.maps) > 1 {
-		ids = slices.DeleteFunc(ids, func(id entity.EntityID) bool { return !owns(g, id) })
-	}
+	ids = slices.DeleteFunc(ids, func(id entity.EntityID) bool {
+		return worldPawnCandidate(g, id) || len(g.maps) > 1 && !owns(g, id)
+	})
 	return ids
 }
 
@@ -117,4 +124,75 @@ func (g *Game) rebuildPatients() {
 		}
 	}
 	slices.Sort(g.med.patients)
+}
+
+// agingHost is aging's view of the colony.
+type agingHost struct{ g *Game }
+
+func (h agingHost) Pawns() []entity.EntityID    { return h.g.pawnIDs }
+func (h agingHost) Patients() []entity.EntityID { return ownPatients(h.g) }
+func (h agingHost) Eligible(id entity.EntityID) bool {
+	v, ok := h.g.vital.Get(id)
+	_, aged := h.g.sk.bios[id]
+	return ok && v.Status != health.Dead && aged && !h.g.prison.Is(id) && !h.g.isRaider(id) && !h.g.visitor(id)
+}
+func (h agingHost) Bio(id entity.EntityID) pawngen.Pawn { return h.g.sk.bios[id] }
+func (h agingHost) Vital(id entity.EntityID) (health.Record, bool) {
+	return h.g.vital.Get(id)
+}
+func (h agingHost) Body(id entity.EntityID) *body.Body { return h.g.bodies[id] }
+func (h agingHost) EnsureBody(id entity.EntityID, v *health.Record) *body.Body {
+	return h.g.ensureBody(id, v)
+}
+func (h agingHost) Salt(id entity.EntityID) uint64 { return h.g.agingSalt(id) }
+func (h agingHost) Roll(n int) int                 { return h.g.stream(streamMedical).IntN(n) }
+func (h agingHost) Pos(id entity.EntityID) (int, int) {
+	p, _ := h.g.positions.Get(id)
+	return p.X, p.Y
+}
+func (h agingHost) Name(id entity.EntityID) string       { return h.g.name(id) }
+func (h agingHost) PersonName(id entity.EntityID) string { return h.g.personName(id) }
+func (h agingHost) Message(x, y int, format string, args ...any) {
+	h.g.message(x, y, format, args...)
+}
+func (h agingHost) Letter(now uint64, x, y int, id entity.EntityID, title string, threat bool, msg msgfmt.Text) {
+	kind := letters.Caution
+	if threat {
+		kind = letters.Threat
+	}
+	h.g.post(MessageView{Tick: now, X: x, Y: y, Focus: id, Letter: true, Title: title, Kind: kind, Msg: msg})
+}
+func (h agingHost) DieMedical(id entity.EntityID, cause health.Cause) { h.g.dieMedical(id, cause) }
+func (h agingHost) ClearPatient(id entity.EntityID)                   { h.g.clearPatient(id) }
+func (h agingHost) BodyChanged(id entity.EntityID, b *body.Body, v *health.Record) {
+	h.g.bodyChanged(id, b, v)
+}
+func (h agingHost) UpdateDowned(id entity.EntityID, b *body.Body, v *health.Record) {
+	h.g.updateDowned(id, b, v)
+}
+func (h agingHost) Memories(id entity.EntityID) mood.Memories { return h.g.memories[id] }
+func (h agingHost) SetMemories(id entity.EntityID, m mood.Memories) {
+	h.g.memories[id] = m
+}
+func (h agingHost) Drafted(id entity.EntityID) bool { return h.g.draft[id] }
+func (h agingHost) Wander(id entity.EntityID, kind mentalbreak.Kind, until uint64) bool {
+	g := h.g
+	if _, breaking := g.breaks[id]; breaking {
+		return false
+	}
+	g.interrupt(id, job.Cancelled)
+	delete(g.orderQueue, id)
+	g.breaks[id] = breakState{kind: kind, until: until}
+	return true
+}
+
+// MalnutritionCandidates walks native needs in store order. The world-pawn
+// owner and off-map caravan ownership are independent of this map pass.
+func (h agingHost) MalnutritionCandidates() []entity.EntityID {
+	return diet.MalnutritionCandidates(h.g.need.All, h.g.bodies, func(id entity.EntityID) bool {
+		return owns(h.g, id) && !worldPawnCandidate(h.g, id)
+	})
+}
+func (h agingHost) Starving(id entity.EntityID) bool {
+	return h.g.need.Ref(id).Starving()
 }

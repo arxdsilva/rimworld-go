@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/world/roof"
 	"testing"
 
 	"rimworld-go/internal/application/game/haul"
@@ -33,15 +34,15 @@ func TestFrameTakesSecondaryMaterials(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	ada, _ := g.SpawnNamedPawn(1, 1, "Ada")
-	g.SpawnStack(item.GraniteBlocks, 40, 2, 8)
+	g.SpawnStack(item.GraniteBlocks, 200, 2, 8)
 	g.SpawnStack(item.Components, 5, 3, 8)
 	g.Enqueue(command.Command{Kind: command.DesignateBuild, X: 8, Y: 3, Build: uint8(construction.ElectricCrematorium), Stuff: uint8(item.GraniteBlocks)})
 	g.Step(1)
 	fid, fr, ok := frameOf(g, 8, 3, construction.LayerObject)
-	if !ok || fr.ExtraNeed(0) != 2 {
-		t.Fatalf("no crematorium blueprint needing 2 steel: %+v", fr)
+	if !ok || fr.ExtraNeed(0) != 20 {
+		t.Fatalf("no crematorium blueprint needing 20 steel: %+v", fr)
 	}
-	for i := 0; i < 3000; i++ {
+	for i := 0; i < 6000; i++ {
 		if i%200 == 0 {
 			g.SetNeeds(ada, needs.Full, needs.Full)
 		}
@@ -59,15 +60,15 @@ func TestFrameTakesSecondaryMaterials(t *testing.T) {
 			fv = v
 		}
 	}
-	if fv.AX.Extra[0] != "steel" || fv.AX.Need[0] != 2 || fv.AX.ExtraGot[0] != 0 || fv.Status != "Needs 2 steel" {
+	if fv.AX.Extra[0] != "steel" || fv.AX.Need[0] != 20 || fv.AX.ExtraGot[0] != 0 || fv.Status != "Needs 20 steel" {
 		t.Fatalf("frame view: %+v status %q", fv.AX, fv.Status)
 	}
-	g.SpawnStack(item.Steel, 10, 4, 8)
+	g.SpawnStack(item.Steel, 20, 4, 8)
 	for i := 0; i < 2000 && !fr.Ready(); i++ {
 		g.Step(1)
 		fr, _ = g.frames.Get(fid)
 	}
-	if fr.ExtraGot[0] != 2 || !fr.Ready() {
+	if fr.ExtraGot[0] != 20 || !fr.Ready() {
 		t.Fatalf("steel not delivered: %+v", fr)
 	}
 	if n := g.haul.incoming[haul.ExtraKey(fid, 0)]; n != 0 {
@@ -80,8 +81,8 @@ func TestFrameTakesSecondaryMaterials(t *testing.T) {
 			steel += st.Qty
 		}
 	})
-	if steel != 10 {
-		t.Fatalf("cancel: %d steel on the map, want all 10 back", steel)
+	if steel != 20 {
+		t.Fatalf("cancel: %d steel on the map, want all 20 back", steel)
 	}
 }
 
@@ -228,6 +229,9 @@ func TestDeepDrillBringsUpOre(t *testing.T) {
 		}
 		g.stacks.All(func(_ entity.EntityID, st item.Stack) {
 			if st.Kind == ore {
+				if !st.Forbidden {
+					t.Fatal("drilled ore is not forbidden")
+				}
 				got += st.Qty
 			}
 		})
@@ -335,5 +339,52 @@ func TestMoisturePumpDriesMarsh(t *testing.T) {
 		if bv.ID == pump && bv.AX.Radius != 2 {
 			t.Fatalf("radius view %d", bv.AX.Radius)
 		}
+	}
+}
+
+func TestScannersBlockUnderRoofInNativeGame(t *testing.T) {
+	for _, kind := range []construction.Kind{construction.GroundScanner, construction.MineralScanner} {
+		t.Run(kind.String(), func(t *testing.T) {
+			g := New(Config{Seed: 3, Width: 30, Height: 20})
+			bid := buildNow(t, g, kind, item.Steel, construction.South, 5, 2)
+			cells, _, _ := construction.Footprint(kind, construction.South, 5, 2)
+			cx := 5
+			for _, c := range cells {
+				cx = max(cx, c[0])
+			}
+			onPower(t, g, cx, 2, cx+1, 2)
+			ada, _ := g.SpawnNamedPawn(1, 1, "Ada")
+			p := cells[len(cells)-1]
+			g.ensureRoofGrid()
+			g.setRoof(p[1]*g.grid.Width()+p[0], roof.Natural)
+			assign := func() bool {
+				if kind == construction.GroundScanner {
+					return g.br.ind.Ops(industryHost{g}).Assign(ada, false, 2)
+				}
+				return travelOf(g).AssignScan(ada, 2)
+			}
+			if !g.powered(bid) {
+				t.Fatal("fixture lacks power")
+			}
+			if assign() {
+				t.Fatal("roofed scanner assigned")
+			}
+			g.setRoof(p[1]*g.grid.Width()+p[0], 0)
+			if !assign() {
+				t.Fatal("open scanner not assigned")
+			}
+			j, _ := g.jobs.Get(ada)
+			j.State = job.Do
+			g.setRoof(p[1]*g.grid.Width()+p[0], roof.Natural)
+			if kind == construction.GroundScanner {
+				industryHost{g}.doOperate(ada, j)
+			} else {
+				travelOf(g).Do(ada, j)
+			}
+			got, _ := g.jobs.Get(ada)
+			if got.State != job.Fail || got.Fail != job.Blocked {
+				t.Fatalf("roof added during scan did not stop it: %+v", got)
+			}
+		})
 	}
 }

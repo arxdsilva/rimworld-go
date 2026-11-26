@@ -89,6 +89,7 @@ type BillView struct {
 	Stuff     string
 	StuffKind uint8
 	Quality   bool
+	Condition item.ConditionRange
 }
 
 // BillIngredientView is one ingredient kind a bill may use.
@@ -190,7 +191,7 @@ func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 			Store: uint8(bl.Store), StoreLabel: bl.Store.String(), StoreZone: bl.Zone, Radius: bl.Radius,
 			SkillMin: bl.SkillMin, SkillMax: bl.MaxSkill(), Worker: uint64(bl.Worker), UnpauseAt: bl.UnpauseAt,
 			Inputs: b.book.InputsLabel(d), NoWorker: b.noWorker(bl, d),
-			StuffKind: uint8(bl.Stuff), Quality: item.HasQuality(d.Output),
+			StuffKind: uint8(bl.Stuff), Quality: item.HasQuality(d.Output), Condition: bl.Condition,
 		}
 		if bl.Stuff != 0 {
 			v.Stuff = bl.Stuff.String()
@@ -217,7 +218,7 @@ func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 func (b *Bills) current(v *BillView, bid entity.EntityID, i int, d recipe.Def) {
 	for _, pid := range b.h.PawnIDs() {
 		j, ok := b.h.Job(pid)
-		if !ok || !j.Active() || j.Dest != bid || j.BillIndex != i || j.Kind != job.Bill && j.Kind != job.HaulIngredients && j.Kind != job.PackIngredients {
+		if !ok || !j.Active() || j.Dest != bid || !billJob(j.Kind) || billOf(j, b.list[bid]) != i {
 			continue
 		}
 		v.CurrentWorker = b.h.Name(pid)

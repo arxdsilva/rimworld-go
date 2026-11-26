@@ -16,7 +16,7 @@ import (
 // workbench from components at crafting 8, behind Servo replacements,
 // which needs Prosthetics and Fabrication; the valve heart is steel at
 // crafting 5 behind Prosthetics. Nothing makes a nanomed kit or an organ.
-func TestServoRecipesNeedResearch(t *testing.T) {
+func TestBionicRecipesNeedResearch(t *testing.T) {
 	t.Parallel()
 	servo := map[recipe.ID]item.Kind{recipe.MakeServoArm: item.ServoArm, recipe.MakeServoLeg: item.ServoLeg,
 		recipe.MakeOpticImplant: item.OpticImplant, recipe.MakeCochlearImplant: item.CochlearImplant,
@@ -24,8 +24,9 @@ func TestServoRecipesNeedResearch(t *testing.T) {
 	var pr research.Progress
 	for id, out := range servo {
 		d := recipe.Core().DefOf(id)
-		if d.Output != out || d.OutQty != 1 || d.Bench != construction.Workbench || d.Input.Kind != item.Components ||
-			d.Input.Qty <= 0 || d.MinSkill != 8 {
+		if d.Output != out || d.OutQty != 1 || d.Bench != construction.FabricationBench ||
+			len(d.Inputs) != 2 || d.Inputs[0].Kind != item.Plasteel ||
+			d.Inputs[1].Kind != item.AdvancedComponents || d.MinSkill != 8 {
 			t.Errorf("%s = %+v", d.Name, d)
 		}
 		if p, ok := pr.Locks("recipe:" + d.Name); !ok || p != research.ServoReplacements {
@@ -33,7 +34,10 @@ func TestServoRecipesNeedResearch(t *testing.T) {
 		}
 	}
 	v := recipe.Core().DefOf(recipe.MakeValveHeart)
-	if v.Output != item.ValveHeart || v.Input != (recipe.Input{Kind: item.Steel, Qty: 25}) || v.MinSkill != 5 {
+	if v.Output != item.ValveHeart || v.Bench != construction.MachiningTable ||
+		len(v.Inputs) != 2 || v.Inputs[0] != (recipe.Input{Kind: item.Steel, Qty: 25}) ||
+		v.Inputs[1] != (recipe.Input{Kind: item.Components, Qty: 4}) ||
+		v.Work != 15000 || v.MinSkill != 5 {
 		t.Errorf("valve heart = %+v", v)
 	}
 	if p, ok := pr.Locks("recipe:" + v.Name); !ok || p != research.Prosthetics {

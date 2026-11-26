@@ -35,7 +35,7 @@ func TestBeaconWallCutsReach(t *testing.T) {
 	spawn(t, g, item.Silver, 100, 26, 14) // to be walled in
 	spawn(t, g, item.Silver, 7, 22, 21)   // 7 tiles south: in reach (radius 7.5)
 	spawn(t, g, item.Silver, 50, 30, 14)  // 8 tiles east: out of reach
-	silver := func() int { return beaconGoods(g).counts[item.Silver] }
+	silver := func() int { return beaconGoods(g).Counts()[item.Silver] }
 	if got := silver(); got != 107 {
 		t.Fatalf("open ground: beacon silver %d, want 107 (radius 7.5 reaches 22,21, not 30,14)", got)
 	}
@@ -76,17 +76,17 @@ func TestBeaconRockCutsReach(t *testing.T) {
 	g, _, _, _ := orbitalGame(t)
 	powerBeacon(t, g, 22, 14)
 	spawn(t, g, item.Silver, 40, 22, 19)
-	if got := beaconGoods(g).counts[item.Silver]; got != 40 {
+	if got := beaconGoods(g).Counts()[item.Silver]; got != 40 {
 		t.Fatalf("open: %d silver, want 40", got)
 	}
 	for x := 15; x <= 29; x++ {
 		g.setTerrain(x, 17, terrain.Rock)
 	}
-	if got := beaconGoods(g).counts[item.Silver]; got != 0 {
+	if got := beaconGoods(g).Counts()[item.Silver]; got != 0 {
 		t.Fatalf("behind a rock line: %d silver, want 0", got)
 	}
 	g.setTerrain(22, 17, terrain.Soil)
-	if got := beaconGoods(g).counts[item.Silver]; got != 40 {
+	if got := beaconGoods(g).Counts()[item.Silver]; got != 40 {
 		t.Fatalf("a gap mined: %d silver, want 40", got)
 	}
 }
@@ -97,7 +97,7 @@ func TestBeaconRockCutsReach(t *testing.T) {
 func TestBeaconGoodsUnionOfBeacons(t *testing.T) {
 	t.Parallel()
 	g, _, _, _ := orbitalGame(t)
-	if gd := beaconGoods(g); len(gd.ids) != 0 || gd.counts == nil {
+	if gd := beaconGoods(g); len(gd.Kinds()) != 0 || gd.Counts() == nil {
 		t.Fatalf("no beacon: goods %+v", gd)
 	}
 	powerBeacon(t, g, 20, 14)
@@ -111,10 +111,11 @@ func TestBeaconGoodsUnionOfBeacons(t *testing.T) {
 	st.Forbidden = true
 	g.putStack(fid, st)
 	gd := beaconGoods(g)
-	if gd.counts[item.Silver] != 15 || gd.counts[item.Steel] != 7 {
-		t.Fatalf("counts %v, want silver 15, steel 7", gd.counts)
+	if gd.Counts()[item.Silver] != 15 || gd.Counts()[item.Steel] != 7 {
+		t.Fatalf("counts %v, want silver 15, steel 7", gd.Counts())
 	}
-	for k, ids := range gd.ids {
+	for _, k := range gd.Kinds() {
+		ids := gd.IDs(k)
 		for i := 1; i < len(ids); i++ {
 			if ids[i] <= ids[i-1] {
 				t.Fatalf("%s ids %v not ascending", k, ids)

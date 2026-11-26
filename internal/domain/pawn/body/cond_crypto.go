@@ -76,5 +76,18 @@ func VomitEvery(b *Body) int32 {
 	if CryptoSick(b) && (every == 0 || every > CryptoVomitEvery) {
 		every = CryptoVomitEvery
 	}
+	if b != nil {
+		if c, ok := b.Cond(CondAnesthetic); ok {
+			// wiki: Anesthetic (MTB 0.25 days during sedation/woozy,
+			// 4 days when wearing off).
+			interval := int32(6)
+			if c.Stage == anesthStageOff {
+				interval = 96
+			}
+			if every == 0 || every > interval {
+				every = interval
+			}
+		}
+	}
 	return every
 }

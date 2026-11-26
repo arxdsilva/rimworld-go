@@ -120,7 +120,7 @@ func TestTailorSewsTShirt(t *testing.T) {
 	}
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	ada, _ := g.SpawnNamedPawn(5, 5, "Ada")
-	onlyWork(g, ada, work.Craft)
+	onlyWork(g, ada, work.Tailor)
 	placeBuilt(t, g, construction.TailoringBench, construction.South, 15, 2)
 	g.Enqueue(commandAddBill(15, 2, recipe.MakeTShirt))
 	g.SpawnStack(item.Cloth, 4, 8, 8)

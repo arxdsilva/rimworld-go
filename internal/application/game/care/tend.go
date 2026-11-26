@@ -58,11 +58,29 @@ func (d *Doctor) ImportTended(m map[entity.EntityID]uint64) {
 	}
 }
 
-// OtherDoctor reports a standing colonist besides id who does Doctor
-// work and is not on bed rest itself (a resting doctor tends no one else).
+// OtherDoctor reports another colonist already treating this patient or
+// able to reach it for autonomous Doctor work. A patient must not wait for
+// a doctor who is asleep, drafted, blocked, or carrying out a player order.
 func (d *Doctor) OtherDoctor(id entity.EntityID) bool {
+	x, y, ok := d.h.Pos(id)
+	if !ok {
+		return false
+	}
+	owner, held := d.h.Owner(id)
 	for _, pid := range d.h.PawnIDs() {
-		if pid != id && d.h.Standing(pid) && d.h.DoesDoctor(pid) && !d.c.Rest.On(pid) {
+		if pid == id || !d.h.Standing(pid) || d.h.DoctorBlocked(pid) {
+			continue
+		}
+		j, _ := d.h.Job(pid)
+		if held && owner == pid && j.Active() && j.Target == id &&
+			(j.Kind == job.Tend || j.Kind == job.Rescue || j.Kind == job.Surgery) {
+			return true
+		}
+		if !d.h.DoesDoctor(pid) || d.c.Rest.On(pid) || d.h.Drafted(pid) ||
+			j.Active() && (j.Forced || j.Kind == job.Sleep) {
+			continue
+		}
+		if _, _, reachable := d.h.BesideSpot(pid, x, y); reachable {
 			return true
 		}
 	}
@@ -84,8 +102,8 @@ func (d *Doctor) Lying(id entity.EntityID) bool {
 // asleep) with something to tend, its care level allowing care, and not
 // waiting to be rescued to a bed first. bleeding picks the patients
 // losing blood (true) or the rest (false).
-func (d *Doctor) tendable(pid entity.EntityID, bleeding bool) bool {
-	if !d.Lying(pid) || !d.h.NeedsTending(pid) || !d.c.Level(pid).Tends() || d.Rescuable(pid) {
+func (d *Doctor) tendable(pid entity.EntityID, bleeding bool, doer ...entity.EntityID) bool {
+	if !d.Lying(pid) || !d.h.NeedsTending(pid) || !d.c.Level(pid).Tends() || d.Rescuable(pid) && (len(doer) == 0 || tripWhy(d.c, doer[0], pid, tripRescue) == "") {
 		return false
 	}
 	return (d.h.BleedPerDay(pid) > 0) == bleeding
@@ -116,7 +134,7 @@ func (d *Doctor) Urgent(doctor, patient entity.EntityID, u Urgency) bool {
 			continue
 		}
 		bleeding := d.h.BleedPerDay(pid) > 0
-		if !d.tendable(pid, bleeding) {
+		if !d.tendable(pid, bleeding, doctor) {
 			continue
 		}
 		if h := u.BleedDeathHours(pid); bleeding && h >= 0 && h < urgentBleedHours {
@@ -148,8 +166,8 @@ func (d *Doctor) assignTendOther(id entity.EntityID) bool {
 // leaves one for another halfway (no flapping).
 func (d *Doctor) assignTendWhere(id entity.EntityID, bleeding bool) bool {
 	best := d.bestPatient(id, func(pid entity.EntityID) (job.Record, bool) {
-		return job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}, d.tendable(pid, bleeding)
-	})
+		return job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}, d.tendable(pid, bleeding, id)
+	}, false)
 	return best != nil && d.startTend(id, best.rec)
 }
 

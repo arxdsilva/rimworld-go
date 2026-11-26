@@ -9,7 +9,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/world/filth"
-	"rimworld-go/internal/domain/world/roof"
 )
 
 // The Home area (SIM-021): tiles the colony keeps clean. Painted with
@@ -160,14 +159,4 @@ func (g *Game) importHome(cells []uint8, ver uint32) {
 		}
 	}
 	g.refreshFilth()
-}
-
-// areaRoofPlan re-raises a build plan on a tile of the build-roof area
-// that lost its roof (collapse) once it is supported again; a tile marked
-// for removal, a wall and a roofed tile are left alone.
-func areaRoofPlan(c roof.Cell, wall bool) roof.Cell {
-	if !wall && c.Has(roof.AreaBuild|roof.Supported) && !c.Roofed() && c&roof.PlanRemove == 0 {
-		c |= roof.PlanBuild
-	}
-	return c
 }

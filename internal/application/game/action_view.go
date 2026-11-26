@@ -5,6 +5,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/actionview"
+	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/orders"
@@ -197,7 +198,13 @@ func (g *Game) attackCycleOf(id entity.EntityID, j job.Record) float64 {
 		d := weaponDefOf(g, id)
 		total := combat.AimTicks(combatSkills{g}, id, d)
 		// Past the first aim the countdown is the cooldown (and a gun's aim).
-		if c := combat.CycleTicks(d); j.WorkLeft > total || struck && rec.Target == j.Target && now-rec.Tick <= uint64(c) {
+		if c := d.Cooldown + combat.AimTicks(combatSkills{g}, id, d); j.WorkLeft > total || struck && rec.Target == j.Target && now-rec.Tick <= uint64(c) {
+			if !d.Ranged {
+				c = d.Cooldown
+			}
+			if j.Count > 0 {
+				c = max(d.BurstTicks, 1)
+			}
 			total = c
 		}
 		return cycle(j.WorkLeft, total)
@@ -232,6 +239,8 @@ func (g *Game) fillPawnAction(pv *PawnView, id entity.EntityID, j job.Record) {
 		switch j.Kind {
 		case job.Attack, job.Hunt, job.Tend, job.EmergencyTend, job.Tame, job.Rescue, job.Milk, job.Shear:
 			pv.ActTarget = j.Target
+		case job.SitDown:
+			pv.ActX, pv.ActY = j.TX, j.TY // native chair cell; the renderer faces the chair's table
 		}
 	}
 	pv.AttackCycle = g.attackCycleOf(id, j)
@@ -263,7 +272,7 @@ func (g *Game) chargeLine(a animal.State) string {
 func (g *Game) fillAnimalAction(av *AnimalView, id entity.EntityID, real animal.State) {
 	now := uint64(g.clock.Now())
 	def := animal.DefOf(real.Species)
-	a := actionState(real)
+	a := animalview.ActionState(real)
 	struck := false
 	if rec, ok := g.lastStrike[id]; ok && justStruck(rec, now) {
 		struck = true
@@ -304,7 +313,7 @@ func (g *Game) grazing(id entity.EntityID, a animal.State) bool {
 		return false
 	}
 	if t := a.Feed; a.Mode == animal.Feed && t.Kind != animal.FeedNone &&
-		weapon.Distance(pos.X, pos.Y, t.X, t.Y) <= feedReach(t) && g.feedThere(&a, t) { // animal_needs.go
+		weapon.Distance(pos.X, pos.Y, t.X, t.Y) <= animal.FeedReach(t) && g.feedThere(&a, t) { // animal_needs.go
 		return true
 	}
 	if !animal.EcologyOf(a.Species).Diet.Plants() {

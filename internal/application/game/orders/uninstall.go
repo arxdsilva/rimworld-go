@@ -30,7 +30,7 @@ type Uninstall struct {
 // feature) that holds no one.
 func Packable(b construction.Building) bool {
 	d := construction.DefOf(b.Kind)
-	return construction.Movable(b.Kind) && !b.Kind.Instant() && !d.Natural && !b.Ruin && !b.Ancient && !b.Hostile && b.Occupant == 0
+	return construction.Movable(b.Kind) && !b.Kind.Instant() && !d.Natural && !b.Ruin && !b.Ancient && !b.Hostile && b.Occupant == 0 && !b.Forbidden
 }
 
 // ReasonUnpackable is why a building can't be uninstalled.
@@ -89,7 +89,7 @@ func (u *Uninstall) Assign(id entity.EntityID) bool {
 			continue // gone, or the mark came off: no longer indexed
 		}
 		keep = append(keep, bid)
-		if !h.Free(id, bid, job.Uninstall) {
+		if !Packable(b) || b.Deconstruct || h.Interred(bid) || !h.Free(id, bid, job.Uninstall) {
 			continue
 		}
 		if d := dist(px, py, b.X, b.Y); d < bestD {
@@ -112,7 +112,7 @@ func (u *Uninstall) Assign(id entity.EntityID) bool {
 func (u *Uninstall) Do(id entity.EntityID, j job.Record) {
 	h := u.h
 	b, ok := h.Building(j.Target)
-	if !ok || !b.Uninstall || b.Deconstruct {
+	if !ok || !b.Uninstall || b.Deconstruct || !Packable(b) || h.Interred(j.Target) {
 		finish(h, id, j, job.Fail, job.TargetGone)
 		return
 	}
@@ -128,7 +128,10 @@ func (u *Uninstall) Do(id entity.EntityID, j job.Record) {
 		h.SetJob(id, j)
 		return
 	}
-	h.Pack(j.Target, CrateOf(b))
+	if h.Pack(j.Target, CrateOf(b)) == 0 {
+		finish(h, id, j, job.Fail, job.Blocked)
+		return
+	}
 	u.ids = setMark(u.ids, j.Target, false)
 	finish(h, id, j, job.Complete, job.FailNone)
 }
@@ -137,5 +140,5 @@ func (u *Uninstall) Do(id entity.EntityID, j job.Record) {
 // kind, material and quality, its damage carried as wear.
 func CrateOf(b construction.Building) item.Stack {
 	return item.Stack{Kind: item.MinifiedBuilding, Qty: 1, X: b.X, Y: b.Y, Building: uint8(b.Kind),
-		Stuff: b.Stuff, Quality: b.Quality, Wear: b.Damage}
+		Stuff: b.Stuff, Quality: b.Quality, Wear: b.Damage, MaterialBasis: b.MaterialBasis}
 }

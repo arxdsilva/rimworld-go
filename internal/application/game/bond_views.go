@@ -23,7 +23,7 @@ func (g *Game) youngByMother() map[entity.EntityID][]string {
 			out = map[entity.EntityID][]string{}
 		}
 		m := entity.EntityID(a.Mother)
-		out[m] = append(out[m], animalLabel(*a))
+		out[m] = append(out[m], animalLabel(a.State()))
 	}
 	return out
 }
@@ -51,5 +51,5 @@ func (g *Game) fillAnimalBonds(av *AnimalView, id entity.EntityID, a animal.Stat
 		av.BondID = entity.EntityID(a.Bond)
 		av.Bond = g.name(av.BondID)
 	}
-	av.Trained, av.Training = trainViews(a, now) // train_animals.go
+	av.Trained, av.Training = herd.TrainViews(a, now, trainingAt(g, id))
 }

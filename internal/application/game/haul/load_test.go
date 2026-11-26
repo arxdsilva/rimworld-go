@@ -98,3 +98,23 @@ func TestToppableUsesLimit(t *testing.T) {
 		t.Fatalf("limit %d: a stack of 25 must be full, 24 not", lim)
 	}
 }
+
+func TestSplitLoadKeepsYieldBuildingAndBookIdentity(t *testing.T) {
+	cases := []struct {
+		name  string
+		st    item.Stack
+		check func(item.Stack) bool
+	}{
+		{name: "corpse yield", st: item.Stack{Kind: item.CorpseAnimal, Qty: 2, Yield: 735}, check: func(got item.Stack) bool { return got.Yield == 735 }},
+		{name: "minified building", st: item.Stack{Kind: item.MinifiedBuilding, Qty: 2, Building: 17}, check: func(got item.Stack) bool { return got.Building == 17 }},
+		{name: "book", st: item.Stack{Kind: item.Novel, Qty: 2, Book: 0x12345678}, check: func(got item.Stack) bool { return got.Book == 0x12345678 }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := SplitLoad(tc.st, 1)
+			if got.Qty != 1 || !tc.check(got) {
+				t.Fatalf("split load lost identity: %+v", got)
+			}
+		})
+	}
+}

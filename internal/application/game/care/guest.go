@@ -113,8 +113,7 @@ func (g *Hospitality) recovered(id entity.EntityID) {
 		c.gu.JoinOffer(id)
 		return
 	}
-	c.gu.Goodwill(f, GoodwillHealed, ReasonHealed)
-	c.gu.Leave(id)
+	c.gu.Leave(id) // award goodwill on actual healthy departure
 }
 
 // Died: guest id died while down on the map; its faction thinks the worse

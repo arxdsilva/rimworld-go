@@ -43,33 +43,27 @@ func (p *Prison) Live(id entity.EntityID, now uint64) {
 	if h.Captured(id) {
 		return // in a captor's arms
 	}
-	v = h.Heal(id, v, now) // faster in bed and tended
-	n := h.Needs(id)
+	n := h.Needs(id) // physical upkeep has already run in the needs phase
 	if v.Status == health.Downed {
-		p.FoodBand(id, h.DownedHunger(id, now))
+		p.FoodBand(id, n)
 		return
 	}
 	j, _ := h.Job(id)
 	asleep := j.Kind == job.Sleep && j.State == job.Do
-	if asleep {
-		n = needs.SleepTick(n, now)
-	} else {
-		n = h.Decay(id, n, now)
-	}
-	h.SetNeeds(id, n)
 	if r.Leaving {
 		p.walkOut(id, r, j, now)
 		return
+	}
+	if asleep {
+		p.FoodBand(id, n)
+		return // physical sleep is advanced by the native job phase
 	}
 	if p.breakOut(id, now) { // escape.go (CBT-4)
 		return
 	}
 	p.FoodBand(id, n)
 	switch {
-	case asleep:
-		if n.Rest >= needs.WakeRest {
-			h.SetJob(id, job.Record{})
-		}
+
 	case j.State == job.Complete || j.State == job.Fail:
 		h.ReleaseOwner(id)
 		h.SetJob(id, job.Record{})

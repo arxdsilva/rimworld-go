@@ -111,7 +111,7 @@ func (au *Auto) cull(s animal.Species, c Caps) int {
 		}
 		k := classMale
 		switch {
-		case !grown(a, now):
+		case !grown(h, a, now):
 			k = classYoung
 		case a.Female:
 			k = classFemale

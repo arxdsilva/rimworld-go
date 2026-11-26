@@ -8,6 +8,8 @@ import (
 	"sort"
 	"testing"
 
+	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
 )
@@ -70,8 +72,12 @@ func TestDefinitions(t *testing.T) {
 	if len(Defs(en, "skill")) != int(skill.NumSkills) || Defs(en, "skill")[0].Key != "shooting" {
 		t.Fatal("skills")
 	}
-	if len(Defs(en, "train")) != 3 {
-		t.Fatal("training: obedience, guard, release")
+	wantTraining := []Def{{"obedience", "Obedience"}, {"guard", "Guard"}, {"release", "Release"}, {"haul", "Haul"}}
+	if got := Defs(en, "train"); len(got) != int(training.NumSkills) || !reflect.DeepEqual(got, wantTraining) {
+		t.Fatalf("training definitions = %+v, want %+v", got, wantTraining)
+	}
+	if _, ok := TrainByKey(""); ok {
+		t.Fatal("empty training key must not resolve")
 	}
 	if len(Defs(en, "tally")) != 2 || len(Defs(en, "need_bar")) != 3 || Defs(en, "doing") != nil {
 		t.Fatal("tally and need defs")
@@ -97,7 +103,7 @@ func TestDefinitions(t *testing.T) {
 	}
 	for _, d := range Defs(en, "train") {
 		sk, ok := TrainByKey(d.Key)
-		if !ok || TrainLabel(sk) != d.Label || TrainKey(sk) != d.Key {
+		if !ok || TrainLabel(en, sk) != d.Label || TrainKey(sk) != d.Key {
 			t.Errorf("train %s", d.Key)
 		}
 		if TrainDesc(en, sk) == "" {
@@ -109,5 +115,41 @@ func TestDefinitions(t *testing.T) {
 	}
 	if _, ok := LookupDef(en, "skill", "work_speed"); ok {
 		t.Fatal("a stat is not a skill")
+	}
+}
+
+// A translated label must never change the layout's saved stable definition key.
+type trainingTranslation struct{}
+
+func (trainingTranslation) T(src string) string {
+	if src == "Haul" {
+		return "Transporter"
+	}
+	return src
+}
+
+func TestHaulTrainingDefinitionAndCell(t *testing.T) {
+	t.Parallel()
+	tr := trainingTranslation{}
+	def, ok := LookupDef(tr, "train", "haul")
+	if !ok || def != (Def{"haul", "Transporter"}) {
+		t.Fatalf("translated definition: %+v, %v", def, ok)
+	}
+	sk, ok := TrainByKey(def.Key)
+	if !ok || sk != training.Haul {
+		t.Fatalf("key resolved to %v, %v", sk, ok)
+	}
+	if _, ok := TrainByKey(def.Label); ok {
+		t.Fatal("translated label became a persistent key")
+	}
+	a := game.AnimalView{}
+	v := game.AnimalTrainingView{Skill: int(sk), Label: "Haul", Allowed: true, On: true, Steps: 2, Needed: int(training.Needed(sk))}
+	c := TrainCell(tr, a, v)
+	if c.Label != "Transporter" || c.Value != "2 of 7" || c.Pct != 28 || c.Tip == "" {
+		t.Fatalf("haul training cell: %+v", c)
+	}
+	v.Allowed = false
+	if c := TrainCell(tr, a, v); c != (Cell{}) {
+		t.Fatalf("untrainable species shows haul: %+v", c)
 	}
 }

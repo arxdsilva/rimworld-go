@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -69,6 +70,7 @@ func (h senseGear) SetDown(id entity.EntityID, st item.Stack) {
 		r := g.worldSt.stashed[i]
 		if fleetOf(g).At(r.Holder) != nil {
 			travelOf(g).Carry(uint64(r.Holder), st) // on the road: the caravan takes it home
+			maps.RefreshPace(fleetOf(g), r.Holder)
 			return
 		}
 		if m := mapByID(g, r.Map); m != nil {

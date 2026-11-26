@@ -4,6 +4,9 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/bodytemp"
+	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/sim/command"
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -198,5 +201,75 @@ func TestBreachedRoomCoolsOverHours(t *testing.T) {
 	out = int(temperature.Outdoor(g.clock.Now()))
 	if now := int(g.temperatureAt(3, 5)); now-out > (warm-out)/3 {
 		t.Fatalf("after a few hours it is close to the outside air: %d (outside %d)", now, out)
+	}
+}
+
+// Native serious exposure is still an injury after a forced move enters
+// comfortable air. Keep the real Warm job until clinical recovery, while
+// explicit subsequent orders can replace it.
+func TestSeriousThermalRecoveryAfterNativeMove(t *testing.T) {
+	g, id := warmHut(t)
+	g.SetNeeds(id, needs.Full, needs.Full)
+	g.exposure[id] = bodytemp.Sev{Hypo: exposure.FromPermille(500)}
+	x, y, ok := g.warmSpot(id)
+	if !ok {
+		t.Fatal("missing comfortable native refuge")
+	}
+	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(id), X: x, Y: y})
+	arrived, waiting := false, false
+	for range 6000 {
+		g.Step(1)
+		pos, _ := g.positions.Get(id)
+		j, _ := g.jobs.Get(id)
+		if pos.X == x && pos.Y == y {
+			arrived = true
+			waiting = waiting || j.Kind == job.Warm && j.State == job.Do
+		}
+		if arrived && g.exposureDanger(id) && !safeThermalCell(g, id, pos.X, pos.Y) {
+			t.Fatalf("serious exposure left safe refuge: %+v %+v", pos, j)
+		}
+		if arrived && waiting && !g.exposureDanger(id) {
+			t.Logf("native refuge K=%d exposure=%d job=%v", g.clock.Now(), exposure.Permille(g.exposure[id].Hypo), j.Kind)
+			break
+		}
+	}
+	if !arrived || !waiting || g.exposureDanger(id) || !g.alive(id) {
+		t.Fatal("no physical recovery after original move")
+	}
+}
+
+func TestThermalRecoveryYieldsToPlayerOrderAndUnsafeRefuge(t *testing.T) {
+	g, id := warmHut(t)
+	g.SetNeeds(id, needs.Full, needs.Full)
+	x, y, ok := g.warmSpot(id)
+	if !ok {
+		t.Fatal("missing native refuge")
+	}
+	g.positions.Set(id, Position{X: x, Y: y})
+	g.exposure[id] = bodytemp.Sev{Hypo: exposure.FromPermille(500)}
+	if !stepUntil(g, 100, func() bool { j, _ := g.jobs.Get(id); return j.Kind == job.Warm && j.State == job.Do }) {
+		t.Fatal("serious injury did not take native warm job")
+	}
+	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(id), X: 2, Y: 10})
+	g.Step(2)
+	j, _ := g.jobs.Get(id)
+	if j.Kind != job.Move || !j.Forced || j.TX != 2 || j.TY != 10 {
+		t.Fatalf("warm wait replaced explicit order: %+v", j)
+	}
+	if !stepUntil(g, 2000, func() bool { p, _ := g.positions.Get(id); return p.X == 2 && p.Y == 10 }) {
+		t.Fatal("explicit move did not execute")
+	}
+	if !stepUntil(g, 2000, func() bool { j, _ := g.jobs.Get(id); return j.Kind == job.Warm && j.State == job.Do }) {
+		t.Fatal("thermal recovery did not resume after explicit move")
+	}
+	j, _ = g.jobs.Get(id)
+	x, y = j.TX, j.TY
+	if !g.startFire(x, y, 100) {
+		t.Fatal("failed to start actual refuge fire")
+	}
+	g.Step(2)
+	j, _ = g.jobs.Get(id)
+	if j.Kind == job.Warm && j.Active() && g.fireNear(j.TX, j.TY, 1) {
+		t.Fatalf("native recovery kept unsafe cell %+v", j)
 	}
 }

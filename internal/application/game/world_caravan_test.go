@@ -6,15 +6,20 @@ package game
 import (
 	"fmt"
 	"reflect"
+	"rimworld-go/internal/domain/sim/clock"
 	"slices"
 	"sync"
 	"testing"
 
 	"rimworld-go/internal/application/game/maps"
+	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -401,5 +406,213 @@ func TestEveryoneGone(t *testing.T) {
 	g.ng.pods[0].Landed = true
 	if !everyoneGone(g) {
 		t.Fatal("a landed pod still counts")
+	}
+}
+
+func TestCaravanMemoryExpirySurvivesSaveLoad(t *testing.T) {
+	t.Parallel()
+	g := worldGame(t)
+	id := g.pawnIDs[0]
+	formCaravan(t, g, nearDest(t, g), id)
+	if !g.isStashed(id) {
+		t.Fatal("caravan member not stashed")
+	}
+	day := uint64(clock.TicksPerDay)
+	due := (uint64(g.clock.Now())/day+1)*day + 875
+	live := mood.Memory{Kind: mood.SleptInNiceRoom, Expires: due + day}
+	g.memories[id] = mood.Memories{{Kind: mood.AteRaw, Expires: due}, live}
+	g.clock.Advance(int(due - uint64(g.clock.Now())))
+	runPhase(g, PhaseSocial)
+	if m := g.memories[id]; len(m) != 1 || m[0] != live {
+		t.Fatalf("caravan member kept expired memory: %+v", m)
+	}
+	h := saveAndLoad(t, g)
+	if m := h.memories[id]; len(m) != 1 || m[0] != live {
+		t.Fatalf("loaded caravan memory %+v", m)
+	}
+	if g.StateHash() != h.StateHash() {
+		t.Fatal("caravan state changed during save/load")
+	}
+	g.Step(250)
+	h.Step(250)
+	if g.StateHash() != h.StateHash() {
+		t.Fatal("caravan state diverged after resuming")
+	}
+}
+
+// A nearby map border can be fully blocked while a different reachable
+// border still permits the same pawn to leave.
+func TestCaravanExitFallsBackFromFullyBlockedNearEdge(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 31, Width: 36, Height: 22})
+	id, err := g.SpawnNamedPawn(5, 11, "Ada")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for y := 0; y < g.Height(); y++ {
+		for x := 0; x < 4; x++ {
+			g.grid.SetWalkable(x, y, false)
+		}
+	}
+	if _, _, ok := g.combat.Tiles.WalkableNear(0, 11, 3); ok {
+		t.Fatal("fixture has an open tile at the near border")
+	}
+	if !(mapsWalk{g}).StartExit(id) {
+		t.Fatal("alternate reachable border was not tried")
+	}
+	j, ok := g.jobs.Get(id)
+	if !ok || j.Kind != job.ExitMap || !j.Active() ||
+		j.TX != 0 && j.TX != g.Width()-1 && j.TY != 0 && j.TY != g.Height()-1 {
+		t.Fatalf("wrong exit job after fallback: %+v", j)
+	}
+}
+
+func TestCaravanHeadlessReadModelRoundTrip(t *testing.T) {
+	g := worldGame(t)
+	a, b := g.pawnIDs[0], g.pawnIDs[1]
+	c := formCaravan(t, g, nearDest(t, g), a, b)
+	c.C.FoodDays = 1250
+	travelOf(g).Carry(c.C.ID, item.Stack{Kind: item.Wood, Qty: 7})
+	g.socState().moodM[a] = 1000
+	delete(g.socState().moodM, b)
+	n, _ := g.need.Get(a)
+	n.Hunger = 0
+	g.need.Set(a, n.Settle())
+	base := g.StateHash()
+	v := g.WorldMap().Caravans[0]
+	if v.FoodDays != 1250 || v.SpeedPermil != c.C.Speed() || len(v.Cargo) == 0 || len(v.MemberFacts) != 2 {
+		t.Fatalf("native caravan facts missing: %+v", v)
+	}
+	m := v.MemberFacts[0]
+	if m.ID != a || !m.MoodKnown || m.Mood != 1 || m.BreakTier != mentalbreak.TierAt(1, mentalbreak.ShiftThresholds(mentalbreak.DefaultThresholds(), g.breakOffset(a))) || !m.HungerKnown || m.Hunger != 0 || m.HungerBand != needs.Malnourished || v.MemberFacts[1].MoodKnown {
+		t.Fatalf("native member facts wrong: %+v", v.MemberFacts)
+	}
+	if g.StateHash() != base {
+		t.Fatal("reading the view changed authoritative state")
+	}
+	expected := g.WorldMap()
+	v.Cargo[0].Qty = 9999
+	v.MemberFacts[0].Mood = 99
+	v.Members[0] = "mutated"
+	if !reflect.DeepEqual(g.WorldMap(), expected) {
+		t.Fatal("caravan read model aliases live state")
+	}
+	h, _ := saveLoadInfo(t, g)
+	h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
+	if h.StateHash() != base || !reflect.DeepEqual(h.WorldMap(), expected) {
+		t.Fatal("caravan read model or authoritative state changed on load")
+	}
+}
+
+func TestCaravanSplitCommandConservesOwnersAndReplay(t *testing.T) {
+	g := worldGame(t)
+	a, b := g.pawnIDs[0], g.pawnIDs[1]
+	c := formCaravan(t, g, nearDest(t, g), a, b)
+	cid := c.C.ID
+	c.C.FoodDays = 1732
+	c.C.Progress = 313
+	x, y := ax9Free(t, g)
+	packed, err := g.SpawnAnimal("donkey", x, y)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stashed, err := g.SpawnAnimal("horse", x, y)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.animals.Ref(packed).Tame = true
+	g.animals.Ref(stashed).Tame = true
+	packedState := g.animals.Ref(packed).State()
+	g.detachAnimal(packed)
+	if !g.stashPawn(stashed, entity.EntityID(cid)) {
+		t.Fatal("stash pack animal")
+	}
+	c.C.Animals = append(c.C.Animals, uint64(stashed))
+	// Exact physical lots, one hold-owned animal and one native stashed animal.
+	travelOf(g).Carry(cid, item.Stack{Kind: item.Steel, Qty: 30, Forbidden: true})
+	travelOf(g).Carry(cid, item.Stack{Kind: item.Cloth, Qty: 5, Quality: 3, Wear: 4})
+	saved := g.worldSt.ax9.Export()
+	for i := range saved.Cargo {
+		if saved.Cargo[i].Caravan == cid {
+			saved.Cargo[i].Hold.Animals = append(saved.Cargo[i].Hold.Animals, travel.Beast{ID: packed, State: packedState})
+		}
+	}
+	g.worldSt.ax9 = travel.Import(saved)
+	view := g.WorldMap().Caravans[0]
+	if view.Split.Reason != "" || view.Split.Quote == 0 || len(view.Split.Animals) != 2 {
+		t.Fatalf("split view: %+v", view.Split)
+	}
+	before := c.Clone()
+	initialGoods := travelOf(g).Goods(cid)
+	// Duplicate and all-member selections must not move state or spend an ID.
+	for _, cmd := range []command.Command{
+		{Kind: command.CaravanSplit, Target: cid, Quote: view.Split.Quote + 1, Name: travel.EncodeSplit(travel.SplitSelection{Members: []uint64{uint64(b)}})},
+		{Kind: command.CaravanSplit, Target: cid, Quote: view.Split.Quote, Name: travel.EncodeSplit(travel.SplitSelection{Members: []uint64{uint64(b), uint64(b)}})},
+		{Kind: command.CaravanSplit, Target: cid, Quote: view.Split.Quote, Name: travel.EncodeSplit(travel.SplitSelection{Members: []uint64{uint64(a), uint64(b)}})},
+		{Kind: command.CaravanSplit, Target: cid, Quote: view.Split.Quote, Name: travel.EncodeSplit(travel.SplitSelection{Members: []uint64{uint64(b)}, Lots: []travel.SplitLot{{Index: 0, Qty: 99999}}})},
+	} {
+		g.Enqueue(cmd)
+		g.ApplyPending()
+		if len(g.worldSt.caravans) != 1 || !reflect.DeepEqual(g.worldSt.caravans[0], before) || !reflect.DeepEqual(travelOf(g).Goods(cid), initialGoods) {
+			t.Fatal("rejected split mutated owner")
+		}
+	}
+	// Save the actual pending command, then execute on both native owners.
+	cmd := command.Command{Kind: command.CaravanSplit, Target: cid, Quote: view.Split.Quote, Name: travel.EncodeSplit(travel.SplitSelection{Members: []uint64{uint64(b)}, Animals: []uint64{uint64(packed), uint64(stashed)}, Lots: []travel.SplitLot{{Index: 0, Qty: 13}, {Index: 1, Qty: 5}}})}
+	g.Enqueue(cmd)
+	h, _ := saveLoadInfo(t, g)
+	h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
+	for _, gg := range []*Game{g, h} {
+		gg.ApplyPending()
+		if len(gg.worldSt.caravans) != 2 {
+			t.Fatalf("split rejected: %+v", gg.WorldMap())
+		}
+		left, right := gg.worldSt.caravans[0], gg.worldSt.caravans[1]
+		if left.C.ID != cid || right.C.ID <= cid || !slices.Equal(left.C.Members, []uint64{uint64(a)}) || !slices.Equal(right.C.Members, []uint64{uint64(b)}) || left.C.FoodDays != 1732 || right.C.FoodDays != 1732 || left.C.Progress != 313 || right.C.Progress != 313 || !slices.Equal(left.C.Path, right.C.Path) || left.NextEnc != before.NextEnc || right.NextTalk != before.NextTalk {
+			t.Fatalf("split changed route or members: %+v %+v", left, right)
+		}
+		for _, id := range []entity.EntityID{b, stashed} {
+			i, ok := slices.BinarySearchFunc(gg.worldSt.stashed, id, stashCmp)
+			if !ok || gg.worldSt.stashed[i].Holder != entity.EntityID(right.C.ID) {
+				t.Fatalf("wrong holder %d", id)
+			}
+		}
+		v := gg.WorldMap()
+		if len(v.Caravans[0].Split.Animals) != 0 || len(travelOf(gg).SplitAnimals(right.C.ID)) != 1 || len(right.C.Animals) != 1 || right.C.Animals[0] != uint64(stashed) {
+			t.Fatal("animal owners changed or duplicated")
+		}
+		l, r := travelOf(gg).Goods(cid), travelOf(gg).Goods(right.C.ID)
+		wantLeft, wantRight := initialGoods[0], initialGoods[0]
+		wantLeft.Qty, wantRight.Qty = 17, 13
+		if !reflect.DeepEqual(l, []item.Stack{wantLeft}) || !reflect.DeepEqual(r, []item.Stack{wantRight, initialGoods[1]}) {
+			t.Fatalf("cargo conservation %v %v", l, r)
+		}
+		if left.C.Load <= 0 || right.C.Load <= 0 || right.C.Mount <= 0 {
+			t.Fatal("pace not recomputed with both animal owners")
+		}
+	}
+	if g.StateHash() != h.StateHash() {
+		t.Fatal("split pending-command replay diverged")
+	}
+	rightID := g.worldSt.caravans[1].C.ID
+	// Divergent orders cannot alias sibling routes. Both can go home independently.
+	for _, gg := range []*Game{g, h} {
+		gg.Enqueue(command.Command{Kind: command.CaravanReturn, Target: rightID})
+		gg.ApplyPending()
+		if other := fleetOf(gg).At(entity.EntityID(cid)); other == nil || !slices.Equal(other.C.Path, before.C.Path) || other.C.Progress != 313 {
+			t.Fatal("sibling route aliased")
+		}
+		gg.Enqueue(command.Command{Kind: command.CaravanReturn, Target: cid})
+		gg.ApplyPending()
+	}
+	if g.StateHash() != h.StateHash() {
+		t.Fatal("return replay diverged")
+	}
+	for i := 0; i < 20 && len(g.worldSt.caravans) > 0; i++ {
+		worldForward(g, 2500)
+		worldForward(h, 2500)
+	}
+	if g.StateHash() != h.StateHash() || len(g.worldSt.caravans) != 0 || !g.animals.Has(packed) || !g.animals.Has(stashed) || !g.positions.Has(a) || !g.positions.Has(b) {
+		t.Fatal("split owners failed independent return")
 	}
 }

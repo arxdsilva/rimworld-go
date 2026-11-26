@@ -4,6 +4,8 @@
 package ebiten
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -12,9 +14,11 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -119,7 +123,7 @@ func TestAnimalsTabMasterAndTrainingColumns(t *testing.T) {
 	if windows.AnimalMasterCell(an) != "Ada" || windows.AnimalMasterCell(game.AnimalView{}) != "-" {
 		t.Fatal("master cell")
 	}
-	if got := windows.AnimalTrainingCell(an); got != "Obedience 2/3" {
+	if got := windows.AnimalTrainingCell(lang.English{}, an); got != "Obedience 2/3" {
 		t.Fatalf("training cell %q", got)
 	}
 	s := bondSim()
@@ -234,4 +238,71 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	if off := a.uiSt().Scroll[inspector.AnimalLogID]; off != 0 {
 		t.Fatalf("a new animal's log scrolls from the top, got %v", off)
 	}
+}
+
+// Exercise the actual tab draw sink, native command descriptions and Animals
+// list with a real loaded catalog, including a translated format and progress.
+func TestHaulTrainingUsesActiveCatalog(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "fr.json"), []byte(`{
+		"Haul":"Portage",
+		"%s %d/%d":"%[2]d/%[3]d %[1]s",
+		"Handlers train it in %s while this is on. %d of %d steps.":"%[1]s : %[2]d sur %[3]d.",
+		"Handlers train it in %s while this is on. %d of %d steps, learned.":"%[1]s : %[2]d sur %[3]d, acquis.",
+		"training":"en cours",
+		"%d/%d  %s":"%[3]s %[1]d/%[2]d"
+	}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tr, err := lang.Load(dir, "fr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := bondSim()
+	an := &s.world.Animals[0]
+	an.Training = append(an.Training, game.AnimalTrainingView{Skill: int(training.Haul), Label: "Haul", Allowed: true, On: true, Steps: 2, Needed: 7})
+	a, _ := colonyApp(t, s)
+	a.shell.shellTexts.dir = dir
+	a.shell.shellTexts.use("fr")
+	a.sel.Select(selection.Cand{Kind: selection.Animal, ID: an.ID})
+	checkButton := func(label, desc string) {
+		t.Helper()
+		for _, b := range a.insp.Animal().AnimalCommands(an.ID) {
+			if b.ID == "animal.train.3" {
+				if b.Label != label || b.Desc != desc || !b.On {
+					t.Fatalf("translated button: %+v", b)
+				}
+				return
+			}
+		}
+		t.Fatal("haul toggle missing")
+	}
+	checkButton("2/7 Portage", "portage : 2 sur 7.")
+	tab, ok := thingTab(a.insp.Animal().AnimalPane(an.ID), "inspector.training")
+	if !ok {
+		t.Fatal("training tab missing")
+	}
+	img := ebiten.NewImage(1280, 720)
+	events := thingTraceDraw(t, func() {
+		tab.Draw(img, gfx.Rect{X: 40, Y: 260, W: tab.WantW - 2*inspector.PaneInset, H: tab.WantH - 2*inspector.PaneInset})
+	})
+	var title, progress bool
+	for _, e := range events {
+		title = title || e.Text == "Portage"
+		progress = progress || e.Text == "en cours 2/7"
+		if e.Text == "Haul" {
+			t.Fatal("untranslated tab label")
+		}
+	}
+	if !title || !progress {
+		t.Fatalf("translated tab text not drawn: %v", events)
+	}
+	if got := windows.AnimalTrainingCell(tr, *an); !strings.Contains(got, "2/7 Portage") || strings.Contains(got, "Haul") {
+		t.Fatalf("training list: %q", got)
+	}
+	an.Training[len(an.Training)-1].Steps = 7
+	an.Training[len(an.Training)-1].Learned = true
+	checkButton("7/7 Portage", "portage : 7 sur 7, acquis.")
+	a.shell.shellTexts.use("en")
+	checkButton("Haul 7/7", "Handlers train it in haul while this is on. 7 of 7 steps, learned.")
 }

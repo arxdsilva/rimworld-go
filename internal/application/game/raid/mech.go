@@ -118,6 +118,7 @@ type Mechs struct {
 	recs  map[entity.EntityID]MechRecord
 	ships *ShipParts
 	near  []entity.EntityID // EMP's reused buffer
+	spots []Spot            // faction target search scratch, decision beat only
 	// CBT-4: t bashes doors (nil: none); a lands drop pods; pods are a
 	// mechanoid raid's pods still falling (saved); hives the hive mounds,
 	// saved here (nest.go).
@@ -162,7 +163,7 @@ func (ms *Mechs) think(id entity.EntityID, a *animal.State, r *MechRecord, m ani
 	if at := now + uint64(id); lost || at%animal.DecideEvery == 0 || a.Target == 0 && at%mechLookEvery == 0 {
 		// a fallen target was dropped above; one still worth fighting is
 		// kept unless another is found (a guard's leash hysteresis)
-		if t := ms.pick(x, y, *r); t != a.Target && (t != 0 || a.Target == 0) {
+		if t := ms.pick(id, x, y, *r, a.Target); t != a.Target && (t != 0 || a.Target == 0) {
 			a.Target, r.Shots = t, 0
 			a.Cooldown = max(a.Cooldown, wd.Warmup) // aims at a new target
 		}
@@ -241,10 +242,9 @@ func (ms *Mechs) fire(id entity.EntityID, a *animal.State, r *MechRecord, wk wea
 	}
 }
 
-// pick is the target for a mechanoid at (x, y): the nearest colonist or
-// ally (a guard's only within GuardLeash of its post), or a sentry turret
-// in sight and well closer.
-func (ms *Mechs) pick(x, y int, r MechRecord) entity.EntityID {
+// pick selects the nearest living enemy with a margin to keep an existing
+// target. Ship guards obey their post leash.
+func (ms *Mechs) pick(id entity.EntityID, x, y int, r MechRecord, current entity.EntityID) entity.EntityID {
 	t, tx, ty, ok := ms.h.RaidTarget(x, y)
 	if ok && r.Guard && weapon.Distance(r.PostX, r.PostY, tx, ty) > GuardLeash {
 		ok = false
@@ -255,8 +255,25 @@ func (ms *Mechs) pick(x, y int, r MechRecord) entity.EntityID {
 	} else {
 		t = 0
 	}
+	if ms.t != nil {
+		ms.spots = ms.t.Foes(id, x, y, SightRange, ms.spots[:0])
+		for _, s := range ms.spots {
+			if r.Guard && weapon.Distance(r.PostX, r.PostY, s.X, s.Y) > GuardLeash {
+				continue
+			}
+			if d := weapon.Distance(x, y, s.X, s.Y); d < cd || d == cd && s.ID < t {
+				t, cd = s.ID, d
+			}
+		}
+	}
 	if b, _, _, tok := ms.h.TurretFor(x, y, cd, SightRange); tok && (!r.Guard || ms.nearPost(r, x, y)) {
 		return b
+	}
+	if current != 0 && t != current && ms.holds(current, r) {
+		if cx, cy, ok := ms.h.Pos(current); ok &&
+			weapon.Distance(x, y, cx, cy) <= cd+switchMargin {
+			return current
+		}
 	}
 	return t
 }
@@ -273,6 +290,9 @@ func (ms *Mechs) holds(t entity.EntityID, r MechRecord) bool {
 	tx, ty, ok := ms.h.Pos(t)
 	if !ok {
 		return true // a turret: targetAt drops it once it is gone
+	}
+	if a := ms.w.Animal(t); a.Dead() || a.Downed || a.Dormant {
+		return false
 	}
 	if ms.h.Vital(t).Status != health.Alive {
 		return false
@@ -516,17 +536,19 @@ type MechSave struct {
 	Parts []ShipPart
 	// CBT-4 (absent in older saves): a mechanoid raid's pods and the
 	// hive mounds (nest.go).
-	Pods  []Pod
-	Hives []Hive
+	Pods        []Pod
+	Hives       []Hive
+	InfestAfter uint64
 }
 
 // Export is the state for the save (nil when there is none).
 func (ms *Mechs) Export() *MechSave {
-	if len(ms.recs) == 0 && len(ms.ships.parts) == 0 && len(ms.pods) == 0 && (ms.hives == nil || len(ms.hives.hives) == 0) {
+	if len(ms.recs) == 0 && len(ms.ships.parts) == 0 && len(ms.pods) == 0 && (ms.hives == nil || len(ms.hives.hives) == 0 && ms.hives.infestAfter == 0) {
 		return nil
 	}
 	s := &MechSave{Parts: cloneParts(ms.ships.parts), Pods: slices.Clone(ms.pods)}
 	if ms.hives != nil {
+		s.InfestAfter = ms.hives.infestAfter
 		for _, hr := range ms.hives.hives {
 			hr.Brood = slices.Clone(hr.Brood)
 			s.Hives = append(s.Hives, hr)
@@ -546,13 +568,14 @@ func (ms *Mechs) Import(s *MechSave) {
 	clear(ms.recs)
 	ms.ships.parts, ms.pods = nil, nil
 	if ms.hives != nil {
-		ms.hives.hives = nil
+		ms.hives.hives, ms.hives.infestAfter = nil, 0
 	}
 	if s == nil {
 		return
 	}
 	ms.pods = slices.Clone(s.Pods)
 	if ms.hives != nil {
+		ms.hives.infestAfter = s.InfestAfter
 		for _, hr := range s.Hives {
 			hr.Brood = slices.Clone(hr.Brood)
 			ms.hives.hives = append(ms.hives.hives, hr)

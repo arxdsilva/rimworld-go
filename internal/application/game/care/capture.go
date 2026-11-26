@@ -91,9 +91,11 @@ func (c *Care) startHold(by, target entity.EntityID, kind job.Kind, forced bool)
 		return ReasonIncapable
 	}
 	tx, ty, _ := h.Pos(target)
-	if _, ok := c.pr.PrisonBedFor(target, tx, ty); !ok {
-		h.Message(tx, ty, "No free prisoner bed for %s.", c.pr.PersonName(target))
-		return ReasonNoPrisonBed
+	if why := tripWhy(c, by, target, tripCapture); why != "" {
+		if why == ReasonNoPrisonBed {
+			h.Message(tx, ty, "No free prisoner bed for %s.", c.pr.PersonName(target))
+		}
+		return why
 	}
 	sx, sy, ok := h.BesideSpot(by, tx, ty)
 	if !ok {

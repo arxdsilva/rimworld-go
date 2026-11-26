@@ -18,12 +18,11 @@ import (
 
 // remapItems moves saved item kinds onto book by key (PLG-026, as
 // remapRecipes does): every item.Kind and storage filter the state holds
-// (savefmt.ItemKinds.Walk), and the bill-ingredient commands still
-// pending; a gone plugin's stacks are removed. A save without item keys,
-// or with the run's own, is left as it is.
+// (savefmt.ItemKinds.Walk), and saved numeric item command intent; a
+// gone plugin's stacks are removed. A save without item keys, or with
+// the run's own, is left as it is.
 func remapItems(s *saveState, book item.Book) {
 	to := s.ContentKeys.Items(book)
-	s.Pending = to.Commands(s.Pending)
 	to.Walk(s)
 }
 
@@ -31,18 +30,18 @@ func remapItems(s *saveState, book item.Book) {
 // colonists, setup candidates and the world's people.
 func remapBackstories(s *saveState, book backstory.Book) {
 	var colonists []pawngen.Pawn
-	if s.NG1 != nil {
-		colonists = s.NG1.Setup.Colonists
+	if s.NG121 != nil {
+		colonists = s.NG121.Setup.Colonists
 	}
-	s.ContentKeys.RemapBackstories(book, s.Bios, colonists, peopleBios(s)...)
+	s.ContentKeys.RemapBackstories(book, s.Bios21, colonists, peopleBios(s)...)
 }
 
 // peopleBios is every saved world person's bio, to remap in place.
 func peopleBios(s *saveState) []*pawngen.Pawn {
 	var out []*pawngen.Pawn
-	if s.People != nil {
-		for i := range s.People.Persons {
-			out = append(out, s.People.Persons[i].Bio)
+	if s.People21 != nil {
+		for i := range s.People21.Persons {
+			out = append(out, s.People21.Persons[i].Bio)
 		}
 	}
 	return out
@@ -54,10 +53,10 @@ func peopleBios(s *saveState) []*pawngen.Pawn {
 // pawn. A save without trait keys is left as it is.
 func remapTraits(s *saveState, book trait.Book) {
 	var colonists []pawngen.Pawn
-	if s.NG1 != nil {
-		colonists = s.NG1.Setup.Colonists
+	if s.NG121 != nil {
+		colonists = s.NG121.Setup.Colonists
 	}
-	s.ContentKeys.RemapTraits(book, s.Bios, colonists, peopleBios(s)...)
+	s.ContentKeys.RemapTraits(book, s.Bios21, colonists, peopleBios(s)...)
 }
 
 // remapResearch moves saved research IDs onto book by key (PLG-026, as

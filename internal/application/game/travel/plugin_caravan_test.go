@@ -8,10 +8,13 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/caravan"
 )
 
 // bookHost is a travel Host that only knows the item book and records
@@ -93,12 +96,12 @@ func (h *giftHost) Letter(title string, _, _ int, format string, args ...any) {
 // plugin good's value earns goodwill and is named in the letter.
 func TestPluginGiftPodValueByBook(t *testing.T) {
 	b, bell := plugBook(700, 4000, 10)
-	h := &giftHost{bookHost: bookHost{book: b}, fac: faction.Faction{Goodwill: 0}}
+	h := &giftHost{bookHost: bookHost{book: b}, fac: faction.Faction{Type: faction.Settlers, Goodwill: 0}}
 	o := pods{core{&State{}, h}}
 	o.land(Flight{To: 2, Mode: command.PodArriveGift, Pods: 1,
 		Load: Hold{Items: []item.Stack{{Kind: bell, Qty: 5}}}})
-	if len(h.letters) != 1 || !strings.Contains(h.letters[0], "worth 20000 silver") {
-		t.Fatalf("letters %q, want the book's 20000 silver", h.letters)
+	if len(h.letters) != 1 || !strings.Contains(h.letters[0], "worth 12240 silver") {
+		t.Fatalf("letters %q, want 61.2%% of the book's 20000 silver", h.letters)
 	}
 	if h.fac.Goodwill <= 0 {
 		t.Fatalf("goodwill %d, want a gain from the plugin goods' value", h.fac.Goodwill)
@@ -114,5 +117,33 @@ func TestPluginPodLoadKg(t *testing.T) {
 	o := pods{core{s, &bookHost{book: b}}}
 	if kg := o.loadKg(&group{pods: []entity.EntityID{5, 6, 7}}); kg != 7+14 {
 		t.Fatalf("load %d kg, want 21", kg)
+	}
+}
+
+func TestMarketCapacityUsesActiveBookAndNativeCarriers(t *testing.T) {
+	book, bell := plugBook(10000, 40, 10)
+	o := Ops{core{&State{}, &bookHost{book: book}}}
+	h := o.s.cargoOf(1)
+	h.Items = []item.Stack{{Kind: bell, Qty: 3}}
+	buy := trade.Result{Buy: []trade.Line{{Kind: bell, Qty: 1}}}
+	incoming := []item.Stack{{Kind: bell, Qty: 1}}
+	if _, why := o.PlanTrade(1, 1, buy, incoming); why == "" {
+		t.Fatal("accepted 40 kg with one person")
+	}
+	beast := Beast{ID: 2, State: animal.State{Species: animal.Woolhorn, Tame: true}}
+	if kg := caravan.PackKg(animal.BodySize(beast.State.Species)); kg < 5 {
+		t.Fatalf("fixture carrier %d kg", kg)
+	}
+	h.Animals = []Beast{beast}
+	if _, why := o.PlanTrade(1, 1, buy, incoming); why != "" {
+		t.Fatal(why)
+	}
+	actual := carrierCapacity(1, h, TradeCarriers{Stashed: []Beast{beast}})
+	if actual != int64(35+caravan.PackKg(animal.BodySize(beast.State.Species)))*1000 {
+		t.Fatalf("counted duplicate: %d", actual)
+	}
+	beast.State.Tame = false
+	if _, why := o.PlanTrade(1, 1, buy, incoming, TradeCarriers{Stashed: []Beast{beast}}); why == "" {
+		t.Fatal("counted ineligible current owner")
 	}
 }

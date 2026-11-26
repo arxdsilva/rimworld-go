@@ -42,12 +42,16 @@ var excluded = biome.Of(biome.IceSheet, biome.SeaIce, biome.ExtremeDesert)
 var preferredBiomes = map[Type]biome.Set{
 	Clans: biome.Of(biome.BorealForest, biome.TemperateForest, biome.TemperateSwamp,
 		biome.TropicalSwamp, biome.ColdBog, biome.Tundra),
+	FierceClans: biome.Of(biome.BorealForest, biome.TemperateForest, biome.TemperateSwamp,
+		biome.TropicalSwamp, biome.ColdBog, biome.Tundra),
+	SavageClans: biome.Of(biome.BorealForest, biome.TemperateForest, biome.TemperateSwamp,
+		biome.TropicalSwamp, biome.ColdBog, biome.Tundra),
 	Settlers: biome.Of(biome.TemperateForest, biome.AridShrubland, biome.Desert),
 }
 
 // preferred reports tile i suits faction type t.
 func preferred(g Globe, t Type, i int) bool {
-	if t == Freebooters {
+	if t == Freebooters || t == Drifters {
 		return g.Hills(i) >= hillsPreferred
 	}
 	if set, ok := preferredBiomes[t]; ok {

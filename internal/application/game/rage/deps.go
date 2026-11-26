@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/msgfmt"
 )
@@ -64,8 +65,8 @@ type Beasts interface {
 	// Pos is a creature's cell (ok false: none).
 	Pos(id entity.EntityID) (Pos, bool)
 	Animal(id entity.EntityID) (animal.State, bool)
-	// Ref is the stored animal, read only (nil: none).
-	Ref(id entity.EntityID) *animal.State
+	// Ref is the authoritative read-only live animal, avoiding a detached State per candidate.
+	Ref(id entity.EntityID) *animal.Live
 	SetAnimal(id entity.EntityID, a animal.State)
 	// Grown: a is no longer young at now.
 	Grown(a animal.State, now uint64) bool
@@ -90,6 +91,8 @@ type People interface {
 	NearestColonist(p Pos) entity.EntityID
 	// DownedPawn: id is a person lying downed (alive).
 	DownedPawn(id entity.EntityID) bool
+	// PackAnimal identifies a live visiting group's foreign pack animal.
+	PackAnimal(id entity.EntityID) bool
 }
 
 // Sight is a sight query's filter, passed by value so a query allocates
@@ -158,3 +161,6 @@ type Siege interface {
 	// building b beside it; false when b is gone or out of touch.
 	Bash(id, b entity.EntityID, wk weapon.Kind, dmg int) bool
 }
+
+// DownedHuman is the read-only targeting predicate for a present vital record.
+func DownedHuman(v *health.Record) bool { return v != nil && v.Status == health.Downed }
