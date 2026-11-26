@@ -41,7 +41,7 @@ func build(c Config, seed uint64, b biome.ID) (*game.Game, error) {
 	switch c.Scenario {
 	case "grown": // the benchmark's grown colony at Width x Height
 		appscenario.CacheDir = c.FixtureDir
-		g, err := appscenario.Load(appscenario.GrownColony(1, c.Width, c.Height, false))
+		g, err := appscenario.Load(appscenario.MustGrownColony(1, c.Width, c.Height, appscenario.DefaultColonists, false))
 		if err == nil && c.Capturing {
 			// media captures show the colony as its builders would leave
 			// it: closed rooms roofed. The benchmark fixture itself (and

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "languages": [],
+  "ask": [],
+  "triage": "auto",
+  "gate": { "coverage_min": 70 }
+}

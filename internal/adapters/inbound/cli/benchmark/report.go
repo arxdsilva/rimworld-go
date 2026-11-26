@@ -48,6 +48,8 @@ func report(out io.Writer, name string, r result) {
 	}
 	over := overBudget(r.frames)
 	fmt.Fprintf(out, "  frames > %v: %d (%.1f%%)\n", frameBudget, over, 100*float64(over)/float64(max(len(r.frames), 1)))
+	objs, bytes := perTick(r.mallocs, r.allocBytes, len(r.ticks))
+	fmt.Fprintf(out, "  allocs/tick %.1f objects, %.0f B\n", objs, bytes)
 }
 
 // frameBudget mirrors the ebiten adapter's Update budget (update_budget.go):

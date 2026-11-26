@@ -108,7 +108,7 @@ func benchDrawGrown(b *testing.B, side int) {
 	if d := os.Getenv("RIMWORLD_FIXTURE_DIR"); d != "" {
 		appscenario.CacheDir = d
 	}
-	data := appscenario.GrownColony(1, side, side, false)
+	data := appscenario.MustGrownColony(1, side, side, appscenario.DefaultColonists, false)
 	for _, z := range []struct {
 		name string
 		zoom float64 // 0: the furthest zoom-out

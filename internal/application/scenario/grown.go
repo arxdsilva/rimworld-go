@@ -28,10 +28,18 @@ const RaidSize = 12
 // MinSide is the smallest map side the grown colony layout fits.
 const MinSide = 110
 
+// DefaultColonists is the colony size of the fixed layout: the 3 of the
+// start kit plus 17 settlers.
+const DefaultColonists = 20
+
+// MinColonists is the smallest colony: the 3 of the start kit.
+const MinColonists = 3
+
 type key struct {
-	seed uint64
-	w, h int
-	raid bool
+	seed      uint64
+	w, h      int
+	colonists int
+	raid      bool
 }
 
 type memo struct {
@@ -52,30 +60,28 @@ var (
 var CacheDir string
 
 // CacheFile is the file under CacheDir that holds a fixture.
-func CacheFile(seed uint64, w, h int, raid bool) string { return key{seed, w, h, raid}.file() }
+func CacheFile(seed uint64, w, h, colonists int, raid bool) string {
+	return key{seed, w, h, colonists, raid}.file()
+}
 
 func (k key) file() string {
 	raid := ""
 	if k.raid {
 		raid = "-raid"
 	}
-	return filepath.Join(CacheDir, fmt.Sprintf("grown-v%d-s%d-%dx%d%s.sav", game.SaveVersion, k.seed, k.w, k.h, raid))
+	count := ""
+	if k.colonists != DefaultColonists {
+		count = fmt.Sprintf("-c%d", k.colonists)
+	}
+	return filepath.Join(CacheDir, fmt.Sprintf("grown-v%d-s%d-%dx%d%s%s.sav", game.SaveVersion, k.seed, k.w, k.h, count, raid))
 }
 
 // GrownColony returns the save bytes of a grown colony on a w x h map
 // generated from seed (see Build), after WarmupTicks; with raid, Raid
 // (RaidSize) is called after warm-up. The result is built once per
 // argument set per process and shared: callers must not modify it.
-func GrownColony(seed uint64, w, h int, raid bool) []byte {
-	b, err := grownColony(seed, w, h, raid)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-func grownColony(seed uint64, w, h int, raid bool) ([]byte, error) {
-	k := key{seed, w, h, raid}
+func GrownColony(seed uint64, w, h, colonists int, raid bool) ([]byte, error) {
+	k := key{seed, w, h, colonists, raid}
 	memoMu.Lock()
 	m, ok := memos[k]
 	if !ok {
@@ -90,7 +96,7 @@ func grownColony(seed uint64, w, h int, raid bool) ([]byte, error) {
 				return
 			}
 		}
-		g, _, err := Build(seed, w, h)
+		g, _, err := Build(seed, w, h, colonists)
 		if err != nil {
 			m.err = err
 			return
@@ -100,7 +106,11 @@ func grownColony(seed uint64, w, h int, raid bool) ([]byte, error) {
 			g.Raid(RaidSize)
 		}
 		var buf bytes.Buffer
-		if err := g.Save(&buf, fmt.Sprintf("grown %dx%d seed %d", w, h, seed)); err != nil {
+		desc := fmt.Sprintf("grown %dx%d seed %d", w, h, seed)
+		if colonists != DefaultColonists {
+			desc += fmt.Sprintf(" colonists %d", colonists)
+		}
+		if err := g.Save(&buf, desc); err != nil {
 			m.err = err
 			return
 		}
@@ -110,6 +120,15 @@ func grownColony(seed uint64, w, h int, raid bool) ([]byte, error) {
 		}
 	})
 	return m.data, m.err
+}
+
+// MustGrownColony is GrownColony for tests and dev scenes: it panics on error.
+func MustGrownColony(seed uint64, w, h, colonists int, raid bool) []byte {
+	b, err := GrownColony(seed, w, h, colonists, raid)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 // Load restores fixture bytes into a fresh game.
@@ -129,7 +148,12 @@ type Counts struct {
 // ClearPlants, Injure) and typed commands (zones and designations, applied
 // on the first tick). The layout is fixed-size around the map centre:
 //
-//   - 20 colonists (the 3 of the start kit plus 17), some armed;
+//   - colonists colonists (MinColonists or more; DefaultColonists = 20: the 3
+//     of the start kit plus 17), a third armed. Fewer than 20 leave settlers
+//     out of the fixed row; more stand on the nearest free cells outside the
+//     colony site (nearest first, then y, then x), so the 20-colonist state
+//     is unchanged. A count below MinColonists, one the map has no room for,
+//     or one that cannot be placed is an error;
 //   - 15 walled rooms with doors, furnished, one floored (~430
 //     buildings), plus the pen's ~80 fence cells;
 //   - a fenced pen with a gate, two troughs and 50 tame animals;
@@ -140,8 +164,8 @@ type Counts struct {
 //   - three lightly wounded colonists (blood on the ground).
 //
 // Wildlife is whatever the generated map spawns (the biome's cap).
-func Build(seed uint64, w, h int) (*game.Game, Counts, error) {
-	b, err := build(seed, w, h)
+func Build(seed uint64, w, h, colonists int) (*game.Game, Counts, error) {
+	b, err := build(seed, w, h, colonists)
 	if err != nil {
 		return nil, Counts{}, err
 	}
@@ -151,20 +175,30 @@ func Build(seed uint64, w, h int) (*game.Game, Counts, error) {
 type builder struct {
 	g      *game.Game
 	cx, cy int
+	w, h   int
+	site   rect
 	n      Counts
 }
 
-func build(seed uint64, w, h int) (*builder, error) {
+func build(seed uint64, w, h, colonists int) (*builder, error) {
+	if colonists < MinColonists {
+		return nil, fmt.Errorf("grown colony: %d colonists is below the minimum of %d", colonists, MinColonists)
+	}
 	if w < MinSide || h < MinSide {
 		return nil, fmt.Errorf("grown colony: map %dx%d smaller than %d", w, h, MinSide)
 	}
+	site := siteRect(w/2, h/2)
+	if room := site.cellsOutside(w, h); colonists-DefaultColonists > room {
+		return nil, fmt.Errorf("grown colony: %d colonists do not fit a %dx%d map (room for %d beyond the %d of the layout)",
+			colonists, w, h, room, DefaultColonists)
+	}
 	g := game.NewColony(game.Config{Seed: seed, Width: w, Height: h})
-	b := &builder{g: g, cx: w / 2, cy: h / 2}
+	b := &builder{g: g, cx: w / 2, cy: h / 2, w: w, h: h, site: site}
 	g.CompleteResearch()
 	cx, cy := b.cx, b.cy
 	// level the colony site: soil, no plants; a granite outcrop south-east
-	g.SetGround(cx-52, cy-30, cx+47, cy+29, "soil", "", "")
-	g.ClearPlants(cx-52, cy-30, cx+47, cy+29)
+	g.SetGround(site.x0, site.y0, site.x1, site.y1, "soil", "", "")
+	g.ClearPlants(site.x0, site.y0, site.x1, site.y1)
 	g.SetGround(cx+25, cy+5, cx+44, cy+24, "rock", "granite", "")
 	g.SetGround(cx+40, cy+20, cx+44, cy+24, "rock", "granite", "steel")
 	if err := b.rooms(); err != nil {
@@ -175,7 +209,9 @@ func build(seed uint64, w, h int) (*builder, error) {
 	b.fields()
 	b.mines()
 	b.blueprints()
-	b.colonists()
+	if err := b.colonists(colonists); err != nil {
+		return nil, err
+	}
 	return b, nil
 }
 
@@ -317,11 +353,13 @@ func (b *builder) blueprints() {
 	b.n.Blueprints = 50
 }
 
-// colonists: 17 more beside the start kit's three, a third armed, three
-// lightly wounded (bleeding: stains).
-func (b *builder) colonists() {
+// colonists: n in all: the start kit's three, up to 17 settlers in the fixed
+// row, any beyond 20 on the nearest free cells outside the site; a third
+// armed, every 7th lightly wounded (bleeding: stains). A count that cannot
+// be placed is an error.
+func (b *builder) colonists(n int) error {
 	b.n.Colonists = len(b.g.Snapshot())
-	for i := 0; i < 17; i++ {
+	for i := 0; i < min(fixedSettlers, n-MinColonists); i++ {
 		x, y := b.cx-10+i, b.cy+1
 		if i >= 8 && i <= 10 {
 			y = b.cy + 2 // the start kit stands at cx-1..cx+1
@@ -329,6 +367,12 @@ func (b *builder) colonists() {
 		if _, err := b.g.SpawnNamedPawn(x, y, fmt.Sprintf("Settler %d", i+1)); err == nil {
 			b.n.Colonists++
 		}
+	}
+	if n > DefaultColonists {
+		b.extras(n - DefaultColonists)
+	}
+	if b.n.Colonists != n {
+		return fmt.Errorf("grown colony: placed %d of %d colonists on a %dx%d map", b.n.Colonists, n, b.w, b.h)
 	}
 	weapons := []item.Kind{item.Rifle, item.Spear, item.Knife, item.Club}
 	for i, p := range b.g.Snapshot() {
@@ -339,6 +383,36 @@ func (b *builder) colonists() {
 			b.g.Injure(p.ID, 30)
 		}
 	}
+	return nil
+}
+
+// extras stands want more colonists on free cells outside the site.
+func (b *builder) extras(want int) {
+	busy := make([]bool, b.w*b.h)
+	mark := func(x, y int) {
+		if x >= 0 && y >= 0 && x < b.w && y < b.h {
+			busy[y*b.w+x] = true
+		}
+	}
+	for _, p := range b.g.Snapshot() {
+		mark(p.X, p.Y)
+	}
+	wv := b.g.World()
+	for _, v := range wv.Buildings {
+		mark(v.X, v.Y)
+	}
+	for _, v := range wv.Items {
+		mark(v.X, v.Y)
+	}
+	for _, v := range wv.Animals {
+		mark(v.X, v.Y)
+	}
+	b.n.Colonists += placeExtras(extraOrder(b.w, b.h, b.site), want,
+		func(x, y int) bool { return busy[y*b.w+x] },
+		func(x, y, k int) error {
+			_, err := b.g.SpawnNamedPawn(x, y, fmt.Sprintf("Settler %d", fixedSettlers+1+k))
+			return err
+		})
 }
 
 func buildID(name string) uint8 {

@@ -37,4 +37,5 @@ func print(out io.Writer, g *game.Game, ticks int) {
 	for _, p := range g.Snapshot() {
 		fmt.Fprintf(out, "pawn %s: (%d, %d) job=%s hunger=%d rest=%d %s\n", p.Name, p.X, p.Y, p.Job, p.Hunger, p.Rest, p.Status)
 	}
+	fmt.Fprintf(out, "hash=0x%016x\n", g.StateHash())
 }

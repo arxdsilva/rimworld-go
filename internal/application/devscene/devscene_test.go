@@ -4,11 +4,44 @@
 package devscene
 
 import (
+	"bytes"
+	"os"
 	"testing"
 
+	"rimworld-go/internal/application/game"
+	appscenario "rimworld-go/internal/application/scenario"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
 )
+
+// The grown scene loads the benchmark's 20-colonist fixture from
+// FixtureDir: a small colony saved under that cache name stands in for it
+// (building the real one takes a two-day warm-up). Not parallel: it sets
+// the scenario cache directory.
+func TestGrownSceneLoadsTheCachedFixture(t *testing.T) {
+	dir := t.TempDir()
+	t.Cleanup(func() { appscenario.CacheDir = "" })
+	appscenario.CacheDir = dir
+	var save bytes.Buffer
+	want := game.NewColony(game.Config{Seed: 7, Width: 48, Height: 40})
+	if err := want.Save(&save, "fx"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(appscenario.CacheFile(1, 113, 113, appscenario.DefaultColonists, false), save.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	g, err := Build(Config{Scenario: "grown", Width: 113, Height: 113, Hour: -1, FixtureDir: dir}, 1, biome.TemperateForest)
+	if err != nil || g == nil {
+		t.Fatalf("grown scene: %v", err)
+	}
+	loaded, err := appscenario.Load(save.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.StateHash() != loaded.StateHash() {
+		t.Fatal("grown scene did not load the cached fixture")
+	}
+}
 
 // Every set piece builds on a map big enough for the zoo, and the -hour
 // jump lands on the asked hour.

@@ -35,7 +35,7 @@ func TestWorldViewQuietTickAllocs(t *testing.T) {
 	}
 	game.SetIndexSelfCheck(false) // the self-check's scans allocate; this measures the read model
 	t.Cleanup(func() { game.SetIndexSelfCheck(true) })
-	g, _, err := scenario.Build(benchSeed, 200, 200)
+	g, _, err := scenario.Build(benchSeed, 200, 200, scenario.DefaultColonists)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -131,11 +131,11 @@ vanilla system depends on them.
 
 ## 1.4 Headless execution
 
--   [-] **Headless simulation executable** (`cmd/simulate` creates a colony and advances N ticks; does not yet emit a state hash)
+-   [x] **Headless simulation executable** (`cmd/simulate` creates a colony, advances N ticks and ends with `hash=0x<16 hex>`, the final `StateHash`; ENG-010)
     -   Create/start a colony without renderer/audio.
     -   Advance a requested number of ticks.
     -   Emit metrics and final state hash.
--   [-] **Deterministic benchmark runner** (NG-1 ENG-001: `cmd/benchmark` and the grown-colony fixture time ticks, phases and allocations at 120, 250 and 500 tiles a side with 20 colonists; PERF-002: a `views` row times the read model and `frames > 5ms` counts what the Update budget would hold, and `make fps` is the repeatable uncapped frame probe; the colonist-count scales of 100 to 1,000 are not covered)
+-   [x] **Deterministic benchmark runner** (NG-1 ENG-001, ENG-010: `cmd/benchmark` times ticks, phases, views and allocs/tick on grown and raid fixtures at 120, 250 and 500 tiles a side; `-colonists` 3 to 1,000, label `<fixture>/<side>/c<N>/x<speed>`, grown run at 3, 20, 100, 500 and 1,000, raid at 3, 20 and 100; PERF-002: `frames > 5ms` counts what the Update budget would hold, `make fps` is the uncapped frame probe)
     -   Fixed scenarios for 3, 20, 100, 500, and 1,000 colonist-scale
         testing.
     -   Record tick cost and allocations.

@@ -163,6 +163,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | ENG-007-play024-military-aid | Military aid by radio (PLAY-024 phase 4) | 2026-10-26 | [ENG.md](ENG.md#eng-007-play024-military-aid) |
 | ENG-008-plans-include-parallel-work | Every plan includes its parallel work | 2026-10-29 | [ENG.md](ENG.md#eng-008-plans-include-parallel-work) |
 | ENG-009-agent-cleanup | Parallel work reuses and cleans up agents | 2026-10-30 | [ENG.md](ENG.md#eng-009-agent-cleanup) |
+| ENG-010-headless-state-hash-and-colonist-scales | Headless state hash and colonist-count benchmark | 2026-11-25 | [ENG.md](ENG.md#eng-010-headless-state-hash-and-colonist-scales) |
 | FEED-001-tame-animal-food | Hungry tame animals reach the food the colony has | 2026-10-30 | [FOOD.md](FOOD.md#feed-001-tame-animal-food) |
 | FISH-tanks | Fish tanks | 2026-11-02 | [FOOD.md](FOOD.md#fish-tanks) |
 | FISH_TANK_PLAN | Fish tanks and the MAP-5 fixes: gap analysis and plan (FISH-*, MAP-5, STK-AL 2) | 2026-11-02 | [FOOD.md](FOOD.md#fish_tank_plan) |
