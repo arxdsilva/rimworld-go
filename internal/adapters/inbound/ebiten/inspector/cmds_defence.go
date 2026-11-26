@@ -73,11 +73,11 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 	case isDoorBldg(b):
 		out = append(out, Button{ID: DoorHoldID, Label: trOf(a.Pane).T("Hold open"), Toggle: true, On: b.HoldOpen,
 			Desc: trOf(a.Pane).T("Keep this door open so nobody waits at it. Turn it off to let it close again."),
-			Cmds: []command.Command{{Kind: command.SetDoorHoldOpen, X: b.X, Y: b.Y, Enabled: !b.HoldOpen}}})
+			Cmds: []command.Command{{Kind: command.SetDoorHoldOpen, Target: uint64(b.ID), X: b.X, Y: b.Y, Enabled: !b.HoldOpen}}})
 	case isTurretBldg(b) && !b.Hostile: // MAP-13: a settlement's turret takes no orders
 		out = append(out, Button{ID: TurretHoldID, Label: trOf(a.Pane).T("Hold fire"), Toggle: true, On: b.HoldFire,
 			Desc: trOf(a.Pane).T("Stop this turret shooting until you turn it off again."),
-			Cmds: []command.Command{{Kind: command.SetTurretHold, X: b.X, Y: b.Y, Enabled: !b.HoldFire}}})
+			Cmds: []command.Command{{Kind: command.SetTurretHold, Target: uint64(b.ID), X: b.X, Y: b.Y, Enabled: !b.HoldFire}}})
 	case b.Kind == mortarKind || b.Kind == rocketBatteryKind: // AX-5: the battery is aimed like a mortar
 		bx, by, id := b.X, b.Y, b.ID
 		aimDesc, clrDesc := "Click a tile on the map for this mortar to shell. Esc or a right click cancels.",
@@ -89,7 +89,7 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 		out = append(out, Button{ID: MortarAimID, Label: trOf(a.Pane).T("Set target"), Icon: "order_attack", Single: true, Desc: aimDesc,
 			Run: func() { a.shell.Do(ports.AimMortar{ID: id, X: bx, Y: by}) }})
 		clr := Button{ID: MortarClrID, Label: trOf(a.Pane).T("Clear target"), Icon: "order_cancel", Desc: clrDesc,
-			Cmds: []command.Command{{Kind: command.ClearMortarTarget, X: b.X, Y: b.Y}}}
+			Cmds: []command.Command{{Kind: command.ClearMortarTarget, Target: uint64(b.ID), X: b.X, Y: b.Y}}}
 		if !b.HasTarget {
 			clr.Disabled, clr.Reason = true, "no target set"
 		}

@@ -8,11 +8,10 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/game/axview"
-	"rimworld-go/internal/application/game/orders"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -48,23 +47,7 @@ const (
 type BuildableView = axview.Buildable
 
 // Buildables lists every buildable in catalog order.
-func Buildables() []BuildableView {
-	defs := construction.All()
-	out := make([]BuildableView, 0, len(defs))
-	for _, d := range defs {
-		out = append(out, BuildableView{
-			ID: uint8(d.Kind), Kind: d.Name, Wood: d.Wood, Work: d.Work, Rotatable: d.Rotatable,
-			Floor: d.Layer == construction.LayerFloor, Blocks: d.BlocksMove, StoneOK: d.StoneOK,
-			W: max(d.Size[0], 1), H: max(d.Size[1], 1), Bench: d.Bench,
-		})
-		for _, s := range construction.Stuffs(d.Kind) {
-			out[len(out)-1].Stuffs = append(out[len(out)-1].Stuffs, s.String())
-			out[len(out)-1].Catches = append(out[len(out)-1].Catches, filth.Catch(s)/10)
-		}
-		out[len(out)-1].Carpet = d.Carpet
-	}
-	return out
-}
+func Buildables() []BuildableView { return axview.Buildables() }
 
 // StuffID is the command value (command.Command.Stuff) for a material name.
 func StuffID(name string) (uint8, bool) {
@@ -583,7 +566,7 @@ func (g *Game) releaseSwap(bid entity.EntityID) {
 		return
 	}
 	fr, _ := g.frames.Get(fid)
-	fr.Swaps = 0
+	fr.Swaps, fr.SwapNewRecipe = 0, false
 	fr.CompNeed = construction.ComponentCost(fr.Kind)
 	g.frames.Set(fid, fr)
 }
@@ -601,7 +584,12 @@ func (g *Game) completeSwap(id entity.EntityID, fr construction.Frame, b constru
 	}
 	g.frameIDs = kept
 	old := b
-	b.Kind, b.Stuff, b.Tint, b.Damage, b.Ruin, b.Ancient = fr.Kind, fr.Stuff, fr.Tint, 0, false, false // a rebuilt ruin or vault piece is the colony's; AX-3: a new floor
+	b.Kind, b.Stuff, b.Tint, b.Damage, b.Ruin, b.Ancient = fr.Kind, fr.Stuff, fr.Tint, 0, false, false
+	b.MaterialBasis.Primary = item.MaterialCurrent
+	if old.Kind != fr.Kind {
+		b.MaterialBasis.Secondary = item.MaterialCurrent
+		refundSecondary(g, old)
+	}
 	g.bldgs.Set(fr.Swaps, b)
 	g.markRoomsDirty() // stone walls change beauty and impressiveness
 	g.structVer++      // SIM-029: the tint changes
@@ -697,12 +685,10 @@ func (g *Game) cancelReplacing(bid entity.EntityID) {
 }
 
 // floorBarrierAt: (x, y) holds, or is planned to hold, an object no
-// floor goes under: a wall, a fence or gate, or a dug grave.
+// floor goes under: a wall, cooler, vent, fence or gate, or a dug grave
+// (construction.Kind.FloorBarrier).
 func (g *Game) floorBarrierAt(x, y int) bool {
-	barrier := func(k construction.Kind) bool {
-		d := construction.DefOf(k)
-		return k == construction.Wall || d.AnimalBlock || d.Dug
-	}
+	barrier := construction.Kind.FloorBarrier
 	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
 		if b, _ := g.bldgs.Get(bid); barrier(b.Kind) {
 			return true
@@ -766,7 +752,8 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 	}
 	if swap != 0 {
 		fr.Swaps = swap // converted in place: nothing comes down (PLAY-011)
-		fr.CompNeed = 0 // the components already in it are kept
+		old, _ := g.bldgs.Get(swap)
+		fr = construction.SetSwapRecipe(fr, old)
 	} else if cells, _, _ := construction.Footprint(kind, f, x, y); len(cells) > 0 {
 		for i, c := range cells { // A2: a 2-wide ornate door takes down a piece per cell
 			if rep := g.replaceTarget(kind, c[0], c[1]); rep != 0 {
@@ -860,13 +847,7 @@ func markDeconstructWhere(g *Game, minX, minY, maxX, maxY int, on bool, layer co
 }
 
 func normalizeRect(x1, y1, x2, y2 int) (int, int, int, int) {
-	if x2 < x1 {
-		x1, x2 = x2, x1
-	}
-	if y2 < y1 {
-		y1, y2 = y2, y1
-	}
-	return x1, y1, x2, y2
+	return min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)
 }
 
 // removeBuilding deletes a completed building, refunds wood and frees
@@ -880,7 +861,15 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	if !ok {
 		return
 	}
+	if roomWall(b.Kind) || b.Kind == construction.Column {
+		noteRoofLoss(g, b.X, b.Y)
+	}
 	g.releaseSwap(id) // a pending material change becomes a new build
+	if carrier, held := g.reserve.EntityOwner(id); held {
+		if j, ok := g.jobs.Get(carrier); ok && j.Kind == job.Rescue && j.Dest == id {
+			g.interrupt(carrier, job.TargetGone)
+		}
+	}
 	g.bldgs.Delete(id)
 	g.reserve.ReleaseTarget(id) // RES-1: its claimants' jobs find it gone
 	delete(g.fuel, id)
@@ -927,16 +916,21 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 		x, y := g.refundCell(b, refundStuff(b))
 		g.dropStack(refundStuff(b), r, x, y)
 	}
-	for i, c := range construction.DefOf(b.Kind).Extra {
-		g.dropStack(c.Item, orders.FloorExtraRefund(b.Kind, i), b.X, b.Y) // AX-1: a floor's secondary material, half back
-	}
-	if n := componentRefund(b.Kind); n > 0 {
+	refundSecondary(g, b)
+}
+
+// refundSecondary refunds only the old recipe's verified paid inputs.
+func refundSecondary(g *Game, b construction.Building) {
+	components, extras := construction.PaidSecondary(b)
+	if n := components / 2; n > 0 {
 		x, y := g.refundCell(b, item.Components)
-		g.dropStack(item.Components, n, x, y) // half the components, rounded down
+		g.dropStack(item.Components, n, x, y)
 	}
-	for _, c := range construction.DefOf(b.Kind).Extra { // AX-4: half the secondary materials too (a floor's: A1's rule above)
-		if c.N/2 > 0 && construction.DefOf(b.Kind).Layer != construction.LayerFloor {
-			g.dropStack(c.Item, c.N/2, b.X, b.Y)
+	if b.Kind != construction.Flagstone {
+		for _, c := range extras {
+			if c.N/2 > 0 {
+				g.dropStack(c.Item, c.N/2, b.X, b.Y)
+			}
 		}
 	}
 }
@@ -953,4 +947,10 @@ func (g *Game) refundCell(b construction.Building, k item.Kind) (int, int) {
 		return x, y
 	}
 	return b.X, b.Y
+}
+
+// migrateConstructionBasis is invoked on each restored old map before
+// indexes are warmed. Frame progress and physical deliveries are retained.
+func migrateConstructionBasis(g *Game, version int) {
+	construction.MigrateMaterialBasis(version, g.frames, g.bldgs, g.stacks, g.frameIDs, g.bldgIDs, g.itemIDs)
 }

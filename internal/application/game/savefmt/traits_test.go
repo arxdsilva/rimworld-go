@@ -58,3 +58,15 @@ func TestRemapTraits(t *testing.T) {
 		t.Errorf("old save changed: %v", old.Traits)
 	}
 }
+
+func TestUnpublishedBrawlerKeyMigration(t *testing.T) {
+	keys := trait.Core().Keys()
+	keys[int(trait.Scrapper)-1] = "core.brawler"
+	remap := Keys{trait.Class: keys}.TraitIDs(trait.Core())
+	if got := remap(trait.Scrapper); got != trait.Scrapper {
+		t.Fatalf("old Brawler maps to %d, want Scrapper", got)
+	}
+	if got := remap(trait.LightFooted); got != trait.LightFooted {
+		t.Fatalf("Light-footed maps to %d", got)
+	}
+}

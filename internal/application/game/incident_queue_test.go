@@ -118,3 +118,16 @@ func TestLetterChoiceDecline(t *testing.T) {
 		t.Fatal("the plea lapses after a day")
 	}
 }
+
+func TestExpiredRefugeeChoiceBeforeLapse(t *testing.T) {
+	g, l := refugeeGame(t)
+	before := len(g.pawnIDs)
+	g.clock.Advance(int(l.Until - uint64(g.clock.Now())))
+	g.answerLetter(l.ID, 0)
+	if len(g.pawnIDs) != before || len(g.incidents.Queue) != 0 {
+		t.Fatal("expired refugee plea accepted")
+	}
+	if _, ok := g.letters.Get(l.ID); ok {
+		t.Fatal("expired plea retained")
+	}
+}

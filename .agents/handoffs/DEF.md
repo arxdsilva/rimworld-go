@@ -260,6 +260,76 @@ Prisoner state's escape behaviour was already live (CBT-4); proved through the t
 - Boxes: backlog 19.1 **Prisoner state** `[-]` → `[x]`. spec-backlog #10: its one line is met; closed by the PR.
 - Open: a sleeping prisoner can start or join a break (`prison/life.go:64` runs after the downed return only); whether starters must be awake is undecided, recorded as a finding of the #10 run (PR Open follow-ups).
 
+## CBT-3.4-core-scalar-integration
+Reconcile multi-part damage forms with the native Core damage owners · 2026-11-25 · this commit
+- Changed: the appended Scratch, Stab, Bullet, Poke and RangedStab split forms use the same upstream share planner for the live animal damage owner; the scalar injury budget, not historical anatomical loss, stops the remaining shares. A selected replacement still receives its own direct damage.
+- Decisions: share the upstream split predicate for all seven multi-part forms; retain upstream form IDs, armor categories, weapon tables, share rules and draw order. No new balance decision or saved field.
+- Proof: new per-form tests cover healed anatomical loss, scalar stop, replacement isolation and actual HurtHit animal dispatch. Prior six scale pins, two habits-off pins and grown pin remain unchanged on the combined source. The wolf duel retains the original kill/corpse assertion on seed 5; the intervening upstream seed 6 now explicitly proves a downed wolf and active attack at the same 2,000-tick bound. Both outcomes were reproduced before adjusting the fixture.
+- Limits: game root 52634 of 52650 non-test lines, no raised budget.
+- Save impact: none; neither the detached save capture nor canonical encoding changed in the reconciliation.
+- HUD/UI: existing wound/health views show the native per-part results; no new screen.
+- Boxes: existing CBT 3.4b/c damage-form rows remain done; no new checklist feature or spec-backlog issue.
+- Open: upstream #279 remains outside this contribution.
+
+
+## CBT-269-core-placement-accounting
+Reconcile upstream owner-room split accounting with physical placements · 2026-11-25 · this commit
+- Changed: adopt upstream `SpreadBlowWithin` (57ce81e7a parent); remove duplicate `SpreadAnimalBlow`. Keep one native split planner, body-owned `SpreadBlow`, ordinary unsplit `Spread`, and replacement isolation. In the scalar-owner path count the damage newly accepted by a part, retain unapplied damage separately, and stop after the placement that exhausts pre-hit HP, including deferred spill. Preserve whole-share overkill semantics and the bounded root fallback.
+- Proof: a planned 17-point cut that destroys a leg with a 25-point child wound places 17 new points; a blocked heart and deferred bullet spill conserve the actual scalar placement budget. Body Race and game healing, starvation, five-form HurtHit, replacement and wolf regressions pass. All 2,730 parity inputs are retained: 2,450 match legacy body and draws, and the 280 changed outcomes use an independent physical-placement oracle.
+- Decisions: the owner-room threshold is scalar HP, not anatomical net damage. New damage is not refunded when a child disappears in the same blow. Preserve prior body-owned behavior and its tests. New scalar placement can change RNG draw consumption when legacy spill or nominal early stop differs; no change to the RNG generator or planner. The upstream seed-8 healed-limb fixture preserves Injury 28 with 7 surviving wound points and anatomical net rise 21, rather than requiring the anatomical sum to equal Injury on a new loss.
+- Qualification: the body and game regressions, all nine scale/habits/grown pins, architecture and static checks pass.
+- Bench: all seven healthy quadruped split forms improved in three interleaved samples on Ryzen 7 9700X / Go 1.27.4, e.g. form 1 499.5 to 205.2 ns/op and form 7 248.7 to 134.0 ns/op in the controlled microbenchmark; allocation counts and bytes unchanged.
+- Limits: game root 52633/52650 non-test lines; no raised limits or new Body method.
+- Save impact: no schema, persistence or canonical encoding change. HUD/UI: existing native health view uses the resulting per-part wounds and scalar HP.
+- Boxes: COMBAT_GAP row 78 remains done, updated for scalar placement accounting; #269 (not spec-backlog) is addressed in the upstream parent. No new checklist feature.
+- Open: #280 remains open; the healed-limb sever fixture passes, and LossKills checks vital ancestry and organ failure. #279 remains outside this scope.
+
+## MIN-1-core-mining-materials
+Native mining labour, capacities, yield and stonecutting · 2026-11-25 · this commit
+- Changed: actual material-specific mining work, native mining skill/capacities and shared wall/drill output; one-in-four plain-rock chunks, stonecutting and chunk masses. Scanner site ore cells use the same material yield.
+- Decisions: published MIN-1 table, original positive-stack rounding; append ore IDs without renumbering, preserve mining stream across save/replay.
+- HUD: existing tile/job/item views expose the resulting real ore, labour and stack quantities; no new screen.
+- Boxes: MINING_GAP MIN-101 through MIN-109 done; MIN-301 open (scanner-site ores only). #68 partial.
+- Open: #68 MIN-2 roof collapse and remaining MIN-3/4 rows, including ordinary surface ore worldgen.
+
+## SHT-1-core-shooting-reconciliation
+Native shooting, interception and combat traits · 2026-11-25 · this commit
+- Changed: manipulation/sight aim points, distance and downed interception, native friendly-fire settings, Scrapper trait effects and daily XP cap/decay; retain real weapon and armour owners.
+- Decisions: preserve existing form/trait IDs and draw order where semantics unchanged; retain original downed intercept tuning. New-game friendly fire 40, explicit v20 values and older 100 preserved.
+- Save/HUD: settings in new-game/story options, existing Bio/Health/skill read models; typed v20 migration and causal golden evidence.
+- Boxes: SHOOTING_GAP SHT-001/003/005/006/007/104/302 done (existing rows corrected); vanilla **Downed creatures in combat**, **Friendly Fire difficulty**, **Brawler effect** [x].
+- Open: #279 hoof Poke mapping remains outside this contribution; #280 handled in CBT-269 ledger.
+
+## DEF-4-core-weighted-threat-census
+Weighted threat points and independent map/caravan budgets · 2026-11-25 · this commit
+- Changed: native weighted resident/animal/goods census, owner-scoped colony threats and summed independent permanent colony/caravan budgets for quests. Keep shared adaptation and bounded points.
+- Decisions: no pooled nonlinear wealth curve or double-counted off-map assets; temporary quest sites excluded. Existing native faction selection and spawn ownership remain.
+- Save/HUD: persisted adaptation/census inputs, existing History wealth and raid/quest presentation; actual multi-map/caravan/stasis regressions.
+- Boxes: QUESTS_GAP QST-025 done; DEFENCE_GAP §3.8 raid points and #252 partial.
+- Open: #252 remaining threat-curve and census parity.
+
+## MIN-3-native-ore-and-scanner-rules
+Surface ore, scanner admission and mining geometry · 2026-11-25 · this commit
+- Changed: seven surface ore profiles; size ranges; bounded connected veins; reject undersized lumps; roof checks on both scanner types at start and work; auto-forbid drill yield; cardinal mining cells.
+- Decisions: mapgen version 3 intentionally changes new map generation; legacy saved geometry unchanged. Rare ore densities are local tuning. Old ore implementation alone reproduces all prior map goldens; 11 changed pins recorded, sea ice unchanged. Scanner footprint check allocation-free.
+- Boxes: MIN-301..305 and MIN-308 done; refs #68.
+- Open: MIN-201..207 collapse and damage, MIN-306/307 infestation, MIN-402 risk projection; MIN-401 presentation remains open.
+
+## MIN-306-307-native-infestation
+Native infestation eligibility and pacing · 2026-11-25 · this commit
+- Changed: both storytellers use live strict infestation admission, thick rock, within 30 tiles of colony structure, no one-cell room, above -17 C, relative cold and light weights. A successful event sets a saved 20-day deadline; no event at the hive cap.
+- Decisions: original relative weights for cold/light; one weighted draw only for valid candidates; explicit dev swarm retains its previous fallback and spread behavior. Save field defaults to zero.
+- Boxes: MIN-306 and MIN-307 done; refs #68.
+- Open: roof collapse and mining risk projection; presentation remains open.
+
+## MIN-2-native-support-cave-in
+Native structural support loss, damage and risk projection · 2026-11-25 · this commit
+- Changed: circular six-cell support, real support removal queued in saved map state, revalidation at climate pass, thick rock collapse and repeat mining, thin roof crush damage, rubble dirt and stack damage; read-only MiningRoofRisk.
+- Decisions: original loose-stack damage amounts; jaw/brain approximate head/neck targets. Voluntary roof removal is nondamaging; no roof-only support chains. Existing natural roofs without a loss event are not destroyed on load.
+- Save/HUD: additive RoofLoss with owned snapshot copy and normalization. Native danger letter and collapse stamp; overlay and pause remain open. Historical replay hashes retain the square representation of the derived Supported bit only, reconstructed from snapshot terrain/buildings without mutating live roofs. All old v12/habits/scale/grown pins pass unchanged. The recreation workload excludes hazardous mining but retains unchanged sleep/food/work thresholds and asserts injury-free pawns; actual collapse has independent regression coverage.
+- Boxes: MIN-201..207 and MIN-402 implemented in native model, MIN-401 presentation separate; #68 native slice. #252 original 24.1 wealth row already implemented and shared across colony/caravan goods.
+- Open: roof-risk overlay and auto-pause.
+
 ## DEF-15-turret-fuse-hiss
 Turret fuse hiss · 2026-11-26 · 696371bd1
 - Changed: a turret hisses while it is Sparking, powered or not; the nearest 2 are heard (`amb.turret_fuse_hiss`, the key `fuse:<id>`, `render/cue/machines.go:88`).

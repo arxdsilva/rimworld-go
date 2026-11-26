@@ -27,12 +27,12 @@ import (
 // next stack, back to the bench to lay a load of another kind down, or,
 // with everything gathered, to the work spot as a plain bill job carrying
 // the last load (the others lie on the bench, listed in Route).
-func (s *Shop) gather(id entity.EntityID, j job.Record, b construction.Building) {
+func (s *Shop) gather(id entity.EntityID, j job.Record, b construction.Building, bl recipe.Bill) {
 	h := s.h
 	switch {
 	case j.Target == j.Dest && j.Carry != 0:
 		s.lay(id, &j, b)
-	case j.Target != j.Dest && !s.pickUp(id, &j):
+	case j.Target != j.Dest && !s.pickUp(id, &j, bl):
 		s.fail(id, j, job.TargetGone)
 		return
 	}
@@ -85,14 +85,14 @@ func toBill(j *job.Record) {
 // pickUp takes the planned count of the next stack on j's route into the
 // load pawn id carries; false when the stack is gone, short, taken, or
 // won't join the load.
-func (s *Shop) pickUp(id entity.EntityID, j *job.Record) bool {
+func (s *Shop) pickUp(id entity.EntityID, j *job.Record, bl recipe.Bill) bool {
 	h := s.h
 	if j.RouteI+1 >= j.Count {
 		return false
 	}
 	sid, take := j.Route[j.RouteI], int(j.Route[j.RouteI+1])
 	st, ok := h.Stack(sid)
-	if !ok || st.Carrier != 0 || st.Qty < take || j.Carry != 0 && !s.joins(j.Carry, st, take) {
+	if !ok || st.Carrier != 0 || st.Forbidden || !bl.AllowsStack(st) || st.Qty < take || j.Carry != 0 && !s.joins(j.Carry, st, take) {
 		return false
 	}
 	c := h.Carry(id, sid, take)
@@ -112,8 +112,7 @@ func (s *Shop) pickUp(id entity.EntityID, j *job.Record) bool {
 // same kind in the same state, within what one pawn carries.
 func (s *Shop) joins(carry entity.EntityID, st item.Stack, take int) bool {
 	c, ok := s.h.Stack(carry)
-	return ok && c.Kind == st.Kind && c.Rotten() == st.Rotten() && c.Dried == st.Dried && c.Of == st.Of &&
-		c.Animal == st.Animal && c.Qty+take <= item.CarryLimit
+	return ok && item.SameLoad(c, st) && c.Qty+take <= item.CarryLimit
 }
 
 // laidOut reports every ingredient bill job j laid on the bench is still
@@ -121,6 +120,66 @@ func (s *Shop) joins(carry entity.EntityID, st item.Stack, take int) bool {
 func (s *Shop) laidOut(j job.Record) bool {
 	for _, rid := range j.Route {
 		if st, ok := s.h.Stack(rid); !ok || st.Carrier != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// validRecipe rejects obsolete and incompatible saved bills as well as new orders.
+func (s *Shop) validRecipe(k construction.Kind, d recipe.Def) bool {
+	return d.Name != "" && !d.Legacy && d.At(k) && !s.h.RecipeLocked(d.ID)
+}
+
+// ingredientsReady checks the actual reserved loads against the current
+// recipe before any product or ingredient deletion. Reuse the planner's
+// input accounting, including nutrition, stuff and multi-input quantities.
+func (s *Shop) ingredientsReady(id entity.EntityID, j job.Record, b construction.Building, bl recipe.Bill, d recipe.Def) bool {
+	if !s.laidOut(j) {
+		return false
+	}
+	var local [8]pick
+	cands := local[:0]
+	add := func(sid entity.EntityID, carried bool) bool {
+		st, ok := s.h.Stack(sid)
+		if !ok || st.Qty <= 0 || st.Forbidden || st.Rotten() && d.ID != recipe.Cremate || !bl.AllowsStack(st) {
+			return false
+		}
+		if carried {
+			if st.Carrier != id {
+				return false
+			}
+		} else if st.Carrier != 0 || st.X != b.X || st.Y != b.Y {
+			return false
+		}
+		for _, p := range cands {
+			if p.id == sid {
+				return false
+			}
+		}
+		cands = append(cands, pick{id: sid, kind: st.Kind, st: st, left: st.Qty})
+		return true
+	}
+	for _, sid := range j.Route {
+		if !add(sid, false) {
+			return false
+		}
+	}
+	if !add(j.Carry, true) {
+		return false
+	}
+	var inputs [4]recipe.Input
+	var picks [8]pick
+	out := picks[:0]
+	for _, in := range d.AppendInputs(inputs[:0]) {
+		var ok bool
+		out, ok = takeFor(s.bills.book, in, cands, out)
+		if !ok {
+			return false
+		}
+	}
+	for _, c := range cands {
+		if c.left != 0 {
 			return false
 		}
 	}

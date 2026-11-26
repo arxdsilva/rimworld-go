@@ -83,7 +83,7 @@ func TestSpineLossDownsInGame(t *testing.T) {
 func TestHealthViewShowsOrgansAndNewCapacities(t *testing.T) {
 	t.Parallel()
 	g, id, b := organPatient(t, body.ArmL, body.HandL)
-	b.Install(body.ArmL, item.ServoArm)
+	b.InstallReplacement(body.ArmL, item.ServoArm)
 	b.Wounds = append(b.Wounds, body.Wound{Part: body.Liver, Dmg: 10, Kind: body.Bruise, Tended: true})
 	hv, ok := g.Health(id)
 	if !ok {
@@ -94,7 +94,7 @@ func TestHealthViewShowsOrgansAndNewCapacities(t *testing.T) {
 		caps[c.Label] = c.Pct
 	}
 	if len(hv.Capacities) != int(body.NumCaps) || caps["Blood pumping"] != 100 || caps["Blood filtration"] != 80 ||
-		caps["Digestion"] != 80 || caps["Manipulation"] <= 100 {
+		caps["Digestion"] != 90 || caps["Manipulation"] <= 100 {
 		t.Fatalf("capacities %v", caps)
 	}
 	if len(hv.Parts) != int(body.NumParts) || hv.Parts[body.Liver].Label != "liver" ||
@@ -126,7 +126,7 @@ func TestLegacyBodyHasNewOrgans(t *testing.T) {
 	check := func(name string, h *Game) {
 		t.Helper()
 		hb := h.bodies[id]
-		if hb == nil || hb.Implant(body.LegL) != item.PegLeg || hb.Damage() != b.Damage() {
+		if hb == nil || hb.ReplacementAt(body.LegL) != item.PegLeg || hb.Damage() != b.Damage() {
 			t.Fatalf("%s: body %+v", name, hb)
 		}
 		ps := hb.Parts()
@@ -149,8 +149,12 @@ func TestLegacyBodyHasNewOrgans(t *testing.T) {
 	check("v5 legacy arrays", loadLegacy(t, g, 5, func(s *saveState) {
 		for i := range s.Bodies {
 			sb := &s.Bodies[i].V
-			copy(sb.Implants[:], sb.Fitted)
-			sb.Fitted = nil
+			for p, r := range sb.Replacements {
+				if p < len(sb.Implants) {
+					sb.Implants[p] = r.Kind
+				}
+			}
+			sb.Replacements = nil
 		}
 	}))
 }

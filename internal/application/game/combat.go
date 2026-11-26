@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
@@ -105,7 +106,11 @@ func (g *Game) harm(target entity.EntityID, bl hit.Blow, by entity.EntityID, cau
 	case v.Injury >= health.MaxHP || b != nil && b.VitalLost():
 		g.dieBy(target, cause, by)
 	case v.Status == health.Alive && g.downsNow(target, v, b): // bleed.go: consciousness, moving or pain shock
-		g.down(target, health.CauseInjury)
+		if by != 0 && by != target && cause == health.CauseInjury && g.hasSetup() && g.isRaider(target) && !g.prison.Is(target) && health.EnemyDiesOnDowned(g.stream(streamBody).IntN) {
+			g.dieBy(target, cause, by)
+		} else {
+			g.down(target, health.CauseInjury)
+		}
 	}
 	g.mind.Downed(target) // mind: a downed brawler ends the fight
 }
@@ -115,6 +120,7 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) { g.dieBy(id, cause, 
 
 // dieBy kills pawn id; killer is who dealt the last blow (0: none).
 func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.EntityID) {
+	adaptationLoss(g, id, cause, true)
 	g.stainDeath(id) // stains.go
 	g.interrupt(id, job.Cancelled)
 	g.reserve.ReleaseTarget(id)                                     // RES-1: claims on the dead pawn end
@@ -128,6 +134,11 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	g.vital.Set(id, v)
 	g.mind.Downed(id) // mind: the dead keep no break
 	g.spawnCorpse(id)
+	if b := g.bodies[id]; b != nil && body.HasImplant(b, body.Torso, item.AcidFailsafe) {
+		rng := g.stream(streamBody)
+		body.CorrodeOnDeath(b, 3+rng.IntN(4), rng.IntN, uint64(g.clock.Now()))
+	}
+	dissolveEquippedGear(g, id)
 	g.dropRaiderGear(id)           // the weapon falls beside the body
 	senseOf(g).Gear.Spill(id)      // game/sense (CSE-036): the pack too; on the road, into the caravan's goods
 	g.combat.Gear.Died(id, killer) // combat/gear.go (CBT-3): a death of wounds is the last attacker's kill
@@ -141,6 +152,21 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 		g.apparel[id] = o.Taint(id)
 		careGear{g}.StripGear(id)
 	}
+}
+
+// dissolveEquippedGear destroys the weapon currently held and worn apparel.
+// wiki: Death acidifier. Spare weapons and packed inventory drop normally.
+func dissolveEquippedGear(g *Game, id entity.EntityID) {
+	b := g.bodies[id]
+	if b == nil || !body.HasImplant(b, body.Torso, item.AcidFailsafe) {
+		return
+	}
+	if k, ok := g.equip[id]; ok {
+		g.combat.Gear.Release(id, k, 1)
+		g.combat.Drafts.Drop(id, k)
+		delete(g.equip, id)
+	}
+	delete(g.apparel, id)
 }
 
 // heal: humanlikes heal by the wound, an hour at a time, in the medical

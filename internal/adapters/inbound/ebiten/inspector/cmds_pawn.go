@@ -34,7 +34,7 @@ import (
 // The layout clamps the width to ExpandMinW..ExpandMaxW and the height to the
 // room under the colonist bar, and a body gets the panel inset by paneInset,
 // so every body scrolls or copes with less.
-const prisonerWantW, prisonerWantH = 480, 300
+const prisonerWantW, prisonerWantH = 480, 400
 
 // pawnTab is pawn tab name's tab with its reference panel size.
 func pawnTab(name, label string) Tab {

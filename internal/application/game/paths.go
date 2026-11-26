@@ -7,10 +7,10 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/pathstage"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/region"
 )
 
 // Path queries (NG-1 §6.5, E3): pathTo and pathAround ask the region map
@@ -27,32 +27,25 @@ func (g *Game) searcher() *pathing.Searcher {
 	return g.pathSearch
 }
 
-// reachFrom is the region pre-check for a mover at pos: may a walk reach
-// (x, y)? Without regions everything may.
+// reachFrom is a value, not a closure: only a failed region check needs
+// the native owner's sampled exact-path verification.
 func (g *Game) reachFrom(id entity.EntityID, pos Position, regions bool) reachCheck {
 	if !regions {
 		return reachCheck{}
 	}
-	return reachCheck{g: g, m: g.regionsNow(), l: g.moverLayer(id), id: id, pos: pos}
+	return reachCheck{pathstage.ReachCheck{Map: g.regionsNow(), Layer: pathstage.MoverLayer(g.sapper(id), g.isRaider(id)), From: pathing.Point(pos)}, g, id}
 }
 
-// reachCheck is reachFrom's answer (a value, not a closure: asking
-// allocates nothing). With no map every cell may be reached.
 type reachCheck struct {
-	g   *Game
-	m   *region.Map
-	l   region.Layer
-	id  entity.EntityID
-	pos Position
+	pathstage.ReachCheck
+	g  *Game
+	id entity.EntityID
 }
 
-func (r reachCheck) ok(x, y int) bool {
-	if r.m == nil {
-		return true
-	}
-	ok := r.m.Reach(r.l, r.pos.X, r.pos.Y, x, y)
+func (r reachCheck) OK(x, y int) bool {
+	ok := r.ReachCheck.OK(x, y)
 	if !ok && checkIndex(r.g) {
-		checkReach(r.g, r.g.pathQuery(r.id), r.pos.X, r.pos.Y, x, y, ok)
+		pathstage.CheckReach(r.g.pathQuery(r.id), r.From.X, r.From.Y, x, y, ok, true)
 	}
 	return ok
 }
@@ -80,20 +73,9 @@ func (g *Game) findPath(id entity.EntityID, q pathing.Query, sx, sy, tx, ty int)
 // planSearch is how findPath searches; allow, a corridor's cells, is valid
 // until the region map's next corridor.
 func planSearch(g *Game, id entity.EntityID, q pathing.Query, sx, sy, tx, ty int) (pathstage.Kind, []uint64) {
-	switch {
-	case pathing.Octile(sx, sy, tx, ty) <= longPath || g.noRegions() || g.regs.exactLong:
-		return pathstage.Exact, nil
-	case !q.Walkable(tx, ty) || !g.grid.InBounds(sx, sy):
-		return pathstage.Failed, nil
-	case sx == tx && sy == ty:
-		return pathstage.Here, nil
-	}
-	allow, ok := g.regionsNow().Corridor(g.moverLayer(id), sx, sy, tx, ty)
-	if !ok {
-		checkReach(g, q, sx, sy, tx, ty, false) // under the test self-check, proven with a full search
-		return pathstage.Failed, nil
-	}
-	return pathstage.Corridor, allow
+	return pathstage.PlanSearch(q, sx, sy, tx, ty, longPath, g.noRegions(), g.regs.exactLong,
+		g.grid.InBounds(sx, sy), pathstage.MoverLayer(g.sapper(id), g.isRaider(id)), g.regionsNow,
+		func() { pathstage.CheckReach(q, sx, sy, tx, ty, false, checkIndex(g)) })
 }
 
 // findPathVia is findPath, or a plain exact search without regions.
@@ -134,6 +116,70 @@ func (g *Game) checkThreatScan(id entity.EntityID, pos Position, animalR, raider
 	}
 }
 
+func pathsFrozen(g *Game) bool {
+	return g.regs.paths.Frozen() || g.regs.pawnPaths.Frozen()
+}
+
+// preplanPawnPaths batches only the static-obstruction routes that can be
+// searched without changing the ordered movement loop.
+func preplanPawnPaths(g *Game, movers []mover, now uint64) {
+	p := g.maps[0].regs.paths.Pool()
+	s := &g.regs.pawnPaths
+	s.Open()
+	if p == nil || p.Lanes() <= 1 || len(g.pawnIDs) < 8 || g.noRegions() || g.fireActive() {
+		s.Close()
+		return
+	}
+	for _, mv := range movers {
+		id := mv.id
+		if mv.animal || !g.colonist(id) || now < g.motionOf(id).NextMoveAt || !g.alive(id) {
+			continue
+		}
+		j, _ := g.jobs.Get(id)
+		if j.State != job.Goto || j.PathI >= len(j.Path) {
+			continue
+		}
+		pos, _ := g.positions.Get(id)
+		tx, ty := walkTarget(j)
+		next, goal := j.Path[j.PathI], pathing.Point{X: tx, Y: ty}
+		if g.grid.Walkable(next.X, next.Y) || !cellStandable(g, tx, ty) || pathing.Point(pos) == goal {
+			continue
+		}
+		s.Queue(pathstage.Request{ID: id, From: pathing.Point(pos), To: next, Goal: goal,
+			Token: pathstage.TokenOf(j.Path, j.PathI, pathing.Point(pos)),
+			Guard: pathstage.Guard{Kind: j.Kind, Forced: j.Forced, Area: g.restrictedRef(id), AreaFree: g.areaPathFree(id)}})
+	}
+	if !s.CloseBatch() {
+		return
+	}
+	g.plantIndex()
+	g.regionsNow().Regions()
+	for i, r := range s.Requests() {
+		q := g.pathQuery(r.ID)
+		k := pathstage.Failed
+		var allow []uint64
+		if q.Walkable(r.Goal.X, r.Goal.Y) && g.reachFrom(r.ID, Position(r.From), true).OK(r.Goal.X, r.Goal.Y) {
+			pathstage.WarmQuery(q, r.From)
+			k, allow = planSearch(g, r.ID, q, r.From.X, r.From.Y, r.Goal.X, r.Goal.Y)
+		}
+		s.SetPlan(i, q, k, allow)
+	}
+	s.ComputeAt(p, g.grid.Version(), g.structVer, g.searcher())
+}
+
+// preplannedPawnPath returns a staged route only while its job and map still match.
+func preplannedPawnPath(g *Game, id entity.EntityID, j job.Record, tx, ty int) ([]pathing.Point, bool, bool) {
+	if !cellStandable(g, tx, ty) {
+		return nil, false, false
+	}
+	from, _ := g.positions.Get(id)
+	result, ready := g.regs.pawnPaths.Lookup(id, pathstage.Guard{
+		Kind: j.Kind, Forced: j.Forced, Area: g.restrictedRef(id), AreaFree: g.areaPathFree(id),
+	}, pathing.Point(from), j.Path[j.PathI], pathing.Point{X: tx, Y: ty},
+		pathstage.TokenOf(j.Path, j.PathI, pathing.Point(from)), g.grid.Version(), g.structVer, g.fireActive())
+	return result.Path, result.OK, ready
+}
+
 // runRepaths is the movement phase's path stage (pathstage, GAR-035): the
 // animal searches repathEvery queued are planned (every lazy cache their
 // queries read is built here), searched against the occupancy the whole
@@ -152,10 +198,7 @@ func runRepaths(g *Game) {
 	}
 	for i, r := range s.Requests() {
 		q := g.costedQuery(r.ID)
-		q.(pathing.Coster).ExtraCost(r.From.X, r.From.Y) // the ground layer and the region bitsets
-		if b, ok := q.(pathing.Bitset); ok {
-			b.BlockedBits()
-		}
+		pathstage.WarmQuery(q, r.From)
 		k, allow := planSearch(g, r.ID, q, r.From.X, r.From.Y, r.Goal.X, r.Goal.Y)
 		s.SetPlan(i, q, k, allow)
 	}

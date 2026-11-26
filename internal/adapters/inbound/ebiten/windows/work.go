@@ -4,8 +4,10 @@
 package windows
 
 import (
+	"cmp"
 	"fmt"
 	"image/color"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -23,7 +25,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-var WorkColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl", "Ward", "Cut"}
+var WorkColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl", "Ward", "Cut", "Pt", "Rest", "Basic", "Smith", "Tailor", "Art"}
 
 // WorkLive maps live work columns (a column is a work.Type's index, which is
 // also its index in WorkColumns, WorkHelp and WorkColSkill) to their command
@@ -43,9 +45,15 @@ var WorkLive = map[int]struct {
 	8:  {command.WorkResearch, func(p game.PawnView) bool { return p.WorkResearch }},
 	9:  {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
 	10: {command.WorkCraft, func(p game.PawnView) bool { return p.WorkCraft }},
-	11: {command.WorkHandle, func(p game.PawnView) bool { return false }},   // priorities carry it
-	12: {command.WorkWarden, func(p game.PawnView) bool { return false }},   // ENG-003: off by default
-	13: {command.WorkPlantCut, func(p game.PawnView) bool { return false }}, // FOOD-2: priorities carry it
+	11: {command.WorkHandle, func(p game.PawnView) bool { return false }}, // priorities carry it
+	12: {command.WorkWarden, func(p game.PawnView) bool { return false }}, // ENG-003: off by default
+	13: {command.WorkPlantCut, func(p game.PawnView) bool { return false }},
+	14: {command.WorkPatient, func(p game.PawnView) bool { return false }},
+	15: {command.WorkBedRest, func(p game.PawnView) bool { return false }},
+	16: {command.WorkBasic, func(p game.PawnView) bool { return false }},
+	17: {command.WorkSmith, func(p game.PawnView) bool { return false }},
+	18: {command.WorkTailor, func(p game.PawnView) bool { return false }},
+	19: {command.WorkArt, func(p game.PawnView) bool { return false }},
 }
 
 // WorkPriority is the colonist's priority for a work column (0 = off).
@@ -108,6 +116,9 @@ var WorkColSkill = [...]struct {
 	11: {skill.Animals, true},
 	12: {skill.Social, true},
 	13: {skill.Plants, true},
+	17: {skill.Crafting, true},
+	18: {skill.Crafting, true},
+	19: {skill.Artistic, true},
 }
 
 // WorkHelp is the header hover card of each work column.
@@ -122,10 +133,16 @@ var WorkHelp = [...]string{
 	7:  "Cleaning\nSweep dirt and filth off the Home area. No skill.",
 	8:  "Research\nStudy at a research bench. Skill: Intellectual.",
 	9:  "Mining\nDig out rock and ore. Skill: Mining.",
-	10: "Crafting\nWork at benches: workbench, tailoring, stonecutting. Skill: Crafting.",
+	10: "Crafting\nWork at general benches and stonecutting. Skill: Crafting.",
 	11: "Handling\nTame, milk, shear and collect from animals. Skill: Animals.",
 	12: "Warden\nChat with prisoners, recruit them and bring them food. Off unless you turn it on. Skill: Social.",
 	13: "Plant cutting\nCut marked plants and grass, harvest wild plants, fell marked trees, clear blight. Skill: Plants.",
+	14: "Patient\nAllow medical care and other patient duties for this pawn.",
+	15: "Bed rest\nAllow this pawn to rest while injured.",
+	16: "Basic\nFlick switches and open marked graves or caskets. No skill.",
+	17: "Smithing\nProduce forged equipment. Skill: Crafting.",
+	18: "Tailoring\nSew clothing from cloth, leather or wool. Skill: Crafting.",
+	19: "Art\nCarve sculptures at an art bench. Skill: Artistic.",
 }
 
 // incapable reports colonist p can never do work column col, and why
@@ -167,9 +184,9 @@ func WorkCellRect(r uikit.Button, row, col int) gfx.Rect {
 }
 
 // workMaxCells bounds a row: the name cell plus every WorkColumns slot.
-const workMaxCells = 15
+const workMaxCells = int(work.NumTypes) + 1
 
-// workNameCol is the headerless id of the colonist-name cell in workCells.
+// workNameCol identifies the shared colonist portrait, name and status cell.
 const workNameCol = "name"
 
 // workDeclared lists the ids a Work row declares: the name, then WorkColumns.
@@ -180,18 +197,22 @@ func workDeclared() []string {
 }
 
 // workCells places colonist row's cells in the window rect r: the name cell
-// (headerless, as drawn) then one slot per live WorkColumns index, in column
+// then one slot per live WorkColumns index, in column
 // order. A column absent from WorkLive has no cell.
 func workCells(dst []uikit.TableCell, r uikit.Button, row int) []uikit.TableCell {
-	// The name text sits on the whole-pixel row top, as it always drew.
-	y := float32(int(r.Y) + workTop + row*workRowH)
-	dst = append(dst, uikit.TableCell{Col: workNameCol, R: gfx.Rect{X: r.X + hudlayout.WindowPad, Y: y, W: WorkNameW - 8, H: workCellH}})
+	dst = append(dst, uikit.TableCell{Col: workNameCol, R: workNameRect(r, row)})
 	for i, id := range WorkColumns {
 		if _, live := WorkLive[i]; live {
 			dst = append(dst, uikit.TableCell{Col: id, R: WorkCellRect(r, row, i)})
 		}
 	}
 	return dst
+}
+
+// workNameRect owns the portrait, name and status band, and the name-sort
+// header uses the same horizontal extent. Preserve the whole-pixel row top.
+func workNameRect(r uikit.Button, row int) gfx.Rect {
+	return gfx.Rect{X: r.X + hudlayout.WorkPadL, Y: float32(int(r.Y) + workTop + row*workRowH), W: WorkNameW - 8, H: workCellH}
 }
 
 // workColIndex is the WorkColumns index of a cell id (-1 for the name cell).
@@ -243,6 +264,9 @@ func workRowShown(r uikit.Button, row int) bool {
 
 // hint is the header's one-line legend.
 func (w Work) hint() string {
+	if w.workView.simple {
+		return w.sh.T("Checked = enabled; existing priorities are retained. New work starts at 3.")
+	}
 	return w.sh.T("1 = do first ... 4 = do last, - = never; ties: left first; click a cell to change")
 }
 
@@ -271,13 +295,25 @@ func (w Work) help(col int) string {
 	case 9:
 		return w.sh.T("Mining\nDig out rock and ore. Skill: Mining.")
 	case 10:
-		return w.sh.T("Crafting\nWork at benches: workbench, tailoring, stonecutting. Skill: Crafting.")
+		return w.sh.T("Crafting\nWork at general benches and stonecutting. Skill: Crafting.")
 	case 11:
 		return w.sh.T("Handling\nTame, milk, shear and collect from animals. Skill: Animals.")
 	case 12:
 		return w.sh.T("Warden\nChat with prisoners, recruit them and bring them food. Off unless you turn it on. Skill: Social.")
 	case 13:
 		return w.sh.T("Plant cutting\nCut marked plants and grass, harvest wild plants, fell marked trees, clear blight. Skill: Plants.")
+	case 14:
+		return w.sh.T("Patient\nAllow medical care and other patient duties for this pawn.")
+	case 15:
+		return w.sh.T("Bed rest\nAllow this pawn to rest while injured.")
+	case 16:
+		return w.sh.T("Basic\nFlick switches and open marked graves or caskets. No skill.")
+	case 17:
+		return w.sh.T("Smithing\nProduce forged equipment. Skill: Crafting.")
+	case 18:
+		return w.sh.T("Tailoring\nSew clothing from cloth, leather or wool. Skill: Crafting.")
+	case 19:
+		return w.sh.T("Art\nCarve sculptures at an art bench. Skill: Artistic.")
 	}
 	return ""
 }
@@ -314,6 +350,18 @@ func (w Work) colName(col int) string {
 		return w.sh.T("Ward")
 	case 13:
 		return w.sh.T("Cut")
+	case 14:
+		return w.sh.T("Pt")
+	case 15:
+		return w.sh.T("Rest")
+	case 16:
+		return w.sh.T("Basic")
+	case 17:
+		return w.sh.T("Smith")
+	case 18:
+		return w.sh.T("Tailor")
+	case 19:
+		return w.sh.T("Art")
 	}
 	return ""
 }
@@ -355,10 +403,9 @@ func (w Work) Tips(sw, sh int) {
 	r := w.Rect()
 	for _, t := range work.Order {
 		col := int(t)
-		cr := WorkCellRect(r, 0, col)
-		w.kit().Tip("work.hdr."+uikit.Num(col), gfx.Rect{X: cr.X, Y: r.Y + workHeadY, W: cr.W, H: workHeadH}, w.help(col))
+		w.kit().Tip("work.hdr."+uikit.Num(col), workHeadRect(r, col), w.help(col))
 	}
-	for row, p := range w.sh.Pawns() {
+	for row, p := range w.rows() {
 		if !workRowShown(r, row) {
 			break
 		}
@@ -402,6 +449,7 @@ func WorkCellValue(p game.PawnView, col int) string {
 func (w Work) buttons() []uikit.Button {
 	out := w.cellButtons()
 	r := w.Rect()
+	out = append(out, w.viewButtons()...)
 	for _, t := range work.Order {
 		col := int(t)
 		if _, ok := WorkTypeForCol(col); !ok {
@@ -416,7 +464,7 @@ func (w Work) buttons() []uikit.Button {
 // cellButtons are the priority cells alone (an incapable one disabled).
 func (w Work) cellButtons() []uikit.Button {
 	r := w.Rect()
-	pawns := w.sh.Pawns()
+	pawns := w.rows()
 	out := make([]uikit.Button, 0)
 	for row, p := range pawns {
 		if !workRowShown(r, row) {
@@ -467,6 +515,10 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 	hintX := float64(r.X) + pad + float64(gfx.TextW(title, gfx.Label)) + 16
 	gfx.Text(screen, gfx.Ellipsize(w.hint(), gfx.Small, float64(r.X+r.W)-pad-hintX),
 		hintX, gfx.CenterTop(float64(r.Y)+pad, gfx.LineH(gfx.Label), gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
+	mx, my := w.sh.Cursor()
+	for _, b := range w.viewButtons() {
+		uikit.DrawButton(screen, b, b.Contains(mx, my), w.sh)
+	}
 	var buf [workMaxCells]uikit.TableCell
 	for _, c := range workCells(buf[:0], r, 0) {
 		i := workColIndex(c.Col)
@@ -476,17 +528,19 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 		st := gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter}
 		band := float64(workHeadH) / 2 // staggered rows, each centred in half the header
 		y := gfx.CenterTop(float64(r.Y)+workHeadY+float64(workSlot(i)%2)*band, band, st)
-		gfx.Text(screen, w.colName(i), float64(workBoxRect(c.R).X)+float64(hudlayout.WorkBox)/2, y, st)
+		name := w.colName(i)
+		if w.workView.sorted && w.workView.column == i {
+			name = workSortLabel(w.sh, name, w.workView.reverse)
+		}
+		gfx.Text(screen, name, float64(workBoxRect(c.R).X)+float64(hudlayout.WorkBox)/2, y, st)
 	}
-	pawns := w.sh.Pawns()
+	pawns := w.rows()
 	for row, p := range pawns {
 		if !workRowShown(w.Rect(), row) {
 			break
 		}
-		name := workCells(buf[:0], r, row)[0].R
-		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, float64(name.W)), float64(name.X), gfx.CenterTop(float64(name.Y), float64(name.H), gfx.Body), gfx.Body)
+		w.drawPawnRow(screen, p, workCells(buf[:0], r, row)[0].R)
 	}
-	mx, my := w.sh.Cursor()
 	for row, p := range pawns {
 		if !workRowShown(w.Rect(), row) {
 			break
@@ -523,7 +577,14 @@ func (w Work) drawCell(screen *ebiten.Image, p game.PawnView, slot gfx.Rect, col
 	if pr := WorkPriority(p, col); pr > 0 {
 		st.Color = workNumColor(pr)
 	}
-	gfx.Text(screen, WorkCellValue(p, col), float64(box.X+box.W/2), gfx.CenterTop(float64(box.Y), float64(box.H), st), st)
+	if w.workView.simple {
+		if WorkPriority(p, col) > 0 {
+			gfx.Line(screen, box.X+6, box.Y+12, box.X+10, box.Y+17, 2, st.Color, false)
+			gfx.Line(screen, box.X+10, box.Y+17, box.X+19, box.Y+7, 2, st.Color, false)
+		}
+	} else {
+		gfx.Text(screen, WorkCellValue(p, col), float64(box.X+box.W/2), gfx.CenterTop(float64(box.Y), float64(box.H), st), st)
+	}
 	if passion > 0 {
 		ls := gfx.Small
 		ls.Color = uikit.TextDim
@@ -569,15 +630,38 @@ func (w Work) pawnByID(id uint64) (game.PawnView, bool) {
 // colonist can never do that work.
 func (w Work) set(p game.PawnView, col, value int) {
 	wt, ok := WorkTypeForCol(col)
-	if !ok || p.Incapable.Enabled(work.Type(col)) || WorkPriority(p, col) == value {
+	if !ok || p.Incapable.Enabled(work.Type(col)) {
 		return
 	}
-	w.sh.Enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: uint64(p.ID), Work: wt, Count: value})
+	if w.workView.simple {
+		if (WorkPriority(p, col) > 0) != (value > 0) {
+			w.sh.Enqueue(command.Command{Kind: command.SetWorkEnabled, Pawn: uint64(p.ID), Work: wt, Enabled: value > 0})
+		}
+	} else if WorkPriority(p, col) != value {
+		w.sh.Enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: uint64(p.ID), Work: wt, Count: value})
+	}
 }
 
 // Click is a left click on cell id: the next priority, which a drag then
 // paints over the cells it passes (CTL-015).
 func (w Work) Click(id string) {
+	if !w.Open || (w.Mode != "work" && w.Mode != "") {
+		return
+	}
+	if strings.HasPrefix(id, ids.PrefixWorkHead) {
+		w.HeadClick(id, w.kit().Host().Frame().Shift(), false)
+		return
+	}
+	switch id {
+	case ids.WorkMode:
+		w.workView.simple = !w.workView.simple
+		w.paint = painter{}
+		return
+	case ids.WorkNameSort:
+		w.workView.sortBy(-1)
+		w.paint = painter{}
+		return
+	}
 	pn, col, ok := parseWorkCell(id)
 	if !ok || !w.live() {
 		return
@@ -586,7 +670,7 @@ func (w Work) Click(id string) {
 	if !ok || p.Incapable.Enabled(work.Type(col)) {
 		return
 	}
-	next := NextPriority(WorkPriority(p, col))
+	next := w.next(WorkPriority(p, col), false)
 	w.set(p, col, next)
 	w.paint.Arm(id, next)
 }
@@ -613,7 +697,7 @@ func (w Work) RightClick(mx, my int) bool {
 		return true
 	}
 	if p, ok := w.pawnByID(pn); ok {
-		prev := PrevPriority(WorkPriority(p, col))
+		prev := w.next(WorkPriority(p, col), true)
 		w.set(p, col, prev)
 		w.paint.Arm(b.ID, prev)
 	}
@@ -629,8 +713,13 @@ func (w Work) HeadClick(id string, shift, inverse bool) bool {
 		return false
 	}
 	col, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixWorkHead))
-	if err != nil || !shift || !w.live() {
-		return err == nil
+	if _, ok := WorkTypeForCol(col); err != nil || !ok || !w.live() {
+		return false
+	}
+	if !shift {
+		w.workView.sortBy(col)
+		w.paint = painter{}
+		return true
 	}
 	target, have := 0, false
 	for _, p := range w.sh.Pawns() {
@@ -638,10 +727,7 @@ func (w Work) HeadClick(id string, shift, inverse bool) bool {
 			continue
 		}
 		if !have {
-			target, have = NextPriority(WorkPriority(p, col)), true
-			if inverse {
-				target = PrevPriority(WorkPriority(p, col))
-			}
+			target, have = w.next(WorkPriority(p, col), inverse), true
 		}
 		w.set(p, col, target)
 	}
@@ -671,4 +757,96 @@ func (w Work) Drag() {
 			w.set(p, col, w.paint.Value)
 		}
 	}
+}
+
+type workViewState struct {
+	simple, sorted, reverse bool
+	column                  int
+}
+
+func (s *workViewState) sortBy(col int) {
+	if s.sorted && s.column == col {
+		s.reverse = !s.reverse
+		return
+	}
+	s.sorted, s.column, s.reverse = true, col, false
+}
+
+func (w Work) rows() []game.PawnView {
+	rows := w.sh.Pawns()
+	s := w.workView
+	if !s.sorted {
+		return rows
+	}
+	rows = slices.Clone(rows)
+	slices.SortStableFunc(rows, func(a, b game.PawnView) int {
+		var n int
+		if s.column < 0 {
+			n = cmp.Compare(w.sh.PawnLabel(a), w.sh.PawnLabel(b))
+		} else {
+			priority := func(p game.PawnView) int {
+				if v := WorkPriority(p, s.column); v > 0 {
+					return v
+				}
+				return work.Lowest + 1
+			}
+			n = cmp.Compare(priority(a), priority(b))
+			if n == 0 && s.column < len(WorkColSkill) && WorkColSkill[s.column].OK {
+				sk := WorkColSkill[s.column].Skill
+				n = cmp.Compare(b.SkillLv[sk], a.SkillLv[sk])
+			}
+		}
+		if s.reverse {
+			n = -n
+		}
+		if n == 0 {
+			n = cmp.Compare(a.ID, b.ID)
+		}
+		return n
+	})
+	return rows
+}
+
+func (w Work) next(v int, inverse bool) int {
+	if w.workView.simple {
+		if v > 0 {
+			return 0
+		}
+		return work.DefaultPriority
+	}
+	if inverse {
+		return PrevPriority(v)
+	}
+	return NextPriority(v)
+}
+
+// workSortLabel keeps the sort marker in the same translatable format as the header.
+func workSortLabel(tr lang.Tr, name string, reverse bool) string {
+	if reverse {
+		return lang.Tf(tr, "%s v", name)
+	}
+	return lang.Tf(tr, "%s ^", name)
+}
+
+func (w Work) viewButtons() []uikit.Button {
+	r := w.Rect()
+	mode := w.sh.T("Manual priorities")
+	if w.workView.simple {
+		mode = w.sh.T("Simple checkboxes")
+	}
+	name := w.sh.T("Name / status")
+	if w.workView.sorted && w.workView.column < 0 {
+		name = workSortLabel(w.sh, name, w.workView.reverse)
+	}
+	cell := workNameRect(r, 0)
+	return []uikit.Button{
+		{ID: ids.WorkMode, Label: mode, X: cell.X, Y: r.Y + 31, W: 180, H: 25},
+		{ID: ids.WorkNameSort, Label: name, X: cell.X, Y: r.Y + workHeadY, W: cell.W, H: workHeadH, Quiet: true},
+	}
+}
+
+func (w Work) drawPawnRow(screen *ebiten.Image, p game.PawnView, cell gfx.Rect) {
+	w.sh.DrawPortrait(screen, p.Look, float64(cell.X), float64(cell.Y), float64(cell.H), float64(cell.H))
+	w.sh.DrawWorkStatus(screen, p, cell.Right()-20, cell.Y+3, 20)
+	gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, float64(cell.W)-56), float64(cell.X)+32, gfx.CenterTop(float64(cell.Y), float64(cell.H), gfx.Body), gfx.Body)
 }

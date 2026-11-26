@@ -62,7 +62,7 @@ func TestOneKidneyLowersImmunity(t *testing.T) {
 
 func TestLiverLungsAndStomachAreLifeOrgans(t *testing.T) {
 	t.Parallel()
-	for _, parts := range [][]Part{{Liver}, {LungL, LungR}, {Stomach}} {
+	for _, parts := range [][]Part{{Liver}, {LungL, LungR}} {
 		var b Body
 		for _, p := range parts {
 			b.destroy(p)
@@ -78,10 +78,13 @@ func TestLiverLungsAndStomachAreLifeOrgans(t *testing.T) {
 	}
 	b = Body{}
 	b.destroy(Stomach)
-	if !b.Install(Stomach, item.SynthStomach) || b.OrganFailure() || !b.GutWormImmune() {
+	if b.Capacity(Digestion) != 500 || b.OrganFailure() || b.VitalLost() {
+		t.Fatal("one missing stomach must leave a living pawn at 50% digestion")
+	}
+	if !b.InstallReplacement(Stomach, item.SynthStomach) || b.OrganFailure() || !b.GutWormImmune() {
 		t.Fatal("a synth stomach stands in and keeps gut worms out")
 	}
-	if b.Capacity(Digestion) != ServoEff {
+	if b.Capacity(Digestion) != 1125 {
 		t.Fatalf("digestion %d", b.Capacity(Digestion))
 	}
 }
@@ -90,7 +93,7 @@ func TestLiverDamageLowersDigestionAndFiltration(t *testing.T) {
 	t.Parallel()
 	var b Body
 	b.Wounds = []Wound{{Part: Liver, Dmg: 25, Kind: Bruise}}
-	if b.Capacity(Digestion) != 500 || b.Capacity(BloodFiltration) != 500 {
+	if b.Capacity(Digestion) != 750 || b.Capacity(BloodFiltration) != 500 {
 		t.Fatalf("half a liver: digestion %d filtration %d", b.Capacity(Digestion), b.Capacity(BloodFiltration))
 	}
 }
@@ -107,7 +110,7 @@ func TestSpineLossStopsMoving(t *testing.T) {
 	if b.Capacity(Moving) != 0 || b.OrganFailure() {
 		t.Fatalf("no spine: moving %d (and alive)", b.Capacity(Moving))
 	}
-	if !b.Install(Spine, item.SpinalBrace) || b.Capacity(Moving) != 1000 || !b.SpineBraced() {
+	if !b.InstallReplacement(Spine, item.SpinalBrace) || b.Capacity(Moving) != 1000 || !b.SpineBraced() {
 		t.Fatalf("spinal brace: moving %d", b.Capacity(Moving))
 	}
 }
@@ -119,12 +122,13 @@ func TestBloodPumpingWeighsOnConsciousnessMovingAndBleed(t *testing.T) {
 	if b.Capacity(BloodPumping) != 600 {
 		t.Fatalf("pumping %d", b.Capacity(BloodPumping))
 	}
-	// consciousness: 1000 - 125/2 = 938, × (1 - 0.2 × 0.4) = 862
-	if got := b.Capacity(Consciousness); got != 862 {
+	// wiki: Consciousness, Pain. Pain 12.5% reduces brain efficiency
+	// by 1.1%, then 60% blood pumping reduces it by another 8%.
+	if got := b.Capacity(Consciousness); got != 909 {
 		t.Fatalf("consciousness %d", got)
 	}
-	// moving: min(1000, 862) × 0.92 = 793
-	if got := b.Capacity(Moving); got != 793 {
+	// Moving: 90.9% consciousness, weighted 60% blood pumping.
+	if got := b.Capacity(Moving); got != 836 {
 		t.Fatalf("moving %d", got)
 	}
 	b.Wounds = []Wound{{Part: Heart, Dmg: 10, Kind: Cut}}
@@ -164,14 +168,14 @@ func TestServoArmAbove100(t *testing.T) {
 	t.Parallel()
 	var b Body
 	b.destroy(ArmL)
-	if !b.Install(ArmL, item.ServoArm) {
+	if !b.InstallReplacement(ArmL, item.ServoArm) {
 		t.Fatal("servo arm")
 	}
 	if got := b.Capacity(Manipulation); got != (1250+1000)/2 {
 		t.Fatalf("manipulation %d, want 1125", got)
 	}
 	b.destroy(ArmR)
-	b.Install(ArmR, item.ServoArm)
+	b.InstallReplacement(ArmR, item.ServoArm)
 	if got := b.Capacity(Manipulation); got != 1250 {
 		t.Fatalf("two servo arms %d", got)
 	}
@@ -183,16 +187,16 @@ func TestServoArmAbove100(t *testing.T) {
 	var c Body
 	c.destroy(LegL)
 	c.destroy(LegR)
-	c.Install(LegL, item.ServoLeg)
-	c.Install(LegR, item.ServoLeg)
+	c.InstallReplacement(LegL, item.ServoLeg)
+	c.InstallReplacement(LegR, item.ServoLeg)
 	if c.Capacity(Moving) != 1250 {
 		t.Fatalf("servo legs moving %d", c.Capacity(Moving))
 	}
 	c.destroy(EyeL)
-	c.Install(EyeL, item.OpticImplant)
+	c.InstallReplacement(EyeL, item.OpticImplant)
 	c.destroy(EarL)
-	c.Install(EarL, item.CochlearImplant)
-	if c.Capacity(Sight) != 1125 || c.Capacity(Hearing) != 1125 {
+	c.InstallReplacement(EarL, item.CochlearImplant)
+	if c.Capacity(Sight) != 1187 || c.Capacity(Hearing) != 1187 {
 		t.Fatalf("optic %d cochlear %d", c.Capacity(Sight), c.Capacity(Hearing))
 	}
 }
@@ -209,7 +213,7 @@ func TestProstheticArmEfficiencyFixed(t *testing.T) {
 	}
 	var b Body
 	b.destroy(ArmL)
-	b.Install(ArmL, item.ProstheticArm)
+	b.InstallReplacement(ArmL, item.ProstheticArm)
 	if got := b.Capacity(Manipulation); got != (500+1000)/2 {
 		t.Fatalf("prosthetic arm manipulation %d", got)
 	}
@@ -226,11 +230,11 @@ func TestEveryImplantFitsSomewhere(t *testing.T) {
 		}
 		var on []Part
 		for p := Part(0); p < NumParts; p++ {
-			if Fits(k, p) {
+			if k.IsAddedImplant() && FitsImplant(k, p) || k.IsReplacement() && FitsReplacement(k, p) {
 				on = append(on, p)
 			}
 		}
-		if len(on) == 0 || ImplantEfficiency(k) == 0 && k != item.GlassEye && k != item.WoodenNose {
+		if len(on) == 0 || k.IsReplacement() && ImplantEfficiency(k) == 0 && k != item.GlassEye && k != item.WoodenNose {
 			t.Errorf("%v fits %v with efficiency %d", k, on, ImplantEfficiency(k))
 		}
 		if w, ok := fits[k]; ok && (len(w) != len(on) || w[0] != on[0] || w[len(w)-1] != on[len(on)-1]) {
@@ -248,7 +252,7 @@ func TestOrgansMatchTheirParts(t *testing.T) {
 			t.Errorf("%v organ %v, want %v", p, OrganOf(p), want[p])
 		}
 		for _, k := range []item.Kind{item.Kidney, item.Lung, item.Heart, item.Liver} {
-			if Fits(k, p) {
+			if FitsReplacement(k, p) {
 				t.Errorf("organ %v must not fit as an implant", k)
 			}
 			if FitsOrgan(k, p) != (want[p] == k) {
@@ -278,12 +282,12 @@ func TestNanomedPotency(t *testing.T) {
 func TestLossKillsGuardsLastOrgans(t *testing.T) {
 	t.Parallel()
 	var b Body
-	for _, p := range []Part{Brain, Torso, Heart, Liver, Stomach} {
+	for _, p := range []Part{Brain, Torso, Heart, Liver} {
 		if !b.LossKills(p) {
 			t.Errorf("losing %v kills", p)
 		}
 	}
-	for _, p := range []Part{KidneyL, LungR, Spine, ArmL, EyeL} {
+	for _, p := range []Part{KidneyL, LungR, Spine, ArmL, EyeL, Stomach} {
 		if b.LossKills(p) {
 			t.Errorf("losing %v alone does not kill", p)
 		}
@@ -294,8 +298,8 @@ func TestLossKillsGuardsLastOrgans(t *testing.T) {
 		t.Fatal("the last kidney and lung are guarded")
 	}
 	b.destroy(Stomach)
-	b.Install(Stomach, item.SynthStomach)
-	if b.LossKills(LegL) || b.Implant(Stomach) != item.SynthStomach {
+	b.InstallReplacement(Stomach, item.SynthStomach)
+	if b.LossKills(LegL) || b.ReplacementAt(Stomach) != item.SynthStomach {
 		t.Fatal("the check must not touch the body")
 	}
 }

@@ -60,11 +60,22 @@ const (
 	Gold
 	// Machinery is buried machinery: mined for components (NG-1 §4.8).
 	Machinery
+	// Scanner site ores extend the saved enumeration.
+	Plasteel
+	Uranium
+	Jade
 	numOres
 )
 
-var oreNames = [numOres]string{"", "steel", "silver", "gold", "machinery"}
-var oreLabels = [numOres]string{"", "Compacted steel", "Silver ore", "Gold ore", "Buried machinery"}
+var oreNames = [numOres]string{"", "steel", "silver", "gold", "machinery", "plasteel", "uranium", "jade"}
+var oreLabels = [numOres]string{"", "Compacted steel", "Silver ore", "Gold ore", "Buried machinery", "Plasteel", "Uranium ore", "Jade"}
+
+// MineYields is the base material count per ore cell (wiki: Ore).
+// Scanner sites use this table as their yield contract, too.
+var MineYields = [...]int{
+	Steel: 40, Silver: 40, Gold: 40, Machinery: 2,
+	Plasteel: 40, Uranium: 40, Jade: 40,
+}
 
 func (o Ore) String() string {
 	if o >= numOres {

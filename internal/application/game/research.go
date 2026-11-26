@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/pkg/letterdata"
 )
 
 // Research lives in game/research (RSCH-1: the wiki's speed, costs, bench
@@ -66,9 +67,8 @@ func (h researchHost) Start(worker, bench entity.EntityID, sx, sy, ticks int) bo
 		h.g.reserve.TryTile(worker, sx, sy) // RES-1: the work spot is the researcher's
 }
 func (h researchHost) Work(id entity.EntityID) bool {
-	ok := h.g.workTick(id)
 	h.g.workProgress(id, skIntellectual, true) // skills.go: trains Intellectual
-	return ok
+	return true
 }
 func (h researchHost) Speed(id entity.EntityID) rlab.Pawn {
 	g, manip, sight, trait := h.g, int32(1000), int32(1000), 100
@@ -114,7 +114,9 @@ func (h researchHost) Difficulty() int {
 }
 func (h researchHost) Now() uint64 { return uint64(h.g.clock.Now()) }
 func (h researchHost) Letter(title, text string, x, y int) {
-	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letters.Good})
+	fields := []letterdata.Field{{Name: "what", Kind: "research", Value: research.DefOf(h.g.lab.Cur).Name}}
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true,
+		Title: title, Code: "research.completed", Fields: &fields, Kind: letters.Good})
 }
 func (h researchHost) Changed()                { h.g.viewGen++ }                  // view cache (indexes.go)
 func (h researchHost) Projects() research.Book { return h.g.sk.content.Research } // the run's (PLG-026)

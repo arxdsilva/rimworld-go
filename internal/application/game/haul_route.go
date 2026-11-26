@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/haul"
+	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/store"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -33,6 +34,7 @@ type haulShare = haul.Share
 // hauler's shares in route order. Maps are only looked up, never ranged
 // over in decisions.
 type haulState struct {
+	peerMeal   sense.PeerChoice
 	incoming   map[entity.EntityID]int
 	deliveries map[entity.EntityID][]haulShare
 	// storedAt (PLAY-023, haul_priority.go): the tick each stack was set
@@ -56,8 +58,12 @@ func booksOf(g *Game) *books.Books {
 // bookMind is game/books' Mind and Colony roles.
 type bookMind struct{ g *Game }
 
-func (h bookMind) Joy(id entity.EntityID) int                    { return h.g.joy[id] }
-func (h bookMind) SetJoy(id entity.EntityID, v int)              { h.g.joy[id] = v }
+func (h bookMind) Joy(id entity.EntityID) int { return joyForScheduling(h.g, id) }
+func (h bookMind) SetJoy(id entity.EntityID, v int) {
+	if recreationEligible(h.g, id) {
+		h.g.joy[id] = v
+	}
+}
 func (h bookMind) Learn(id entity.EntityID, sk skill.ID, xp int) { h.g.learn(id, sk, xp) }
 func (h bookMind) Level(id entity.EntityID, sk skill.ID) int     { return int(h.g.skillOf(id, sk).Level) }
 func (h bookMind) Study(p research.Project, n int)               { h.g.lab.Study(p, n, 0, 0) }
@@ -455,8 +461,7 @@ func (g *Game) spareTakes(st item.Stack, x, y int) bool {
 
 // cellCap is how many of k one stack on (x, y) holds: StackLimit, a hopper's HopperStack.
 func cellCap(g *Game, k item.Kind, x, y int) int {
-	z, _ := g.storageAt(x, y)
-	return z.Kind.StackCap(g.sk.content.Items.StackLimit(k))
+	return haul.CellLimit(g.sk.content.Items, g.zones, k, x, y)
 }
 
 // endDelivery completes a delivery whose load is all handed over.
@@ -466,4 +471,19 @@ func (g *Game) endDelivery(id entity.EntityID, j job.Record) {
 	j.State = job.Complete
 	j.Path = nil
 	g.jobs.Set(id, j)
+}
+
+// limitMigrationHost applies changed content limits after all maps and
+// claims have been loaded, retaining original stack entity identities.
+type limitMigrationHost struct{ haulHost }
+
+func (h limitMigrationHost) AppendStack(st item.Stack) {
+	id := h.g.entities.Next()
+	h.g.itemIDs = append(h.g.itemIDs, id)
+	h.g.putStack(id, st)
+}
+func (h limitMigrationHost) CancelClaim(id entity.EntityID) { h.g.interrupt(id, job.Cancelled) }
+func (h limitMigrationHost) FreeTile(st item.Stack, x, y int) bool {
+	g := h.g
+	return g.dryWalkable(x, y) && g.itemAt(x, y) == 0 && st.Qty <= cellCap(g, st.Kind, x, y)
 }

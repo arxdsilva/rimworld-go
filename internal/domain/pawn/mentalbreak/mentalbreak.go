@@ -43,6 +43,13 @@ type Def struct {
 
 const hour = 2500
 
+// Dementia confusion uses its own shorter wandering window, independent
+// of ordinary mood-break duration and incidence.
+const (
+	DementiaWanderDays  = 5
+	DementiaWanderTicks = 4 * hour
+)
+
 // def builds a Def. dur is the legacy fixed/minimum Duration current
 // callers use; lo..hi is the wiki range DurationFor draws from; weight is
 // the commonality times ten (0.5 -> 5).

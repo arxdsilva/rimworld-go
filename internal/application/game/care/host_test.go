@@ -21,37 +21,39 @@ import (
 // open plane (every tile reachable, paths are empty), buildings, a
 // reservation map and a record of what care asked the host to do.
 type fakeHost struct {
-	now       uint64
-	breaking  map[entity.EntityID]bool // Breaking (SIM-062)
-	hazard    map[entity.EntityID]bool // BedHazard (SIM-063)
-	pos       map[entity.EntityID][2]int
-	vital     map[entity.EntityID]health.Record
-	jobs      map[entity.EntityID]job.Record
-	bleed     map[entity.EntityID]int32
-	pawns     []entity.EntityID
-	raiders   []entity.EntityID
-	prisoners map[entity.EntityID]bool
-	animals   map[entity.EntityID]bool
-	drafted   map[entity.EntityID]bool
-	blocked   map[entity.EntityID]bool
-	doctors   map[entity.EntityID]bool
-	healing   map[entity.EntityID]int
-	sickRest  map[entity.EntityID]bool
-	sickStill map[entity.EntityID]bool
-	surgery   map[entity.EntityID]bool
-	hungry    map[entity.EntityID]bool
-	noBeds    bool                     // SleepInBed fails
-	tend      map[entity.EntityID]bool // needs tending
-	bldgIDs   []entity.EntityID
-	bldgs     map[entity.EntityID]construction.Building
-	owners    map[entity.EntityID]entity.EntityID
-	stacks    map[entity.EntityID]item.Stack
-	sleptAt   map[entity.EntityID]entity.EntityID
-	noPath    bool
-	work      int
-	log       []string
-	tended    map[entity.EntityID]int32
-	air       fakeAir // Climate (AIL-1): fakehost_climate_test.go
+	now        uint64
+	breaking   map[entity.EntityID]bool // Breaking (SIM-062)
+	hazard     map[entity.EntityID]bool // BedHazard (SIM-063)
+	pos        map[entity.EntityID][2]int
+	vital      map[entity.EntityID]health.Record
+	jobs       map[entity.EntityID]job.Record
+	bleed      map[entity.EntityID]int32
+	pawns      []entity.EntityID
+	raiders    []entity.EntityID
+	prisoners  map[entity.EntityID]bool
+	animals    map[entity.EntityID]bool
+	drafted    map[entity.EntityID]bool
+	blocked    map[entity.EntityID]bool
+	doctors    map[entity.EntityID]bool
+	healing    map[entity.EntityID]int
+	sickRest   map[entity.EntityID]bool
+	sickStill  map[entity.EntityID]bool
+	surgery    map[entity.EntityID]bool
+	hungry     map[entity.EntityID]bool
+	noBeds     bool                     // SleepInBed fails
+	tend       map[entity.EntityID]bool // needs tending
+	bldgIDs    []entity.EntityID
+	bldgs      map[entity.EntityID]construction.Building
+	owners     map[entity.EntityID]entity.EntityID
+	stacks     map[entity.EntityID]item.Stack
+	sleptAt    map[entity.EntityID]entity.EntityID
+	noPath     bool
+	openPrison map[entity.EntityID]bool
+	bedRefusal map[entity.EntityID]string
+	work       int
+	log        []string
+	tended     map[entity.EntityID]int32
+	air        fakeAir // Climate (AIL-1): fakehost_climate_test.go
 }
 
 func newFakeHost() *fakeHost {
@@ -102,9 +104,13 @@ func (h *fakeHost) Job(id entity.EntityID) (job.Record, bool) {
 	j, ok := h.jobs[id]
 	return j, ok
 }
-func (h *fakeHost) SetJob(id entity.EntityID, j job.Record)     { h.jobs[id] = j }
-func (h *fakeHost) Now() uint64                                 { return h.now }
-func (h *fakeHost) BleedPerDay(id entity.EntityID) int32        { return h.bleed[id] }
+func (h *fakeHost) SetJob(id entity.EntityID, j job.Record) { h.jobs[id] = j }
+func (h *fakeHost) Now() uint64                             { return h.now }
+func (h *fakeHost) BleedPerDay(id entity.EntityID) int32    { return h.bleed[id] }
+func (h *fakeHost) AnimalIDs() []entity.EntityID {
+	return slices.Sorted(maps.Keys(h.animals))
+}
+func (h *fakeHost) TameAnimal(id entity.EntityID) bool          { return h.animals[id] }
 func (h *fakeHost) PawnIDs() []entity.EntityID                  { return h.pawns }
 func (h *fakeHost) RaiderIDs() []entity.EntityID                { return h.raiders }
 func (h *fakeHost) IsPrisoner(id entity.EntityID) bool          { return h.prisoners[id] }
@@ -138,7 +144,7 @@ func (h *fakeHost) SleepCell(id entity.EntityID, b construction.Building) (int, 
 func (h *fakeHost) bedAt(id entity.EntityID) entity.EntityID {
 	p := h.pos[id]
 	for _, bid := range h.bldgIDs {
-		if b := h.bldgs[bid]; b.X == p[0] && b.Y == p[1] && b.SlotOf(uint64(id)) >= 0 {
+		if b := h.bldgs[bid]; b.X == p[0] && b.Y == p[1] && construction.BedSlot(b, uint64(id)) >= 0 {
 			return bid
 		}
 	}
@@ -256,3 +262,14 @@ func (h *fakeHost) Breaking(id entity.EntityID) bool { return h.breaking[id] }
 // W3 contract (SIM-063/064): no hazards, feeding records the call.
 func (h *fakeHost) BedHazard(bed entity.EntityID) bool  { return h.hazard[bed] }
 func (h *fakeHost) Feed(patient, carry entity.EntityID) { h.log = append(h.log, "feed") }
+
+func (h *fakeHost) BedWhy(bed, carrier entity.EntityID) string {
+	if why := h.bedRefusal[bed]; why != "" {
+		return why
+	}
+	if h.BedHazard(bed) {
+		return ReasonBedBurning
+	}
+	return ""
+}
+func (h *fakeHost) PrisonRoom(bed entity.EntityID) bool { return !h.openPrison[bed] }

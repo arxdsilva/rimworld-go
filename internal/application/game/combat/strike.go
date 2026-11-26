@@ -124,11 +124,21 @@ func (s *Strikes) StrikeRoll(attacker, target entity.EntityID, wk weapon.Kind, r
 	s.strike(attacker, target, wk, roll)
 }
 
+// StrikeBrawl uses the social RNG and excludes implanted body weapons
+// such as the power claw. Arm prostheses still contribute their fists.
+func (s *Strikes) StrikeBrawl(attacker, target entity.EntityID, roll func(int) int) {
+	s.strikeMode(attacker, target, weapon.Fists, roll, true)
+}
+
 // strike is StrikeRoll, returning the profile the attack was made with (a
 // melee tool's, whose cooldown follows; a gun's when it fired). A
 // humanlike beside its target fights with a tool (melee.go): its melee
 // weapon's, or its gun's stock rather than a point-blank shot (CBT-2).
 func (s *Strikes) strike(attacker, target entity.EntityID, wk weapon.Kind, roll func(int) int) weapon.Def {
+	return s.strikeMode(attacker, target, wk, roll, false)
+}
+
+func (s *Strikes) strikeMode(attacker, target entity.EntityID, wk weapon.Kind, roll func(int) int, social bool) weapon.Def {
 	h := s.h
 	hk, d := s.natural(attacker, wk)
 	ax, ay, _ := h.Pos(attacker)
@@ -141,7 +151,7 @@ func (s *Strikes) strike(attacker, target entity.EntityID, wk weapon.Kind, roll 
 		return d
 	}
 	if s.melee(attacker, wk, d, ax, ay, tx, ty) {
-		return s.blow(attacker, target, wk, hk, d, ax, ay, tx, ty, roll)
+		return s.blow(attacker, target, wk, hk, d, ax, ay, tx, ty, roll, social)
 	}
 	if s.gear.Shielded(attacker) {
 		return d // CBT-3: a shield belt's wearer cannot shoot out

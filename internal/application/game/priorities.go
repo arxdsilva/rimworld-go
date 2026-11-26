@@ -38,7 +38,11 @@ func (g *Game) prioOf(id entity.EntityID) work.Priorities {
 }
 
 func (g *Game) setPriority(id entity.EntityID, t work.Type, v int) {
-	if _, ok := g.labor.Get(id); !ok {
+	if t >= work.NumTypes {
+		return
+	}
+	m, ok := g.labor.Get(id)
+	if !ok {
 		return
 	}
 	if v > 0 && g.incapableWork(id).Enabled(t) {
@@ -47,7 +51,7 @@ func (g *Game) setPriority(id entity.EntityID, t work.Type, v int) {
 	}
 	p := g.prioOf(id).Set(t, v)
 	g.prio[id] = p
-	g.labor.Set(id, p.Mask())
+	g.labor.Set(id, m.Set(t, v > 0))
 }
 
 // assignWorkByPriority starts the most urgent work the colonist can do. Only a fire
@@ -73,6 +77,13 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		return false // skills.go: incapable work is never assigned
 	}
 	switch t {
+	case work.Patient, work.BedRest:
+		if g.care.Rest.WorkType(id) != t {
+			return false
+		}
+		g.care.Rest.UpdateWork(id, g.prioOf(id), true)
+		j, _ := g.jobs.Get(id)
+		return g.care.Rest.Slot(id, j)
 	case work.Firefight:
 		return g.assignFightFire(id) // firefight.go
 	case work.Doctor:
@@ -87,10 +98,13 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Haul:
 		return g.haulUrgent(id) || g.assignRefuel(id) || ordersOf(g).AssignHaul(id) || travelOf(g).AssignLoad(id) || travelOf(g).AssignPack(id) || g.assignBury(id) || g.fillHoppers(id) || g.fillTroughs(id) ||
 			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || g.assignHaul(id) // WRK-007: urgent (STO-2), refuel, open, strip (AX-1), travel load (AX-9), corpses, hoppers (FOOD-4), troughs, bills, general
+	case work.Basic:
+		return g.assignFlick(id) || ordersOf(g).AssignBasic(id)
 	case work.Construct:
-		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first; WRK-004 and WRK-003 for the rest
-			ordersOf(g).AssignConstruct(id) || g.assignRoof(id) || g.assignConstruct(id) || g.assignDelivery(id) || g.assignRepair(id) || g.assignSmooth(id) // AX-1: uninstall, install
-	case work.Cook, work.Craft:
+		return ordersOf(g).AssignConstruct(id) || g.assignRoof(id) || g.assignConstruct(id) || g.assignDelivery(id) || g.assignRepair(id) || g.assignSmooth(id) // AX-1: uninstall, install
+	case work.Art:
+		return g.craft.Bills.AnyFor(t) && g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // avoid a second bench scan when no Art bills exist
+	case work.Cook, work.Craft, work.Smith, work.Tailor:
 		return g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // craft/shop.go
 	case work.Hunt:
 		return g.combat.Hunting.Assign(id) // combat/hunt.go
@@ -141,4 +155,20 @@ func (g *Game) setSchedule(id entity.EntityID, hour int, a schedule.Activity) {
 	s := g.scheduleOf(id)
 	s[hour] = a
 	g.scheds[id] = s
+}
+
+// updateRestWork preserves the normal clinical interruption at equal/top
+// priority; when explicitly lowered, admission runs in the work scheduler
+// after actual higher-priority available work. Existing care stays in bed.
+func (g *Game) updateRestWork(id entity.EntityID) {
+	pr := g.prioOf(id)
+	rank := pr[g.care.Rest.WorkType(id)]
+	admit := rank > 0
+	for _, v := range pr {
+		if v > 0 && v < rank {
+			admit = false
+			break
+		}
+	}
+	g.care.Rest.UpdateWork(id, pr, admit)
 }

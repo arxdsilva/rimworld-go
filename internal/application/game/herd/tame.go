@@ -54,11 +54,11 @@ func foodQty(s animal.Species, k item.Kind) int {
 func (t *Taming) Assign(id entity.EntityID) bool {
 	h := t.h
 	now, l := h.Now(), h.Animals(id)
-	if !h.AnyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.TameMark && !a.Tame }) {
+	if !h.AnyTameMarked() {
 		return false // nothing marked for taming (the job index)
 	}
 	aid, ax, ay, ok := h.Nearest(id, func(o entity.EntityID, a *animal.State) bool {
-		return Tameable(a, l, now) && !claimed(h, o)
+		return Tameable(a, l, now) && !h.ForeignOwned(o) && !claimed(h, o)
 	})
 	if !ok {
 		return false
@@ -80,7 +80,7 @@ func (t *Taming) Assign(id entity.EntityID) bool {
 func (t *Taming) Do(id entity.EntityID, j job.Record) {
 	h := t.h
 	a, ok := h.Animal(j.Target)
-	if !ok || a.Tame || !a.TameMark {
+	if !ok || a.Tame || !a.TameMark || h.ForeignOwned(j.Target) {
 		done(h, id, j)
 		return
 	}
@@ -107,7 +107,7 @@ func (t *Taming) Do(id entity.EntityID, j job.Record) {
 	}
 	t.feed(id, j)
 	a, _ = h.Animal(j.Target)
-	if h.Roll(1000) < Chance(h.Animals(id), a) {
+	if h.UseTameInspiration(id) || h.Roll(1000) < Chance(h.Animals(id), a) {
 		h.Tamed(id, j.Target)
 	} else {
 		h.TameFailed(id, j.Target)
@@ -137,7 +137,7 @@ func (t *Taming) feed(id entity.EntityID, j job.Record) {
 // one's twice as far), at most full.
 func eat(h Host, a *animal.State, st item.Stack) {
 	v := animal.Meal(a.Species, animal.FeedValue(animal.EcologyOf(a.Species).Diet, st.Kind)*st.Qty)
-	if !grown(*a, h.Now()) {
+	if !grown(h, *a, h.Now()) {
 		v *= animal.YoungMeal
 	}
 	a.Food = min(a.Food+v, animal.Full)

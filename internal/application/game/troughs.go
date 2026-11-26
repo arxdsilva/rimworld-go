@@ -4,7 +4,10 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/saveutil"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -13,9 +16,9 @@ import (
 
 // Trough feed filters.
 const (
-	TroughPlants uint8 = iota // straw, berries, raw vegetables
-	TroughMeat
-	TroughAny
+	TroughPlants = animal.TroughPlants
+	TroughMeat   = animal.TroughMeat
+	TroughAny    = animal.TroughAny
 )
 
 var troughFilterNames = [...]string{"plants", "meat", "any"}
@@ -24,6 +27,7 @@ var troughFilterNames = [...]string{"plants", "meat", "any"}
 type troughState struct {
 	Filter uint8
 	Food   map[item.Kind]int
+	Edit   command.ConfigEdit
 }
 
 // troughFill is how many food items trough id holds.
@@ -36,14 +40,21 @@ func (g *Game) troughFill(id entity.EntityID) int {
 }
 
 // setTroughFilter applies a SetTroughFilter command.
-func (g *Game) setTroughFilter(id entity.EntityID, f uint8) {
+func (g *Game) setTroughFilter(id entity.EntityID, f uint8) command.ConfigEdit {
 	if f > TroughAny {
-		return
+		return command.ConfigEdit{}
 	}
-	if b, ok := g.bldgs.Get(id); !ok || b.Kind.String() != "feeding trough" {
-		return
+	if _, ok := g.isTrough(id); !ok {
+		return command.ConfigEdit{}
 	}
 	t := g.troughs[id]
 	t.Filter = f
+	t.Edit = command.ConfigEdit{Revision: t.Edit.Revision + 1, Tick: uint64(g.Tick()), Kind: command.SetTroughFilter}
 	g.troughs[id] = t
+	return t.Edit
+}
+
+func cloneSaveTrough(t troughState) troughState {
+	t.Food = saveutil.OwnMap(true, t.Food)
+	return t
 }

@@ -19,7 +19,7 @@ import (
 // coreStream is Generate's stock and the next draw after it, hashed over
 // seeds 1..50 per trader kind and tech, recorded from the core-only body
 // before plugin goods could be stocked (the W1-trade baseline).
-// The key is "<trader kind>/<tech>"; kind 3 (NumKinds) is no trader.
+// The key is "<trader kind>/<tech>"; historical kind 3 was the invalid sentinel.
 var coreStream = map[string]string{
 	"0/0": "535dbfb823013c4a", "0/1": "e46bcf3e73f41880", "0/2": "e46bcf3e73f41880",
 	"1/0": "dd94a922cf15e3bb", "1/1": "101d652431835839", "1/2": "101d652431835839",
@@ -27,29 +27,63 @@ var coreStream = map[string]string{
 	"3/0": "1e56e0d3def0d8ac", "3/1": "1e56e0d3def0d8ac", "3/2": "1e56e0d3def0d8ac",
 }
 
-// streamHash hashes Generate's stock and the draw after it for seeds 1..50.
+// medicalAdded is the additive MED-14-only stock. The historical stream
+// contract still covers every pre-MED-14 item, quantity and next draw.
+func medicalAdded(k item.Kind) bool {
+	switch k {
+	case item.BlissCircuit, item.NerveDampener, item.AcidFailsafe,
+		item.AcousticImplant, item.ServoClaw, item.CochlearImplant,
+		item.ServoJaw, item.SynthTongue, item.ApexArm, item.ApexLeg,
+		item.ApexEye:
+		return true
+	}
+	return false
+}
+
+// streamHash hashes historical stock and the draw after it for seeds 1..50.
 func streamHash(b item.Book, k TraderKind, tech faction.Tech) string {
 	h := fnv.New64a()
 	for seed := uint64(1); seed <= 50; seed++ {
 		rng := randx.New(seed)
 		st := Generate(b, k, tech, rng)
-		fmt.Fprintf(h, "%d|%d|%v|%d;", seed, st.Silver, st.Lines, rng.IntN(1<<30))
+		// Preserve the pre-lot random-stream contract. New persisted
+		// physical fields do not consume random draws.
+		var lines []struct {
+			Kind     item.Kind
+			Qty      int
+			Building uint8
+		}
+		for _, l := range st.Lines {
+			if medicalAdded(l.Kind) {
+				continue
+			}
+			lines = append(lines, struct {
+				Kind     item.Kind
+				Qty      int
+				Building uint8
+			}{l.Kind, l.Qty, l.Building})
+		}
+		fmt.Fprintf(h, "%d|%d|%v|%d;", seed, st.Silver, lines, rng.IntN(1<<30))
 	}
 	return fmt.Sprintf("%016x", h.Sum64())
 }
 
-// TestGenerateCoreStreamUnchanged: with the core book, and with a book whose
-// plugin kinds no trader stocks, every trader kind and tech draws the stock
-// and leaves the stream exactly where the core-only Generate did.
+// TestGenerateCoreStreamUnchanged pins the three original traveling merchants
+// and the invalid kind's draw stream. New settlement kinds have their own
+// deterministic generation tests; the historical invalid sentinel was 3.
 func TestGenerateCoreStreamUnchanged(t *testing.T) {
 	t.Parallel()
 	books := map[string]item.Book{"core": {}, "no opt-in": testBook(item.Def{Label: "bell", Path: "Manufactured/Components", Value: 40})}
 	for name, b := range books {
-		for k := TraderKind(0); k <= NumKinds; k++ {
+		for _, k := range []TraderKind{BulkHauler, Quartermaster, CurioMerchant, NumKinds} {
 			for _, tech := range []faction.Tech{faction.Neolithic, faction.Industrial, faction.Spacer} {
-				key := fmt.Sprintf("%d/%d", k, tech)
+				historical := k
+				if k == NumKinds {
+					historical = TribalSettlement // the former invalid kind was 3
+				}
+				key := fmt.Sprintf("%d/%d", historical, tech)
 				if got := streamHash(b, k, tech); got != coreStream[key] {
-					t.Errorf("%s book, %s: stream %q, want %q", name, key, got, coreStream[key])
+					t.Errorf("%s book, %s (now %d): stream %q, want %q", name, key, k, got, coreStream[key])
 				}
 			}
 		}
@@ -101,12 +135,12 @@ func TestWantsPriceByBook(t *testing.T) {
 			}
 		}
 	}
-	// value 18 at Terms{}: buy 18 x 1.45; the curio's sell 18 x 0.5 plus its 10 % specialty.
-	if buy, sell := Price(b, bell, CurioMerchant, Buy, Terms{}), Price(b, bell, CurioMerchant, Sell, Terms{}); buy != 2610 || sell != 990 {
-		t.Fatalf("bell at the curio: buy %d sell %d, want 2610 990", buy, sell)
+	// A plugin good follows the same 140% buy / 60% sell Core coefficients.
+	if buy, sell := Price(b, bell, CurioMerchant, Buy, Terms{}), Price(b, bell, CurioMerchant, Sell, Terms{}); buy != 2520 || sell != 1080 {
+		t.Fatalf("bell at the curio: buy %d sell %d, want 2520 1080", buy, sell)
 	}
-	if sell := Price(b, bell, BulkHauler, Sell, Terms{}); sell != 900 {
-		t.Fatalf("bell at the bulk hauler sells %d, want 900 (no specialty)", sell)
+	if sell := Price(b, bell, BulkHauler, Sell, Terms{}); sell != 1080 {
+		t.Fatalf("bell at the bulk hauler sells %d, want 1080 (Core price unaffected by trader inventory category)", sell)
 	}
 	if !Wants(b, CurioMerchant, bell) || Wants(b, BulkHauler, bell) || Wants(b, Quartermaster, bell) {
 		t.Fatal("only the curio merchant wants a Manufactured plugin good")
@@ -114,9 +148,9 @@ func TestWantsPriceByBook(t *testing.T) {
 	if !Wants(b, BulkHauler, ore) || Wants(b, CurioMerchant, ore) || Wants(b, Quartermaster, ore) {
 		t.Fatal("only the bulk hauler wants a Raw-resources plugin good")
 	}
-	// the bulk hauler's Materials specialty pays the ore 10 % more than the quartermaster
-	if Price(b, ore, BulkHauler, Sell, Terms{}) <= Price(b, ore, Quartermaster, Sell, Terms{}) {
-		t.Fatal("the bulk hauler's specialty does not cover Raw-resources plugin goods")
+	// A trader's specialty controls stocking choices; the common Core price applies.
+	if Price(b, ore, BulkHauler, Sell, Terms{}) != Price(b, ore, Quartermaster, Sell, Terms{}) {
+		t.Fatal("inventory category changed the published sell price")
 	}
 	for k := TraderKind(0); k < NumKinds; k++ {
 		if Wants(b, k, dust) || Price(b, dust, k, Buy, Terms{}) != 0 || Wants(b, k, item.None) {
@@ -125,19 +159,19 @@ func TestWantsPriceByBook(t *testing.T) {
 	}
 	// selling and gifting price the plugin good by the book
 	st := Stock{Kind: CurioMerchant, Silver: 1000}
-	if r := Settle(b, []Delta{{Kind: bell, Qty: -3}}, map[item.Kind]int{bell: 3}, st, Terms{}, false); !r.OK() || r.SilverCenti != 3*990 {
+	if r := Settle(b, []Delta{{Kind: bell, Qty: -3}}, map[item.Kind]int{bell: 3}, st, Terms{}, false); !r.OK() || r.SilverCenti != 3*1080 {
 		t.Fatalf("selling 3 bells: %+v", r)
 	}
 	if r := Settle(b, []Delta{{Kind: bell, Qty: -3}}, map[item.Kind]int{bell: 3}, Stock{Kind: BulkHauler, Silver: 1000}, Terms{}, false); r.Reject != RejectUnwanted {
 		t.Fatalf("the bulk hauler took bells: %+v", r)
 	}
-	if v := GiftValue(b, []Delta{{Kind: bell, Qty: -3}, {Kind: item.Silver, Qty: -10}}); v != 3*18+10 {
-		t.Fatalf("gift value %d, want %d", v, 3*18+10)
+	if v := GiftValue(b, []Delta{{Kind: bell, Qty: -3}, {Kind: item.Silver, Qty: -10}}, Terms{FactionType: faction.Settlers}); v != 42 {
+		t.Fatalf("gift value %d, want 42", v)
 	}
 	if r := Settle(b, []Delta{{Kind: dust, Qty: -1}}, map[item.Kind]int{dust: 1}, st, Terms{}, true); r.Reject != RejectUnwanted {
 		t.Fatalf("a value-0 gift: %+v", r)
 	}
-	if r := Settle(b, []Delta{{Kind: bell, Qty: -2}}, map[item.Kind]int{bell: 2}, st, Terms{}, true); !r.OK() || r.Goodwill != faction.GiftGoodwill(36) {
+	if r := Settle(b, []Delta{{Kind: bell, Qty: -2}}, map[item.Kind]int{bell: 2}, st, Terms{FactionType: faction.Settlers}, true); !r.OK() || r.Goodwill != faction.GiftGoodwill(faction.Faction{Type: faction.Settlers}, GiftValue(b, []Delta{{Kind: bell, Qty: -2}}, Terms{FactionType: faction.Settlers})) {
 		t.Fatalf("a gift of 2 bells: %+v", r)
 	}
 }
@@ -239,5 +273,33 @@ func TestGenerateStocksOptIns(t *testing.T) {
 	}
 	if a, c := Generate(b, CurioMerchant, faction.Spacer, randx.New(9)), Generate(b, CurioMerchant, faction.Spacer, randx.New(9)); fmt.Sprint(a) != fmt.Sprint(c) {
 		t.Fatal("the same seed stocks differently")
+	}
+}
+
+// New medical devices must actually appear in generated core stock without
+// modifying the seeded pre-MED merchant goods or the caller RNG.
+func TestCurioMerchantStocksCoreMedicalImplants(t *testing.T) {
+	t.Parallel()
+	seen := make(map[item.Kind]bool)
+	for seed := uint64(1); seed <= 250; seed++ {
+		stock := Generate(item.Book{}, CurioMerchant, faction.Spacer, randx.New(seed))
+		for _, l := range stock.Lines {
+			if medicalAdded(l.Kind) {
+				if l.Qty != 1 {
+					t.Fatalf("seed %d: MED-14 implant stock %+v", seed, l)
+				}
+				seen[l.Kind] = true
+			}
+		}
+	}
+	for _, kind := range [...]item.Kind{
+		item.BlissCircuit, item.NerveDampener, item.AcidFailsafe,
+		item.AcousticImplant, item.ServoClaw, item.CochlearImplant,
+		item.ServoJaw, item.SynthTongue, item.ApexArm, item.ApexLeg,
+		item.ApexEye,
+	} {
+		if !seen[kind] {
+			t.Errorf("no generated curio merchant stocked MED-14 %v", kind)
+		}
 	}
 }

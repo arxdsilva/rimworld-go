@@ -84,7 +84,7 @@ func (o Ops) TickPass(now uint64, colony bool) {
 // The concerns' entry points the game calls.
 
 // Sleeper is who lies in casket id (0: empty).
-func (o Ops) Sleeper(id entity.EntityID) entity.EntityID { return o.s.caskets[id] }
+func (o Ops) Sleeper(id entity.EntityID) entity.EntityID { return o.s.Sleeper(id) }
 
 // AssignLoad starts hauler id on what a pod group waits for (Haul work).
 func (o Ops) AssignLoad(id entity.EntityID) bool { return pods(o).AssignLoad(id) }

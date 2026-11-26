@@ -73,14 +73,7 @@ func (g *Game) canGrieve(c entity.EntityID) bool {
 // addGrief gives c a grief thought about subject lasting days, shown as
 // label ("": the def's).
 func (g *Game) addGrief(c, subject entity.EntityID, d social.GriefDef, label string, now uint64) {
-	m := g.memories[c].AddLabeled(mood.Grief, uint64(subject), d.Mood, label, now)
-	// mood.Grief has no duration of its own: the relation's sets it.
-	for i := range m {
-		if m[i].Kind == mood.Grief && m[i].Subject == uint64(subject) && m[i].Expires == now {
-			m[i].Expires = now + uint64(d.Days)*clock.TicksPerDay
-		}
-	}
-	g.memories[c] = m
+	g.memories[c] = g.memories[c].AddLabeledUntil(mood.Grief, uint64(subject), d.Mood, label, now, now+uint64(d.Days)*clock.TicksPerDay)
 }
 
 // grieve gives every tie of id its grief (lost: missing, not dead) and,
@@ -167,13 +160,12 @@ func (g *Game) socialOnReturned(id entity.EntityID) {
 		if len(m) == 0 {
 			continue
 		}
-		out := m[:0]
-		for _, x := range m {
-			if !(x.Kind == mood.Grief && x.Subject == uint64(id)) {
-				out = append(out, x)
-			}
+		out := m.ForgetSubject(mood.Grief, uint64(id))
+		if len(out) == 0 {
+			delete(g.memories, c)
+		} else {
+			g.memories[c] = out
 		}
-		g.memories[c] = out
 	}
 	g.addHistory("returned", g.personName(id)+" came back.", id)
 }

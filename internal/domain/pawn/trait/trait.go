@@ -390,3 +390,75 @@ func sortedSkills[V any](m map[skill.ID]V) []skill.ID {
 	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
 	return out
 }
+
+// ImplantMood is the instantaneous thought for a body-augmentation trait.
+// wiki: Body modder and Body purist (published mood stages).
+// Local trait names and descriptions remain original.
+func ImplantMood(t ID, count int) int {
+	switch t {
+	case AugmentFan:
+		if count == 0 {
+			return -4
+		}
+		stages := [...]int{4, 7, 9, 11, 12, 13}
+		return stages[min(count, len(stages))-1]
+	case NaturalPurist:
+		if count == 0 {
+			return 0
+		}
+		return -min(5*(count+1), 35) // wiki: Body purist (sixth and later at -35)
+	}
+	return 0
+}
+
+// AppendImplantThoughts adds state thoughts for implant-sensitive traits.
+func AppendImplantThoughts(dst []mood.Thought, traits []ID, implants int) []mood.Thought {
+	for _, id := range traits {
+		var kind mood.Kind
+		switch id {
+		case AugmentFan:
+			kind = mood.AugmentFan
+		case NaturalPurist:
+			kind = mood.NaturalPurist
+		default:
+			continue
+		}
+		d := mood.DefOf(kind)
+		dst = append(dst, mood.Thought{Kind: kind, Label: d.Label, Value: ImplantMood(id, implants)})
+	}
+	return dst
+}
+
+// ApplyThoughts applies the frozen trait book, work passion and difficulty.
+func ApplyThoughts(tb Book, ids []ID, ts []mood.Thought, passion skill.Passion, off int) []mood.Thought {
+	if len(ids) > 0 {
+		for i := range ts {
+			for _, t := range ids {
+				d := tb.DefOf(t)
+				if sc, ok := d.ThoughtScale[ts[i].Kind]; ok {
+					ts[i].Value = ts[i].Value * int(sc) / 100
+				}
+				if add, ok := d.AddThought[ts[i].Kind]; ok {
+					ts[i].Value += int(add)
+				}
+			}
+		}
+		for _, t := range ids {
+			for _, m := range tb.DefOf(t).Mods {
+				if m.Stat == stat.MoodOffset && m.Add != 0 {
+					ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: strings.ToLower(tb.DefOf(t).Label), Value: int(m.Add)})
+				}
+			}
+		}
+	}
+	switch passion {
+	case skill.Minor:
+		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.DefOf(mood.LovesWork).Label, Value: mood.DefOf(mood.LovesWork).Value})
+	case skill.Major:
+		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.DefOf(mood.LovesWork).Label, Value: 4})
+	}
+	if off != 0 {
+		ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: mood.DefOf(mood.Difficulty).Label, Value: off})
+	}
+	return ts
+}

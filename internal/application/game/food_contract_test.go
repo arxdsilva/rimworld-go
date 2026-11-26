@@ -5,6 +5,7 @@ package game
 
 import (
 	"reflect"
+	"rimworld-go/internal/application/game/viewmodel"
 	"slices"
 	"testing"
 
@@ -124,11 +125,11 @@ func TestFoodContractBuildingsAndKinds(t *testing.T) {
 
 // TestSameItemViewSeesEveryField: the item list's identity memo
 // (item_view.go) compares every ItemView field, so a field added later
-// and left out of sameItemView fails here.
+// and left out of viewmodel.EqualItem fails here.
 func TestSameItemViewSeesEveryField(t *testing.T) {
 	t.Parallel()
 	var a ItemView
-	if !sameItemView(a, a) {
+	if !viewmodel.EqualItem(a, a) {
 		t.Fatal("a view differs from itself")
 	}
 	typ := reflect.TypeOf(a)
@@ -154,8 +155,8 @@ func TestSameItemViewSeesEveryField(t *testing.T) {
 		default:
 			t.Fatalf("field %s: kind %s not covered by this test", typ.Field(i).Name, f.Kind())
 		}
-		if sameItemView(a, b) {
-			t.Errorf("sameItemView misses field %s", typ.Field(i).Name)
+		if viewmodel.EqualItem(a, b) {
+			t.Errorf("viewmodel.EqualItem misses field %s", typ.Field(i).Name)
 		}
 	}
 }

@@ -17,9 +17,9 @@ import (
 // somewhere around the target, nearer for a better aim), and an aimed shot
 // can still be caught by the target's cover. It then flies its line cell
 // by cell: rock, walls and doors stop it, and a creature in its way may
-// take it (friendly fire), except the shooter's allies close to the
-// muzzle. On arrival an aimed shot strikes its target if it still stands
-// there; any other shot strikes something in the cell half the time.
+// take it (friendly fire), except anything close to the muzzle. On
+// arrival an aimed shot strikes its target if it still stands there; any
+// other shot strikes something in the cell half the time.
 // Every roll is on the main stream; Step runs once a tick and the slice is
 // reused, so a shot costs no allocation.
 //
@@ -214,7 +214,7 @@ func (s *Shots) through(sh *projectile.Shot, x, y int) bool {
 	if downed {
 		c = c * attack.DownedIntercept / 1000
 	}
-	c = c * attack.InterceptScale(weapon.Range(sh.FromX, sh.FromY, x, y)) / 1000
+	c = c * attack.DistanceInterceptFactor(x-sh.FromX, y-sh.FromY) / 1000
 	if c > 0 {
 		c = c * attack.Permille(s.ffPct(sh, v)) / 100
 	}

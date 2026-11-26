@@ -4,12 +4,20 @@
 package travel
 
 import (
+	"fmt"
+	"rimworld-go/internal/domain/world/planet"
 	"slices"
 	"strconv"
 	"strings"
 
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mentalbreak"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/caravan"
 	"rimworld-go/pkg/mathx"
 )
 
@@ -38,10 +46,33 @@ func RelationWord(r faction.Relation) string {
 	return "neutral"
 }
 
-// SettlementViews lists every settlement of the peoples fs (the defeated
-// left out), faction by faction, capital first; name names a tile whose
-// faction recorded no name ("" none: "a settlement of <faction>").
-func SettlementViews(fs []faction.Faction, name func(t int) string) []SiteView {
+// SettlementFaction returns 1 + the faction index controlling tile t.
+func SettlementFaction(fs []faction.Faction, t int) int {
+	for i, f := range fs {
+		if slices.Contains(f.Settlements, t) {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+// TileName prefers the planet's generated name, then the faction,
+// then the neutral tile identifier.
+func TileName(p *planet.Planet, fs []faction.Faction, t int) string {
+	if p != nil {
+		if name := p.SettlementName(t); name != "" {
+			return name
+		}
+	}
+	if id := SettlementFaction(fs, t); id != 0 {
+		return "a settlement of " + fs[id-1].Name
+	}
+	return fmt.Sprintf("tile %d", t)
+}
+
+// SettlementViews lists existing settlements, capital first; the planet
+// supplies a fallback name when the faction has none recorded.
+func SettlementViews(fs []faction.Faction, p *planet.Planet) []SiteView {
 	var out []SiteView
 	for i := range fs {
 		f := &fs[i]
@@ -53,14 +84,14 @@ func SettlementViews(fs []faction.Faction, name func(t int) string) []SiteView {
 			if k < len(f.SettlementNames) {
 				n = f.SettlementNames[k]
 			}
-			if n == "" {
-				n = name(t)
+			if n == "" && p != nil {
+				n = p.SettlementName(t)
 			}
 			if n == "" {
 				n = "a settlement of " + f.Name
 			}
 			out = append(out, SiteView{Tile: t, Name: n, Faction: f.Name, Relation: RelationWord(f.Relation),
-				Visitable: f.Type.Human() && f.Relation != faction.Hostile})
+				Visitable: f.CanVisit()})
 		}
 	}
 	return out
@@ -168,10 +199,76 @@ func ExitBeside(cells [][2]int, open, busy func(x, y int) bool) (int, int, bool)
 type CaravanView struct {
 	ID      uint64
 	Members []string
+	Cargo   []item.Stack // physical cargo, copied from the travel owner
 	// Health is each member's short health note, parallel to Members
 	// ("bleeding", "flu", "food poisoning"; "" when well; WS-M).
 	Health     []string
 	Tile, Dest int
 	Progress   int
 	State      string
+	// MemberFacts is parallel to Members and Health, with stable identities
+	// even when multiple members have the same displayed name.
+	MemberFacts []CaravanMemberFacts
+	Split       SplitView
+	TravelState caravan.State
+	// FoodDays is the native road food budget in milli-days, not a sum
+	// of the physical Cargo stacks. Forming caravans have no assigned budget.
+	FoodDays  int32
+	FoodKnown bool
+	// SpeedPermil is the native walking speed multiplier; TilesPerDay is
+	// the difficulty-1 travel rate with nights off. Forming has no fixed speed.
+	SpeedPermil                       int32
+	TilesPerDay                       float64
+	Moving, Resting, WaitingEncounter bool
+}
+
+// CaravanMemberFacts are read-only native need and mood observations.
+// A missing off-map mood sample is unknown, not a zero mood. BreakTier is
+// the mood threshold tier, not a prediction that an off-map break will fire.
+type CaravanMemberFacts struct {
+	ID           entity.EntityID
+	Name, Health string
+	Hunger       int // 0..needs.Full
+	HungerBand   needs.Band
+	HungerKnown  bool
+	Mood         int // 0..100
+	MoodKnown    bool
+	BreakTier    mentalbreak.Tier
+	ActiveBreak  bool
+}
+
+// MemberHealth formats the native health facts without consulting a map.
+func MemberHealth(status health.Status, b *body.Body, disease string, infected bool) string {
+	if status == health.Dead {
+		return "dead"
+	}
+	var out []string
+	if b != nil && b.BleedPerDay() > 0 {
+		out = append(out, "bleeding")
+	}
+	if status == health.Downed {
+		out = append(out, "down")
+	}
+	if disease != "" {
+		out = append(out, disease)
+	}
+	if _, ok := b.Poisoned(); ok {
+		out = append(out, "food poisoning")
+	}
+	if infected {
+		out = append(out, "infection")
+	}
+	if len(out) == 0 && b != nil && body.HasOpenWound(b) {
+		out = append(out, "injured")
+	}
+	return strings.Join(out, ", ")
+}
+
+// MemberFacts projects sampled needs and mood without reading map-local thoughts.
+func MemberFacts(id entity.EntityID, name string, n needs.Pair, nok bool, m int, mok, active bool, offset int) CaravanMemberFacts {
+	v := CaravanMemberFacts{ID: id, Name: name, Hunger: n.Hunger, HungerBand: n.Band, HungerKnown: nok, Mood: m, MoodKnown: mok, ActiveBreak: active}
+	if mok {
+		v.BreakTier = mentalbreak.TierAt(m, mentalbreak.ShiftThresholds(mentalbreak.DefaultThresholds(), offset))
+	}
+	return v
 }

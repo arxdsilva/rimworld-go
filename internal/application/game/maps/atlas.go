@@ -6,6 +6,8 @@ package maps
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/travel"
+
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/caravan"
@@ -133,6 +135,7 @@ type Request struct {
 	Caravan uint64
 	Lump    item.Kind
 	Qty     int
+	Cells   int  // exact promised ore cells
 	Centre  bool // a settlement attack enters at the map's centre (pods, MAP-05)
 	// Trouble is what Caravan met, from Faction (1 + index); Resume its
 	// state on the road before it stopped (MAP-08).
@@ -172,6 +175,10 @@ func (a *Atlas) Clone() *Atlas {
 	c := &Atlas{Next: a.Next, Maps: slices.Clone(a.Maps), Queue: slices.Clone(a.Queue)}
 	for i := range c.Maps {
 		c.Maps[i].Cells = slices.Clone(c.Maps[i].Cells)
+	}
+	for i := range c.Queue {
+		r := &c.Queue[i]
+		r.Cells = travel.SiteCells(r.Lump, r.Qty, r.Cells)
 	}
 	return c
 }
@@ -280,4 +287,16 @@ func (a *Atlas) Countdown(id uint32, now uint64) int {
 // exiting reports a forming caravan from map id with members still on it.
 func (f Fleet) exiting(id uint32) bool {
 	return slices.ContainsFunc(*f.list, func(c Caravan) bool { return c.Map == id && len(c.Exiting) > 0 })
+}
+
+// IsColony identifies a permanent colony; the first map has no atlas row.
+func IsColony(a *Atlas, id uint32) bool {
+	if id == 0 {
+		return true
+	}
+	if a == nil {
+		return false
+	}
+	m := a.Meta(id)
+	return m != nil && m.Kind == Colony
 }

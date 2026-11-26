@@ -25,7 +25,7 @@ const (
 	TrainToggled uint8 = 0x80
 )
 
-var trainLabels = [training.NumSkills]string{training.Obedience: "Obedience", training.Guard: "Guard", training.Release: "Release"}
+var trainLabels = [training.NumSkills]string{training.Obedience: "Obedience", training.Guard: "Guard", training.Release: "Release", training.Haul: "Haul"}
 
 // TrainLabel is a skill's display name.
 func TrainLabel(s training.Skill) string {
@@ -35,21 +35,16 @@ func TrainLabel(s training.Skill) string {
 	return trainLabels[s]
 }
 
-// CanLearn reports whether species sp can learn s at all: Obedience any
-// tame animal but hive insects, Guard fighters and pets, Release
-// predators.
+// CanLearn uses the species training class rather than combat heuristics.
 func CanLearn(sp animal.Species, s training.Skill) bool {
-	d := animal.DefOf(sp)
-	if d.Hive {
-		return false
-	}
+	class := animal.TrainabilityOf(sp)
 	switch s {
-	case training.Obedience:
-		return true
-	case training.Guard:
-		return animal.Fighter(sp) || animal.RosterOf(sp).Behaviour == animal.Pet
+	case training.Obedience, training.Guard:
+		return class >= animal.TrainSimple
 	case training.Release:
-		return d.Predator
+		return class >= animal.TrainIntermediate
+	case training.Haul:
+		return class >= animal.TrainAdvanced
 	}
 	return false
 }
@@ -58,36 +53,31 @@ func CanLearn(sp animal.Species, s training.Skill) bool {
 func TrainDefault(s training.Skill) bool { return s == training.Obedience }
 
 // TrainOn reports whether skill s is on for a.
-func TrainOn(a animal.State, s training.Skill) bool {
+func TrainOn(a animal.State, s training.Skill, m ...training.Maintenance) bool {
 	if s >= training.NumSkills || !CanLearn(a.Species, s) {
 		return false
 	}
-	return TrainDefault(s) != (a.Trained[s]&TrainToggled != 0)
+	return TrainDefault(s) != (trainingByte(a, s, m)&TrainToggled != 0)
 }
 
-// TrainSteps is a's steps of s as of now (decayed since the last
-// session).
-func TrainSteps(a animal.State, s training.Skill, now uint64) uint8 {
+// TrainSteps reads authoritative saved progress; maintenance settles decay.
+func TrainSteps(a animal.State, s training.Skill, _ uint64, m ...training.Maintenance) uint8 {
 	if s >= training.NumSkills {
 		return 0
 	}
-	steps := a.Trained[s] &^ TrainToggled
-	if a.TrainDecay == 0 || now <= a.TrainDecay {
-		return steps
-	}
-	return training.Decay(s, steps, now-a.TrainDecay)
+	return trainingByte(a, s, m) &^ TrainToggled
 }
 
 // TrainLearned reports whether a knows s now.
-func TrainLearned(a animal.State, s training.Skill, now uint64) bool {
-	return training.Learned(s, TrainSteps(a, s, now))
+func TrainLearned(a animal.State, s training.Skill, now uint64, m ...training.Maintenance) bool {
+	return training.Learned(s, TrainSteps(a, s, now, m...))
 }
 
 // NextTrainSkill is the skill a's next session works on: the first on and
 // unlearned one, Guard and Release only once Obedience is learned.
-func NextTrainSkill(a animal.State, now uint64) (training.Skill, bool) {
+func NextTrainSkill(a animal.State, now uint64, m ...training.Maintenance) (training.Skill, bool) {
 	for s := training.Skill(0); s < training.NumSkills; s++ {
-		if !TrainOn(a, s) || TrainLearned(a, s, now) {
+		if !TrainOn(a, s, m...) || TrainLearned(a, s, now, m...) {
 			continue
 		}
 		if s != training.Obedience && !TrainLearned(a, training.Obedience, now) {
@@ -101,4 +91,22 @@ func NextTrainSkill(a animal.State, now uint64) (training.Skill, bool) {
 // TrainDue reports whether animal id's next session may start now.
 func TrainDue(id entity.EntityID, a animal.State, now uint64) bool {
 	return a.TrainDecay == 0 || now >= a.TrainDecay+TrainCooldown+uint64(id)%TrainJitter
+}
+
+// TrainingSlot is the byte owned by the legacy array or the global training
+// owner, preserving the historical fixed-width Gob array.
+func TrainingSlot(a *animal.State, m *training.Maintenance, s training.Skill) *uint8 {
+	if s == training.Haul {
+		return &m.HaulProgress
+	}
+	return &a.Trained[s]
+}
+func trainingByte(a animal.State, s training.Skill, m []training.Maintenance) uint8 {
+	if s == training.Haul {
+		if len(m) > 0 {
+			return m[0].HaulProgress
+		}
+		return 0
+	}
+	return a.Trained[s]
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"rimworld-go/internal/domain/sim/clock"
 	"sort"
 
 	"rimworld-go/internal/domain/world/biome"
@@ -210,7 +211,7 @@ func (p *Planet) climate(i int) temperature.Climate {
 	if p.Lat[i] < 0 {
 		peak = peakSouth
 	}
-	return temperature.Climate{YearMean: int(p.Temp[i]), Amplitude: amp, PeakDay: peak, DaySwing: swing}
+	return (temperature.Climate{YearMean: int(p.Temp[i]), Amplitude: amp, PeakDay: peak, DaySwing: swing}).WithCalendar(p.Params.Calendar)
 }
 
 // GrowingDays is the growing period at tile i (of 60): days with a mean
@@ -388,7 +389,7 @@ func finish(p *Planet) {
 		}
 		w := uint32(1)
 		if biome.DefOf(p.Biome[i]).Difficulty != "extreme" && p.Hill[i] <= site.LargeHills &&
-			p.GrowingDays(i) >= landingGrowDays {
+			p.GrowingDays(i)*clock.DaysPerYear >= landingGrowDays*p.Params.Calendar.YearDays() {
 			w = landingPreferred
 		}
 		total += w
@@ -425,6 +426,9 @@ func (p Params) Key() string {
 	fmt.Fprintf(h, "%q|%d|%d|%d|%d|%d|", p.SeedText, p.Coverage, p.Rain, p.Temp, p.Pop, p.Version)
 	for _, s := range p.Factions {
 		fmt.Fprintf(h, "%d:%d,", s.Type, s.Count)
+	}
+	if p.Calendar != (clock.CalendarPolicy{}) {
+		fmt.Fprintf(h, "calendar:%d:%d", p.Calendar.QuadrumDays(), p.Calendar.Revision)
 	}
 	return fmt.Sprintf("%016x", h.Sum64())
 }

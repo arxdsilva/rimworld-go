@@ -42,6 +42,8 @@ type regionState struct {
 	rooms     roomIndex        // rooms_index.go
 	budget    pathstage.Budget // paths.go pathToJob
 	paths     pathstage.Stage  // the movement phase's queued searches (paths.go runRepaths)
+
+	pawnPaths pathstage.PawnStage // batched colonist replans, opt-in pool
 }
 
 type specialCell struct {
@@ -174,67 +176,17 @@ func (g *Game) layerBits(l region.Layer) []uint64 {
 	return rs.bits[l]
 }
 
-// sameSet reports that two cached tile sets are the same one (not just
-// equal): a query built before a building change holds an older set.
-func sameSet(a, b tileSet) bool {
-	return len(a) == len(b) && (len(a) == 0 || &a[0] == &b[0])
-}
-
-// moverLayer is the layer pathTo plans id with (pathQuery's choice).
-func (g *Game) moverLayer(id entity.EntityID) region.Layer {
-	switch {
-	case g.sapper(id):
-		return region.Sapper
-	case g.isRaider(id):
-		return region.Hostile
-	}
-	return region.Colonist
-}
-
 // reachRegions answers reachable(id, x, y) from the region labels, with
 // pathTo's rules: the mover's own cell is reached; a walkable target must
 // share a component with the start; an unwalkable one is reached from
 // beside it (already adjacent, or any walkable 8-neighbour reachable).
 func (g *Game) reachRegions(id entity.EntityID, x, y int) bool {
 	pos, _ := g.positions.Get(id)
-	if pos.X == x && pos.Y == y {
-		return true
-	}
-	l := g.moverLayer(id)
-	m := g.regionsNow()
-	if m.Label(l, x, y) >= 0 {
-		return m.Reach(l, pos.X, pos.Y, x, y)
-	}
-	if pathing.Adjacent(pos.X, pos.Y, x, y) {
-		return true
-	}
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if (dx != 0 || dy != 0) && m.Label(l, x+dx, y+dy) >= 0 && m.Reach(l, pos.X, pos.Y, x+dx, y+dy) {
-				return true
-			}
-		}
-	}
-	return false
+	l := pathstage.MoverLayer(g.sapper(id), g.isRaider(id))
+	return pathstage.ReachRegions(g.regionsNow(), l, pos.X, pos.Y, x, y, func(x, y int) bool { return cellStandable(g, x, y) })
 }
 
 // --- pathing.Reacher / pathing.Bitset on the game's path queries ---------
-
-// plainQuery hides a query's optional extensions (self-check searches).
-type plainQuery struct{ pathing.Query }
-
-// checkReach, under the test self-check, proves a "no path" region answer
-// with a full search.
-// It is generic so a query is boxed only when it is checked (a Reach
-// call stays allocation-free).
-func checkReach[Q pathing.Query](g *Game, q Q, sx, sy, tx, ty int, got bool) bool {
-	if !got && checkIndex(g) {
-		if _, ok := pathing.Find(plainQuery{q}, sx, sy, tx, ty); ok {
-			panic("regions: Reach said no, A* found a path")
-		}
-	}
-	return got
-}
 
 // colonyQuery is the grid as the colony's own creatures walk it, with the
 // region extensions (tame animals with no fences on the map).
@@ -248,7 +200,8 @@ func (q colonyQuery) Reach(sx, sy, tx, ty int) bool {
 	if q.g.noRegions() {
 		return true
 	}
-	return checkReach(q.g, q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+	got := q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty)
+	return pathstage.CheckReach(q, sx, sy, tx, ty, got, !got && checkIndex(q.g))
 }
 
 // hostileReady reports that h's door set is the current one the regions
@@ -258,14 +211,15 @@ func (h hostileMap) regionsReady() bool {
 		return false
 	}
 	h.g.regionsNow()
-	return sameSet(h.doors, h.g.regs.doors)
+	return pathstage.SameBacking(h.doors, h.g.regs.doors)
 }
 
 func (h hostileMap) Reach(sx, sy, tx, ty int) bool {
 	if !h.regionsReady() {
 		return true
 	}
-	return checkReach(h.g, h, sx, sy, tx, ty, h.g.regs.m.Reach(region.Hostile, sx, sy, tx, ty))
+	got := h.g.regs.m.Reach(region.Hostile, sx, sy, tx, ty)
+	return pathstage.CheckReach(h, sx, sy, tx, ty, got, !got && checkIndex(h.g))
 }
 
 func (h hostileMap) BlockedBits() []uint64 {
@@ -278,14 +232,15 @@ func (h hostileMap) BlockedBits() []uint64 {
 // sapperMap embeds hostileMap but also shuts traps: it must not inherit
 // hostileMap's extensions.
 func (s sapperMap) regionsReady() bool {
-	return s.hostileMap.regionsReady() && sameSet(s.traps, s.g.regs.traps)
+	return s.hostileMap.regionsReady() && pathstage.SameBacking(s.traps, s.g.regs.traps)
 }
 
 func (s sapperMap) Reach(sx, sy, tx, ty int) bool {
 	if !s.regionsReady() {
 		return true
 	}
-	return checkReach(s.g, s, sx, sy, tx, ty, s.g.regs.m.Reach(region.Sapper, sx, sy, tx, ty))
+	got := s.g.regs.m.Reach(region.Sapper, sx, sy, tx, ty)
+	return pathstage.CheckReach(s, sx, sy, tx, ty, got, !got && checkIndex(s.g))
 }
 
 func (s sapperMap) BlockedBits() []uint64 {
@@ -324,7 +279,8 @@ func (q fenceQuery) Reach(sx, sy, tx, ty int) bool {
 	if !ok {
 		return true
 	}
-	return checkReach(q.g, q, sx, sy, tx, ty, q.g.regionsNow().Reach(l, sx, sy, tx, ty))
+	got := q.g.regionsNow().Reach(l, sx, sy, tx, ty)
+	return pathstage.CheckReach(q, sx, sy, tx, ty, got, !got && checkIndex(q.g))
 }
 
 func (q fenceQuery) BlockedBits() []uint64 {
@@ -343,7 +299,8 @@ func (c crowdCost) Reach(sx, sy, tx, ty int) bool {
 		return q.Reach(sx, sy, tx, ty)
 	case *grid.Grid:
 		if q == c.g.grid && !c.g.noRegions() {
-			return checkReach(c.g, q, sx, sy, tx, ty, c.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+			got := c.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty)
+			return pathstage.CheckReach(q, sx, sy, tx, ty, got, !got && checkIndex(c.g))
 		}
 	}
 	return true

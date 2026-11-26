@@ -31,7 +31,7 @@ import (
 
 // Version is the generator version saved with a colony (Setup.GenVersion):
 // regenerating a map's debug fields needs the version that made it.
-const Version = 2
+const Version = 3
 
 // versionSalt keeps this version's streams apart from any other's.
 const versionSalt uint64 = 0x6d617067656e0002 // "mapgen" v2

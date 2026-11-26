@@ -367,7 +367,8 @@ func TestLeftoverFindsAnotherStockpileWhenTheSpareGoes(t *testing.T) {
 	g.zones.Clear(zone.Rect{MinX: 20, MinY: 7, MaxX: 21, MaxY: 8})
 	tripEnd(t, g, id)
 	stored, loose, framed, _ := woodSplit(g)
-	if stored != 88 || loose != 200 || framed != 12 {
+	load := min(item.CarryLimit, item.Wood.StackLimit())
+	if stored != load-framed || loose != 300-load || framed != 12 {
 		t.Fatalf("stored=%d loose=%d framed=%d: the rest goes to the other stockpile", stored, loose, framed)
 	}
 }

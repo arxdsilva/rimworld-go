@@ -923,8 +923,10 @@ Columns = work types.
 
 ## Modes
 
--   simple enabled/disabled;
+-   simple enabled/disabled checkbox editing: switching views preserves existing priorities; a new enable takes 3;
 -   manual priorities equivalent to 1--4.
+
+WRK-108: all 20 Core columns follow the authoritative work order, including Art before Craft. The Work table uses native priority and skill read models and the existing portrait/status icons; headers sort detached rows by name or column priority, with skill as the tie-break.
 
 ## Cells
 
@@ -1126,7 +1128,7 @@ Manage owned animals efficiently.
 
 ## Training
 
-Expose supported training categories and progress.
+Expose supported training categories (Obedience, Guard, Release, Haul) and native progress. Default docked and floating Dossier cards show each skill allowed for the selected tame animal; custom layouts retain their chosen stable definition keys. Training tab, command toggles/tooltips and Animals list use the active translation catalog. Separate Rescue training and an explicit ineligibility explanation remain unimplemented.
 
 ## Actions
 
@@ -1196,9 +1198,13 @@ problems.
     inspector; the Capture / Arrest orders come from the right-click
     menu on a downed or targetable pawn.
 -   **Regions:** mode selector (none, reduce resistance, recruit,
-    release, execute); resistance bar; assigned warden; bed line.
+    release, execute); faction, recruitment-difficulty estimate, resistance bar; assigned warden; bed line.
 -   **Information:** `Simulation.Prisoner(id)` → `game.PrisonerView`
-    (`Mode` = prisoner.Mode, `Resistance`, `Warden`, `ForPrisonersBed`).
+    (`Mode` = prisoner.Mode, `Resistance`, `Warden`, `ForPrisonersBed`,
+    `Faction`, `RecruitChanceMin`, `RecruitChanceMax`). Recruitment difficulty
+    is the complement of the ordinary native chance after resistance reaches
+    zero: the last living warden's skill, or the level 0–20 range when none is
+    known. Recruitment inspiration can bypass the ordinary roll.
 -   **Commands:** `command.SetPrisonerMode` (`Target`, `Mode`),
     `command.ReleasePrisoner` (`Target`), `command.Capture` /
     `command.Arrest` (`Pawn`, `Target`), `command.SetBedForPrisoners`
@@ -1206,7 +1212,7 @@ problems.
     (off by default).
 -   **States:** `ok == false`: no tab; no warden enabled, no prisoner
     bed or no food each show a warning line with the fix.
--   [x] Not wired yet (M8). (2026-11-20 audit: ebiten/inspector/prisoner_ui.go prisonerTabBody, PrisonerWarnings (no warden/bed/food lines), cmds_pawn.go tab)
+-   [x] Wired: `ebiten/inspector/prisoner_ui.go` renders the native faction and difficulty estimate alongside the mode, resistance and warnings; SIM-174 adds read-only projection coverage and UI journey verification.
 
 ------------------------------------------------------------------------
 
@@ -1282,13 +1288,20 @@ Validation handles affordability and stock changes.
     mode only selling is allowed and the footer shows the projected
     goodwill (`faction.GiftGoodwill` of the offered value) instead of
     silver.
+-   **Named physical items:** separate
+    selectable rows for quality, material and wear, identified by
+    `TradeRowView.StackID`. Ordinary bulk goods remain grouped. In
+    gift mode `GiftRows` quotes exact physical goodwill values; changing
+    modes clears stale drafts. Offers encode `@stackID` (seller) or
+    `@lotID` (buyer) beside the goods kind. The domain checks live
+    quantities, allowed location, available money and carrier cargo before
+    updating persistent trader lots.
 -   **States:** a refused deal shows `TradeView.Reason` in red under the
     footer and keeps the amounts; an accepted one clears them (the rows
     update from the next view). Accept is disabled with a reason when the
     offer is empty, the colony can't afford it, or the trader can't pay.
     `ok == false` closes the window.
--   [x] Not built yet (PLAY-024 Phase 2, agent U1; the read model and (2026-11-20 audit: ebiten/dialogs/trade.go tradeDraft; trade_test.go TestTradeDialogTotals; wired via dialogs_compat.go TradeSource)
-    commands exist since Phase 0).
+-   [x] Wired: ebiten/dialogs/trade.go reads the session's TradeView, displays physical gift/paid rows and issues the typed ProposeTrade command. trade_test.go covers mode switches, physical offer IDs and recalculated prices; application/game tests verify physical sale, save/load, reacquisition, gifting and carrier-loss identity preservation.
 
 ------------------------------------------------------------------------
 
@@ -1500,6 +1513,7 @@ Show path, travel time, terrain cost and invalid route reasons.
 -   **States:** no caravans: the list says so; the colony tile is always
     marked.
 -   [x] Wired: F8 opens the full-screen `worldview/` over the running colony (markers for colonies, sites, encounters, destroyed sites, caravans, pods and settlements; picking; inspector with disabled reasons; route preview and ETA; search, legend, grid). `windows/world*.go` is gone.
+-   [x] MAP-20: WorldMap().Markets supplies a read-only stock and cargo quote at a friendly settlement visit. A caravan inspector Trade gizmo opens world.market to choose purchases, sales and gifts (including silver); the modal sends the typed WorldCaravanTrade command. The simulation rechecks the trade before moving physical goods. TestJourneyWorldSettlementMarketTrade covers the real input-to-command-to-cargo path.
 
 ------------------------------------------------------------------------
 
@@ -1592,7 +1606,7 @@ Manage an active world-traveling group.
 -   **Commands:** `command.CaravanReturn` (`Target` = caravan id).
 -   **States:** arrived caravans show "Waiting at destination";
     returning ones show the trip home.
--   [-] Wired: `CaravanView`, `Game.TravelEstimate` and the inspector gizmos Travel, Return, Enter (only when Arrived), Attack (any human base; a non-hostile one asks first, modal `world.attack`, naming the faction, the 200 goodwill and that it turns hostile), Settle and Reform. Missing: Trade (no caravan trading) and Split, which stays disabled ("Not yet").
+-   [-] Wired: `CaravanView`, `Game.TravelEstimate` and the inspector gizmos Travel, Return, Enter (only when Arrived), Attack (any human base; a non-hostile one asks first, modal `world.attack`, naming the faction, the 200 goodwill and that it turns hostile), Settle and Reform. MAP-20 adds Trade during a friendly settlement visit through a typed cargo-backed market command. MAP-25 implements native Split via `command.CaravanSplit` (Target caravan ID, required current `CaravanView.Split.Quote`, Name = `travel.EncodeSplit(selection)`). Both halves keep their travel/visit state, route and food duration; exact selected member/animal IDs and zero-based physical cargo lots are transferred atomically after capacity checks. The Split gizmo/dialog remains disabled until presentation is wired to the native contract.
 
 ------------------------------------------------------------------------
 
@@ -2308,7 +2322,7 @@ Agents should implement screens approximately in this dependency order.
 -   [x] zones (stockpile paint food+wood; no grow-zone/home/allowed) (2026-11-20 audit: architect/catalog.go grow, home, allowed_area, dump tools; cmds_zone.go; zones_draw_zone_test.go)
 -   [x] stockpile settings (2026-11-20 audit: windows/storage.go; inspector/storage_ui.go; storage_test.go)
 -   [x] growing settings (PLAY-020)
--   [-] Work (overlay from snapshot; every live work type cycles 1-4 or off, columns left to right in the order a colonist breaks ties: `.agents/gaps/WORK_PRIORITIES_GAP_ANALYSIS.md`; not virtualized)
+-   [-] Work (overlay from snapshot; 20 live columns, manual and simple checkbox editing, portraits/status and name/priority sort; left to right in native work order; not virtualized and no separate skill-only sort)
 -   [x] Schedule (2026-11-20 audit: windows/schedule.go; journey_schedule_area_test.go TestScheduleAreaStripMatchesDropdownCommand)
 -   [-] Area Manager (SIM-046: create, rename, paint, assign; no delete or overlay)
 

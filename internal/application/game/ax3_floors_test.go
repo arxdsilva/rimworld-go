@@ -75,7 +75,7 @@ func TestFloorsTakeTheirMaterials(t *testing.T) {
 	if !g.BuildNow("stone tile", "marble blocks", "south", 3, 3) || !g.BuildNow("flagstone", "sandstone blocks", "south", 4, 3) {
 		t.Fatal("stone floors not built")
 	}
-	if construction.WorkFor(construction.StoneTile, item.MarbleBlocks) != 110 || construction.WorkFor(construction.Concrete, item.Steel) != 10 {
+	if construction.WorkFor(construction.StoneTile, item.MarbleBlocks) != 1100 || construction.WorkFor(construction.Concrete, item.Steel) != 100 {
 		t.Fatal("wiki floor work scaled by material")
 	}
 }

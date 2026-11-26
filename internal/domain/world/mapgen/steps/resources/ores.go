@@ -33,10 +33,14 @@ type oreSpec struct {
 }
 
 var oreSpecs = [...]oreSpec{
-	{ore: geology.Steel, per: 350, minDeep: 60, minSize: 6, sizeSpan: 9, minDepth: 2},
-	{ore: geology.Silver, per: 1400, minSize: 4, sizeSpan: 6, minDepth: 3},
-	{ore: geology.Gold, per: 2800, minSize: 3, sizeSpan: 4, minDepth: 5},
-	{ore: geology.Machinery, per: 2500, minSize: 1, sizeSpan: 3, minDepth: 3},
+	{ore: geology.Steel, per: 350, minDeep: 60, minSize: 30, sizeSpan: 11, minDepth: 2},
+	{ore: geology.Silver, per: 1400, minSize: 4, sizeSpan: 9, minDepth: 3},
+	{ore: geology.Gold, per: 2800, minSize: 2, sizeSpan: 7, minDepth: 5},
+	{ore: geology.Machinery, per: 2500, minSize: 3, sizeSpan: 4, minDepth: 3},
+	// Local density tuning, relative to the existing rare-ore budgets.
+	{ore: geology.Uranium, per: 1200, minSize: 6, sizeSpan: 7, minDepth: 4},
+	{ore: geology.Jade, per: 2200, minSize: 2, sizeSpan: 7, minDepth: 4},
+	{ore: geology.Plasteel, per: 2800, minSize: 2, sizeSpan: 7, minDepth: 5},
 }
 
 const (
@@ -102,10 +106,14 @@ func placeOres(c *mapgen.Ctx) []lump {
 			if !found {
 				break
 			}
-			x, y := c.XY(o)
-			origins = append(origins, mapgen.Point{X: x, Y: y})
 			size := sp.minSize + r.IntN(sp.sizeSpan)
 			cells := growLump(c, r, o, size)
+			if len(cells) < sp.minSize || len(cells) >= 6 && isRect(c, cells) {
+				n++ // insufficient contiguous rock: try another origin
+				continue
+			}
+			x, y := c.XY(o)
+			origins = append(origins, mapgen.Point{X: x, Y: y})
 			for _, i := range cells {
 				c.R.Geology.Ore[i] = sp.ore
 			}

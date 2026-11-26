@@ -6,6 +6,8 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/orders"
+	"rimworld-go/internal/application/game/viewmodel"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/command"
@@ -31,10 +33,7 @@ type queuedOrder struct {
 }
 
 // QueuedOrderView is one waiting order in the read model.
-type QueuedOrderView struct {
-	Label string
-	X, Y  int
-}
+type QueuedOrderView = viewmodel.QueuedOrderView
 
 // followingOrder reports a colonist busy with a player order.
 func (g *Game) followingOrder(id entity.EntityID) bool {
@@ -50,7 +49,7 @@ func (g *Game) queueOrder(id entity.EntityID, c command.Command) {
 	}
 	c.Queue = false
 	if !g.followingOrder(id) && len(g.orderQueue[id]) == 0 {
-		if g.execOrder(id, c) == "" {
+		if g.execOrder(id, &c) == "" {
 			g.trackOrder(id, queuedOrder{cmd: c})
 		}
 		return
@@ -76,7 +75,7 @@ func (g *Game) nextOrder(id entity.EntityID) {
 	for g.orderDue(id) {
 		q := g.orderQueue[id][0]
 		g.orderQueue[id] = g.orderQueue[id][1:]
-		if reason := g.execOrder(id, q.cmd); reason != "" {
+		if reason := g.execOrder(id, &q.cmd); reason != "" {
 			pos, _ := g.positions.Get(id)
 			g.message(pos.X, pos.Y, "%s skipped %q: %s", g.name(id), q.label, reason)
 			continue
@@ -86,6 +85,35 @@ func (g *Game) nextOrder(id entity.EntityID) {
 	}
 	if len(g.orderQueue[id]) == 0 {
 		delete(g.orderQueue, id)
+	}
+}
+
+// replaceOrder runs an explicit order without losing the existing queue
+// on refusal. Interrupt mode resumes the previous player command after
+// any continuation of the new order.
+func (g *Game) replaceOrder(id entity.EntityID, c command.Command) {
+	old := g.orderQueue[id]
+	prev, following := g.postponed.orders[id]
+	following = following && g.followingOrder(id)
+	resume := c.Mode == command.PrioritizeInterrupt
+	c.Mode = 0
+	delete(g.orderQueue, id)
+	if g.execOrder(id, &c) != "" {
+		if following && !g.followingOrder(id) {
+			delete(g.postponed.orders, id)
+			old = append([]queuedOrder{prev}, old...)
+		}
+		if len(old) > 0 {
+			g.orderQueue[id] = old
+		}
+		return
+	}
+	g.trackOrder(id, queuedOrder{cmd: c})
+	if resume {
+		if following {
+			g.orderQueue[id] = append(g.orderQueue[id], prev)
+		}
+		g.orderQueue[id] = append(g.orderQueue[id], old...)
 	}
 }
 
@@ -101,7 +129,10 @@ func (g *Game) followPlainOrder(id entity.EntityID, c command.Command) {
 
 // execOrder applies a move or prioritize order now; it returns why the
 // order couldn't start ("" when it did).
-func (g *Game) execOrder(id entity.EntityID, c command.Command) string {
+func (g *Game) execOrder(id entity.EntityID, c *command.Command) string {
+	if !g.alive(id) || g.breaking(id) {
+		return ReasonIncapable
+	}
 	switch c.Kind {
 	case command.MovePawn:
 		if !g.grid.Walkable(c.X, c.Y) {
@@ -119,16 +150,17 @@ func (g *Game) execOrder(id entity.EntityID, c command.Command) string {
 	case command.DropGear:
 		return senseOf(g).Gear.Drop(id, int(c.Mode), c.Index) // game/sense/drop.go (GEAR-1)
 	case command.Prioritize:
+		if c.Order.NativeOrder() {
+			return nativeOrder(g, id, c)
+		}
 		if c.Order.TargetsPawn() {
 			if reason := g.care.Force(id, c.Order, entity.EntityID(c.Target)); reason != "" {
 				return reason
 			}
 			break
 		}
-		if c.Order != command.OrderMine && c.Order != command.OrderSmooth {
-			if _, reason := g.forcedJob(id, c.Order, c.X, c.Y, construction.Layer(c.Layer)); reason != "" {
-				return reason
-			}
+		if _, reason := g.forcedJob(id, c.Order, c.X, c.Y, construction.Layer(c.Layer)); reason != "" {
+			return reason
 		}
 		g.prioritize(id, c.Order, c.X, c.Y, construction.Layer(c.Layer))
 	}
@@ -140,11 +172,8 @@ func (g *Game) execOrder(id entity.EntityID, c command.Command) string {
 
 // orderLabel names an order the way the order menu shows it.
 func (g *Game) orderLabel(id entity.EntityID, c command.Command) string {
-	if c.Kind == command.MovePawn {
-		return fmt.Sprintf("Go to (%d, %d)", c.X, c.Y)
-	}
-	if c.Kind == command.DropGear {
-		return "Drop gear"
+	if label := orders.DirectLabel(c); label != "" {
+		return label
 	}
 	for _, o := range g.OrdersAt(id, c.X, c.Y) {
 		if o.Cmd.Kind == c.Kind && o.Cmd.Order == c.Order && o.Cmd.Layer == c.Layer && o.Cmd.Target == c.Target {
@@ -152,4 +181,50 @@ func (g *Game) orderLabel(id entity.EntityID, c command.Command) string {
 		}
 	}
 	return fmt.Sprintf("Order at (%d, %d)", c.X, c.Y)
+}
+
+// nativeOrder routes explicit orders to their existing gameplay owners.
+func nativeOrder(g *Game, id entity.EntityID, c *command.Command) string {
+	if !g.colonist(id) || g.prison.Is(id) || !g.standingPawn(id) {
+		return ReasonIncapable
+	}
+	m, _ := g.labor.Get(id)
+	n := orders.Native{Host: nativeOrderHost{haulHost{g}}, Claims: g.reserve, Craft: g.craft, Gear: senseOf(g).Gear}
+	tail, why := n.Start(id, m&^g.incapableWork(id), c)
+	if tail != "" {
+		next := *c
+		next.Name, next.Queue, next.Mode = tail, false, 0
+		g.orderQueue[id] = append([]queuedOrder{{cmd: next, label: orders.DirectLabel(next)}}, g.orderQueue[id]...)
+	}
+	return why
+}
+
+type nativeOrderHost struct{ haulHost }
+
+func (h nativeOrderHost) Interrupt(id entity.EntityID) { h.g.interrupt(id, job.Cancelled) }
+
+// Allow preserves the exact physical identity already claimed by this order.
+func (h nativeOrderHost) Allow(id entity.EntityID) {
+	if st, ok := h.g.stacks.Get(id); ok && st.Carrier == 0 && st.Forbidden {
+		st.Forbidden = false
+		h.g.putStack(id, st)
+	}
+}
+func (h nativeOrderHost) StartForced(id entity.EntityID, rec job.Record) bool {
+	// A deferred long search must not destroy the current job/carry/claims.
+	rec.Forced = true
+	bypass := h.g.areaBypass(id, rec)
+	path, ok := h.g.pathToJob(id, rec.TX, rec.TY)
+	if bypass {
+		h.g.endAreaBypass()
+	}
+	if !ok {
+		return false
+	}
+	h.Interrupt(id)
+	if startJobWithPath(h.g, id, rec, path, true) {
+		return true
+	}
+	h.g.reserve.ReleaseOwner(id)
+	return false
 }

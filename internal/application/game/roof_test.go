@@ -12,6 +12,8 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
@@ -253,22 +255,22 @@ func TestRemoveRoofSetsNoAutoAndUnroofs(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	hut(t, g, 1, 1, 5, 5) // roofed 3x3
-	g.roofOnMined(4, 4)   // a natural roof inside: never removed
+	g.roofOnMined(4, 4)   // a removable thin natural roof inside
 	g.designateRoof(2, 2, 2, 2, true)
 	g.designateRoof(0, 0, 6, 6, false)
 	if n := countRoofIn(g, roof.NoAuto, 0, 0, 6, 6); n != 49 {
 		t.Fatalf("NoAuto on %d tiles, want 49", n)
 	}
-	if n := countRoof(g, roof.PlanRemove); n != 8 {
-		t.Fatalf("%d removal plans, want 8 built roofs", n)
+	if n := countRoof(g, roof.PlanRemove); n != 9 {
+		t.Fatalf("%d removal plans, want 8 built and 1 thin natural roof", n)
 	}
-	if c := g.roofAt(4, 4); c.Has(roof.PlanRemove) || !c.Has(roof.Natural) {
-		t.Fatalf("natural roof untouched: %b", c)
+	if c := g.roofAt(4, 4); !c.Has(roof.PlanRemove) || !c.Has(roof.Natural) {
+		t.Fatalf("thin natural roof planned: %b", c)
 	}
 	id := worker(t, g, 3, 3)
 	jobs := 0
 	var last [2]int
-	for tick := 0; tick < 3000 && countRoof(g, roof.Built) > 0; tick++ {
+	for tick := 0; tick < 3000 && countRoof(g, roof.PlanRemove) > 0; tick++ {
 		g.Step(1)
 		g.SetNeeds(id, needs.Full, needs.Full)
 		if j, _ := g.jobs.Get(id); j.Kind == job.Unroof && [2]int{j.DestX, j.DestY} != last {
@@ -279,19 +281,19 @@ func TestRemoveRoofSetsNoAutoAndUnroofs(t *testing.T) {
 			}
 		}
 	}
-	if countRoof(g, roof.Built) != 0 || countRoof(g, roof.PlanRemove) != 0 || jobs != 8 {
+	if countRoof(g, roof.Built) != 0 || countRoof(g, roof.PlanRemove) != 0 || jobs != 9 {
 		t.Fatalf("built %d, removal plans %d, jobs %d", countRoof(g, roof.Built), countRoof(g, roof.PlanRemove), jobs)
 	}
-	if !g.roofAt(4, 4).Has(roof.Natural) {
-		t.Fatal("natural roof must stay")
+	if g.roofAt(4, 4).Roofed() {
+		t.Fatal("thin natural roof must be removed")
 	}
 	g.markRoomsDirty()
 	g.ensureRooms()
 	if n := countRoof(g, roof.PlanBuild); n != 0 {
 		t.Fatalf("auto-roof re-planned %d removed tiles", n)
 	}
-	if r := g.roomAt(3, 3); g.roomRoofed(r) != 1000/9 {
-		t.Fatalf("roofed %d, want one natural tile of 9", g.roomRoofed(r))
+	if r := g.roomAt(3, 3); g.roomRoofed(r) != 0 {
+		t.Fatalf("roofed %d, want no remaining roof", g.roomRoofed(r))
 	}
 }
 
@@ -323,7 +325,7 @@ func TestRoofCollapsesWhenWallRemoved(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 10})
 	hut(t, g, 1, 1, 12, 5) // interior x 2..11, y 2..4: 30 roofed tiles
-	g.roofOnMined(11, 4)   // natural: never collapses
+	g.roofOnMined(11, 4)   // thin natural roof
 	if countRoof(g, roof.Built) != 29 {
 		t.Fatalf("built %d", countRoof(g, roof.Built))
 	}
@@ -338,13 +340,16 @@ func TestRoofCollapsesWhenWallRemoved(t *testing.T) {
 	if n := countRoof(g, roof.Built); n != 18 {
 		t.Fatalf("built %d after collapse, want 18 (x 2..7)", n)
 	}
-	if countRoofIn(g, roof.Built, 8, 0, 12, 9) != 0 || !g.roofAt(11, 4).Has(roof.Natural) {
-		t.Fatal("unsupported tiles fall, the natural roof stays")
+	if countRoofIn(g, roof.Built, 8, 0, 12, 9) != 0 || g.roofAt(11, 4).Roofed() {
+		t.Fatal("all unsupported roofs must fall")
 	}
 	var notices []string
 	for _, m := range g.messages[before:] {
 		if strings.Contains(m.Text, "roof collapsed") {
 			notices = append(notices, m.Text)
+			if !m.Danger {
+				t.Fatal("collapse must be a danger message")
+			}
 		}
 	}
 	want := "A roof collapsed near (8, 2) — no support within 6 tiles."
@@ -374,7 +379,7 @@ func TestRoofCollapsesWhenWallRemoved(t *testing.T) {
 func TestMinedRockLeavesNaturalRoof(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
-	for _, p := range [][2]int{{6, 4}, {6, 6}} {
+	for _, p := range [][2]int{{6, 4}, {6, 6}, {7, 4}} {
 		g.setTerrain(p[0], p[1], terrain.Rock)
 	}
 	id := worker(t, g, 3, 4)
@@ -394,10 +399,10 @@ func TestMinedRockLeavesNaturalRoof(t *testing.T) {
 	if !g.roofAt(6, 6).Has(roof.Natural) {
 		t.Fatal("sapper-dug tile should keep a natural roof")
 	}
-	// natural roofs never collapse and can't be planned away
+	// the remaining rock supports both thin roofs; both can be removed deliberately
 	g.Step(climateInterval * 2)
 	g.designateRoof(6, 4, 6, 6, false)
-	if c := g.roofAt(6, 4); !c.Has(roof.Natural) || c.Has(roof.PlanRemove) {
+	if c := g.roofAt(6, 4); !c.Has(roof.Natural) || !c.Has(roof.PlanRemove) {
 		t.Fatalf("natural roof after remove designation: %b", c)
 	}
 	if !g.roofAt(6, 6).Has(roof.Natural) {
@@ -850,5 +855,63 @@ func TestDousedFireDoesNotLightRoom(t *testing.T) {
 	g.RoofRooms()
 	if !lit() {
 		t.Fatal("under a roof the fire burns and lights the room")
+	}
+}
+
+func TestRoofCaveInPreviewSaveAndRepeat(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 11, Width: 24, Height: 18})
+	g.setTerrain(10, 8, terrain.Rock)
+	g.ensureRooms()
+	g.setRoof(8*g.grid.Width()+11, roof.Natural|roof.NaturalThick|roof.Supported)
+	g.setRoof(9*g.grid.Width()+11, roof.Natural|roof.Supported)
+	thick := worker(t, g, 11, 8)
+	thin := worker(t, g, 11, 9)
+	sid, err := g.SpawnStack(item.Wood, 20, 11, 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := g.StateHash()
+	risks := g.MiningRoofRisk(10, 8)
+	if !reflect.DeepEqual(risks, []roof.Risk{{X: 11, Y: 8, Thick: true}, {X: 11, Y: 9}}) {
+		t.Fatalf("risks %+v", risks)
+	}
+	if g.StateHash() != before {
+		t.Fatal("preview mutated state")
+	}
+	g.raid.Rock.Dig(10, 8, raid.RockHP)
+	g.ensureRooms()
+	if len(g.roofx.loss) != 2 || !g.roofAt(11, 8).Thick() {
+		t.Fatalf("pending cave-in lost: %v", g.roofx.loss)
+	}
+	h := saveLoad(t, g)
+	if !reflect.DeepEqual(g.roofx.loss, h.roofx.loss) {
+		t.Fatalf("pending loss not restored: %v vs %v", g.roofx.loss, h.roofx.loss)
+	}
+	for _, game := range []*Game{g, h} {
+		game.checkRoofSupport()
+		v, _ := game.vital.Get(thick)
+		if v.Status != health.Dead || game.terr.At(11, 8) != terrain.Rock || !game.roofAt(11, 8).Thick() {
+			t.Fatalf("thick collapse: %+v", v)
+		}
+		v, _ = game.vital.Get(thin)
+		if v.Injury == 0 && v.Status != health.Dead {
+			t.Fatal("thin collapse did no damage")
+		}
+		if game.roofAt(11, 9).Roofed() {
+			t.Fatal("thin roof did not fall")
+		}
+		st, ok := game.stacks.Get(sid)
+		if !ok || st.Qty != 15 {
+			t.Fatalf("item damage %+v %v", st, ok)
+		}
+		game.raid.Rock.Dig(11, 8, raid.RockHP)
+		game.checkRoofSupport()
+		if game.terr.At(11, 8) != terrain.Rock || !game.roofAt(11, 8).Thick() {
+			t.Fatal("thick cave-in did not repeat")
+		}
+	}
+	if g.StateHash() != h.StateHash() {
+		t.Fatal("collapse save replay diverged")
 	}
 }

@@ -23,11 +23,18 @@ type Animals struct {
 // Bed gives tame animal id at (x, y) its bed: the cell to walk to, false
 // when none can be had (it sleeps where it stands).
 func (a *Animals) Bed(id entity.EntityID, x, y int) (bx, by int, ok bool) {
+	return a.RestBed(id, x, y, false)
+}
+
+// RestBed prefers a clinical stay for an injured pet, then its personal
+// bed, in one pass over the existing candidates. A clinical stay is temporary.
+func (a *Animals) RestBed(id entity.EntityID, x, y int, injured bool) (bx, by int, ok bool) {
 	var best entity.EntityID
+	bestMedical := false
 	bestD := 1 << 30
 	for _, bid := range a.h.BuildingIDs() {
 		b, ok := a.h.Building(bid)
-		if !ok || !b.Kind.AnimalSleeps() || b.Forbidden || !a.h.AreaAllows(id, b.X, b.Y) {
+		if !ok || !b.Kind.AnimalSleeps() || b.Medical && !injured || bestMedical && !b.Medical || b.Forbidden || b.Uninstall || b.Deconstruct || !a.h.AreaAllows(id, b.X, b.Y) || a.h.HeldByOther(id, bid) {
 			continue
 		}
 		d := pathing.Dist(x, y, b.X, b.Y)
@@ -37,20 +44,58 @@ func (a *Animals) Bed(id entity.EntityID, x, y int) (bx, by int, ok bool) {
 		case b.Claimant != 0 && a.h.TameAnimal(entity.EntityID(b.Claimant)):
 			continue // another animal's
 		}
-		if d < bestD || (d == bestD && bid < best) {
-			best, bestD = bid, d
+		if b.Medical && !bestMedical || d < bestD || (d == bestD && bid < best) {
+			if b.Medical && (!a.h.PatientBedSafe(id, bid, b.X, b.Y) || !a.h.Reachable(id, b.X, b.Y)) {
+				continue
+			}
+			best, bestD, bestMedical = bid, d, b.Medical
 		}
 	}
 	if best == 0 {
 		return 0, 0, false
 	}
 	b, _ := a.h.Building(best)
-	if b.Claimant != uint64(id) {
+	if b.Medical {
+		if a.h.HeldBed(id) != best {
+			a.h.Hold(id, best)
+		}
+	} else if b.Claimant != uint64(id) {
 		a.h.ReleaseBed(id) // moving to a new bed gives up the old one
+	}
+	if b.Claimant != uint64(id) {
 		b.Claimant = uint64(id)
 		a.h.SetBuilding(best, b)
 	}
 	return b.X, b.Y, true
+}
+
+// EndMedicalRest returns a clinical stay after recovery, an interrupted
+// rest, a removed/forbidden bed, or loss of the medical designation.
+func (a *Animals) EndMedicalRest(id entity.EntityID, resting, lying, injured bool) bool {
+	bid := a.h.HeldBed(id)
+	if bid == 0 {
+		return false
+	}
+	b, ok := a.h.Building(bid)
+	if resting && injured && ok && b.Kind.AnimalSleeps() && b.Medical && !b.Forbidden && !b.Uninstall && !b.Deconstruct && b.Claimant == uint64(id) && a.h.PatientBedSafe(id, bid, b.X, b.Y) {
+		x, y := a.h.Pos(id)
+		if !lying || construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
+			return false
+		}
+	}
+	a.h.RecoveredAnimal(id)
+	return true
+}
+
+// MedicalLying is true only at a claimed, designated, usable animal bed.
+func (a *Animals) MedicalLying(id entity.EntityID) bool {
+	bid := a.h.HeldBed(id)
+	b, ok := a.h.Building(bid)
+	if !ok || !b.Kind.AnimalSleeps() || !b.Medical || b.Forbidden || b.Uninstall || b.Deconstruct || b.Claimant != uint64(id) {
+		return false
+	}
+	x, y := a.h.Pos(id)
+	return construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) && a.h.PatientBedSafe(id, bid, b.X, b.Y)
 }
 
 // SleepRate is the rest per hour sleeping animal id regains, from base

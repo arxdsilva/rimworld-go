@@ -53,6 +53,7 @@ func prisonGame(t *testing.T) (g *Game, ada, bo, rid, bed entity.EntityID) {
 	ada, _ = g.SpawnNamedPawn(8, 6, "Ada")
 	bo, _ = g.SpawnNamedPawn(9, 9, "Bo")
 	scheduleAll(g, schedule.Work)
+	hutWalls(t, g, 1, 1, 5, 5)
 	placeBuilt(t, g, construction.SleepingSpot, construction.South, 3, 3)
 	bed = g.bldgIDs[len(g.bldgIDs)-1]
 	g.Enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(bed), Enabled: true})
@@ -341,6 +342,10 @@ func TestReleaseWalksOffAndPleasesFaction(t *testing.T) {
 	g.ng.factions = []faction.Faction{{Type: faction.Settlers, Name: "Valley", Goodwill: -20}}
 	g.personOf(rid).Faction = 1
 	capture(t, g, ada, bo, rid)
+	afterCapture := g.ng.factions[0]
+	if afterCapture.Relation != faction.Hostile || afterCapture.Goodwill != -75 {
+		t.Fatalf("neutral capture did not make the faction hostile: %+v", afterCapture)
+	}
 	g.Enqueue(command.Command{Kind: command.ReleasePrisoner, Target: uint64(rid)})
 	for i := 0; i < 4000 && slices.Contains(g.raiderIDs, rid); i++ {
 		g.Step(1)
@@ -355,7 +360,7 @@ func TestReleaseWalksOffAndPleasesFaction(t *testing.T) {
 		t.Fatalf("the released prisoner should leave; at %+v job %+v", g.positionOf(rid), g.jobsOf(rid))
 	}
 	f := g.ng.factions[0]
-	if f.Goodwill != -20+releaseGoodwill || !slices.Contains(f.Events, "prisoner released") {
+	if f.Goodwill != afterCapture.Goodwill+releaseGoodwill || !slices.Contains(f.Events, "prisoner released") {
 		t.Fatalf("faction %+v", f)
 	}
 	if p := g.personOf(rid); p == nil || p.Where != whereOffMap {
@@ -481,5 +486,32 @@ func TestSaveLoadKeepsPrisoners(t *testing.T) {
 		g.Step(300)
 		h.Step(300)
 		sameState(t, "prison", g, h)
+	}
+}
+
+func TestPrisonerFactionAndRecruitDifficultyReadModel(t *testing.T) {
+	g, ada, bo, rid, _ := prisonGame(t)
+	capture(t, g, ada, bo, rid)
+	person := g.personOf(rid)
+	person.Origin = faction.AncientHostile
+	v, ok := g.Prisoner(rid)
+	if !ok || v.Faction != faction.DefOf(faction.AncientHostile).Label {
+		t.Fatalf("hidden origin not projected: %+v", v)
+	}
+	g.ng.factions = []faction.Faction{{ID: 0, Type: faction.Clans, Name: "Ridge Union"}}
+	person.Faction, person.Origin = 1, faction.Player
+	held := g.raiders[rid]
+	held.Warden = bo
+	g.raiders[rid] = held
+	want := prisoner.RecruitChance(int(g.skillOf(bo, skSocial).Level))
+	before := g.StateHash()
+	for _, sim := range []*Game{g, saveLoad(t, g)} {
+		v, ok := sim.Prisoner(rid)
+		if !ok || v.Faction != "Ridge Union" || v.RecruitChanceMin != want || v.RecruitChanceMax != want || v.Warden == "" {
+			t.Fatalf("prisoner read model lost affiliation/chance: %+v", v)
+		}
+	}
+	if before != g.StateHash() {
+		t.Fatal("prisoner view mutated authoritative state")
 	}
 }

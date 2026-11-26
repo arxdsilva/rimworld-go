@@ -14,6 +14,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -60,7 +61,7 @@ func restFedUntil(g *Game, n int, cond func() bool) bool {
 }
 
 // sickPatient is Pat, sick in bed at (6, 2) with a doctor walled in out of
-// reach (so no one tends it and it does not tend itself), and food at
+// reach and self-tend disabled (so no one tends it), and food at
 // (10, 4).
 func sickPatient(t *testing.T) (g *Game, pat, bed entity.EntityID) {
 	t.Helper()
@@ -68,6 +69,7 @@ func sickPatient(t *testing.T) (g *Game, pat, bed entity.EntityID) {
 	pat, _ = g.SpawnNamedPawn(4, 4, "Pat")
 	g.SpawnNamedPawn(16, 7, "Doc")
 	walledIn(t, g, 16, 7, 16, 7)
+	g.care.SetSelfTend(pat, false)
 	bed = buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 2)
 	if _, err := g.SpawnStack(item.SurvivalMeal, 10, 10, 4); err != nil {
 		t.Fatal(err)
@@ -436,5 +438,107 @@ func TestRestingDoctorIsNoOtherDoctor(t *testing.T) {
 	g.care.Rest.Start(b, 1)
 	if g.care.Doctor.OtherDoctor(a) {
 		t.Fatal("a resting doctor tends no one")
+	}
+}
+
+// A nearer medical bed must not prevent a patient reaching another safe
+// bed, and a bed forbidden during rest releases its temporary medical stay.
+func TestPatientRestSkipsUnsafeAndUnreachableBeds(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 26, Height: 15})
+	pat, _ := g.SpawnNamedPawn(4, 6, "Pat")
+	g.SetNeeds(pat, needs.Full, needs.Full)
+	blocked := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 8, 3)
+	b, _ := g.bldgs.Get(blocked)
+	walledIn(t, g, 8, 3, 8, 4)
+	hazard := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 4, 3)
+	g.devStartFire(4, 3)
+	safe := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 19, 4)
+	next := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 21, 8)
+	setInjury(g, pat, 45, true)
+	if !restFedUntil(g, 1500, func() bool { return restingIn(g, pat, safe) }) {
+		j, _ := g.jobs.Get(pat)
+		t.Fatalf("expected actual safe bed %d, got %+v (blocked %d, fire %d)", safe, j, blocked, hazard)
+	}
+	b, _ = g.bldgs.Get(safe)
+	b.Forbidden = true
+	g.bldgs.Set(safe, b)
+	if !restFedUntil(g, 1500, func() bool { return restingIn(g, pat, next) }) {
+		j, _ := g.jobs.Get(pat)
+		t.Fatalf("did not move to second safe bed %d: %+v", next, j)
+	}
+	if b, _ := g.bldgs.Get(safe); b.Claimant != 0 || g.care.Rest.HeldBed(pat) != next {
+		t.Fatal("obsolete medical claim not released")
+	}
+	t.Logf("actual patient bed %d -> %d at K%d; old claim released", safe, next, g.clock.Now())
+}
+
+// A drafted doctor cannot service an autonomous patient. Keep the draft
+// intact, but let a capable patient with self-tend enabled treat its wounds.
+func TestPatientSelfTendsWhenOnlyOtherDoctorDrafted(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 10})
+	pat, _ := g.SpawnNamedPawn(4, 4, "Pat")
+	doc, _ := g.SpawnNamedPawn(12, 6, "Doc")
+	bed := buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 2)
+	g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(doc), Enabled: true})
+	addWound(t, g, pat, body.ArmL, 6, body.Cut)
+	if !restFedUntil(g, 600, func() bool { return restingIn(g, pat, bed) }) {
+		t.Fatal("patient did not lie in bed")
+	}
+	if !restFedUntil(g, 2000, func() bool { return g.tended(pat) && !g.needsTending(pat) }) {
+		t.Fatal("drafted doctor prevented actual self-tend")
+	}
+	if !g.drafted(doc) {
+		t.Fatal("self-tend cleared player draft")
+	}
+	if !restFedUntil(g, 600, func() bool { return restingIn(g, pat, bed) }) {
+		t.Fatal("patient did not return to bed")
+	}
+}
+
+// An enclosed doctor cannot take the patient's treatment job.
+func TestPatientSelfTendsWhenOnlyOtherDoctorUnreachable(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 10})
+	pat, _ := g.SpawnNamedPawn(4, 4, "Pat")
+	doc, _ := g.SpawnNamedPawn(16, 7, "Doc")
+	walledIn(t, g, 16, 7, 16, 7)
+	bed := buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 2)
+	addWound(t, g, pat, body.ArmL, 6, body.Cut)
+	if !restFedUntil(g, 600, func() bool { return restingIn(g, pat, bed) }) {
+		t.Fatal("patient did not lie in bed")
+	}
+	if !restFedUntil(g, 2000, func() bool { return g.tended(pat) && !g.needsTending(pat) }) {
+		t.Fatal("unreachable doctor prevented actual self-tend")
+	}
+	pos, _ := g.positions.Get(doc)
+	if pos.X != 16 || pos.Y != 7 {
+		t.Fatal("doctor left enclosure")
+	}
+	if !restFedUntil(g, 600, func() bool { return restingIn(g, pat, bed) }) {
+		t.Fatal("patient did not return to bed")
+	}
+}
+
+// A sleeping doctor should stay asleep while a patient capable of caring
+// for itself treats its own wound.
+func TestPatientSelfTendsWhenOnlyOtherDoctorAsleep(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 10})
+	pat, _ := g.SpawnNamedPawn(4, 4, "Pat")
+	doc, _ := g.SpawnNamedPawn(12, 6, "Doc")
+	bed := buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 2)
+	for h := 0; h < 24; h++ {
+		g.setSchedule(doc, h, schedule.Sleep)
+	}
+	g.SetNeeds(doc, needs.Full, needs.Full/4)
+	laidDown(g, doc)
+	addWound(t, g, pat, body.ArmL, 6, body.Cut)
+	if !stepUntil(g, 600, func() bool { return restingIn(g, pat, bed) }) {
+		t.Fatal("patient did not lie in bed")
+	}
+	if !stepUntil(g, 2000, func() bool { return g.tended(pat) && !g.needsTending(pat) }) {
+		t.Fatal("sleeping doctor prevented actual self-tend")
+	}
+	j, _ := g.jobs.Get(doc)
+	if j.Kind != job.Sleep || j.State != job.Do {
+		t.Fatalf("doctor was woken: %+v", j)
 	}
 }

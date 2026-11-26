@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/pawngen"
-	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/msgfmt"
@@ -185,7 +184,7 @@ func (h gatherHearts) Bedtime(id entity.EntityID) bool {
 }
 func (h gatherHearts) LovinCheck(id entity.EntityID, now uint64) { h.g.rest.Lovin.Check(id, now) }
 func (h gatherHearts) AddJoy(id entity.EntityID, n int) {
-	h.g.joy[id] = recreation.Clamp(h.g.joy[id] + n)
+	addRecreation(h.g, id, n)
 }
 func (h gatherHearts) Remember(id entity.EntityID, t mood.Kind, other entity.EntityID, now uint64) {
 	h.g.memories[id] = h.g.memories[id].AddFor(t, uint64(other), now)

@@ -26,6 +26,10 @@ func AgingOnsetText(k CondKind, p Part) string {
 		return "hearing loss in the " + p.Label()
 	case CondArteryBlockage:
 		return "an artery blockage"
+	case CondAsthma:
+		return "asthma in the " + p.Label()
+	case CondAlzheimers:
+		return "alzheimers"
 	}
 	return DefOfCond(k).Label
 }
@@ -35,7 +39,7 @@ func AgingOnsetText(k CondKind, p Part) string {
 func AgingLabel(c Condition, d CondDef, salt uint64) string {
 	l := strings.ToUpper(d.Label[:1]) + d.Label[1:]
 	switch c.Kind {
-	case CondCataract, CondHearingLoss:
+	case CondCataract, CondHearingLoss, CondAsthma:
 		return l + " (" + c.Part.Label() + ")"
 	case CondCarcinoma:
 		return l + " (" + c.Part.Label() + "), " + CarcinomaGrowth(c, salt).String()
@@ -54,13 +58,13 @@ func AgingTip(c Condition, label string, salt uint64) string {
 	case CondBadBack:
 		return label + "\nMoving −30 %, manipulation −10 %. It comes with age and stays; a spinal brace in place of the spine ends it."
 	case CondCataract:
-		return label + "\nThe " + c.Part.Label() + " sees half as well (sight −25 %). It stays; replacing the eye (an optic implant) ends it."
+		return label + "\nThe " + c.Part.Label() + " sees half as well (the effective sight loss depends on the other eye). It stays; replacing the eye (an optic implant) ends it."
 	case CondFrail:
 		return label + "\nMoving and manipulation −30 %. It comes with age and stays."
 	case CondDementia:
 		return label + "\nConsciousness −15 %, talking and hearing −25 %; now and then wanders off confused. It stays."
 	case CondHearingLoss:
-		return label + "\nThe " + c.Part.Label() + " hears half as well (hearing −25 %). It stays; a cochlear implant in its place ends it."
+		return label + "\nThe " + c.Part.Label() + " hears half as well (the effective hearing loss depends on the other ear). It stays; a acoustic implant in its place ends it."
 	case CondArteryBlockage:
 		mtb := heartAttackMTBAt(c.Stage)
 		return fmt.Sprintf("%s\nSeverity %d%%; it slowly grows and stops the heart at 100%%. A heart attack about once in %d days at this stage. A pump or valve heart, or a new heart, ends it.",
@@ -81,6 +85,10 @@ func AgingTip(c Condition, label string, salt uint64) string {
 			t += "In remission: shrinking, it will fade away."
 		}
 		return t + "\nExcise it: a doctor with Medicine 10 and 4 industrial medicine or better; a failed excision kills one time in four."
+	case CondAsthma:
+		return fmt.Sprintf("%s\nSeverity %d%%: lung efficiency decreases by stage (10/30/50%%). Tending every 7 days slows or reverses progression; lung transplant cures it.", label, int(c.Sev)/10)
+	case CondAlzheimers:
+		return fmt.Sprintf("%s\nSeverity %d%%: brain efficiency falls by stage (5/10/15/20%%), with memory loss and confusion.", label, int(c.Sev)/10)
 	case CondHeartAttack:
 		return fmt.Sprintf("%s\nSeverity %d%%: at 60 %% the patient blacks out, at 100 %% the heart stops. Each tend (one an hour) has a 65 %% × quality chance to ease it by 30 %%; below 0 it is over.",
 			label, int(c.Sev)/10)
@@ -109,7 +117,7 @@ func AgingHeadline(b *Body, state string, now uint64) string {
 	if state != "Healthy" {
 		return state
 	}
-	for _, k := range []CondKind{CondCarcinoma, CondArteryBlockage} {
+	for _, k := range []CondKind{CondCarcinoma, CondAsthma, CondAlzheimers, CondArteryBlockage} {
 		if _, ok := b.Cond(k); ok {
 			d := DefOfCond(k)
 			return strings.ToUpper(d.Label[:1]) + d.Label[1:]

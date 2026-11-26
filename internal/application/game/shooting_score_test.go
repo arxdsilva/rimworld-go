@@ -52,25 +52,29 @@ func TestShootingScoreInTheGame(t *testing.T) {
 		t.Fatalf("deliberate aim's points must raise the shooter factor: %d vs %d", a.Shooter, b.Shooter)
 	}
 	near := shooter(5, "Nia", func(p *pawngen.Pawn) { p.Conditions = []pawngen.Condition{pawngen.Nearsighted} })
-	if acc := g.statOf(near, stat.ShootAcc); acc != -6 {
-		t.Fatalf("nearsighted %d, want -6", acc)
+	if acc := g.statOf(near, stat.ShootAcc); acc != -15 {
+		t.Fatalf("nearsighted %d, want -15", acc)
 	}
 	v := g.VitalOf(plain)
 	b := g.ensureBody(plain, &v)
 	b.Missing |= 1 << body.EyeL
 	g.bodyChanged(plain, b, &v)
-	if acc := g.statOf(plain, stat.ShootAcc); acc != -6 {
-		t.Fatalf("one eye %d, want -6", acc)
+	if acc := g.statOf(plain, stat.ShootAcc); b.Capacity(body.Sight) != 750 || acc != -3 {
+		t.Fatalf("one eye sight %d, accuracy %d, want 750/-3", b.Capacity(body.Sight), acc)
 	}
 	b.Missing |= 1 << body.EyeR
 	g.bodyChanged(plain, b, &v)
 	if acc := g.statOf(plain, stat.ShootAcc); acc != -12 {
 		t.Fatalf("blind %d, want -12", acc)
 	}
+	loaded := loadAsVersion(t, g, SaveVersion)
+	if got := loaded.statOf(plain, stat.ShootAcc); got != -12 {
+		t.Fatalf("restored blind accuracy %d, want -12", got)
+	}
 	for sight, want := range map[int32]int32{1500: 6, 2000: 12, 2500: 12, 500: -6, 0: -12} {
-		ms := bodyMods(bodyKey{1000, 1000, sight})
-		if len(ms) != 1 || ms[0].Stat != stat.ShootAcc || int32(ms[0].Add) != want {
-			t.Errorf("sight %d: %+v, want shoot_acc %+d", sight, ms, want)
+		got := bodyAimOf(bodyKey{1000, 1000, sight})
+		if got != want {
+			t.Errorf("sight %d: %+v, want shoot_acc %+d", sight, got, want)
 		}
 	}
 }
@@ -93,4 +97,44 @@ func TestMeleeCooldownIgnoresAimTime(t *testing.T) {
 			t.Errorf("%v: aim 100 -> %d, want %d", c.tr, got, c.aim)
 		}
 	}
+}
+
+var benchShotAim int
+
+func BenchmarkCachedShotAim(b *testing.B) {
+	g, id := shootingBenchmarkPawn(b)
+	v := g.VitalOf(id)
+	g.ensureBody(id, &v)
+	h := combatSkills{g}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		benchShotAim, _ = h.ShotAim(id)
+	}
+}
+
+func BenchmarkCachedSightRefresh(b *testing.B) {
+	g, id := shootingBenchmarkPawn(b)
+	v := g.VitalOf(id)
+	bd := g.ensureBody(id, &v)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bd.Missing ^= 1 << body.EyeL
+		g.bodyChanged(id, bd, &v)
+	}
+}
+
+func shootingBenchmarkPawn(t testing.TB) (*Game, entity.EntityID) {
+	t.Helper()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	id, err := g.spawnGenerated(genPawn("Compare", func(p *pawngen.Pawn) {
+		p.Traits = []trait.ID{trait.QuickDraw}
+		p.Skills[skill.Shooting] = skill.Skill{Level: 10, Passion: skill.Minor}
+		p.Skills[skill.Mining] = skill.Skill{Level: 7, Passion: skill.Minor}
+	}), 4, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g, id
 }

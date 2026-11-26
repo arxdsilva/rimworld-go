@@ -553,8 +553,8 @@ func TestActorUsingUpItsStackFinishes(t *testing.T) {
 	})
 }
 
-// AL-4: a wild mother's egg follows the home-area rule; a tame one's is the
-// colony's wherever it falls.
+// AL-4: naturally laid wild goose eggs are unclaimed; tame turkey eggs
+// belong to the colony, whether laid inside Home or elsewhere.
 func TestWildEggFollowsTheHomeRule(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
@@ -565,16 +565,22 @@ func TestWildEggFollowsTheHomeRule(t *testing.T) {
 	}{{"wild in Home", 5, false, false}, {"wild outside", 40, false, true}, {"tame outside", 40, true, false}} {
 		g := alGame(60, 30)
 		warmDay(t, g)
-		hen := spawnSexed(t, g, "turkey", c.x, 10, true, c.tame, "Hen")
-		setAnimal(g, hen, func(a *animal.State) { a.Mated = animal.MatedEggs })
+		species, kind := animal.Goose, item.Egg
+		if c.tame {
+			species, kind = animal.Turkey, item.FertileEgg
+		}
+		hen := spawnSexed(t, g, species.String(), c.x, 10, true, c.tame, "Hen")
+		if c.tame {
+			setAnimal(g, hen, func(a *animal.State) { a.Mated = animal.MatedEggs })
+		}
 		day := int(uint64(g.clock.Now())/clock.TicksPerDay) + 1
-		for !animal.LaysToday(animal.Turkey, uint64(hen), day) {
+		for !animal.LaysToday(species, uint64(hen), day) {
 			day++
 		}
-		advance(g, uint64(day)*clock.TicksPerDay+animal.LayTick(animal.Turkey, uint64(hen)))
+		advance(g, uint64(day)*clock.TicksPerDay+animal.LayTick(species, uint64(hen)))
 		keepFed(g, hen)
 		g.Step(1)
-		_, st, ok := eggStack(g, item.FertileEgg)
+		_, st, ok := eggStack(g, kind)
 		if !ok {
 			t.Fatalf("%s: no egg", c.name)
 		}

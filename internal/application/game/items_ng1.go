@@ -14,10 +14,6 @@ import (
 
 // Components and the NG-1 buildings in play (NG-1 §4.8, §5.6).
 
-// componentRefund is the components deconstruction returns: half, rounded
-// down.
-func componentRefund(k construction.Kind) int { return construction.ComponentCost(k) / 2 }
-
 // refundStuff is the material a deconstructed building returns. A placed
 // kind with a salvage (the drop pod's shell) is steel whatever stuff it
 // was recorded with.

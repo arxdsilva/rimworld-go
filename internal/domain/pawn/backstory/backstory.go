@@ -75,13 +75,13 @@ var bitInfo = [numBits]struct {
 }{
 	{"Violence", []work.Type{work.Hunt}, []skill.ID{skill.Shooting, skill.Melee}},
 	{"Caring", []work.Type{work.Doctor}, []skill.ID{skill.Medicine}},
-	{"Menial work", []work.Type{work.Haul, work.Clean}, nil},
+	{"Menial work", []work.Type{work.Basic, work.Haul, work.Clean}, nil},
 	{"Intellectual", []work.Type{work.Research}, []skill.ID{skill.Intellectual}},
 	{"Animals", []work.Type{work.Handle}, []skill.ID{skill.Animals}},
 	{"Cooking", []work.Type{work.Cook}, []skill.ID{skill.Cooking}},
 	{"Plants", []work.Type{work.Grow, work.PlantCut}, []skill.ID{skill.Plants}},
 	{"Mining", []work.Type{work.Mine}, []skill.ID{skill.Mining}},
-	{"Crafting", []work.Type{work.Craft}, []skill.ID{skill.Crafting}},
+	{"Crafting", []work.Type{work.Craft, work.Smith, work.Tailor, work.Art}, []skill.ID{skill.Crafting, skill.Artistic}},
 	{"Construction", []work.Type{work.Construct}, []skill.ID{skill.Construction}},
 }
 

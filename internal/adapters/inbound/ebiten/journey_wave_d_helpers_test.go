@@ -32,7 +32,8 @@ func wdBuilding(j *journey, x, y int) (id entity.EntityID) {
 	return wbBuildingAt(j, x, y)
 }
 
-// wdSelect selects the building at (x, y) with a real click.
+// wdSelect selects the building at (x, y) with real clicks, cycling through
+// other selectable objects stacked on its tile when necessary.
 func wdSelect(j *journey, x, y int) entity.EntityID {
 	j.t.Helper()
 	id := wdBuilding(j, x, y)
@@ -40,8 +41,16 @@ func wdSelect(j *journey, x, y int) entity.EntityID {
 	j.update(1)
 	j.settle()
 	j.clickTile(x, y, 0, 0)
+	// The normal precedence puts ground items before buildings. A weapon
+	// dropped on a door, for example, takes the first click; spaced clicks
+	// exercise the same tile-cycle path a player uses to reach the building.
+	for i, cycles := 0, j.a.sel.Cycle.N; i < cycles &&
+		(!j.a.sel.HasBuilding || j.a.sel.SelBuilding != id); i++ {
+		j.settle() // avoid the double-click gesture; this is the next stack item
+		j.clickTile(x, y, 0, 0)
+	}
 	if !j.a.sel.HasBuilding || j.a.sel.SelBuilding != id {
-		j.t.Fatalf("the click at (%d, %d) did not select building %d", x, y, id)
+		j.t.Fatalf("clicking the stack at (%d, %d) did not select building %d", x, y, id)
 	}
 	return id
 }

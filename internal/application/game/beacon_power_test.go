@@ -34,7 +34,7 @@ func reach(g *Game) int {
 	for range selfCheckEvery {
 		beaconCells(g)
 	}
-	return beaconGoods(g).counts[item.Silver]
+	return beaconGoods(g).Counts()[item.Silver]
 }
 
 // TestUnpoweredBeaconGivesNoReachCallOrGift: a beacon with no generator
@@ -126,11 +126,11 @@ func TestBeaconCacheFollowsPoweredFlipAlone(t *testing.T) {
 	if g.structVer != sv {
 		t.Fatalf("structVer moved %d -> %d", sv, g.structVer)
 	}
-	if got := beaconGoods(g).counts[item.Silver]; got != 0 {
+	if got := beaconGoods(g).Counts()[item.Silver]; got != 0 {
 		t.Fatalf("powered flag off: reach %d, want 0", got)
 	}
 	g.setPowered(b, true)
-	if got := beaconGoods(g).counts[item.Silver]; got != 100 {
+	if got := beaconGoods(g).Counts()[item.Silver]; got != 100 {
 		t.Fatalf("powered flag on: reach %d, want 100", got)
 	}
 }

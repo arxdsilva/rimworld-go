@@ -15,8 +15,11 @@ func TestFishIsRawMeat(t *testing.T) {
 	if !Fish.IsMeat() || !Fish.Raw() || !Fish.IsFood() || !Fish.Perishable() {
 		t.Fatalf("fish: meat %v raw %v food %v rots %v", Fish.IsMeat(), Fish.Raw(), Fish.IsFood(), Fish.Perishable())
 	}
-	if Fish.Category() != Meat.Category() || Fish.StackLimit() != Meat.StackLimit() || Fish.Preference() != Meat.Preference() {
+	if Fish.Category() != Meat.Category() || Fish.Preference() != Meat.Preference() {
 		t.Fatalf("fish: category %q stack %d preference %d", Fish.Category(), Fish.StackLimit(), Fish.Preference())
+	}
+	if Fish.StackLimit() != 25 {
+		t.Fatalf("fish stack %d, want 25", Fish.StackLimit())
 	}
 	if Fish.Nutrition() != Meat.Nutrition() {
 		t.Fatalf("fish nutrition %d, meat %d", Fish.Nutrition(), Meat.Nutrition())

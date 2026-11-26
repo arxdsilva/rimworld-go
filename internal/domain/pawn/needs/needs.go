@@ -4,7 +4,10 @@
 // Package needs is hunger and rest meters (integers, 0–Full).
 package needs
 
-import "rimworld-go/internal/domain/pawn/schedule"
+import (
+	"rimworld-go/internal/domain/pawn/recreation"
+	"rimworld-go/internal/domain/pawn/schedule"
+)
 
 const (
 	// Full is a full adult food bar, 1.0 nutrition (wiki: Nutrition): item
@@ -232,6 +235,10 @@ func SleepAllowed(a schedule.Activity) bool {
 // WorkScheduled is true when autonomous labor is allowed.
 func WorkScheduled(a schedule.Activity) bool {
 	return a == schedule.Work || a == schedule.Anything
+}
+
+func JoyPriority(a schedule.Activity, joy int) bool {
+	return a == schedule.Anything && joy < recreation.Bored
 }
 
 // FightBand maps food level h to the social-fight hunger bands

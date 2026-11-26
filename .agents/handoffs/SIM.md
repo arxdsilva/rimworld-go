@@ -484,3 +484,49 @@ Mental breaks that target others; W3 integration (SIM-063…066) · 2026-10-29 �
 - Limits (budget paid): care root was over 40 methods, so each feature got a component (`Feed`, `PrisonBeds`, `Guest`, `Visits`, `Strip`), root back under 40; SOLID_GO §10 now says so and allows adapters beside wrapped code when the file budget is full. P1 moved prisoner state, a prisoner's life and warden work into new `game/prison`; recruiting and guest joining share `g.enlist`; no behaviour change (hashes matched). game 55,891 -> 55,844 lines, 183 -> 182 files, methods/fields 2,038/149 -> 2,010/148; coverage care ~97%, mind 96.4%, prison 93.9%.
 - Determinism/golden: benchmark hashes changed intentionally (downed hunger, feeding, visits, rescue causes, breaks): grown 250 `0xf6c61f40b377d985`, grown 500 `0x1a01790f2f095343`, raid 250 `0x8066e6b6f3956edd`, raid 500 `0x7185b71c1b1e1272`; tick p99 <= SIM-061 baseline. `TestGrownGolden` (scenario) re-pinned to `0x73d615f22d9b245`, stable over `-count=2`. The four phases are one commit (shared contract files). `make lint` not run (SIM-061).
 - Open: tantrum/object destruction and escape breaks (vanilla 10.1 destructive `[-]`); feeding downed animals; stranger event; per-pair visit cooldown; "Resting (injured)" job line; drafted group right-click. Checklists: vanilla 10.1 eligibility `[x]`, catatonic `[x]`.
+
+## SIM-071-core-mood-expectations
+Native memories, recovery and wealth expectations · 2026-11-25 · this commit
+- Changed: subject-aware expiring event memories, capped/diminishing stacking, actual current/target mood, natural-break catharsis, and wealth-band expectations for colonists/captives. Recreation tolerance shares the wealth bands (SIM-075).
+- Decisions: authoritative memory cleanup only on owner steps; awake mood approaches target, natural break ending only earns catharsis. Numerical sources map to ENG-003 (mood and social memories), SIM-061–066 (breaks), BED, FOOD, TEMP, MED/AIL, QST and SHT. AX-6 already supplies the wealth thresholds and recreation tolerance rates. General mood and expectation bonuses use the published sources documented in the definitions (#16).
+- Save/HUD: saved memories and legacy Kind 100 remain compatible; Bio/Needs/Dossier display read-only actual/target and thought state. Deterministic expiry and off-map maintenance.
+- Boxes: vanilla **Memory thoughts**, **Thought expiry**, **Smoothed current mood**, **Recovery**, **Wealth-driven expectations** [x]; #16 expectations item implemented, settlement restock item in MAP-20.
+- Open: none within the expectations slice.
+
+## SIM-019-core-animal-lifecycle
+Native animal ecology and lifecycle ownership · 2026-11-25 · this commit
+- Changed: ordinary animal feeding/rest, adult-size wildlife budget, birth/tame/release and species-specific training eligibility; maintenance progresses on the native decision cycle and survives off-map transfer.
+- Decisions: wildlife budget cost uses adult body size in hundredths, with one body unit for unknown sizes. Preserve the existing 60-tick bucket, original tuning for fictional species and stable species IDs.
+- Save/HUD: grouped animal records retain legacy flat reads; existing Wildlife/Animal inspector reads native state and training.
+- Boxes: vanilla **Animal hunger/rest**, **Trainability**, **Training decay/maintenance** [x]; #102 trainability item implemented, **Hauling** remains [ ].
+- Open: #102 hauling training; no new animal ownership or mod API.
+
+## SIM-030-core-faction-roles
+Native faction roles and captive origin · 2026-11-25 · this commit
+- Changed: ordinary seeded human factions and distinct hidden ancient/mechanoid/insect roles; real faction wars/goodwill and tech-dependent settlement stock. Captive affiliation survives capture and recruitment transitions.
+- Decisions: preserve saved faction IDs; hidden roles do not appear as ordinary trading/raiding human settlements. Core prisoner interactions remain separate from expansion-only slavery.
+- Save/HUD: existing faction/Bio/Dossier/PawnView projections carry affiliation; Prisoner tab still lacks its own faction row or recruitment difficulty.
+- Boxes: vanilla **Faction types**, **Faction tech level** [-] (complete model remains); UI **Faction** [-], **Recruitment difficulty** [-]; #104 and #174 partial.
+- Open: #104 complete faction/tech model; #174 Prisoner tab faction and recruitment-difficulty presentation.
+
+## SIM-174-prisoner-faction-recruitment
+Native prisoner faction and recruitment difficulty · 2026-11-25 · this commit
+- Changed: Prisoner tab displays native faction/hidden origin and recruitment difficulty; no recorded faction is explicit.
+- Decisions: difficulty is the complement of the existing ordinary recruitment chance after resistance; use last living warden or the skill 0–20 range, and explain inspiration. No changed recruitment policy or fabricated trait.
+- Save/HUD: read-only additive view; no stored fields, RNG or command changes. Native projection and real prisoner UI journey pass.
+- Boxes: UI §20.1 **Faction**, **Recruitment difficulty** [x]; MAIN_UI §27 wired; vanilla **Resistance/recruitment difficulty** [x] annotated; #174 faction and recruitment projection implemented.
+- Open: #104 remains partial.
+
+## SIM-102-native-animal-hauling
+Native trained animal hauling · 2026-11-25 · this commit
+- Changed: advanced trainable species acquire haul training through the existing handler, training command, and maintenance owner; native animal AI reserves source and destination, picks up a real stack, walks to ordinary storage and deposits it; needs, combat, loss and transfer cancel the physical errand.
+- Decisions: seven learning steps and 20 kg capped by ordinary carry limit are local tuning; ordinary ground stockpiles/dumps only, no shelf or hopper delivery. Existing three-byte skill array preserved; additive progress and task on saved world training maintenance.
+- Save/HUD: physical pickup and in-flight save/restore replay regression, destination claim release; additive native skill row; no presentation/asset edits.
+- Boxes: vanilla **Hauling** [x]; #102 native trainability and hauling implemented.
+- Open: upstream review, broader path/cargo edge cases and whole-repo qualification.
+
+## FCT-104-native-special-faction-identity
+Hidden faction identity and actual actor origin · 2026-11-25 · this commit
+- Changed: separate native hidden faction objects with stable negative IDs; SpecialFactions and ActorFaction resolve living actors and persisted origin, with no surface ID renumbering.
+- Decisions: hidden identities are not extra surface settlements. Existing tech-dependent settlement/trader stocks and raid kit ownership retained.
+- Boxes: #104 original native faction and settlement/trader tech scope.

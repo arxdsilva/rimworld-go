@@ -138,7 +138,7 @@ func layStash(c quest.Ctx, q *qd.Quest) quest.Verdict {
 		X1: min(cx+stashClear, w-1), Y1: min(cy+stashClear, h-1),
 		Centre: mapgen.Point{X: cx, Y: cy}, Posts: posts,
 	}
-	arms := kit.Pick(p.Points*stashGuardPct/100, stashGuardMax, quest.TechOf(c.R.World.Factions(), q.Target), c.Intn)
+	arms := kit.PickLimited(p.Points*stashGuardPct/100, stashGuardMax, quest.TechOf(c.R.World.Factions(), q.Target), c.Intn)
 	p.Count = b.Camp(comp, q.Target, arms, p.Seed)
 	// After the camp: laying it clears every item inside its bounds.
 	b.Goods(q.Rewards[0].Lines, cx, cy, true)

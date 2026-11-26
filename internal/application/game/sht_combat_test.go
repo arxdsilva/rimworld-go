@@ -59,7 +59,7 @@ func TestSHTCombatFriendlyFire(t *testing.T) {
 	hits := func(pct int) int {
 		g := New(Config{Seed: 9, Width: 40, Height: 10})
 		d := difficulty.Of(difficulty.Seasoned)
-		d.FriendlyFirePct = pct
+		d.FriendlyFire = pct
 		g.ng.setup = &Setup{Preset: difficulty.Seasoned, Difficulty: d, Storyteller: "steady"}
 		att, _ := g.SpawnNamedPawn(2, 5, "Ada")
 		g.Arm(att, item.Rifle)
@@ -121,7 +121,7 @@ func TestSHTCombatFriendlyFireSparesOnlyColonists(t *testing.T) {
 	run := func(kind string, pct int) (int, []projectile.Trace) {
 		g := New(Config{Seed: 9, Width: 40, Height: 10})
 		d := difficulty.Of(difficulty.Seasoned)
-		d.FriendlyFirePct = pct
+		d.FriendlyFire = pct
 		g.ng.setup = &Setup{Preset: difficulty.Seasoned, Difficulty: d, Storyteller: "steady"}
 		att, _ := g.SpawnNamedPawn(2, 5, "Ada")
 		g.Arm(att, item.Rifle)
@@ -161,7 +161,7 @@ func TestSHTCombatFriendlyFireSparesOnlyColonists(t *testing.T) {
 
 // TestSHTCombatDownedInLine (SHT-006 in game): a colonist lying downed
 // 12 tiles down the line is in the creature index and takes some of the
-// shots past it, at a quarter of a standing one's chance. The count is
+// shots past it, at a tenth of a standing one's chance. The count is
 // pinned for this seed.
 func TestSHTCombatDownedInLine(t *testing.T) {
 	t.Parallel()
@@ -190,7 +190,8 @@ func TestSHTCombatDownedInLine(t *testing.T) {
 }
 
 // pinDownedHits is TestSHTCombatDownedInLine's count (seed 9).
-const pinDownedHits = 13
+// Re-pinned: preserve local 10% downed interception instead of upstream 25%.
+const pinDownedHits = 4
 
 // downIn keeps id lying downed and unhurt in its place (a fresh one if it
 // died).
@@ -220,9 +221,11 @@ func standIn(g *Game, id entity.EntityID, name string) entity.EntityID {
 }
 
 // The pinned ally hit counts of TestSHTCombatFriendlyFire (seed 9).
+// Re-pinned after merging the native skill, body and projectile rules; both
+// runs reproduce 35/31. Exact aimed-only scaling is tested in combat.
 const (
-	pinFFFull = 36
-	pinFFNone = 25 // wild shots only: never scaled
+	pinFFFull = 35
+	pinFFNone = 31 // wild shots only: never scaled
 )
 
 // TestSHTCombatRaidAim (SHT-102): the raiders' first aim goes through the

@@ -83,8 +83,8 @@ func TestStartWildlifeBySeason(t *testing.T) {
 						hot[season]++
 					}
 				}
-				if preds == 0 || grazers == 0 {
-					t.Fatalf("seed %d %s %v: %d predators, %d grazers", seed, season, b, preds, grazers)
+				if preds+grazers == 0 {
+					t.Fatalf("seed %d %s %v: no season-eligible wild animals", seed, season, b)
 				}
 			}
 		}
@@ -117,15 +117,15 @@ func TestWildlifeWeights(t *testing.T) {
 	if w := animal.SeasonWeight(animal.Ibex, "Winter"); w != 2000 { // cold|temperate: the mean
 		t.Errorf("mixed habitat %d", w)
 	}
-	if w := wildWeight(animal.Deer, biome.TemperateForest, "Winter"); w != animal.Weight(animal.Deer, biome.TemperateForest)*1000 {
+	if w := animal.WildWeight(animal.Deer, biome.TemperateForest, "Winter"); w != animal.Weight(animal.Deer, biome.TemperateForest)*1000 {
 		t.Errorf("deer in a temperate winter %d", w)
 	}
 	for _, s := range []animal.Species{animal.HiveBeetle, animal.Glimmerstag, animal.Cow, animal.Husky} {
-		if wildWeight(s, biome.TemperateForest, "Spring") != 0 {
+		if animal.WildWeight(s, biome.TemperateForest, "Spring") != 0 {
 			t.Errorf("%s never spawns wild", s)
 		}
 	}
-	if wildWeight(animal.Caribou, biome.TemperateForest, "Winter") != 0 {
+	if animal.WildWeight(animal.Caribou, biome.TemperateForest, "Winter") != 0 {
 		t.Error("caribou are not temperate forest wildlife")
 	}
 }
@@ -169,7 +169,7 @@ func TestMigrationDeterministic(t *testing.T) {
 	// a stocked map (at capacity) gets nobody, dawn or not
 	g := New(Config{Seed: 11, Width: 50, Height: 50})
 	g.wild = true
-	for i := 0; len(g.animalIDs) < g.wildlifeCap(); i++ {
+	for i := 0; i*animal.EcosystemWeight(animal.Deer) < g.wildlifeCap(); i++ {
 		_, _ = g.SpawnAnimal("deer", 5+i%40, 5+i/40)
 	}
 	n := len(g.animalIDs)

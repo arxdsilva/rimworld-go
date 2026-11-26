@@ -70,7 +70,8 @@ func (a *Atlas) colonies() int {
 }
 
 // FoundReason is why a colony cannot be founded on tile ("" it can).
-func (f Fleet) FoundReason(tile int) string {
+func (l Lifecycle) FoundReason(tile int) string {
+	f := l.f
 	p := f.h.Planet()
 	if p == nil {
 		return "No world map."
@@ -88,7 +89,8 @@ func (f Fleet) FoundReason(tile int) string {
 }
 
 // SettleReason is why caravan id cannot settle where it is ("" it can).
-func (f Fleet) SettleReason(id entity.EntityID) string {
+func (l Lifecycle) SettleReason(id entity.EntityID) string {
+	f := l.f
 	c := f.At(id)
 	switch {
 	case c == nil:
@@ -96,14 +98,15 @@ func (f Fleet) SettleReason(id entity.EntityID) string {
 	case c.Back || c.C.State != caravan.Arrived && c.C.State != caravan.Visiting:
 		return "Only a caravan waiting at its destination can settle."
 	}
-	return f.FoundReason(c.C.Tile)
+	return l.FoundReason(c.C.Tile)
 }
 
 // Found has caravan cid found a colony on its tile at the end of the tick:
 // why it cannot ("" it will).
-func (f Fleet) Found(cid uint64) string {
+func (l Lifecycle) Found(cid uint64) string {
+	f := l.f
 	id := entity.EntityID(cid)
-	if why := f.SettleReason(id); why != "" {
+	if why := l.SettleReason(id); why != "" {
 		return why
 	}
 	c := f.At(id)
@@ -120,7 +123,7 @@ func (l Lifecycle) settle(r Request, now uint64) {
 	if c == nil {
 		return
 	}
-	if why := f.FoundReason(r.Tile); why != "" {
+	if why := l.FoundReason(r.Tile); why != "" {
 		f.h.Note("%s", why)
 		return
 	}

@@ -66,16 +66,41 @@ func (c Caravan) Clone() Caravan {
 	return c
 }
 
-// Fleet is the caravans (ascending id, the caller's slice) and the open
-// maps' atlas over the host.
-type Fleet struct {
-	list *[]Caravan
-	a    *Atlas
-	h    Host
+// CloneCaravans detaches a saved or restored caravan list from live routes.
+func CloneCaravans(caravans []Caravan) []Caravan {
+	if len(caravans) == 0 {
+		return nil
+	}
+	out := make([]Caravan, len(caravans))
+	for i, c := range caravans {
+		out[i] = c.Clone()
+	}
+	return out
 }
 
-// Of is the fleet in list with atlas a.
-func Of(list *[]Caravan, a *Atlas, h Host) Fleet { return Fleet{list, a, h} }
+// Fleet manages travelling caravans and their map-bound lifecycle.
+// Settlement transactions are accessed through the separate Market service.
+type Fleet struct {
+	list   *[]Caravan
+	a      *Atlas
+	h      Host
+	market *Markets
+}
+
+// Of binds the authoritative caravan list and map atlas.
+func Of(list *[]Caravan, a *Atlas, h Host) Fleet {
+	return Fleet{list: list, a: a, h: h}
+}
+
+// WithMarkets binds the world's authoritative market owner.
+func (f Fleet) WithMarkets(markets *Markets) Fleet {
+	f.market = markets
+	return f
+}
+
+// Market binds settlement transaction operations to this fleet's live
+// caravans and market ledger.
+func (f Fleet) Market() Market { return Market{fleet: f} }
 
 // At is caravan id (nil: none).
 func (f Fleet) At(id entity.EntityID) *Caravan {
@@ -112,6 +137,7 @@ func (f Fleet) Land(members, animals []uint64, t int) uint64 {
 		f.h.Rehold(entity.EntityID(m), entity.EntityID(c.C.ID))
 	}
 	*f.list = append(*f.list, c)
+	f.pace(&(*f.list)[len(*f.list)-1])
 	f.Arrived(&(*f.list)[len(*f.list)-1], f.h.Now())
 	return c.C.ID
 }

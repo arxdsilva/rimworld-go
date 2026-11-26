@@ -18,7 +18,7 @@ Scope: several maps open and ticking at once (the colony, mineral sites, attacke
 
 - Trade, visitors, gatherings, the ship and climate events stay on the first colony map in this delivery. They are single-colony services; making them per map is a later task.
 - The meeting encounter (trade with a passing caravan) is deferred: caravan trading does not exist yet. Only ambush, manhunter ambush and demand ship.
-- Splitting a caravan stays a disabled gizmo ("Not yet").
+- MAP-25: native caravan splitting is implemented through a quote-bound typed command and exact member, animal and cargo partition. The gizmo stays disabled until the presentation owner wires the command (#55 remains partial).
 - Max colonies defaults to 1, so a new game behaves as today until the player raises it (1-5).
 - Abandoning needs a confirm modal (our UX choice; vanilla asks nothing).
 - New wanderers joining after a game over (vanilla 1.5, 8 in-game hours) are deferred: the modal offers Keep watching, Load and Main menu.

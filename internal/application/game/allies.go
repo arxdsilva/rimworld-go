@@ -5,6 +5,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/tradeview"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
@@ -32,7 +33,7 @@ func (g *Game) Allies() []AllyGroupView {
 		if !c.Here {
 			continue
 		}
-		v := AllyGroupView{Leaving: c.Leaving, HoursLeft: hoursLeft(c.LeaveAt, now)}
+		v := AllyGroupView{Leaving: c.Leaving, HoursLeft: tradeview.HoursLeft(c.LeaveAt, now)}
 		if f := g.factionByID(c.Faction); f != nil {
 			v.Faction = f.Name
 		}

@@ -173,12 +173,12 @@ func PartsLeft(b *body.Body) int {
 // at tick now (Stack.Yield): its size at its age (through the small
 // curve), the parts it still has, and NotCareful unless careful. At least
 // 1, so 0 keeps meaning a whole adult (older saves).
-func CorpseYieldOf(a State, now uint64, careful bool) int {
+func CorpseYieldOf(a State, now uint64, careful bool, policy ...clock.CalendarPolicy) int {
 	am, _ := adultYieldH(a.Species)
 	if am <= 0 {
 		return 1000
 	}
-	size := husbandry[a.Species].size * StageSize(a.Species, AgeDays(a.Born, now, a.Species)) / 1000
+	size := husbandry[a.Species].size * StageSize(a.Species, AgeDays(a.Born, now, a.Species, policy...)) / 1000
 	y := smallCurve(meatPerSize*size) * 1000 / am
 	y = y * PartsLeft(a.Body) / 1000
 	if !careful {

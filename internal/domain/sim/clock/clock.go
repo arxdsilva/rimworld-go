@@ -10,7 +10,8 @@ type Tick uint64
 
 // Clock tracks authoritative simulation time. It never moves backward.
 type Clock struct {
-	tick Tick
+	tick     Tick
+	calendar CalendarPolicy
 }
 
 // StartHour is the default colony-start hour (morning).
@@ -22,9 +23,10 @@ func New() *Clock {
 }
 
 // NewAt returns a Clock starting at t.
-func NewAt(t Tick) *Clock {
-	return &Clock{tick: t}
+func NewAt(t Tick, policy ...CalendarPolicy) *Clock {
+	return &Clock{tick: t, calendar: Policy(policy...)}
 }
+func (c *Clock) Calendar() CalendarPolicy { return c.calendar }
 
 // StartingMorning is the tick for StartHour on day 0.
 func StartingMorning() Tick {
@@ -46,7 +48,7 @@ func (c *Clock) Advance(n int) {
 
 // Date returns the calendar date for the clock's current tick.
 func (c *Clock) Date() Date {
-	return DateAt(c.tick)
+	return DateAtPolicy(c.tick, c.calendar)
 }
 
 // Calendar constants. At 1x, TicksPerSecond ticks elapse per real second.
@@ -86,12 +88,15 @@ type Date struct {
 }
 
 // DateAt converts an authoritative tick into a calendar Date.
-func DateAt(t Tick) Date {
-	totalHours := int(t) / TicksPerHour
+func DateAt(t Tick) Date { return DateAtPolicy(t, CalendarPolicy{}) }
+
+func DateAtPolicy(t Tick, p CalendarPolicy) Date {
+	totalHours := int(t / TicksPerHour)
 	hour := totalHours % HoursPerDay
 	totalDays := totalHours / HoursPerDay
-	day := totalDays % DaysPerQuadrum
-	totalQuadrums := totalDays / DaysPerQuadrum
+	q := p.QuadrumDays()
+	day := totalDays % q
+	totalQuadrums := totalDays / q
 	quadrum := totalQuadrums % QuadrumsPerYear
 	year := totalQuadrums / QuadrumsPerYear
 	minute, second := clockFace(t)

@@ -57,10 +57,12 @@ func MigrateDifficulty(s difficulty.Settings) difficulty.Settings {
 	for _, l := range legacySpeed {
 		was := difficulty.Of(l.p)
 		was.ResearchSpeed = l.old
-		was.QuestRewardPct, was.QuestThreats, was.FriendlyFirePct = s.QuestRewardPct, s.QuestThreats, s.FriendlyFirePct
+		was.QuestRewardPct, was.QuestThreats, was.FriendlyFire = s.QuestRewardPct, s.QuestThreats, s.FriendlyFire
+		was.AdaptGrowth, was.FoodPoisonChance, was.BalanceVersion = s.AdaptGrowth, s.FoodPoisonChance, s.BalanceVersion
 		if s == was {
 			now := difficulty.Of(l.p)
-			now.QuestRewardPct, now.QuestThreats, now.FriendlyFirePct = s.QuestRewardPct, s.QuestThreats, s.FriendlyFirePct
+			now.QuestRewardPct, now.QuestThreats, now.FriendlyFire = s.QuestRewardPct, s.QuestThreats, s.FriendlyFire
+			now.AdaptGrowth, now.FoodPoisonChance, now.BalanceVersion = s.AdaptGrowth, s.FoodPoisonChance, s.BalanceVersion
 			return now
 		}
 	}

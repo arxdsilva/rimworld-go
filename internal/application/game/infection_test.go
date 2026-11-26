@@ -4,6 +4,8 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/sim/command"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -240,5 +242,63 @@ func TestHealrootYieldsMedicine(t *testing.T) {
 	d := plant.DefOf(plant.Healroot)
 	if !d.Crop || d.Yields != item.HerbalMedicine || d.Yield <= 0 {
 		t.Fatalf("healroot def %+v", d)
+	}
+}
+
+// Exercise the actual illness phase after a sick pawn reaches a real bed,
+// rather than setting an immunity result or inferring posture from a claim.
+func TestNativeBedRestImmunityUsesLyingPosture(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		kind   construction.Kind
+		stuff  item.Kind
+		factor int32
+	}{
+		{"sleeping spot", construction.SleepingSpot, item.Wood, 1100},
+		{"bedroll", construction.Bedroll, item.Cloth, 1155},
+		{"bed", construction.Bed, item.Wood, 1177},
+		{"hospital", construction.HospitalBed, item.Steel, 1221},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := New(Config{Seed: 1, Width: 16, Height: 12})
+			id, _ := g.SpawnNamedPawn(4, 4, "Pat")
+			bed := buildNow(t, g, tc.kind, tc.stuff, construction.South, 8, 3)
+			sleepAnytime(g)
+			g.setPriority(id, work.Doctor, 0)
+			g.Infect(id, 10)
+			g.SetNeeds(id, needs.Full, needs.Full)
+			if !stepUntil(g, 1500, func() bool { return restingIn(g, id, bed) }) {
+				t.Fatal("patient did not actually reach bed")
+			}
+			g.SetNeeds(id, needs.Full, needs.Full)
+			if got := g.immunityGain(id); got != tc.factor {
+				t.Fatalf("lying immunity gain %d, want %d", got, tc.factor)
+			}
+			c, ok := g.worstInfection(id)
+			if !ok {
+				t.Fatal("missing actual infection")
+			}
+			want := c
+			infection.StepRace(&want, body.DefOfCond(c.Kind), false, tc.factor, 1)
+			medHour(g)
+			after, ok := g.worstInfection(id)
+			if !ok || after.Immunity != want.Immunity || after.Immunity <= c.Immunity {
+				t.Fatalf("actual medical phase %v -> %v, want %v", c, after, want)
+			}
+			t.Logf("actual bed %d K=%d immunity %d->%d factor=%d", bed, g.clock.Now(), c.Immunity, after.Immunity, tc.factor)
+			g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(id), X: 4, Y: 9})
+			g.Step(1)
+			if g.immunityGain(id) != 1000 {
+				t.Fatalf("standing/going to work received bed bonus: %d", g.immunityGain(id))
+			}
+			if !stepUntil(g, 1500, func() bool { p, _ := g.positions.Get(id); return p.X == 4 && p.Y == 9 }) {
+				t.Fatal("manual move from bed did not finish")
+			}
+			g.down(id, health.CauseInjury)
+			g.SetNeeds(id, needs.Full, needs.Full)
+			if got := g.immunityGain(id); got != 1000 {
+				t.Fatalf("ground downed got resting bonus %d", got)
+			}
+		})
 	}
 }

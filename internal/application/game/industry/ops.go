@@ -79,7 +79,7 @@ func (o Ops) Assign(worker entity.EntityID, drill bool, tries int) bool {
 		bestD := 1 << 30
 		for _, id := range ids {
 			b, ok := o.h.Building(id)
-			if !ok || b.Deconstruct || b.Forbidden || slices.Contains(tried, id) || !o.h.Powered(id) {
+			if !ok || b.Deconstruct || b.Forbidden || slices.Contains(tried, id) || !o.h.Powered(id) || !drill && !o.h.SkyClear(b) {
 				continue
 			}
 			_, spot, ok := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -108,7 +108,7 @@ func (o Ops) Do(worker, id entity.EntityID) Outcome {
 	if !ok || JobOf(b.Kind) == 0 {
 		return Stop
 	}
-	if !o.h.Powered(id) {
+	if !o.h.Powered(id) || b.Forbidden || b.Deconstruct || b.Kind == construction.GroundScanner && !o.h.SkyClear(b) {
 		return Blocked
 	}
 	u := o.h.Work(worker, b.Kind == construction.DeepDrill)
@@ -119,7 +119,7 @@ func (o Ops) Do(worker, id entity.EntityID) Outcome {
 	if b.Kind == construction.DeepDrill {
 		if w >= DrillCycle {
 			w = 0
-			o.portion(b)
+			o.portion(worker, b)
 		}
 	} else if w >= o.scanTarget() {
 		w = 0
@@ -138,16 +138,16 @@ func (o Ops) scanTarget() int {
 
 // portion brings up one drill cycle beside drill b: its nearest found ore
 // in reach, else chunks of the stone below (wiki).
-func (o Ops) portion(b construction.Building) {
+func (o Ops) portion(worker entity.EntityID, b construction.Building) {
 	_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 	w, _ := o.h.Size()
 	k, ok := o.s.nearestOre(b.X, b.Y, w)
 	if !ok {
-		o.h.Drop(item.ChunkOf(o.h.StoneAt(b.X, b.Y)), 1, spot[0], spot[1])
+		o.h.DropDrilled(item.ChunkOf(o.h.StoneAt(b.X, b.Y)), 1, spot[0], spot[1])
 		return
 	}
-	kind, n, out := o.s.take(k)
-	o.h.Drop(kind, n, spot[0], spot[1])
+	kind, n, out := o.s.take(k, o.h.MiningYield(worker, portionOf(item.Kind(o.s.ore[k].Ore))))
+	o.h.DropDrilled(kind, n, spot[0], spot[1])
 	if _, more := o.s.nearestOre(b.X, b.Y, w); out && !more {
 		o.h.Letter("Deep ore exhausted", b.X, b.Y, "The deep drill has brought up all the %s in its reach. It brings up stone chunks from now on.", kind.String())
 	}

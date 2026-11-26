@@ -23,8 +23,7 @@ const (
 // M5 adds the partner thoughts: feelings for the main partner (opinion/10,
 // clamped to +-10) and sleeping alone while that partner is on the map.
 func (g *Game) socialThoughts(id entity.EntityID) []mood.Thought {
-	out := g.prisonerThoughts(id)            // prisoners.go
-	out = append(out, g.bondThoughts(id)...) // bonds.go
+	out := g.bondThoughts(id) // bonds.go
 	if g.soc == nil {
 		return out
 	}
@@ -64,34 +63,33 @@ func (g *Game) sleptAlone(id, p entity.EntityID) bool {
 	return !ok || mine == 0 || mine != theirs
 }
 
-// smoothedMood is the mood moodOf reports: target, approached gradually;
-// target itself until id's first step.
-func (g *Game) smoothedMood(id entity.EntityID, target int) int {
-	if g.soc == nil {
-		return target
+// smoothedMood reads the displayed value when one has been sampled.
+func (g *Game) smoothedMood(id entity.EntityID) (int, bool) {
+	if g.soc != nil {
+		if m, ok := g.soc.moodM[id]; ok {
+			return int((m + 500) / 1000), true
+		}
 	}
-	m, ok := g.soc.moodM[id]
-	if !ok {
-		return target
-	}
-	return int((m + 500) / 1000)
+	return 0, false
 }
 
-// stepMood moves id's smoothed mood one step toward its thought total (a
-// missing value starts at the target; the dead drop theirs).
+// stepMood prunes memories and moves an awake pawn's mood toward its target.
 func (g *Game) stepMood(id entity.EntityID) {
-	if v, ok := g.vital.Get(id); !ok || v.Status == health.Dead {
+	v, ok := g.vital.Get(id)
+	if !ok || v.Status == health.Dead {
 		if g.soc != nil {
 			delete(g.soc.moodM, id)
 		}
 		return
 	}
-	target := int32(g.thoughtLevel(id)) * 1000
-	s := g.socState()
-	cur, ok := s.moodM[id]
-	if !ok {
-		s.moodM[id] = target
+	mood.PrunePawn(g.memories, id, uint64(g.clock.Now()))
+	if g.asleep(id) || v.Status == health.Downed && !g.lyingAwake(id) {
 		return
 	}
-	s.moodM[id] = mood.Approach(cur, target, moodPeriod)
+	target := int32(g.thoughtLevel(id)) * 1000
+	cur, ok := g.socState().moodM[id]
+	if !ok {
+		cur = target
+	}
+	g.soc.moodM[id] = mood.Approach(cur, target, moodPeriod)
 }

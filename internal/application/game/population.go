@@ -15,41 +15,25 @@ import (
 	"rimworld-go/internal/domain/world/temperature"
 )
 
-// Wild population (SIM-025, plan 3.1). A map carries about as many wild
-// animals as its biome supports: biome.Wildlife per 10,000 tiles, fewer
-// in winter. Once an hour the count is checked against that capacity: well
-// below it (capLowPct) a group of the biome's animals may wander in at a
-// reachable edge; well above it (capHighPct) the newest herd may walk off
-// the map. The gap between the two thresholds, groups trimmed to the room
-// left under capacity, departures that never take the count below the low
-// threshold and a settling time after either keep it from flapping.
+// Wildlife uses a biome/area weight budget and hysteretic migration.
+// Species weights differ; hunting and hunger change the occupied budget.
 
 const (
-	// capLowPct / capHighPct: the count, percent of capacity, below which
-	// animals arrive and above which a herd leaves.
+	// capLowPct and capHighPct bound migration hysteresis.
 	capLowPct  = 70
 	capHighPct = 130
 	// arriveOdds / leaveOdds: 1 in this many per hour once past a threshold.
 	arriveOdds = 24
 	leaveOdds  = 12
-	// capUrgentPct: below this share of capacity (hunting and hunger have
-	// thinned the land out) a group comes with 1 chance in urgentOdds an
-	// hour, and the next may follow after urgentSettle.
+	// Under urgent density, arrival checks and settling run more often.
 	capUrgentPct = 60
 	urgentOdds   = 3
 	urgentSettle = 2 * clock.TicksPerHour
-	// preyOdds of every predatorOdds+preyOdds arriving groups are prey;
-	// predators come only while they are fewer than that share of the
-	// wild count (they do not die off as prey does).
-	preyOdds     = 6
-	predatorOdds = 1
-	// popSettle: after an arrival or a departure the count is left to
-	// settle this long before the next one.
+	// PopSettle prevents rapid arrival/departure reversals.
 	popSettle = 6 * clock.TicksPerHour
 	// startCapPct: a new colony starts with this share of capacity.
-	startCapPct = 80
-	// winterColdPct / winterMildPct: winter capacity of a biome with a
-	// yearly mean at or below 0 °C, and of any other.
+	startCapPct = animal.StartCapPct
+	// Winter capacity by biome average temperature.
 	winterColdPct = 60
 	winterMildPct = 80
 	// departSeen: a departing animal last seen this close to its exit and
@@ -68,12 +52,12 @@ type departure struct {
 	Left         int // members that walked off so far
 }
 
-// wildlifeCap is how many wild animals the map supports now: the biome's
-// density over the map's area, cut in winter.
+// wildlifeCap is the biome/area ecosystem budget in hundredths, including
+// the existing winter and volcanic-weather reductions.
 func (g *Game) wildlifeCap() int {
 	bd := biome.DefOf(g.biome)
-	c := animal.WildlifeCapacity(bd.Wildlife, g.grid.Width()*g.grid.Height())
-	if temperature.Season(g.clock.Now()) == "Winter" {
+	c := animal.EcosystemCapacity(bd.AnimalDensity100, g.grid.Width()*g.grid.Height())
+	if temperature.SeasonPolicy(g.clock.Now(), g.clock.Calendar()) == "Winter" {
 		pct := winterMildPct
 		if bd.Climate.YearMean <= 0 {
 			pct = winterColdPct
@@ -83,31 +67,29 @@ func (g *Game) wildlifeCap() int {
 	return c * g.incidents.WildlifePermil(uint64(g.clock.Now())) / 1000 // TEMP-2: a volcanic winter halves it (arrivals and the start target follow)
 }
 
-// wildCount is the number of wild animals counted against capacity. It is
-// counted at most once an in-game hour (the hourly check refreshes it and
-// keeps it current through its own arrivals and departures); the cached
-// value is saved, so a loaded game reads the same count.
+// wildCount caches ecosystem weight within an hour, converting headcount
+// caches from old saves on first access.
 func (g *Game) wildCount() int {
 	now := uint64(g.clock.Now())
-	if g.wl.CountHour != now/clock.TicksPerHour+1 {
+	if !g.wl.WeightSchema || g.wl.CountHour != now/clock.TicksPerHour+1 {
 		g.recountWild(now)
 	}
 	return g.wl.Count
 }
 
-// recountWild counts the wild animals (and the predators among them) now
-// and caches the counts for the hour.
+// recountWild totals live wildlife and predator weights for this hour.
 func (g *Game) recountWild(now uint64) int {
 	n, preds := 0, 0
 	for _, id := range g.animalIDs {
-		if a, ok := g.animals.Get(id); ok && animal.CountsWild(a, now) {
-			n++
+		if a, ok := g.animals.Get(id); ok && animal.CountsWild(a, now) && !foreignPackAnimal(g, id) {
+			w := animal.EcosystemWeight(a.Species)
+			n += w
 			if isPredator(a.Species) {
-				preds++
+				preds += w
 			}
 		}
 	}
-	g.wl.Count, g.wl.Preds, g.wl.CountHour = n, preds, now/clock.TicksPerHour+1
+	g.wl.Count, g.wl.Preds, g.wl.CountHour, g.wl.WeightSchema = n, preds, now/clock.TicksPerHour+1, true
 	return n
 }
 
@@ -115,7 +97,7 @@ func (g *Game) recountWild(now uint64) int {
 func (g *Game) populationHour(now uint64) {
 	capacity := g.wildlifeCap()
 	n := g.recountWild(now)
-	if now < g.wl.PopSettle || capacity <= 0 {
+	if capacity <= 0 || n > 0 && now < g.wl.PopSettle {
 		return
 	}
 	switch {
@@ -124,7 +106,7 @@ func (g *Game) populationHour(now uint64) {
 		if n*100 < capacity*capUrgentPct {
 			odds, settle = urgentOdds, urgentSettle
 		}
-		if g.rng.IntN(odds) != 0 {
+		if g.rng.IntN(odds) != 0 && n > 0 {
 			return
 		}
 		if k, pred := g.wildArrival(capacity-n, n, g.wl.Preds); k > 0 {
@@ -148,21 +130,6 @@ func (g *Game) populationHour(now uint64) {
 	}
 }
 
-// pickWildGroup draws an arriving group's species: prey preyOdds times in
-// predatorOdds+preyOdds (always prey while the n wild animals already
-// hold their share of preds predators), from the biome's season-weighted
-// wildlife (the other kind when the biome has none of the drawn one).
-func (g *Game) pickWildGroup(n, preds int) (animal.Species, bool) {
-	first, second := isPrey, isPredator
-	if g.rng.IntN(preyOdds+predatorOdds) < predatorOdds && preds*(preyOdds+predatorOdds) < n {
-		first, second = isPredator, isPrey
-	}
-	if s, ok := g.pickSpecies(first); ok {
-		return s, true
-	}
-	return g.pickSpecies(second)
-}
-
 // wildArrival brings in one group of at most room animals at an edge the
 // colony can be reached from, given n wild animals with preds predators;
 // it returns how many came and whether they are predators.
@@ -170,7 +137,13 @@ func (g *Game) wildArrival(room, n, preds int) (int, bool) {
 	if room <= 0 {
 		return 0, false
 	}
-	s, ok := g.pickWildGroup(n, preds)
+	// Keep arrivals within the same hysteresis band whenever one animal fits.
+	// An empty map may admit one indivisible animal even when no species fits.
+	upper := (g.wildlifeCap()*capHighPct)/100 - n
+	s, ok := animal.PickEcosystemGroup(n, preds, upper, g.rng.IntN, g.pickSpecies)
+	if !ok && n == 0 {
+		s, ok = animal.PickEcosystemGroup(n, preds, -1, g.rng.IntN, g.pickSpecies)
+	}
 	if !ok {
 		return 0, false
 	}
@@ -178,7 +151,7 @@ func (g *Game) wildArrival(room, n, preds int) (int, bool) {
 	var x, y int
 	if g.hasSetup() {
 		hab = g.newHabitat()       // wildlife_habitat.go
-		x, y, ok = hab.pickEdge(s) // at a map edge, never mid-map
+		x, y, ok = hab.PickEdge(s) // at a map edge, never mid-map
 		if !ok {
 			x, y, ok = g.edgeTile()
 			hab = nil
@@ -189,11 +162,12 @@ func (g *Game) wildArrival(room, n, preds int) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	size := min(g.herdSizeOf(s), room)
+	weight := animal.EcosystemWeight(s)
+	size := min(g.herdSizeOf(s), max(1, room/weight))
 	if isPredator(s) {
 		size = min(size, startPredatorMax)
 	}
-	return len(g.spawnHerdIn(hab, s, x, y, size)), isPredator(s)
+	return len(g.spawnHerdIn(hab, s, x, y, size)) * weight, isPredator(s)
 }
 
 // herdLeaves sends the newest herd (highest Herd id) whose going keeps the
@@ -217,12 +191,13 @@ func (g *Game) herdLeaves(n, capacity int) (int, bool) {
 	floor := (capacity*capLowPct + 99) / 100
 	for _, h := range order {
 		ids := herds[h]
-		if n-len(ids) < floor {
+		a, _ := g.animals.Get(ids[0])
+		weight := len(ids) * animal.EcosystemWeight(a.Species)
+		if n-weight < floor {
 			continue
 		}
-		a, _ := g.animals.Get(ids[0])
 		g.sendHerdOff(h, ids)
-		return len(ids), isPredator(a.Species)
+		return weight, isPredator(a.Species)
 	}
 	return 0, false
 }

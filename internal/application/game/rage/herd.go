@@ -34,7 +34,7 @@ func (r *Rage) HerdCall(id entity.EntityID, a animal.State, by entity.EntityID, 
 	if c, ok := r.m.Call[a.Herd]; ok && now < c.At+callEvery {
 		return
 	}
-	if o := r.h.Ref(by); o != nil && !o.Tame && o.Herd == a.Herd {
+	if o, ok := r.h.Animal(by); ok && !o.Tame && o.Herd == a.Herd {
 		return // a squabble inside the herd
 	}
 	pos := r.pos(id)

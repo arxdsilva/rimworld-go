@@ -84,7 +84,7 @@ func TestBondOnTrainingSuccessRate(t *testing.T) {
 	now := uint64(g.clock.Now())
 	for i := 0; i < n; i++ {
 		a, _ := g.animals.Get(dog)
-		a.Trained, a.TrainDecay = [training.NumSkills]uint8{}, 0
+		a.Trained, a.TrainDecay = [training.LegacySkills]uint8{}, 0
 		g.trainSession(ada, dog, &a, training.Obedience, now)
 		if a.Trained[training.Obedience] > 0 {
 			steps++
@@ -111,7 +111,7 @@ func TestBondedTrainerIsFiveTimesBetter(t *testing.T) {
 		got := 0
 		for i := 0; i < 10000; i++ {
 			a, _ := g.animals.Get(dog)
-			a.Trained, a.TrainDecay, a.Bond = [training.NumSkills]uint8{}, 0, 0
+			a.Trained, a.TrainDecay, a.Bond = [training.LegacySkills]uint8{}, 0, 0
 			if bonded {
 				a.Bond = uint64(ada)
 			}

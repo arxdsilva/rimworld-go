@@ -15,9 +15,12 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -62,17 +65,49 @@ func visitsOf(g *Game) visit.Visits {
 // visitingFactions are the factions (1 + index) that may send visitors.
 func (g *Game) visitingFactions() []int { return visitsOf(g).Factions() }
 
-// visitorsFit reports whether a friendly visitor group can arrive: a
-// colony with a friendly or neutral people and no visitors already here.
+// rebuildVisitGroups upgrades old visit records without touching running jobs.
+func rebuildVisitGroups(g *Game) {
+	if g.worldSt == nil || len(g.worldSt.visitors) == 0 {
+		return
+	}
+	cars := caravansOf(&g.trade)
+	legacy := make([]visit.LegacyCaravan, 0, len(cars))
+	for _, c := range cars {
+		legacy = append(legacy, visit.LegacyCaravan{Trader: c.Trader, Members: c.Members,
+			Faction: g.factionRef(c.Faction), LeaveAt: c.LeaveAt})
+	}
+	groupIDs := visitsOf(g).RebuildLegacy(legacy, uint64(g.clock.Now()))
+	for i, c := range cars {
+		c.GroupID = groupIDs[i]
+		if len(c.Cargo) == 0 {
+			c.Cargo = visit.AssignCargo(c.Stock, []entity.EntityID{c.Trader})
+		}
+	}
+}
+
+// visitorsFit permits independent natural visitors while an existing
+// party, including a long-lived externally managed guest, is on the map.
 func (g *Game) visitorsFit(now uint64) bool {
 	if !g.hasSetup() || len(g.pawnIDs) == 0 || len(g.visitingFactions()) == 0 {
 		return false
 	}
-	return g.worldSt == nil || len(g.worldSt.visitors) == 0
+	if g.worldSt == nil {
+		return true
+	}
+	return visit.RoomForNaturalVisitors(g.worldSt.visitGroups)
 }
 
 // visitorsArrive brings a visitor group in from a map edge.
 func (g *Game) visitorsArrive(now uint64) bool { return visitsOf(g).Arrive(now) }
+
+// A small fraction of ordinary visits bring a trading party. The frequency
+// is original tuning; the real trade session is shared with the caravan.
+func visitorIncidentArrive(g *Game, now uint64) bool {
+	if g.stream(streamWorld).IntN(4) == 0 && smallTraderArrive(g, now) {
+		return true
+	}
+	return g.visitorsArrive(now)
+}
 
 // insetLandNear is a free dry tile near (x, y) in from the border.
 func (g *Game) insetLandNear(x, y int, used [][2]int) (int, int, bool) {
@@ -198,7 +233,7 @@ func (h careGuests) Leave(id entity.EntityID) {
 	g, now := h.g, uint64(h.g.clock.Now())
 	for i := range g.worldS().visitors {
 		if v := &g.worldSt.visitors[i]; v.ID == id {
-			v.Leaving, v.RetryAt, v.LeaveAt = true, 0, now
+			v.Leaving, v.RetryAt, v.LeaveAt, v.Healed = true, 0, now, true
 		}
 	}
 	g.reserve.ReleaseOwner(id)
@@ -235,7 +270,7 @@ func (h careGuests) offerJoin(id entity.EntityID) {
 // where id stands is within joinUnsafeMargin of its comfort band.
 func (h careGuests) leavingSafe(id entity.EntityID) bool {
 	g := h.g
-	if slices.ContainsFunc(g.raiderIDs, g.standingRaider) {
+	if g.incidents.Fallout(uint64(g.clock.Now())) || slices.ContainsFunc(g.raiderIDs, g.standingRaider) {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
@@ -262,10 +297,11 @@ type visitHost struct {
 	visitDiplomacy
 	visitTurning
 	visitCarrying
+	raidFight // shared walk, strike, and breach paths
 }
 
 func newVisitHost(g *Game) visitHost {
-	return visitHost{visitBodies{g}, visitMovers{g}, visitGround{g}, visitArrivals{g}, visitFighters{g}, visitDiplomacy{g}, visitTurning{g}, visitCarrying{g}}
+	return visitHost{visitBodies{g}, visitMovers{g}, visitGround{g}, visitArrivals{g}, visitFighters{g}, visitDiplomacy{g}, visitTurning{g}, visitCarrying{g}, raidFight{g}}
 }
 
 type visitBodies struct{ g *Game }
@@ -285,13 +321,59 @@ func (h visitBodies) Hold(id entity.EntityID, now uint64) { // prison.Live walks
 	h.g.raiders[id] = r
 }
 func (h visitBodies) GuestStep(id entity.EntityID) bool { return h.g.care.Guest.Step(id) }
-func (h visitBodies) GuestDied(id entity.EntityID)      { h.g.care.Guest.Died(id) }
-func (h visitBodies) Standing(id entity.EntityID) bool  { return h.g.standingPawn(id) }
-func (h visitBodies) Name(id entity.EntityID) string    { return h.g.name(id) }
+func (h visitBodies) NeedsStep(id entity.EntityID, now uint64) {
+	g := h.g
+	j, _ := g.jobs.Get(id)
+	if j.Kind == job.Sleep && j.State == job.Do {
+		return
+	}
+	n, _ := g.need.Get(id)
+	if n.Hunger <= needs.HungryAt && g.worldSt != nil {
+		for i := range g.worldSt.visitors {
+			r := &g.worldSt.visitors[i]
+			if r.ID == id && r.Rations > 0 {
+				r.Rations--
+				n.Hunger = min(n.Hunger+needs.Full/2, needs.Full)
+				break
+			}
+		}
+	}
+	g.need.Set(id, n)
+}
+func (h visitBodies) RestStep(id entity.EntityID, now uint64) bool {
+	g := h.g
+	j, _ := g.jobs.Get(id)
+	n, _ := g.need.Get(id)
+	if j.Kind == job.Sleep {
+		if j.State == job.Goto {
+			return true
+		}
+		if j.State == job.Do {
+			return true // phaseJobs owns the actual sleep tick
+		}
+	}
+	if n.Tired() {
+		g.rest.InPlace(id)
+		return true
+	}
+	return false
+}
+func (h visitBodies) GuestDied(id entity.EntityID)     { h.g.care.Guest.Died(id) }
+func (h visitBodies) Standing(id entity.EntityID) bool { return h.g.standingPawn(id) }
+func (h visitBodies) Name(id entity.EntityID) string   { return h.g.name(id) }
 func (h visitBodies) Depart(id entity.EntityID) { // it stays a known person
-	h.g.setWhere(id, whereOffMap)
-	h.g.removeRaider(id) // raids.go: off the map
-	h.g.invalidateCreatures()
+	g := h.g
+	if g.worldSt != nil && g.alive(id) {
+		for _, r := range g.worldSt.visitors {
+			if r.ID == id && r.Healed && !r.Turned && r.Faction > 0 {
+				careGuests{g}.Goodwill(uint64(r.Faction), care.GoodwillHealed, care.ReasonHealed)
+				break
+			}
+		}
+	}
+	g.setWhere(id, whereOffMap)
+	g.removeRaider(id) // raids.go: off the map
+	g.invalidateCreatures()
 }
 
 type visitMovers struct{ g *Game }
@@ -304,11 +386,8 @@ func (h visitMovers) Job(id entity.EntityID) job.Record                { j, _ :=
 func (h visitMovers) SetJob(id entity.EntityID, rec job.Record)        { h.g.jobs.Set(id, rec) }
 func (h visitMovers) Release(id entity.EntityID)                       { h.g.reserve.ReleaseOwner(id) }
 func (h visitMovers) StartJob(id entity.EntityID, rec job.Record) bool { return h.g.startJob(id, rec) }
-func (h visitMovers) WalkableNear(x, y, r int) (int, int, bool) {
-	return h.g.combat.Tiles.WalkableNear(x, y, r)
-}
-func (h visitMovers) Free(x, y int) bool { return h.g.dryWalkable(x, y) && !h.g.pawnOn(x, y) }
-func (h visitMovers) Size() (int, int)   { return h.g.grid.Width(), h.g.grid.Height() }
+func (h visitMovers) Free(x, y int) bool                               { return h.g.dryWalkable(x, y) && !h.g.pawnOn(x, y) }
+func (h visitMovers) Size() (int, int)                                 { return h.g.grid.Width(), h.g.grid.Height() }
 
 type visitGround struct{ g *Game }
 
@@ -325,6 +404,51 @@ func (h visitGround) Records(create bool) *[]visit.Rec {
 	}
 	return &h.g.worldS().visitors
 }
+func (h visitGround) Groups(create bool) *[]visit.Group {
+	if h.g.worldSt == nil && !create {
+		return nil
+	}
+	return &h.g.worldS().visitGroups
+}
+func (h visitGround) GroupID() uint64 {
+	w := h.g.worldS()
+	w.nextVisitGroup++
+	return w.nextVisitGroup
+}
+func (h visitGround) MemberGone(id entity.EntityID, pack bool) (gone, harmed bool) {
+	g := h.g
+	if pack {
+		a, ok := g.animals.Get(id)
+		return !ok, !ok || a.Downed
+	}
+	p := g.personOf(id)
+	if p == nil {
+		return true, true
+	}
+	if p.Where == whereOffMap {
+		return true, false
+	}
+	if p.Where == whereColony {
+		return true, false // a quest guest recruited into the colony
+	}
+	if p.Where != whereVisitor && !g.onMap(id) {
+		return true, true
+	}
+	if g.prison.Is(id) {
+		return true, true
+	}
+	v, ok := g.vital.Get(id)
+	if ok && v.Status == health.Dead {
+		return true, true
+	}
+	if ok && v.Status == health.Downed && g.lastHit[id].Tick > 0 {
+		return false, true // violent incapacitation counts toward the party's losses
+	}
+	return false, false
+}
+func (h visitGround) GroupDanger(id entity.EntityID) bool {
+	return h.g.exposureDanger(id)
+}
 
 type visitArrivals struct{ g *Game }
 
@@ -336,11 +460,16 @@ func (h visitArrivals) NewPerson(ref int, f *faction.Faction) entity.EntityID {
 	g.socState().sig[id] = personSig{}
 	return id
 }
+func (h visitArrivals) PackAnimal(x, y int) (entity.EntityID, bool) {
+	id, err := h.g.spawnAnimal(animal.Donkey, x, y)
+	return id, err == nil
+}
+
 func (h visitArrivals) Place(id entity.EntityID, ref, x, y int, now uint64) {
 	g := h.g
 	g.raiderIDs = withID(g.raiderIDs, id) // prisoners.go
 	g.positions.Set(id, Position{X: x, Y: y})
-	g.names.Set(id, bioName(g.personOf(id).Bio))
+	g.names.Set(id, g.personOf(id).Bio.DisplayName())
 	g.jobs.Set(id, job.Record{})
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
@@ -363,16 +492,13 @@ type visitFighters struct{ g *Game }
 func (h visitFighters) RaiderIDs() []entity.EntityID           { return h.g.raiderIDs }
 func (h visitFighters) StandingRaider(id entity.EntityID) bool { return h.g.standingRaider(id) }
 func (h visitFighters) Arm(id entity.EntityID, k item.Kind)    { h.g.equip[id] = k }
-func (h visitFighters) Strike(id entity.EntityID, j job.Record, now uint64) {
-	h.g.combat.Strikes.Do(id, j, now)
-}
 func (h visitFighters) NearestColonist(x, y int) (entity.EntityID, int, int, bool) {
 	id, p, ok := h.g.nearestColonist(Position{X: x, Y: y})
 	return id, p.X, p.Y, ok
 }
 func (h visitFighters) HitAt(id entity.EntityID) uint64 { return h.g.lastHit[id].Tick }
 func (h visitFighters) Trader(id entity.EntityID) bool {
-	return h.g.trade.caravan != nil && h.g.trade.caravan.Trader == id
+	return caravanByTrader(&h.g.trade, id) != nil
 }
 
 type visitDiplomacy struct{ g *Game }
@@ -475,13 +601,142 @@ func (h visitTurning) Rescuing(id entity.EntityID) bool {
 }
 
 func (h visitTurning) TraderTurned(ref int) bool {
-	g, c := h.g, h.g.trade.caravan
-	if c == nil || g.factionRef(c.Faction) != ref {
-		return false
+	g := h.g
+	changed := false
+	for _, c := range caravansOf(&g.trade) {
+		if g.factionRef(c.Faction) != ref {
+			continue
+		}
+		c.Turned, changed = true, true
+		if s := g.trade.session; s != nil && s.trader == c.Trader {
+			g.trade.session = nil
+		}
 	}
-	c.Turned = true
-	if s := g.trade.session; s != nil && s.trader == c.Trader {
-		g.trade.session = nil
+	return changed
+}
+
+func (h visitGround) GroupClosed(id uint64) {
+	g := h.g
+	if c := caravanByGroup(&g.trade, id); c != nil {
+		removeCaravan(&g.trade, c)
 	}
-	return true
+}
+
+func (h visitGround) GroupGift(gr visit.Group) {
+	g := h.g
+	if g.stream(streamTrade).IntN(100) >= 30 { // original tuning; wiki: Trade
+		return
+	}
+	qty := 1 + g.stream(streamTrade).IntN(3)
+	g.dropGoods(trade.Line{Kind: item.HerbalMedicine, Qty: qty}, gr.CampX, gr.CampY, false)
+	g.message(gr.CampX, gr.CampY, "The visitors left a parting gift.")
+}
+
+// PackStep runs a caravan animal's actual movement after the normal
+// animal survival/flee phase. Animals outside visiting groups use their
+// existing AI without new work.
+func (h visitGround) PackStep(id entity.EntityID, group visit.Group, now uint64) {
+	g := h.g
+	a, ok := g.animals.Get(id)
+	if !ok || a.Downed {
+		return
+	}
+	pos, _ := g.positions.Get(id)
+	if group.Phase == visit.PhaseLeaving {
+		if max(pos.X-group.ExitX, group.ExitX-pos.X, pos.Y-group.ExitY, group.ExitY-pos.Y) <= 1 {
+			// Debit a normally departing carrier before marking it departed;
+			// the removal path must not drop merchandise a second time.
+			if c := caravanByGroup(&g.trade, group.ID); c != nil {
+				carrierGone(g, c, id, false)
+			}
+			for i := range g.worldS().visitGroups {
+				if gr := &g.worldSt.visitGroups[i]; gr.ID == group.ID {
+					for j := range gr.Members {
+						if gr.Members[j].ID == id {
+							gr.Members[j].Departed = true
+						}
+					}
+				}
+			}
+			g.leaveMap(id)
+			return
+		}
+		if a.PathI >= len(a.Path) && now >= a.RetryAt {
+			g.animalGoTo(id, &a, group.ExitX, group.ExitY)
+		}
+	} else {
+		tx, ty := group.CampX, group.CampY
+		if g.onMap(group.Leader) {
+			p, _ := g.positions.Get(group.Leader)
+			tx, ty = p.X, p.Y
+		}
+		if max(pos.X-tx, tx-pos.X, pos.Y-ty, ty-pos.Y) > 4 &&
+			a.PathI >= len(a.Path) && now >= a.RetryAt {
+			g.animalGoTo(id, &a, tx, ty)
+		}
+	}
+	a.Mode = animal.Wander
+	a.NextDecide = now + 180
+	g.animals.Set(id, a)
+}
+
+// dismissVisitorCommand orders an actual conversation with the group's
+// leader; walking and interruption use the existing forced-job system.
+func dismissVisitorCommand(g *Game, pawn, target entity.EntityID) {
+	if !g.isPawn(pawn) || !g.alive(pawn) || g.drafted(pawn) || g.capacity(pawn, body.Talking) <= 0 {
+		return
+	}
+	gr, ok := visitsOf(g).GroupOf(target)
+	if !ok || gr.Leader != target || gr.Phase == visit.PhaseLeaving ||
+		(gr.Kind != visit.KindVisitor && gr.Kind != visit.KindCaravan && gr.Kind != visit.KindSmallTrader) ||
+		!g.alive(target) || !g.visitor(target) {
+		return
+	}
+	pos, ok := g.positions.Get(target)
+	if !ok {
+		return
+	}
+	tx, ty, ok := g.besideSpot(pawn, pos.X, pos.Y)
+	if !ok {
+		return
+	}
+	g.interrupt(pawn, job.Cancelled)
+	g.startJob(pawn, job.Record{Kind: job.DismissVisitorGroup, Target: target,
+		TX: tx, TY: ty, WorkLeft: 30, Forced: true})
+}
+
+func dismissVisitorJob(g *Game, pawn entity.EntityID, j job.Record) {
+	gr, ok := visitsOf(g).GroupOf(j.Target)
+	if !ok || gr.Leader != j.Target || gr.Phase == visit.PhaseLeaving || !g.alive(j.Target) {
+		j.State = job.Fail
+		g.jobs.Set(pawn, j)
+		return
+	}
+	p, ok := g.positions.Get(j.Target)
+	me, _ := g.positions.Get(pawn)
+	if !ok {
+		j.State = job.Fail
+		g.jobs.Set(pawn, j)
+		return
+	}
+	if max(p.X-me.X, me.X-p.X, p.Y-me.Y, me.Y-p.Y) > 1 {
+		if tx, ty, ok := g.besideSpot(pawn, p.X, p.Y); ok {
+			if tx != j.TX || ty != j.TY {
+				g.startJob(pawn, job.Record{Kind: j.Kind, Target: j.Target,
+					TX: tx, TY: ty, WorkLeft: j.WorkLeft, Forced: true})
+				return
+			}
+		}
+		j.State = job.Fail
+		g.jobs.Set(pawn, j)
+		return
+	}
+	if j.WorkLeft > 1 {
+		j.WorkLeft--
+		g.jobs.Set(pawn, j)
+		return
+	}
+	visitsOf(g).LeaveGroup(gr.ID, visit.LeaveDismissed, uint64(g.clock.Now()))
+	j.State = job.Complete
+	g.jobs.Set(pawn, j)
 }

@@ -92,8 +92,14 @@ type Soil struct {
 // weather and the lamps rather than the plant, so it is asked for one
 // plant on demand instead of riding on every PlantView.
 type PlantGrowth struct {
-	State  string
-	RipeIn int
+	State             string
+	RipeIn            int
+	Rate              int // percent of baseline
+	Fertility         int // percent of standard soil
+	Light             int // illumination in permille
+	LightFactor       int // growth factor in permille
+	Temperature       int // air temperature in tenths of C
+	TemperatureFactor int // thermal growth factor in permille
 }
 
 // Stain is one stained tile for presentation.

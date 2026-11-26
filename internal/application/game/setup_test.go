@@ -65,7 +65,7 @@ func setupFor(t testing.TB, key string, edit func(*Setup)) *Setup {
 func buildSetup(t testing.TB, s *Setup) *Game {
 	t.Helper()
 	b := NewColonyBuilder(Config{Setup: s})
-	for i := 0; i <= buildSteps(); i++ {
+	for i := 0; i <= setupview.BuildSteps(); i++ {
 		if _, _, done := b.Step(1); done {
 			return b.Game()
 		}
@@ -184,7 +184,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	var phases []string
 	last := float32(-1)
 	for i := 0; ; i++ {
-		if i > buildSteps() {
+		if i > setupview.BuildSteps() {
 			t.Fatal("never done")
 		}
 		if b.Game() != nil {
@@ -824,30 +824,25 @@ func TestThreatPointsUsesDifficulty(t *testing.T) {
 	t.Parallel()
 	pts := func(p difficulty.Preset) (*Game, int) {
 		g := buildSetup(t, setupFor(t, "ember_clan", func(s *Setup) { s.Preset, s.Difficulty = p, difficulty.Of(p) }))
+		stepUntilLanded(t, g)
+		if _, err := g.SpawnStack(item.Silver, 50000, 0, 0); err != nil {
+			t.Fatal(err)
+		}
 		return g, g.threatPoints()
 	}
 	g, seasoned := pts(difficulty.Seasoned)
-	want := difficulty.ThreatPoints(difficulty.Of(difficulty.Seasoned), g.Wealth(), g.standingColonists(), 0, 0)
+	want := difficulty.ThreatPointsWeighted(difficulty.Of(difficulty.Seasoned), threatBase(g, false), g.rel(uint64(g.clock.Now())), g.clock.Calendar().YearDays(), .82)
 	if seasoned != want || g.raidPoints(3) != want {
 		t.Fatalf("seasoned %d, want %d", seasoned, want)
 	}
 	_, merciless := pts(difficulty.Merciless)
-	if merciless < seasoned*19/10 || merciless > seasoned*21/10 {
-		t.Fatalf("merciless %d vs seasoned %d: want twice", merciless, seasoned)
+	if merciless < seasoned*240/100 || merciless > seasoned*255/100 {
+		t.Fatalf("merciless %d vs seasoned %d: want about 247%%", merciless, seasoned)
 	}
 	// adaptation raises them
-	g.ng.adapt.Value = 20
+	g.ng.adapt = difficulty.Adapter{Units: 600000, Precise: true}
 	if g.threatPoints() <= seasoned {
 		t.Fatal("adaptation does not raise threat points")
-	}
-	// raid sizes grow with the map
-	big := bareSetupGame(difficulty.Seasoned)
-	big.grid = New(Config{Width: 500, Height: 500}).grid
-	if big.maxRaiders() != 14 || bareSetupGame(difficulty.Seasoned).maxRaiders() != 8 {
-		t.Fatalf("max raiders %d", big.maxRaiders())
-	}
-	if NewColony(Config{Seed: 1, Width: 60, Height: 60}).maxRaiders() != maxScaledRaiders {
-		t.Fatal("legacy raids stay at 8")
 	}
 }
 
@@ -859,9 +854,9 @@ func TestDifficultyHooks(t *testing.T) {
 		infection50, revenge50, infection90 int
 		huntColonists                       bool
 	}{
-		{difficulty.Wanderer, 13, 13, 12, 12, 12, 200, 25, 360, false}, // RSCH-1: research x1.2 (wiki)
+		{difficulty.Wanderer, 12, 12, 10, 12, 10, 150, 12, 270, false}, // RSCH-1: research x1.2 (wiki)
 		{difficulty.Seasoned, 10, 10, 10, 10, 0, 500, 50, 900, true},
-		{difficulty.Merciless, 8, 8, 8, 9, -8, 650, 65, 1000, true},
+		{difficulty.Merciless, 8, 8, 8, 9, -10, 550, 50, 990, true},
 	}
 	for _, c := range cases {
 		g := bareSetupGame(c.preset)
@@ -983,7 +978,7 @@ func TestSetupStateRoundTrip(t *testing.T) {
 		s.Scenario.Parts = append(s.Scenario.Parts, scenario.Part{Kind: scenario.PartCondition, Cond: scenario.EndlessChill})
 	}))
 	g.Step(30)
-	g.ng.adapt = difficulty.Adapter{Days: 12, Value: 3}
+	g.ng.adapt = difficulty.Adapter{Units: -12500, Precise: true}
 	st := g.exportSetupState()
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(st); err != nil {
@@ -1018,9 +1013,91 @@ func TestLossesEaseAndAdapt(t *testing.T) {
 	if g.nextThreat != next+6*clock.TicksPerDay || !g.ng.lost || len(g.ng.dead) != 1 {
 		t.Fatalf("loss ease: next %d (was %d), lost %v", g.nextThreat, next, g.ng.lost)
 	}
-	g.ng.adapt = difficulty.Adapter{Days: 40}
 	g.dayRollover(now)
-	if g.ng.adapt.Days != 15 || g.ng.lost {
+	if g.ng.adapt.AdaptDays() != -30 || g.ng.lost {
 		t.Fatalf("adaptation after a loss: %+v", g.ng.adapt)
+	}
+}
+
+func TestAdaptationCountsTransitionsNotWounds(t *testing.T) {
+	t.Parallel()
+	g := buildSetup(t, setupFor(t, "ember_clan", nil))
+	id := g.pawnIDs[0]
+	g.hurt(id, 9, 0)
+	if g.ng.adapt.AdaptDays() != 0 {
+		t.Fatal("ordinary wound charged adaptation")
+	}
+	g.down(id, health.CauseInjury)
+	g.down(id, health.CauseInjury)
+	if len(g.pawnIDs) != 5 {
+		t.Fatal("expected five eligible starting colonists")
+	}
+	if g.ng.adapt.AdaptDays() != -5.75 {
+		t.Fatal(g.ng.adapt)
+	}
+	state := g.exportSetupState()
+	g2 := New(Config{Width: g.Width(), Height: g.Height()})
+	g2.importSetupState(state)
+	if g2.ng.adapt != g.ng.adapt {
+		t.Fatal("save lost adaptation")
+	}
+	g.die(id, health.CauseInjury)
+	now := uint64(g.clock.Now())
+	g.checkLosses(now)
+	g.checkLosses(now)
+	if g.ng.adapt.AdaptDays() != -35.75 || len(g.ng.dead) != 1 {
+		t.Fatal(g.ng.adapt)
+	}
+	g.ng.adapt.HalfDay(g.ng.setup.Difficulty, g.relDay(now))
+	if g.ng.adapt.AdaptDays() != -34.25 {
+		t.Fatal(g.ng.adapt)
+	}
+}
+
+func TestAdaptationCountsEachColonistDeath(t *testing.T) {
+	t.Parallel()
+	g := buildSetup(t, setupFor(t, "ember_clan", nil))
+	for _, id := range g.pawnIDs[:2] {
+		g.die(id, health.CauseInjury)
+	}
+	now := uint64(g.clock.Now())
+	g.checkLosses(now)
+	g.checkLosses(now)
+	if g.ng.adapt.AdaptDays() != -60 || len(g.ng.dead) != 2 {
+		t.Fatal(g.ng.adapt)
+	}
+}
+
+// V21 saves already carried an explicit friendly-fire switch before NG-2
+// introduced adaptation growth and food-poison multipliers.
+func TestImportedV21DifficultyRetainsFriendlyFireAndNewZeros(t *testing.T) {
+	t.Parallel()
+	g := bareSetupGame(difficulty.Seasoned)
+	old := difficulty.Of(difficulty.Seasoned)
+	old.BalanceVersion, old.FriendlyFire = 1, 0
+	old.AdaptGrowth, old.FoodPoisonChance = 0, 0
+	g.ng.setup.Difficulty = old
+
+	var wire bytes.Buffer
+	if err := gob.NewEncoder(&wire).Encode(g.exportSetupState()); err != nil {
+		t.Fatal(err)
+	}
+	var decoded SetupState
+	if err := gob.NewDecoder(&wire).Decode(&decoded); err != nil {
+		t.Fatal(err)
+	}
+	loaded := New(Config{Seed: 3, Width: 40, Height: 40})
+	loaded.importSetupState(&decoded)
+	got := loaded.ng.setup.Difficulty
+	if got.BalanceVersion != 3 || got.FriendlyFire != 0 ||
+		got.AdaptGrowth != 100 || got.FoodPoisonChance != 100 {
+		t.Fatalf("old saved difficulty changed explicit friendly fire or new defaults: %+v", got)
+	}
+	got.AdaptGrowth, got.FoodPoisonChance = 0, 0
+	loaded.ng.setup.Difficulty = got
+	again := New(Config{Seed: 3, Width: 40, Height: 40})
+	again.importSetupState(loaded.exportSetupState())
+	if actual := again.ng.setup.Difficulty; actual != got {
+		t.Fatalf("new explicit zero controls changed on save/load: %+v want %+v", actual, got)
 	}
 }

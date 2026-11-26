@@ -13,7 +13,8 @@ import (
 
 func TestNoChronicBeforeOnsetAge(t *testing.T) {
 	onset := map[CondKind]int{CondBadBack: 41, CondCataract: 49, CondFrail: 51, CondDementia: 69,
-		CondHearingLoss: 49, CondArteryBlockage: 21, CondCarcinoma: 23} // wiki: Ailments
+		CondHearingLoss: 49, CondArteryBlockage: 21, CondCarcinoma: 23,
+		CondAsthma: 0, CondAlzheimers: 34} // wiki: Ailments
 	if len(Chronics()) != len(onset) {
 		t.Fatalf("chronic kinds %d, want %d", len(Chronics()), len(onset))
 	}
@@ -26,7 +27,11 @@ func TestNoChronicBeforeOnsetAge(t *testing.T) {
 				t.Fatalf("%s at %d before onset %d", DefOfCond(c.Kind).Label, age, c.OnsetAge)
 			}
 		}
-		if OnsetPerDay(c.Kind, c.OnsetAge) <= 0 {
+		if c.Kind == CondAsthma {
+			if OnsetPerYear(c.Kind, c.OnsetAge) != 0 || OnsetPerDay(c.Kind, c.OnsetAge) != 0 {
+				t.Fatal("asthma must use birthday incidence rather than a daily onset curve")
+			}
+		} else if OnsetPerDay(c.Kind, c.OnsetAge) <= 0 {
 			t.Fatalf("%s can start at its onset age", DefOfCond(c.Kind).Label)
 		}
 	}
@@ -45,7 +50,7 @@ func TestOnsetChanceRisesWithAge(t *testing.T) {
 			}
 			prev = n
 		}
-		if prev != c.Cap || OnsetPerYear(c.Kind, c.OnsetAge+1) <= OnsetPerYear(c.Kind, c.OnsetAge) {
+		if prev != c.Cap || c.Slope > 0 && OnsetPerYear(c.Kind, c.OnsetAge+1) <= OnsetPerYear(c.Kind, c.OnsetAge) {
 			t.Fatalf("%s rises linearly to its cap: %d", DefOfCond(c.Kind).Label, prev)
 		}
 	}
@@ -63,7 +68,7 @@ func TestAgingDefsFollowWiki(t *testing.T) {
 	}
 	b = Body{}
 	b.Develop(CondCataract, EyeL, 0)
-	if b.Capacity(Sight) != 750 {
+	if b.Capacity(Sight) != 875 {
 		t.Fatalf("one cataract: sight %d", b.Capacity(Sight))
 	}
 	b.Develop(CondCataract, EyeR, 0)
@@ -298,11 +303,11 @@ func TestCataractCuredByEyeReplacement(t *testing.T) {
 	if b.condOn(CondCataract, EyeL) || !b.condOn(CondCataract, EyeR) {
 		t.Fatalf("the replaced eye's cataract goes, the other stays: %+v", b.Conds)
 	}
-	if b.Capacity(Sight) != (1250+500)/2 {
+	if b.Capacity(Sight) != (3*1250+500)/4 {
 		t.Fatalf("sight %d", b.Capacity(Sight))
 	}
 	if !b.Apply(Operation{Kind: InstallImplant, Part: EarR, Item: item.CochlearImplant}, Success, nil, 0) || b.condOn(CondHearingLoss, EarR) {
-		t.Fatal("a cochlear implant ends that ear's hearing loss")
+		t.Fatal("a acoustic implant ends that ear's hearing loss")
 	}
 	// an eye lost to a wound takes its cataract along at the next step
 	b.destroy(EyeR)

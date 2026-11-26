@@ -21,6 +21,14 @@ func New(seed uint64) *Rand {
 	return &Rand{pcg: p, src: rand.New(p)} // #nosec G404 -- explicitly seeded PCG: the deterministic sim stream
 }
 
+// Clone forks the generator at its current position without advancing it.
+// Extra optional content can draw from the fork while the saved core stream
+// continues exactly as before.
+func (r *Rand) Clone() *Rand {
+	p := *r.pcg
+	return &Rand{pcg: &p, src: rand.New(&p)} // #nosec G404 -- exact copy of the explicitly seeded deterministic sim stream
+}
+
 // MarshalBinary captures the generator state (saved games).
 func (r *Rand) MarshalBinary() ([]byte, error) { return r.pcg.MarshalBinary() }
 

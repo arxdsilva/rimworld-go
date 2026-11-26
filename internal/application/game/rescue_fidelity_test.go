@@ -129,7 +129,7 @@ func TestRescueFidelityStarvedToOwnBed(t *testing.T) {
 	buildNow(t, g, construction.HospitalBed, item.Wood, construction.South, 14, 3)
 	own := buildNow(t, g, construction.Bed, item.Wood, construction.South, 24, 4)
 	b, _ := g.bldgs.Get(own)
-	g.bldgs.Set(own, b.Claim(uint64(bo)))
+	g.bldgs.Set(own, construction.ClaimBed(b, uint64(bo)))
 	g.SetNeeds(bo, 0, needs.Full) // starving: it stays down until fed
 	g.down(bo, health.CauseNoFood)
 	if !runCare(g, 600, func() bool { return g.bedUnder(bo) == own }, doc) {
@@ -143,11 +143,11 @@ func TestRescueFidelityKeepsOwnClaim(t *testing.T) {
 	t.Parallel()
 	g, doc, bo, hosp, plain := rescueScene(t)
 	b, _ := g.bldgs.Get(plain)
-	g.bldgs.Set(plain, b.Claim(uint64(bo)))
+	g.bldgs.Set(plain, construction.ClaimBed(b, uint64(bo)))
 	if !runCare(g, 600, func() bool { return g.bedUnder(bo) == hosp }, doc) {
 		t.Fatal("injured: rescued to the hospital bed")
 	}
-	if b, _ := g.bldgs.Get(plain); b.SlotOf(uint64(bo)) < 0 {
+	if b, _ := g.bldgs.Get(plain); construction.BedSlot(b, uint64(bo)) < 0 {
 		t.Fatal("its own bed stays its own")
 	}
 	if g.care.Rest.HeldBed(bo) != hosp {
@@ -202,5 +202,53 @@ func TestRescueFidelityWardenTakesPrisonerToBed(t *testing.T) {
 	if !ok || !carried || !g.prison.Is(rid) || g.care.Carry.Len() != 0 {
 		j, _ := g.jobs.Get(bo)
 		t.Fatalf("the warden carries the prisoner to its bed (ok %v carried %v, warden job %+v)", ok, carried, j)
+	}
+}
+
+func TestCaptureRequiresEnclosedPrison(t *testing.T) {
+	t.Parallel()
+	g, doc, _, rid, bed := prisonGame(t)
+	if !(careReach{g}).PrisonRoom(bed) {
+		t.Fatal("fixture room")
+	}
+	g.removeBuildingAs(g.layerBldgAt(1, 3, construction.LayerObject), false)
+	if why := g.care.StartCapture(doc, rid, true); why != care.ReasonPrisonRoom {
+		t.Fatalf("open prison reason %q", why)
+	}
+	if g.care.Carry.Carrier(rid) != 0 {
+		t.Fatal("invalid prison captured patient")
+	}
+	if !g.BuildNow("wall", "wood", "south", 1, 3) {
+		t.Fatal("restore prison")
+	}
+	if why := g.care.StartCapture(doc, rid, true); why != "" {
+		t.Fatalf("enclosed prison rejected: %q", why)
+	}
+}
+
+func TestRescueRefusalReasonsAndCarrierClimate(t *testing.T) {
+	t.Parallel()
+	g, doc, bo, hosp, plain := rescueScene(t)
+	g.removeBuilding(plain)
+	hb, _ := g.bldgs.Get(hosp)
+	h := careReach{g}
+	if g.thermo.Residual == nil {
+		g.thermo.Residual = map[int]temperature.Temp{}
+	}
+	tile := hb.Y*g.grid.Width() + hb.X
+	g.thermo.Residual[tile] = temperature.Temp(g.bandsOf(doc).Max + 901)
+	if why := h.BedWhy(hosp, doc); why != care.ReasonBedTemperature {
+		t.Fatalf("carrier climate reason %q", why)
+	}
+	if why := g.care.Force(doc, command.OrderRescue, bo); why != care.ReasonBedTemperature {
+		t.Fatalf("hot rescue reason %q", why)
+	}
+	delete(g.thermo.Residual, tile)
+	g.devStartFire(hb.X, hb.Y)
+	if why := g.care.Force(doc, command.OrderRescue, bo); why != care.ReasonBedBurning {
+		t.Fatalf("burning rescue reason %q", why)
+	}
+	if g.care.Carry.Carrier(bo) != 0 {
+		t.Fatal("unsafe rescue started")
 	}
 }

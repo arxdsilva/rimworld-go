@@ -4,7 +4,6 @@
 package animal
 
 import (
-	"math"
 	"strconv"
 	"strings"
 )
@@ -117,36 +116,13 @@ func YoungPhrase(s Species, n int) string {
 	return "a " + YoungName(s, 1)
 }
 
-// Wildlife capacity curve (NG-1 §6.6, D15; moved from the game's
-// population.go in FOOD-6): linear in area up to 120², then with the
-// square root of the area (a 500² map is not seventeen times as
-// crowded), never above WildlifeMax.
-const (
-	wildlifeLinearArea = 120 * 120
-	WildlifeMax        = 300
-)
-
-// WildlifeCapacity is a biome density (animals per 10 000 tiles) over a
-// map of area tiles, before the winter cut: density × area/10 000 up to
-// 120², else density × 1.44 × √(area/120²), capped at WildlifeMax. Integer
-// arithmetic (deterministic): 1.44·√(area/14 400) = 12·√(100·area)/10 000.
-func WildlifeCapacity(density, area int) int {
-	if area <= wildlifeLinearArea {
-		return density * area / 10000
+// YoungSentence capitalizes the first word of a young-animal birth notice.
+func YoungSentence(s Species, n int) string {
+	phrase := YoungPhrase(s, n)
+	if phrase == "" {
+		return phrase
 	}
-	return min(WildlifeMax, density*12*FloorSqrt(100*area)/10000)
-}
-
-// FloorSqrt is ⌊√n⌋ for n >= 0, exact (the float estimate is corrected).
-func FloorSqrt(n int) int {
-	r := int(math.Sqrt(float64(n)))
-	for r > 0 && r*r > n {
-		r--
-	}
-	for (r+1)*(r+1) <= n {
-		r++
-	}
-	return r
+	return strings.ToUpper(phrase[:1]) + phrase[1:]
 }
 
 // CountsWild: an animal counted against capacity. Tame animals, leavers

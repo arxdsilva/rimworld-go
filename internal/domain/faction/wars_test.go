@@ -126,3 +126,30 @@ func TestRivalIsAnEnemy(t *testing.T) {
 		t.Fatalf("enemy names %q", got)
 	}
 }
+
+func TestHostileSurfaceFactionsFightEveryOtherSurfaceFaction(t *testing.T) {
+	t.Parallel()
+	fs := Generate(DefaultSlots(), randx.New(918))
+	if len(fs) != 6 {
+		t.Fatalf("default surface factions = %d", len(fs))
+	}
+	for _, f := range fs {
+		if f.Type != Drifters && f.Type != FierceClans && f.Type != SavageClans && f.Type != Freebooters {
+			continue
+		}
+		for _, other := range fs {
+			if f.ID != other.ID && (!f.AtWar(other.ID) || !other.AtWar(f.ID)) {
+				t.Errorf("%s not at war with %s", f.Type, other.Type)
+			}
+		}
+	}
+	for i := range fs {
+		if fs[i].Type == Drifters {
+			fs[i].Goodwill = 90
+			Update(&fs[i])
+			if fs[i].Relation != Friendly || len(fs[i].Enemies) != len(fs)-1 {
+				t.Fatal("friendship toward the player changed foreign wars")
+			}
+		}
+	}
+}

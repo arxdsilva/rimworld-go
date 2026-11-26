@@ -90,7 +90,7 @@ func (g Gear) Stow(id, stack entity.EntityID, n int) bool {
 	st.Qty = n
 	p := g.s.Packs[id]
 	p.Add(st)
-	g.s.Packs[id] = p
+	g.setPack(id, p)
 	return true
 }
 
@@ -134,7 +134,7 @@ func (g Gear) Spill(id entity.EntityID) {
 	if !ok {
 		return
 	}
-	delete(g.s.Packs, id)
+	g.setPack(id, inventory.Pack{})
 	for _, e := range p.Items {
 		g.r.SetDown(id, e.Stack)
 	}
@@ -179,7 +179,7 @@ func (g Gear) Wealth() int {
 	w := 0
 	for _, id := range g.r.PawnIDs() {
 		for _, e := range g.s.Packs[id].Items {
-			w += g.r.Items().Value(e.Stack.Kind) * e.Stack.Qty
+			w += g.r.Items().StackValue(e.Stack) * e.Stack.Qty
 		}
 	}
 	return w
@@ -188,9 +188,29 @@ func (g Gear) Wealth() int {
 // setPack stores id's pack; an empty one is no pack, so a colony that used a
 // pack and emptied it saves as one that never did.
 func (g Gear) setPack(id entity.EntityID, p inventory.Pack) {
+	g.s.foodDonorsValid = false
 	if len(p.Items) == 0 {
 		delete(g.s.Packs, id)
 		return
 	}
 	g.s.Packs[id] = p
+}
+
+// FoodDonors returns the sorted, derived food-bearing pack IDs. Callers
+// still validate current-map membership, live eligibility and diet.
+func (g Gear) FoodDonors() []entity.EntityID {
+	if !g.s.foodDonorsValid {
+		g.s.foodDonors = g.s.foodDonors[:0]
+		for id, p := range g.s.Packs {
+			for _, e := range p.Items {
+				if e.Stack.Qty > 0 && e.Stack.Kind.IsFood() && !e.Stack.Rotten() {
+					g.s.foodDonors = append(g.s.foodDonors, id)
+					break
+				}
+			}
+		}
+		slices.Sort(g.s.foodDonors)
+		g.s.foodDonorsValid = true
+	}
+	return g.s.foodDonors
 }

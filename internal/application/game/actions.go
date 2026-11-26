@@ -31,6 +31,7 @@ const (
 	ActionMilk        = actionview.Milk
 	ActionShear       = actionview.Shear
 	ActionEat         = actionview.Eat
+	ActionSit         = actionview.Sit
 	ActionRefuel      = actionview.Refuel
 	ActionHaul        = actionview.Haul
 	ActionHorseshoes  = actionview.Horseshoes

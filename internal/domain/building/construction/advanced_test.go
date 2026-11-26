@@ -23,7 +23,7 @@ func TestComponentBuildings(t *testing.T) {
 		t.Fatal("a tool cabinet is steel only")
 	}
 	hb := DefOf(HospitalBed)
-	if hb.Name != "hospital bed" || hb.Wood != 45 || hb.Work != 200 || hb.Components != 2 || !hb.Rotatable ||
+	if hb.Name != "hospital bed" || hb.Wood != 45 || hb.Work != 2800 || hb.Components != 2 || !hb.Rotatable ||
 		hb.Size != [2]int{1, 2} || hb.BlocksMove {
 		t.Fatalf("hospital bed %+v", hb)
 	}

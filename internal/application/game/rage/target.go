@@ -6,6 +6,7 @@ package rage
 import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -47,8 +48,25 @@ func isFoe(s Sight, o entity.EntityID) bool {
 	if o == s.Self || o == 0 {
 		return false
 	}
-	if a := s.R.h.Ref(o); a != nil {
-		return a.Tame && !a.Dead() && !a.Downed
+	if a, ok := s.R.h.Animal(o); ok {
+		if a.Dead() || a.Downed || a.Dormant {
+			return false
+		}
+		if a.Tame || s.R.h.PackAnimal(o) {
+			return true
+		}
+		if self, ok := s.R.h.Animal(s.Self); ok {
+			mine, owned := faction.Creature(self.Species)
+			other, foreign := faction.Creature(a.Species)
+			if !foreign {
+				return false
+			}
+			if owned {
+				return faction.HiddenEnemies(mine, other)
+			}
+			return other == faction.MechHive // enraged wildlife threatens machines
+		}
+		return false
 	}
 	return s.R.h.StandingPawn(o)
 }
@@ -60,8 +78,8 @@ func reachableFoe(s Sight, o entity.EntityID) bool {
 		return false
 	}
 	r.probes--
-	me := r.h.Ref(s.Self)
-	tame := me != nil && me.Tame
+	me, ok := r.h.Animal(s.Self)
+	tame := ok && me.Tame
 	return r.ReachesFoe(tame, r.pos(s.Self), r.pos(o))
 }
 
@@ -84,7 +102,7 @@ func pickFoe(r *Rage, id entity.EntityID, pos Pos, now uint64) (f entity.EntityI
 	if f = nearestFoe(r, pos, s, true); f != 0 {
 		return f, true
 	}
-	if me := r.h.Ref(id); me != nil && !me.Tame && !animal.DefOf(me.Species).Hive {
+	if me, ok := r.h.Animal(id); ok && !me.Tame && !animal.DefOf(me.Species).Hive {
 		s.Keep = breachableFoe
 		if f = nearestFoe(r, pos, s, true); f != 0 {
 			return f, true

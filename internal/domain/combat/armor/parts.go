@@ -15,7 +15,7 @@ var partGroups = [body.NumParts]Region{
 	body.Brain: CoverFullHead | CoverUpperHead,
 	body.EyeL:  CoverFullHead | CoverEyes, body.EyeR: CoverFullHead | CoverEyes,
 	body.EarL: CoverFullHead | CoverUpperHead, body.EarR: CoverFullHead | CoverUpperHead,
-	body.Nose: CoverFullHead, body.Jaw: CoverFullHead,
+	body.Nose: CoverFullHead, body.Jaw: CoverFullHead, body.Tongue: CoverFullHead,
 	body.Torso: CoverTorso, body.Heart: CoverTorso, body.LungL: CoverTorso, body.LungR: CoverTorso,
 	body.Stomach: CoverTorso, body.KidneyL: CoverTorso, body.KidneyR: CoverTorso, body.Liver: CoverTorso,
 	body.Spine: CoverTorso,

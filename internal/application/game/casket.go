@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -239,7 +240,8 @@ func (g *Game) casketHostile(b construction.Building, v *vaultSave, weapon item.
 	g.raiders[id] = raid.Raider{Group: len(g.raidGroups) - 1, Arrived: now}
 	g.raiderPerson(id, 0) // people.go: a world person (relations, capture)
 	if p := g.personOf(id); p != nil {
-		g.names.Set(id, bioName(p.Bio))
+		p.Origin = faction.AncientHostile
+		g.names.Set(id, p.Bio.DisplayName())
 	}
 	return id
 }

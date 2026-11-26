@@ -8,7 +8,13 @@ import "testing"
 // TestEveryImplantHasValue: every implant is worth something (MED-00 gave
 // the prosthetic foot, glass eye and wooden nose the values they lacked).
 func TestEveryImplantHasValue(t *testing.T) {
-	want := map[Kind]int{ProstheticFoot: 90, GlassEye: 40, WoodenNose: 5}
+	// wiki: Power claw, Cochlear implant, Joywire, Painstopper, Death acidifier (market value).
+	// original tuning: the three project-specific legacy parts.
+	want := map[Kind]int{
+		ProstheticFoot: 15, GlassEye: 40, WoodenNose: 5,
+		ServoClaw: 385, AcousticImplant: 220,
+		BlissCircuit: 220, NerveDampener: 220, AcidFailsafe: 400,
+	}
 	for k := Kind(1); k < numKinds; k++ {
 		if !k.IsImplant() {
 			continue

@@ -881,7 +881,7 @@ def _hearing_trumpet():
 
 
 def _prosthetic_foot():
-    """A carved wooden foot: heel block, toe wedge and a leather ankle strap."""
+    """A carved prosthetic foot: heel block, toe wedge and a leather ankle strap."""
     from .plant_base import _limb
     S.box("sole", 0.2, -0.7, 0.0, 0.5, -0.5, 0.07, "wood", bevel=0.03)
     S.box("toe", 0.14, -0.67, 0.0, 0.24, -0.53, 0.05, "wood_plank", bevel=0.025)
@@ -995,8 +995,8 @@ def _optic_implant():
     return S.render_asset("item", "optic_implant", zmax=0.2, extra={"item": "optic implant"})
 
 
-def _cochlear_implant():
-    """A cochlear implant: a small dark module curved like the back of an
+def _acoustic_implant(name="acoustic_implant"):
+    """An acoustic implant: a small dark module curved like the back of an
     ear, a steel receiver disc with a teal light, and a coiled copper lead."""
     import math
     from .plant_base import _limb
@@ -1012,7 +1012,7 @@ def _cochlear_implant():
     for k in range(len(lead) - 1):
         _limb("lead%d" % k, (lead[k][0], lead[k][1], 0.02), (lead[k + 1][0], lead[k + 1][1], 0.02), 0.015, 0.015,
               "copper", segs=6)
-    return S.render_asset("item", "cochlear_implant", zmax=0.14, extra={"item": "cochlear implant"})
+    return S.render_asset("item", name, zmax=0.14, extra={"item": name.replace("_", " ")})
 
 
 def _spinal_brace():
@@ -1217,5 +1217,5 @@ def build_social():
 
 def build_med():
     """MED-05 medical tier (ART-026)."""
-    return [_nanomed_kit(), _servo_arm(), _servo_leg(), _optic_implant(), _cochlear_implant(), _spinal_brace(),
+    return [_nanomed_kit(), _servo_arm(), _servo_leg(), _optic_implant(), _acoustic_implant(), _acoustic_implant("cochlear_implant"), _spinal_brace(),
             _pump_heart(), _synth_stomach(), _valve_heart(), _kidney(), _lung(), _organ_heart(), _liver()]

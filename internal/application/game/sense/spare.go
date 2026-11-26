@@ -44,7 +44,7 @@ func (g Gear) eatFromPack(id entity.EntityID, p inventory.Pack) bool {
 			return false
 		}
 		x, y := g.r.Pos(id)
-		if g.r.StartJob(id, job.Record{Kind: job.Eat, Target: stack, TX: x, TY: y, WorkLeft: needs.EatWorkTicks, Count: 2}) {
+		if g.r.StartJob(id, job.Record{Kind: job.Eat, Target: stack, TX: x, TY: y, WorkLeft: needs.EatWorkTicks, Count: 0}) {
 			j := g.r.Job(id)
 			j.Carry = stack // set down uneaten, it goes back (BackToPack)
 			g.r.SetJob(id, j)

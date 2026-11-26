@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -70,4 +71,67 @@ func TestCampfireCooksWithFuelOnly(t *testing.T) {
 		}
 	}
 	t.Fatal("a lit campfire should cook a simple meal")
+}
+
+func TestColonyAIVanillaDiagonalTableDoesNotCountAsEatingSurface(t *testing.T) {
+	g := New(Config{Seed: 40, Width: 28, Height: 18})
+	id, err := g.SpawnNamedPawn(4, 4, "Eater")
+	if err != nil {
+		t.Fatal(err)
+	}
+	placeBuilt(t, g, construction.Table, construction.South, 5, 5)
+	if g.nextToTable(4, 4) {
+		t.Fatal("diagonal corner of a table is not an adjacent cardinal eating surface")
+	}
+	g.afterEat(id, item.Stack{Kind: item.Meal, Qty: 1}, false)
+	found := false
+	for _, m := range g.memories[id] {
+		if m.Kind == mood.AteWithoutTable {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("diagonally nearby table erased actual ate-without-table thought")
+	}
+}
+
+// A peer-carried meal reaches a free dining seat 30 tiles from the eater.
+func TestColonyAIVanillaPeerPackMealFindsReservedChairBeforeEating(t *testing.T) {
+	g := New(Config{Seed: 124, Width: 50, Height: 18})
+	owner, _ := g.SpawnNamedPawn(4, 5, "Donor")
+	eater, _ := g.SpawnNamedPawn(5, 5, "Hungry")
+	placeBuilt(t, g, construction.Table, construction.South, 35, 5)
+	placeBuilt(t, g, construction.Chair, construction.South, 35, 7)
+	pack := senseOf(g).Gear.Pack(owner)
+	pack.Add(item.Stack{Kind: item.Meal, Qty: 2})
+	senseOf(g).Packs[owner] = pack
+	g.SetNeeds(owner, needs.Full, needs.Full)
+	g.SetNeeds(eater, needs.CriticalHunger-1, needs.Full)
+	ate := false
+	for step := 0; step < 500+needs.EatWorkTicks; step++ {
+		g.Step(1)
+		if _, ok := g.lastMeal[eater]; ok {
+			ate = true
+			break
+		}
+	}
+	if !ate {
+		j, _ := g.jobs.Get(eater)
+		at, _ := g.positions.Get(eater)
+		sx, sy, found := g.rest.Seats.AtTable(eater, at.X, at.Y)
+		t.Fatalf("peer packed meal unfinished: pawn at %d,%d job=%+v table=%d,%d found=%v lastMeal=%+v", at.X, at.Y, j, sx, sy, found, g.lastMeal[eater])
+	}
+	p, _ := g.positions.Get(eater)
+	if p.X != 35 || p.Y != 7 {
+		t.Fatalf("chewed peer packed meal at (%d,%d) instead of reachable chair (35,7)", p.X, p.Y)
+	}
+	for _, th := range g.thoughts(eater) {
+		if th.Kind == mood.AteWithoutTable {
+			t.Fatalf("ate without table thought when seated by actual table: %+v", th)
+		}
+	}
+	if len(senseOf(g).Gear.Pack(owner).Items) != 1 ||
+		senseOf(g).Gear.Pack(owner).Items[0].Stack.Qty != 1 {
+		t.Fatalf("donor's original 2 meals not decremented exactly once: %+v", senseOf(g).Gear.Pack(owner))
+	}
 }

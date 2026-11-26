@@ -24,7 +24,7 @@ func FactionViews(fs []faction.Faction) []FactionView {
 	for i, f := range fs {
 		out[i] = FactionView{Index: i, Relation: f.Relation, Goodwill: f.Goodwill,
 			CanBeFriendly: faction.DefOf(f.Type).CanBeFriendly, Defeated: f.Defeated, Besieged: f.Besieged,
-			Tech: faction.DefOf(f.Type).Tech, Human: f.Type.Human(),
+			Tech: faction.DefOf(f.Type).Tech, Human: f.Type.HasWorldSettlements(),
 			Settlements: slices.Sorted(slices.Values(f.Settlements))}
 	}
 	return out

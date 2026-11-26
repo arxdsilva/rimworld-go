@@ -115,6 +115,7 @@ type fakeShell struct {
 	settle   string
 	bar      gfx.Rect
 	window   bool
+	tier     int
 }
 
 func newFake(g Reader) (*fakeShell, *View) {
@@ -1161,3 +1162,15 @@ func TestAttackConfirmsAndAbandonWarns(t *testing.T) {
 		t.Fatal("a site map never ends the game")
 	}
 }
+
+func (s *fakeShell) SpeedTier() int { return s.tier }
+func (s *fakeShell) SetSpeed(n int) { s.tier = n }
+func (s *fakeShell) Paused() bool   { return s.tier == 0 }
+func (s *fakeShell) TogglePause() {
+	if s.tier == 0 {
+		s.tier = 1
+	} else {
+		s.tier = 0
+	}
+}
+func (s *fakeShell) PauseReason() string { return "" }

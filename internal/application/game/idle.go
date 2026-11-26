@@ -84,7 +84,7 @@ func (g *Game) assignIdle(id entity.EntityID) bool {
 	}
 	linger := idleMinTicks + g.rng.IntN(idleMaxTicks-idleMinTicks)
 	if g.temperamentOf(id) != Wanderer || g.rng.IntN(2) == 0 {
-		if g.joy[id] < recreation.Entertained && g.rng.IntN(3) > 0 && recOf(g).Seek(id, linger) {
+		if joyForScheduling(g, id) < recreation.Entertained && g.rng.IntN(3) > 0 && recOf(g).Seek(id, linger) {
 			return true // game/recreate (AX-6): the best fun around, when there's a pin, a game or a screen
 		}
 	}
@@ -122,7 +122,7 @@ func (g *Game) idleChat(id entity.EntityID, linger int) bool {
 			continue
 		}
 		op, _ := g.positions.Get(oid)
-		if d := pathing.Dist(pos.X, pos.Y, op.X, op.Y); d < bestD && g.inArea(id, op.X, op.Y) { // areas.go
+		if d := pathing.Dist(pos.X, pos.Y, op.X, op.Y); d < bestD && g.inArea(id, op.X, op.Y) && !doorway(g, op.X, op.Y) { // areas.go
 			best, bestD = oid, d
 		}
 	}
@@ -238,6 +238,9 @@ func (g *Game) idleAt(id entity.EntityID, linger int, kind job.Kind,
 			if _, taken := g.reserve.TileOwner(b.X, b.Y); taken {
 				continue
 			}
+			if other, taken := g.occupantAt(b.X, b.Y); taken && other != id {
+				continue
+			}
 		}
 		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD {
 			best, bestD = bid, d
@@ -270,7 +273,7 @@ func (g *Game) idleAt(id entity.EntityID, linger int, kind job.Kind,
 func (g *Game) doIdle(id entity.EntityID, j job.Record) {
 	j.WorkLeft--
 	if _, breaking := g.breaks[id]; !breaking && uint64(g.clock.Now())%recreation.GainPeriod == 0 {
-		g.joy[id] = recreation.Clamp(g.joy[id] + recreation.Gain(recreate.ActivityOf(j.Kind)))
+		addRecreation(g, id, recreation.Gain(recreate.ActivityOf(j.Kind)))
 	}
 	if j.Kind == job.Chat {
 		pos, _ := g.positions.Get(id)

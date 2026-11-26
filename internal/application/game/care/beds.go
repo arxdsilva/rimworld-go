@@ -6,13 +6,14 @@ package care
 import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/mathx"
 )
 
 // IsMedicalBed: b is a sleeping place kept for the sick and injured.
 func IsMedicalBed(b construction.Building) bool {
-	return b.Medical && b.Kind.Sleeps()
+	return b.Medical && (b.Kind.Sleeps() || b.Kind.AnimalSleeps())
 }
 
 // BedNeed is why a patient wants a bed; it picks which beds SafeBedFor
@@ -67,9 +68,9 @@ func PrisonBedFor(c *Care, target entity.EntityID, x, y int) entity.EntityID {
 // set only beds reacher can get beside, and with heal only beds whose air
 // heals the patient's exposure (AIL-1).
 type bedQuery struct {
-	patient, reacher   entity.EntityID
-	x, y               int
-	prison, care, heal bool
+	patient, reacher, carrier  entity.EntityID
+	x, y                       int
+	prison, care, heal, animal bool
 }
 
 // healMargin is how far inside the patient's comfortable range (tenths of
@@ -83,8 +84,9 @@ const healMargin = 10
 // needs tending or bed rest.
 func rescueQuery(c *Care, patient entity.EntityID, x, y int) bedQuery {
 	k := c.kindOf(patient)
-	needs := k == targetGuest || k == targetStranger || c.h.NeedsTending(patient) || c.Rest.NeedsBedRest(patient)
-	return bedQuery{patient: patient, x: x, y: y, prison: k == targetPrisoner, care: needs, heal: k != targetPrisoner}
+	isAnimal := c.h.CareGroup(patient) == medcare.Animals
+	needs := isAnimal || k == targetGuest || k == targetStranger || c.h.NeedsTending(patient) || c.Rest.NeedsBedRest(patient)
+	return bedQuery{patient: patient, x: x, y: y, prison: k == targetPrisoner, care: needs, heal: k != targetPrisoner, animal: isAnimal}
 }
 
 // healBest is best over the beds whose air heals the patient. With none,
@@ -95,16 +97,23 @@ func (q bedQuery) healBest(c *Care) entity.EntityID {
 	if bid := q.best(c); bid != 0 || !q.heal {
 		return bid
 	}
-	h := c.h
-	px, py, _ := h.Pos(q.patient)
-	if h.BedUnder(q.patient) != 0 || h.AirHeals(q.patient, px, py, 0) {
-		return 0
-	}
-	if _, _, ok := h.HealingSpot(q.patient); ok {
+	if !q.fallbackAllowed(c) {
 		return 0
 	}
 	q.heal = false
 	return q.best(c)
+}
+
+// fallbackAllowed is the shared live no-healing-site exception. A patient
+// already in healing air or its bed must not be moved into worse air.
+func (q bedQuery) fallbackAllowed(c *Care) bool {
+	h := c.h
+	px, py, _ := h.Pos(q.patient)
+	if h.BedUnder(q.patient) != 0 || h.AirHeals(q.patient, px, py, 0) {
+		return false
+	}
+	_, _, ok := h.HealingSpot(q.patient)
+	return !ok
 }
 
 // rank is bed b's rank for q (higher first): a medical bed (5 a hospital
@@ -118,7 +127,7 @@ func (q bedQuery) rank(b construction.Building) int {
 		return 4
 	case q.care && b.Kind == construction.HospitalBed:
 		return 3
-	case b.SlotOf(uint64(q.patient)) >= 0:
+	case construction.BedSlot(b, uint64(q.patient)) >= 0:
 		return 2
 	}
 	return 0
@@ -127,22 +136,61 @@ func (q bedQuery) rank(b construction.Building) int {
 // best is the first bed by rank, then distance, then id, that q admits.
 // The hazard and reach checks run only for a bed that would win, so a
 // search costs one check per new leader, not one per bed.
+func (q bedQuery) eligible(c *Care, bid entity.EntityID, b construction.Building) bool {
+	if (q.animal && !b.Kind.AnimalSleeps()) || (!q.animal && !b.Kind.Sleeps()) ||
+		b.ForPrisoners != q.prison || b.Forbidden || b.Deconstruct || b.Uninstall || !construction.CanClaimBed(b, uint64(q.patient)) {
+		return false
+	}
+	owner, taken := c.h.Owner(bid)
+	return !taken || owner == q.patient || owner == q.reacher || owner == q.carrier
+}
+func (q bedQuery) bedWhy(c *Care, bid entity.EntityID, b construction.Building) string {
+	if q.prison && !c.h.PrisonRoom(bid) {
+		return ReasonPrisonRoom
+	}
+	if why := c.h.BedWhy(bid, q.carrier); why != "" {
+		return why
+	}
+	if q.heal && !c.h.AirHeals(q.patient, b.X, b.Y, healMargin) {
+		return ReasonBedTemperature
+	}
+	return ""
+}
+func (q bedQuery) refusal(c *Care) string {
+	// A usable but hazardous bed gives a precise refusal rather than
+	// claiming no bed exists. Rank deterministically like selection.
+	bestRank, bestD := -1, 0
+	var best entity.EntityID
+	why := ""
+	for _, id := range c.h.BuildingIDs() {
+		b, ok := c.h.Building(id)
+		if !ok || !q.eligible(c, id, b) {
+			continue
+		}
+		r, d := q.rank(b), manhattan(q.x, q.y, b.X, b.Y)
+		if r < bestRank || r == bestRank && (d > bestD || d == bestD && id > best) {
+			continue
+		}
+		if reason := q.bedWhy(c, id, b); reason != "" {
+			best, bestRank, bestD, why = id, r, d, reason
+		}
+	}
+	return why
+}
+
 func (q bedQuery) best(c *Care) entity.EntityID {
 	h := c.h
 	best, bestD, bestRank := entity.EntityID(0), 0, -1
 	for _, bid := range h.BuildingIDs() {
 		b, ok := h.Building(bid)
-		if !ok || !b.Kind.Sleeps() || b.ForPrisoners != q.prison || !b.CanClaim(uint64(q.patient)) {
-			continue
-		}
-		if owner, taken := h.Owner(bid); taken && owner != q.patient {
+		if !ok || !q.eligible(c, bid, b) {
 			continue
 		}
 		rank, d := q.rank(b), manhattan(q.x, q.y, b.X, b.Y)
 		if rank < bestRank || rank == bestRank && (d > bestD || d == bestD && bid > best) {
 			continue
 		}
-		if h.BedHazard(bid) || q.heal && !h.AirHeals(q.patient, b.X, b.Y, healMargin) {
+		if q.bedWhy(c, bid, b) != "" {
 			continue
 		}
 		if q.reacher != 0 {
@@ -155,7 +203,7 @@ func (q bedQuery) best(c *Care) entity.EntityID {
 	return best
 }
 
-// restBedFor is the bed-rest choice (PLAY-020, unchanged by SIM-063):
+// restBedFor is the safe bed-rest choice (PLAY-020):
 // medical beds the patient may claim and no one else holds, one it
 // already holds first, then the nearest by tile distance, ties to the
 // lowest id.
@@ -163,21 +211,36 @@ func restBedFor(c *Care, patient entity.EntityID, x, y int) entity.EntityID {
 	best, bestD := entity.EntityID(0), 1<<30
 	for _, bid := range c.h.BuildingIDs() {
 		b, ok := c.h.Building(bid)
-		if !ok || !IsMedicalBed(b) || !b.CanClaim(uint64(patient)) || b.ForPrisoners != c.h.IsPrisoner(patient) {
+		if !ok || !b.Kind.Sleeps() || !IsMedicalBed(b) || b.Forbidden || b.Uninstall || b.Deconstruct || !construction.CanClaimBed(b, uint64(patient)) || b.ForPrisoners != c.h.IsPrisoner(patient) {
 			continue
 		}
 		if owner, taken := c.h.Owner(bid); taken && owner != patient {
 			continue
 		}
 		d := pathing.Dist(x, y, b.X, b.Y)
-		if b.SlotOf(uint64(patient)) >= 0 {
+		if construction.BedSlot(b, uint64(patient)) >= 0 {
 			d = -1
 		}
-		if best == 0 || d < bestD || d == bestD && bid < best {
-			best, bestD = bid, d
+		if best != 0 && (d > bestD || d == bestD && bid > best) {
+			continue
 		}
+		sx, sy := c.h.SleepCell(patient, construction.ClaimBed(b, uint64(patient)))
+		if !restBedSafe(c.h, patient, bid, sx, sy) {
+			continue
+		}
+		if _, ok := c.h.PathTo(patient, sx, sy); !ok {
+			continue
+		}
+		best, bestD = bid, d
 	}
 	return best
+}
+
+// The same clinical checks protect both a newly chosen bed and ongoing
+// bed rest. A bed claim alone does not make the bed safe.
+func restBedSafe(h Host, patient, bid entity.EntityID, x, y int) bool {
+	b, ok := h.Building(bid)
+	return ok && !b.Forbidden && !b.Uninstall && !b.Deconstruct && !h.BedHazard(bid) && h.AirHeals(patient, x, y, 0)
 }
 
 func manhattan(ax, ay, bx, by int) int { return mathx.Abs(ax-bx) + mathx.Abs(ay-by) }

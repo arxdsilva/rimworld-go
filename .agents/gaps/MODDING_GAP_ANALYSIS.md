@@ -162,3 +162,7 @@ Integration after each wave: `go build ./...`, `make arch`, `go test -race` of t
 
 - `go test -race ./internal/application/game/` as one local binary at default parallelism exceeds its 10-minute timeout on a 12-core Mac both before the plugin work (`d6226ad01`: 600.6 s, 3849 s CPU, `TestQuestSoak` 5 min under contention, 22 s alone) and after (`2c220bf5c`: 600.7 s, 3802 s CPU): pre-existing, not a PLG regression; CI runs the binary alone through `scripts/ci_test.sh`.
 - `.claude/scheduled_tasks.lock` (the loop's harness lock) trips `TestNoToolFolders` locally while a loop runs; it is untracked.
+
+### Independent native review correction (2026-11-25)
+
+PLG-044 historical item filters are reconstructed from the saved key table, not today's core/plugin cutoff; a removed key cannot grant a newly appended native kind. The no-key policy stays unchanged. No unrelated gap is closed by this correction.

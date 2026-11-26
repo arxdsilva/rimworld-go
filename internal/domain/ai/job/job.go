@@ -194,6 +194,12 @@ const (
 	PackIngredients
 	UnloadPack
 	TakeSpare
+	// EatFromPeerPack retrieves one edible portion from a nearby colony pawn.
+	EatFromPeerPack
+	// DismissVisitorGroup is a conversation with a visiting party leader.
+	DismissVisitorGroup
+	// GiveItem carries a pack entry (BillIndex, Count) to pawn Dest.
+	GiveItem
 )
 
 // Hauls reports a haul job: a plain haul, or FOOD-4's hopper fill, a
@@ -210,7 +216,7 @@ func HaulKind(toHopper bool) Kind {
 
 // Eating reports a meal under way: eating, or taking a paste meal from
 // a dispenser to eat (STO-2), which no hunger check replaces.
-func (k Kind) Eating() bool { return k == Eat || k == DispensePaste }
+func (k Kind) Eating() bool { return k == Eat || k == DispensePaste || k == EatFromPeerPack }
 
 // IsIdle reports a free-time behaviour that any real work may replace.
 func (k Kind) IsIdle() bool {
@@ -320,6 +326,8 @@ func (k Kind) String() string {
 		return "tend animal"
 	case Visit:
 		return "visit"
+	case DismissVisitorGroup:
+		return "ask visitors to leave"
 	case Rope:
 		return "rope animal"
 	case FightFire:
@@ -398,6 +406,10 @@ func (k Kind) String() string {
 		return "unload pack"
 	case TakeSpare:
 		return "take spare meal"
+	case EatFromPeerPack:
+		return "take meal from pack"
+	case GiveItem:
+		return "hand over item"
 	default:
 		return "idle"
 	}
@@ -456,7 +468,7 @@ type Record struct {
 	// Forced marks a player-prioritized job: tiredness does not
 	// interrupt it.
 	Forced bool
-	// BillIndex is the bench bill a Bill job works on.
+	// BillIndex is the current position of the bench bill.
 	BillIndex int
 	// Route (HAUL-001) is a delivery's targets in order (frames, or a fuel
 	// user), RouteI the next one; SpareX/SpareY the stockpile cell that
@@ -470,6 +482,8 @@ type Record struct {
 	// the count to take. PickupI is the next pile's first entry.
 	Pickups []entity.EntityID
 	PickupI int
+	// BillIdentity binds a craft job to the selected row across edits and saves.
+	BillIdentity uint64
 }
 
 // Line is the inspector job summary.

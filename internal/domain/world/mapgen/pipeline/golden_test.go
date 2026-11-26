@@ -55,24 +55,26 @@ func resultHash(r mapgen.Result) uint64 {
 // grow time, and FOOD-2 moved every crop, tree and bush to the wiki grow
 // days (trees about 30 days instead of 2), so the generated growth values
 // change; terrain and plant placement are unchanged.
+// MIN-301/302: version 3 intentionally changes ore placement and vein size.
+// Restoring only the previous Ores pass reproduces every old pin.
 var goldenMaps = []struct {
 	biome biome.ID
 	hills site.Hills
 	extra func(*site.Site)
 	want  uint64
 }{
-	{biome.TemperateForest, site.Flat, nil, 0x170a38e55b0b80ce},
-	{biome.TemperateForest, site.LargeHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.River, In: 0, Out: 4}; s.Caves = true }, 0x70e4ae5c29325e99},
-	{biome.BorealForest, site.Mountainous, func(s *site.Site) { s.Caves = true; s.Uphill, s.HasUphill = 2, true }, 0xddd61ef4abbb9f7c},
-	{biome.Tundra, site.SmallHills, func(s *site.Site) { s.Lakes = 2 }, 0xe361f70f1f8e340d},
-	{biome.ColdBog, site.Flat, func(s *site.Site) { s.Coast = 1 << 6 }, 0x0a5abc6055870b7a},
-	{biome.IceSheet, site.LargeHills, nil, 0x9bb1e3e269aea4},
+	{biome.TemperateForest, site.Flat, nil, 0xc44b39140a19d9ce},
+	{biome.TemperateForest, site.LargeHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.River, In: 0, Out: 4}; s.Caves = true }, 0xa4753e9c92fe35d0},
+	{biome.BorealForest, site.Mountainous, func(s *site.Site) { s.Caves = true; s.Uphill, s.HasUphill = 2, true }, 0x784e32cf1a0f67e8},
+	{biome.Tundra, site.SmallHills, func(s *site.Site) { s.Lakes = 2 }, 0x537f1f2fb866e868},
+	{biome.ColdBog, site.Flat, func(s *site.Site) { s.Coast = 1 << 6 }, 0xe70dc72faee4a1ba},
+	{biome.IceSheet, site.LargeHills, nil, 0xc4ec5293ef7b82e0},
 	{biome.SeaIce, site.Flat, nil, 0x9583980065b10be2},
-	{biome.TemperateSwamp, site.SmallHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.Creek, In: 2, Out: 6} }, 0xb16fbbae0c780e89},
-	{biome.TropicalRainforest, site.LargeHills, func(s *site.Site) { s.Road = 1<<0 | 1<<4; s.Settled = true }, 0x60b5a25a2a1e1ad9},
-	{biome.AridShrubland, site.Mountainous, func(s *site.Site) { s.Stones = []geology.Stone{geology.Sandstone, geology.Granite} }, 0xeee369698f9f1600},
-	{biome.Desert, site.SmallHills, func(s *site.Site) { s.Coast = 1 << 2; s.CoastNear = 1 }, 0xccbbae807ecb88b4},
-	{biome.ExtremeDesert, site.Flat, func(s *site.Site) { s.Road = 1 << 6 }, 0x732d39cb3f689572},
+	{biome.TemperateSwamp, site.SmallHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.Creek, In: 2, Out: 6} }, 0x13378def76f13849},
+	{biome.TropicalRainforest, site.LargeHills, func(s *site.Site) { s.Road = 1<<0 | 1<<4; s.Settled = true }, 0x6bfe3c12b114df2f},
+	{biome.AridShrubland, site.Mountainous, func(s *site.Site) { s.Stones = []geology.Stone{geology.Sandstone, geology.Granite} }, 0x2730654dc1657dc9},
+	{biome.Desert, site.SmallHills, func(s *site.Site) { s.Coast = 1 << 2; s.CoastNear = 1 }, 0x76f01d6f9b96ce34},
+	{biome.ExtremeDesert, site.Flat, func(s *site.Site) { s.Road = 1 << 6 }, 0x761d258724c4bff2},
 }
 
 func TestGoldenMaps(t *testing.T) {

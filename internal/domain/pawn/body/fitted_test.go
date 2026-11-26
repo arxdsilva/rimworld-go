@@ -17,31 +17,31 @@ import (
 // saves (and hashes) as before.
 func TestImplantAccessor(t *testing.T) {
 	var b Body
-	if b.Implant(LegL) != 0 || b.Fitted != nil {
+	if b.ReplacementAt(LegL) != 0 || b.Replacements != nil {
 		t.Fatal("a fresh body has no implants")
 	}
-	b.SetImplant(EyeR, 0)
-	if b.Fitted != nil {
+	b.SetReplacement(EyeR, 0)
+	if b.Replacements != nil {
 		t.Fatal("clearing an empty slot must not grow Fitted")
 	}
-	b.SetImplant(EyeL, item.GlassEye)
-	if len(b.Fitted) != int(EyeL)+1 || b.Implant(EyeL) != item.GlassEye || b.Implant(LegL) != 0 {
-		t.Fatalf("fitted %v", b.Fitted)
+	b.SetReplacement(EyeL, item.GlassEye)
+	if len(b.Replacements) != int(EyeL)+1 || b.ReplacementAt(EyeL) != item.GlassEye || b.ReplacementAt(LegL) != 0 {
+		t.Fatalf("fitted %v", b.Replacements)
 	}
-	b.SetImplant(LegL, item.PegLeg)
-	if len(b.Fitted) != int(LegL)+1 || b.Implant(LegL) != item.PegLeg || b.ArtificialParts() != 2 {
-		t.Fatalf("fitted %v", b.Fitted)
+	b.SetReplacement(LegL, item.PegLeg)
+	if len(b.Replacements) != int(LegL)+1 || b.ReplacementAt(LegL) != item.PegLeg || b.ArtificialParts() != 2 {
+		t.Fatalf("fitted %v", b.Replacements)
 	}
-	b.SetImplant(LegL, 0)
-	if len(b.Fitted) != int(EyeL)+1 {
-		t.Fatalf("trailing empty slots are trimmed: %v", b.Fitted)
+	b.SetReplacement(LegL, 0)
+	if len(b.Replacements) != int(EyeL)+1 {
+		t.Fatalf("trailing empty slots are trimmed: %v", b.Replacements)
 	}
-	b.SetImplant(EyeL, 0)
-	if b.Fitted != nil {
-		t.Fatalf("no implants left: %v", b.Fitted)
+	b.SetReplacement(EyeL, 0)
+	if b.Replacements != nil {
+		t.Fatalf("no implants left: %v", b.Replacements)
 	}
-	b.SetImplant(NumParts, item.PegLeg)
-	if b.Fitted != nil || b.Implant(NumParts) != 0 {
+	b.SetReplacement(NumParts, item.PegLeg)
+	if b.Replacements != nil || b.ReplacementAt(NumParts) != 0 {
 		t.Fatal("an unknown part takes nothing")
 	}
 }
@@ -51,16 +51,16 @@ func TestImplantAccessor(t *testing.T) {
 func TestInstallRemoveUseFitted(t *testing.T) {
 	var b Body
 	b.destroy(FootR)
-	if !b.Install(FootR, item.ProstheticFoot) || b.Implant(FootR) != item.ProstheticFoot || len(b.Fitted) != int(FootR)+1 {
-		t.Fatalf("install: %v", b.Fitted)
+	if !b.InstallReplacement(FootR, item.ProstheticFoot) || b.ReplacementAt(FootR) != item.ProstheticFoot || len(b.Replacements) != int(FootR)+1 {
+		t.Fatalf("install: %v", b.Replacements)
 	}
-	if b.Install(FootR, item.ProstheticFoot) {
+	if b.InstallReplacement(FootR, item.ProstheticFoot) {
 		t.Fatal("a fitted part takes no second implant")
 	}
-	if k, ok := b.Remove(FootR); !ok || k != item.ProstheticFoot || b.Fitted != nil {
-		t.Fatalf("remove: %v %v %v", k, ok, b.Fitted)
+	if k, ok := b.RemoveReplacement(FootR); !ok || k != item.ProstheticFoot || b.Replacements != nil {
+		t.Fatalf("remove: %v %v %v", k, ok, b.Replacements)
 	}
-	if _, ok := b.Remove(FootR); ok {
+	if _, ok := b.RemoveReplacement(FootR); ok {
 		t.Fatal("nothing left to remove")
 	}
 }
@@ -69,13 +69,13 @@ func TestInstallRemoveUseFitted(t *testing.T) {
 // becomes the same implants in Fitted.
 func TestFittedFromLegacyArray(t *testing.T) {
 	var legacy [20]item.Kind
-	if FittedFrom(legacy[:]) != nil {
+	if ReplacementsFrom(legacy[:]) != nil {
 		t.Fatal("an empty array has no implants")
 	}
 	legacy[LegL], legacy[Nose] = item.PegLeg, item.WoodenNose
-	f := FittedFrom(legacy[:])
-	b := Body{Fitted: f}
-	if len(f) != int(LegL)+1 || b.Implant(LegL) != item.PegLeg || b.Implant(Nose) != item.WoodenNose || b.Implant(LegR) != 0 {
+	f := ReplacementsFrom(legacy[:])
+	b := Body{Replacements: f}
+	if len(f) != int(LegL)+1 || b.ReplacementAt(LegL) != item.PegLeg || b.ReplacementAt(Nose) != item.WoodenNose || b.ReplacementAt(LegR) != 0 {
 		t.Fatalf("fitted %v", f)
 	}
 }
@@ -88,7 +88,7 @@ func TestBodyGobKeepsMedicalFields(t *testing.T) {
 		BloodLoss: 210,
 		Conds:     []Condition{{Kind: 3, Part: Torso, Sev: 400, Immunity: 200, TendQ: 500, TendSum: 900, TendUntil: 5, Since: 2, Stage: 1}},
 	}
-	b.SetImplant(EarL, item.HearingTrumpet)
+	b.SetReplacement(EarL, item.HearingTrumpet)
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(&b); err != nil {
 		t.Fatal(err)
@@ -97,7 +97,7 @@ func TestBodyGobKeepsMedicalFields(t *testing.T) {
 	if err := gob.NewDecoder(&buf).Decode(&got); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(got.Wounds, b.Wounds) || got.BloodLoss != b.BloodLoss || !slices.Equal(got.Conds, b.Conds) || !slices.Equal(got.Fitted, b.Fitted) {
+	if !slices.Equal(got.Wounds, b.Wounds) || got.BloodLoss != b.BloodLoss || !slices.Equal(got.Conds, b.Conds) || !slices.Equal(got.Replacements, b.Replacements) {
 		t.Fatalf("%+v", got)
 	}
 }

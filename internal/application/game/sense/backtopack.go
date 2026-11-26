@@ -36,6 +36,6 @@ func (g Gear) BackToPack(id, carry entity.EntityID) bool {
 			p.Items[i].Unload = true
 		}
 	}
-	g.s.Packs[id] = p
+	g.setPack(id, p)
 	return true
 }

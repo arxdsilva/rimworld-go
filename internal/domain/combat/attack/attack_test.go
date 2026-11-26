@@ -26,13 +26,31 @@ func TestAccuracyBreakpoints(t *testing.T) {
 	}
 }
 
+// ShootingScore is the ShootingAccuracyPawn stat before its curve: skill plus
+// (min(Manipulation,100%)-100%)x8 and (min(Sight,200%)-100%)x12 plus points.
+func TestShootingScoreBodyCapacitiesAndBonus(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ manipulation, sight, bonus, want int }{
+		{0, 1000, 0, 2}, {500, 1000, 0, 6}, {1000, 1000, 0, 10}, {1500, 1000, 0, 10},
+		{1000, 0, 0, -2}, {1000, 500, 0, 4}, {1000, 1500, 0, 16},
+		{1000, 2000, 0, 22}, {1000, 2500, 0, 22}, {500, 1500, 0, 12},
+		{1000, 1000, 12, 22}, {1000, 1000, -10, 0},
+	} {
+		if got := ShootingScore(10, ManipPoints(tc.manipulation)+SightPoints(tc.sight)+tc.bonus); got != tc.want {
+			t.Errorf("ShootingScore(10, %d, %d, %d) = %d want %d", tc.manipulation, tc.sight, tc.bonus, got, tc.want)
+		}
+	}
+}
+
 func TestShooterPerTile(t *testing.T) {
 	t.Parallel()
 	for skill, want := range map[int]int{
-		-30: 700_000, -20: 700_000, -10: 800_000, 0: 890_000, 5: 945_000, 10: 970_000,
-		15: 981_666, 20: 990_000, 30: 996_500, 40: 998_000, 60: 999_000, 99: 999_000,
-		// SHT-004: the full published points; 2 is 93 (was interpolated to 91.2).
-		2: 930_000,
+		-30: 700_000, -20: 700_000, -10: 800_000, -6: 830_000, -5: 840_000, -4: 850_000,
+		-2: 870_000, 0: 890_000, 1: 910_000, 2: 930_000, 3: 935_000, 4: 940_000,
+		5: 945_000, 6: 950_000, 8: 960_000, 10: 970_000, 12: 975_000, 14: 980_000,
+		15: 981_666, 16: 983_333, 17: 984_999, 18: 986_666, 19: 988_333, 20: 990_000,
+		22: 992_500, 24: 993_750, 26: 995_000, 28: 995_750,
+		30: 996_500, 40: 998_000, 60: 999_000, 99: 999_000,
 	} {
 		if got := ShooterPerTile(skill); got != want {
 			t.Errorf("skill %d: %d want %d", skill, got, want)

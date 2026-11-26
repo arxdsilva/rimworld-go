@@ -100,8 +100,8 @@ func TestTraderCaravanArrivesStaysLeaves(t *testing.T) {
 	if !reflect.DeepEqual(g.visitorIDs(), c.Members) {
 		t.Fatalf("visitors %v, members %v", g.visitorIDs(), c.Members)
 	}
-	if g.caravanFits(now) || g.visitorsFit(now) {
-		t.Fatal("another group fits while the caravan is here")
+	if !g.caravanFits(now) || !g.visitorsFit(now) {
+		t.Fatal("independent caravans and visitors should be eligible")
 	}
 	if st, ok := g.TradeStatus(); !ok || !st.CaravanVisiting || st.CaravanFaction != g.factionByID(c.Faction).Name || st.CaravanHoursLeft != 18 {
 		t.Fatalf("trade status %+v %v", st, ok)
@@ -123,9 +123,20 @@ func TestTraderCaravanArrivesStaysLeaves(t *testing.T) {
 		t.Fatal("the caravan never strolled")
 	}
 	gw := g.factionByID(c.Faction).Goodwill
-	items := len(g.itemIDs)
+	// Ground items can grow while the visitors leave (e.g. wild animal
+	// corpses); only newly dropped stock from this trader is a regression.
+	beforeIDs := slices.Clone(g.itemIDs)
+	traderGoods := make(map[item.Kind]bool)
+	for _, line := range c.Stock.Lines {
+		traderGoods[line.Kind] = true
+	}
 	// the stay ends: they walk out and the caravan is over
 	c.LeaveAt = uint64(g.clock.Now()) + 10
+	for i := range g.worldSt.visitGroups {
+		if g.worldSt.visitGroups[i].ID == c.GroupID {
+			g.worldSt.visitGroups[i].LeaveAt = c.LeaveAt
+		}
+	}
 	for i := range g.worldSt.visitors {
 		g.worldSt.visitors[i].LeaveAt = c.LeaveAt
 	}
@@ -136,17 +147,27 @@ func TestTraderCaravanArrivesStaysLeaves(t *testing.T) {
 	if len(g.visitorIDs()) != 0 || g.trade.caravan != nil {
 		t.Fatalf("still here: visitors %v, caravan %v", g.visitorIDs(), g.trade.caravan)
 	}
-	if g.factionByID(c.Faction).Goodwill < gw-1 || len(g.itemIDs) > items {
-		t.Fatal("a caravan that left in peace dropped goods or cost goodwill")
+	var dropped []item.Stack
+	for _, id := range g.itemIDs {
+		if slices.Contains(beforeIDs, id) {
+			continue
+		}
+		if st, ok := g.stacks.Get(id); ok && st.Forbidden && traderGoods[st.Kind] {
+			dropped = append(dropped, st)
+		}
+	}
+	if got := g.factionByID(c.Faction).Goodwill; got < gw-1 || len(dropped) != 0 {
+		t.Fatalf("peace exit: goodwill %d -> %d, dropped trader merchandise %+v",
+			gw, got, dropped)
 	}
 	if _, ok := g.TradeStatus(); ok {
 		t.Fatal("trade status after the caravan left")
 	}
 }
 
-// TestKillingTraderDropsGoodsAndCostsGoodwill: a dead or captured trader
-// drops its goods and silver forbidden where it fell, and its faction
-// loses traderLostGoodwill.
+// TestKillingTraderDropsGoodsAndCostsGoodwill: only cargo carried by the
+// trader drops on death or capture; guards keep their shares. Faction
+// goodwill is charged once.
 func TestKillingTraderDropsGoodsAndCostsGoodwill(t *testing.T) {
 	t.Parallel()
 	for _, how := range []string{"killed", "captured"} {
@@ -157,6 +178,12 @@ func TestKillingTraderDropsGoodsAndCostsGoodwill(t *testing.T) {
 			f.Goodwill = 20
 			stock := cloneStock(c.Stock)
 			tid := c.Trader
+			var owned visit.Cargo
+			for _, hold := range c.Cargo {
+				if hold.Owner == tid {
+					owned = hold
+				}
+			}
 			if how == "killed" {
 				g.die(tid, health.CauseInjury)
 			} else {
@@ -169,9 +196,23 @@ func TestKillingTraderDropsGoodsAndCostsGoodwill(t *testing.T) {
 			if f.Goodwill != 20-traderLostGoodwill {
 				t.Fatalf("goodwill %d, want %d", f.Goodwill, 20-traderLostGoodwill)
 			}
-			want := map[item.Kind]int{item.Silver: stock.Silver}
-			for _, l := range stock.Lines {
+			want := map[item.Kind]int{item.Silver: owned.Silver}
+			for _, l := range owned.Lines {
 				want[l.Kind] += l.Qty
+			}
+			if c.Stock.Silver != stock.Silver-owned.Silver {
+				t.Fatalf("lost trader left phantom silver: %d", c.Stock.Silver)
+			}
+			for _, original := range stock.Lines {
+				remainder := original.Qty
+				for _, lost := range owned.Lines {
+					if lost.Goods() == original.Goods() {
+						remainder -= lost.Qty
+					}
+				}
+				if got := stockQty(c.Stock, original.Kind); got != remainder {
+					t.Fatalf("remaining stock %s: %d, want %d", original.Kind, got, remainder)
+				}
 			}
 			got := map[item.Kind]int{}
 			for _, iid := range g.itemIDs {
@@ -257,17 +298,38 @@ func TestSessionClosesWhenTraderLeaves(t *testing.T) {
 	g.Step(5)
 	neg = openCaravanTrade(t, g, c)
 	c.LeaveAt = uint64(g.clock.Now()) + 5
-	g.Step(10)
-	if _, ok := g.TradeView(); ok {
-		t.Fatal("the session stayed open after the trader's stay ended")
-	}
-	if j, _ := g.jobs.Get(neg); j.Kind == job.Trade && j.Active() {
-		t.Fatalf("the trade job outlived the session: %+v", j)
-	}
-	if tp, _ := g.positions.Get(c.Trader); optionAt(g, neg, tp.X, tp.Y, "Trade with ") != nil {
-		if o := optionAt(g, neg, tp.X, tp.Y, "Trade with "); !o.Disabled || o.Reason != ReasonNotTrading {
-			t.Fatalf("order on a leaving trader %+v", o)
+	for i := range g.worldSt.visitGroups {
+		if g.worldSt.visitGroups[i].ID == c.GroupID {
+			g.worldSt.visitGroups[i].LeaveAt = c.LeaveAt
 		}
+	}
+	for i := range g.worldSt.visitors {
+		if g.worldSt.visitors[i].GroupID == c.GroupID {
+			g.worldSt.visitors[i].LeaveAt = c.LeaveAt
+		}
+	}
+	g.Step(10)
+	if !g.visitor(c.Trader) {
+		t.Fatal("the trader departed before reaching the edge")
+	}
+	if g.traderOpen(c.Trader) {
+		t.Fatal("the departing trader must reject new trade")
+	}
+	if _, ok := g.TradeView(); ok {
+		t.Fatal("the trade session survived the deadline")
+	}
+	for i := 0; i < 15000 && g.visitor(c.Trader); i++ {
+		g.Step(1)
+	}
+	if g.visitor(c.Trader) {
+		t.Fatal("departing trader stayed on the map")
+	}
+	if _, ok := g.TradeView(); ok {
+		t.Fatal("trade session remained after actual departure")
+	}
+	g.Step(2)
+	if j, _ := g.jobs.Get(neg); j.Kind == job.Trade && j.Active() {
+		t.Fatalf("trade job remained after departure: %+v", j)
 	}
 }
 
@@ -337,10 +399,10 @@ func TestProposeTradeMovesGoods(t *testing.T) {
 	}
 	f := g.factionByID(c.Faction)
 	gd := g.colonyGoods(false)
-	if gd.counts[item.Components] != 10 || gd.counts[item.Silver] != 900 {
-		t.Fatalf("colony goods %v", gd.counts)
+	if gd.Counts()[item.Components] != 10 || gd.Counts()[item.Silver] != 900 {
+		t.Fatalf("colony goods %v", gd.Counts())
 	}
-	res := trade.Settle(item.Book{}, offer, gd.counts, c.Stock, g.termsFor(neg, f), false)
+	res := trade.Settle(item.Book{}, offer, gd.Counts(), c.Stock, g.termsFor(neg, f), false)
 	if !res.OK() {
 		t.Fatalf("settle: %s", res.Reject)
 	}
@@ -380,7 +442,7 @@ func TestProposeTradeMovesGoods(t *testing.T) {
 	silver1 := totalOf(g, item.Silver)
 	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer([]trade.Delta{{Kind: item.Silver, Qty: -200}}), Enabled: true})
 	g.ApplyPending()
-	if f.Goodwill != faction.GiftGoodwill(200) || totalOf(g, item.Silver) != silver1-200 {
+	if f.Goodwill != faction.GiftGoodwill(faction.Faction{Type: f.Type, Goodwill: 0}, 200) || totalOf(g, item.Silver) != silver1-200 {
 		t.Fatalf("gift: goodwill %d, silver %d -> %d", f.Goodwill, silver1, totalOf(g, item.Silver))
 	}
 }
@@ -440,8 +502,8 @@ func openComms(t *testing.T, g *Game, pawn entity.EntityID) {
 	psStepUntil(t, g, 600, "comms session", func() bool { _, ok := g.CommsView(); return ok })
 }
 
-// TestOrbitalNeedsPoweredConsole: the orbital trader fits only while a
-// radio console runs on power, and the console's order says why not.
+// TestOrbitalNeedsPoweredConsole: a ship may pass silently through a radio
+// outage; a powered console is still required to discover and call it.
 func TestOrbitalNeedsPoweredConsole(t *testing.T) {
 	t.Parallel()
 	g, gen, console, pawn := orbitalGame(t)
@@ -452,22 +514,29 @@ func TestOrbitalNeedsPoweredConsole(t *testing.T) {
 	g.setFuel(gen, 0)
 	g.Step(2 * powerInterval)
 	now = uint64(g.clock.Now())
-	if g.powered(console) || g.orbitalFits(now) {
-		t.Fatal("fits without power")
+	if g.powered(console) || !g.orbitalFits(now) {
+		t.Fatal("an unpowered but built console must admit an unnoticed ship")
 	}
 	if o := optionAt(g, pawn, 12, 5, "Use radio console"); o == nil || !o.Disabled || o.Reason != ReasonNoPower {
 		t.Fatalf("unpowered console order %+v", o)
 	}
-	if g.FireIncident(incident.DefOf(incident.OrbitalTrader).Key) {
-		t.Fatal("fired without power")
-	}
-	g.setFuel(gen, g.fuelCap(gen))
-	g.Step(2 * powerInterval)
+	oldLetters := len(g.letters.List())
 	if !g.FireIncident(incident.DefOf(incident.OrbitalTrader).Key) || g.trade.orbital == nil {
-		t.Fatal("the ship did not come with power")
+		t.Fatal("the ship failed to arrive during the radio outage")
+	}
+	if len(g.letters.List()) != oldLetters {
+		t.Fatal("an unpowered console announced a ship")
+	}
+	if hidden, shown := g.TradeStatus(); shown || hidden.Present || hidden.CallReason != ReasonNoPower {
+		t.Fatalf("silent ship leaked through trade alerts: %+v visible=%v", hidden, shown)
 	}
 	o := g.trade.orbital
-	if o.Kind != trade.CurioMerchant || o.Until != uint64(g.clock.Now())+orbitalStay || o.Stock.Silver < 1600 {
+	g.setFuel(gen, g.fuelCap(gen))
+	g.Step(2 * powerInterval)
+	if !g.powered(console) {
+		t.Fatal("radio power did not return")
+	}
+	if o.Kind != trade.CurioMerchant || o.Until != now+orbitalStay || o.Stock.Silver < 1600 {
 		t.Fatalf("ship %+v", o)
 	}
 	if g.orbitalFits(uint64(g.clock.Now())) {
@@ -582,7 +651,7 @@ func TestOrbitalPurchaseDropsPod(t *testing.T) {
 	o := g.trade.orbital
 	buy := o.Stock.Lines[0]
 	offer := []trade.Delta{{Kind: buy.Kind, Qty: 1}}
-	res := trade.Settle(item.Book{}, offer, g.colonyGoods(true).counts, o.Stock, g.termsFor(pawn, nil), false)
+	res := trade.Settle(item.Book{}, offer, g.colonyGoods(true).Counts(), o.Stock, g.termsFor(pawn, nil), false)
 	if !res.OK() {
 		t.Fatalf("settle: %s", res.Reject)
 	}
@@ -650,7 +719,7 @@ func TestCommsGiftRaisesGoodwill(t *testing.T) {
 			row = &cv.Factions[i]
 		}
 	}
-	if row == nil || !row.Gift.Allowed || row.Gift.Cost != faction.GiftSilverPerGoodwill || row.Aid.Allowed || row.Aid.Reason != faction.ReasonNotFriend {
+	if row == nil || !row.Gift.Allowed || row.Gift.Cost != faction.GiftSilverFor(*f, f.Goodwill+1) || row.Aid.Allowed || row.Aid.Reason != faction.ReasonNotFriend {
 		t.Fatalf("faction row %+v", row)
 	}
 	g.Enqueue(command.Command{Kind: command.CommsGift, Index: f.ID, Count: 400}) // more than in reach
@@ -660,7 +729,7 @@ func TestCommsGiftRaisesGoodwill(t *testing.T) {
 	}
 	g.Enqueue(command.Command{Kind: command.CommsGift, Index: f.ID, Count: 200})
 	g.ApplyPending()
-	if f.Goodwill != 5 || totalOf(g, item.Silver) != 600 {
+	if f.Goodwill != faction.GiftGoodwill(faction.Faction{Type: f.Type, Goodwill: 0}, 200) || totalOf(g, item.Silver) != 600 {
 		t.Fatalf("goodwill %d, silver %d", f.Goodwill, totalOf(g, item.Silver))
 	}
 	if cv, _ := g.CommsView(); cv.BeaconSilver != 100 {
@@ -679,10 +748,10 @@ func TestCommsRequestCaravan(t *testing.T) {
 			f = &g.ng.factions[i]
 		}
 	}
-	f.Goodwill = 30
+	f.Goodwill, f.Relation = 80, faction.Friendly
 	g.Enqueue(command.Command{Kind: command.CommsRequestCaravan, Index: f.ID})
 	g.ApplyPending()
-	if f.Goodwill != 30 || len(g.trade.requests) != 0 {
+	if f.Goodwill != 80 || len(g.trade.requests) != 0 {
 		t.Fatal("a request without a comms session went through")
 	}
 	g.trade.comms = &commsSession{operator: g.pawnIDs[0]} // the console itself is TestOrbitalGoodsOnlyNearBeacon's
@@ -690,11 +759,11 @@ func TestCommsRequestCaravan(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.CommsRequestCaravan, Index: f.ID})
 	g.Enqueue(command.Command{Kind: command.CommsRequestCaravan, Index: f.ID}) // a second ask is refused
 	g.ApplyPending()
-	if f.Goodwill != 30-faction.CaravanCost || len(g.trade.requests) != 1 {
+	if f.Goodwill != 80-faction.CaravanCost || len(g.trade.requests) != 1 {
 		t.Fatalf("goodwill %d, requests %+v", f.Goodwill, g.trade.requests)
 	}
 	r := g.trade.requests[0]
-	if r.Faction != f.ID || r.At < now+6*clock.TicksPerHour || r.At > now+12*clock.TicksPerHour {
+	if r.Faction != f.ID || r.At != now+48*clock.TicksPerHour {
 		t.Fatalf("request %+v (now %d)", r, now)
 	}
 	if cd := g.cooldownOf(f.ID); cd.CaravanUntil != now+faction.CaravanCooldownDays*clock.TicksPerDay {
@@ -772,16 +841,65 @@ func TestTradeSameSeed(t *testing.T) {
 	}
 }
 
-// TestTradeStatusReportsShipAndCaravan: TradeStatus reports the ship and
-// the caravan without any session open.
+// TestTradeStatusReportsShipAndCaravan: a trader caravan remains visible
+// while an unpowered radio keeps a passing ship undiscovered.
 func TestTradeStatusReportsShipAndCaravan(t *testing.T) {
 	t.Parallel()
 	g := tradeRich(t)
 	st, ok := g.TradeStatus()
-	if !ok || !st.Present || !st.CaravanVisiting || st.Ship == "" || st.CaravanFaction == "" || st.HoursLeft != 16 || st.CaravanHoursLeft != 18 {
+	if !ok || st.Present || !st.CaravanVisiting || st.Ship != "" || st.CaravanFaction == "" || st.CallReason != ReasonNoPower || st.CaravanHoursLeft != 18 {
 		t.Fatalf("status %+v %v", st, ok)
 	}
 	if _, open := g.TradeView(); open {
 		t.Fatal("a session is open")
+	}
+}
+
+// TestTradeQuoteMatchesLiveSettlement checks displayed ordinary prices and
+// the silver actually moved by the authoritative caravan deal.
+func TestTradeQuoteMatchesLiveSettlement(t *testing.T) {
+	t.Parallel()
+	g, c := caravanGame(t)
+	neg := openCaravanTrade(t, g, c)
+	tradeYard(t, g, neg, 900, 10)
+	v, ok := g.TradeView()
+	if !ok || len(v.Rows) == 0 {
+		t.Fatal("missing trade quote")
+	}
+	terms := g.termsFor(neg, g.factionByID(c.Faction))
+	if v.PriceModPct != trade.TradePriceImprovementCenti(terms)/100 {
+		t.Fatalf("displayed improvement %d, terms %+v", v.PriceModPct, terms)
+	}
+	checked := 0
+	for _, row := range v.Rows {
+		if row.TraderQty == 0 || strings.ContainsAny(row.Kind, "@:") {
+			continue // physical lots have separate item-specific values
+		}
+		kind, valid := item.ParseKind(row.Kind)
+		if !valid || kind == item.Silver {
+			continue
+		}
+		if want := trade.Price(g.sk.content.Items, kind, c.Kind, trade.Buy, terms); row.BuyC != want {
+			t.Fatalf("%s quoted %d, settlement price %d", row.Kind, row.BuyC, want)
+		}
+		checked++
+	}
+	if checked == 0 {
+		t.Fatal("no ordinary trade prices checked")
+	}
+	buy := c.Stock.Lines[0]
+	offer := []trade.Delta{{Kind: buy.Kind, Qty: 1}, {Kind: item.Components, Qty: -4}}
+	if buy.Kind > item.Components {
+		offer[0], offer[1] = offer[1], offer[0]
+	}
+	before := g.colonyGoods(false)
+	silver0 := totalOf(g, item.Silver)
+	res := trade.Settle(g.sk.content.Items, offer, before.Counts(), c.Stock, terms, false)
+	if !res.OK() {
+		t.Fatalf("invalid ordinary deal: %v", res.Reject)
+	}
+	g.cmdProposeTrade(trade.EncodeOffer(offer), false)
+	if got := totalOf(g, item.Silver); got != silver0+res.Silver {
+		t.Fatalf("live trade silver %d, expected %d from quote terms", got, silver0+res.Silver)
 	}
 }

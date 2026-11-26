@@ -9,6 +9,8 @@ import (
 
 	"rimworld-go/internal/application/game/hit"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
@@ -81,8 +83,8 @@ func TestAnimalCutBlowSplits(t *testing.T) {
 			want := body.SpreadBlowWithin(ref, dmg, body.Cut, body.SplitCut, a.HP(), twin(t, g.stream(streamMedical)).IntN, uint64(g.clock.Now())) // woundAnimal's room
 			g.harm(id, cutBlow(dmg), 0, health.CauseInjury)
 			a, _ = g.animals.Get(id)
-			if want != c.total || a.Injury != want || woundDmg(a.Body) != want || woundedParts(a.Body) != c.parts {
-				t.Fatalf("%s seed %d: Injury %d, wounds %d on %d parts, want %d on %d", key, c.seed, a.Injury, woundDmg(a.Body), woundedParts(a.Body), c.total, c.parts)
+			if want != c.total || a.Injury != want || body.OpenWoundDamage(a.Body) != want || woundedParts(a.Body) != c.parts {
+				t.Fatalf("%s seed %d: Injury %d, wounds %d on %d parts, want %d on %d", key, c.seed, a.Injury, body.OpenWoundDamage(a.Body), woundedParts(a.Body), c.total, c.parts)
 			}
 			if !slices.Equal(woundsOf(a.Body), woundsOf(ref)) {
 				t.Fatalf("%s seed %d: no wound is trimmed: %+v, want %+v", key, c.seed, a.Body.Wounds, ref.Wounds)
@@ -180,7 +182,7 @@ func TestAnimalSplitInjuryNeverShort(t *testing.T) {
 			t.Fatalf("seed %d: the elephant survives a cut of %d at %d of %d", seed, dmg, pre, animal.DefOf(a.Species).MaxHP)
 		}
 		t.Logf("seed %d: body damage %d, SpreadBlow %d, rise %d, Injury %d -> %d", seed, before, took, got.Body.Damage()-before, a.Injury, got.Injury)
-		if took != rises[seed] || got.Body.Damage()-before != took || got.Injury-a.Injury != took || woundDmg(got.Body) > got.Injury {
+		if took != rises[seed] || got.Body.Damage()-before != took || got.Injury-a.Injury != took || body.OpenWoundDamage(got.Body) > got.Injury {
 			t.Fatalf("seed %d: body rise %d, Injury rise %d, want both %d", seed, got.Body.Damage()-before, got.Injury-a.Injury, rises[seed])
 		}
 	}
@@ -189,7 +191,8 @@ func TestAnimalSplitInjuryNeverShort(t *testing.T) {
 // bodyCopy is a copy of b sharing no slice with it.
 func bodyCopy(b *body.Body) *body.Body {
 	c := *b
-	c.Wounds, c.Conds, c.Fitted = slices.Clone(b.Wounds), slices.Clone(b.Conds), slices.Clone(b.Fitted)
+	c.Wounds, c.Conds = slices.Clone(b.Wounds), slices.Clone(b.Conds)
+	c.Replacements, c.Implants = slices.Clone(b.Replacements), slices.Clone(b.Implants)
 	return &c
 }
 
@@ -258,7 +261,7 @@ func TestAnimalSplitNegativeRiseClamped(t *testing.T) {
 		b.Wounds = append(b.Wounds,
 			body.Wound{Part: body.QLegHR, Dmg: leg - 1, Kind: body.Cut, Size: int32(leg - 1)},
 			body.Wound{Part: body.QPawHR, Dmg: paw - 1, Kind: body.Cut, Size: int32(paw - 1)})
-		a.Injury = woundDmg(b)
+		a.Injury = body.OpenWoundDamage(b)
 		g.animals.Set(id, a)
 		now := uint64(g.clock.Now())
 		took := body.SpreadBlow(bodyCopy(b), dmg, body.Cut, body.SplitCut, twin(t, g.stream(streamMedical)).IntN, now)
@@ -298,14 +301,14 @@ func healedLeg(t *testing.T, g *Game, id entity.EntityID, path string) int {
 	now := uint64(g.clock.Now())
 	if path == "tended" {
 		a.Body.Wounds = append(a.Body.Wounds, body.Wound{Part: body.QLegHL, Dmg: 6, Kind: body.Cut, Size: 6, At: now})
-		a.Injury = woundDmg(a.Body) + lost
+		a.Injury = body.OpenWoundDamage(a.Body) + lost
 		tendAnimalBody(&a, 500, now)
 		g.animals.Set(id, a)
 		g.markAnimalPatient(id)
 		h := 0
-		for ; woundDmg(a.Body) > 0; h++ {
-			if a.Injury != woundDmg(a.Body)+lost || h > 24*30 {
-				t.Fatalf("hour %d: Injury %d, wounds %d + lost %d", h, a.Injury, woundDmg(a.Body), lost)
+		for ; body.OpenWoundDamage(a.Body) > 0; h++ {
+			if a.Injury != body.OpenWoundDamage(a.Body)+lost || h > 24*30 {
+				t.Fatalf("hour %d: Injury %d, wounds %d + lost %d", h, a.Injury, body.OpenWoundDamage(a.Body), lost)
 			}
 			toNextHour(g)
 			var ok bool
@@ -349,7 +352,8 @@ func TestAnimalHealedLostPartSplitNotCutShort(t *testing.T) {
 				maxHP, now := animal.DefOf(a.Species).MaxHP, uint64(g.clock.Now())
 				old := body.SpreadBlow(bodyCopy(a.Body), dmg, body.Cut, body.SplitCut, twin(t, g.stream(streamMedical)).IntN, now)
 				med := twin(t, g.stream(streamMedical))
-				full := body.SpreadBlowWithin(bodyCopy(a.Body), dmg, body.Cut, body.SplitCut, maxHP, med.IntN, now)
+				ref := bodyCopy(a.Body)
+				full := body.SpreadBlowWithin(ref, dmg, body.Cut, body.SplitCut, maxHP, med.IntN, now)
 				if infection.WoundChance(body.Cut, -1, infection.RoomOther) > 0 {
 					med.IntN(infection.DelaySpan + 1) // a survivor's infection delay
 				}
@@ -366,12 +370,25 @@ func TestAnimalHealedLostPartSplitNotCutShort(t *testing.T) {
 				if !sameStream(g.stream(streamMedical), med) {
 					t.Fatalf("seed %d: the medical stream is not at the full blow's draw", seed)
 				}
-				// independent of SpreadBlowWithin: Injury (0 before) rose by what the
-				// body rose by (Damage: wounds plus lost-part HP, the healed leg's
-				// excluded), which is the new wounds alone when no part was lost
+				// With no newly lost part, all new damage is in surviving
+				// wounds. If an ancestor is destroyed, its newly wounded
+				// child may disappear too: anatomical net rise can be
+				// smaller, but the physical hit is not refunded into spill.
 				newLoss := got.Body.Missing != 1<<body.QLegFL
-				if got.Injury != got.Body.Damage()-lost || !newLoss && got.Injury != woundDmg(got.Body) {
-					t.Fatalf("seed %d: Injury %d, body Damage %d (wounds %d) less the lost %d", seed, got.Injury, got.Body.Damage(), woundDmg(got.Body), lost)
+				open := body.OpenWoundDamage(got.Body)
+				rise := got.Body.Damage() - lost
+				if got.Body.Missing&(1<<body.QLegFL) == 0 || got.Body.Missing != ref.Missing ||
+					!slices.Equal(woundsOf(got.Body), woundsOf(ref)) || open > got.Injury ||
+					(!newLoss && (got.Injury != rise || got.Injury != open)) ||
+					(newLoss && !got.Body.VitalLost() && rise > got.Injury) {
+					t.Fatalf("seed %d: Injury %d, anatomical rise %d, wounds %d, missing %#x", seed, got.Injury, rise, open, got.Body.Missing)
+				}
+				// Independently reproduced on both real healing paths:
+				// a 28-point hit leaves 7 surviving wound points and
+				// 14 new lost-part HP; the other 7 were placed on a
+				// child that the same blow destroyed.
+				if seed == 8 && (got.Injury != 28 || open != 7 || rise != 21 || !newLoss) {
+					t.Fatalf("seed 8 ancestor-loss accounting changed: Injury %d, wounds %d, net %d", got.Injury, open, rise)
 				}
 				if old < full {
 					short++
@@ -415,5 +432,136 @@ func TestAnimalStarvedSplitStopsAtHP(t *testing.T) {
 	}
 	if kills == 0 || stopped == 0 {
 		t.Fatalf("%d kills, %d stopped before the whole split", kills, stopped)
+	}
+}
+
+// TestAnimalSplitAfterHealingLostParts uses the live medical and healing
+// owners; anatomical loss remains after the scalar injury has healed.
+func TestAnimalSplitAfterHealingLostParts(t *testing.T) {
+	for seed := uint64(1); seed <= 10; seed++ {
+		g, id := wildOne(t, seed, "elephant")
+		a, _ := g.animals.Get(id)
+		a.Body = animal.NewBody(a.Species)
+		a.Body.Missing |= 1<<body.QLegFL | 1<<body.QLegFR | 1<<body.QLegHL
+		body.Spread(a.Body, animal.DefOf(a.Species).MaxHP+5-a.Body.Damage(), body.Cut, randx.New(seed).IntN, 0)
+		a.Injury = body.OpenWoundDamage(a.Body)
+		tendAnimalBody(&a, 1000, uint64(g.clock.Now()))
+		a.Food = animal.Full
+		for i := 0; i < 1000 && a.Injury > 0; i++ {
+			g.naturalHeal(id, &a, uint64(animalHealEvery)-uint64(id)%uint64(animalHealEvery))
+		}
+		if a.Injury != 0 || a.Body == nil || a.Body.Missing == 0 || a.Dead() {
+			t.Fatal("lost parts must survive ordinary healing")
+		}
+		g.animals.Set(id, a)
+		for range 3 {
+			before, _ := g.animals.Get(id)
+			g.harm(id, cutBlow(12), 0, health.CauseInjury)
+			got, ok := g.animals.Get(id)
+			if !ok || got.Injury < before.Injury+12 || body.OpenWoundDamage(got.Body) > got.Injury {
+				t.Fatalf("seed %d cut was truncated by old lost parts: %+v", seed, got)
+			}
+		}
+	}
+}
+
+// Ancestor loss can lower the old anatomical aggregate while deleting
+// child wounds. It must neither stop this live split nor lower Injury.
+func TestAnimalSplitAncestorLossKeepsScalarDamage(t *testing.T) {
+	for seed := uint64(1); seed <= 200; seed++ {
+		g, id := wildOne(t, seed, "elephant")
+		a, _ := g.animals.Get(id)
+		a.Body = animal.NewBody(a.Species)
+		b := a.Body
+		b.Missing |= 1<<body.QLegFL | 1<<body.QLegFR | 1<<body.QLegHL
+		leg, paw := b.PartDef(body.QLegHR).MaxHP, b.PartDef(body.QPawHR).MaxHP
+		b.Wounds = append(b.Wounds, body.Wound{Part: body.QLegHR, Dmg: leg - 1, Kind: body.Cut, Size: int32(leg - 1)}, body.Wound{Part: body.QPawHR, Dmg: paw - 1, Kind: body.Cut, Size: int32(paw - 1)})
+		a.Injury = body.OpenWoundDamage(b)
+		g.animals.Set(id, a)
+		ref := *b
+		ref.Wounds = slices.Clone(b.Wounds)
+		took := body.SpreadBlowWithin(&ref, 12, body.Cut, body.SplitCut, a.HP(), twin(t, g.stream(streamMedical)).IntN, uint64(g.clock.Now()))
+		g.harm(id, cutBlow(12), 0, health.CauseInjury)
+		got, ok := g.animals.Get(id)
+		if !ok || took < 12 || got.Injury != a.Injury+took || body.OpenWoundDamage(got.Body) > got.Injury {
+			t.Fatalf("seed %d: scalar damage %d + %d -> %d", seed, a.Injury, took, got.Injury)
+		}
+	}
+}
+
+// All newly added damage forms reach the native animal wound owner via
+// HurtHit. On a healthy body below the scalar kill threshold, it must
+// produce the same planned shares as the upstream split implementation.
+func TestAnimalNewDamageFormsThroughHurtHit(t *testing.T) {
+	for _, form := range []damage.Form{damage.FormScratch, damage.FormStab, damage.FormBullet, damage.FormPoke, damage.FormRangedStab} {
+		t.Run(form.String(), func(t *testing.T) {
+			found := false
+			for seed := uint64(1); seed <= 100; seed++ {
+				g, id := wildOne(t, seed, "elephant")
+				a, _ := g.animals.Get(id)
+				ref := animal.NewBody(a.Species)
+				want := body.SpreadBlow(ref, 10, body.WoundOf(form), body.SplitOf(form), twin(t, g.stream(streamMedical)).IntN, uint64(g.clock.Now()))
+				if ref.Missing != 0 || len(ref.Wounds) < 2 {
+					continue
+				}
+				hits(g).HurtHit(id, armor.Landed{Hit: damage.Hit{Form: form, Amount: 10}}, 0)
+				got, ok := g.animals.Get(id)
+				if !ok || got.Injury != want || !slices.Equal(woundsOf(got.Body), woundsOf(ref)) {
+					t.Fatalf("seed %d: native damage did not preserve planned shares; got %+v, want %d %+v", seed, got, want, ref.Wounds)
+				}
+				found = true
+				break
+			}
+			if !found {
+				t.Fatal("no nontrivial split in deterministic seed range")
+			}
+		})
+	}
+}
+
+// #280's reported fixture: the actual natural/tended healing owners
+// leave a lost limb on the body. A non-vital second limb must still be
+// severable by an ordinary survivable cut. Pick a real RNG seed for the
+// native one-part cut, not a substitute wound implementation.
+func TestAnimalHealedLostPartCanSeverAgain(t *testing.T) {
+	for _, path := range []string{"natural", "tended"} {
+		t.Run(path, func(t *testing.T) {
+			g, id := wildOne(t, 1, "labrador")
+			healedLeg(t, g, id, path)
+			a, _ := g.animals.Get(id)
+			if a.Injury != 0 || a.Body.LossKills(body.QLegFR) {
+				t.Fatal("healthy remaining non-vital leg protected")
+			}
+			var chosen uint64
+			for seed := uint64(1); seed < 10000; seed++ {
+				r := randx.New(seed)
+				p, ok := a.Body.PickPart(r.IntN)
+				if ok && p == body.QLegFR && r.IntN(100) < 30 {
+					chosen = seed
+					break
+				}
+			}
+			if chosen == 0 {
+				t.Fatal("no native RNG fixture")
+			}
+			r := randx.New(chosen)
+			st, err := r.MarshalBinary()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = g.stream(streamMedical).UnmarshalBinary(st); err != nil {
+				t.Fatal(err)
+			}
+			dmg := a.Body.PartDef(body.QLegFR).MaxHP
+			if dmg <= 0 || dmg >= a.HP() {
+				t.Fatal("fixture is lethal")
+			}
+			g.harm(id, cutBlow(dmg), 0, health.CauseInjury)
+			got, ok := g.animals.Get(id)
+			want := uint32(1<<body.QLegFL | 1<<body.QLegFR | 1<<body.QPawFR)
+			if !ok || got.Body == nil || got.Injury != dmg || got.Body.Missing != want {
+				t.Fatalf("seed %d: expected second leg severed for %d, got %+v", chosen, dmg, got)
+			}
+		})
 	}
 }

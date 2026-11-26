@@ -14,7 +14,7 @@ import (
 func TestStartRelationsUseNewBand(t *testing.T) {
 	t.Parallel()
 	slots := []Slot{{Settlers, 4}, {Clans, 4}, {Drifters, 3}, {Freebooters, 3}}
-	seenHostileDrifter, seenCalmDrifter := false, false
+	seenHostileDrifter := false
 	for seed := uint64(1); seed <= 300; seed++ {
 		for _, f := range Generate(slots, randx.New(seed)) {
 			if got, want := f.Relation == Hostile, f.Goodwill <= HostileAt; got != want {
@@ -30,33 +30,28 @@ func TestStartRelationsUseNewBand(t *testing.T) {
 					t.Fatalf("seed %d freebooter not hostile", seed)
 				}
 			case Drifters:
-				inBand := f.Goodwill >= -90 && f.Goodwill <= -75
-				if inBand != (f.Relation == Hostile) {
+				if f.Goodwill < -100 || f.Goodwill > -80 || f.Relation != Hostile {
 					t.Fatalf("seed %d drifter gw %d relation %d", seed, f.Goodwill, f.Relation)
 				}
-				if inBand {
-					seenHostileDrifter = true
-				} else {
-					seenCalmDrifter = true
-				}
+				seenHostileDrifter = true
 			}
 		}
 	}
-	if !seenHostileDrifter || !seenCalmDrifter {
-		t.Errorf("drifters hostile seen %v, calm seen %v", seenHostileDrifter, seenCalmDrifter)
+	if !seenHostileDrifter {
+		t.Fatal("default generated worlds never contained hostile Drifters")
 	}
 	if f := Generate([]Slot{{Swarm, 1}}, randx.New(1)); len(f) != 1 || f[0].Relation != Hostile {
 		t.Errorf("swarm not hostile: %+v", f)
 	}
 }
 
-// TestDrifterHostileStartShare pins the Drifters' start range at -90 and its
-// hostile share at 16 of 101 (the old band gave 11 of 71).
+// TestDrifterHostileStartShare pins the permanent hostile starting band
+// for industrial rough factions (Goodwill -100..-80).
 func TestDrifterHostileStartShare(t *testing.T) {
 	t.Parallel()
 	d := DefOf(Drifters)
-	if d.GoodwillMin != -90 {
-		t.Fatalf("Drifters GoodwillMin = %d, want -90", d.GoodwillMin)
+	if d.GoodwillMin != -100 || d.GoodwillMax != -80 {
+		t.Fatalf("Drifters goodwill range %+v", d)
 	}
 	hostile, total := 0, 0
 	for gw := d.GoodwillMin; gw <= d.GoodwillMax; gw++ {
@@ -65,7 +60,7 @@ func TestDrifterHostileStartShare(t *testing.T) {
 			hostile++
 		}
 	}
-	if hostile != 16 || total != 101 {
-		t.Errorf("hostile share %d/%d, want 16/101", hostile, total)
+	if hostile != 21 || total != 21 {
+		t.Errorf("hostile share %d/%d, want 21/21", hostile, total)
 	}
 }

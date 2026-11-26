@@ -419,3 +419,11 @@ _Rows: Deterministic benchmark runner_
 | `ColonyHour` (48×40) | ≤ +10% vs 17.5 ms |
 | Existing draw, shadow, stain and dirt benches | within +10% |
 
+## NG-2-core-difficulty-adaptation
+Native difficulty presets and shared adaptation · 2026-11-25 · this commit
+- Changed: six configurable presets, fixed-point loss adaptation with half-day growth and actual death/downing accounting; the same difficulty controls native yield, weather, disease and poisoning.
+- Decisions: preserve original identifiers and historical neutral/explicit-zero migrations; no extra per-consumer adaptation state. Numerical sources use existing feature scopes: DEF-4 for threat and adaptation, FOOD/HRV and MIN for yields, FOOD/DEF for animal revenge, RSCH-1 for research, MED/AIL/FOOD for infection, disease and poisoning, SHT-007 for interception, TEMP for weather, ENG-003 for mood. The combined preset table applies these scopes across difficulty levels; source tags identify the published numbers and original tuning.
+- Save/HUD: existing new-game/story options expose settings; migration keeps prior saves and explicit zero. Deterministic event accounting.
+- Limits: existing architecture ratchet unchanged.
+- Boxes: vanilla **Difficulty profile** [-] (distinct death/downing switches and further custom options remain), **Custom difficulty**, **Storyteller component** [x].
+- Open: NG-2 remaining difficulty switches/options.

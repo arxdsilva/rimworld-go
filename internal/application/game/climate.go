@@ -5,10 +5,13 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/letters"
+	"rimworld-go/internal/application/game/saveutil"
+	"rimworld-go/internal/application/game/viewmodel"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
+	"rimworld-go/pkg/letterdata"
 	"rimworld-go/pkg/msgfmt"
 )
 
@@ -35,6 +38,8 @@ type MessageView struct {
 	// the scenario's intro, extreme weather (NG-1).
 	Letter bool
 	Title  string
+	Code   string              // stable event code, independent of the title
+	Fields *[]letterdata.Field // pointer keeps MessageView comparable
 	// Kind (PLAY-018) colours a letter in the right-side stack: "threat",
 	// "caution", "info" or "good" ("" reads as info, or threat if Danger).
 	Kind string
@@ -83,10 +88,17 @@ func (g *Game) message(x, y int, format string, args ...any) {
 
 // threat posts a danger message: a threat has arrived.
 func (g *Game) threat(title string, x, y int, format string, args ...any) {
-	// a major threat is a red letter in the stack too (PLAY-018), and a
-	// danger message the UI may pause for
+	threatWithFields(g, "", title, x, y, format, nil, args...)
+}
+
+// threatWithFields gives a danger letter its typed event data.
+func threatWithFields(g *Game, code, title string, x, y int, format string, fields []letterdata.Field, args ...any) {
+	var ref *[]letterdata.Field
+	if len(fields) != 0 {
+		ref = &fields
+	}
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Msg: msgfmt.Of(format, args...), X: x, Y: y, Danger: true,
-		Letter: true, Title: title, Kind: letters.Threat})
+		Letter: true, Title: title, Code: code, Fields: ref, Kind: letters.Threat})
 }
 
 // post posts m and returns its text: a view given only Msg prints it as
@@ -99,7 +111,7 @@ func (g *Game) post(m MessageView) string {
 		m.Msg = msgfmt.Make(msgfmt.Plain(m.Text), nil)
 	}
 	if m.Letter {
-		m.Kind = g.addLetter(m) // a letter is also kept in the stack
+		m.Kind, m.Fields = g.addLetter(m), nil // letters own typed fields; ticker has no mutable alias
 	} else if !m.Danger && g.mergeRepeat(m) {
 		return m.Text
 	}
@@ -142,7 +154,9 @@ func (g *Game) addLetter(m MessageView) string {
 	if x == 0 && y == 0 || !g.grid.InBounds(x, y) {
 		x, y = -1, -1
 	}
-	g.letters.Add(letters.Letter{Tick: m.Tick, Kind: kind, Title: m.Title, Text: m.Text, Msg: m.Msg,
+	code, fields := letterdata.Defaults(m.Code, m.Fields, m.Title, m.Msg.Format, m.Msg.Args())
+	g.letters.Add(letters.Letter{Tick: m.Tick, Kind: kind, Code: code, Fields: fields,
+		Title: m.Title, Text: m.Text, Msg: m.Msg,
 		X: x, Y: y, Map: uint32(m.Map), Focus: m.Focus})
 	return kind
 }
@@ -150,7 +164,7 @@ func (g *Game) addLetter(m MessageView) string {
 // dismissLetter removes letter id (an unknown id is ignored). Dismissing a
 // join offer declines it: the stranger, still here, goes its way.
 func (g *Game) dismissLetter(id uint64) {
-	if l, ok := g.letters.Remove(id); ok && l.Join != 0 && g.visitor(l.Join) {
+	if l, ok := g.letters.RemoveLive(id, uint64(g.clock.Now())); ok && l.Join != 0 && g.visitor(l.Join) {
 		careGuests{g}.Leave(l.Join) // visitors.go
 	} else if ok && l.Wanderer != 0 {
 		for _, c := range g.pawnIDs {
@@ -162,7 +176,7 @@ func (g *Game) dismissLetter(id uint64) {
 // acceptLetter accepts letter id's offer (command.AcceptLetter): a rescued
 // stranger still on the map joins. A letter with no offer is left as it is.
 func (g *Game) acceptLetter(id uint64) {
-	l, ok := g.letters.Get(id)
+	l, ok := g.letters.GetLive(id, uint64(g.clock.Now()))
 	if !ok || l.Join == 0 && l.Wanderer == 0 {
 		return
 	}
@@ -178,18 +192,7 @@ func (g *Game) acceptLetter(id uint64) {
 }
 
 // letterViews is the stack for the read model, oldest first (a copy).
-func (g *Game) letterViews() []LetterView {
-	list := g.letters.List()
-	if len(list) == 0 {
-		return nil
-	}
-	out := make([]LetterView, len(list))
-	for i, l := range list {
-		out[i] = LetterView{ID: l.ID, Tick: l.Tick, Kind: l.Kind, Title: l.Title, Text: l.Text, Msg: l.Msg,
-			X: l.X, Y: l.Y, Map: MapID(l.Map), Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0 || l.Wanderer != 0, Demand: l.Demand, Quest: l.Quest, Until: l.Until, Choices: l.Choices}
-	}
-	return out
-}
+func (g *Game) letterViews() []LetterView { return viewmodel.Letters(g.letters.List()) }
 
 // importLetters restores the stack from a save. A save from before the
 // stack existed has letter messages but never issued an id (next is 0):
@@ -218,4 +221,9 @@ func (g *Game) phaseClimate() {
 	g.expose()
 	senseOf(g).Gear.Rot(climateInterval)    // game/sense (CSE-036)
 	g.craft.Drying.Advance(climateInterval) // craft/drying.go; frost: per chunk with the plants (plant_growth.go)
+}
+
+func cloneSaveMessage(m MessageView) MessageView {
+	m.Fields = saveutil.OwnPointerSlice(true, m.Fields)
+	return m
 }

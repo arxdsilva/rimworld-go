@@ -4,6 +4,7 @@
 package game
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -256,7 +257,7 @@ func TestSynthStomachBlocksGutWorms(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	v, _ := g.vital.Get(id)
-	g.ensureBody(id, &v).SetImplant(body.Stomach, item.SynthStomach)
+	g.ensureBody(id, &v).SetReplacement(body.Stomach, item.SynthStomach)
 	if len(g.diseaseCandidates(body.CondGutWorms)) != 0 || g.FireIncident("gut_worms") || g.GiveDisease(id, uint8(body.CondGutWorms)) {
 		t.Fatal("a synth stomach keeps gut worms out")
 	}
@@ -284,8 +285,13 @@ func TestDiseaseLetter(t *testing.T) {
 		t.Fatalf("%d sick, %d letters", len(sick), len(g.letters.List())-before)
 	}
 	l := g.letters.List()[len(g.letters.List())-1]
-	if l.Kind != letters.Caution || l.Title != "Plague" || !strings.Contains(l.Text, sick[0]) || !strings.Contains(l.Text, "15 hours") {
+	if l.Kind != letters.Caution || l.Title != "Plague" || l.Code != "colony.disease.plague" ||
+		!strings.Contains(l.Text, sick[0]) || !strings.Contains(l.Text, "15 hours") {
 		t.Fatalf("letter %+v", l)
+	}
+	if len(l.Fields) != 4 || l.Fields[1].Name != "what" || l.Fields[1].Value != "plague" ||
+		l.Fields[2].Name != "count" || l.Fields[2].Value != fmt.Sprint(len(sick)) {
+		t.Fatalf("plague typed event fields %+v", l.Fields)
 	}
 	for _, id := range g.diseaseCandidates(body.CondPlague) {
 		if g.diseaseLabel(id) == "plague" {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -80,8 +81,8 @@ func TestHarvestYieldsOrgan(t *testing.T) {
 	if v := g.VitalOf(patient); v.Status == health.Dead || b.ImmunityGain() != 750 {
 		t.Fatalf("one kidney is enough to live: %+v", v)
 	}
-	if g.countItem(item.IndustrialMedicine) != 8 {
-		t.Fatalf("a harvest uses 2 medicine: %d left", g.countItem(item.IndustrialMedicine))
+	if g.countItem(item.IndustrialMedicine) != 9 {
+		t.Fatalf("a harvest uses 1 medicine: %d left", g.countItem(item.IndustrialMedicine))
 	}
 }
 
@@ -141,6 +142,10 @@ func TestAnestheticWearsOffInGame(t *testing.T) {
 	queueOp(g, patient, body.Anesthetize, body.Torso, 0)
 	operateAll(t, g, patient, doc)
 	since := g.bodies[patient].Conds[0].Since
+	duration := uint64(g.bodies[patient].Conds[0].Rate)
+	if duration < 45000 || duration > 75000 {
+		t.Fatalf("anesthetic duration = %d", duration)
+	}
 	if v := g.VitalOf(patient); v.Status != health.Downed || v.Cause != health.CauseAnesthetic || !g.UnderAnaesthetic(patient) {
 		t.Fatalf("sedated: %+v", v)
 	}
@@ -162,9 +167,9 @@ func TestAnestheticWearsOffInGame(t *testing.T) {
 	if g.VitalOf(patient).Status != health.Alive || !g.UnderAnaesthetic(patient) || g.bodies[patient].Sedated() {
 		t.Fatalf("woozy and up at 7 hours: %+v", g.VitalOf(patient))
 	}
-	step(since + 21*clock.TicksPerHour + 1)
+	step(since + duration + clock.TicksPerHour + 1)
 	if g.UnderAnaesthetic(patient) {
-		t.Fatal("gone after 20 hours")
+		t.Fatalf("anesthetic remains after %d ticks", duration)
 	}
 	hv, _ := g.Health(patient)
 	if len(hv.Options) == 0 {
@@ -274,14 +279,15 @@ func TestHarvestMood(t *testing.T) {
 	if v, _ := value(rid, mood.OrganHarvested); v != -30 {
 		t.Fatalf("the donor: %d", v)
 	}
-	if v, _ := value(ada, mood.KnowOrganHarvested); v != -5 {
+	if v, _ := value(ada, mood.KnowOrganHarvested); v != 0 {
 		t.Fatalf("the colony: %d", v)
 	}
 	if f := g.factionOf(1); f.Goodwill != -80 {
 		t.Fatalf("a kidney costs 80 goodwill: %d", f.Goodwill)
 	}
 	g.organHarvested(ada, rid, body.KidneyR)
-	if v, n := value(bo, mood.KnowOrganHarvested); n != 2 || v != -5-3 {
+	// Cumulative fixed-point rounding includes 75% of the second -5 memory as -4.
+	if v, n := value(bo, mood.KnowOrganHarvested); n != 2 || v != -5-4 {
 		t.Fatalf("stacking at 75 %%: %d over %d", v, n)
 	}
 	for i := 0; i < 6; i++ {
@@ -295,9 +301,13 @@ func TestHarvestMood(t *testing.T) {
 	if f := g.factionOf(1); f.Goodwill != -100 {
 		t.Fatalf("a heart costs at most 100 goodwill: %d", f.Goodwill)
 	}
-	g.organHarvested(bo, ada, body.KidneyL)
-	if v, _ := value(bo, mood.KnowColonistOrganHarvested); v != -6 {
-		t.Fatalf("a colonist's organ weighs more: %d", v)
+	g.organHarvested(0, ada, body.KidneyL)
+	if v, _ := value(bo, mood.KnowColonistOrganHarvested); v != -5 {
+		t.Fatalf("a colonist's organ (nonfatal): %d", v)
+	}
+	g.fatalOrganHarvest(ada)
+	if v, _ := value(bo, mood.FatalOrganHarvest); v != -6 {
+		t.Fatal(v)
 	}
 }
 
@@ -307,12 +317,16 @@ func TestMonitorNeedsPowerAndAdjacency(t *testing.T) {
 	patient, _ := g.SpawnNamedPawn(5, 2, "Patient")
 	bed := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 5, 2)
 	b, _ := g.bldgs.Get(bed)
-	g.bldgs.Set(bed, b.Claim(uint64(patient)))
+	g.bldgs.Set(bed, construction.ClaimBed(b, uint64(patient)))
 	sx, sy := g.sleepCellFor(patient, b)
 	g.positions.Set(patient, Position{sx, sy})
 	if g.bedUnder(patient) != bed {
 		t.Fatal("the patient lies in the hospital bed")
 	}
+	if g.immunityGain(patient) != 1000 {
+		t.Fatal("standing claim gave immunity bonus")
+	}
+	g.jobs.Set(patient, job.Record{Kind: job.Sleep, State: job.Do, Target: bed})
 	before := g.immunityGain(patient)
 	far := buildNow(t, g, construction.VitalsMonitor, item.Steel, construction.South, 12, 2)
 	onPower(t, g, 12, 2, 14, 2)
@@ -330,8 +344,8 @@ func TestMonitorNeedsPowerAndAdjacency(t *testing.T) {
 	if !g.powered(mon) || !g.monitorBy(patient) {
 		t.Fatalf("powered and beside the bed: powered %v", g.powered(mon))
 	}
-	if g.monitorTend(patient) != 70 || g.immunityGain(patient) != before+20 {
-		t.Fatalf("tend +70, immunity +20: %d, %d -> %d", g.monitorTend(patient), before, g.immunityGain(patient))
+	if g.monitorTend(patient) != 70 || g.immunityGain(patient) != before+22 {
+		t.Fatalf("tend +70, resting immunity +22: %d, %d -> %d", g.monitorTend(patient), before, g.immunityGain(patient))
 	}
 	in := g.surgeryInput(0, patient, body.Amputate, item.HerbalMedicine)
 	if !in.Monitor || !in.HospitalBed {
@@ -409,7 +423,7 @@ func TestOldSurgerySaveLoads(t *testing.T) {
 	}
 	h.cmdRemoveOperation(patient, 1)
 	operateUntil(t, h, patient, doc)
-	if h.bodies[patient].Implant(body.LegL) != item.PegLeg {
+	if h.bodies[patient].ReplacementAt(body.LegL) != item.PegLeg {
 		t.Fatal("the old queue still runs")
 	}
 }
@@ -441,5 +455,27 @@ func TestSurgeryChanceView(t *testing.T) {
 		if !found {
 			t.Fatalf("picker lacks %q", label)
 		}
+	}
+}
+
+// Installing a synthetic heart in a healthy free guest salvages the
+// natural organ and imposes the Core unnecessary-surgery faction penalty.
+func TestGuestHealthyHeartUpgradeCostsGoodwill(t *testing.T) {
+	g, _, surgeon := surgeryColony(t, 4)
+	guest := spawnGuest(t, g, 14, 8)
+	g.ng.factions = []faction.Faction{{Type: faction.Settlers, Name: "Valley"}}
+	g.personOf(guest).Faction = 1
+	g.surg = &surgeryState{}
+	g.surg.ensure()
+	g.surg.ops[guest] = []body.Operation{{Kind: body.InstallImplant, Part: body.Heart, Item: item.ValveHeart}}
+	g.operate(surgeon, guest, 0, &job.Record{}, item.IndustrialMedicine)
+	if got := g.bodies[guest].ReplacementAt(body.Heart); got != item.ValveHeart {
+		t.Fatalf("prosthetic heart operation result = %s; %s", got, surgeryLine(g, guest))
+	}
+	if got := g.factionOf(1).Goodwill; got != -70 {
+		t.Fatalf("foreign faction goodwill = %d, want -70", got)
+	}
+	if got := g.stockOf(item.Heart); got != 1 {
+		t.Fatalf("removed healthy heart recovered = %d, want 1", got)
 	}
 }

@@ -30,72 +30,93 @@ type Shop struct {
 // Assign starts the first bill at the first bench, in building order,
 // that pawn id may work with work types m and that wants doing.
 func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
+	for _, bid := range s.h.BuildingIDs() {
+		if s.assignBench(id, m, bid, -1, false, nil) {
+			return true
+		}
+	}
+	return false
+}
+
+// AssignAt plans a player-selected bill using the normal recipe, worker,
+// fuel, ingredient and reservation rules. startForced admits a budgeted route before interrupting old work.
+func (s *Shop) AssignAt(id entity.EntityID, m work.Mask, bid entity.EntityID, bill int, startForced func(job.Record) bool) bool {
+	return bill >= -1 && s.assignBench(id, m, bid, bill, true, startForced)
+}
+
+func (s *Shop) assignBench(id entity.EntityID, m work.Mask, bid entity.EntityID, only int, forced bool, startForced func(job.Record) bool) bool {
 	h := s.h
-	for _, bid := range h.BuildingIDs() {
-		b, ok := h.Bench(bid) // a bench: copied before anything below can change the store
+	b, ok := h.Bench(bid) // a bench: copied before anything below can change the store
+	if !ok || b.Forbidden || b.Deconstruct || b.Uninstall {
+		return false
+	}
+	if owner, taken := h.Claims().EntityOwner(bid); taken && owner != id {
+		return false
+	}
+	if !forced && h.Postponed(id, bid) {
+		return false // SIM-027: blocked or out of reach lately
+	}
+	var spot [2]int // the work spot, worked out once a bill wants doing
+	spotOK, unreach := false, false
+	for i, bl := range s.bills.list[bid] {
+		if only >= 0 && only != i {
+			continue
+		}
+		d := s.bills.book.DefOf(bl.Recipe)
+		if !s.validRecipe(b.Kind, d) || !m.Enabled(d.WorkType()) || !s.workerOK(id, bl, d) {
+			continue
+		}
+		stock := s.bills.stock(d)
+		bl = bl.Update(stock)
+		s.bills.list[bid][i] = bl
+		if !bl.Wants(stock + s.pendingExcept(bl, d, id, forced)) {
+			continue
+		}
+		if d.Dry && s.drying.busy(bid) {
+			continue // still drying the last batch
+		}
+		if d.Ferment && !s.drying.barrelOpen(bid) {
+			continue // PRD-4: full, or fermenting (ferment.go)
+		}
+		if Fueled(b.Kind) && h.Fuel(bid) <= 0 {
+			continue // no fire to cook over or forge with
+		}
+		if ElectricBench(b.Kind) && !h.Powered(bid) {
+			continue // PLAY-021: an electric bench works only on power
+		}
+		if BurnsWood(b.Kind, d) && h.FreeWood() < d.ExtraQty {
+			continue // no wood to burn the body with
+		}
+		if !forced && bl.SearchAt > h.Now() {
+			continue // PRD-1: nothing to gather lately, retried after a cooldown
+		}
+		if !spotOK {
+			_, spot, _ = construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+			spotOK = true
+		}
+		if owner, held := h.Claims().TileOwner(spot[0], spot[1]); held && owner != id {
+			break // RES-1: another worker holds the work spot (a bench sharing it)
+		}
+		rec, ok := s.plan(id, bl, d, spot)
 		if !ok {
+			s.bills.list[bid][i].SearchAt = h.Now() + IngredientRetry
 			continue
 		}
-		if owner, taken := h.Claims().EntityOwner(bid); taken && owner != id {
+		if unreach || !h.Reachable(id, spot[0], spot[1]) {
+			if !unreach && !forced { // SIM-027: searched once, put off
+				h.Postpone(id, bid)
+			}
+			unreach = true
 			continue
 		}
-		if h.Postponed(id, bid) {
-			continue // SIM-027: blocked or out of reach lately
+		rec.Dest, rec.DestX, rec.DestY, rec.WorkLeft, rec.BillIndex = bid, spot[0], spot[1], BillWork(b.Kind, d), i
+		rec.Forced = forced
+		rec.BillIdentity = s.bills.ensureIdentity(bid, i)
+		if forced {
+			return s.startWith(id, rec, startForced)
 		}
-		var spot [2]int // the work spot, worked out once a bill wants doing
-		spotOK, unreach := false, false
-		for i, bl := range s.bills.list[bid] {
-			d := s.bills.book.DefOf(bl.Recipe)
-			if !m.Enabled(d.Skill) || !s.workerOK(id, bl, d) {
-				continue
-			}
-			stock := s.bills.stock(d)
-			bl = bl.Update(stock)
-			s.bills.list[bid][i] = bl
-			if !bl.Wants(stock + s.pending(bl, d)) {
-				continue
-			}
-			if d.Dry && s.drying.busy(bid) {
-				continue // still drying the last batch
-			}
-			if d.Ferment && !s.drying.barrelOpen(bid) {
-				continue // PRD-4: full, or fermenting (ferment.go)
-			}
-			if Fueled(b.Kind) && h.Fuel(bid) <= 0 {
-				continue // no fire to cook over or forge with
-			}
-			if ElectricBench(b.Kind) && !h.Powered(bid) {
-				continue // PLAY-021: an electric bench works only on power
-			}
-			if BurnsWood(b.Kind, d) && h.FreeWood() < d.ExtraQty {
-				continue // no wood to burn the body with
-			}
-			if bl.SearchAt > h.Now() {
-				continue // PRD-1: nothing to gather lately, retried after a cooldown
-			}
-			if !spotOK {
-				_, spot, _ = construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-				spotOK = true
-			}
-			if owner, held := h.Claims().TileOwner(spot[0], spot[1]); held && owner != id {
-				break // RES-1: another worker holds the work spot (a bench sharing it)
-			}
-			rec, ok := s.plan(id, bl, d, spot)
-			if !ok {
-				s.bills.list[bid][i].SearchAt = h.Now() + IngredientRetry
-				continue
-			}
-			if unreach || !h.Reachable(id, spot[0], spot[1]) {
-				if !unreach { // SIM-027: searched once, put off
-					h.Postpone(id, bid)
-				}
-				unreach = true
-				continue
-			}
-			rec.Dest, rec.DestX, rec.DestY, rec.WorkLeft, rec.BillIndex = bid, spot[0], spot[1], BillWork(b.Kind, d), i
-			if s.stackFirst(id, rec) || s.start(id, rec) {
-				return true
-			}
+		if s.stackFirst(id, rec) || s.start(id, rec) {
+			return true
 		}
 	}
 	return false
@@ -183,12 +204,16 @@ func (s *Shop) stackFirst(id entity.EntityID, rec job.Record) bool {
 // first stack puts the bench off (SIM-027), as a plain bill job's start
 // does.
 func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
+	return s.startWith(id, rec, func(r job.Record) bool { return s.h.StartJob(id, r) })
+}
+
+func (s *Shop) startWith(id entity.EntityID, rec job.Record, start func(job.Record) bool) bool {
 	h := s.h
 	pack := rec.Kind == job.PackIngredients
 	if pack {
 		rec.Kind = job.HaulIngredients // starts as a gathering (the host claims its first pick's count)
 	}
-	if !h.StartJob(id, rec) {
+	if !start(rec) {
 		if j, _ := h.Job(id); rec.Kind == job.HaulIngredients && j.Fail == job.Unreachable {
 			h.Postpone(id, rec.Dest)
 		}
@@ -211,17 +236,23 @@ func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
 
 // pending is the output already being made for an "until you have" bill,
 // so two cooks don't both start the last meal.
-func (s *Shop) pending(bl recipe.Bill, d recipe.Def) int {
+func (s *Shop) pending(bl recipe.Bill, d recipe.Def) int { return s.pendingExcept(bl, d, 0, false) }
+
+func (s *Shop) pendingExcept(bl recipe.Bill, d recipe.Def, except entity.EntityID, forced bool) int {
 	if bl.Mode != recipe.UntilHave || d.Dry || d.Ferment {
 		return 0
 	}
 	n := 0
 	for _, pid := range s.h.PawnIDs() {
+		if forced && pid == except {
+			continue
+		}
 		j, ok := s.h.Job(pid)
 		if !ok || j.Kind != job.Bill && j.Kind != job.HaulIngredients && j.Kind != job.PackIngredients || j.State == job.Complete || j.State == job.Fail {
 			continue
 		}
-		if bills := s.bills.list[j.Dest]; j.BillIndex < len(bills) && bills[j.BillIndex].Recipe == bl.Recipe {
+		bills := s.bills.list[j.Dest]
+		if i := billOf(j, bills); i < len(bills) && bills[i].Recipe == bl.Recipe {
 			n += d.OutQty
 		}
 	}
@@ -241,25 +272,31 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 	h := s.h
 	b, ok := h.Building(j.Dest)
 	bills := s.bills.list[j.Dest]
-	if j.Kind == job.PackIngredients {
-		j.BillIndex = billOf(j, bills)
-	}
-	if !ok || j.BillIndex >= len(bills) {
+	j.BillIndex = billOf(j, bills)
+	if !ok || b.Forbidden || b.Deconstruct || b.Uninstall || j.BillIndex < 0 || j.BillIndex >= len(bills) {
 		s.fail(id, j, job.TargetGone)
 		return
 	}
 	bl := bills[j.BillIndex]
 	d := s.bills.book.DefOf(bl.Recipe)
+	if !s.validRecipe(b.Kind, d) || j.Kind == job.PackIngredients && int(bl.Recipe) != j.SpareX {
+		s.fail(id, j, job.TargetGone)
+		return
+	}
 	switch j.Kind {
 	case job.HaulIngredients:
-		s.gather(id, j, b)
+		s.gather(id, j, b, bl)
 		return
 	case job.PackIngredients:
-		s.packGather(id, j, b)
+		s.packGather(id, j, b, bl)
 		return
 	}
 	if j.Carry == 0 {
-		s.fetch(id, j, d)
+		s.fetch(id, j, bl, d)
+		return
+	}
+	if st, ok := h.Stack(j.Carry); !ok || st.Carrier != id || st.Qty <= 0 || !bl.AllowsStack(st) || st.Rotten() && d.ID != recipe.Cremate {
+		s.fail(id, j, job.TargetGone)
 		return
 	}
 	if j.WorkLeft == BillWork(b.Kind, d) && s.tidyFirst(id, j) {
@@ -285,7 +322,7 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 		h.SetJob(id, j)
 		return
 	}
-	if !s.laidOut(j) {
+	if !s.ingredientsReady(id, j, b, bl, d) {
 		s.fail(id, j, job.TargetGone) // an ingredient left the bench
 		return
 	}
@@ -316,10 +353,10 @@ func (s *Shop) tidyFirst(id entity.EntityID, j job.Record) bool {
 
 // fetch picks the ingredient up (splitting off what the recipe takes) and
 // heads for the bench's work spot.
-func (s *Shop) fetch(id entity.EntityID, j job.Record, d recipe.Def) {
+func (s *Shop) fetch(id entity.EntityID, j job.Record, bl recipe.Bill, d recipe.Def) {
 	h := s.h
 	st, ok := h.Stack(j.Target)
-	if !ok || st.Carrier != 0 || !d.Input.Enough(st, st.Qty) {
+	if !ok || st.Carrier != 0 || st.Forbidden || !s.bills.book.TakesStack(d.Input, st) || !bl.AllowsStack(st) || st.Rotten() && d.ID != recipe.Cremate || !d.Input.Enough(st, st.Qty) {
 		s.fail(id, j, job.TargetGone)
 		return
 	}
@@ -328,7 +365,16 @@ func (s *Shop) fetch(id entity.EntityID, j job.Record, d recipe.Def) {
 	if d.Ferment { // PRD-4: no more than the barrel takes
 		take = min(take, max(1, s.drying.barrelRoom(j.Dest)))
 	}
-	if j.Carry = h.Carry(id, j.Target, take); j.Carry != j.Target {
+	if !d.Input.Enough(st, take) {
+		s.fail(id, j, job.TargetGone)
+		return
+	}
+	j.Carry = h.Carry(id, j.Target, take)
+	if j.Carry == 0 {
+		s.fail(id, j, job.TargetGone)
+		return
+	}
+	if j.Carry != j.Target {
 		h.Claims().ReleaseEntity(id, j.Target) // picked up: the rest of the stack is free
 	}
 	path, ok := h.PathTo(id, j.DestX, j.DestY)

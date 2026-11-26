@@ -147,7 +147,7 @@ func TestHealthySleeperLeavesMedicalBed(t *testing.T) {
 		t.Fatal("tired, it walks past the medical bed to the plain one")
 	}
 	// put it in the medical bed by hand (an old save): it gets up
-	b := bedOf(g, med).Claim(uint64(id))
+	b := construction.ClaimBed(bedOf(g, med), uint64(id))
 	g.bldgs.Set(med, b)
 	sx, sy := g.sleepCellFor(id, b)
 	g.positions.Set(id, Position{X: sx, Y: sy})
@@ -267,8 +267,8 @@ func TestMigrateHospitalBedsFromV3(t *testing.T) {
 		b.Medical = false // as saved before PLAY-020
 		g.bldgs.Set(id, b)
 	}
-	g.bldgs.Set(owned, bedOf(g, owned).Claim(uint64(ada)))
-	b := bedOf(g, lying).Claim(uint64(bo))
+	g.bldgs.Set(owned, construction.ClaimBed(bedOf(g, owned), uint64(ada)))
+	b := construction.ClaimBed(bedOf(g, lying), uint64(bo))
 	g.bldgs.Set(lying, b)
 	sx, sy := g.sleepCellFor(bo, b)
 	g.positions.Set(bo, Position{X: sx, Y: sy})

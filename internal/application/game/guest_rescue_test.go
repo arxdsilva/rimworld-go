@@ -18,9 +18,11 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
@@ -103,14 +105,17 @@ func TestDownedVisitorRescuedTendedAndLeaves(t *testing.T) {
 	if !left() || g.inBed(vis) {
 		t.Fatalf("recovered, it leaves and gives the bed back (in bed %v)", g.inBed(vis))
 	}
-	if !hasEvent(g, fac, care.ReasonHealed) {
-		t.Fatalf("its faction thanks the colony: %q", g.factionOf(fac).Events)
+	if g.visitor(vis) && hasEvent(g, fac, care.ReasonHealed) {
+		t.Fatal("recovery alone has not yet earned the safe-return goodwill")
 	}
 	for i := 0; i < 50 && g.visitor(vis); i++ {
 		g.Step(250)
 	}
 	if g.visitor(vis) || g.personOf(vis).Where != whereOffMap {
 		t.Fatal("it walks home")
+	}
+	if !hasEvent(g, fac, care.ReasonHealed) {
+		t.Fatalf("healthy departure earns goodwill once: %q", g.factionOf(fac).Events)
 	}
 }
 
@@ -146,7 +151,7 @@ func strangerInBed(t *testing.T, g *Game) entity.EntityID {
 	if !b.Kind.Sleeps() {
 		t.Fatalf("fixture: building %d is no bed", bid)
 	}
-	b = b.Claim(uint64(s))
+	b = construction.ClaimBed(b, uint64(s))
 	g.bldgs.Set(bid, b)
 	x, y := g.sleepCellFor(s, b)
 	g.positions.Set(s, Position{X: x, Y: y})
@@ -212,5 +217,22 @@ func TestStrangerDeclinedLeaves(t *testing.T) {
 	g.acceptLetter(gone)
 	if slices.Contains(g.pawnIDs, s) {
 		t.Fatal("a stranger who left cannot join")
+	}
+}
+
+func TestRecoveredGuestFalloutMakesLeavingUnsafe(t *testing.T) {
+	g, _, vis, _ := guestScene(t)
+	g.climate = temperature.Climate{YearMean: 200}
+	h := careGuests{g}
+	if !h.leavingSafe(vis) {
+		t.Fatal("fixture: mild weather must be safe")
+	}
+	now := uint64(g.clock.Now())
+	if !g.incidents.StartSky(incident.ToxicFallout, now, clock.TicksPerHour) || h.leavingSafe(vis) {
+		t.Fatal("toxic fallout admitted as safe departure")
+	}
+	g.clock.Advance(clock.TicksPerHour)
+	if !h.leavingSafe(vis) {
+		t.Fatal("expired fallout remains unsafe")
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -522,9 +523,9 @@ func TestJourneyPlantCutWorkColumn(t *testing.T) {
 	j := newJourney(t)
 	id := uint64(j.g.Snapshot()[0].ID)
 	j.key("F1", 0)
-	col := len(windowspkg.WorkColumns) - 1 // the Cut column
-	if windowspkg.WorkColumns[col] != "Cut" {
-		t.Fatalf("the last Work column is %q, want Cut", windowspkg.WorkColumns[col])
+	col := int(work.PlantCut) // work IDs remain stable as new columns append
+	if col >= len(windowspkg.WorkColumns) || windowspkg.WorkColumns[col] != "Cut" {
+		t.Fatalf("plant cutting column %d missing from Work tab: %q", col, windowspkg.WorkColumns)
 	}
 	cell := "work.cell." + strconv.FormatUint(id, 10) + "." + strconv.Itoa(col)
 	if wbFind(j, strings.ToLower(cell)) == "" {

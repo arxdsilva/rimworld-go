@@ -574,3 +574,75 @@ func TestSocialOldSaveRegistersColonists(t *testing.T) {
 		}
 	}
 }
+
+func TestOffMapMemoriesExpireAtDailyUpkeep(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 7, Width: 20, Height: 12})
+	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	if !g.stashPawn(id, entity.EntityID(999)) {
+		t.Fatal("failed to stash colonist")
+	}
+	if len(g.pawnIDs) != 0 {
+		t.Fatalf("stashed colonist still on map: %v", g.pawnIDs)
+	}
+	due := uint64(clock.TicksPerDay + 875)
+	live := mood.Memory{Kind: mood.SleptInNiceRoom, Expires: due + clock.TicksPerDay}
+	g.memories[id] = mood.Memories{
+		{Kind: mood.AteRaw, Expires: due, Label: "expired"},
+		live,
+	}
+	g.clock.Advance(int(due - uint64(g.clock.Now())))
+	runPhase(g, PhaseSocial)
+	if got := g.memories[id]; len(got) != 1 || got[0] != live {
+		t.Fatalf("off-map daily upkeep preserved stale memories: %+v", got)
+	}
+	if !g.unstashPawn(id, 5, 5) {
+		t.Fatal("could not bring colonist back")
+	}
+	if got := g.memories[id]; len(got) != 1 || got[0] != live {
+		t.Fatalf("colonist lost valid memories on return: %+v", got)
+	}
+}
+
+func TestGriefGetsFinalExpiryAtCreation(t *testing.T) {
+	t.Parallel()
+	g, a, b := socialPair(t)
+	now := socNow(g)
+	d := social.GriefDef{Mood: -14, Days: 30}
+	g.addGrief(a, b, d, "my sibling died", now)
+	want := now + uint64(d.Days)*clock.TicksPerDay
+	if m := g.memories[a]; len(m) != 1 || m[0].Expires != want || m[0].Label != "my sibling died" {
+		t.Fatalf("new grief %+v, want expiry %d", m, want)
+	}
+	g.addGrief(a, b, social.GriefDef{Mood: -5, Days: 10}, "my relative is missing", now+5)
+	if m := g.memories[a]; len(m) != 1 || m[0].Expires != now+5+10*clock.TicksPerDay || m[0].Value != -5 {
+		t.Fatalf("refreshed grief %+v", m)
+	}
+}
+
+func TestReturnedGriefReleasesDiscardedLabels(t *testing.T) {
+	t.Parallel()
+	g, a, subject := socialPair(t)
+	g.setPair(a, subject, social.Pair{Kind: social.PairSpouse, Since: uint64(g.clock.Now())})
+	removed := mood.Memory{Kind: mood.Grief, Subject: uint64(subject), Expires: 40000, Label: "my wife is missing"}
+	kept := mood.Memory{Kind: mood.KindWords, Expires: 50000, Subject: 1000}
+	mem := mood.Memories{removed, kept}
+	g.memories[a] = mem
+	g.socialOnReturned(subject)
+	if got := g.memories[a]; len(got) != 1 || got[0] != kept {
+		t.Fatalf("kept wrong memory on return: %+v", got)
+	}
+	if mem[1] != (mood.Memory{}) {
+		t.Fatalf("retained removed memory in backing slice: %+v", mem[1])
+	}
+
+	mem = mood.Memories{removed}
+	g.memories[a] = mem
+	g.socialOnReturned(subject)
+	if _, exists := g.memories[a]; exists {
+		t.Fatal("empty remembered-thought entry retained after return")
+	}
+	if mem[0] != (mood.Memory{}) {
+		t.Fatalf("still holds removed grief label: %+v", mem[0])
+	}
+}

@@ -53,7 +53,7 @@ State: `done` shipped; `open` owed to a later change.
 | CTL-020 | Escape clears the selection. Bug: a lone animal, item or plant stayed selected. | Memory | done | `app.go` |
 | CTL-101 | Right click with several undrafted colonists opens a menu. | Memory | open: no source for how it works | |
 | CTL-102 | A colonist's name in Work and Assign jumps to them. Only Animals does. | Memory | open | |
-| CTL-103 | A column header sorts the column. | Memory | open (WRK-104) | |
+| CTL-103 | A column header sorts the column. | Memory | done (WRK-104) | Work header sorts priority, name header sorts names; Shift preserves bulk edit. |
 
 ## Already matching
 

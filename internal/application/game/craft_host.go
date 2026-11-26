@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/sim/command"
 	"slices"
 
 	"rimworld-go/internal/application/game/mapview"
@@ -73,20 +74,29 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 	return g.craft.Shop.Nearest(id, in)
 }
 
-// dropStackOf spawns a copy of st (kind, quantity, rot, dried, found and
-// marked; PRD-2: quality, wear, stuff, and the dead wearer of tainted
-// apparel) at (x, y), merging into a matching stack there.
+// dropStackOf places physical stacks at the current content and cell caps,
+// preserving the complete payload on each part.
 func (g *Game) dropStackOf(st item.Stack, x, y int) {
-	sid, err := g.SpawnStack(st.Kind, st.Qty, x, y)
-	if err != nil {
+	if !g.grid.InBounds(x, y) {
 		return
 	}
-	if s, ok := g.stacks.Get(sid); ok {
-		s.Rot, s.Dried = st.Rot, st.Dried
-		s.Unclaimed, s.HaulMarked, s.Forbidden = st.Unclaimed, st.HaulMarked, st.Forbidden
-		s.Quality, s.Wear, s.Stuff, s.Of, s.Animal = st.Quality, st.Wear, st.Stuff, st.Of, st.Animal
-		s.Poison, s.Ingredients, s.IngredientSpecies = st.Poison, st.Ingredients, st.IngredientSpecies // FOOD-4
-		g.mergeOrSet(sid, s)
+	limit := cellCap(g, st.Kind, x, y)
+	for left := st.Qty; left > 0; {
+		part := st
+		part.Qty, part.X, part.Y, part.Carrier = min(left, limit), x, y, 0
+		sid, err := g.SpawnStack(part.Kind, part.Qty, x, y)
+		if err != nil {
+			return
+		}
+		if part.Kind.IsBook() && part.Book == 0 {
+			spawned, _ := g.stacks.Get(sid)
+			part.Book = spawned.Book
+			if part.Quality == 0 {
+				part.Quality = spawned.Quality
+			}
+		}
+		g.mergeOrSet(sid, part)
+		left -= part.Qty
 	}
 }
 
@@ -362,3 +372,33 @@ func (h craftPacks) Unstow(id entity.EntityID, entry uint32, n int) (entity.Enti
 	return senseOf(h.g).Gear.TakeOut(id, entry, n)
 }
 func (h craftPacks) Settled(id entity.EntityID) { delete(senseOf(h.g).FromPack, id) }
+
+// remapSuspendedBill covers tidy-resume records, including older saves
+// without BillIdentity. The normal Tidy owner settles removed loads.
+func remapSuspendedBill(g *Game, c command.Command, bid entity.EntityID, stamp command.ConfigEdit) {
+	if bid == 0 || c.Kind != command.RemoveBill && c.Kind != command.ReorderBill {
+		return
+	}
+	to := stamp.Index
+	if c.Kind == command.RemoveBill {
+		to = -1
+	}
+	resumes := senseOf(g).Resume
+	for _, id := range g.pawnIDs {
+		if j, ok := resumes[id]; ok {
+			if next, changed := craft.RemapBillJob(j, bid, g.craft.Bills.Of(bid), c.Index, to); changed {
+				if next.BillIndex < 0 {
+					// A cancelled bill has no work to resume; settle the held
+					// load and claims at the normal interruption boundary.
+					if live, ok := g.jobs.Get(id); ok && live.Kind == job.CleanRoom {
+						g.interrupt(id, job.TargetGone)
+					} else {
+						senseOf(g).Tidy.Forget(id)
+					}
+				} else {
+					resumes[id] = next
+				}
+			}
+		}
+	}
+}

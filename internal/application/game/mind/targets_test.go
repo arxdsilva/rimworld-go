@@ -113,8 +113,9 @@ func TestBerserkAttacksAndEndsWhenDowned(t *testing.T) {
 	}
 	f.down[1] = true
 	m.Downed(1)
-	if _, _, ok := f.Break(1); ok || len(f.recovered) != 1 {
-		t.Fatal("a downed berserker calms")
+	if _, _, ok := f.Break(1); ok || len(f.recovered) != 1 ||
+		len(f.catharsisRecover) != 1 {
+		t.Fatal("a downed berserker calms and receives catharsis")
 	}
 }
 

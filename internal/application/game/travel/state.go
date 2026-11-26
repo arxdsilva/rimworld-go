@@ -10,6 +10,8 @@ import (
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -82,6 +84,7 @@ type Site struct {
 	Tile    int
 	Mineral item.Kind
 	Qty     int
+	Cells   int // exact ore cells promised at discovery
 	Expires uint64
 }
 
@@ -235,6 +238,9 @@ func Import(v *Save) *State {
 		return s
 	}
 	s.finds, s.nextID, s.sites = v.Finds, v.NextID, slices.Clone(v.Sites)
+	for i := range s.sites {
+		s.sites[i].Cells = SiteCells(s.sites[i].Mineral, s.sites[i].Qty, s.sites[i].Cells)
+	}
 	for _, p := range v.Caskets {
 		s.setSleeper(p.Casket, p.Sleeper)
 	}
@@ -286,6 +292,25 @@ func Import(v *Save) *State {
 		}
 		s.fuses[f.Casket] = f.At
 	}
+	for _, h := range s.holds {
+		for i := range h.Animals {
+			body.MigrateReplacements(h.Animals[i].State.Body)
+		}
+	}
+	for _, h := range s.cargo {
+		for i := range h.Animals {
+			body.MigrateReplacements(h.Animals[i].State.Body)
+		}
+	}
+	for i := range s.flights {
+		for j := range s.flights[i].Load.Animals {
+			body.MigrateReplacements(s.flights[i].Load.Animals[j].State.Body)
+		}
+	}
+	for id, b := range s.roped {
+		body.MigrateReplacements(b.State.Body)
+		s.roped[id] = b
+	}
 	return s
 }
 
@@ -336,6 +361,14 @@ func (s *State) setScan(id entity.EntityID, sc Scan) {
 	s.scans[id] = sc
 }
 
+// Sleeper is the indexed occupant of a particular casket, nil-safe.
+func (s *State) Sleeper(id entity.EntityID) entity.EntityID {
+	if s == nil {
+		return 0
+	}
+	return s.caskets[id]
+}
+
 // Asleep reports pawn id lying in a stasis casket (nil-safe): its
 // illness is suspended (the game keeps it out of the patients index).
 func (s *State) Asleep(id entity.EntityID) bool {
@@ -344,6 +377,25 @@ func (s *State) Asleep(id entity.EntityID) bool {
 	}
 	for _, p := range s.caskets {
 		if p == id {
+			return true
+		}
+	}
+	return false
+}
+
+// InTransportPod reports whether a person is aboard a loaded pod or
+// an in-flight pod group. Stasis caskets and caravans are different holders.
+func (s *State) InTransportPod(id entity.EntityID) bool {
+	if s == nil || id == 0 {
+		return false
+	}
+	for _, h := range s.holds {
+		if h != nil && slices.Contains(h.Pawns, id) {
+			return true
+		}
+	}
+	for _, f := range s.flights {
+		if slices.Contains(f.Load.Pawns, id) {
 			return true
 		}
 	}
@@ -425,12 +477,43 @@ func (h *Hold) merge(o *Hold, r item.MealRule) {
 func (h *Hold) value(b item.Book) int {
 	v := 0
 	for _, st := range h.Items {
-		v += st.Qty * b.Value(st.Kind)
+		v += st.Qty * b.StackValue(st)
 	}
 	for _, b := range h.Animals {
 		v += animalValue(b.State.Species)
 	}
 	return v
+}
+
+// giftValue evaluates this hold's pod-delivered goods at their selling
+// value. Item condition and quality affect core goods; plugin values come
+// from the run's item book.
+func (h *Hold) giftValue(b item.Book) int {
+	centi := 0
+	for _, st := range h.Items {
+		market := b.StackValue(st)
+		if st.Kind == item.MinifiedBuilding {
+			market = (trade.Goods{Kind: st.Kind, Building: st.Building}).Value(b)
+		}
+		v := trade.GiftUnitCenti(st.Kind, market, trade.GiftPod, 0)
+		if v < 0 || st.Qty < 0 {
+			return 0
+		}
+		const maxInt = int(^uint(0) >> 1)
+		if v > 0 && st.Qty > (maxInt-centi)/v {
+			return 0
+		}
+		centi += st.Qty * v
+	}
+	for _, beast := range h.Animals {
+		v := trade.GiftBaseCenti(animalValue(beast.State.Species), trade.GiftPod, 0)
+		const maxInt = int(^uint(0) >> 1)
+		if v < 0 || v > maxInt-centi {
+			return 0
+		}
+		centi += v
+	}
+	return centi / 100
 }
 
 // Of is *p, made on first use (the game keeps the state behind a nil-able

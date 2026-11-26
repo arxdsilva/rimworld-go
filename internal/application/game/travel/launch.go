@@ -161,8 +161,9 @@ func (o pods) land(f Flight) {
 	}
 	name, settled, _, _ := o.settlement(f.To)
 	if f.Mode == command.PodArriveGift && settled {
-		gw := o.gift(f.To, load.value(o.h.Items()))
-		o.h.Letter("Gift delivered", hx, hy, "%s received the pods' goods, worth %d silver (%+d goodwill).", name, load.value(o.h.Items()), gw)
+		value := load.giftValue(o.h.Items())
+		gw := o.gift(f.To, value)
+		o.h.Letter("Gift delivered", hx, hy, "%s received the pods' goods, worth %d silver (%+d goodwill).", name, value, gw)
 		return
 	}
 	if drop && o.h.MapOpen(f.To) { // MAP-10: onto an open map, at its edge, centre or the chosen spot
@@ -192,15 +193,15 @@ func (o pods) land(f Flight) {
 
 // Claim takes the mineral site on tile t off the world map as a site map
 // opens there (MAP-04): its lump; ok false when there is none.
-func (o Ops) Claim(t int) (item.Kind, int, bool) {
+func (o Ops) Claim(t int) (Site, bool) {
 	i := slices.IndexFunc(o.s.sites, func(s Site) bool { return s.Tile == t })
 	if i < 0 {
-		return 0, 0, false
+		return Site{}, false
 	}
 	s := o.s.sites[i]
 	o.s.sites = slices.Delete(o.s.sites, i, i+1)
 	o.h.Changed()
-	return s.Mineral, s.Qty, true
+	return s, true
 }
 
 // Carry adds st to caravan cid's goods (a site map packed up, MAP-03).
@@ -255,4 +256,5 @@ func (o pods) carry(cid uint64, load Hold) {
 	for _, st := range load.Items {
 		h.addMeal(st, o.h.MealRule())
 	}
+	o.h.LandedCargo(cid)
 }

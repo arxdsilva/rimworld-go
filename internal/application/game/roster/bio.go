@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/pawn/trait"
+	"rimworld-go/internal/domain/world/mining"
 	"rimworld-go/internal/domain/world/plant"
 )
 
@@ -23,13 +24,16 @@ import (
 // (CandidatePool.Views) and the colony's Bio tab (Game.Bio) (NG-1 §2.9,
 // §5.4).
 
-// LevelSpeed is the speed in permille of work trained by sk at level l: plant
-// work has its own curve (HRV-009), the rest skill.SpeedPermil.
+// LevelSpeed applies the Plants and Mining curves, then generic skill speed.
 func LevelSpeed(sk skill.ID, l uint8) int {
-	if sk == skill.Plants {
+	switch sk {
+	case skill.Plants:
 		return plant.WorkSpeedPermil(int(l))
+	case skill.Mining:
+		return mining.Speed(int(l))
+	default:
+		return skill.SpeedPermil(l)
 	}
-	return skill.SpeedPermil(l)
 }
 
 // SkillView is one skill row.
@@ -109,6 +113,7 @@ var skillAffects = [skill.NumSkills]struct {
 	skill.Medicine:     {"Doctoring (tend, rescue); heal amount, infection chance", true},
 	skill.Social:       {"Chat mood bonus; tame chance", false},
 	skill.Intellectual: {"Research", true},
+	skill.Artistic:     {"Sculpting; sculpture quality and speed", true},
 }
 
 // BioOf builds p's BioView: names, sex/build/age, backstories (from b)

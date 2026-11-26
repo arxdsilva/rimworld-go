@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/saveutil"
 	"slices"
 
 	"rimworld-go/internal/application/game/setupview"
@@ -61,14 +62,6 @@ type ng1State struct {
 	introDone bool
 }
 
-// Builder phases (NG-1 §2.10, MAPGEN-2 §7): "Preparing the site", one
-// build step per map-generator step (its pipeline.Label), then these two.
-const (
-	phasePrepare = "Preparing the site"
-	phasePlace   = "Placing the colony"
-	phaseArrival = "Arrival"
-)
-
 // ColonyBuilder builds a new colony step by step.
 type ColonyBuilder struct {
 	cfg  Config
@@ -82,23 +75,6 @@ type ColonyBuilder struct {
 // NewColonyBuilder starts building cfg's colony. A nil cfg.Setup builds the
 // legacy colony in one step.
 func NewColonyBuilder(cfg Config) *ColonyBuilder { return &ColonyBuilder{cfg: cfg} }
-
-// buildSteps is the number of build steps of a Setup colony.
-func buildSteps() int { return pipeline.Steps() + 3 }
-
-// buildPhase names build step i.
-func buildPhase(i int) string {
-	n := pipeline.Steps()
-	switch {
-	case i <= 0:
-		return phasePrepare
-	case i <= n:
-		return pipeline.Label(pipeline.StepNames()[i-1])
-	case i == n+1:
-		return phasePlace
-	}
-	return phaseArrival
-}
 
 // Step does up to units of work (at least one build step); phase names the
 // step now in progress for the loading screen ("" once done) and frac the
@@ -117,7 +93,7 @@ func (b *ColonyBuilder) Step(units int) (phase string, frac float32, done bool) 
 	if b.done {
 		return "", 1, true
 	}
-	return buildPhase(b.step), float32(b.step) / float32(buildSteps()), false
+	return setupview.BuildPhase(b.step), float32(b.step) / float32(setupview.BuildSteps()), false
 }
 
 // Game is the built colony (nil until done).
@@ -155,6 +131,7 @@ func (b *ColonyBuilder) runStep() {
 	default:
 		b.g.finishSetup()
 		b.g.warmIndexes(true) // jobindex.go: not on the first tick
+		b.g.wealth.PrimeForMood()
 		b.done = true
 	}
 	b.step++
@@ -178,6 +155,9 @@ func newSetupGame(cfg Config, s *Setup) *Game {
 	cfg.Width, cfg.Height, cfg.Biome, cfg.Seed = side, side, s.Site.Biome, s.Seed
 	g := New(cfg)
 	cp := *s
+	// Normalize historical defaults at the creation boundary as well as
+	// import: a fresh colony and its first checkpoint hash the same state.
+	cp.Difficulty = cp.Difficulty.Upgraded()
 	cp.Factions = cloneFactionList(s.Factions)
 	cp.Colonists = slices.Clone(s.Colonists)
 	g.ng.setup = &cp
@@ -187,9 +167,12 @@ func newSetupGame(cfg Config, s *Setup) *Game {
 	if g.climate == (temperature.Climate{}) {
 		g.climate = biome.DefOf(s.Site.Biome).Climate
 	}
-	g.climate = setupview.WithConditions(g.climate, g.ng.fx.Conditions)
-	g.ng.startDay = seasonStartDay(g.climate.PeakDay, s.Season)
-	g.clock = clock.NewAt(clock.Tick(g.ng.startDay*clock.TicksPerDay + clock.StartHour*clock.TicksPerHour))
+	if cfg.Climate != nil {
+		g.climate = *cfg.Climate
+	}
+	g.climate = setupview.WithConditions(g.climate, g.ng.fx.Conditions).WithCalendar(g.clock.Calendar())
+	g.ng.startDay = setupview.SeasonStartDayPolicy(g.climate.PeakDay, uint8(s.Season), g.clock.Calendar())
+	g.clock = clock.NewAt(clock.Tick(g.ng.startDay*clock.TicksPerDay+clock.StartHour*clock.TicksPerHour), g.clock.Calendar())
 	g.lab.Prog = research.Progress{} // a new colony knows nothing yet
 	return g
 }
@@ -236,10 +219,10 @@ func (g *Game) relDay(now uint64) int { return int(g.rel(now) / clock.TicksPerDa
 // season names the season at now: the map's own calendar (a southern site
 // has its summer in the north's winter); the legacy calendar otherwise.
 func (g *Game) season(now uint64) string {
-	if g.hasSetup() {
+	if g.hasSetup() || g.clock.Calendar() != (clock.CalendarPolicy{}) {
 		return g.climate.SeasonAt(clock.Tick(now))
 	}
-	return temperature.Season(clock.Tick(now))
+	return temperature.SeasonPolicy(clock.Tick(now), g.clock.Calendar())
 }
 
 // diff is the colony's difficulty (Seasoned for a legacy colony; callers
@@ -251,35 +234,18 @@ func (g *Game) diff() difficulty.Settings {
 	return difficulty.Of(difficulty.Seasoned)
 }
 
-// Difficulty fields that scale yields (diffScale).
+// Difficulty fields that scale yields retain their original numeric IDs.
 const (
-	DiffCrop = iota
-	DiffMine
-	DiffButcher
+	DiffCrop    = difficulty.YieldCrop
+	DiffMine    = difficulty.YieldMine
+	DiffButcher = difficulty.YieldButcher
 )
 
-// diffScale scales a yield base by the difficulty's percent for field
-// (DiffCrop, DiffMine, DiffButcher). A legacy colony gets
-// base unchanged; a mine yield of at least 1 stays at least 1.
 func (g *Game) diffScale(field, base int) int {
 	if !g.hasSetup() {
 		return base
 	}
-	s := g.ng.setup.Difficulty
-	pct := 100
-	switch field {
-	case DiffCrop:
-		pct = s.CropYield
-	case DiffMine:
-		pct = s.MineYield
-	case DiffButcher:
-		pct = s.ButcherYield
-	}
-	v := difficulty.Scale(pct, base)
-	if field == DiffMine && base > 0 {
-		v = max(v, 1)
-	}
-	return v
+	return difficulty.ScaleYield(g.ng.setup.Difficulty, field, base)
 }
 
 // moodOffset is the difficulty's constant mood offset (0 for a legacy
@@ -335,22 +301,25 @@ type SetupState struct {
 	StartDay  int
 	Dead      []entity.EntityID
 	Lost      bool
+	Setback   difficulty.Setback
 	Extreme   extremeEvent // before TEMP-2 (v8): migrateExtreme; never written now
 	Pods      []podState
 	IntroDone bool
 }
 
 // exportSetupState is the setup state for a save (nil: legacy colony).
-func (g *Game) exportSetupState() *SetupState {
+func (g *Game) exportSetupState(owned ...bool) *SetupState {
 	if !g.hasSetup() {
 		return nil
 	}
 	st := g.ng
 	s := *st.setup
 	s.Factions = cloneFactionList(s.Factions)
-	s.Colonists = slices.Clone(s.Colonists)
+	own := len(owned) > 0 && owned[0]
+	s.Colonists = saveutil.DetachElements(own, slices.Clone(s.Colonists), saveutil.ClonePawn)
+	s.Scenario.Parts, s.Site.Stones, s.World.Factions = saveutil.OwnSlice(own, s.Scenario.Parts), saveutil.OwnSlice(own, s.Site.Stones), saveutil.OwnSlice(own, s.World.Factions)
 	return &SetupState{
-		Setup: s, Factions: cloneFactionList(st.factions), Story: st.story, Plan: st.plan, Adapt: st.adapt,
+		Setup: s, Factions: cloneFactionList(st.factions), Story: st.story, Plan: st.plan, Adapt: canonicalAdaptation(st.adapt, g.relDay(uint64(g.clock.Now()))),
 		Climate: baseClimate(g), StartDay: st.startDay, Dead: slices.Clone(st.dead), Lost: st.lost,
 		Pods: clonePods(st.pods), IntroDone: st.introDone,
 	}
@@ -365,11 +334,14 @@ func (g *Game) importSetupState(s *SetupState) {
 		return
 	}
 	setup := s.Setup
+	setup.Difficulty = setup.Difficulty.Upgraded()
 	g.ng = ng1State{
 		setup: &setup, fx: setup.Scenario.Apply(), factions: cloneFactionList(s.Factions),
 		story: s.Story, plan: s.Plan, adapt: s.Adapt, startDay: s.StartDay,
-		dead: slices.Clone(s.Dead), lost: s.Lost, legacyExtreme: s.Extreme, pods: clonePods(s.Pods), introDone: s.IntroDone,
+		dead: slices.Clone(s.Dead), lost: s.Lost,
+		legacyExtreme: s.Extreme, pods: clonePods(s.Pods), introDone: s.IntroDone,
 	}
+	g.ng.adapt.Migrate(g.relDay(uint64(g.clock.Now())))
 	if s.Climate != (temperature.Climate{}) {
 		g.climate = s.Climate
 	}

@@ -28,9 +28,9 @@ func TestTrainingDefaultsAndToggles(t *testing.T) {
 	}
 	set(dog, training.Guard, true)
 	set(dog, training.Obedience, false)
-	set(dog, training.Release, true) // a labrador is no hunter: ignored
+	set(dog, training.Release, true) // advanced trainability permits Release
 	a, _ = g.animals.Get(dog)
-	if herd.TrainOn(a, training.Obedience) || !herd.TrainOn(a, training.Guard) || herd.TrainOn(a, training.Release) {
+	if herd.TrainOn(a, training.Obedience) || !herd.TrainOn(a, training.Guard) || !herd.TrainOn(a, training.Release) {
 		t.Fatalf("toggled %v", a.Trained)
 	}
 	if herd.TrainSteps(a, training.Guard, 0) != 0 || herd.TrainSteps(a, training.Obedience, 0) != 0 {
@@ -79,15 +79,20 @@ func TestTrainingStepsOrderAndDecay(t *testing.T) {
 	if _, ok := herd.NextTrainSkill(a, now); ok {
 		t.Fatal("everything on is learned")
 	}
-	later := now + training.DecayTicks
+	interval := training.DecayInterval(animal.Wildness(a.Species))
+	later := now + interval
+	decayAnimalTraining(g, dog, &a, later)
 	if herd.TrainSteps(a, training.Guard, later) != 2 || herd.TrainLearned(a, training.Guard, later) {
-		t.Fatal("ten days unpractised costs a step")
+		t.Fatal("scheduled decay must lower Guard before Obedience")
 	}
-	if s, ok := herd.NextTrainSkill(a, later); !ok || s != training.Obedience {
-		t.Fatal("a decayed skill is trained again")
+	if s, ok := herd.NextTrainSkill(a, later); !ok || s != training.Guard {
+		t.Fatal("Guard should be re-learned")
 	}
-	if herd.TrainSteps(a, training.Obedience, now+99*training.DecayTicks) != 1 {
-		t.Fatal("learned Obedience keeps its floor")
+	for i := 1; i <= 5; i++ {
+		decayAnimalTraining(g, dog, &a, later+uint64(i)*interval)
+	}
+	if herd.TrainSteps(a, training.Obedience, later+5*interval) != 0 || !a.Tame {
+		t.Fatal("domesticated animals lose unmaintained skills but stay tame")
 	}
 	if !herd.TrainDue(dog, a, now+herd.TrainCooldown+herd.TrainJitter) || herd.TrainDue(dog, a, now+herd.TrainCooldown-1) {
 		t.Fatal("the next session waits for the cooldown")

@@ -60,7 +60,10 @@ func (s *Sleep) Assign(id entity.EntityID) {
 func (s *Sleep) InPlace(id entity.EntityID) {
 	x, y := s.h.Pos(id)
 	s.h.SetSleptAt(id, 0)
-	fx, fy := s.h.FloorSpot(id, x, y)
+	fx, fy := x, y
+	if v, ok := s.h.Vital(id); !ok || v.Status != health.Downed {
+		fx, fy = s.h.FloorSpot(id, x, y)
+	}
 	s.h.StartJob(id, job.Record{Kind: job.Sleep, TX: fx, TY: fy, WorkLeft: needs.SleepWorkMin})
 }
 
@@ -69,7 +72,16 @@ func (s *Sleep) InPlace(id entity.EntityID) {
 // gets up the job completes, its log notes where it slept and it wakes
 // with that night's thoughts.
 func (s *Sleep) Do(id entity.EntityID, j job.Record, now uint64) {
-	n := needs.SleepTickAt(s.h.Needs(id), now, s.Stats.RestEffect(j.Target))
+	if j.Target != 0 {
+		if b, ok := s.h.Building(j.Target); !ok || b.Forbidden || b.Uninstall || b.Deconstruct {
+			s.h.SetSleptAt(id, 0)
+			j.State, j.Fail = job.Fail, job.Cancelled
+			s.h.SetJob(id, j)
+			return
+		}
+	}
+	rate := s.Stats.RestEffect(j.Target) * int(s.h.RestFactor(id)) / 1000
+	n := needs.SleepTickAt(s.h.Needs(id), now, rate)
 	s.h.SetNeeds(id, n)
 	s.Needs.Tick(id, now) // comfort in bed, outdoors (BED-3)
 	j.WorkLeft--

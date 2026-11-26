@@ -43,21 +43,7 @@ func (g *Game) isTrough(id entity.EntityID) (construction.Building, bool) {
 // troughFeeds reports that a trough set to filter f takes item kind k:
 // kibble (animal feed for plant and meat eaters alike, FEED-001) on every
 // filter.
-func troughFeeds(f uint8, k item.Kind) bool {
-	plants := animal.PlantFeed(k) || k == item.Straw
-	if k == item.Kibble {
-		return f <= TroughAny
-	}
-	switch f {
-	case TroughPlants:
-		return plants
-	case TroughMeat:
-		return k == item.Meat || k == item.Fish
-	case TroughAny:
-		return plants || k == item.Meat || k == item.Fish
-	}
-	return false
-}
+func troughFeeds(f uint8, k item.Kind) bool { return animal.TroughFeeds(f, k) }
 
 // troughPen is the enclosed pen trough b serves (pens.go troughMarker):
 // the one holding its tile or a neighbouring cell (lowest marker first).

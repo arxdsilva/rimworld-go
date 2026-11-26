@@ -88,7 +88,7 @@ func (f Fleet) setDown(c *Caravan, ex, ey int) []string {
 }
 
 // MapOpen reports a map open on world tile t (the first colony's too).
-func (f Fleet) MapOpen(t int) bool {
-	_, ok := f.mapAt(t)
+func (l Lifecycle) MapOpen(t int) bool {
+	_, ok := l.f.mapAt(t)
 	return ok
 }

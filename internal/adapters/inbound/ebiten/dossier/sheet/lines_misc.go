@@ -40,6 +40,12 @@ func WorkLabel(tr lang.Tr, t work.Type) string {
 		return tr.T("Mining")
 	case work.Craft:
 		return tr.T("Crafting")
+	case work.Art:
+		return tr.T("Art")
+	case work.Smith:
+		return tr.T("Smithing")
+	case work.Tailor:
+		return tr.T("Tailoring")
 	case work.Handle:
 		return tr.T("Animal handling")
 	case work.Warden:

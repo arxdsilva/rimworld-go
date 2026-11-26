@@ -162,7 +162,9 @@ func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept,
 	s := senseOf(g)
 	s.Rules = s.Rules.With(gameplay.JoyTopOff, on)
 	applyNow(g, command.Command{Kind: command.DesignateCut, X: 0, Y: 0, X2: 47, Y2: 39})
-	applyNow(g, command.Command{Kind: command.DesignateMine, X: 0, Y: 0, X2: 47, Y2: 39})
+	// Keep this workload independent of occupational trauma. Blanket
+	// mining now risks structural collapse (covered by roof_test.go);
+	// cutting supplies real work throughout the recreation block.
 	seen := map[entity.EntityID]bool{}
 	spell := map[entity.EntityID]int{}
 	for i := 0; i < ticks; i++ {
@@ -195,6 +197,12 @@ func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept,
 			if j.Active() && j.Kind != job.Sleep && !j.Kind.IsIdle() && !j.Kind.Eating() {
 				worked++
 			}
+		}
+	}
+	for _, id := range g.pawnIDs {
+		v, _ := g.vital.Get(id)
+		if v.Status != health.Alive || v.Injury != 0 {
+			t.Fatalf("recreation workload must remain injury-free, on=%v id=%d vital=%+v", on, id, v)
 		}
 	}
 	return hours, worked, slept, unfed, longest
@@ -547,6 +555,21 @@ func giftScene(t *testing.T) (g *Game, pat, fri entity.EntityID) {
 	return g, pat, fri
 }
 
+// startGift drives the actual gift job; the draw distribution is covered
+// separately by care.TestGiftShareFollowsTolerance.
+func startGift(t *testing.T, g *Game, pat, fri entity.EntityID) {
+	t.Helper()
+	for range 4000 {
+		g.joy[fri] = min(g.joy[fri], recreation.Bored)
+		g.joy[pat] = min(g.joy[pat], recreation.Bored)
+		if g.care.Giving.Try(fri, pat) {
+			return
+		}
+		restFed(g, 1)
+	}
+	t.Fatal("an eligible visitor could not start a physical sick-room gift")
+}
+
 // giftsOver steps n ticks and counts the doses patient had.
 func giftsOver(g *Game, pat, fri entity.EntityID, n int) (doses int) {
 	var last uint64
@@ -565,6 +588,7 @@ func giftsOver(g *Game, pat, fri entity.EntityID, n int) (doses int) {
 func TestGiftOnlyWithinPolicy(t *testing.T) {
 	t.Parallel()
 	g, pat, fri := giftScene(t)
+	startGift(t, g, pat, fri)
 	if doses := giftsOver(g, pat, fri, 20000); doses == 0 {
 		t.Fatal("a friend brings a sick colonist a drink in time")
 	}
@@ -588,6 +612,7 @@ func TestGiftOnlyWithinPolicy(t *testing.T) {
 func TestGiftDoesNotFlap(t *testing.T) {
 	t.Parallel()
 	g, pat, fri := giftScene(t)
+	startGift(t, g, pat, fri)
 	doses := giftsOver(g, pat, fri, 20000)
 	if doses != 1 {
 		t.Fatalf("%d doses in 20000 ticks, want one inside the 30000-tick gap", doses)
@@ -667,12 +692,36 @@ func joyOffHash(seed uint64, ticks int) (uint64, *Game) {
 //
 // Re-pinned (EAI-014): the wealth tracker sweeps a slice every 25 ticks and
 // its cursor, hour and partial sum are saved state.
+// Re-pinned (wildlife ecosystem weights): 250x250 and smaller biome maps
+// now start with a weight-budgeted species mix; the canonical wildlife
+// population and its deterministic combat/mood consequences change the hash.
+// Native map sites, species trainability and mining:
+// LegacySite adds seed-selected rivers/lakes, training classes govern
+// pet/handler behavior and Mining Speed uses its own level curve. Both
+// seeds retain all habit toggles off and are checked by repeated replay.
+//
+// PRD-6, Artistic and Brawler: one additional
+// canonical skill affects pawn generation and the saved skill arrays.
+// The generated-pawn fingerprint confirms the
+// intentional skill addition. The same habit toggles remain off here.
+//
+// SIM-071: revised mood Base=32, wealth
+// expectation bands, catharsis on natural break recovery only and reviewed
+// memory stacking change actual mood/mental-break decisions, the initial
+// wealth sample and authoritative save snapshots. Each seed was measured in
+// two independent 30,000-tick runs with identical final state hashes.
+// Re-pinned for the public-source correction: independent body-size wildlife
+// budgeting changes the initial animal population, and corrected mood
+// memories change subsequent choices. Both full 30k-tick runs were repeated
+// twice with identical hashes; the habit-off assertions remain unchanged.
+// The residual wildlife-budget correction changes seed 1's initial RNG
+// and population; reverting only ecosystem.go restores both old pins.
 func TestHabitsOffKeepTheHash(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
 		seed uint64
 		want uint64
-	}{{1, 0xfc3e66ea9c32106b}, {2, 0xe49853f47fd8de12}} { // Re-pinned (CBT multi-part hits, 2026-11-24): multi-part hit rules for scratch, stab and bullet (W1) and animal blows through PickPart + dealSpread (W0b): they add body-stream draws (both seeds); before: Re-pinned (SHT-105, #273, 2026-11-23): LightFooted trait draws and Nimble dodges; both re-pinned (SHT, #75, 2026-11-23): Scrapper trait draws, FriendlyFirePct 100, curve, downed and XP cap; seed 2 before (DEF 3.1)
+	}{{1, 0x69981d86e2777d5a}, {2, 0x78898ea1fcd98adc}} { // seed 2 re-pinned (DEF 3.1, 2026-11-21): Kit.DamageTaken, LogEntry.Kind, blast credit and LastBy
 		h, g := joyOffHash(c.seed, 30000)
 		if h != c.want {
 			t.Errorf("seed %d: hash %#x, want %#x", c.seed, h, c.want)

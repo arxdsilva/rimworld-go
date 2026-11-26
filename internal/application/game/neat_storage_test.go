@@ -5,6 +5,7 @@ package game
 
 import (
 	"os"
+	"rimworld-go/internal/application/game/viewmodel"
 	"slices"
 	"testing"
 
@@ -342,7 +343,7 @@ func TestNeatItemViews(t *testing.T) {
 			t.Errorf("stack %d: store %d slot %d, want %d %d", w.id, v.Store, v.Slot, w.store, w.slot)
 		}
 	}
-	if v := view(a); sameItemView(v, ItemView{ID: v.ID}) || sameItemView(ItemView{Store: 1}, ItemView{}) || sameItemView(ItemView{Slot: 1}, ItemView{}) {
+	if v := view(a); viewmodel.EqualItem(v, ItemView{ID: v.ID}) || viewmodel.EqualItem(ItemView{Store: 1}, ItemView{}) || viewmodel.EqualItem(ItemView{Slot: 1}, ItemView{}) {
 		t.Fatal("the memoised list misses Store or Slot")
 	}
 	g.deleteItem(a) // the next stack moves down a slot
@@ -399,7 +400,7 @@ func TestNeatStorageRoundTrip(t *testing.T) {
 			t.Errorf("%s: profile %q after a load", p.k, name)
 		}
 	}
-	if !slices.EqualFunc(g.World().Items, h.World().Items, sameItemView) {
+	if !slices.EqualFunc(g.World().Items, h.World().Items, viewmodel.EqualItem) {
 		t.Fatal("the item views changed over a save")
 	}
 	if z, _ := h.storageAt(pieces[23].x, pieces[23].y); z.Allows(item.Wood) {

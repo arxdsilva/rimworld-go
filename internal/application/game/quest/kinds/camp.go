@@ -157,7 +157,7 @@ func layCamp(c quest.Ctx, q *qd.Quest, site, guard *qd.Part, m uint32) {
 	w, h := b.Size()
 	tech := campTech(c, q.Target)
 	comp := mapgen.Camp(mapgen.CompoundConfig{W: w, H: h, Tech: tech, Seed: site.Seed})
-	arms := kit.Pick(guard.Points, campDefenders, tech, randx.New(site.Seed^campSalt).IntN)
+	arms := kit.PickLimited(guard.Points, campDefenders, tech, randx.New(site.Seed^campSalt).IntN)
 	site.Map = m
 	site.Count = b.Camp(comp, q.Target, arms, site.Seed)
 	guard.Count = site.Count

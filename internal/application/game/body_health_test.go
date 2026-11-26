@@ -145,6 +145,9 @@ func TestMissingJawSilencesTalkingInTheView(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
+	if !g.Snapshot()[0].CanTalk {
+		t.Fatal("healthy pawn cannot speak")
+	}
 	v := g.VitalOf(p)
 	b := g.ensureBody(p, &v)
 	b.Missing |= 1 << body.Jaw
@@ -159,6 +162,9 @@ func TestMissingJawSilencesTalkingInTheView(t *testing.T) {
 	got := map[string]int{}
 	for _, c := range hv.Capacities {
 		got[c.Label] = c.Pct
+	}
+	if g.Snapshot()[0].CanTalk {
+		t.Fatal("jawless pawn can speak in snapshot")
 	}
 	if got["Talking"] != 0 || got["Moving"] != 100 || got["Sight"] != 100 {
 		t.Fatalf("capacities = %v", got)
@@ -177,6 +183,7 @@ func TestCapacitiesFeedStatsOnlyOnChange(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	base := g.statOf(p, stat.MoveSpeed)
+	baseAcc := g.statOf(p, stat.ShootAcc)
 	v := g.VitalOf(p)
 	b := g.ensureBody(p, &v)
 	b.Missing |= 1<<body.LegL | 1<<body.FootL
@@ -184,12 +191,15 @@ func TestCapacitiesFeedStatsOnlyOnChange(t *testing.T) {
 	if ms := g.statOf(p, stat.MoveSpeed); ms >= base || ms != base*500/1000 {
 		t.Fatalf("one leg halves move speed: %d -> %d", base, ms)
 	}
+	fx := g.sk.stats[p]
 	b.Missing |= 1<<body.EyeL | 1<<body.EyeR
 	g.bodyChanged(p, b, &v)
-	if acc := g.statOf(p, stat.ShootAcc); acc != -12 { // SHT-003: blind is -12 score points
-		t.Fatalf("blind shooting accuracy %d", acc)
+	if acc := g.statOf(p, stat.ShootAcc); acc != baseAcc-12 {
+		t.Fatalf("Sight changes effective shooting without rebuilding the sheet: %d -> %d", baseAcc, acc)
 	}
-	fx := g.sk.stats[p]
+	if g.sk.stats[p] != fx {
+		t.Fatal("a Sight-only change must keep the current stat sheet")
+	}
 	g.bodyChanged(p, b, &v)
 	if g.sk.stats[p] != fx {
 		t.Fatal("an unchanged body keeps its stat sheet")

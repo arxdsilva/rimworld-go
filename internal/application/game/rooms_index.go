@@ -280,15 +280,7 @@ func (g *Game) refreshRoofSupportAround(bchanged []int32) {
 	grid, cols := g.roomGrid, g.buildingCells(construction.Column) // A2: a column holds a roof too
 	const r = roof.SupportRange
 	supported := func(x, y int) bool {
-		for yy := max(0, y-r); yy <= min(h-1, y+r); yy++ {
-			row := grid[yy*w : yy*w+w]
-			for xx := max(0, x-r); xx <= min(w-1, x+r); xx++ {
-				if row[xx] == room.Wall || cols.has(yy*w+xx) {
-					return true
-				}
-			}
-		}
-		return false
+		return roof.IsSupported(w, h, x, y, func(sx, sy int) bool { i := sy*w + sx; return grid[i] == room.Wall || cols.has(i) })
 	}
 	for _, c := range bchanged {
 		cx, cy := int(c)%w, int(c)/w
@@ -299,15 +291,7 @@ func (g *Game) refreshRoofSupportAround(bchanged []int32) {
 					continue
 				}
 				ri.stamp[i] = ri.gen
-				cell := g.roofs[i]
-				n := cell &^ roof.Supported
-				if supported(x, y) {
-					n |= roof.Supported
-				}
-				if grid[i] == room.Wall {
-					n &^= roof.PlanBuild
-				}
-				n = areaRoofPlan(n, grid[i] == room.Wall) // home.go: the build-roof area keeps its roof
+				n := roof.WithSupport(g.roofs[i], supported(x, y), grid[i] == room.Wall)
 				if n.Has(roof.Built) && !n.Has(roof.Supported) && !n.Has(roof.Natural) {
 					g.roofx.unsupported = true
 				}
@@ -324,12 +308,6 @@ func (g *Game) autoRoofRooms(rm *region.Rooms) {
 		if g.rooms[r].contents.Cells > roof.AutoMaxCells {
 			continue
 		}
-		rm.EachCell(r, func(i int) {
-			c := g.roofs[i]
-			if c.Roofed() || !c.Has(roof.Supported) || c&(roofPlans|roof.NoAuto) != 0 {
-				return
-			}
-			g.setRoof(i, c|roof.PlanBuild)
-		})
+		rm.EachCell(r, func(i int) { g.setRoof(i, roof.AutoPlan(g.roofs[i])) })
 	}
 }

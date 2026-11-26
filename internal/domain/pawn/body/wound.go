@@ -22,6 +22,8 @@ const (
 	// Frostbite (TEMP-3, cond_frostbite.go): cold damage on an extremity;
 	// it never bleeds. wiki: Frostbite
 	Frostbite
+	// Added after the prior save ordinals; caused only on the corpse.
+	CorrosiveBurn
 )
 
 // scarDmg is the residual damage a scar keeps.
@@ -53,27 +55,24 @@ type Wound struct {
 	Size      int32
 }
 
-// Body is one body's wounds, missing parts (a bit per Part),
-// installed implants, blood loss and conditions (saved). A part replaced by
-// an implant stays Missing; the implant stands in for it.
-//
-// Fitted holds the implant on each part, indexed by Part and grown lazily
-// (nil: no implants), so appending parts never resizes a saved array; read
-// and write it through Implant and SetImplant. BloodLoss is permille of
-// blood lost and BloodStage its last stage (the hysteresis memory of
-// BloodStage, bleed.go); Conds are the body's conditions (condition.go).
-// Fresh marks parts torn off by a hit and not yet tended (a bit per Part,
-// MED-01): the stump hurts and bleeds until a tend closes it.
-//
-// MED-13 appends the body plan: Anatomy picks the part table (zero: the
-// humanlike body, so a human's body and save are unchanged) and Scale
-// the part hit points in permille of the plan's human-scale numbers (0:
-// 1000). Pain reads damage against Scale, so a wound hurts a small animal
-// as much as the same share of a man's hit points. Both are zero-safe:
-// an older save and a human body read them as zero.
+// Replacement is an artificial body part. Damage is measured against the
+// replaced part's max HP; a zero value means no replacement.
+type Replacement struct {
+	Kind    item.Kind
+	Damage  int16
+	HealAcc int32
+}
+
+// Body is a body's authoritative health state. Missing tracks lost natural
+// tissue; Replacements keep artificial parts damageable independently of
+// wounds. Implants are attached to existing parts without replacing them.
 type Body struct {
-	Wounds     []Wound
-	Missing    uint32
+	Wounds       []Wound
+	Missing      uint32
+	Replacements []Replacement
+	Implants     []Implant
+	// Fitted is read only by gob when loading pre-v18 animal bodies embedded
+	// directly in world saves. Runtime code uses Replacements.
 	Fitted     []item.Kind
 	BloodLoss  int32
 	Conds      []Condition
@@ -83,56 +82,63 @@ type Body struct {
 	Scale      int32
 }
 
-// Implant is the implant fitted on p (0: none).
-func (b *Body) Implant(p Part) item.Kind {
-	if int(p) < len(b.Fitted) {
-		return b.Fitted[p]
+// ReplacementAt reports the artificial part fitted at p, if any.
+func (b *Body) ReplacementAt(p Part) item.Kind {
+	if int(p) < len(b.Replacements) {
+		return b.Replacements[p].Kind
 	}
 	return 0
 }
 
-// SetImplant puts kind k on p as it is, with no checks (0 clears it):
-// Install and Remove are the checked ways. Fitted grows to reach p and
-// shrinks back to nil once no part carries anything.
-func (b *Body) SetImplant(p Part, k item.Kind) {
+func replacementDamage(b *Body, p Part) int32 {
+	if int(p) < len(b.Replacements) {
+		return int32(b.Replacements[p].Damage)
+	}
+	return 0
+}
+
+// SetReplacement changes the installed artificial part without surgery checks.
+// An existing replacement's damage is reset when a new one is fitted.
+func (b *Body) SetReplacement(p Part, k item.Kind) {
 	if p >= b.numParts() {
 		return
 	}
 	if k != 0 {
-		b.Fresh &^= bit(p) // the operation closed the stump
+		b.Fresh &^= bit(p)
 	}
-	if int(p) >= len(b.Fitted) {
+	if int(p) >= len(b.Replacements) {
 		if k == 0 {
 			return
 		}
-		b.Fitted = append(b.Fitted, make([]item.Kind, int(p)+1-len(b.Fitted))...)
+		b.Replacements = append(b.Replacements, make([]Replacement, int(p)+1-len(b.Replacements))...)
 	}
-	b.Fitted[p] = k
-	n := len(b.Fitted)
-	for n > 0 && b.Fitted[n-1] == 0 {
+	b.Replacements[p] = Replacement{Kind: k}
+	n := len(b.Replacements)
+	for n > 0 && b.Replacements[n-1].Kind == 0 {
 		n--
 	}
 	if n == 0 {
-		b.Fitted = nil
-		return
+		b.Replacements = nil
+	} else {
+		b.Replacements = b.Replacements[:n]
 	}
-	b.Fitted = b.Fitted[:n]
 }
 
-// FittedFrom is a Fitted slice holding the implants of a per-part array
-// (an older save's fixed-size Implants), nil when it holds none.
-func FittedFrom(a []item.Kind) []item.Kind {
+// ReplacementsFrom converts the pre-v18 part-indexed item array at the save
+// boundary. The rest of the simulation operates only on Replacements.
+func ReplacementsFrom(a []item.Kind) []Replacement {
 	var b Body
 	for p, k := range a {
 		if k != 0 {
-			b.SetImplant(Part(p), k)
+			b.SetReplacement(Part(p), k)
 		}
 	}
-	return b.Fitted
+	return b.Replacements
 }
 
-// fitted reports an implant on p.
-func (b *Body) fitted(p Part) bool { return b.Implant(p).IsImplant() }
+func (b *Body) hasReplacement(p Part) bool {
+	return b.ReplacementAt(p).IsReplacement()
+}
 
 // partDmg is the wound damage on p.
 func (b *Body) partDmg(p Part) int {
@@ -158,7 +164,19 @@ func (b *Body) Hurt(roll func(int) int, dmg int, kind WoundKind, now uint64) Par
 
 // hurtPart wounds p, destroying it when its damage reaches MaxHP.
 func (b *Body) hurtPart(p Part, dmg int, kind WoundKind, now uint64) {
-	if b.isMissing(p) || dmg <= 0 {
+	if dmg <= 0 {
+		return
+	}
+	if b.isMissing(p) {
+		if !b.hasReplacement(p) {
+			return
+		}
+		r := &b.Replacements[p]
+		if int(r.Damage)+dmg >= b.maxHP(p) {
+			b.destroy(p)
+		} else {
+			r.Damage += int16(dmg)
+		}
 		return
 	}
 	if b.partDmg(p)+dmg >= b.maxHP(p) {
@@ -177,9 +195,10 @@ func (b *Body) destroy(p Part) {
 		if b.under(q, p) {
 			b.Missing |= bit(q)
 			b.Fresh &^= bit(q) // a stump below is part of this loss
-			b.SetImplant(q, 0)
+			b.SetReplacement(q, 0)
 		}
 	}
+	dropImplantsUnder(b, p)
 	kept := b.Wounds[:0]
 	for _, w := range b.Wounds {
 		if !b.under(w.Part, p) {
@@ -196,7 +215,7 @@ func (b *Body) destroy(p Part) {
 func (b *Body) VitalLost() bool {
 	t := b.table()
 	for p := range t {
-		if t[p].Vital && b.isMissing(Part(p)) && !b.fitted(Part(p)) {
+		if t[p].Vital && b.isMissing(Part(p)) && !b.hasReplacement(Part(p)) {
 			return true
 		}
 	}
@@ -204,12 +223,12 @@ func (b *Body) VitalLost() bool {
 }
 
 // replaced reports p covered by an implant on itself or an ancestor.
-func (b *Body) replaced(p Part) bool {
-	if b.Fitted == nil {
+func (b *Body) coveredByReplacement(p Part) bool {
+	if b.Replacements == nil {
 		return false
 	}
 	for q := Part(0); q < b.numParts(); q++ {
-		if b.fitted(q) && b.under(p, q) {
+		if b.hasReplacement(q) && b.under(p, q) {
 			return true
 		}
 	}
@@ -235,9 +254,12 @@ func lossDamage(b *Body) int {
 	for _, w := range b.Wounds {
 		n += w.Dmg
 	}
+	for _, r := range b.Replacements {
+		n += int(r.Damage)
+	}
 	t := b.table()
 	for p := Part(0); p < Part(len(t)); p++ {
-		if !b.isMissing(p) || b.replaced(p) {
+		if !b.isMissing(p) || b.coveredByReplacement(p) {
 			continue
 		}
 		if q := t[p].Parent; q != p && b.isMissing(q) {

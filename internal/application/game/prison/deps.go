@@ -64,13 +64,6 @@ type Roster interface {
 type Life interface {
 	Needs(id entity.EntityID) needs.Pair
 	SetNeeds(id entity.EntityID, n needs.Pair)
-	// Heal is one tick of healing; it returns the updated record.
-	Heal(id entity.EntityID, v health.Record, now uint64) health.Record
-	// Decay is one awake tick of needs.
-	Decay(id entity.EntityID, n needs.Pair, now uint64) needs.Pair
-	// DownedHunger is one tick of a downed pawn's food; it returns the
-	// stored needs (starving is the game's malnutrition, FOOD-1).
-	DownedHunger(id entity.EntityID, now uint64) needs.Pair
 }
 
 // Cells is where a held pawn goes: jobs, beds and its room.
@@ -112,6 +105,7 @@ type Talk interface {
 	// Negotiation is warden id's Social impact, permille.
 	Negotiation(id entity.EntityID) int32
 	SocialLevel(id entity.EntityID) int
+	UseRecruitInspiration(id entity.EntityID) bool
 	// Chat counts as a chat between a and b (memories, log).
 	Chat(a, b entity.EntityID, now uint64)
 }

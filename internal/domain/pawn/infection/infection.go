@@ -14,7 +14,10 @@
 // lethal condition kills at 1000; any condition is cured at 0.
 package infection
 
-import "rimworld-go/internal/domain/pawn/body"
+import (
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/sim/clock"
+)
 
 const (
 	// Full is full severity or immunity (permille).
@@ -200,4 +203,64 @@ func HoursToDeath(c body.Condition, d body.CondDef, tended bool, immMul int32) i
 	}
 	sev := SevPerDay(c, d, tended)
 	return int((int64(Full-c.Sev)*hoursPerDay + int64(sev) - 1) / int64(sev))
+}
+
+// RestGain is the published fatigue modifier (wiki: Rest, Immunity Gain Speed).
+// Rest is 0..10000. A downed pawn is not resting merely because it lies down.
+func RestGain(rest int, resting bool) int32 {
+	gain := int32(1000)
+	switch {
+	case rest < 100:
+		gain = 800
+	case rest < 1400:
+		gain = 920
+	case rest < 2800:
+		gain = 960
+	}
+	if resting {
+		gain = gain * 1100 / 1000
+	}
+	return gain
+}
+
+// Worst computes the condition fact from the authoritative body.
+func Worst(b *body.Body) (body.Condition, bool) {
+	if b == nil {
+		return body.Condition{}, false
+	}
+	var worst body.Condition
+	found := false
+	for _, c := range b.Conds {
+		if c.Kind == body.CondInfection && (!found || c.Sev > worst.Sev) {
+			worst, found = c, true
+		}
+	}
+	return worst, found
+}
+
+// Sick computes the condition fact from the authoritative body.
+func Sick(b *body.Body) bool {
+	if b == nil {
+		return false
+	}
+	for _, c := range b.Conds {
+		if d := body.DefOfCond(c.Kind); !d.NoImmunity && c.Immunity < Full {
+			return true
+		}
+	}
+	return false
+}
+
+// UntendedHours computes the condition fact from the authoritative body.
+func UntendedHours(b *body.Body, now uint64) int {
+	if b == nil {
+		return 0
+	}
+	oldest := now
+	for _, w := range b.Wounds {
+		if !w.Permanent && !w.Tended && w.At < oldest {
+			oldest = w.At
+		}
+	}
+	return int((now - oldest) / clock.TicksPerHour)
 }

@@ -5,6 +5,7 @@ package ebiten
 
 import (
 	"errors"
+	"rimworld-go/internal/domain/pawn/skill"
 	"strings"
 	"testing"
 
@@ -330,8 +331,8 @@ func TestTeamWarnings(t *testing.T) {
 	// lays out one row per skill for the team grid.
 	b, fb := pawnsApp(t)
 	rep := b.ng.Pool.Team()
-	if len(rep.Best) != 11 {
-		t.Fatalf("team grid has %d skills, want 11", len(rep.Best))
+	if len(rep.Best) != int(skill.NumSkills) {
+		t.Fatalf("team grid has %d skills, want %d", len(rep.Best), skill.NumSkills)
 	}
 	order := []string{game.WarnNoFighter, game.WarnNoDoctor, game.WarnNoCook, game.WarnNoGrower, game.WarnNoBuilder, game.WarnNoResearch, game.WarnYoungOrOld}
 	last := -1

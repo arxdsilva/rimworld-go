@@ -24,7 +24,7 @@ func TestCapacityFactorsExplainCapacity(t *testing.T) {
 	var b Body
 	b.destroy(LegL)
 	b.destroy(LegR)
-	b.SetImplant(LegR, item.PegLeg)
+	b.SetReplacement(LegR, item.PegLeg)
 	b.Hurt(fixed(0), 10, Cut, 1)
 	b.AddCond(Condition{Kind: CondBadBack})
 	fs := b.CapacityFactors(Moving)

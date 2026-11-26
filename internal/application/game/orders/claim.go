@@ -103,3 +103,13 @@ func FloorExtraRefund(k construction.Kind, i int) int {
 	}
 	return construction.DefOf(k).Extra[i].N / 2
 }
+
+// DeconstructionRefund uses the same material, floor and ruin rule as the
+// original game placement owner.
+func DeconstructionRefund(b construction.Building) int {
+	r := construction.PaidPrimaryRefund(b)
+	if b.Ruin {
+		r = (r + 1) / 2
+	}
+	return r
+}

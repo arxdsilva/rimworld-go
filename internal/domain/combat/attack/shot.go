@@ -3,6 +3,8 @@
 
 package attack
 
+import "math"
+
 // ShooterFactor is the shooter's share of a hit chance (permille): its
 // accuracy per tile (ppm) raised to the distance. wiki: Shooting
 func ShooterFactor(perTilePPM, dist int) Permille {
@@ -81,4 +83,28 @@ const StrayHit Permille = 500
 // InterceptScale of the distance from the muzzle (SHT-005).
 func InterceptChance(bodySize Permille) Permille {
 	return min(max(bodySize*400/one, 40), 800)
+}
+
+// DistanceInterceptFactor is the interception distance factor (permille)
+// for a cell at (dx, dy) tiles from the muzzle: 0 up to InterceptNear
+// tiles, 1000 from InterceptFull, linear in Euclidean distance between.
+func DistanceInterceptFactor(dx, dy int) Permille {
+	const lo, hi = InterceptNear * InterceptNear, InterceptFull * InterceptFull
+	d2 := dx*dx + dy*dy
+	switch {
+	case d2 <= lo:
+		return 0
+	case d2 >= hi:
+		return one
+	}
+	milli := int(math.Sqrt(float64(d2) * one * one))
+	return Permille((milli - InterceptNear*one) / (InterceptFull - InterceptNear))
+}
+
+// DownedInterceptChance is one tenth of the standing interception chance.
+func DownedInterceptChance(chance Permille) Permille { return chance * DownedIntercept / one }
+
+// FriendlyFireChance applies the player friendly-fire difficulty scale.
+func FriendlyFireChance(chance Permille, percent int) Permille {
+	return chance * Permille(min(max(percent, 0), 100)) / 100
 }

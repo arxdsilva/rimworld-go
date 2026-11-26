@@ -79,7 +79,7 @@ Maximum 125 %. Manipulation 30 %, Sight 20 %, each with a 100 % limit. Applies t
 
 ### Ore
 
-| Ore | Yield | Ours | Vein size | Ours | Commonality | One vein, wiki | One vein, ours |
+| Ore | Yield | Before MIN-1 | Vein size | Existing world generation | Commonality | One vein, wiki | Before MIN-1 |
 |---|---|---|---|---|---|---|---|
 | Steel | 40 | 20 | 30~40 ("30+ tiles") | 6-14 | 1 | 1,200-1,600 | 120-280 |
 | Silver | 40 | 25 | 4~12 | 4-9 | 0.10 | 160-480 | 100-225 |
@@ -91,7 +91,7 @@ Maximum 125 %. Manipulation 30 %, Sight 20 %, each with a 100 % limit. Applies t
 
 ### Balance note
 
-Per tile of plain rock, blocks halve rather than quartering. The wiki pays 25 % × 20 = 5 blocks at 1,600 ticks a chunk; we pay 1 chunk × `recipe.CutYield` 10 at 300 ticks. Chunks on the ground fall to a quarter, which clears the map too.
+MIN-1 changes plain-rock mining to a one-in-four chunk draw and stonecutting to 20 blocks at 1,600 ticks per chunk. Expected blocks per plain tile are now 5, before other factors. The ore table above records the pre-MIN-1 baseline and existing worldgen sizes, not the new shared cell yields.
 
 A tile of steel takes about 4.2× longer and gives twice the steel, so steel per hour of work is about half. With wiki veins there's far more steel on the map in total. Everything priced against today's numbers (build costs, trader stock, early-game pacing) should be looked at when MIN-1 ships. A short play test on the default difficulty is part of that phase. Vein size is MIN-3, but the per-vein column above means it should follow soon after.
 
@@ -101,32 +101,32 @@ State: `done` shipped; `open` owed to a later change. Phase in brackets.
 
 | Id | Gap | Wiki | Today | State |
 |---|---|---|---|---|
-| MIN-101 | Work per tile | HP × 1.5 | `MineWork` 360, ore ×3/2, `world.go:26`, `:122-127` | open [MIN-1] |
-| MIN-102 | Speed by level | The table | `skill.SpeedPermil`, `roster/bio.go:25-30`, `skill/skill.go:122-128`: 58 % at 0, 106 % at 8, 178 % at 20. Plants already has its own curve there | open [MIN-1] |
-| MIN-103 | Speed capacities | Manipulation 100 %, Sight 50 % | Manipulation through generic `WorkSpeed`, `body.go:97-99`; Sight absent | open [MIN-1] |
-| MIN-104 | Yield by level | The table, cap 125 % | ±4 % a level around 7, 60..140 %, `skills.go:537-543`: 72 % at 0, 104 % at 8, 140 % at 20 | open [MIN-1] |
-| MIN-105 | Yield capacities | Manipulation 30 %, Sight 20 % | Absent. `plant.YieldAmount` is the precedent (HRV-008) | open [MIN-1] |
-| MIN-106 | Chunk per tile | "~25% chance" | Always 1, `world.go:22`, `:417` | open [MIN-1] |
-| MIN-107 | Ore yield | 40 each, 2 components | Steel 20, silver 25, gold 8, `world.go:30` | open [MIN-1] |
-| MIN-108 | Blocks per chunk | 20, at 1,600 ticks | `CutYield` 10, `Work: 300`, `recipe/recipe.go:487-492` | open [MIN-1] |
-| MIN-109 | Chunk mass | Granite 25, marble 25, limestone 22, sandstone 20, slate 18 kg | All 25, `item/mass.go:46-47` | open [MIN-1] |
-| MIN-201 | Mining removes support | A roof "will collapse if the last supporting structure within 6 tiles is removed, whether by mining, deconstruction, or destruction" | `roofOnMined` leaves a natural roof, `roof.go:426-433`; `checkRoofSupport` skips natural, `roof.go:409` | open [MIN-2] |
-| MIN-202 | Thick collapse | "99,999 damage with 999% AP"; collapsed rock; the roof stays and it can happen again | None. Comment `roof.go:389`, "nobody is hurt" | open [MIN-2] |
-| MIN-203 | Thin and built collapse | "between 15 and 30 damage with 0% AP", to neck and head; rubble filth; "approximately 33.3%" kill [Verify] | The roof goes, a message, nobody hurt, `roof.go:412-421` | open [MIN-2] |
-| MIN-204 | Items under a collapse | Damaged, no number | Untouched | open [MIN-2], own number |
-| MIN-205 | Removing a roof that holds others | Deletes the unsupported section with no collapse | Any unsupported built roof falls with a message, `roof.go:409-421` | open [MIN-2] |
-| MIN-206 | Notice | Notification and pause, no advance warning | `g.message`, no pause, `roof.go:421` | open [MIN-2] |
-| MIN-207 | Shape of the range | "roughly circular area 6 tiles around" | Chebyshev, a square, `world/roof/roof.go:34-36` | open [MIN-2]; changes built roofs too |
-| MIN-301 | Surface uranium, jade, plasteel | Vein pages | `veinSpecs` has steel, silver, gold, machinery, `geology/generate.go:31-38`. Deep drill finds them, `industry/ore.go:29-36` | open [MIN-3] |
-| MIN-302 | Vein size | The table | The table | open [MIN-3], after MIN-1 |
-| MIN-303 | Deep drill auto-forbid | Summary only | `Drop` unforbidden, `industry/ops.go:147` | open [MIN-3], re-read first |
-| MIN-304 | Scanner under a roof | "do not function under a roof" | Only `Powered` is checked, `industry/ops.go:79`, `:108` | open [MIN-3] |
-| MIN-305 | Drill and scanner cost | Drill 100 steel, 2 components; scanner 150 steel, 4 components, 1 advanced | Drill 11 and 2 components, scanner 17, `construction/construction.go:801-804`; no scale found | open [MIN-3], check ARCHITECT first |
-| MIN-306 | Infestation placement | Overhead mountain roof, above -17 °C, within 30 tiles of a colony structure, not a 1×1 room; less below -8 °C and in light | `HiveSpot` takes any roof, light under 30 %, above -17 °C, `raid_host.go:239-243`; `hiveInfest` 6 from the rock face, `raid/nest.go:55`. No 30-tile rule | open [MIN-3] |
-| MIN-307 | Infestation pacing | At most once in 20 days; none at 30 hives | 1/8 of threat rolls from day 12, `raid/threats.go:40`, `:56`, no spacing. `HiveCap` 30 only limits spreading, `raid/nest.go:36` | open [MIN-3] |
-| MIN-308 | Four-way mining | Summary only | Diagonals allowed, `world.go:428` | open [MIN-3], re-read first |
+| MIN-101 | Work per tile | HP × 1.5 | `mineWorkAt` uses `mining.WorkTicksForStone/WorkTicksForOre`; material-specific labour. | done [MIN-1] |
+| MIN-102 | Speed by level | The table | `mining.Speed` (40 + 120 × level permille), used by `roster.LevelSpeed`. | done [MIN-1] |
+| MIN-103 | Speed capacities | Manipulation 100 %, Sight 50 % | `workProgressPct` combines native WorkSpeed and `mining.SightSpeed` (capped sight); wall and deep-drill work. | done [MIN-1] |
+| MIN-104 | Yield by level | The table, cap 125 % | `mining.Yield` implements the listed table and 1250 permille cap. | done [MIN-1] |
+| MIN-105 | Yield capacities | Manipulation 30 %, Sight 20 % | `mining.Yield` uses live manipulation and sight; wall and drill output share it. | done [MIN-1] |
+| MIN-106 | Chunk per tile | "~25% chance" | `doMine` draws one in four from the persisted mining RNG for plain rock. | done [MIN-1] |
+| MIN-107 | Ore yield | 40 each, 2 components | `geology.MineYields` shared by wall mining and scanner site counts; 40 ore, 2 machinery components. | done [MIN-1] |
+| MIN-108 | Blocks per chunk | 20, at 1,600 ticks | `recipe.CutYield` 20, stonecutter work 1600. | done [MIN-1] |
+| MIN-109 | Chunk mass | Granite 25, marble 25, limestone 22, sandstone 20, slate 18 kg | `item.Kind.MassGrams` has the five stone-specific masses. | done [MIN-1] |
+| MIN-201 | Mining removes support | A roof "will collapse if the last supporting structure within 6 tiles is removed, whether by mining, deconstruction, or destruction" | Actual last structural support loss is queued on the map and survives save/reload; climate pass rechecks current support before collapse. | done [MIN-2] |
+| MIN-202 | Thick collapse | "99,999 damage with 999% AP"; collapsed rock; the roof stays and it can happen again | Thick roof collapse deals lethal 99999 damage, destroys material at the tile and creates rock while retaining the thick roof; repeat mining can collapse it again. | done (native) [MIN-2] |
+| MIN-203 | Thin and built collapse | "between 15 and 30 damage with 0% AP", to neck and head; rubble filth; "approximately 33.3%" kill [Verify] | Unsupported thin/built roofs fall; native 15-30 crush damage and rubble dirt; humanoid jaw/brain approximate head/neck targets, animals use scalar damage. | done (native; target approximation) [MIN-2] |
+| MIN-204 | Items under a collapse | Damaged, no number | Falling roof damages loose stacks; thin collapse adds wear or removes a quarter of unconditioned quantity, thick collapse destroys loose stacks. | done (original damage tuning) [MIN-2] |
+| MIN-205 | Removing a roof that holds others | Deletes the unsupported section with no collapse | Deliberate removal of thin/built roof is nondamaging. Roofs use structural support only; independent roof-to-roof support chains are not represented. | done for native structural model [MIN-2] |
+| MIN-206 | Notice | Notification and pause, no advance warning | Danger letter and timed collapse stamp emitted by the native event. | done (native); presentation pause remains open [MIN-2] |
+| MIN-207 | Shape of the range | "roughly circular area 6 tiles around" | Exact circular radius six used by full and incremental support checks. | done [MIN-2] |
+| MIN-301 | Surface uranium, jade, plasteel | Vein pages | All seven ordinary surface ore profiles and scanner sites share the stable ore kinds. | done [MIN-3] |
+| MIN-302 | Vein size | The table | Mapgen v3 uses bounded connected veins with the documented size profiles; undersized and rectangular large lumps rejected. | done [MIN-3] |
+| MIN-303 | Deep drill auto-forbid | Summary only | Deep drill output is created forbidden through the native physical item owner. | done [MIN-3] |
+| MIN-304 | Scanner under a roof | "do not function under a roof" | Both ground and long-range scanners require their complete footprint unroofed, at admission and during work. | done [MIN-3] |
+| MIN-305 | Drill and scanner cost | Drill 100 steel, 2 components; scanner 150 steel, 4 components, 1 advanced | Current construction definitions already specify the requested steel and component costs. | done [MIN-3] |
+| MIN-306 | Infestation placement | Overhead mountain roof, above -17 °C, within 30 tiles of a colony structure, not a 1×1 room; less below -8 °C and in light | Thick overhead rock, live temperature/room/colony-structure admission; cold/light weighted by original factors. | done [MIN-3] |
+| MIN-307 | Infestation pacing | At most once in 20 days; none at 30 hives | Successful storyteller infestation saves a 20-day deadline; native cap 30; failed event falls back to raid. Explicit dev swarm remains separate. | done [MIN-3] |
+| MIN-308 | Four-way mining | Summary only | Mining starts at a reachable cardinal work cell; other orders retain diagonal access. | done [MIN-3] |
 | MIN-401 | Roof overlay | Thin and thick are different things | Hover names both, `render/overlay/roof_draw.go:77-80`; the draw has one natural style, `:133` | open [MIN-4] |
-| MIN-402 | Risk preview on Mine | No advance warning (ours goes further) | None. Support is on `roof.Cell` | open [MIN-4], ships with MIN-202 |
+| MIN-402 | Risk preview on Mine | No advance warning (ours goes further) | MiningRoofRisk exposes the tiles and thickness threatened by removing one support; read-only and deterministic. | done (native); presentation overlay remains open [MIN-4] |
 | MIN-403 | Roof in tile info | The tile's roof kind | `RoofLabelAt`, `hud/cellinfo.go:80` | done; no change |
 
 `roof.go:27` and `world/roof/roof.go:13-14` say natural roofs can't be removed. Only the thick ones are refused (`roof.go:226`), which matches the wiki, so the comments should change with MIN-2.

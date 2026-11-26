@@ -5,6 +5,7 @@ package game
 
 import (
 	"fmt"
+	"rimworld-go/internal/application/game/viewmodel"
 	"slices"
 
 	"rimworld-go/internal/application/game/framestatus"
@@ -51,7 +52,7 @@ func (g *Game) frameViews() []FrameView {
 		if slices.Equal(old.Haulers, fv.Haulers) && (old.Haulers == nil) == (fv.Haulers == nil) {
 			fv.Haulers = old.Haulers // the old slice: nothing writes either
 		}
-		if same && !equalFrameView(fv, old) {
+		if same && !viewmodel.EqualFrame(fv, old) {
 			same = false
 		}
 	}
@@ -85,17 +86,6 @@ func (g *Game) appendFrameViews(out []FrameView) []FrameView {
 		}
 	}
 	return out
-}
-
-// equalFrameView reports two frame views that read the same (Haulers
-// element by element). TestFrameViewEqual proves every field is compared.
-func equalFrameView(a, b *FrameView) bool {
-	return a.ID == b.ID && a.Kind == b.Kind && a.X == b.X && a.Y == b.Y && a.Wood == b.Wood &&
-		a.Need == b.Need && a.WorkLeft == b.WorkLeft && a.Facing == b.Facing && a.Floor == b.Floor &&
-		a.Stuff == b.Stuff && a.W == b.W && a.H == b.H && a.Moving == b.Moving && a.MovingFrom == b.MovingFrom &&
-		a.WorkTotal == b.WorkTotal && a.Incoming == b.Incoming && a.InStock == b.InStock &&
-		a.Reserved == b.Reserved && a.Builder == b.Builder && slices.Equal(a.Haulers, b.Haulers) &&
-		a.Status == b.Status && a.Comp == b.Comp && a.CompNeed == b.CompNeed && a.CompIncoming == b.CompIncoming && a.AX == b.AX
 }
 
 // fillFrameViews completes the inspector fields of the frames World()

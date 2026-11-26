@@ -223,3 +223,10 @@ Wasm mods run in real games · 2026-11-21 · a9e028551, bab189b41, b7cff43f1
 - Determinism: same state hash with Starlark or Wasm twins; no wall clock or global RNG in the wiring.
 - Boxes: MODDING gap row PLG-063 `[x]`; PLG-051 `[-]` (Wasm blobs shipped; Starlark has no state, general plugin blobs open); MASTER_SPEC §49 shipping note; THIRD_PARTY_NOTICES wazero row (wired); feature checklist 38.3 **Second runtime spike: WebAssembly on wazero** stays `[x]` (note updated); issue #7: Closes #7 in the docs commit.
 - Open: the contributor's own Rust/TinyGo harness; Starlark plugin state and general plugin blobs (PLG-051); `contentlint` does not lint `.wasm` files; gob decodes `ModState` before its bounds apply (savefmt decompressed-size cap unaudited, as for every save field).
+
+## PLG-026-saved-filter-identity
+Historical saved plugin filter identity · 2026-11-25 · this commit
+- Changed: the item remap walks saved filter bits in their original key namespace, including slots now occupied by new core kinds. Identity/no-key paths and the None sentinel retain their prior policy.
+- Evidence: exact upstream v20 fixture, removed/reordered content, native storage admission and re-save/reload; no schema bump or enum renumbering.
+- Boxes: vanilla **Storage filters** [x] annotated; PLG-044 remap guarantee clarified.
+- Open: none within this historical filter migration scope.

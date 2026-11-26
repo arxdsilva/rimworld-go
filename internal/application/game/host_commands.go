@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/tabview"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -46,7 +47,13 @@ func (g *Game) applyHostCommand(c command.Command) {
 		fleetOf(g).Form(c.Name, c.Count) // game/maps
 	case command.CaravanReturn:
 		fleetOf(g).Return(target) // game/maps
-	case command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel:
+	case command.RecoverCargoToCaravan:
+		recoverCargo(g, c)
+	case command.WorldCaravanTrade:
+		_, why := fleetOf(g).Market().Trade(c.Target, pawn, c.Name, c.Enabled, c.Quote)
+		w := g.worldS()
+		w.marketReply = tabview.MarketReply{Serial: w.marketReply.Serial + 1, CaravanID: c.Target, Quote: c.Quote, Reason: why}
+	case command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.CaravanSplit:
 		mapsApply(g, c) // world_state.go: game/maps (MAP-01..04)
 	case command.SetColonyCap:
 		SetMaxColonies(g, c.Count) // world_state.go
@@ -105,7 +112,7 @@ func (g *Game) applyHostCommand(c command.Command) {
 	case command.ReorderOperation:
 		g.cmdReorderOperation(pawn, c.Index, c.Count) // surgery.go
 	case command.ProposeTrade:
-		g.cmdProposeTrade(c.Name, c.Enabled) // trade_session.go (PLAY-024)
+		g.cmdProposeTrade(c.Name, c.Enabled, c.ExactLots) // trade_session.go (PLAY-024)
 	case command.CloseTrade:
 		g.cmdCloseTrade() // trade_session.go
 	case command.CommsCallTrader:
@@ -118,5 +125,7 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdCommsRequestAid(c.Index) // comms.go
 	case command.CloseComms:
 		g.cmdCloseComms() // comms.go
+	case command.DismissVisitorGroup:
+		dismissVisitorCommand(g, pawn, target)
 	}
 }

@@ -50,7 +50,7 @@ Wiki: rimworldwiki.com pages Infection, Flu, Plague, Malaria, Sleeping sickness,
 | Hypothermia | Builds 10 °C below the range; fades at or above the minimum; between, nothing is said | Same; between it holds | `domain/pawn/exposure/exposure.go` `Step`; `game/heat.go` `expose` | was y (AIL-001, AIL-002); now n: a doctor moves the pawn, it checks standing every interval |
 | Heatstroke | Builds 10 °C above the range; fades at or below the maximum | Same; between it holds | same | was y; now n |
 | Frostbite | A wound; heals naturally | A wound on an extremity, healed as one | `body/cond_frostbite.go` `StrikeFrostbite`; `body/tend.go` `HealHour` | n |
-| Malnutrition | ±1.51–2.27 %/h; fed it falls | Same; a doctor feeds a downed colonist, the warden a prisoner | `body/cond_malnutrition.go` `StepMalnutrition`; `game/care_host_prison.go` `stepMalnutrition`; `care/feed.go` | n: it ends in feeding or death |
+| Malnutrition | ±1.51–2.27 %/h; fed it falls | Same; a doctor feeds a downed colonist, the warden a prisoner | `body/cond_malnutrition.go` `StepMalnutrition`; `game/diet/malnutrition.go` `StepMalnutrition`; `care/feed.go` | n: it ends in feeding or death |
 | Blood loss | Recovers 33.3 %/day once nothing bleeds | Same; untended bleeding kills | `body/bleed.go` `StepBlood`; `game/bleed.go` `stepBloodLoss` | n |
 
 Every non-exposure condition downs with `CauseInjury`, which `stepCare` (`game/infection.go`) checks for standing every hour while the pawn is a patient. The exposure causes were the only ones checked on a stage change alone. A tend of quality 0 adds nothing to a parasite's tend sum (`body/tend.go` clamps at 0); it needs a doctor with no manipulation or sight, and parasites never down.

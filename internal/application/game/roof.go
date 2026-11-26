@@ -6,13 +6,16 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/roofing"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/damage"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Roofs (SIM-018): per-tile roofs that keep rooms warm and keep the sky
@@ -27,10 +30,9 @@ import (
 //     the per-room roofed counts consistent;
 //   - Supported is derived from the room grid's boundaries on every room
 //     rebuild; unsupported Built roofs fall at the next climate interval;
-//   - Natural roofs never collapse and cannot be removed; removing a
-//     thick one (NaturalThick, MAPGEN-2: deep rock overhead) is refused
-//     with ReasonThickRoof, and no drop pod lands under one.
-// No RNG, no map iteration, no wall clock: ties go by row-major index.
+//   - Natural roof loss is armed by actual removal of a support; thick
+//     roofs leave new rock when they collapse. Thin roofs may be removed.
+// Collapse damage uses the saved body stream, never wall clock or map iteration.
 
 // roofCollapse is a collapse stamp, kept for an hour.
 type roofCollapse struct {
@@ -38,7 +40,7 @@ type roofCollapse struct {
 	tick uint64
 }
 
-// roofIndex is state derived from g.roofs (never saved).
+// roofIndex is derived except for pending support loss, which is saved.
 type roofIndex struct {
 	// plans: row-major indices of tiles with a build or removal plan,
 	// ascending (so ties break by y, then x).
@@ -48,15 +50,12 @@ type roofIndex struct {
 	countsOK bool
 	// unsupported: a Built roof lost its support at the last rebuild.
 	unsupported bool
+	loss        []int32 // pending natural-roof support losses; saved until the climate pass
 	// ver moves whenever a tile gains or loses its roof (Roofed changes),
 	// and never goes back, even when the grid is replaced: what is cached
 	// from the roofs (a wind turbine's band, power_gen.go) is keyed on it.
 	ver uint64
 }
-
-// roofTries is how many of the nearest planned tiles a builder tries
-// (each costs a path search) before giving up for now.
-const roofTries = 3
 
 const roofPlans, roofCancel = roof.PlanBuild | roof.PlanRemove, roof.PlanBuild | roof.PlanRemove | roof.AreaBuild // Cancel: plans and build area
 
@@ -126,18 +125,8 @@ func (g *Game) roomRoofed(r int) int {
 
 // countRoofed recounts the roofed cells of every room (once per change).
 func (g *Game) countRoofed() {
-	counts := g.roofx.counts[:0]
-	for range g.rooms {
-		counts = append(counts, 0)
-	}
-	if len(g.roofs) == len(g.roomGrid) {
-		for i, r := range g.roomGrid {
-			if r >= 0 && g.roofs[i].Roofed() {
-				counts[r]++
-			}
-		}
-	}
-	g.roofx.counts, g.roofx.countsOK = counts, true
+	g.roofx.counts = roof.CountRooms(g.roofx.counts, len(g.rooms), g.roomGrid, g.roofs)
+	g.roofx.countsOK = true
 }
 
 // afterRoomsRebuilt runs after every room rebuild: support is recomputed
@@ -158,14 +147,7 @@ func (g *Game) refreshRoofSupport() {
 	cols := g.buildingCells(construction.Column) // A2: a column holds the roof like a wall
 	field := roof.SupportField(w, h, func(x, y int) bool { return grid[y*w+x] == room.Wall || cols.has(y*w+x) })
 	for i, c := range g.roofs {
-		n := c &^ roof.Supported
-		if field[i] {
-			n |= roof.Supported
-		}
-		if grid[i] == room.Wall {
-			n &^= roof.PlanBuild
-		}
-		n = areaRoofPlan(n, grid[i] == room.Wall) // home.go: the build-roof area keeps its roof
+		n := roof.WithSupport(c, field[i], grid[i] == room.Wall)
 		if n.Has(roof.Built) && !n.Has(roof.Supported) && !n.Has(roof.Natural) {
 			g.roofx.unsupported = true
 		}
@@ -179,11 +161,7 @@ func (g *Game) autoRoof() {
 		if r < 0 || g.rooms[r].contents.Cells > roof.AutoMaxCells {
 			continue
 		}
-		c := g.roofs[i]
-		if c.Roofed() || !c.Has(roof.Supported) || c&(roofPlans|roof.NoAuto) != 0 {
-			continue
-		}
-		g.setRoof(i, c|roof.PlanBuild)
+		g.setRoof(i, roof.AutoPlan(g.roofs[i]))
 	}
 }
 
@@ -192,7 +170,7 @@ func (g *Game) autoRoof() {
 func (g *Game) designateRoof(x1, y1, x2, y2 int, build bool) {
 	g.ensureRooms()
 	g.ensureRoofGrid()
-	minX, minY, maxX, maxY := g.clipRect(x1, y1, x2, y2)
+	minX, minY, maxX, maxY := roof.ClipRect(g.grid.Width(), g.grid.Height(), x1, y1, x2, y2)
 	w := g.grid.Width()
 	thick := -1 // the first thick roof a removal met
 	for y := minY; y <= maxY; y++ {
@@ -202,33 +180,13 @@ func (g *Game) designateRoof(x1, y1, x2, y2 int, build bool) {
 			if !build && thick < 0 && c.Thick() {
 				thick = i
 			}
-			if build {
-				c &^= roof.PlanRemove | roof.NoAuto
-				if g.roomGrid[i] != room.Wall && !c.Has(roof.Natural) {
-					c |= roof.AreaBuild
-				}
-				if g.roomGrid[i] != room.Wall && c.Has(roof.Supported) && !c.Roofed() {
-					c |= roof.PlanBuild
-				}
-			} else {
-				c = c&^(roof.PlanBuild|roof.AreaBuild) | roof.NoAuto
-				if c.Has(roof.Built) && !c.Has(roof.Natural) {
-					c |= roof.PlanRemove
-				}
-			}
+			c = roof.Designate(c, g.roomGrid[i] == room.Wall, build)
 			g.setRoof(i, c)
 		}
 	}
 	if thick >= 0 {
 		g.message(thick%w, thick/w, "%s: that roof can't be removed.", ReasonThickRoof)
 	}
-}
-
-// clipRect normalizes a rectangle and clips it to the map; an empty
-// result has max < min.
-func (g *Game) clipRect(x1, y1, x2, y2 int) (minX, minY, maxX, maxY int) {
-	minX, minY, maxX, maxY = normalizeRect(x1, y1, x2, y2)
-	return max(minX, 0), max(minY, 0), min(maxX, g.grid.Width()-1), min(maxY, g.grid.Height()-1)
 }
 
 // clearRoofPlans drops the roof bits of mask inside the rectangle: Cancel
@@ -238,7 +196,7 @@ func (g *Game) clearRoofPlans(minX, minY, maxX, maxY int, mask roof.Cell) {
 	if len(g.roofs) == 0 {
 		return
 	}
-	minX, minY, maxX, maxY = g.clipRect(minX, minY, maxX, maxY)
+	minX, minY, maxX, maxY = roof.ClipRect(g.grid.Width(), g.grid.Height(), minX, minY, maxX, maxY)
 	w := g.grid.Width()
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
@@ -248,17 +206,9 @@ func (g *Game) clearRoofPlans(minX, minY, maxX, maxY int, mask roof.Cell) {
 }
 
 // roofWork reports the job a planned tile needs, if any: Roof for a
-// supported, unroofed build plan, Unroof for a built roof planned for
+// supported, unroofed build plan, Unroof for a removable roof planned for
 // removal.
-func roofWork(c roof.Cell) (job.Kind, bool) {
-	switch {
-	case c.Has(roof.PlanBuild|roof.Supported) && !c.Roofed():
-		return job.Roof, true
-	case c.Has(roof.PlanRemove|roof.Built) && !c.Has(roof.Natural):
-		return job.Unroof, true
-	}
-	return job.None, false
-}
+func roofWork(c roof.Cell) (job.Kind, bool) { return roof.Work(c) }
 
 // assignRoof gives builder id the nearest roof job, if any: the nearest
 // unreserved planned tile (Chebyshev, as assignConstruct; ties by y, then
@@ -269,40 +219,18 @@ func (g *Game) assignRoof(id entity.EntityID) bool {
 	}
 	pos, _ := g.positions.Get(id)
 	w := g.grid.Width()
-	type cand struct{ i, d int }
-	var best [roofTries]cand
-	n := 0
-	for _, p := range g.roofx.plans {
-		i := int(p)
-		if _, ok := roofWork(g.roofs[i]); !ok {
-			continue
+	best, n := roof.NearestPlans(g.roofx.plans, w, pos.X, pos.Y, func(i int) bool {
+		kind, ok := roofWork(g.roofs[i])
+		if !ok {
+			return false
 		}
 		x, y := i%w, i/w
-		if _, taken := g.reserve.TileOwner(x, y); taken {
-			continue
-		}
-		if kind, _ := roofWork(g.roofs[i]); g.postponedFor(id, kind, 0, x, y) {
-			continue // SIM-027: out of reach lately
-		}
-		c := cand{i, pathing.Dist(pos.X, pos.Y, x, y)}
-		// keep the roofTries nearest, in (distance, index) order; plans
-		// ascend by index, so a strict compare keeps the earlier tile
-		k := n
-		for k > 0 && c.d < best[k-1].d {
-			k--
-		}
-		if k >= roofTries {
-			continue
-		}
-		if n < roofTries {
-			n++
-		}
-		copy(best[k+1:n], best[k:n-1])
-		best[k] = c
-	}
-	for _, c := range best[:n] {
-		x, y := c.i%w, c.i/w
-		kind, _ := roofWork(g.roofs[c.i])
+		_, taken := g.reserve.TileOwner(x, y)
+		return !taken && !g.postponedFor(id, kind, 0, x, y)
+	})
+	for _, i := range best[:n] {
+		x, y := i%w, i/w
+		kind, _ := roofWork(g.roofs[i])
 		tx, ty, ok := g.roofSpot(id, pos, x, y)
 		if !ok {
 			g.postponeTile(id, kind, x, y)
@@ -324,20 +252,7 @@ func (g *Game) assignRoof(id entity.EntityID) bool {
 // walkable (startJob checks the path), else the walkable 8-neighbour
 // nearest the builder that it can reach.
 func (g *Game) roofSpot(id entity.EntityID, pos Position, x, y int) (int, int, bool) {
-	if g.grid.Walkable(x, y) {
-		return x, y, true
-	}
-	bx, by, bd := 0, 0, 1<<30
-	for _, d := range [8][2]int{{0, 1}, {1, 0}, {0, -1}, {-1, 0}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
-		nx, ny := x+d[0], y+d[1]
-		if !g.grid.Walkable(nx, ny) {
-			continue
-		}
-		if dd := pathing.Dist(pos.X, pos.Y, nx, ny); dd < bd && g.reachable(id, nx, ny) {
-			bx, by, bd = nx, ny, dd
-		}
-	}
-	return bx, by, bd < 1<<30
+	return roof.WorkSpot(pos.X, pos.Y, x, y, g.grid.Walkable, func(x, y int) bool { return g.reachable(id, x, y) })
 }
 
 // doRoof advances a Roof or Unroof job. A plan cancelled meanwhile (or a
@@ -367,7 +282,7 @@ func (g *Game) doRoof(id entity.EntityID, j job.Record) {
 	if j.Kind == job.Roof {
 		c = c&^roof.PlanBuild | roof.Built
 	} else {
-		c &^= roof.Built | roof.PlanRemove
+		c &^= roof.Built | roof.Natural | roof.PlanRemove
 	}
 	g.setRoof(i, c) // invalidates the roofed counts heat reads
 	g.reserve.ReleaseOwner(id)
@@ -381,43 +296,118 @@ func (g *Game) failRoof(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
-// checkRoofSupport collapses unsupported built roofs (climate interval):
-// one notice per batch, at the first fallen tile (by y, then x), and a
-// dust stamp kept for an hour. Natural roofs never fall; nobody is hurt.
+// noteRoofLoss runs only at authoritative support removals. Persist the
+// candidate set so read-model rebuilds or a save between removal and
+// climate cannot suppress a cave-in.
+func noteRoofLoss(g *Game, x, y int) {
+	g.roofx.loss = roof.NoteLoss(g.roofx.loss, g.grid.Width(), g.grid.Height(), x, y, g.roofs)
+}
+
+// MiningRoofRisk is the detached native preview for removing one rock.
+func (g *Game) MiningRoofRisk(x, y int) []roof.Risk {
+	if !terrain.IsRockWall(g.terr.At(x, y)) {
+		return nil
+	}
+	return roof.RemovalRisk(g.grid.Width(), g.grid.Height(), x, y, g.roofs, func(x, y int) bool {
+		b, _ := g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerObject))
+		return g.isBoundary(x, y) || b.Kind == construction.Column
+	})
+}
+
+// checkRoofSupport settles the batch at the climate interval. It is
+// never invoked from World() or a preview.
 func (g *Game) checkRoofSupport() {
 	now := uint64(g.clock.Now())
-	kept := g.roofCollapses[:0]
-	for _, s := range g.roofCollapses {
-		if now-s.tick < clock.TicksPerHour {
-			kept = append(kept, s)
-		}
-	}
-	g.roofCollapses = kept
+	g.roofCollapses = slices.DeleteFunc(g.roofCollapses, func(s roofCollapse) bool { return now-s.tick >= clock.TicksPerHour })
 	if g.roomDirty {
-		g.ensureRooms() // support is recomputed on the rebuild
+		g.ensureRooms()
 	}
-	if !g.roofx.unsupported {
+	if !g.roofx.unsupported && len(g.roofx.loss) == 0 {
 		return
+	}
+	// A newly collapsed rock can be mined again before the incremental
+	// topology rebuild observes it. Re-read pending loss footprints even
+	// when two edits left the cached room topology unchanged.
+	if len(g.roofx.loss) > 0 {
+		g.refreshRoofSupportAround(g.roofx.loss)
 	}
 	g.roofx.unsupported = false
+	falling := roof.Falling(g.roofs, g.roofx.loss)
+	g.roofx.loss = nil
 	w := g.grid.Width()
-	first := -1
-	for i, c := range g.roofs {
-		if !c.Has(roof.Built) || c.Has(roof.Supported) || c.Has(roof.Natural) {
-			continue
-		}
-		g.setRoof(i, c&^(roof.Built|roofPlans))
-		if first < 0 {
-			first = i
+	for _, i := range falling {
+		c := g.roofs[i]
+		x, y := i%w, i/w
+		if c.Thick() {
+			roofing.Collapse(roofFallHost{combatDebris{g}}, x, y, true)
+		} else {
+			g.setRoof(i, c&^(roof.Built|roof.Natural|roofPlans))
+			roofing.Collapse(roofFallHost{combatDebris{g}}, x, y, false)
 		}
 	}
-	if first < 0 {
+	if len(falling) > 0 {
+		i := falling[0]
+		x, y := i%w, i/w
+		g.threat("Roof collapse", x, y, "A roof collapsed near (%d, %d) — no support within %d tiles.", x, y, roof.SupportRange)
+		g.roofCollapses = append(g.roofCollapses, roofCollapse{x: x, y: y, tick: now})
+	}
+}
+
+type roofFallHost struct{ combatDebris }
+
+func (h roofFallHost) Victims(x, y int) []entity.EntityID {
+	g := h.g
+	var out []entity.EntityID
+	for _, ids := range [][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
+		for _, id := range ids {
+			p, ok := g.positions.Get(id)
+			if ok && p.X == x && p.Y == y && (g.onMap(id) || g.animals.Has(id)) {
+				out = append(out, id)
+			}
+		}
+	}
+	return out
+}
+func (h roofFallHost) Crush(id entity.EntityID, thick bool) {
+	g := h.g
+	if thick {
+		g.hurt(id, 99999, 0)
 		return
 	}
-	x, y := first%w, first/w
-	g.message(x, y, "A roof collapsed near (%d, %d) — no support within %d tiles.", x, y, roof.SupportRange)
-	g.roofCollapses = append(g.roofCollapses, roofCollapse{x: x, y: y, tick: now})
+	rng := g.stream(streamBody)
+	dmg := 15 + rng.IntN(16)
+	if g.animals.Has(id) {
+		g.hurt(id, dmg, 0)
+		return
+	}
+	part := body.Jaw
+	if rng.IntN(2) == 0 {
+		part = body.Brain
+	}
+	hw := hits(g)
+	hw.HurtHit(id, hw.LandOn(id, part, damage.Hit{Form: damage.FormCrush, Amount: dmg}, rng.IntN), 0)
 }
+func (h roofFallHost) ClearSite(x, y int) {
+	g := h.g
+	for layer := range construction.NumLayers {
+		if bid := g.layerBldgAt(x, y, construction.Layer(layer)); bid != 0 {
+			g.removeBuildingAs(bid, false)
+		}
+		if fid := g.layerFrameAt(x, y, construction.Layer(layer)); fid != 0 {
+			g.cancelFrame(fid)
+		}
+	}
+	if pid := g.plantAt(x, y); pid != 0 {
+		g.removePlant(pid)
+	}
+}
+func (h roofFallHost) FillRock(x, y int) {
+	g := h.g
+	g.setTerrain(x, y, terrain.Rock)
+	i := y*g.grid.Width() + x
+	g.setRoof(i, g.roofs[i]&^roofPlans|roof.Natural|roof.NaturalThick|roof.Supported)
+}
+func (h roofFallHost) Rubble(x, y int) { h.g.addDirt(y*h.g.grid.Width()+x, 250) }
 
 // roofOnMined leaves a natural roof where rock was mined away.
 func (g *Game) roofOnMined(x, y int) {

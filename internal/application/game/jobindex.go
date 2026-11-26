@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/application/game/idindex"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
-	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -167,25 +166,13 @@ func (g *Game) checkPlantCands(id entity.EntityID, k job.Kind, want func(plant.P
 	}
 }
 
-// ---- animals ----
-
-// anyAnimal reports whether some animal in the store passes ok: a quick
-// pass over the store's dense values (no id lookups, no copies, stopping
-// at the first match) that lets the animal job givers (hunt, tame,
-// collect, train, tend) skip their search when nothing is marked or
-// ready — the common case. The store holds every animal those searches
-// can find, so "none here" means they would find none. ok must be a pure
-// read (it may run on any prefix of the store).
-func (g *Game) anyAnimal(ok func(entity.EntityID, *animal.State) bool) bool {
-	return g.animals.AnyRef(ok)
-}
-
 // ---- beds ----
 
 // sleepLayers are the construction layers a sleeping place can be on.
 var sleepLayers = func() []construction.Layer {
 	var out []construction.Layer
-	for _, k := range []construction.Kind{construction.Bed, construction.SleepingSpot, construction.DoubleBed, construction.HospitalBed} {
+	for _, k := range []construction.Kind{construction.Bed, construction.SleepingSpot, construction.DoubleBed, construction.HospitalBed,
+		construction.AnimalSleepingSpot, construction.AnimalBed, construction.AnimalSleepingBox} {
 		if l := layerOf(k); !slices.Contains(out, l) {
 			out = append(out, l)
 		}
@@ -206,7 +193,7 @@ func (g *Game) bedUnderIndexed(id entity.EntityID, pos Position) entity.EntityID
 		if bid == 0 {
 			continue
 		}
-		if b, _ := g.bldgs.Get(bid); b.Kind.Sleeps() && b.SlotOf(uint64(id)) >= 0 {
+		if b, _ := g.bldgs.Get(bid); !b.Forbidden && !b.Uninstall && !b.Deconstruct && (b.Kind.Sleeps() || b.Kind.AnimalSleeps()) && construction.BedSlot(b, uint64(id)) >= 0 {
 			if found != 0 {
 				return g.bedUnderScan(id, pos) // two: the list order decides
 			}
@@ -225,7 +212,7 @@ func (g *Game) bedCoveringIndexed(x, y int) bool {
 		if scan {
 			return g.bedCoveringScan(x, y)
 		}
-		if b, ok := g.bldgs.Get(bid); bid != 0 && ok && b.Kind.Sleeps() {
+		if b, ok := g.bldgs.Get(bid); bid != 0 && ok && (b.Kind.Sleeps() || b.Kind.AnimalSleeps()) {
 			return true
 		}
 	}
@@ -235,7 +222,7 @@ func (g *Game) bedCoveringIndexed(x, y int) bool {
 func (g *Game) bedUnderScan(id entity.EntityID, pos Position) entity.EntityID {
 	for _, bid := range bedsOf(g) {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.SlotOf(uint64(id)) < 0 {
+		if !ok || b.Forbidden || b.Uninstall || b.Deconstruct || construction.BedSlot(b, uint64(id)) < 0 {
 			continue
 		}
 		if construction.Covers(b.Kind, b.Facing, b.X, b.Y, pos.X, pos.Y) {

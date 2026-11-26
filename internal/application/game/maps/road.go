@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/travel"
-	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
@@ -32,6 +31,22 @@ func (f Fleet) Step(now uint64) {
 	for i := 0; i < len(*f.list); i++ {
 		c := &(*f.list)[i]
 		id := entity.EntityID(c.C.ID)
+		// An empty caravan must not advance, arrive or accept a demand
+		// after losing its final member. Its existing cargo cleanup follows.
+		if c.C.State != caravan.Forming && len(c.C.Members) == 0 {
+			if c.Ask.Letter != 0 {
+				f.h.DropLetter(c.Ask.Letter)
+			}
+			f.h.Letter(true, "Caravan lost", 0, "Nobody in the caravan survived the journey.")
+			*f.list = slices.Delete(*f.list, i, i+1)
+			i--
+			continue
+		}
+		if hour && c.C.State != caravan.Forming && c.C.State != caravan.Home {
+			// The living carrier roster and physical capacities can change
+			// through off-map illness, downing and recovery between commands.
+			f.pace(c)
+		}
 		switch c.C.State {
 		case caravan.Forming:
 			continue
@@ -113,15 +128,16 @@ func (f Fleet) Arrived(c *Caravan, now uint64) {
 		f.a.Queue = append(f.a.Queue, Request{Op: OpOpen, Kind: Site, Tile: c.C.Tile, Caravan: c.C.ID, Quest: q})
 		return
 	}
-	if lump, qty, ok := f.h.Cargo().Claim(c.C.Tile); ok { // game/travel (AX-9): a mineral site (MAP-04)
+	if site, ok := f.h.Cargo().Claim(c.C.Tile); ok { // game/travel (AX-9): a mineral site (MAP-04)
 		c.C.State = caravan.Arrived
-		f.a.Queue = append(f.a.Queue, Request{Op: OpOpen, Kind: Site, Tile: c.C.Tile, Caravan: c.C.ID, Lump: lump, Qty: qty})
+		f.a.Queue = append(f.a.Queue, Request{Op: OpOpen, Kind: Site, Tile: c.C.Tile, Caravan: c.C.ID, Lump: site.Mineral, Qty: site.Qty, Cells: site.Cells})
 		return
 	}
 	fa := f.h.Faction(c.C.Tile)
-	if fa != nil && fa.Type.Human() && fa.Relation != faction.Hostile && !fa.Defeated {
+	if fa != nil && fa.CanVisit() {
 		c.C.State = caravan.Visiting
 		c.C.VisitUntil = now + visitTicks
+		f.Market().Visit(c.C.Tile, fa, now)
 		c.C.FoodDays = FoodDays
 		f.h.Letter(false, "Caravan arrived", 0, "The caravan reached %s and stays a day as their guests.", f.h.TileName(c.C.Tile))
 		return
@@ -139,6 +155,21 @@ func (f Fleet) enterMap(c *Caravan, id uint32) {
 	}
 	c.C.State = caravan.Arrived
 	f.a.Queue = append(f.a.Queue, Request{Op: OpEnter, Map: id, Caravan: c.C.ID})
+}
+
+// RecoveryAt resolves a caravan waiting at the actual source map's world
+// tile with a land route. Entering a map dissolves the caravan instead.
+func (f Fleet) RecoveryAt(id entity.EntityID, sourceMap uint32) *Caravan {
+	c := f.At(id)
+	if c == nil || c.Back || c.C.State != caravan.Arrived && c.C.State != caravan.Visiting {
+		return nil
+	}
+	tile := f.tileOf(sourceMap)
+	p := f.h.Planet()
+	if tile < 0 || c.C.Tile != tile || p == nil || len(c.Out) < 2 || !slices.Contains(c.Out, tile) || len(p.Route(c.Home, tile)) < 2 {
+		return nil
+	}
+	return c
 }
 
 // Travel is command.CaravanTravel: caravan id heads for world tile t from
@@ -160,6 +191,7 @@ func (f Fleet) Travel(id entity.EntityID, t int) {
 	k := max(slices.Index(c.Out, c.C.Tile), 0)
 	c.Out = append(slices.Clone(c.Out[:k]), route...)
 	c.C.Path, c.C.Progress, c.C.Dest, c.Back = slices.Clone(route[1:]), 0, t, false
+	f.pace(c)
 	c.C.State = caravan.Travelling
 }
 
@@ -201,6 +233,7 @@ func (f Fleet) startReturn(c *Caravan) {
 	back := slices.Clone(c.Out[:k])
 	slices.Reverse(back)
 	c.C.Path, c.C.Progress, c.Back = back, 0, true
+	f.pace(c)
 	c.C.State = caravan.Returning
 	if len(back) == 0 {
 		f.Arrived(c, f.h.Now())

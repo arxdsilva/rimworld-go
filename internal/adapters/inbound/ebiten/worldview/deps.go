@@ -97,10 +97,16 @@ type presentation interface {
 	ports.Texts
 }
 
+// simulationControl issues simulation commands and owns its speed while a modal is open.
+type simulationControl interface {
+	ports.Commands
+	ports.Speed
+}
+
 // Shell composes the roles the view calls with its Host.
 type Shell interface {
 	ports.Sizer
-	ports.Commands
+	simulationControl
 	ports.World
 	presentation
 	ports.Panels

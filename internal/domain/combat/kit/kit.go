@@ -76,16 +76,27 @@ func Cost(k item.Kind) int {
 	return 0
 }
 
-// Pick spends points on raiders' weapons for a faction of tech, at most
-// limit raiders and at least one. Each raider who can afford a ranged
-// weapon of its faction carries one RangedPct of the time (one of those
-// it can afford, evenly); otherwise a melee weapon, and when that is more
-// than what is left (after the first raider) a knife.
-func Pick(points, limit int, tech faction.Tech, roll func(int) int) []item.Kind {
+// Pick spends points on raiders' weapons for a faction of tech, without a
+// head-count cap (the points are the only limit; vanilla caps raids by
+// points alone) and at least one raider. Each raider who can afford a
+// ranged weapon of its faction carries one RangedPct of the time (one of
+// those it can afford, evenly); otherwise a melee weapon, and when that is
+// more than what is left (after the first raider) a knife.
+func Pick(points int, tech faction.Tech, roll func(int) int) []item.Kind {
+	return pick(points, -1, tech, roll)
+}
+
+// PickLimited is Pick with a caller-supplied head-count limit for fixed-size
+// garrisons such as settlement and quest-site defenders.
+func PickLimited(points, limit int, tech faction.Tech, roll func(int) int) []item.Kind {
+	return pick(points, limit, tech, roll)
+}
+
+func pick(points, limit int, tech faction.Tech, roll func(int) int) []item.Kind {
 	var kit []item.Kind
 	var can [len(ranged)]item.Kind
 	var costs [len(ranged)]int
-	for len(kit) < limit && (points >= Cheapest || len(kit) == 0) {
+	for (limit < 0 || len(kit) < limit) && (points >= Cheapest || len(kit) == 0) {
 		n := 0
 		for _, e := range ranged {
 			if e.cost <= points && fits(e, tech) {

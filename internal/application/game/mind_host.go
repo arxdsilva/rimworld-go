@@ -20,14 +20,13 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/social"
+	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/pkg/msgfmt"
 )
 
-// breakState is a colonist's mental break: its kind and end tick. It stays
-// on the game (g.breaks), which social fights and dementia write too; the
-// mind package runs the mood breaks through mindHost.
+// breakState is the game's active mental-break kind and expiry tick.
 type breakState struct {
 	kind  mentalbreak.Kind
 	until uint64
@@ -69,11 +68,11 @@ func (h mindPawns) Pos(id entity.EntityID) (int, int, bool) {
 	p, ok := h.g.positions.Get(id)
 	return p.X, p.Y, ok
 }
-func (h mindPawns) Alive(id entity.EntityID) bool     { return h.g.onMap(id) }
-func (h mindPawns) Standing(id entity.EntityID) bool  { return h.g.alive(id) && h.g.onMap(id) }
-func (h mindPawns) Colonists() []entity.EntityID      { return h.g.pawnIDs }
-func (h mindPawns) Mood(id entity.EntityID) int       { return h.g.moodOf(id) }
-func (h mindPawns) BreakShift(id entity.EntityID) int { return h.g.breakOffset(id) }
+func (h mindPawns) Alive(id entity.EntityID) bool    { return h.g.onMap(id) }
+func (h mindPawns) Standing(id entity.EntityID) bool { return h.g.standingPawn(id) }
+func (h mindPawns) Colonists() []entity.EntityID     { return h.g.pawnIDs }
+func (h mindPawns) Mood(id entity.EntityID) int      { return h.g.moodOf(id) }
+func (h mindPawns) Awake(id entity.EntityID) bool    { return !h.g.asleep(id) }
 
 // Prisoners is a fresh list (a murderous rage picks its target once).
 func (h mindPawns) Prisoners() []entity.EntityID {
@@ -87,6 +86,8 @@ func (h mindPawns) Prisoners() []entity.EntityID {
 }
 
 type mindBreaks struct{ g *Game }
+
+func (h mindBreaks) BreakShift(id entity.EntityID) int { return h.g.breakOffset(id) }
 
 func (h mindBreaks) Break(id entity.EntityID) (mentalbreak.Kind, uint64, bool) {
 	b, ok := h.g.breaks[id]
@@ -265,7 +266,7 @@ func (h mindBrawls) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool)
 }
 func (h mindBrawls) Fighter(id entity.EntityID) bool { return h.g.standingPawn(id) }
 func (h mindBrawls) Punch(id, foe entity.EntityID) {
-	h.g.combat.Strikes.StrikeRoll(id, foe, weapon.Fists, h.g.stream(streamSocial).IntN) // combat/strike.go
+	h.g.combat.Strikes.StrikeBrawl(id, foe, h.g.stream(streamSocial).IntN) // combat/strike.go
 }
 func (h mindBrawls) PunchTicks(entity.EntityID) int { return weapon.DefOf(weapon.Fists).Cooldown } // SHT-103: melee is never scaled
 func (h mindBrawls) StopBrawl(id entity.EntityID) {
@@ -314,12 +315,14 @@ func (h mindEvents) Started(id entity.EntityID, k mentalbreak.Kind, target entit
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Danger: mind.Hostile(k), Focus: id,
 		Letter: true, Title: "Mental break: " + def.Label, Kind: kind})
 }
-func (h mindEvents) Recovered(id entity.EntityID, _ mentalbreak.Kind) {
+func (h mindEvents) Recovered(id entity.EntityID, _ mentalbreak.Kind, catharsis bool) {
 	g := h.g
-	g.logEvent(id, logEntry{Kind: evlog.Recovered})
-	g.remember(id, mood.Catharsis)
-	pos, _ := g.positions.Get(id)
-	g.message(pos.X, pos.Y, "%s has calmed down and feels a little better.", g.name(id))
+	if catharsis {
+		g.logEvent(id, logEntry{Kind: evlog.Recovered})
+		g.remember(id, mood.Catharsis)
+		pos, _ := g.positions.Get(id)
+		g.message(pos.X, pos.Y, "%s has calmed down and feels a little better.", g.name(id))
+	}
 	g.interrupt(id, job.Cancelled)
 }
 
@@ -329,9 +332,17 @@ type mindMuses struct{ g *Game }
 func (h mindMuses) SkillLevel(id entity.EntityID, sk skill.ID) uint8 {
 	return h.g.skillOf(id, sk).Level
 }
+func (h mindMuses) Passion(id entity.EntityID, sk skill.ID) skill.Passion {
+	return h.g.skillOf(id, sk).Passion
+}
+func (h mindMuses) CanRun(id entity.EntityID) bool {
+	return !h.g.sk.stats[id].hasTrait(trait.Plodding)
+}
+func (h mindMuses) CanShoot(id entity.EntityID) bool {
+	return h.g.canViolence(id) && !h.g.sk.stats[id].hasTrait(trait.Scrapper)
+}
 func (h mindMuses) Inspired(id entity.EntityID, label string) {
-	letterf(h.g, letters.Good, "Inspiration", id, "%s has %s: the next thing %s makes or builds turns out better.",
-		h.g.personName(id), label, h.g.personName(id))
+	letterf(h.g, letters.Good, "Inspiration", id, "%s gained %s.", h.g.personName(id), label)
 }
 func (h mindMuses) InspirationEnded(id entity.EntityID, label string) {
 	p, _ := h.g.positions.Get(id)

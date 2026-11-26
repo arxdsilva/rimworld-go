@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -320,7 +322,43 @@ func TestCasketOccupantsLive(t *testing.T) {
 	for id, p0 := range start {
 		p, ok := g.positions.Get(id)
 		if ok && p == p0 {
-			t.Fatalf("hostile occupant %d never moved", id)
+			// A vault defender may hold its ground while attacking from
+			// weapon range; movement and active combat are both valid.
+			if j, _ := g.jobs.Get(id); j.Kind != job.Attack || j.Target == 0 || !j.Active() {
+				t.Fatalf("hostile occupant %d neither moved nor fought: job %+v", id, j)
+			}
 		}
+	}
+}
+
+func TestSealedCasketRequiresBasicWork(t *testing.T) {
+	g := vaultGame(t, nil, nil, vault.Empty)
+	breachV1(t, g)
+	for _, d := range vaultByID(g, 1).Defenders {
+		g.killAnimal(entity.EntityID(d), 0)
+	}
+	id := bldgIDAt(g, construction.SleeperCasket, 68, 64)
+	g.orderOpenCasket(id)
+	b, _ := g.bldgs.Get(id)
+	if !b.Deconstruct {
+		t.Fatal("casket order not marked")
+	}
+	for _, pid := range g.pawnIDs {
+		onlyWork(g, pid, work.Construct)
+		if g.assignWorkType(pid, work.Construct) {
+			j, _ := g.jobs.Get(pid)
+			if j.Target == id {
+				t.Fatalf("Construct stole Basic casket job: %+v", j)
+			}
+		}
+	}
+	for _, pid := range g.pawnIDs {
+		onlyWork(g, pid, work.Basic)
+	}
+	for i := 0; i < 40 && sealedIn(g, 1) > 0; i++ {
+		g.Step(250)
+	}
+	if sealedIn(g, 1) != 0 {
+		t.Fatal("Basic-only workers did not open the casket")
 	}
 }

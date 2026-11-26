@@ -18,7 +18,9 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/generation"
 	"rimworld-go/internal/domain/world/geology"
+	miningrules "rimworld-go/internal/domain/world/mining"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/terrain"
 )
 
@@ -41,30 +43,11 @@ type (
 	PowerNetView     = mapview.PowerNet
 )
 
-// MineYield is the chunks of its stone dropped by mining one rock tile
-// (SIM-029: a stonecutter cuts each chunk into blocks).
-const MineYield = 1
-
-// MineWork is the labour to mine one rock tile; an ore vein takes half as
-// long again (mineWorkAt).
-const MineWork = 360
-
-// OreYield is the metal dropped by mining one ore tile (SIM-029; original
-// numbers).
-var OreYield = [...]int{geology.Steel: 20, geology.Silver: 25, geology.Gold: 8, geology.Machinery: 2}
+// OreYield is the base ore per rock cell, shared by the scanner.
+var OreYield = geology.MineYields
 
 // oreMetal is the item mined from an ore vein.
-func oreMetal(o geology.Ore) item.Kind {
-	switch o {
-	case geology.Silver:
-		return item.Silver
-	case geology.Gold:
-		return item.Gold
-	case geology.Machinery:
-		return item.Components // buried machinery (NG-1 §4.8)
-	}
-	return item.Steel
-}
+func oreMetal(o geology.Ore) item.Kind { return miningrules.OreMetal(o) }
 
 // TerrainNames maps WorldView.Terrain codes to names.
 func TerrainNames() []string { return terrain.Names() }
@@ -75,10 +58,9 @@ func StoneNames() []string { return mapview.StoneNames() }
 // OreNames maps WorldView.Ore codes to names ("" is none).
 func OreNames() []string { return mapview.OreNames() }
 
-// generate replaces the map with a seeded generated one for the game's
-// biome (temperate forest: the original generator).
-func (g *Game) generate(seed uint64) generation.Result {
-	res := generation.GenerateBiome(seed, g.grid.Width(), g.grid.Height(), biome.DefOf(g.biome))
+// generate creates terrain and natural growth from the colony's planet site.
+func (g *Game) generate(seed uint64, at site.Site) generation.Result {
+	res := generation.GenerateSite(seed, g.grid.Width(), g.grid.Height(), biome.DefOf(g.biome), at)
 	for y := 0; y < g.grid.Height(); y++ {
 		for x := 0; x < g.grid.Width(); x++ {
 			g.setTerrain(x, y, res.Terrain.At(x, y))
@@ -95,6 +77,9 @@ func (g *Game) generate(seed uint64) generation.Result {
 
 func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	wasRock := terrain.IsRockWall(g.terr.At(x, y))
+	if wasRock && !terrain.IsRockWall(t) {
+		noteRoofLoss(g, x, y)
+	}
 	g.terr.Set(x, y, t)
 	if wasRock != terrain.IsRockWall(t) {
 		defer g.reorientAround(x, y) // a door cut into a cliff lines up with the rock (PLAY-011)
@@ -130,12 +115,12 @@ func (g *Game) stoneAt(x, y int) geology.Stone {
 	return s
 }
 
-// mineWorkAt is the labour to mine (x, y): ore veins take longer.
+// mineWorkAt is the labour to mine the actual mineral or stone at (x,y).
 func (g *Game) mineWorkAt(x, y int) int {
-	if g.geo.OreAt(x, y) != geology.NoOre {
-		return MineWork * 3 / 2
+	if ore := g.geo.OreAt(x, y); ore != geology.NoOre {
+		return miningrules.WorkTicksForOre(ore)
 	}
-	return MineWork
+	return miningrules.WorkTicksForStone(g.stoneAt(x, y))
 }
 
 // stoneView is the geology view last handed out, built at ver.
@@ -390,7 +375,7 @@ func (g *Game) assignMine(id entity.EntityID) bool {
 }
 
 func (g *Game) startMine(id entity.EntityID, rx, ry int, forced bool) bool {
-	tx, ty, ok := g.reachableSpot(id, rx, ry)
+	tx, ty, ok := g.reachableSpot(id, rx, ry, true)
 	if !ok {
 		g.postponeTile(id, job.Mine, rx, ry) // walled in: SIM-027
 		return false
@@ -424,37 +409,24 @@ func (g *Game) doMine(id entity.EntityID, j job.Record) {
 	delete(g.mines, [2]int{j.DestX, j.DestY})
 	g.minesVer++
 	if ore != geology.NoOre {
-		g.dropStack(oreMetal(ore), g.skillYield(id, skMining, g.diffYield(DiffMine, OreYield[ore])), j.DestX, j.DestY)
-	} else {
-		g.dropStack(item.ChunkOf(g.stoneAt(j.DestX, j.DestY)), g.skillYield(id, skMining, g.diffYield(DiffMine, MineYield)), j.DestX, j.DestY)
+		g.dropStack(oreMetal(ore), miningrules.Amount(g.diffYield(DiffMine, OreYield[ore]), g.miningYieldPermil(id)), j.DestX, j.DestY)
+	} else if g.stream(streamMining).IntN(4) == 0 { // wiki: Stone chunk, independent of ore yield
+		g.dropStack(item.ChunkOf(g.stoneAt(j.DestX, j.DestY)), 1, j.DestX, j.DestY)
 	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
 
 // reachableSpot is a walkable tile next to (or on) (x, y) the pawn can reach.
-func (g *Game) reachableSpot(id entity.EntityID, x, y int) (int, int, bool) {
-	if g.grid.Walkable(x, y) && g.reachable(id, x, y) {
-		return x, y, true
-	}
-	for _, d := range [][2]int{{0, 1}, {1, 0}, {0, -1}, {-1, 0}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
-		nx, ny := x+d[0], y+d[1]
-		if g.grid.Walkable(nx, ny) && g.reachable(id, nx, ny) {
-			return nx, ny, true
-		}
-	}
-	return 0, 0, false
+func (g *Game) reachableSpot(id entity.EntityID, x, y int, cardinal ...bool) (int, int, bool) {
+	return pathing.ReachableSpot(x, y, len(cardinal) > 0 && cardinal[0], func(x, y int) bool {
+		return g.grid.Walkable(x, y) && g.reachable(id, x, y)
+	})
 }
 
-// dropStack spawns a stack and merges it with any same-kind stack there.
+// dropStack puts down ordinary goods through the physical drop owner.
 func (g *Game) dropStack(k item.Kind, qty, x, y int) {
-	sid, err := g.SpawnStack(k, qty, x, y)
-	if err != nil {
-		return
-	}
-	if st, ok := g.stacks.Get(sid); ok {
-		g.mergeOrSet(sid, st)
-	}
+	g.dropStackOf(item.Stack{Kind: k, Qty: qty}, x, y)
 }
 
 // BiomeInfo is a new-game landing picker card (game/landing); Biomes

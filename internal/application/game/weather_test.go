@@ -6,6 +6,7 @@ package game
 import (
 	"bytes"
 	"math"
+	"rimworld-go/internal/domain/world/site"
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -53,10 +54,10 @@ func TestPhaseWeatherAdvancesDeterministically(t *testing.T) {
 	}
 	c := New(Config{Seed: 2, Width: 24, Height: 14})
 	jumpTo(c, 10, 1)
-	c.generate(2)
+	c.generate(2, site.Site{})
 	d := New(Config{Seed: 3, Width: 24, Height: 14})
 	jumpTo(d, 10, 1)
-	d.generate(3)
+	d.generate(3, site.Site{})
 	// up to 40 weather blocks, stopping at the first block boundary
 	// (after the first block) where they differ
 	for i := 0; i < 40 && (i == 0 || c.Weather() == d.Weather()); i++ {

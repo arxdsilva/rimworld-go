@@ -16,7 +16,7 @@ import (
 // senseJoy is game/sense's JoyRoles (CSE-002, 008).
 type senseJoy struct{ g *Game }
 
-func (h senseJoy) Colonist(id entity.EntityID) bool { return careRoster(h).IsColonist(id) }
+func (h senseJoy) Colonist(id entity.EntityID) bool { return recreationEligible(h.g, id) }
 func (h senseJoy) SeatWanted(id entity.EntityID) bool {
 	g := h.g
 	if j, _ := g.jobs.Get(id); j.Kind == job.SitDown && j.Active() {
@@ -25,7 +25,7 @@ func (h senseJoy) SeatWanted(id entity.EntityID) bool {
 	r := g.rest.Needs.Of(id)
 	return r.Comfort < rest.SeekComfort && uint64(g.clock.Now()) >= r.SeatAt
 }
-func (h senseJoy) Joy(id entity.EntityID) int                     { return h.g.joy[id] }
+func (h senseJoy) Joy(id entity.EntityID) int                     { return joyForScheduling(h.g, id) }
 func (h senseJoy) SetJob(id entity.EntityID, j job.Record)        { h.g.jobs.Set(id, j) }
 func (h senseJoy) StartJob(id entity.EntityID, r job.Record) bool { return h.g.startJob(id, r) }
 func (h senseJoy) Seat(id entity.EntityID, x, y int) (int, int, bool) {
@@ -54,7 +54,10 @@ type doseHabits struct{ g *Game }
 
 func (h doseHabits) Mood(id entity.EntityID) (int, int) {
 	t := h.g.thoughtLevel(id)
-	return h.g.smoothedMood(id, t), t
+	if m, ok := h.g.smoothedMood(id); ok {
+		return m, t
+	}
+	return t, t
 }
 func (h doseHabits) PotentialMood() bool { return senseOf(h.g).Rules.On(gameplay.DrugPotentialMood) }
 func (h doseHabits) PackDoses() bool     { return senseOf(h.g).Rules.On(gameplay.AnyDrugFromPack) }
@@ -79,7 +82,7 @@ func (h doseHabits) SpawnHeld(id entity.EntityID, st item.Stack) (entity.EntityI
 type careGifts struct{ g *Game }
 
 func (h careGifts) GiftFor(visitor, patient entity.EntityID, turn uint64) (item.Kind, entity.EntityID, int, int, bool) {
-	if !senseOf(h.g).Rules.On(gameplay.SickGifts) || h.g.joy[patient] >= recreation.Entertained {
+	if !senseOf(h.g).Rules.On(gameplay.SickGifts) || joyForScheduling(h.g, patient) >= recreation.Entertained {
 		return 0, 0, 0, 0, false
 	}
 	return doseOf(h.g).GiftFor(visitor, patient, turn)

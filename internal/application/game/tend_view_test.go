@@ -38,6 +38,11 @@ func loadAsVersionWith(t *testing.T, g *Game, v int, edit func(*saveState)) *Gam
 	if err := dec.Decode(&s); err != nil {
 		t.Fatal(err)
 	}
+	// Historical save fixtures must encode the animal wire layout that
+	// predates the native v21 grouped-state writer, not just an old header.
+	if v < SaveVersion {
+		legacyAnimalFormat(&s)
+	}
 	info.Version = v
 	edit(&s)
 	var out bytes.Buffer

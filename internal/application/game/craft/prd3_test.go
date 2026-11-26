@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/quality"
@@ -134,7 +135,7 @@ func TestForgeFuel(t *testing.T) {
 	f.build(1, construction.FueledSmithy, 4, 4)
 	f.put(50, item.Stack{Kind: item.Steel, Qty: 20, X: 1, Y: 1})
 	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.MakeMace, Mode: recipe.DoCount, Target: 2}})
-	if c.Shop.Assign(pawn, crafting) {
+	if c.Shop.Assign(pawn, smithing) {
 		t.Fatal("forged with no fuel")
 	}
 	if _, st := c.Bills.Line(1, 0); st != BillNoFuel {
@@ -143,13 +144,13 @@ func TestForgeFuel(t *testing.T) {
 	f.work = 1 // one work unit a tick: one fuel burn a worked tick
 	work := recipe.Core().DefOf(recipe.MakeMace).Work
 	f.fuel[1] = work*fakeWorkBurn + 100
-	j := runBill(t, f, c, crafting, work+10)
+	j := runBill(t, f, c, smithing, work+10)
 	if j.State != job.Complete || f.Stock(item.Mace) != 1 || f.burnt != work*fakeWorkBurn {
 		t.Fatalf("job %v maces %d burnt %d", j.State, f.Stock(item.Mace), f.burnt)
 	}
 	f.jobs = map[entity.EntityID]job.Record{}
 	f.claims = map[entity.EntityID]entity.EntityID{}
-	j = runBill(t, f, c, crafting, 1) // fetched; 100 fuel ticks left, 600 work to do
+	j = runBill(t, f, c, smithing, 1) // fetched; 100 fuel ticks left, 600 work to do
 	j = runBill2(f, c, 100)
 	if j.State != job.Fail || j.Fail != job.Blocked || f.fuel[1] != 0 {
 		t.Fatalf("burnt out: %+v fuel %d", j, f.fuel[1])
@@ -180,7 +181,11 @@ func TestSculpture(t *testing.T) {
 	f.build(1, construction.ArtBench, 10, 10)
 	f.put(50, item.Stack{Kind: item.MarbleBlocks, Qty: 20, X: 1, Y: 1})
 	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.SculptSmall, Mode: recipe.UntilHave, Target: 1}})
-	j := runBill(t, f, c, crafting, 100)
+	if c.Shop.Assign(pawn, crafting) {
+		t.Fatal("Craft admitted an Art bill")
+	}
+	artOnly := work.Mask(0).Set(work.Art, true)
+	j := runBill(t, f, c, artOnly, 100)
 	if j.State != job.Complete {
 		t.Fatalf("job %+v", j)
 	}
@@ -205,7 +210,7 @@ func TestSculpture(t *testing.T) {
 	if len(f.msgs) == 0 || !strings.Contains(f.msgs[len(f.msgs)-1], "Ada finished \""+c.Art.Title(sid, b)+"\"") {
 		t.Fatalf("messages %v", f.msgs)
 	}
-	if c.Shop.Assign(pawn, crafting) {
+	if c.Shop.Assign(pawn, artOnly) {
 		t.Fatal("until you have one: the standing piece counts")
 	}
 	if c.Art.Title(1, f.bldgs[1]) != "" || c.Art.Describe(1, f.bldgs[1]) != "" {
@@ -226,7 +231,7 @@ func TestSculpture(t *testing.T) {
 	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.SculptLarge, Mode: recipe.DoCount, Target: 1}})
 	f.jobs = map[entity.EntityID]job.Record{}
 	f.claims = map[entity.EntityID]entity.EntityID{}
-	if j := runBill(t, f, c, crafting, 100); j.State != job.Fail || j.Fail != job.Blocked || c.Bills.Of(1)[0].Done != 0 {
+	if j := runBill(t, f, c, artOnly, 100); j.State != job.Fail || j.Fail != job.Blocked || c.Bills.Of(1)[0].Done != 0 {
 		t.Fatalf("no room: %+v", j)
 	}
 }

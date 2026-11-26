@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"fmt"
 	"reflect"
+	"rimworld-go/internal/application/game/animalstate"
 	"slices"
 
 	"rimworld-go/internal/application/game/letters"
@@ -16,10 +17,15 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/ship"
+	"rimworld-go/internal/application/game/tabview"
+	"rimworld-go/internal/application/game/tradeview"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/application/game/visit"
+	"rimworld-go/internal/application/game/worldlink"
+	"rimworld-go/internal/application/game/worldpawn"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/economy/item"
@@ -27,7 +33,6 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
-	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -43,45 +48,31 @@ import (
 	"rimworld-go/pkg/randx"
 )
 
-// The world beyond the map (ENG-003, M9). The caravans' state machine
-// lives in game/maps (forming, the road, visits, coming home) over the
-// adapters at the end of this file; members away are stashed off the map
-// (world_stash.go). Away, a member's needs are frozen while the caravan
-// has food; once it runs out its hunger drains and a member dying of
-// malnutrition dies away (dieAway, no corpse on the map).
-//
-// The planet is not saved: it is rebuilt lazily from the setup's World
-// params (deterministic). A legacy colony (no setup) has no world map and
-// cannot send caravans.
-
-// worldStep is phaseWorld's cadence for the slow upkeep (caravans,
-// allowed areas); caravans advance on the hour.
+// Slow caravan and allowed-area upkeep cadence.
 const worldStep = 250
 
-// worldState is the world beyond the map: caravans, the pawns away on
-// them, the visitors on the map and the allowed-area assignments. nil
-// until first needed; saved as World. The Game field is worldSt (g.world
-// is the World read model).
 type worldState struct {
-	// planet is rebuilt from the setup's World params on first use (never
-	// saved); planetTried: the build was attempted (nil: no world).
-	planet      *planet.Planet
-	planetTried bool
-	caravans    []maps.Caravan // ascending ID (game/maps)
-	stashed     []stashRec     // ascending ID (world_stash.go)
-	visitors    []visitorRec   // ascending ID (visitors.go)
-	// areaOf is each restricted colonist's or tame animal's allowed area
-	// ref (areas.go): an area id, or command.AreaHome; absent means
-	// unrestricted. Looked up only, never iterated for output unsorted.
+	// Maintenance follows animals across map boundaries and off-map stashes.
+	trainingMaintenance map[entity.EntityID]training.Maintenance
+	// Planet is lazily rebuilt from setup, never serialized.
+	planet              *planet.Planet
+	planetTried         bool
+	link                *worldlink.Link      // historical standalone world's saved location
+	caravans            []maps.Caravan       // ascending ID (game/maps)
+	marketReply         tabview.MarketReply  // transient UI receipt
+	markets             maps.Markets         // authoritative settlement inventory and old-save recovery
+	stashed             []stashRec           // ascending ID (world_stash.go)
+	worldPawnMothballed worldpawn.Mothballed // authoritative off-map cadence
+	visitors            []visitorRec         // ascending ID (visitors.go)
+	visitGroups         []visit.Group
+	nextVisitGroup      uint64
+	// areaOf maps restricted residents/animals to saved area refs.
 	areaOf map[entity.EntityID]int
-	// pathFree is the pawn whose job startJob is pathing free of its area
-	// right now (areas.go; transient, 0 between calls).
+	// pathFree is the transient area-path exception for the active pawn.
 	pathFree entity.EntityID
-	// huntOut is, per hunter, the prey of its chase and when it was first
-	// seen outside the hunter's area (area_dest.go; saved).
+	// huntOut saves hunter/prey area-crossing observations.
 	huntOut map[entity.EntityID]huntOutRec
-	// areaVer is each area's version (by id), areaGen the last one handed
-	// out (areas.go; not saved: views only).
+	// areaVer/areaGen track view-only area updates.
 	areaVer     map[uint16]uint64
 	areaGen     uint64
 	ship        *ship.State   // story.go: game/ship (AX-8), built on first use
@@ -99,21 +90,25 @@ type worldState struct {
 
 // worldSave is worldState as saved.
 type worldSave struct {
-	Version  uint8 // format of this block; 0 = empty
-	Caravans []maps.Caravan
-	Stashed  []stashRec
-	Visitors []visitorRec
-	// AreaOf is the allowed-area assignments: Version 1 saves hold area
-	// positions (index i is id i+1 now), Version 2 area refs (PLAY-015).
+	Version          uint8 // format of this block; 0 = empty
+	Caravans         []maps.Caravan
+	Stashed          []stashRec
+	Visitors         []visitorRec
+	VisitGroups      []visit.Group
+	NextVisitGroup   uint64
+	Mothballed       []entity.EntityID // active lightweight world-pawn cadence
+	SettlementStocks []maps.SettlementStock
+	// AreaOf stores versioned allowed-area references.
 	AreaOf  []areaAssign
-	HuntOut []huntOutRec // area_dest.go
-	AX9     *travel.Save // game/travel (AX-9): absent in older saves
-	Atlas   *maps.Atlas  // game/maps (MAP-01): absent while one map was ever open
-	Quests  *quest.Save  // game/quest (QST-1): absent before the first quest or in a legacy colony
+	HuntOut []huntOutRec    // area_dest.go
+	AX9     *travel.Save    // game/travel (AX-9): absent in older saves
+	Atlas   *maps.Atlas     // game/maps (MAP-01): absent while one map was ever open
+	Quests  *quest.Save     // game/quest (QST-1): absent before the first quest or in a legacy colony
+	Link    *worldlink.Link // added historic colony world binding, absent in older saves
 }
 
-// worldSaveVersion is the format exportWorld writes (2: area refs).
-const worldSaveVersion = 2
+// worldSaveVersion is the format exportWorld writes (3: visit groups).
+const worldSaveVersion = 3
 
 // areaAssign is one pawn's allowed area in a save.
 type areaAssign struct {
@@ -129,32 +124,49 @@ func (g *Game) worldS() *worldState {
 	return g.worldSt
 }
 
-// worldPlanet is the colony's planet, rebuilt from its setup on first use;
-// nil for a colony without a world map (legacy, or no world params).
+// worldPlanet caches the rebuilt world without serializing its geometry.
 func (g *Game) worldPlanet() *planet.Planet {
 	w := g.worldS()
-	if w.planetTried {
-		return w.planet
+	if !w.planetTried {
+		w.planetTried = true
+		if g.hasSetup() {
+			w.planet = maps.BuildPlanet(g.ng.setup.World.WithCalendar(g.clock.Calendar()), g.ng.setup.Tile, g.ng.factions)
+		} else {
+			w.planet = worldlink.Planet(w.link, g.ng.factions)
+		}
 	}
-	w.planetTried = true
-	if !g.hasSetup() || g.ng.setup.World.Coverage <= 0 {
-		return nil
-	}
-	p := planet.Build(g.ng.setup.World)
-	if g.ng.setup.Tile < 0 || g.ng.setup.Tile >= p.TileCount() {
-		return nil
-	}
-	w.planet = p
-	maps.Prune(p, g.ng.factions) // MAP-05: settlements destroyed in this game stay off the rebuilt planet
-	return p
+	return w.planet
 }
 
 // colonyTile is the colony's world tile (-1: no world map).
 func (g *Game) colonyTile() int {
-	if !g.hasSetup() || g.ng.setup.World.Coverage <= 0 {
-		return -1
+	if g.hasSetup() && g.ng.setup.World.Coverage > 0 {
+		return g.ng.setup.Tile
 	}
-	return g.ng.setup.Tile
+	if g.worldSt != nil && g.worldSt.link != nil {
+		return g.worldSt.link.Tile
+	}
+	return -1
+}
+
+// AttachPlanet connects a standalone historical colony to a generated world.
+// Existing map geometry, residents, simulation streams and history are retained.
+func AttachPlanet(g *Game, params planet.Params) (bool, error) {
+	if g == nil {
+		return false, fmt.Errorf("missing colony")
+	}
+	w := g.worldSt
+	busy := w != nil && (len(w.caravans) != 0 || w.markets.Len() != 0 || !w.atlas.Empty() || !w.ax9.Empty())
+	ctx := worldlink.Context{HasWorld: g.colonyTile() >= 0 || w != nil && w.link != nil, Standalone: !g.hasSetup() && len(g.maps) == 1, Active: busy}
+	link, factions, changed, err := ctx.Attach(params.WithCalendar(g.clock.Calendar()), g.ng.factions)
+	if !changed || err != nil {
+		return changed, err
+	}
+	w = g.worldS()
+	w.link, g.ng.factions = link, factions
+	w.planet, w.planetTried = nil, false
+	g.viewGen++
+	return true, nil
 }
 
 // phaseWorld runs with a world after phaseIncidents and the colony's
@@ -165,6 +177,9 @@ func (g *Game) phaseWorld() {
 		fleetOf(g).CheckForming(now) // each map's own forming caravans
 	}
 	travelOf(g).TickPass(now, first) // game/travel (AX-9): each map's caskets and boarders, the colony's flights and sites
+	if first {
+		worldpawn.Step(offMapPawns{g}, &w.worldPawnMothballed, now)
+	}
 }
 
 // worldUpkeep is the colony's allowed areas, caravans and ship every
@@ -222,47 +237,27 @@ func (g *Game) LaunchReason(pod entity.EntityID, dest int, mode uint8) (string, 
 	return travelOf(g).LaunchReason(pod, dest, mode)
 }
 
-// settlementFaction is the faction (1 + index) whose settlement stands on
-// tile t, 0 when none.
-func (g *Game) settlementFaction(t int) int {
-	for i, f := range g.ng.factions {
-		if slices.Contains(f.Settlements, t) {
-			return i + 1
-		}
-	}
-	return 0
-}
+// settlementFaction is the 1-based faction index occupying world tile t.
+func (g *Game) settlementFaction(t int) int { return travel.SettlementFaction(g.ng.factions, t) }
 
-// tileName names world tile t: its settlement, else "tile N".
+// tileName resolves the generated settlement or the fallback faction/tile name.
 func (g *Game) tileName(t int) string {
-	if p := g.worldPlanet(); p != nil {
-		if n := p.SettlementName(t); n != "" {
-			return n
-		}
-	}
-	if f := g.factionOf(g.settlementFaction(t)); f != nil {
-		return "a settlement of " + f.Name
-	}
-	return fmt.Sprintf("tile %d", t)
+	return travel.TileName(g.worldPlanet(), g.ng.factions, t)
 }
 
-// dieAway kills caravan member id off the map: no corpse, its weapon lost
-// with it; the colony grieves as for any death.
+// dieAway kills a caravan member, leaving no corpse on the map.
 func dieAway(g *Game, id entity.EntityID, cause health.Cause) {
-	c := fleetOf(g).Of(id)
+	f := fleetOf(g)
+	cid := maps.MemberCaravanID(f, id)
 	delete(g.equip, id)
 	g.setWhere(id, whereColony) // the colony's death (its history line), not a stranger's
 	g.dieBy(id, cause, 0)
 	dropStash(g, id)
-	if c != nil {
-		c.C.Members = slices.DeleteFunc(c.C.Members, func(m uint64) bool { return m == uint64(id) })
-	}
+	maps.RemoveDeadMember(f, cid, id)
 	letterf(g, letters.Caution, "Death on the road", 0, "%s died on the caravan's journey.", g.personName(id))
 }
 
-// worldEdge is a walkable map-edge tile from which the colony can be
-// reached (walls and doors broken if need be), drawn from the world
-// stream: what edgeTile is for raids, without touching g.rng.
+// worldEdge picks a reachable edge without consuming g.rng.
 func (g *Game) worldEdge() (int, int, bool) {
 	hx, hy := g.home()
 	if x, y, ok := g.combat.Tiles.WalkableNear(hx, hy, homeReach(g)); ok {
@@ -282,13 +277,20 @@ func (g *Game) exportWorld() *worldSave {
 	if w != nil && w.quests != nil {
 		qs = w.quests.Export() // nil while it holds nothing
 	}
-	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 && w.ax9.Empty() && w.atlas.Empty() && qs == nil {
+	if w == nil || w.link == nil && len(w.caravans) == 0 && w.markets.Len() == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.visitGroups) == 0 && w.nextVisitGroup == 0 && len(w.worldPawnMothballed) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 && w.ax9.Empty() && w.atlas.Empty() && qs == nil {
 		return nil
 	}
-	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors), Quests: qs}
-	for _, c := range w.caravans {
-		s.Caravans = append(s.Caravans, c.Clone())
+	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors), NextVisitGroup: w.nextVisitGroup, Quests: qs, Link: w.link.Snapshot(g.ng.factions)}
+	for i := range s.Stashed {
+		if r := s.Stashed[i].Raider; r != nil {
+			copy := *r // arrival mutates the original raider's group
+			s.Stashed[i].Raider = &copy
+		}
 	}
+	s.Mothballed = w.worldPawnMothballed.Export()
+	s.VisitGroups = visit.CloneGroups(w.visitGroups)
+	s.Caravans = maps.CloneCaravans(w.caravans)
+	s.SettlementStocks = w.markets.Snapshot()
 	for id, a := range w.areaOf {
 		s.AreaOf = append(s.AreaOf, areaAssign{Pawn: id, Area: a})
 	}
@@ -300,18 +302,46 @@ func (g *Game) exportWorld() *worldSave {
 	return s
 }
 
-// importWorld restores exportWorld's state (nil: fresh).
+// worldAnimalRefs creates private copies of stashed beasts before grouped
+// encoding zeroes the legacy world markers. Live stashes remain unchanged.
+func worldAnimalRefs(w *worldSave) []animalstate.OffMapRef {
+	var refs []animalstate.OffMapRef
+	for i := range w.Stashed {
+		r := &w.Stashed[i]
+		if r.Beast != nil {
+			state := *r.Beast
+			r.Beast = &state
+			refs = append(refs, animalstate.OffMapRef{ID: r.ID, State: r.Beast})
+		}
+	}
+	return refs
+}
+
+// importWorld restores the World save (nil: fresh).
 func (g *Game) importWorld(s *worldSave) {
 	g.worldSt = nil
 	if s == nil {
 		return
 	}
 	w := g.worldS()
-	for _, c := range s.Caravans {
-		w.caravans = append(w.caravans, c.Clone())
-	}
+	w.link, g.ng.factions = worldlink.Restore(s.Link, g.hasSetup(), g.ng.factions)
+	w.caravans = maps.CloneCaravans(s.Caravans)
+	w.markets.Restore(s.SettlementStocks, len(s.Caravans) > 0)
 	w.stashed = slices.Clone(s.Stashed)
+	for i := range w.stashed {
+		if beast := w.stashed[i].Beast; beast != nil {
+			body.MigrateReplacements(beast.Body)
+		}
+	}
 	w.visitors = slices.Clone(s.Visitors)
+	w.nextVisitGroup = s.NextVisitGroup
+	w.worldPawnMothballed = worldpawn.ImportMothballed(s.Mothballed)
+	w.visitGroups = visit.CloneGroups(s.VisitGroups)
+	for _, gr := range w.visitGroups {
+		if gr.ID > w.nextVisitGroup {
+			w.nextVisitGroup = gr.ID
+		}
+	}
 	for _, a := range s.AreaOf {
 		if w.areaOf == nil {
 			w.areaOf = map[entity.EntityID]int{}
@@ -327,24 +357,23 @@ func (g *Game) importWorld(s *worldSave) {
 	}
 }
 
-// worldMapView builds the World tab: the colony tile and every caravan.
+// worldMapView builds the World tab from copies of the caravan state.
 func (g *Game) worldMapView() WorldMapView {
-	v := WorldMapView{Tile: g.colonyTile()}
 	if g.worldSt == nil {
-		return v
+		return WorldMapView{Tile: g.colonyTile()}
 	}
-	for i := range g.worldSt.caravans {
-		c := &g.worldSt.caravans[i]
-		cv := CaravanView{ID: c.C.ID, Tile: c.C.Tile, Dest: c.C.Dest, Progress: c.C.Progress / 10, State: c.C.State.Label()}
-		if c.Back {
-			cv.Dest = c.Home
-		}
-		for _, m := range c.C.Members {
-			cv.Members = append(cv.Members, g.personName(entity.EntityID(m)))
-			cv.Health = append(cv.Health, g.caravanMemberStatus(entity.EntityID(m))) // caravan_medical.go
-		}
-		v.Caravans = append(v.Caravans, cv)
-	}
+	v := tabview.BuildWorldMap(g.colonyTile(), uint64(g.clock.Now()), g.worldSt.caravans,
+		g.caravanMemberFacts,
+		func(id uint64) []item.Stack {
+			if g.worldSt.ax9 == nil {
+				return nil
+			}
+			return travelOf(g).Goods(id)
+		},
+		func(c *maps.Caravan) (tabview.MarketView, bool) {
+			return tradeview.Visiting(uint64(g.clock.Now()), c, marketWorldSource{g})
+		}, func(c *maps.Caravan, goods []item.Stack) travel.SplitView { return fleetOf(g).SplitView(c, goods) })
+	v.MarketReply = g.worldSt.marketReply
 	return v
 }
 
@@ -391,7 +420,7 @@ func (h travelHost) PutDown(c entity.EntityID)                 { h.g.care.DropPa
 func (h travelHost) Move(id entity.EntityID, x, y int)         { h.g.cmdMove(id, x, y) }
 func (h travelHost) DropStack(st item.Stack, x, y int)         { h.g.dropStackOf(st, x, y) }
 func (h travelHost) MealRule() item.MealRule                   { return item.RuleOf(senseOf(h.g).Rules) }
-func (h travelHost) RemoveAnimal(id entity.EntityID)           { h.g.removeAnimal(id) }
+func (h travelHost) RemoveAnimal(id entity.EntityID)           { h.g.detachAnimal(id) }
 func (h travelHost) Planet() *planet.Planet                    { return h.g.worldPlanet() }
 
 // ColonyTile is the viewed-from map's own world tile: pods launch from it
@@ -414,17 +443,22 @@ func (h travelHost) Sicken(id entity.EntityID)         { cryptoSicken(h.g, id) }
 func (h travelHost) Explode(x, y int, d explosion.Def) { h.g.combat.Blasts.Explode(0, 0, x, y, d) }
 
 // Assault: pod passengers on caravan cid attack the settlement under them.
-func (h travelHost) Assault(cid uint64, centre bool) { fleetOf(h.g).Assault(cid, centre) }
+func (h travelHost) Assault(cid uint64, centre bool) { fleetOf(h.g).Life().Assault(cid, centre) }
 
 // MapOpen, LandOn: pods onto an open map (MAP-10, game/maps pod.go).
-func (h travelHost) MapOpen(t int) bool { return fleetOf(h.g).MapOpen(t) }
+func (h travelHost) MapOpen(t int) bool { return fleetOf(h.g).Life().MapOpen(t) }
 func (h travelHost) LandOn(members, animals []uint64, t int, centre, spot bool, x, y int) uint64 {
 	return fleetOf(h.g).LandOn(members, animals, t, centre, spot, x, y)
 }
 
 // FoundReason, Found: pods founding a colony (MAP-06).
-func (h travelHost) FoundReason(t int) string { return fleetOf(h.g).FoundReason(t) }
-func (h travelHost) Found(cid uint64) string  { return fleetOf(h.g).Found(cid) }
+func (h travelHost) FoundReason(t int) string { return fleetOf(h.g).Life().FoundReason(t) }
+func (h travelHost) Found(cid uint64) string  { return fleetOf(h.g).Life().Found(cid) }
+
+// LandedCargo refreshes pace after the physical pod hold is committed.
+func (h travelHost) LandedCargo(cid uint64) {
+	maps.RefreshPace(fleetOf(h.g), entity.EntityID(cid))
+}
 
 // Land: pod passengers become a caravan arrived on t (home by land).
 func (h travelHost) Land(members, animals []uint64, t int) uint64 {
@@ -436,18 +470,18 @@ func (h travelHost) Land(members, animals []uint64, t int) uint64 {
 func fleetOf(g *Game) maps.Fleet {
 	w := g.worldS()
 	if w.mapsH == nil {
-		w.mapsH = mapsHost{mapsCrew{g}, mapsWalk{g}, mapsGround{g}, mapsGlobe{g}, mapsRoad{g}, mapsOpen{g}, mapsPop{g}, mapsSettle{g}, mapsFound{g}, mapsWaylay{g}, mapsQuests{g}} // built once
+		w.mapsH = mapsHost{mapsCrew{g}, mapsWalk{g}, mapsGround{g}, mapsGlobe{g}, mapsRoad{g}, mapsMarket{g}, mapsOpen{g}, mapsPop{g}, mapsSettle{g}, mapsFound{g}, mapsWaylay{g}, mapsQuests{g}} // built once
 	}
-	return maps.Of(&w.caravans, &w.atlas, w.mapsH)
+	return maps.Of(&w.caravans, &w.atlas, w.mapsH).WithMarkets(&w.markets)
 }
 
-// mapsHost is game/maps' roles (maps/deps.go) over small adapters.
 type mapsHost struct {
 	mapsCrew
 	mapsWalk
 	mapsGround
 	mapsGlobe
 	mapsRoad
+	mapsMarket
 	mapsOpen
 	mapsPop
 	mapsSettle
@@ -488,8 +522,7 @@ func (h mapsWalk) StartExit(id entity.EntityID) bool {
 		return false
 	}
 	ex, ey := nearestEdge(pos, h.g.grid.Width(), h.g.grid.Height())
-	x, y, ok := h.g.combat.Tiles.WalkableNear(ex, ey, 3)
-	return ok && h.g.startJob(id, job.Record{Kind: job.ExitMap, TX: x, TY: y})
+	return maps.TryExit(mapsGround(h), id, ex, ey, h.g.pathDeferred, h.g.startJob)
 }
 func (h mapsWalk) Rehold(id, holder entity.EntityID) {
 	w := h.g.worldS()
@@ -585,7 +618,7 @@ func (h mapsRoad) Talk(a, b entity.EntityID, k social.Interaction, joy int, now 
 	h.g.ensurePerson(b)
 	h.g.applyInteraction(a, b, k, now) // social.go
 	for _, id := range [2]entity.EntityID{a, b} {
-		h.g.joy[id] = min(h.g.joy[id]+joy, recreation.Full)
+		addRecreation(h.g, id, joy)
 	}
 }
 func (h mapsRoad) Roll(n int) int { return h.g.stream(streamWorld).IntN(n) }
@@ -635,7 +668,7 @@ func DevOpenMap(g *Game, tile int) (MapID, bool) {
 		return MapID(id), ok
 	}
 	id := g.worldS().atlas.Add(maps.Site, -1, now)
-	m := newMapState(Config{Seed: maps.SeedFor(g.streams.seed, -1, id), Width: 60, Height: 60, Biome: g.maps[0].biome}, id)
+	m := newMapState(Config{Seed: maps.SeedFor(g.streams.seed, -1, id), Width: 60, Height: 60, Biome: g.maps[0].biome, Calendar: g.clock.Calendar()}, id)
 	cur := g.mapState
 	g.maps, g.mapState = append(g.maps, m), m
 	initMapHosts(g)
@@ -679,6 +712,7 @@ func closeMap(g *Game, id uint32) {
 // forget drops entity id from every colony-wide table keyed by entity
 // (its map's own stores close with the map).
 func forget(g *Game, id entity.EntityID) {
+	g.craft.Bills.Forget(id)
 	g.names.Delete(id)
 	g.need.Delete(id)
 	g.vital.Delete(id)
@@ -708,16 +742,16 @@ func (h mapsOpen) Switch(id uint32) bool {
 // Open builds map id on world tile (MAP-01): the generator over the
 // tile's site, the lump, its wildlife from the map's own stream (map 0's
 // never moves), fog and warm indexes. The colony's landing spot is kept.
-func (h mapsOpen) Open(id uint32, tile, w, ht int, seed uint64, lump item.Kind, qty int) (maps.Opened, bool) {
+func (h mapsOpen) Open(id uint32, tile, w, ht int, seed uint64, lump item.Kind, qty, cells int) (maps.Opened, bool) {
 	g := h.g
 	p := g.worldPlanet()
 	if p == nil || tile < 0 || tile >= p.TileCount() || !p.Land(tile) {
 		return maps.Opened{}, false
 	}
 	st := p.Site(tile)
-	m := newMapState(Config{Seed: seed, Width: w, Height: ht, Biome: st.Biome}, id)
+	m := newMapState(Config{Seed: seed, Width: w, Height: ht, Biome: st.Biome, Calendar: g.clock.Calendar()}, id)
 	if m.tile = tile; st.Climate != (temperature.Climate{}) {
-		m.climate = st.Climate
+		m.climate = st.Climate.WithCalendar(g.clock.Calendar())
 	}
 	cur, rng, landing, has := g.mapState, g.rng, g.ng.landing, g.ng.hasLanding
 	g.maps = append(g.maps, m)
@@ -725,7 +759,7 @@ func (h mapsOpen) Open(id uint32, tile, w, ht int, seed uint64, lump item.Kind, 
 	initMapHosts(g)
 	res, _ := pipeline.Generate(mapgen.Config{Seed: seed, W: w, H: ht, Site: st, Biome: biome.DefOf(st.Biome)})
 	g.applySite(res) // setup_mapgen.go: sets the landing spot it found
-	o := maps.Opened{Cells: placeLump(g, lump, qty), Land: g.ng.landing, HasLand: g.ng.hasLanding}
+	o := maps.Opened{Cells: maps.PlaceLump(mapsPop{g}, lump, qty, cells), Land: g.ng.landing, HasLand: g.ng.hasLanding}
 	g.spawnWildlife()
 	if o.HasLand {
 		g.fogFromStart(o.Land[0], o.Land[1])
@@ -740,88 +774,51 @@ func (h mapsOpen) Open(id uint32, tile, w, ht int, seed uint64, lump item.Kind, 
 // mapWildSalt keeps a new map's wildlife stream apart from its generator.
 const mapWildSalt = 0x5717E_3A9
 
-// placeLump lays a mineral site's lump near the centre: rock cells
-// holding its ore, enough to mine about qty (OreYield a cell); a mineral
-// with no vein kind lies dug out in one stack. The ore cells, or nil.
-func placeLump(g *Game, k item.Kind, qty int) []int {
-	ore := map[item.Kind]geology.Ore{item.Steel: geology.Steel, item.Silver: geology.Silver, item.Gold: geology.Gold, item.Components: geology.Machinery}[k]
-	if k == 0 || qty <= 0 {
-		return nil
-	}
-	n, w := 1, g.grid.Width()
-	if ore != geology.NoOre {
-		n = (qty + OreYield[ore] - 1) / OreYield[ore]
-	}
+type mapsPop struct{ g *Game }
+
+func (h mapsPop) Seed() uint64                                { return h.g.streams.seed }
+func (h mapsPop) Raid()                                       { shipHost(h).Raid(false) }
+func (h mapsPop) Census(cells []int) maps.Census              { return maps.CountSite(h, cells) }
+func (h mapsPop) Aboard() (people, animals []entity.EntityID) { return maps.Aboard(h) }
+
+func (h mapsPop) Colonists() []entity.EntityID     { return h.g.pawnIDs }
+func (h mapsPop) RaiderIDs() []entity.EntityID     { return h.g.raiderIDs }
+func (h mapsPop) AnimalIDs() []entity.EntityID     { return h.g.animalIDs }
+func (h mapsPop) Prisoner(id entity.EntityID) bool { return h.g.prison.Is(id) }
+func (h mapsPop) Threat(id entity.EntityID) bool   { return h.g.isRaider(id) && h.g.standingPawn(id) }
+func (h mapsPop) Tame(id entity.EntityID) bool     { a := h.g.animals.Ref(id); return a != nil && a.Tame }
+func (h mapsPop) Manhunter(id entity.EntityID) bool {
+	a := h.g.animals.Ref(id)
+	return a != nil && a.Manhunter > uint64(h.g.clock.Now())
+}
+func (h mapsPop) OreCell(i int) bool {
+	w := h.g.grid.Width()
+	return h.g.geo.OreAt(i%w, i/w) != geology.NoOre
+}
+
+func (h mapsPop) LumpSize() (int, int) { return h.g.grid.Width(), h.g.grid.Height() }
+func (h mapsPop) LumpTaken() map[[2]int]bool {
 	taken := map[[2]int]bool{}
-	for _, sid := range g.itemIDs {
-		if s, ok := g.stacks.Get(sid); ok {
+	for _, id := range h.g.itemIDs {
+		if s, ok := h.g.stacks.Get(id); ok {
 			taken[[2]int{s.X, s.Y}] = true
 		}
 	}
-	cells := maps.LumpCells(w, g.grid.Height(), n, func(x, y int) bool {
-		return g.dryWalkable(x, y) && g.plantAt(x, y) == 0 && g.layerBlockerAt(x, y) == 0 && !taken[[2]int{x, y}]
-	})
-	if ore == geology.NoOre {
-		if len(cells) > 0 {
-			g.dropStack(k, qty, cells[0]%w, cells[0]/w)
-		}
-		return nil
-	}
-	for _, c := range cells {
-		x, y := c%w, c/w
-		g.setTerrain(x, y, terrain.Rock)
-		if g.geo.At(x, y) == geology.None {
-			g.geo.Set(x, y, geology.Granite)
-		}
-		g.geo.SetOre(x, y, ore)
-	}
-	return cells
+	return taken
 }
-
-type mapsPop struct{ g *Game }
-
-func (h mapsPop) Seed() uint64 { return h.g.streams.seed }
-func (h mapsPop) Raid()        { shipHost(h).Raid(false) } // story.go: the storyteller's raid
-func (h mapsPop) Census(cells []int) maps.Census {
+func (h mapsPop) LumpFree(x, y int) bool {
 	g := h.g
-	c := maps.Census{Ours: len(g.pawnIDs)}
-	for _, id := range g.raiderIDs {
-		if g.prison.Is(id) {
-			c.Ours++
-		} else if g.isRaider(id) && g.standingPawn(id) {
-			c.Hostiles++
-		}
-	}
-	for _, id := range g.animalIDs {
-		if a := g.animals.Ref(id); a != nil && a.Tame {
-			c.Ours++
-		} else if a != nil && a.Manhunter > uint64(g.clock.Now()) {
-			c.Hostiles++ // MAP-08: a manhunter ambush is a fight too
-		}
-	}
-	for _, i := range cells {
-		if g.geo.OreAt(i%g.grid.Width(), i/g.grid.Width()) != geology.NoOre {
-			c.Ore++
-		}
-	}
-	return c
+	return g.dryWalkable(x, y) && g.plantAt(x, y) == 0 && g.layerBlockerAt(x, y) == 0
 }
-func (h mapsPop) Aboard() (people, animals []entity.EntityID) {
+func (h mapsPop) LumpVein(x, y int, ore geology.Ore) {
 	g := h.g
-	people = slices.Clone(g.pawnIDs)
-	for _, id := range g.raiderIDs {
-		if g.prison.Is(id) {
-			people = append(people, id)
-		}
+	g.setTerrain(x, y, terrain.Rock)
+	if g.geo.At(x, y) == geology.None {
+		g.geo.Set(x, y, geology.Granite)
 	}
-	slices.Sort(people)
-	for _, id := range g.animalIDs {
-		if a := g.animals.Ref(id); a != nil && a.Tame {
-			animals = append(animals, id)
-		}
-	}
-	return people, animals
+	g.geo.SetOre(x, y, ore)
 }
+func (h mapsPop) LumpStack(k item.Kind, qty, x, y int) { h.g.dropStack(k, qty, x, y) }
 
 // PackUp: a settlement's goods start forbidden like any found loot, and
 // taking them is what the pack-up is for, so there it allows what was found
@@ -830,14 +827,58 @@ func (h mapsPop) PackUp(cid uint64) {
 	g := h.g
 	m := atlasRow(g)
 	loot := m != nil && (m.Kind == maps.Settlement || m.Defeated) // a fallen settlement is a Site
-	for _, sid := range slices.Clone(g.itemIDs) {
-		if st, ok := g.stacks.Get(sid); ok && (!st.Forbidden || loot && st.Unclaimed) {
-			st.Forbidden = false
-			travelOf(g).Carry(cid, st)
-			g.deleteItem(sid)
+	travel.PackMapGoods(travelOf(g), haulHost{g}, cid, loot)
+}
+
+// CargoSource reads a detached eligible source stack on the specified map.
+// The map and native entity ID identify the source; no external source
+// label or actor authority is inferred.
+func CargoSource(g *Game, mapID MapID, id entity.EntityID) (item.Stack, bool) {
+	m := mapByID(g, uint32(mapID))
+	if m == nil {
+		return item.Stack{}, false
+	}
+	prev := g.mapState
+	g.mapState = m
+	defer func() { g.mapState = prev }()
+	return cargoSource(g, id)
+}
+
+func cargoSource(g *Game, id entity.EntityID) (item.Stack, bool) {
+	st, ok := g.stacks.Get(id)
+	if !ok || st.Qty <= 0 || st.Unclaimed || st.Forbidden || g.reserve.Free(id, st.Qty) != st.Qty {
+		return item.Stack{}, false
+	}
+	x, y := st.X, st.Y
+	if st.Carrier != 0 {
+		p, here := g.positions.Get(st.Carrier)
+		j, _ := g.jobs.Get(st.Carrier)
+		if !here || !slices.Contains(g.pawnIDs, st.Carrier) || !g.alive(st.Carrier) || g.isStashed(st.Carrier) || j.Active() && j.Carry == id {
+			return item.Stack{}, false
 		}
+		x, y = p.X, p.Y
+	}
+	return st, g.grid.InBounds(x, y) && !g.fogged(x, y)
+}
+
+// recoverCargo delegates command admission and committed pace to the fleet.
+func recoverCargo(g *Game, c command.Command) {
+	if g.worldSt != nil {
+		maps.RecoverCargo(fleetOf(g), recoverySource{g}, c)
 	}
 }
+
+type recoverySource struct{ g *Game }
+
+func (h recoverySource) Source(id entity.EntityID) (item.Stack, bool) { return cargoSource(h.g, id) }
+func (h recoverySource) CrewEligible(id, cid entity.EntityID) bool {
+	g := h.g
+	i, ok := slices.BinarySearchFunc(g.worldSt.stashed, id, stashCmp)
+	p := g.personOf(id)
+	return ok && g.worldSt.stashed[i].Holder == cid && !g.worldSt.stashed[i].Prisoner && g.worldSt.stashed[i].Beast == nil && p != nil && p.Faction == 0 && p.Where == whereCaravan && g.alive(id)
+}
+func (h recoverySource) RecoverFreight() maps.RecoveryFreight             { return travelOf(h.g) }
+func (h recoverySource) Debit(id entity.EntityID, st item.Stack, qty int) { h.g.takeItems(id, st, qty) }
 
 // atlasRow is the current map's atlas row (nil: the first map or none).
 func atlasRow(g *Game) *maps.Meta {
@@ -852,6 +893,7 @@ func atlasRow(g *Game) *maps.Meta {
 func DevDemand(g *Game, id entity.EntityID, st item.Stack) {
 	g.viewGen++
 	travelOf(g).Carry(uint64(id), st)
+	maps.RefreshPace(fleetOf(g), id)
 	maps.DevDemand(fleetOf(g), id, uint64(g.clock.Now()))
 }
 
@@ -885,7 +927,7 @@ func SettleReason(g *Game, id uint64) string {
 	if g.worldSt == nil {
 		return "No such caravan."
 	}
-	return fleetOf(g).SettleReason(entity.EntityID(id))
+	return fleetOf(g).Life().SettleReason(entity.EntityID(id))
 }
 
 // threatTarget is the map a threat strikes (MAP-12): the current one with one
@@ -936,8 +978,12 @@ func (h mapsFound) Promote(next uint32, land [2]int, hasLand bool) {
 	n.id, old.id = 0, next
 	g.maps[slices.Index(g.maps, n)], g.maps[0] = old, n
 	g.ng.landing, g.ng.hasLanding = land, hasLand
-	if p := g.worldPlanet(); p != nil && g.ng.setup != nil {
-		g.ng.setup.Tile, g.ng.setup.Site = n.tile, p.Site(n.tile)
+	if p := g.worldPlanet(); p != nil {
+		if g.ng.setup != nil {
+			g.ng.setup.Tile, g.ng.setup.Site = n.tile, p.Site(n.tile)
+		} else if g.worldSt.link != nil {
+			g.worldSt.link.Tile = n.tile
+		}
 	}
 	swap := func(id MapID) MapID {
 		switch id {

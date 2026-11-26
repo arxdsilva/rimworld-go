@@ -957,7 +957,7 @@ follow
 mate
 ```
 
-Domestication can later add training, master, allowed zone, hauling, guarding, rescue.
+Domestication supports training, master, allowed zone, trained hauling and guarding. Separate Rescue training remains unimplemented.
 
 Inactive herds should update at low frequency.
 

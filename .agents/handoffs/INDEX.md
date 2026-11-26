@@ -30,6 +30,8 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 |---|---|---|---|
 | AI-001-agents-folder | One `.agents/` folder for every agent tool | 2026-11-06 | [AI.md](AI.md#ai-001-agents-folder) |
 | AI-002-no-tool-folders | Agent files live only in `.agents/`; the repo keeps no tool folder | 2026-11-08 | [AI.md](AI.md#ai-002-no-tool-folders) |
+| AIL-1-ground-rescue-live-safety | Ground rescue live safety | 2026-11-25 | [MED.md](MED.md#ail-1-ground-rescue-live-safety) |
+| AIL-1-live-rescue-arrival | Live clinical destination admission | 2026-11-25 | [MED.md](MED.md#ail-1-live-rescue-arrival) |
 | AIL-1-stuck-downed | No exposure state holds a colonist down forever | 2026-11-06 | [MED.md](MED.md#ail-1-stuck-downed) |
 | AIL-2-open-air | Heatstroke victims are carried into cool open air | 2026-11-06 | [MED.md](MED.md#ail-2-open-air) |
 | ARCH-001-solid-rule-and-guard | SOLID rule and the arch guard | 2026-10-28 | [ARCH.md](ARCH.md#arch-001-solid-rule-and-guard) |
@@ -43,6 +45,8 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | ARCH-008-gar-analysis-adrs | GAR gap analysis, ADRs 0001-0004 and the architecture diagrams (GAR Parts B and D) | 2026-11-08 | [ARCH.md](ARCH.md#arch-008-gar-analysis-adrs) |
 | ARCH-009-phase-scheduler | The tick's phases are declared systems in a schedule (GAR-001..005, 012) | 2026-11-08 | [ARCH.md](ARCH.md#arch-009-phase-scheduler) |
 | ARCH-010-path-stage-pool | Animal repaths as a decide-then-apply path stage on an 8-lane pool (GAR-035, GAR-031) | 2026-11-08 | [ARCH.md](ARCH.md#arch-010-path-stage-pool) |
+| ARCH-019-core-animal-save-canonical | Grouped animal ownership and deterministic canonical saves | 2026-11-25 | [ARCH.md](ARCH.md#arch-019-core-animal-save-canonical) |
+| ARCH-020-core-native-path-stage | Native path planning and allocation reduction | 2026-11-25 | [ARCH.md](ARCH.md#arch-020-core-native-path-stage) |
 | ART-000-agent-pipeline-integration | Art spec wired into the agent pipeline | 2026-09-08 | [ART.md](ART.md#art-000-agent-pipeline-integration) |
 | ART-001-vendor-pack-renderer | CC0 vendor character pack in the renderer | 2026-09-08 | [ART.md](ART.md#art-001-vendor-pack-renderer) |
 | ART-002-presentation-animation-clock | Presentation animation clock | 2026-09-08 | [ART.md](ART.md#art-002-presentation-animation-clock) |
@@ -88,6 +92,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | AX-7-books | Books and bookcases made real | 2026-11-02 | [AX.md](AX.md#ax-7-books) |
 | AX-8-escape-ship | The escape ship, end to end | 2026-11-02 | [AX.md](AX.md#ax-8-escape-ship) |
 | AX-9-pods-casket-scanner | Stasis casket, transport pods, mineral scanner, hitching spot | 2026-11-02 | [AX.md](AX.md#ax-9-pods-casket-scanner) |
+| AX-A4-core-material-basis | Construction material accounting and historical frames | 2026-11-25 | [AX.md](AX.md#ax-a4-core-material-basis) |
 | AX-AR1-art | A2/A3 art: decor, furniture, walls, floors | 2026-11-01 | [AX.md](AX.md#ax-ar1-art) |
 | AX-AR2-art | Art for orders (A1), power/industry (A4), fire foam/security (A5) | 2026-11-01 | [AX.md](AX.md#ax-ar2-art) |
 | AX-AR3-art | A6/A7 art: recreation, books, bookcases | 2026-11-02 | [AX.md](AX.md#ax-ar3-art) |
@@ -96,10 +101,13 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | BED-1-bed-stats | Bed stats, bedrolls, animal beds, bed furniture, forbidding buildings | 2026-10-29 | [BASE.md](BASE.md#bed-1-bed-stats) |
 | BED-2-room-stats-roles-thoughts | Room statistics, roles and room thoughts | 2026-10-29 | [BASE.md](BASE.md#bed-2-room-stats-roles-thoughts) |
 | BED-3-beauty-comfort-outdoors-needs | Comfort, beauty and outdoors needs | 2026-10-29 | [BASE.md](BASE.md#bed-3-beauty-comfort-outdoors-needs) |
+| BED-241-native-packing-admission | Minified bedrolls and forbidden work admission | 2026-11-25 | [BASE.md](BASE.md#bed-241-native-packing-admission) |
+| BED-242-animal-medical-owner | Animal bed ownership and native clinical recovery | 2026-11-25 | [BASE.md](BASE.md#bed-242-animal-medical-owner) |
 | CBT-1-damage-model | Damage model | 2026-10-30 | [DEF.md](DEF.md#cbt-1-damage-model) |
 | CBT-2-attack-mechanics | Attack mechanics | 2026-10-30 | [DEF.md](DEF.md#cbt-2-attack-mechanics) |
 | CBT-3-weapons-gear-structures | Weapons, gear and structures | 2026-10-30 | [DEF.md](DEF.md#cbt-3-weapons-gear-structures) |
 | CBT-3.2-ranged-hit-chance | Ranged hit chance, aim traits and interception by distance | 2026-11-22 | [DEF.md](DEF.md#cbt-3.2-ranged-hit-chance) |
+| CBT-3.4-core-scalar-integration | Reconcile multi-part damage forms with the native Core damage owners | 2026-11-25 | [DEF.md](DEF.md#cbt-3.4-core-scalar-integration) |
 | CBT-3.4-multi-part-cuts-and-pain | Multi-part cuts, inner blunt strikes and wiki pain constants | 2026-11-22 | [DEF.md](DEF.md#cbt-3.4-multi-part-cuts-and-pain) |
 | CBT-3.4b-scratch-stab-bullet | Scratch, Stab and Bullet multi-part rules; Bite and Arrow pinned single-part | 2026-11-24 | [DEF.md](DEF.md#cbt-3.4b-scratch-stab-bullet) |
 | CBT-3.4c-poke-rangedstab | Poke and RangedStab damage forms: Stab variants and their weapons | 2026-11-24 | [DEF.md](DEF.md#cbt-3.4c-poke-rangedstab) |
@@ -107,8 +115,12 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | CBT-5-explosions-and-combat-ui | Explosions and combat UI | 2026-10-30 | [DEF.md](DEF.md#cbt-5-explosions-and-combat-ui) |
 | CBT-10-prisoner-state | Prisoner state's escape behaviour was already live (CBT-4); proved through the tick and ticked | 2026-11-25 | [DEF.md](DEF.md#cbt-10-prisoner-state) |
 | CBT-269-animal-split-room | An animal's split blow stops at its own hit points, not the body's lost-part total | 2026-11-24 | [DEF.md](DEF.md#cbt-269-animal-split-room) |
+| CBT-269-core-placement-accounting | Reconcile upstream owner-room split accounting with physical placements | 2026-11-25 | [DEF.md](DEF.md#cbt-269-core-placement-accounting) |
 | CBT-272-dedupe-loss-damage | One loop for body damage and the animal death rule | 2026-11-23 | [DEF.md](DEF.md#cbt-272-dedupe-loss-damage) |
 | CI-001-race-budget-and-memory | The `-race` suite within CI's time and memory | 2026-11-02 | [OPS.md](OPS.md#ci-001-race-budget-and-memory) |
+| CI-002-ENG-010-core-reconciliation | Integrate the upstream benchmark fixture API | 2026-11-26 | [OPS.md](OPS.md#ci-002-eng-010-core-reconciliation) |
+| CI-002-ENG-011-core-command-reconciliation | Integrate upstream #285/#312 with Core | 2026-11-26 | [OPS.md](OPS.md#ci-002-eng-011-core-command-reconciliation) |
+| CI-002-save-freeze-followup | Detached save capture on the simulation owner | 2026-11-24 | [OPS.md](OPS.md#ci-002-save-freeze-followup) |
 | CI-002-tint-shader-race | The tint shader's first draw raced | 2026-11-04 | [OPS.md](OPS.md#ci-002-tint-shader-race) |
 | CI-003-game-test-time | `application/game` test time under `-race` | 2026-11-06 | [OPS.md](OPS.md#ci-003-game-test-time) |
 | CI-004-ebiten-test-time | The ebiten root's `-race` test time | 2026-11-06 | [OPS.md](OPS.md#ci-004-ebiten-test-time) |
@@ -133,6 +145,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | DEF-3.1-threat-weighted-raider-targeting | Threat-weighted targets audit, combat log kinds, History Threats tab and Damage taken | 2026-11-21 | [DEF.md](DEF.md#def-3.1-threat-weighted-raider-targeting) |
 | DEF-4-R1-raids-drafted-control | Raids, drafted control, IED leftovers, combat log | 2026-10-29 | [DEF.md](DEF.md#def-4-r1-raids-drafted-control) |
 | DEF-4-R2-mechanoids-ship-part | Mechanoids and the crashed ship part | 2026-10-29 | [DEF.md](DEF.md#def-4-r2-mechanoids-ship-part) |
+| DEF-4-core-weighted-threat-census | Weighted threat points and independent map/caravan budgets | 2026-11-25 | [DEF.md](DEF.md#def-4-core-weighted-threat-census) |
 | DEF-15-turret-fuse-hiss | Turret fuse hiss | 2026-11-26 | [DEF.md](DEF.md#def-15-turret-fuse-hiss) |
 | DEPS-001-libraries-and-rules | Libraries at the edge, and cleaning up what we wrote by hand | 2026-11-03 | [OPS.md](OPS.md#deps-001-libraries-and-rules) |
 | DOCS-001-readme-screenshots | README with screenshots and clips | 2026-10-19 | [OPS.md](OPS.md#docs-001-readme-screenshots) |
@@ -151,6 +164,8 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | DOS-8-lessons | Colonist card lessons (RHUD-043..047) | 2026-11-04 | [DOS.md](DOS.md#dos-8-lessons) |
 | DOS-9-card-on | The colonist card on by default, and the audit | 2026-11-04 | [DOS.md](DOS.md#dos-9-card-on) |
 | DOS-10-compact | The docked card in 30 % of the screen | 2026-11-04 | [DOS.md](DOS.md#dos-10-compact) |
+| DOS-11-haul-localization | Haul training and translated adapter contract | 2026-11-25 | [DOS.md](DOS.md#dos-11-haul-localization) |
+| DOS-12-default-haul-training | Default training and complete localization | 2026-11-26 | [DOS.md](DOS.md#dos-12-default-haul-training) |
 | EAI-0-enemy-ai-contract | Enemy AI contract and the `rage` extraction | 2026-11-09 | [DEF.md](DEF.md#eai-0-enemy-ai-contract) |
 | EAI-1-animals | Animals: door bashing, targets, herds, packs, grief | 2026-11-09 | [DEF.md](DEF.md#eai-1-animals) |
 | EAI-2-raiders | Raider sight, turret danger and indexed picks | 2026-11-09 | [DEF.md](DEF.md#eai-2-raiders) |
@@ -167,16 +182,19 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | ENG-009-agent-cleanup | Parallel work reuses and cleans up agents | 2026-10-30 | [ENG.md](ENG.md#eng-009-agent-cleanup) |
 | ENG-010-headless-state-hash-and-colonist-scales | Headless state hash and colonist-count benchmark | 2026-11-25 | [ENG.md](ENG.md#eng-010-headless-state-hash-and-colonist-scales) |
 | ENG-011-determinism-replay | Determinism and replay: keyed RNG, command order, replay verify | 2026-11-25 | [ENG.md](ENG.md#eng-011-determinism-replay) |
+| FCT-104-native-special-faction-identity | Hidden faction identity and actual actor origin | 2026-11-25 | [SIM.md](SIM.md#fct-104-native-special-faction-identity) |
 | FEED-001-tame-animal-food | Hungry tame animals reach the food the colony has | 2026-10-30 | [FOOD.md](FOOD.md#feed-001-tame-animal-food) |
 | FISH-tanks | Fish tanks | 2026-11-02 | [FOOD.md](FOOD.md#fish-tanks) |
 | FISH_TANK_PLAN | Fish tanks and the MAP-5 fixes: gap analysis and plan (FISH-*, MAP-5, STK-AL 2) | 2026-11-02 | [FOOD.md](FOOD.md#fish_tank_plan) |
 | FOOD-0-gap-analysis-and-contract | Food production gap analysis and contract | 2026-10-30 | [FOOD.md](FOOD.md#food-0-gap-analysis-and-contract) |
+| FOOD-1-final-ingredient-admission | Atomic final bill input admission | 2026-11-25 | [FOOD.md](FOOD.md#food-1-final-ingredient-admission) |
 | FOOD-1-nutrition-and-hunger | Nutrition and hunger at RimWorld fidelity | 2026-10-30 | [FOOD.md](FOOD.md#food-1-nutrition-and-hunger) |
 | FOOD-2-growing | Growing at RimWorld fidelity | 2026-10-30 | [FOOD.md](FOOD.md#food-2-growing) |
 | FOOD-3-animals-butchering | Animals, butchering and hunting at RimWorld fidelity | 2026-10-30 | [FOOD.md](FOOD.md#food-3-animals-butchering) |
 | FOOD-4-cooking-eating | Cooking, preservation and eating | 2026-10-31 | [FOOD.md](FOOD.md#food-4-cooking-eating) |
 | FOOD-5-food-ui | Food UI | 2026-10-31 | [FOOD.md](FOOD.md#food-5-food-ui) |
 | FOOD-6-close-out | FOOD close-out | 2026-10-31 | [FOOD.md](FOOD.md#food-6-close-out) |
+| FOOD-6-core-poison-and-peer-feeding | Native ingestion and food admission | 2026-11-25 | [FOOD.md](FOOD.md#food-6-core-poison-and-peer-feeding) |
 | GEAR-0-contract | Contract for gear, outfits, options and ailments | 2026-11-06 | [GEAR.md](GEAR.md#gear-0-contract) |
 | GEAR-1-gear-actions | Drop, Eat and Lock in the simulation | 2026-11-06 | [GEAR.md](GEAR.md#gear-1-gear-actions) |
 | GEAR-1-gear-facts | Gear tab summary numbers; armour slows the wearer | 2026-11-06 | [GEAR.md](GEAR.md#gear-1-gear-facts) |
@@ -187,8 +205,11 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | HAUL-001-batched-delivery | Batched construction delivery | 2026-10-21 | [STORAGE.md](STORAGE.md#haul-001-batched-delivery) |
 | HAUL-002-gather-nearby-piles | Haulers gather nearby piles before delivering | 2026-10-30 | [STORAGE.md](STORAGE.md#haul-002-gather-nearby-piles) |
 | HAUL-003-harvest-sweep | Harvest the field before hauling its piles | 2026-11-04 | [STORAGE.md](STORAGE.md#haul-003-harvest-sweep) |
+| HAUL-102-claim-specific-invalidation | Reservation-aware trained haul availability | 2026-11-25 | [STORAGE.md](STORAGE.md#haul-102-claim-specific-invalidation) |
+| HAUL-102-indexed-animal-admission | Reachable bounded trained animal hauling | 2026-11-25 | [STORAGE.md](STORAGE.md#haul-102-indexed-animal-admission) |
 | LIC-001-dual-licensing | GPL-3.0-only code, commercial licenses, separate assets license, CLA | 2026-11-18 | [OPS.md](OPS.md#lic-001-dual-licensing) |
 | LOG-001-creature-event-log | Creature event log | 2026-10-21 | [OPS.md](OPS.md#log-001-creature-event-log) |
+| LOG-002-core-semantic-event-letters | Stable event letter codes and read models | 2026-11-25 | [OPS.md](OPS.md#log-002-core-semantic-event-letters) |
 | MAP-0-contract | Multiple maps, gap analysis and inert contract | 2026-11-02 | [WORLD.md](WORLD.md#map-0-contract) |
 | MAP-1-site-maps | Site maps, ticking maps, switching | 2026-11-02 | [WORLD.md](WORLD.md#map-1-site-maps) |
 | MAP-2-attack-and-pods | Attacking settlements and pod modes | 2026-11-02 | [WORLD.md](WORLD.md#map-2-attack-and-pods) |
@@ -196,10 +217,17 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | MAP-4-endings-turrets-neutral-attacks | The everyone-gone ending, hostile turrets, neutral attacks | 2026-11-02 | [WORLD.md](WORLD.md#map-4-endings-turrets-neutral-attacks) |
 | MAP-5-doors-visitors-wanderers | Enemy doors, hostile visitors, new wanderers | 2026-11-02 | [WORLD.md](WORLD.md#map-5-doors-visitors-wanderers) |
 | MAP-6-deferred-four | The four deferred items, second pass | 2026-11-03 | [WORLD.md](WORLD.md#map-6-deferred-four) |
+| MAP-09-road-pace-mutation | Road load and carrier mutation | 2026-11-25 | [WORLD.md](WORLD.md#map-09-road-pace-mutation) |
+| MAP-09-shared-carrier-physical-wealth | Physical caravan census and shared carrier pace | 2026-11-25 | [WORLD.md](WORLD.md#map-09-shared-carrier-physical-wealth) |
+| MAP-20-core-settlement-market | Persistent settlement markets and physical caravan trade | 2026-11-25 | [WORLD.md](WORLD.md#map-20-core-settlement-market) |
+| MAP-24-caravan-headless-facts | Native caravan inspector data contract | 2026-11-25 | [WORLD.md](WORLD.md#map-24-caravan-headless-facts) |
+| MAP-25-native-caravan-split | Atomic headless caravan split | 2026-11-25 | [WORLD.md](WORLD.md#map-25-native-caravan-split) |
+| MAP-26-native-territory-projection | Faction land territory derived from live settlements | 2026-11-25 | [WORLD.md](WORLD.md#map-26-native-territory-projection) |
 | MED-00-contract | Medical overhaul contract and save groundwork | 2026-10-26 | [MED.md](MED.md#med-00-contract) |
 | MED-01-bleeding | Bleeding, blood loss, pain, downed | 2026-10-26 | [MED.md](MED.md#med-01-bleeding) |
 | MED-02-tend-immunity | Tend quality, healing, scars, infection vs immunity | 2026-10-26 | [MED.md](MED.md#med-02-tend-immunity) |
 | MED-03-care-policy | Medical care policy, doctor work order, emergency tend | 2026-10-26 | [MED.md](MED.md#med-03-care-policy) |
+| MED-03-core-animal-rescue-and-safe-beds | Native downed-animal rescue and bed eligibility | 2026-11-25 | [MED.md](MED.md#med-03-core-animal-rescue-and-safe-beds) |
 | MED-04-diseases | Diseases and outbreaks | 2026-10-26 | [MED.md](MED.md#med-04-diseases) |
 | MED-05-anatomy-bionics | Organs, capacities, bionic tier | 2026-10-26 | [MED.md](MED.md#med-05-anatomy-bionics) |
 | MED-06-surgery | Surgery v2, organs, euthanasia, anesthetic, vitals monitor | 2026-10-26 | [MED.md](MED.md#med-06-surgery) |
@@ -210,9 +238,15 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | MED-11-food-poisoning-caravans | Food poisoning, disease on caravans | 2026-10-26 | [MED.md](MED.md#med-11-food-poisoning-caravans) |
 | MED-12-downed-animals | Downed animals | 2026-10-26 | [MED.md](MED.md#med-12-downed-animals) |
 | MED-13-animal-anatomy | Per-archetype animal anatomy | 2026-10-26 | [MED.md](MED.md#med-13-animal-anatomy) |
+| MED-14-core-replacement-and-chronic-care | Native chronic illness, anesthesia and fitted replacements | 2026-11-25 | [MED.md](MED.md#med-14-core-replacement-and-chronic-care) |
+| MIN-1-core-mining-materials | Native mining labour, capacities, yield and stonecutting | 2026-11-25 | [DEF.md](DEF.md#min-1-core-mining-materials) |
+| MIN-2-native-support-cave-in | Native structural support loss, damage and risk projection | 2026-11-25 | [DEF.md](DEF.md#min-2-native-support-cave-in) |
+| MIN-3-native-ore-and-scanner-rules | Surface ore, scanner admission and mining geometry | 2026-11-25 | [DEF.md](DEF.md#min-3-native-ore-and-scanner-rules) |
+| MIN-306-307-native-infestation | Native infestation eligibility and pacing | 2026-11-25 | [DEF.md](DEF.md#min-306-307-native-infestation) |
 | MOD-000-mods-programme | RimHUD, Neat Storage and Common Sense programme | 2026-11-03 | [MOD.md](MOD.md#mod-000-mods-programme) |
 | MOD-W0-P-budget | Room in package `game` | 2026-11-03 | [MOD.md](MOD.md#mod-w0-p-budget) |
 | NG1_NEW_GAME_PLAN | NG-1: complete new-game flow, big maps at 60 fps, generated colonists, factions, water | 2026-10-22 | [NG.md](NG.md#ng1_new_game_plan) |
+| NG-2-core-difficulty-adaptation | Native difficulty presets and shared adaptation | 2026-11-25 | [NG.md](NG.md#ng-2-core-difficulty-adaptation) |
 | NST-A-kinds | Neat Storage kinds (domain) | 2026-11-03 | [STORAGE.md](STORAGE.md#nst-a-kinds) |
 | NST-B-storage | Storage behaviour of the 27 Neat Storage pieces | 2026-11-03 | [STORAGE.md](STORAGE.md#nst-b-storage) |
 | NST-C-architect | Architect category, cards and inspector for Neat Storage | 2026-11-04 | [STORAGE.md](STORAGE.md#nst-c-architect) |
@@ -293,14 +327,20 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PLG-6-cadence-hooks-batched-reads | Scripting port: batched colonist reads, 60-tick cadence hooks, Starlark vs gopher-lua baseline | 2026-11-20 | [MOD.md](MOD.md#plg-6-cadence-hooks-batched-reads) |
 | PLG-7-wasm-second-runtime-candidate | Second scripting runtime: WebAssembly on wazero named as the candidate | 2026-11-20 | [MOD.md](MOD.md#plg-7-wasm-second-runtime-candidate) |
 | PLG-8-wasm-wazero-spike | WebAssembly on wazero spike: second scripting runtime behind the same port, not wired | 2026-11-20 | [MOD.md](MOD.md#plg-8-wasm-wazero-spike) |
+| PLG-026-saved-filter-identity | Historical saved plugin filter identity | 2026-11-25 | [MOD.md](MOD.md#plg-026-saved-filter-identity) |
 | PLG-063-wasm-wiring | Wasm mods run in real games | 2026-11-21 | [MOD.md](MOD.md#plg-063-wasm-wiring) |
 | PRD-0-craft-package | The craft package and the quality domain | 2026-10-29 | [BASE.md](BASE.md#prd-0-craft-package) |
 | PRD-1-bill-settings | Bill settings, multi-ingredient recipes, gathering | 2026-10-29 | [BASE.md](BASE.md#prd-1-bill-settings) |
+| PRD-2-core-inspiration-types | Native Core inspiration effects | 2026-11-25 | [BASE.md](BASE.md#prd-2-core-inspiration-types) |
 | PRD-2-quality-stuff-condition | Quality, stuff, condition, inspiration | 2026-10-29 | [BASE.md](BASE.md#prd-2-quality-stuff-condition) |
 | PRD-3-benches-work-speed-sculptures | Benches, work speed, art and sculptures | 2026-10-29 | [BASE.md](BASE.md#prd-3-benches-work-speed-sculptures) |
 | PRD-4-catalogue-stockpiles-shelves | Recipe catalogue, stockpile filters, shelves, barrel | 2026-10-29 | [BASE.md](BASE.md#prd-4-catalogue-stockpiles-shelves) |
+| PRD-6-core-artistic-skills | Independent Artistic skill and sculpture learning | 2026-11-25 | [BASE.md](BASE.md#prd-6-core-artistic-skills) |
+| PRD-7-native-condition-and-wealth | Bill condition admission and shared physical value | 2026-11-25 | [BASE.md](BASE.md#prd-7-native-condition-and-wealth) |
+| PRD-8-and-BED-241-native-quality-forbid | Native grenade quality and forbidden bed lifecycle | 2026-11-25 | [BASE.md](BASE.md#prd-8-and-bed-241-native-quality-forbid) |
 | PWR-power-wires | Visible power wires and Reconnect | 2026-11-03 | [BASE.md](BASE.md#pwr-power-wires) |
 | QA-001-player-journeys | Player-journey tests, CI on every push, real-path clicks | 2026-10-27 | [OPS.md](OPS.md#qa-001-player-journeys) |
+| QA-002-core-table-reconciliation | Reconcile QA-002 with Core presentation | 2026-11-26 | [OPS.md](OPS.md#qa-002-core-table-reconciliation) |
 | QA-002-table-columns-drawn | Every declared table column is drawn: pure cell layouts, a column test per table window and a guard | 2026-11-24 | [OPS.md](OPS.md#qa-002-table-columns-drawn) |
 | QA-002-ui-visual-checks-filed | Two UI visual-check items added to the Definition of Done and filed | 2026-11-22 | [OPS.md](OPS.md#qa-002-ui-visual-checks-filed) |
 | QST-1-quests-contract | Quests contract: domain, root, glue | 2026-11-07 | [WORLD.md](WORLD.md#qst-1-quests-contract) |
@@ -316,6 +356,9 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | REL-003-installers | Installers as the main release files, an app icon, `-version` and `-selfcheck` | 2026-11-09 | [OPS.md](OPS.md#rel-003-installers) |
 | RES-1-reservations | Reservations, RimWorld-style | 2026-10-30 | [BASE.md](BASE.md#res-1-reservations) |
 | REVIEW-001-playable-survival | Quality pass on PLAY-001 through SURV-001 | 2026-09-16 | [OPS.md](OPS.md#review-001-playable-survival) |
+| RSC-001-and-201-207-native-crash-and-downing | Native transport pod crash, safe care and downed movement | 2026-11-25 | [MED.md](MED.md#rsc-001-and-201-207-native-crash-and-downing) |
+| RSC-002-and-203-headless-rescue-diplomacy | Core departure risk and capture diplomacy | 2026-11-25 | [MED.md](MED.md#rsc-002-and-203-headless-rescue-diplomacy) |
+| RSC-205-native-carrier-admission | Reachable rescue and custody destinations | 2026-11-25 | [MED.md](MED.md#rsc-205-native-carrier-admission) |
 | RSCH-0-gap-analysis-and-contract | Research gap analysis and contract | 2026-11-01 | [BASE.md](BASE.md#rsch-0-gap-analysis-and-contract) |
 | RSCH-1-research-simulation | Research simulation at wiki fidelity | 2026-11-01 | [BASE.md](BASE.md#rsch-1-research-simulation) |
 | RSCH-2-research-tab | The Research tab as RimWorld's research screen | 2026-11-01 | [BASE.md](BASE.md#rsch-2-research-tab) |
@@ -326,6 +369,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SAV-3-load-and-leave | Load rows, sort and filter, Save & Quit, unsaved progress | 2026-11-09 | [UI.md](UI.md#sav-3-load-and-leave) |
 | SAV-4-header-world-seed | The save header records the world seed; the Load card shows it | 2026-11-23 | [UI.md](UI.md#sav-4-header-world-seed) |
 | SHADOW-creatures-cast-none | Creatures cast no shadow (agent SH) | 2026-11-01 | [ART.md](ART.md#shadow-creatures-cast-none) |
+| SHT-1-core-shooting-reconciliation | Native shooting, interception and combat traits | 2026-11-25 | [DEF.md](DEF.md#sht-1-core-shooting-reconciliation) |
 | SHT-75-shooting-gaps | Shooting gaps: accuracy inputs, downed creatures, friendly fire, aim, hit card | 2026-11-23 | [DEF.md](DEF.md#sht-75-shooting-gaps) |
 | SHT-105-light-footed-trait | Light-footed trait: the Nimble melee dodge | 2026-11-23 | [DEF.md](DEF.md#sht-105-light-footed-trait) |
 | SHT-105-nimble-trap-spring | Nimble trap spring chance, gosec notes, pinned tools | 2026-11-23 | [DEF.md](DEF.md#sht-105-nimble-trap-spring) |
@@ -348,6 +392,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SIM-016-weather | Weather | 2026-10-19 | [SIM.md](SIM.md#sim-016-weather) |
 | SIM-017-burial-cremation | Corpses, graves, funeral pyres and mourning | 2026-10-19 | [SIM.md](SIM.md#sim-017-burial-cremation) |
 | SIM-018-roofs | Roofs | 2026-10-20 | [SIM.md](SIM.md#sim-018-roofs) |
+| SIM-019-core-animal-lifecycle | Native animal ecology and lifecycle ownership | 2026-11-25 | [SIM.md](SIM.md#sim-019-core-animal-lifecycle) |
 | SIM-019-wildlife | Wildlife: 61 species | 2026-10-21 | [SIM.md](SIM.md#sim-019-wildlife) |
 | SIM-020-blood-stains | Blood and ichor: stains on floors and bodies | 2026-10-21 | [SIM.md](SIM.md#sim-020-blood-stains) |
 | SIM-021-dirt-cleaning-home-carpets | Tracked dirt, cleaning, Home area, cotton, carpets | 2026-10-22 | [SIM.md](SIM.md#sim-021-dirt-cleaning-home-carpets) |
@@ -358,6 +403,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SIM-027-postpone-blocked-work | Postponing blocked and unreachable work | 2026-10-22 | [SIM.md](SIM.md#sim-027-postpone-blocked-work) |
 | SIM-028-floors-under-furniture-fences-forbid | Floors under furniture, fences and gates, forbid | 2026-10-22 | [SIM.md](SIM.md#sim-028-floors-under-furniture-fences-forbid) |
 | SIM-029-stone-types-ore-smoothing-stonecutting | Stone types, ore veins, smoothing and stonecutting | 2026-10-22 | [SIM.md](SIM.md#sim-029-stone-types-ore-smoothing-stonecutting) |
+| SIM-030-core-faction-roles | Native faction roles and captive origin | 2026-11-25 | [SIM.md](SIM.md#sim-030-core-faction-roles) |
 | SIM-030-planet-factions | Planet generator, landing-site parameters and factions (NG-1) | 2026-10-22 | [SIM.md](SIM.md#sim-030-planet-factions) |
 | SIM-031-storyteller-difficulty | Storytellers, difficulty and threat points (NG-1) | 2026-10-22 | [SIM.md](SIM.md#sim-031-storyteller-difficulty) |
 | SIM-032-pawn-identity-skills | Colonist identity, skills in play and character creation (NG-1) | 2026-10-22 | [SIM.md](SIM.md#sim-032-pawn-identity-skills) |
@@ -395,11 +441,16 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SIM-064-feeding-patients | Feeding patients, downed hunger | 2026-10-29 | [SIM.md](SIM.md#sim-064-feeding-patients) |
 | SIM-065-visit-sick-strip | Visiting the sick, strip | 2026-10-29 | [SIM.md](SIM.md#sim-065-visit-sick-strip) |
 | SIM-066-mental-breaks | Mental breaks that target others; W3 integration (SIM-063…066) | 2026-10-29 | [SIM.md](SIM.md#sim-066-mental-breaks) |
+| SIM-071-core-mood-expectations | Native memories, recovery and wealth expectations | 2026-11-25 | [SIM.md](SIM.md#sim-071-core-mood-expectations) |
+| SIM-102-native-animal-hauling | Native trained animal hauling | 2026-11-25 | [SIM.md](SIM.md#sim-102-native-animal-hauling) |
+| SIM-174-prisoner-faction-recruitment | Native prisoner faction and recruitment difficulty | 2026-11-25 | [SIM.md](SIM.md#sim-174-prisoner-faction-recruitment) |
 | SND-001-audio-runtime | Audio runtime | 2026-10-21 | [SND.md](SND.md#snd-001-audio-runtime) |
 | SND-002-audio-asset-pipeline | Audio asset pipeline | 2026-10-21 | [SND.md](SND.md#snd-002-audio-asset-pipeline) |
 | SND-003-animal-voices | Animal voices (281 ElevenLabs clips) | 2026-10-21 | [SND.md](SND.md#snd-003-animal-voices) |
 | SND-004-moss-backend | MOSS-SoundEffect backend for creature voices | 2026-11-01 | [SND.md](SND.md#snd-004-moss-backend) |
 | SND-005-moss-replaces-elevenlabs | MOSS replaces every ElevenLabs sound | 2026-11-06 | [SND.md](SND.md#snd-005-moss-replaces-elevenlabs) |
+| STK-1-core-fish-stack-limit | Raw-fish stack limit with legacy kind compatibility | 2026-11-25 | [STORAGE.md](STORAGE.md#stk-1-core-fish-stack-limit) |
+| STK-85-per-kind-opt-in-migration | Opt-in Core per-kind stack limits | 2026-11-25 | [STORAGE.md](STORAGE.md#stk-85-per-kind-opt-in-migration) |
 | STK-AG-architect-gap | Architect gap analysis and placeholder cards | 2026-11-01 | [STORAGE.md](STORAGE.md#stk-ag-architect-gap) |
 | STK-AL-2-drops | What drops on the map (allow fixes) | 2026-11-02 | [STORAGE.md](STORAGE.md#stk-al-2-drops) |
 | STK-AL-allow-system | Allow system gap analysis and fixes | 2026-11-01 | [STORAGE.md](STORAGE.md#stk-al-allow-system) |
@@ -466,4 +517,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | WG-1-planet-v1-and-relief | Planet v1 domain and the globe relief | 2026-11-02 | [WORLD.md](WORLD.md#wg-1-planet-v1-and-relief) |
 | WG-2-globe-lines-and-landing-ui | Roads, rivers and labels on the globe; landing UI; units | 2026-11-02 | [WORLD.md](WORLD.md#wg-2-globe-lines-and-landing-ui) |
 | WRK-001-work-order | Work order and harvesting | 2026-11-04 | [BASE.md](BASE.md#wrk-001-work-order) |
+| WRK-101-core-work-columns | Patient, bed rest, basic, smith and tailor work types | 2026-11-25 | [BASE.md](BASE.md#wrk-101-core-work-columns) |
+| WRK-103-simple-priorities-rows | Work checkbox editing and sortable pawn rows | 2026-11-25 | [BASE.md](BASE.md#wrk-103-simple-priorities-rows) |
+| WRK-108-art-work-column | Independent Art work type | 2026-11-25 | [BASE.md](BASE.md#wrk-108-art-work-column) |
 | ZONE-001-per-tile-zones | Per-tile zones | 2026-10-21 | [STORAGE.md](STORAGE.md#zone-001-per-tile-zones) |

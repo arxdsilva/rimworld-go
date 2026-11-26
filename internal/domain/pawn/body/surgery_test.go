@@ -130,7 +130,8 @@ func TestRollOutcome(t *testing.T) {
 
 func TestFailDeathAndMedicineNeeds(t *testing.T) {
 	t.Parallel()
-	if FailDeathChance(Operation{InstallImplant, Heart, item.PumpHeart}) != 250 ||
+	if FailDeathChance(Operation{InstallImplant, Heart, item.PumpHeart}) != 0 ||
+		FailDeathChance(Operation{InstallImplant, Heart, item.ValveHeart}) != 250 ||
 		FailDeathChance(Operation{InstallOrgan, Heart, item.Heart}) != 250 ||
 		FailDeathChance(Operation{Kind: ExciseCarcinoma, Part: Stomach}) != 250 ||
 		FailDeathChance(Operation{InstallOrgan, KidneyL, item.Kidney}) != 0 ||
@@ -142,7 +143,7 @@ func TestFailDeathAndMedicineNeeds(t *testing.T) {
 		qty   int
 		least item.Kind
 	}{
-		{InstallImplant, 2, item.HerbalMedicine}, {RemoveImplant, 2, item.HerbalMedicine}, {HarvestOrgan, 2, item.HerbalMedicine},
+		{InstallImplant, 2, item.HerbalMedicine}, {RemoveImplant, 1, item.HerbalMedicine}, {HarvestOrgan, 1, item.HerbalMedicine},
 		{Amputate, 2, item.HerbalMedicine}, {Anesthetize, 1, item.HerbalMedicine}, {Euthanize, 1, item.HerbalMedicine},
 		{ExciseCarcinoma, 4, item.IndustrialMedicine},
 	} {
@@ -185,7 +186,7 @@ func TestNewOperationsCanOperate(t *testing.T) {
 	if !b.CanOperate(Operation{InstallOrgan, KidneyL, item.Kidney}) {
 		t.Fatal("a damaged kidney can be replaced")
 	}
-	b.SetImplant(Heart, item.PumpHeart)
+	b.SetReplacement(Heart, item.PumpHeart)
 	b.Missing |= bit(Heart)
 	if b.CanOperate(Operation{Kind: HarvestOrgan, Part: Heart}) || !b.CanOperate(Operation{InstallOrgan, Heart, item.Heart}) {
 		t.Fatal("an artificial heart is not harvested but can give way to a natural one")
@@ -204,9 +205,9 @@ func TestApplyHarvestAndTransplant(t *testing.T) {
 	if !b.Apply(Operation{InstallOrgan, KidneyL, item.Kidney}, Success, fixed(0), 2) || b.isMissing(KidneyL) || b.ImmunityGain() != 1000 {
 		t.Fatalf("the transplant restores the kidney: %+v", b)
 	}
-	b.SetImplant(Heart, item.ValveHeart)
+	b.SetReplacement(Heart, item.ValveHeart)
 	b.Missing |= bit(Heart)
-	if !b.Apply(Operation{InstallOrgan, Heart, item.Heart}, Success, fixed(0), 3) || b.isMissing(Heart) || b.Implant(Heart) != 0 {
+	if !b.Apply(Operation{InstallOrgan, Heart, item.Heart}, Success, fixed(0), 3) || b.isMissing(Heart) || b.ReplacementAt(Heart) != 0 {
 		t.Fatal("a natural heart replaces the valve heart")
 	}
 	if !b.Apply(Operation{Kind: HarvestOrgan, Part: Heart}, Success, fixed(0), 4) || !b.VitalLost() {
@@ -223,7 +224,7 @@ func TestFailedOperations(t *testing.T) {
 	t.Parallel()
 	var b Body
 	brace := Operation{InstallImplant, Spine, item.SpinalBrace}
-	if b.Apply(brace, MinorFail, fixed(3), 1) || !b.isMissing(Spine) || b.fitted(Spine) {
+	if b.Apply(brace, MinorFail, fixed(3), 1) || !b.isMissing(Spine) || b.hasReplacement(Spine) {
 		t.Fatal("a failed spinal brace destroys the spine")
 	}
 	var c Body

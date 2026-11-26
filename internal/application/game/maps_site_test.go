@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/caravan"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/terrain"
 )
 
@@ -139,7 +140,7 @@ func siteRun(t *testing.T) uint64 {
 	g := worldGame(t)
 	tile, ada := plainNear(t, g), g.pawnIDs[0]
 	w := g.worldS()
-	w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Steel, Qty: 200, Expires: 1 << 40}}})
+	w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Steel, Qty: 200, Cells: 200 / OreYield[geology.Steel], Expires: 1 << 40}}})
 	arriveAt(t, g, tile, ada)
 	g.Step(1)
 	if len(g.maps) != 2 || len(w.atlas.Maps) != 1 || len(g.World().AX.Sites) != 0 {
@@ -148,8 +149,9 @@ func siteRun(t *testing.T) uint64 {
 	m, meta := g.maps[1], &w.atlas.Maps[0]
 	m.climate = biome.DefOf(biome.TemperateForest).Climate // the test planet is all sea ice: keep ada on her feet
 	calmSite(g, m)                                         // whatever threat the site rolled (QST-047): this run is about the mining
-	if meta.Lump != item.Steel || len(meta.Cells) != 10 {
-		t.Fatalf("lump %v in %d cells, want steel in 10", meta.Lump, len(meta.Cells))
+	siteCells := 200 / OreYield[geology.Steel]
+	if meta.Lump != item.Steel || len(meta.Cells) != siteCells {
+		t.Fatalf("lump %v in %d cells, want steel in %d", meta.Lump, len(meta.Cells), siteCells)
 	}
 	for _, c := range meta.Cells { // mined out, as a miner would leave it
 		x, y := c%m.grid.Width(), c/m.grid.Width()
@@ -158,7 +160,7 @@ func siteRun(t *testing.T) uint64 {
 		}
 		g.mapState = m
 		g.setTerrain(x, y, terrain.Stone)
-		g.dropStack(item.Steel, 20, x, y)
+		g.dropStack(item.Steel, OreYield[geology.Steel], x, y)
 		g.mapState = g.view
 	}
 	g.Step(4 * clock.TicksPerHour)
@@ -247,7 +249,7 @@ func TestMineralSiteRaidDayTen(t *testing.T) {
 	g := worldGame(t)
 	tile := plainNear(t, g)
 	w := g.worldS()
-	w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Silver, Qty: 2400, Expires: 1 << 40}}})
+	w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Silver, Qty: 2400, Cells: 2400 / OreYield[geology.Silver], Expires: 1 << 40}}})
 	arriveAt(t, g, tile, g.pawnIDs[0], g.pawnIDs[1])
 	g.Step(1)
 	meta := &w.atlas.Maps[0]
@@ -357,7 +359,7 @@ func TestSiteMapSaveLoad(t *testing.T) {
 	g := worldGame(t)
 	tile, ada := plainNear(t, g), g.pawnIDs[0]
 	w := g.worldS()
-	w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Steel, Qty: 200, Expires: 1 << 40}}})
+	w.ax9 = travel.Import(&travel.Save{Sites: []travel.Site{{Tile: tile, Mineral: item.Steel, Qty: 200, Cells: 200 / OreYield[geology.Steel], Expires: 1 << 40}}})
 	arriveAt(t, g, tile, ada)
 	g.Step(clock.TicksPerHour + 1)
 	if len(g.maps) != 2 {
@@ -365,7 +367,7 @@ func TestSiteMapSaveLoad(t *testing.T) {
 	}
 	h, _ := saveLoadInfo(t, g)
 	h.worldS().planet, h.worldS().planetTried = testPlanet().Fork(), true
-	if len(h.maps) != 2 || len(h.worldSt.atlas.Maps) != 1 || len(h.worldSt.atlas.Maps[0].Cells) != 10 || onMap(h, ada) != h.maps[1] {
+	if len(h.maps) != 2 || len(h.worldSt.atlas.Maps) != 1 || len(h.worldSt.atlas.Maps[0].Cells) != 200/OreYield[geology.Steel] || onMap(h, ada) != h.maps[1] {
 		t.Fatalf("the loaded game lost the site map: %d maps", len(h.maps))
 	}
 	if g.StateHash() != h.StateHash() {

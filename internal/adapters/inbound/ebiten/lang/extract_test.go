@@ -13,6 +13,9 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/pkg/msgfmt"
 )
 
 var update = flag.Bool("update", false, "rewrite assets/lang/en.json from the client's T/Tf calls and the game's posts")
@@ -27,6 +30,21 @@ func TestCatalogIsCurrent(t *testing.T) {
 	sim, built, finished := simKeys(parseTree(t, gameRel), module(t, repoRoot(t))+"/"+gameRel)
 	for k := range sim {
 		keys[k] = true
+	}
+	// FactionWarning returns the exact templates and their translated
+	// argument words. The AST poster scanner cannot follow return values
+	// across a package boundary, so read the live producer's keys here.
+	for _, plan := range []raid.Plan{raid.Assault, raid.Siege, raid.Sappers} {
+		for _, count := range []int{1, 2} {
+			title, format, noun, verb := raid.FactionWarning(plan, count)
+			key, ok := msgfmt.Key(format)
+			if !ok {
+				t.Fatalf("raid event format is not a translatable template: %q", format)
+			}
+			for _, text := range []string{title, key, noun, verb} {
+				keys[text] = true
+			}
+		}
 	}
 	// Formats built at run time and finished text reach the catalog as a
 	// Plain key no template holds, so they stay English (-v lists them).

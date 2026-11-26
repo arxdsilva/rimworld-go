@@ -13,10 +13,10 @@ import (
 // AX-4: a frame's secondary materials are slots of their own, wanted
 // after the material and the components, and given into ExtraGot.
 func TestExtraSlots(t *testing.T) {
-	// a watermill: 31 wood, 3 components, 9 steel (Def.Extra)
-	fr := construction.Frame{Kind: construction.Watermill, Stuff: item.Wood, Need: 31, CompNeed: 3}
+	// a watermill: 280 wood, 3 components, 80 steel (Def.Extra)
+	fr := construction.Frame{Kind: construction.Watermill, Stuff: item.Wood, Need: 280, CompNeed: 3}
 	slots := Slots(nil, 7, fr)
-	if len(slots) != 3 || slots[2].Kind != item.Steel || slots[2].Need != 9 || slots[2].Key != ExtraKey(7, 0) {
+	if len(slots) != 3 || slots[2].Kind != item.Steel || slots[2].Need != 80 || slots[2].Key != ExtraKey(7, 0) {
 		t.Fatalf("slots %+v", slots)
 	}
 	if fid, comp := SlotFrame(ExtraKey(7, 2)); fid != 7 || comp {
@@ -25,19 +25,19 @@ func TestExtraSlots(t *testing.T) {
 	if SupplyKind(fr) != item.Wood {
 		t.Fatal("the material first")
 	}
-	fr.Wood, fr.Comp = 31, 3
-	if SupplyKind(fr) != item.Steel || SupplyNeed(fr, item.Steel) != 9 || fr.Ready() {
+	fr.Wood, fr.Comp = 280, 3
+	if SupplyKind(fr) != item.Steel || SupplyNeed(fr, item.Steel) != 80 || fr.Ready() {
 		t.Fatalf("then the steel: %v %d ready=%v", SupplyKind(fr), SupplyNeed(fr, item.Steel), fr.Ready())
 	}
 	if !SlotOpen(fr, ExtraKey(7, 0), item.Steel) || SlotOpen(fr, ExtraKey(7, 0), item.Wood) {
 		t.Fatal("the steel slot takes steel only")
 	}
-	fr = Give(fr, ExtraKey(7, 0), 9)
-	if fr.ExtraGot[0] != 9 || !fr.Ready() || SlotOpen(fr, ExtraKey(7, 0), item.Steel) {
+	fr = Give(fr, ExtraKey(7, 0), 80)
+	if fr.ExtraGot[0] != 80 || !fr.Ready() || SlotOpen(fr, ExtraKey(7, 0), item.Steel) {
 		t.Fatalf("delivered: %+v", fr)
 	}
 	names, got, need := ExtraView(fr)
-	if names[0] != item.Steel.String() || got[0] != 9 || need[0] != 9 || names[1] != "" {
+	if names[0] != item.Steel.String() || got[0] != 80 || need[0] != 80 || names[1] != "" {
 		t.Fatalf("view %v %v %v", names, got, need)
 	}
 	fr.Reinstall = 3

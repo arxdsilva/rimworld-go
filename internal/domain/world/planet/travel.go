@@ -40,7 +40,8 @@ func (p *Planet) MoveDifficulty(i, day int) float64 {
 	}
 	d := biome.DefOf(p.Biome[i])
 	v := d.MoveBase + p.hillMoveOf(i)
-	day = (day%clock.DaysPerYear + clock.DaysPerYear) % clock.DaysPerYear
+	year := p.Params.Calendar.YearDays()
+	day = (day%year + year) % year
 	t := float64(p.climate(i).DailyMean(clock.Tick(day*clock.TicksPerDay))) / 10
 	v += (d.MoveWinter - d.MoveBase) * clampF((winterStart-t)/(winterStart-winterFull), 0, 1)
 	return p.roadMoveOf(i, v)
@@ -83,12 +84,13 @@ func (p *Planet) QuadrumTemps(i int) [4]float64 {
 		return out
 	}
 	cl := p.climate(i)
+	days := p.Params.Calendar.QuadrumDays()
 	for q := range out {
 		sum := 0
-		for d := q * clock.DaysPerQuadrum; d < (q+1)*clock.DaysPerQuadrum; d++ {
+		for d := q * days; d < (q+1)*days; d++ {
 			sum += int(cl.DailyMean(clock.Tick(d * clock.TicksPerDay)))
 		}
-		out[q] = float64(sum) / float64(clock.DaysPerQuadrum) / 10
+		out[q] = float64(sum) / float64(days) / 10
 	}
 	return out
 }

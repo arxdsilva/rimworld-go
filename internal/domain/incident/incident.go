@@ -76,6 +76,8 @@ const (
 	// RivalRaid (EAI-030, in no pool): a raid the story queued for a later
 	// tick (State.Queue): a rival faction's, or the refugee's pursuers'.
 	RivalRaid
+	TravelerGroup
+	TransportPodCrash
 	NumIDs
 )
 
@@ -129,12 +131,14 @@ var defs = [NumIDs]Def{
 	TakenALiking: {Key: "taken_a_liking", Name: "Taken a liking", Category: Nature, Helpful: true, Weight: 10, Cooldown: 8, MinDay: 6},
 	TimbergnawGnawing: {Key: "timbergnaw_gnawing", Name: "Timbergnaw gnawing", Category: Nature, Weight: 7, Cooldown: 20, MinDay: 10,
 		Biomes: biome.Of(biome.BorealForest, biome.Tundra, biome.ColdBog, biome.TemperateForest)},
-	MadAnimal:     {Key: "mad_animal", Name: "Mad animal", Category: Threat, Weight: 1, Cooldown: 10, MinDay: 6},
-	VisitorGroup:  {Key: "visitor_group", Name: "Visitors", Category: Nature, Weight: 12, Cooldown: 8, MinDay: 4},
-	WandererJoins: {Key: "wanderer_joins", Name: "Wanderer joins", Category: Nature, Helpful: true, Weight: 6, Cooldown: 20, MinDay: 8},
-	Party:         {Key: "party", Name: "Party", Category: Nature, Helpful: true, Weight: 8, Cooldown: 10, MinDay: 6},
-	SolarFlare:    {Key: "solar_flare", Name: "Solar flare", Category: Nature, Weight: 6, Cooldown: 12, MinDay: 12},
-	ShortCircuit:  {Key: "short_circuit", Name: "Short circuit", Category: Nature, Weight: 5, Cooldown: 8, MinDay: 10},
+	MadAnimal:         {Key: "mad_animal", Name: "Mad animal", Category: Threat, Weight: 1, Cooldown: 10, MinDay: 6},
+	VisitorGroup:      {Key: "visitor_group", Name: "Visitors", Category: Nature, Weight: 12, Cooldown: 8, MinDay: 4},
+	TravelerGroup:     {Key: "traveler_group", Name: "Travelers", Category: Nature, Weight: 5, Cooldown: 6, MinDay: 4},
+	TransportPodCrash: {Key: "transport_pod_crash", Name: "Transport pod crash", Category: Nature, Helpful: true, Weight: 3, Cooldown: 20, MinDay: 8},
+	WandererJoins:     {Key: "wanderer_joins", Name: "Wanderer joins", Category: Nature, Helpful: true, Weight: 6, Cooldown: 20, MinDay: 8},
+	Party:             {Key: "party", Name: "Party", Category: Nature, Helpful: true, Weight: 8, Cooldown: 10, MinDay: 6},
+	SolarFlare:        {Key: "solar_flare", Name: "Solar flare", Category: Nature, Weight: 6, Cooldown: 12, MinDay: 12},
+	ShortCircuit:      {Key: "short_circuit", Name: "Short circuit", Category: Nature, Weight: 5, Cooldown: 8, MinDay: 10},
 	// MED-04: the wiki gives no weights or cooldowns for our storyteller;
 	// these are original tuning (diseases from day 15, a few a year).
 	Flu:              {Key: "flu", Name: "Flu", Category: Nature, Weight: 6, Cooldown: 20, MinDay: 15, Disease: true},

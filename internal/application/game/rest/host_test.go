@@ -35,11 +35,13 @@ type fakeHost struct {
 	colonists map[entity.EntityID]bool
 	partner   map[entity.EntityID]entity.EntityID
 
-	act        schedule.Activity
-	food       bool
-	bedRest    map[entity.EntityID]bool
-	medicalOK  map[entity.EntityID]bool
-	surgeryRan []int
+	act          schedule.Activity
+	food         bool
+	bedRest      map[entity.EntityID]bool
+	bodyRestRate map[entity.EntityID]int32
+	medicalOK    map[entity.EntityID]bool
+	stays        map[entity.EntityID]entity.EntityID
+	surgeryRan   []int
 
 	room    int
 	sky     bool
@@ -99,7 +101,8 @@ func (f *fakeHost) TileFree(id entity.EntityID, x, y int) bool {
 	o, ok := f.taken[[2]int{x, y}]
 	return !f.blocked[[2]int{x, y}] && (!ok || o == id)
 }
-func (f *fakeHost) ReserveTile(id entity.EntityID, x, y int) { f.reserved[[2]int{x, y}] = id }
+func (f *fakeHost) ReserveTile(id entity.EntityID, x, y int)              { f.reserved[[2]int{x, y}] = id }
+func (f *fakeHost) PatientBedSafe(id, bed entity.EntityID, x, y int) bool { return true }
 func (f *fakeHost) HeldByOther(id, target entity.EntityID) bool {
 	o, ok := f.held[target]
 	return ok && o != id
@@ -169,11 +172,11 @@ func (f *fakeHost) SetSleptAt(id, bed entity.EntityID) { f.slept[id] = bed }
 func (f *fakeHost) ForgetSleptAt(id entity.EntityID)   { delete(f.slept, id) }
 func (f *fakeHost) ReleaseBed(id entity.EntityID) {
 	for _, bid := range f.bldgIDs {
-		f.bldgs[bid] = f.bldgs[bid].Release(uint64(id))
+		f.bldgs[bid] = construction.ReleaseBed(f.bldgs[bid], uint64(id))
 	}
 }
 func (f *fakeHost) SleepCell(id entity.EntityID, b construction.Building) (int, int) {
-	slot := b.SlotOf(uint64(id))
+	slot := construction.BedSlot(b, uint64(id))
 	if slot < 0 {
 		slot = 0
 	}
@@ -192,6 +195,13 @@ func (f *fakeHost) SeekFood(entity.EntityID) bool              { return f.food }
 
 func (f *fakeHost) OnBedRest(id entity.EntityID) bool        { return f.bedRest[id] }
 func (f *fakeHost) MayUseMedicalBed(id entity.EntityID) bool { return f.medicalOK[id] }
+func (f *fakeHost) RestFactor(id entity.EntityID) int32 {
+	if v := f.bodyRestRate[id]; v > 0 {
+		return v
+	}
+	return 1000
+}
+
 func (f *fakeHost) SurgeryWait(_ entity.EntityID, workLeft int) {
 	f.surgeryRan = append(f.surgeryRan, workLeft)
 }
@@ -243,3 +253,18 @@ func (f *fakeHost) Hurt(id entity.EntityID) (int32, int32, bool) {
 }
 
 var _ Host = (*fakeHost)(nil)
+
+func (f *fakeHost) HeldBed(id entity.EntityID) entity.EntityID { return f.stays[id] }
+func (f *fakeHost) Hold(id, bed entity.EntityID) {
+	if f.stays == nil {
+		f.stays = make(map[entity.EntityID]entity.EntityID)
+	}
+	f.RecoveredAnimal(id)
+	f.stays[id] = bed
+}
+func (f *fakeHost) RecoveredAnimal(id entity.EntityID) {
+	if bid := f.stays[id]; bid != 0 {
+		f.bldgs[bid] = construction.ReleaseBed(f.bldgs[bid], uint64(id))
+		delete(f.stays, id)
+	}
+}

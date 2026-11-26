@@ -50,7 +50,7 @@ func TestHasBedInReadModel(t *testing.T) {
 	}
 	// the second colonist claims it: now the first is the one without
 	b, _ := g.bldgs.Get(bed)
-	g.bldgs.Set(bed, b.Claim(uint64(other)))
+	g.bldgs.Set(bed, construction.ClaimBed(b, uint64(other)))
 	g.Step(1)
 	if pawnView(g, id).HasBed || !pawnView(g, other).HasBed {
 		t.Fatal("the owner should hold the only bed")

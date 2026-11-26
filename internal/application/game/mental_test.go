@@ -4,6 +4,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/wealth"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -61,7 +62,7 @@ func TestBoredomThoughts(t *testing.T) {
 		}
 		return false
 	}
-	g.joy[id] = 1000
+	g.joy[id] = 0
 	if !has(mood.RecreationStarved) {
 		t.Error("recreation-starved thought missing")
 	}
@@ -75,6 +76,7 @@ func TestMiserableColonistBreaksAndRecovers(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	g.wealth.Import(&wealth.Save{Counted: true, Value: 308_000}) // high wealth isolates severe mood
 	for _, k := range []mood.Kind{mood.SleptOutside, mood.AteRaw, mood.AteWithoutTable, mood.SleptInAwfulRoom} {
 		g.remember(id, k)
 	}

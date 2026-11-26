@@ -167,3 +167,31 @@ Harvest the field before hauling its piles · 2026-11-04 · 3cab5a707
 - Changed: user request 2026-11-04: harvest all nearby ready plants before hauling the harvest (HAUL-002's gather-then-haul). `doHarvest` marks the colonist when a harvest completes, fumbled or not (`haul.Sweep.Arm`). `assignWorkType`'s `work.Haul` case (priorities.go) first tries `g.haul.sweep.Next(haulHost{g}, id)`: a marked colonist with Grow on starts the nearest ripe marked plant (marked-plant index, `NearestRipe` = `nearestPlant(id, job.Harvest, haul.WantsHarvest)`) within `haul.Radius` (8, Chebyshev) of where it stands; otherwise the mark goes and haul options follow, `haul.Plan` still gathering piles in one load. No toggle (as HAUL-002), no new UI: the job reads "Harvesting".
 - Decisions: hysteresis: only a finished harvest marks again, so a plant ripening during the haul never pulls the colonist back; hunger, sleep, fire, draft and forced orders are decided before work assignment and keep interrupting, and the sweep resumes only if a ripe plant is within 8 tiles of where the colonist then stands; Firefight, Doctor and Warden at the same priority still precede Haul in `work.Order`; Haul off never reaches the case. Save: `saveState.HarvestSweep []entity.EntityID` ascending, nil when empty, no `SaveVersion` bump (older saves load unmarked), `testdata/save_schema.txt` refreshed. Goldens unchanged on arm64 and amd64 (pinned runs never have a grower finish a marked harvest then reach Haul at the same or higher priority). Tests include the no-flap (`harvest_sweep_test.go`), same-seed hash, save/load mid-sweep.
 - Limits: `game/haul/sweep.go` (`Sweep`: `Arm`, `Armed`, `Disarm`, `Next`, `Export`, `Import`; `SweepHost` = `Harvester` + `GrowOn` + `Position`); `haul/harvest.go` `Harvest`/`WantsHarvest` moved out of `game` behind the `Harvester` role (goldens proven unchanged by the move alone); `game` 52927 non-test lines / 175 files (was 52928 / 175); `haulHost` gains `GrowOn`, `NearestRipe`, `StartHarvest` (32 methods); `haulState` gains `sweep`; `Game` gains no field.
+
+## STK-1-core-fish-stack-limit
+Raw-fish stack limit with legacy kind compatibility · 2026-11-25 · this commit
+- Changed: raw fish uses a 25-unit stack limit while ordinary legacy stackable kinds remain 1000 and one-per-stack types remain one.
+- Decisions: retain existing saved IDs and per-kind admission; no general old-stack migration.
+- HUD: existing inventory/stack counts reflect the native cap; no new screen.
+- Boxes: vanilla **Stackable items** [-]; #85 partial (fish only).
+- Open: #85 general legacy limits and migration.
+
+## STK-85-per-kind-opt-in-migration
+Opt-in Core per-kind stack limits · 2026-11-25 · this commit
+- Changed: frozen book WithPerKindStackLimits restores the previous per-kind table without silently reversing the user-selected 1000 default. Load with that book splits oversized loose physical stacks, preserves the first ID and metadata, releases obsolete quantity claims and conserves units.
+- Decisions: changed-from-default plugin caps preserved; newly uncovered kinds have local caps. Carried/off-map inventories retain units until native drop; if nearby cells are full, separate capped stacks may overlap rather than lose goods. Reuse content book on load.
+- Boxes: #85 per-kind policy and native loose-stack migration implemented as opt-in; automatic default switch not claimed.
+
+## HAUL-102-indexed-animal-admission
+Reachable bounded trained animal hauling · 2026-11-25 · this commit
+- Changed: map-local source/availability cache, region-aware source and storage admission, shared storage summaries, bounded deterministic final selection and ordinary native claim/pickup/deposit owner.
+- Decisions: 16 finalists per region/area group in stable source order, ranked by distance and ID. Derived cache invalidates on owner revisions, not saved; no arbitrary timing threshold. Existing 20 kg tuning and ground storage scope retained.
+- Boxes: vanilla **Hauling** [x] annotated; SIM-102 native hauling correction. No UI change.
+- Open: none within native hauling admission; separate Rescue training remains open.
+
+## HAUL-102-claim-specific-invalidation
+Reservation-aware trained haul availability · 2026-11-25 · this commit
+- Changed: derived reservation changes identify actual entity or tile; unrelated movement claims do not evict group availability. Structural negatives survive all claim churn, including journal overflow; claim-dependent entries conservatively refresh on relevant or unknown changes. Stack/zone/topology/area/fire revisions still invalidate.
+- Tests: unchanged 40-animal/512-stack native 60-tick probe; source and candidate counts remain 512, destination searches zero. Structural negative and history-wrap regression; release/re-admission and prior interruption coverage retained.
+- Boxes: vanilla **Hauling** [x] annotated; SIM-102.
+- Open: no whole-game TPS claim; evidence is bounded work counts.

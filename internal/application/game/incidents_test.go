@@ -142,7 +142,8 @@ func TestStrayJoinsTame(t *testing.T) {
 		g.Step(3 * clock.TicksPerHour)
 		p, _ := g.positions.Get(got[0])
 		if chebyshev(p, Position{X: 20, Y: 20}) > 14 {
-			t.Fatalf("%s: the stray is still at %v", biome.DefOf(b).Key, p)
+			nowA, _ := g.animals.Get(got[0])
+			t.Fatalf("%s: stray %s at %v, mode=%v, goal=(%d,%d), path=%d/%d, nextThink=%d, food=%d, rest=%d, downed=%v", biome.DefOf(b).Key, nowA.Species, p, nowA.Mode, nowA.GoalX, nowA.GoalY, nowA.PathI, len(nowA.Path), nowA.NextThink, nowA.Food, nowA.Rest, nowA.Downed)
 		}
 	}
 }

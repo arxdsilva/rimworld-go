@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
@@ -291,12 +292,13 @@ func TestCancelledFrameReturnsComponents(t *testing.T) {
 func TestMachineryOreYieldsComponents(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
-	g.SpawnNamedPawn(1, 2, "Bo")
+	id, _ := g.SpawnNamedPawn(1, 2, "Bo")
+	setSkill(g, id, skill.Mining, 8)
 	if !g.SetGround(6, 0, 6, 4, "rock", "slate", "machinery") {
 		t.Fatal("set ground")
 	}
 	g.Enqueue(command.Command{Kind: command.DesignateMine, X: 6, Y: 2, X2: 6, Y2: 2})
-	g.Step(TicksPerCell*20 + MineWork*3/2 + 20)
+	g.Step(TicksPerCell*20 + g.mineWorkAt(6, 2) + 20)
 	if g.TerrainAt(6, 2) != "stone" {
 		t.Fatalf("mined tile = %s", g.TerrainAt(6, 2))
 	}
@@ -312,7 +314,8 @@ func TestDeconstructRefundsHalfComponents(t *testing.T) {
 	buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 8, 4)
 	buildNow(t, g, construction.ToolCabinet, item.Steel, construction.South, 12, 4)
 	g.Apply(command.Command{Kind: command.DesignateDeconstruct, X: 8, Y: 4, X2: 12, Y2: 5})
-	g.Step(TicksPerCell*30 + 600)
+	g.Step(TicksPerCell*30 + construction.DeconstructTicks(construction.HospitalBed) +
+		construction.DeconstructTicks(construction.ToolCabinet) + 600)
 	// 2 components -> 1; 1 component -> 0 (rounded down); steel 22 and 15
 	if g.countItem(item.Components) != 1 || g.countItem(item.Steel) != 22+15 {
 		t.Fatalf("components %d steel %d, want 1 and 37", g.countItem(item.Components), g.countItem(item.Steel))
@@ -474,7 +477,7 @@ func TestHospitalBedHeal(t *testing.T) {
 	}
 	bid := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 5, 5)
 	b, _ := g.bldgs.Get(bid)
-	g.bldgs.Set(bid, b.Claim(uint64(patient)))
+	g.bldgs.Set(bid, construction.ClaimBed(b, uint64(patient)))
 	if !g.inHospitalBed(patient) {
 		t.Fatal("the patient lies in the hospital bed")
 	}

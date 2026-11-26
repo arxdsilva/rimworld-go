@@ -27,8 +27,7 @@ var condsAging = []CondEntry{
 	{CondCataract, CondDef{
 		Label:      "cataract",
 		NoImmunity: true,
-		Stages: []Stage{{At: 0, // wiki: Ailments (cataract: the eye −50 %, i.e. sight −25 % per eye)
-			Mods: CapMods{off(Sight, -250)}}},
+		Stages:     []Stage{{At: 0}}, // wiki: Ailments, -50% of the affected eye efficiency
 	}},
 	{CondFrail, CondDef{
 		Label:      "frail",
@@ -45,8 +44,7 @@ var condsAging = []CondEntry{
 	{CondHearingLoss, CondDef{
 		Label:      "hearing loss",
 		NoImmunity: true,
-		Stages: []Stage{{At: 0, // wiki: Ailments (hearing loss: the ear −50 %, i.e. hearing −25 % per ear)
-			Mods: CapMods{off(Hearing, -250)}}},
+		Stages:     []Stage{{At: 0}}, // wiki: Ailments, -50% of the affected ear efficiency
 	}},
 	{CondArteryBlockage, CondDef{
 		Label:      "artery blockage",
@@ -62,9 +60,9 @@ var condsAging = []CondEntry{
 	{CondCarcinoma, CondDef{
 		Label:      "carcinoma",
 		NoImmunity: true,
-		// wiki: Ailments (carcinoma: pain by stage). The part efficiency
-		// loss (−10 … −90 %) is not modelled: stage mods are per kind and
-		// a carcinoma's capacity depends on its part (handoff MED-08).
+		TendEvery:  4 * 24, // wiki: Carcinoma, every 240000 ticks
+		// wiki: Carcinoma; part efficiency offsets at 0/15/40/60/80%
+		// are applied to the affected part by Body.eff.
 		Stages: []Stage{
 			{At: 0, Label: "minor", PainAdd: 100},
 			{At: 150, Label: "minor", PainAdd: 200},
@@ -72,6 +70,26 @@ var condsAging = []CondEntry{
 			{At: 600, Label: "major", PainAdd: 500},
 			{At: 800, Label: "extreme", PainAdd: 600},
 		},
+	}},
+	{CondAsthma, CondDef{
+		Label:      "asthma",
+		NoImmunity: true,
+		TendEvery:  7 * 24, // wiki: Asthma, every 420000 ticks
+		Stages: []Stage{
+			{At: 0, Label: "minor"},
+			{At: 300, Label: "major"},
+			{At: 450, Label: "major"},
+		}, // wiki: Asthma, affected lung efficiency -10/-30/-50%
+	}},
+	{CondAlzheimers, CondDef{
+		Label:      "alzheimers",
+		NoImmunity: true,
+		Stages: []Stage{
+			{At: 0, Label: "minor"},
+			{At: 200, Label: "minor"},
+			{At: 500, Label: "major"},
+			{At: 800, Label: "major"},
+		}, // wiki: Alzheimer's, brain efficiency -5/-10/-15/-20%
 	}},
 	{CondHeartAttack, CondDef{
 		Label:      "heart attack",

@@ -8,14 +8,18 @@ import (
 
 	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/application/game/evlog"
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/rage"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/region"
 	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/msgfmt"
 )
@@ -38,8 +42,8 @@ type (
 // Wildlife at colony start (wildlife.go has the draw; population.go the
 // carrying capacity that tops it up).
 const (
-	startHerdsMin   = 4
-	startHerdsMax   = 6
+	startHerdsMin   = animal.StartHerdsMin
+	startHerdsMax   = animal.StartHerdsMax
 	wildStartRadius = 12
 	wolfStartRadius = 16
 	dawnHour        = 6
@@ -70,9 +74,7 @@ func (g *Game) spawnAnimal(s animal.Species, x, y int) (entity.EntityID, error) 
 	return id, nil
 }
 
-// randomTileAway finds a walkable tile at least minR (Chebyshev) from
-// the landing spot (the map centre for legacy colonies); ok is false
-// after a bounded number of tries.
+// randomTileAway samples walkable tiles at least minR from the landing.
 func (g *Game) randomTileAway(minR int) (int, int, bool) {
 	cx, cy := g.landingSpot() // setup.go
 	for try := 0; try < 400; try++ {
@@ -84,10 +86,7 @@ func (g *Game) randomTileAway(minR int) (int, int, bool) {
 	return 0, 0, false
 }
 
-// phaseAnimals runs every animal: its needs every tick, its reflexes
-// (fleeing, fighting, eating, walking) every tick, and a full decision
-// (animal_needs.go) every animal.DecideEvery ticks or when something
-// happens to it. The creature index is the tick's one build (animal_index.go).
+// phaseAnimals runs each animal's needs, reflexes and periodic decisions.
 func (g *Game) phaseAnimals() {
 	now := uint64(g.clock.Now())
 	g.traces = projectile.Prune(g.traces, now)
@@ -100,12 +99,16 @@ func (g *Game) phaseAnimals() {
 	g.raid.Ships.Tick(now)                          // raid/shippart.go (DEF-4): guards wake, the blight spreads
 	g.wl.ids = append(g.wl.ids[:0], g.animalIDs...) // the list changes as animals die or leave
 	for _, id := range g.wl.ids {
-		a, ok := g.animals.Get(id)
-		if !ok {
+		live := g.animals.Ref(id)
+		if live == nil {
 			continue
 		}
+		a := live.State()
 		if a.Dormant {
 			continue // vault.go: a sealed vault's sleeper neither thinks nor needs
+		}
+		if a.Tame && (now+uint64(id))%animal.DecideEvery == 0 {
+			decayAnimalTraining(g, id, &a, now)
 		}
 		if a.Cooldown > 0 {
 			a.Cooldown--
@@ -116,7 +119,7 @@ func (g *Game) phaseAnimals() {
 		if !g.tickLife(id, &a, now) { // animal_life.go
 			continue // died of old age
 		}
-		g.thinkAnimal(id, &a, now)
+		thinkAnimalReady(g, id, &a, now)
 		if !g.animals.Has(id) {
 			continue
 		}
@@ -124,75 +127,120 @@ func (g *Game) phaseAnimals() {
 		if a.Tame || a.FeedClaim != 0 || a.Mode == animal.Feed && a.Feed.Kind == animal.FeedCarcass {
 			g.syncFeedClaim(id, &a) // animal_needs.go: an eater's reservation
 		}
-		g.animals.Set(id, a) // it steps in phaseMovement
+		live.AssignState(a) // it steps in phaseMovement
 	}
 }
 
-// thinkAnimal is one animal's tick: a downed animal only lies there;
-// otherwise rage, being tamed, fleeing and fighting come first; then a
-// leaving animal walks off; then needs pick between wandering, feeding and
-// resting (decide, paced).
+// thinkAnimal normalizes direct callers, then runs normal animal reflexes.
 func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
-	a.Normalise(uint64(id))        // an older save's (or a fixture's) hunger counter
-	a.Errand = false               // set again below by the errands that are no mode (PLAY-022)
+	a.Normalise(uint64(id)) // fixtures and direct invocations also normalize
+	thinkAnimalReady(g, id, a, now)
+}
+
+func thinkAnimalReady(g *Game, id entity.EntityID, a *animal.State, now uint64) {
+	m := trainingAt(g, id)
+	before := m
+	if !thinkAnimalCore(g, id, a, &m, now) && m.Task.Source != 0 {
+		herd.CancelHaul(animalHaulHost{haulHost{g}}, g.reserve, id, a, &m)
+	}
+	if m != before && g.animals.Has(id) {
+		saveTraining(g, id, m)
+	}
+}
+
+type animalHaulHost struct{ haulHost }
+
+func (h animalHaulHost) Allowed(id entity.EntityID, x, y int) bool { return h.g.areaAllows(id, x, y) }
+func (h animalHaulHost) Take(id, sid entity.EntityID, n int) (entity.EntityID, bool) {
+	return (herdHost{h.g}).Take(id, sid, n)
+}
+func (h animalHaulHost) GoTo(id entity.EntityID, a animal.State, x, y int) animal.State {
+	h.g.animalGoTo(id, &a, x, y)
+	return a
+}
+func (h animalHaulHost) Deposit(id entity.EntityID, st item.Stack) { h.g.mergeOrSet(id, st) }
+func (h animalHaulHost) HaulOffers(id entity.EntityID, a animal.State) []herd.HaulOffer {
+	g := h.g
+	r, layer := g.regionsNow(), region.Wild
+	var areaGen uint64
+	if g.worldSt != nil {
+		areaGen = g.worldSt.areaGen
+	}
+	if g.gatesOpen(id, &a) {
+		layer = region.Tame
+	}
+	return g.idx.animalHaul.Offers(h, g.reserve, id, herd.HaulScope{Regions: r, Layer: layer, Area: g.restrictedRef(id), Flee: a.Mode == animal.Flee, Safe: func(x, y int) bool { return !g.animalFireBlocked(&a, x, y) }},
+		herd.HaulRevision{Stacks: g.stacks.Ver(), Zones: g.zones.Ver(), Fog: g.fog.ver, Grid: g.grid.Version(), Structures: g.structVer, Fences: g.regs.fenceGen, Frames: g.frames.Ver(), Claims: g.reserve.Ver(), Areas: areaGen, Home: uint64(g.homeArea.ver), Fire: g.fire.ver})
+}
+
+func thinkAnimalCore(g *Game, id entity.EntityID, a *animal.State, m *training.Maintenance, now uint64) bool {
+	a.Errand = false               // restored by errands during this tick
 	if g.downedThink(id, a, now) { // animal_health.go: a downed animal lies still
-		return
+		return false
+	}
+	if a.Tame && (now+uint64(id))%animal.DecideEvery == 0 && g.rest.Animals.EndMedicalRest(id, a.Mode == animal.Rest, sleeping(*a), a.Injury > 0) && a.Mode == animal.Rest {
+		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
 	}
 	if animal.IsMech(a.Species) {
 		g.raid.Mechs.Think(id, a, now) // raid/mech.go (DEF-4): a machine, never the animal brain
-		return
+		return false
 	}
 	def := animal.DefOf(a.Species)
 	pos, _ := g.positions.Get(id)
 	if rageOf(g).ThinkManhunter(id, a, now) {
-		return
+		return false
 	}
 	if g.ropedStep(id, a, pos, now) { // rope.go: roped, or led to its pen
 		a.Errand = true // a led animal walks
-		return
+		return false
 	}
 	if g.beingTamed(id) { // holds still for the handler
 		a.Path, a.PathI, a.Mode = nil, 0, animal.Wander
 		a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
-		return
+		return false
 	}
 	if rageOf(g).FleeCheck(id, a, rage.Pos(pos), def, now) {
-		return
+		return false
 	}
-	rageOf(g).ChargeCheck(id, a, rage.Pos(pos), now) // a wild predator may rush someone close
-	if a.Tame && g.masterDuty(id, a, now) {          // train_animals.go: guard and release
-		return
+	if a.ChargeSince != 0 || !a.Tame && now >= a.NextCharge &&
+		(now+uint64(id))%animal.DecideEvery == 0 && animal.Charger(a.Species) {
+		rageOf(g).ChargeCheck(id, a, rage.Pos(pos), now)
+	}
+	if a.Tame && g.masterDuty(id, a, now) { // train_animals.go: guard and release
+		return false
 	}
 	if a.Tame && def.Predator && a.HuntSince != 0 {
 		rageOf(g).GuardBreaksHunt(id, a, rage.Pos(pos), now) // rage/guard.go: a threat comes before a meal
 	}
 	if a.Tame && def.Predator && a.HuntSince == 0 {
 		if rageOf(g).GuardCheck(id, a, rage.Pos(pos), now) {
-			return
+			return false
 		}
+	} else if a.Target == 0 && !def.Predator {
+		a.HuntSince = 0
 	} else if rageOf(g).FightCheck(id, a, rage.Pos(pos), def, now) { // a tame predator's hunt runs as a wild one's (PLAY-017)
-		return
+		return false
 	}
 	if a.Leaving {
 		g.walkOff(id, a, pos, now)
-		return
+		return false
 	}
 	if now >= a.NextDecide {
 		g.decideAnimal(id, a, pos, now)
 		if a.Mode == animal.Attack && a.Target != 0 { // T3: off hunting
 			rageOf(g).Chase(id, a, now)
-			return
+			return false
 		}
 	}
 	switch a.Mode {
 	case animal.Feed:
 		g.feedStep(id, a, pos, now)
-		return
+		return false
 	case animal.Rest:
-		return // lies down (or walks to its herd's bed)
+		return false // lies down (or walks to its herd's bed)
 	case animal.Confused:
 		if g.confusedStep(id, a, pos, def, now) { // bonds.go: its colonist died
-			return
+			return false
 		}
 	case animal.Wander:
 	default:
@@ -200,21 +248,26 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	}
 	if a.Tame && g.followMaster(id, a, pos, now) { // train_animals.go: obedient, master drafted
 		a.Errand = true // keeping up with its master, it walks
-		return
+		return false
 	}
 	if g.lifeMove(id, a, pos, now) { // animal_life.go: mating, following its mother
 		a.Errand = a.Mate != 0 // the male walks to his mate; a young one trailing its mother ambles
-		return
+		return false
+	}
+	if m.HaulProgress != 0 && herd.HaulStep(animalHaulHost{haulHost{g}}, g.reserve, id, a, m, now) {
+		a.Errand = true
+		return true
 	}
 	if a.Tame {
 		g.wanderTame(id, a, pos, def, now)
-		return
+		return false
 	}
 	if a.PathI >= len(a.Path) && now >= a.NextThink {
 		r := def.WanderRadius
 		g.animalGoTo(id, a, pos.X+g.rng.IntN(2*r+1)-r, pos.Y+g.rng.IntN(2*r+1)-r)
 		a.NextThink = now + 240 + uint64(g.rng.IntN(480))
 	}
+	return false
 }
 
 // posOf is id's position (the zero cell when it has none).
@@ -229,42 +282,21 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	gates := g.gatesOpen(id, a) // rope.go: livestock pass gates only when led
 	w, h := g.grid.Width(), g.grid.Height()
 	gx, gy = mathx.Clamp(gx, 0, w-1), mathx.Clamp(gy, 0, h-1)
-	if !g.grid.Walkable(gx, gy) || g.fenceBars(gates, gx, gy) {
-		found := false
-		for r := 1; r <= 3 && !found; r++ {
-			for dy := -r; dy <= r && !found; dy++ {
-				for dx := -r; dx <= r && !found; dx++ {
-					if g.grid.Walkable(gx+dx, gy+dy) && !g.fenceBars(gates, gx+dx, gy+dy) {
-						gx, gy, found = gx+dx, gy+dy, true
-					}
-				}
-			}
-		}
-		if !found {
-			return
-		}
+	var found bool
+	gx, gy, found = herd.WalkTarget(gx, gy, func(x, y int) bool { return g.grid.Walkable(x, y) && !g.fenceBars(gates, x, y) })
+	if !found {
+		return
 	}
+
 	if g.animalFireBlocked(a, gx, gy) { // fire_danger.go: no walk up to a fire
 		a.Path, a.PathI = nil, 0
 		a.RetryAt = uint64(g.clock.Now()) + pathRetry
 		return
 	}
 	pos, _ := g.positions.Get(id)
-	if pos.X == gx && pos.Y == gy {
-		a.Path, a.PathI = nil, 0
-		return
-	}
-	// the colony's own animals use its doors and gates; no animal
-	// crosses a fence (fences.go)
-	q := g.softAnimalQuery(id, g.animalPathQuery(gates, false)) // area_soft.go: areas and fire cost extra
-	path, ok := g.searcher().Find(q, pos.X, pos.Y, gx, gy)
-	if !ok {
-		// no way there (a shut door, say): don't search again for a while
-		a.Path, a.PathI = nil, 0
-		a.RetryAt = uint64(g.clock.Now()) + pathRetry
-		return
-	}
-	a.Path, a.PathI, a.GoalX, a.GoalY = path, 0, gx, gy
+	// Soft area and fire costs do not change the movement layer.
+	q := g.softAnimalQuery(id, g.animalPathQuery(gates, false))
+	herd.AssignPath(a, g.searcher(), q, pos.X, pos.Y, gx, gy, uint64(g.clock.Now())+pathRetry)
 }
 
 // moveAnimal takes an animal's next path step if it is due and the way
@@ -276,9 +308,7 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 		return // removed earlier this tick
 	}
 	if ar.Downed && ar.PathI < len(ar.Path) { // animal_health.go: a downed animal takes no step
-		a := *ar
-		a.Path, a.PathI = nil, 0
-		g.animals.Set(id, a)
+		ar.Path, ar.PathI = nil, 0
 		return
 	}
 	if ar.PathI >= len(ar.Path) {
@@ -288,12 +318,12 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 		}
 		return
 	}
-	a := *ar
+	a := ar.State()
 	next := a.Path[a.PathI]
 	gates := g.gatesOpen(id, &a) // rope.go: livestock pass gates only when led
 	if !g.grid.Walkable(next.X, next.Y) || !gates && g.doorAt(next.X, next.Y) || g.fenceBars(gates, next.X, next.Y) {
 		a.Path, a.PathI = nil, 0
-		g.animals.Set(id, a)
+		ar.AssignState(a)
 		return
 	}
 	from, _ := g.positions.Get(id)
@@ -302,21 +332,21 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 	switch v {
 	case stepGo:
 		a.PathI++
-		g.stepAnimal(id, &a, &m, from, to, now)
+		g.stepAnimal(id, ar, &a, &m, from, to, now)
 		return
 	case stepSidestep:
 		g.positions.Set(id, alt) // replan from the new cell
 		g.animalGoTo(id, &a, a.GoalX, a.GoalY)
-		g.stepAnimal(id, &a, &m, from, alt, now)
+		g.stepAnimal(id, ar, &a, &m, from, alt, now)
 		return
 	case stepArriveNear:
 		a.Path, a.PathI = nil, 0
 		if alt != from {
-			g.stepAnimal(id, &a, &m, from, alt, now)
+			g.stepAnimal(id, ar, &a, &m, from, alt, now)
 			return
 		}
 		a.RetryAt = now + uint64(a.Step()) // stood still: pause a step before replanning
-		g.animals.Set(id, a)
+		ar.AssignState(a)
 		return
 	}
 	// stepWait or stepRepath: stay put and try again next tick
@@ -331,13 +361,13 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 		a.Path, a.PathI = nil, 0 // give up; it thinks of something else
 		m.BlockedTicks, m.BlockedBy = 0, 0
 	}
-	g.animals.Set(id, a)
+	ar.AssignState(a)
 	g.motion.Set(id, m)
 }
 
 // stepAnimal moves an animal from -> to at tick now and springs a trap
 // there if it is a trap victim.
-func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, from, to Position, now uint64) {
+func (g *Game) stepAnimal(id entity.EntityID, live *animal.Live, a *animal.State, m *motionRec, from, to Position, now uint64) {
 	g.positions.Set(id, to)
 	g.stainStep(id, from) // stains.go: a bleeding animal drips
 	// the gait is chosen as the step starts and stays with it (PLAY-022:
@@ -345,7 +375,7 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 	a.StepGait = a.GaitAt(now)
 	m.stepped(now, g.weatherSlow(to.X, to.Y, a.StepCostAt(a.StepGait, isDiagonal(from, to))))
 	g.motion.Set(id, *m)
-	g.animals.Set(id, *a)
+	live.AssignState(*a)
 	if t := g.combat.Traps; t.Victim(*a) && t.At(to.X, to.Y) != 0 { // one object lookup: no building scan
 		t.Spring(id, to.X, to.Y)
 	}
@@ -400,7 +430,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	g.onAnimalDied(id, by)                                                // bonds.go: the bonded colonist's grief, before the state goes
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
-	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony, out, animal.CorpseYieldOf(a, uint64(g.clock.Now()), g.herdOf().Careful(id)))
+	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony, out, animal.CorpseYieldOf(a, uint64(g.clock.Now()), g.herdOf().Careful(id), g.clock.Calendar()))
 	toxicRot(g, corpse, body.ToxicBuildup(a.Body)) // incidents.go (FOOD-6)
 	g.herdOf().Killed(by, id, corpse)              // game/herd (FOOD-3): a hunter carries its kill to storage
 	k, ok := g.animals.Get(by)
@@ -418,6 +448,22 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 }
 
 func (g *Game) removeAnimal(id entity.EntityID) {
+	packCargoLost(g, id)
+	g.detachAnimal(id)
+	saveTraining(g, id, training.Maintenance{})
+}
+
+// detachAnimal removes the active-map record while a live transfer retains
+// its global training maintenance and ownership.
+func (g *Game) detachAnimal(id entity.EntityID) {
+	if m := trainingAt(g, id); m.Task.Source != 0 && g.animals.Has(id) {
+		a := g.animals.Ref(id).State()
+		herd.CancelHaul(animalHaulHost{haulHost{g}}, g.reserve, id, &a, &m)
+		saveTraining(g, id, m)
+	}
+	g.care.Doctor.PatientDied(id)
+	g.releaseBed(id)
+	g.care.Rest.Clear(id)
 	if a := g.animals.Ref(id); a != nil && a.FeedClaim != 0 {
 		g.reserve.ReleaseEntity(id, a.FeedClaim) // an eater's stack is free again
 	}
@@ -488,22 +534,12 @@ func (g *Game) animalViews() []AnimalView {
 			continue
 		}
 		p, _ := g.positions.Get(id)
-		sv := animalview.Of(a.Species)
-		out = append(out, AnimalView{
-			ID: id, Species: a.Species.String(), Label: sv.Label, X: p.X, Y: p.Y,
-			Attack: sv.Attack, Female: animalFemale(id, a),
-			Size:       sv.Size,
-			Health:     a.HP() * 100 / sv.MaxHP,
-			Mode:       a.Mode.String(),
-			Designated: a.Designated,
-			Hostile:    g.hostile(a) || a.Enraged(uint64(g.clock.Now())),
-			TargetID:   rageOf(g).ChaseTarget(a),
-			Tame:       a.Tame,
-			Name:       a.Name,
-			TameMark:   a.TameMark,
-			Manhunter:  a.Enraged(uint64(g.clock.Now())),
-		})
+		out = append(out, animalview.Live(id, a, p.X, p.Y, animalview.Female(id, a),
+			g.hostile(a) || a.Enraged(now), rageOf(g).ChaseTarget(a), now))
 		av := &out[len(out)-1]
+		if g.worldSt != nil {
+			av.Visiting(g.worldSt.visitGroups, g.ng.factions)
+		}
 		m := g.motionOf(id)
 		av.StepTick, av.StepTicks = m.StepTick, m.StepTicks
 		if a.PathI < len(a.Path) {
@@ -511,7 +547,7 @@ func (g *Game) animalViews() []AnimalView {
 			av.BlockedBy = m.BlockedBy
 		}
 		g.fillAnimalAction(av, id, a)
-		av.Gait = viewGait(a, m, now, av.HasNext) // animals_gait.go
+		av.Gait = animalview.Gait(a, m.StepTick, m.StepTicks, now, av.HasNext) // animals_gait.go
 		av.Downed = a.Downed
 		if av.Sleeping = lyingDown(a); av.Sleeping { // animal_health.go: asleep or downed
 			av.Action = "" // the renderer draws the rest pose
@@ -532,46 +568,4 @@ func (g *Game) animalViews() []AnimalView {
 		av.Bashing, av.Defending, av.Grief = rageOf(g).Bashing(id, a, now), rageOf(g).Defending(a), a.Tame && a.Enraged(now)
 	}
 	return out
-}
-
-// actionState is a as the action view reads it: feeding and leaving
-// animals look like wandering ones (a grazer standing still grazes).
-func actionState(a animal.State) animal.State {
-	switch a.Mode {
-	case animal.Feed, animal.Leave, animal.Rest:
-		a.Mode = animal.Wander
-	}
-	return a
-}
-
-// animalFemale reports an animal's sex (simulated since SIM-024; an older
-// save's animals keep the sex their id gave the art).
-func animalFemale(id entity.EntityID, a animal.State) bool {
-	if !a.HasSex {
-		return animal.ArtFemale(uint64(id))
-	}
-	return a.Female
-}
-
-// viewGait is AnimalView.Gait (PLAY-022 C4): the gait of the step the
-// animal is taking. It is the gait the step started with (stepAnimal
-// writes it to State.StepGait), not what the animal's mode says now. It
-// reads "" while the animal is not moving: before its first step, lying
-// down, or once its last step has ended with no cell left on its path.
-func viewGait(a animal.State, m motionRec, now uint64, hasNext bool) string {
-	if a.StepGait == animal.GaitNone || lyingDown(a) {
-		return ""
-	}
-	if !hasNext && now >= m.StepTick+uint64(m.StepTicks) {
-		return ""
-	}
-	switch a.StepGait {
-	case animal.GaitAmble:
-		return GaitAmble
-	case animal.GaitWalk:
-		return GaitWalk
-	case animal.GaitRun:
-		return GaitRun
-	}
-	return ""
 }

@@ -18,8 +18,8 @@ Path prefixes: `ebiten/` is `internal/adapters/inbound/ebiten/`, `game/` is `int
 | Which selections | One pawn or one animal gets the card. Groups, buildings, plants, items, zones and cell info keep today's pane in every mode. |
 | Mechs | Mechs are `AnimalView`s here (`game/animals.go:104`), so a mech counts as the wild target, `w`. |
 | Slavery, ideoligion, genes, psyfocus | Grepped for `slave`, `ideoligion`, `ideology`, `ideo`, `xenotype`, `gene`, `psyfocus`, `psychic`, `meditat` over `internal/`: no hits. All excluded. `mutant` and `ghoul` hit one flavour line in `domain/animal/ecology.go`; also excluded. |
-| Trainables | Ours are obedience, guard and release (`domain/animal/training/training.go:7`). Tameness, rescue, haul and all Odyssey rows are excluded. Guard has no mod row and **is added** to our catalog as an extra, def `guard`. |
-| Artistic skill | We have eleven skills, none artistic. The default layout's skill pairs are rearranged so the odd one is not left beside a blank. |
+| Trainables | Ours are obedience, guard, release and haul (`domain/animal/training/training.go`); the default docked and floating cards show all skills the species can learn. Tameness, separate rescue training and all Odyssey rows are excluded. Guard has no mod row and **is added** to our catalog as an extra, def `guard`. |
+| Artistic skill | PRD-6: twelve canonical skills, including Artistic, now appear in the default docked and floating layouts. Six pairs preserve fit, with work_speed moved to the left status column. The default preset golden is updated; pre-v21 saves migrate eleven-skill arrays. The default layout's skill pairs are rearranged so the odd one is not left beside a blank. |
 | Apparel policy | Excluded here, because the system is missing (open in both checklists). It is core gameplay, not DLC, so its key `clothes_pick` stays reserved. When `SetApparelPolicy` lands, that task adds the widget. |
 | Stat lines with no stat | A tooltip stat line with no formula in our game is excluded, not faked. Where a pure domain formula exists the line calls it. |
 | Selector menus | `uikit.Picker` stands for the mod's float menu; it is what the game uses everywhere. |
@@ -34,10 +34,10 @@ Path prefixes: `ebiten/` is `internal/adapters/inbound/ebiten/`, `game/` is `int
 | | Count |
 |---|---|
 | Rows | 504 |
-| Done | 429 |
+| Done | 432 |
 | Partial | 0 |
 | Missing | 0 |
-| Excluded | 75 |
+| Excluded | 72 |
 | Marked UNCLASSIFIED (status is a best guess) | 0 |
 
 Audit (2026-11-04, DOS-9): every row was re-read against the code, and the "where it lives" column holds what the audit cited. They read the code; the journeys in `ebiten/journey_dossier*_test.go` and the package tests are what ran it. The audit found 092 and 100 missing and 057 and 284 partial; all four were then built. The row table below is the plan the package was built from, so "work planned" reads as a plan.
@@ -45,7 +45,7 @@ Audit (2026-11-04, DOS-9): every row was re-read against the code, and the "wher
 Close to the mod, with a stated difference:
 
 - RHUD-348: the tooltip shows the key and no source mod, because the game has no mods.
-- RHUD-443: the tooltip gives the animal's skill and wildness; our animals have no trainability class.
+- RHUD-443: the tooltip gives the animal's minimum handling skill and wildness instead of its trainability class. Native trainability classes now govern eligibility; a separate class display/ineligibility explanation is still missing.
 - The docked card covers the map's extreme lower-left corner (about 4x5 tiles at the camera's limit). Float the card (one click) or turn it off to reach them.
 - The expanded panel narrows below the width it wants on small windows rather than overlap the Global panel.
 - Alerts above the letters do not move out of the card's way.
@@ -56,7 +56,7 @@ Status by family:
 |---|---|---|---|---|---|
 | A. Display modes and the inspect pane | 60 | 55 | 0 | 0 | 5 |
 | B. Layout tree | 16 | 16 | 0 | 0 | 0 |
-| C. Value widgets | 240 | 190 | 0 | 0 | 50 |
+| C. Value widgets | 240 | 193 | 0 | 0 | 47 |
 | D. Targets and default layouts | 13 | 13 | 0 | 0 | 0 |
 | E. Layout editor | 24 | 23 | 0 | 0 | 1 |
 | F. Presets | 27 | 27 | 0 | 0 | 0 |
@@ -345,7 +345,7 @@ Our eleven skills are in `domain/pawn/skill/skill.go`. All data is on `PawnView.
 | RHUD-203 | Skill row: plants | dossier/build.go:skill | done | Def `plants` (DOS-3) |
 | RHUD-204 | Skill row: animals | dossier/build.go:skill | done | Def `animals` (DOS-3) |
 | RHUD-205 | Skill row: crafting | dossier/build.go:skill | done | Def `crafting` (DOS-3) |
-| RHUD-206 | Skill row: artistic | No art skill: `skill.go` has eleven, none artistic | excluded | No artistic skill |
+| RHUD-206 | Skill row: artistic | skill.Artistic ID 11, item.Book-independent SkillView and Dossier skill catalog | done | Dossier default card now shows Artistic as a normal skill and default preset golden pins the layout |
 | RHUD-207 | Skill row: medicine | dossier/build.go:skill | done | Def `medicine` (DOS-3) |
 | RHUD-208 | Skill row: social | dossier/build.go:skill | done | Def `social` (DOS-3) |
 | RHUD-209 | Skill row: intellectual | dossier/build.go:skill | done | Def `intellectual` (DOS-3) |
@@ -411,7 +411,7 @@ Each line is one more line in `sheet.SkillTip`. Where a pure domain formula exis
 | RHUD-262 | Social: social impact | dossier/sheet/tips.go:SkillTip(Social impact) | done | `Card.Stats` (DOS-3) |
 | RHUD-263 | Social: conversion power | Ideology | excluded | No ideoligion system |
 | RHUD-264 | Social: suppression power | Ideology | excluded | No slavery |
-| RHUD-265 | Artistic: base lines only | No art skill | excluded | No artistic skill |
+| RHUD-265 | Artistic: base lines only | Artistic skill level, passion and sculpting speed/quality description in Bio and Dossier | done | Base skill row is rendered through the existing dossier catalog; game regression pins the Bio read model |
 
 #### C9. Training (creature target)
 
@@ -420,8 +420,8 @@ Each line is one more line in `sheet.SkillTip`. Where a pure domain formula exis
 | RHUD-266 | Training row: tameness | Taming is a one-off, `AnimalView.Tame`; `training.go` has no such step count | excluded | No tameness training |
 | RHUD-267 | Training row: obedience | dossier/build.go:train | done | DOS-3 widget `train`, def `obedience` |
 | RHUD-268 | Training row: release | dossier/build.go:train | done | Def `release` (DOS-3) |
-| RHUD-269 | Training row: rescue | No such trainable: three skills only, `training.go:7`; grep on `domain/animal` empty | excluded | No rescue training |
-| RHUD-270 | Training row: haul | Same | excluded | No haul training |
+| RHUD-269 | Training row: rescue | No separate Rescue training skill in `training.Skill` | excluded | No rescue training |
+| RHUD-270 | Training row: haul | dossier/build.go:train; native appended Haul skill | done | DOS-3 widget `train`, def `haul`; native allowed/progress and translated label/description |
 | RHUD-271 | Training row: attack target (Odyssey) | DLC | excluded | Odyssey trainable |
 | RHUD-272 | Training row: comfort (Odyssey) | DLC | excluded | Odyssey trainable |
 | RHUD-273 | Training row: dig (Odyssey) | DLC | excluded | Odyssey trainable |

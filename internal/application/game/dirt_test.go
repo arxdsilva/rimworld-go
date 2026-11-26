@@ -12,11 +12,13 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
@@ -221,11 +223,15 @@ func TestOutdoorWorkSoilsBoots(t *testing.T) {
 	h.setTerrain(10, 5, terrain.Rock)
 	mid, _ := h.SpawnNamedPawn(9, 5, "Cy")
 	h.Enqueue(command.Command{Kind: command.DesignateMine, X: 10, Y: 5, X2: 10, Y2: 5})
-	h.Step(MineWork + 40)
+	// Mining Speed at neutral level is 88% after the Core skill curve.
+	// Allow enough whole ticks for the designated rock to finish.
+	speed := roster.LevelSpeed(skill.Mining, skill.Neutral)
+	mineTicks := (h.mineWorkAt(10, 5)*1000 + speed - 1) / speed
+	h.Step(mineTicks + 40)
 	if h.terr.At(10, 5) == terrain.Rock {
 		t.Fatal("the rock was not mined")
 	}
-	if c := carried(h, mid); c < (MineWork/filth.WorkEvery-1)*filth.WorkGain {
+	if c := carried(h, mid); c < (mineTicks/filth.WorkEvery-1)*filth.WorkGain {
 		t.Fatalf("mining carried only %d", c)
 	}
 }

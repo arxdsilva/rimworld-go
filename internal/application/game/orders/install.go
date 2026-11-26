@@ -153,7 +153,7 @@ func (in *Install) Do(id entity.EntityID, j job.Record) {
 	h := in.h
 	fr, ok := h.Frame(j.Target)
 	st, has := h.Stack(j.Dest)
-	if !ok || !has || entity.EntityID(fr.Reinstall) != j.Dest || st.Carrier != 0 && st.Carrier != id {
+	if !ok || !has || entity.EntityID(fr.Reinstall) != j.Dest || st.Forbidden || st.Carrier != 0 && st.Carrier != id {
 		finish(h, id, j, job.Fail, job.TargetGone)
 		return
 	}

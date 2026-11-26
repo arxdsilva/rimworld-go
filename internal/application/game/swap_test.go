@@ -200,8 +200,9 @@ func TestSwapBedKeepsClaimantHospitalBedNeedsNoComponents(t *testing.T) {
 func TestSwapFloorAndCarpet(t *testing.T) {
 	t.Parallel()
 	g := swapGame(t)
-	placeBuilt(t, g, construction.StoneTile, construction.South, 4, 4) // AX-3: granite, the default stone
+	placeBuilt(t, g, construction.StoneTile, construction.South, 4, 4)
 	fl := objAt(g, 4, 4, construction.LayerFloor)
+	old, _ := g.bldgs.Get(fl)
 	if ok, r := g.CanPlaceAt("stone tile", "marble blocks", "south", 4, 4); !ok {
 		t.Fatalf("marble tile over granite: %q", r)
 	}
@@ -214,8 +215,8 @@ func TestSwapFloorAndCarpet(t *testing.T) {
 	if b, _ := g.bldgs.Get(fl); b.Stuff != item.MarbleBlocks {
 		t.Fatalf("floor after swap = %+v", b)
 	}
-	if got := itemTotals(g)[item.GraniteBlocks]; got != construction.Refund(construction.StoneTile) {
-		t.Fatalf("floor refund = %d", got)
+	if got, want := itemTotals(g)[old.Stuff], refundOf(old); got != want {
+		t.Fatalf("%s floor refund = %d, want %d", old.Stuff, got, want)
 	}
 	g.placeFrameStuff(construction.Carpet, item.CarpetStraw, construction.South, 8, 4)
 	cfid, _ := swapFrameOn(t, g, 8, 4, construction.LayerObject)

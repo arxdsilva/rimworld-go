@@ -115,7 +115,7 @@ func TestRestSlotTakesTheMedicalBed(t *testing.T) {
 	}
 	j := h.jobs[patient]
 	if j.Kind != job.Sleep || j.Target != bedID || j.WorkLeft != needs.SleepWorkMin || r.HeldBed(patient) != bedID ||
-		h.sleptAt[patient] != bedID || h.bldgs[bedID].SlotOf(uint64(patient)) < 0 || h.log[0] != "interrupt" {
+		h.sleptAt[patient] != bedID || construction.BedSlot(h.bldgs[bedID], uint64(patient)) < 0 || h.log[0] != "interrupt" {
 		t.Fatalf("the free medical bed, held for the stay: %+v held %d", j, r.HeldBed(patient))
 	}
 	j.State = job.Do
@@ -145,7 +145,7 @@ func TestRestSlotTakesTheMedicalBed(t *testing.T) {
 	}
 	h.jobs[patient] = job.Record{}
 	r.Update(patient)
-	if r.HeldBed(patient) != 0 || h.bldgs[bedID].SlotOf(uint64(patient)) >= 0 {
+	if r.HeldBed(patient) != 0 || construction.BedSlot(h.bldgs[bedID], uint64(patient)) >= 0 {
 		t.Fatal("out of bed: the medical bed is given back")
 	}
 }
@@ -195,6 +195,7 @@ func TestRestSelfTendInBed(t *testing.T) {
 	h.tend[patient] = true
 	h.stacks[herbal] = item.Stack{Kind: item.HerbalMedicine, Qty: 1}
 	r.Start(patient, 0)
+	h.bed(bedID, construction.Building{Kind: construction.Bed, Claimant: uint64(patient)})
 	j := job.Record{Kind: job.Sleep, Target: bedID, State: job.Do, WorkLeft: needs.SleepWorkMin}
 	if r.SelfTendDue(patient, j) {
 		t.Fatal("just lay down: not yet")
@@ -230,7 +231,7 @@ func TestSetBedMedical(t *testing.T) {
 	h.jobs[other] = job.Record{Kind: job.Sleep, Target: bedID, State: job.Do}
 	r.SetBedMedical(bedID, true)
 	b := h.bldgs[bedID]
-	if !b.Medical || b.SlotOf(uint64(patient)) < 0 || b.SlotOf(uint64(other)) >= 0 || r.HeldBed(patient) != bedID ||
+	if !b.Medical || construction.BedSlot(b, uint64(patient)) < 0 || construction.BedSlot(b, uint64(other)) >= 0 || r.HeldBed(patient) != bedID ||
 		len(h.log) != 1 || h.log[0] != "interrupt" {
 		t.Fatalf("the patient keeps its slot, the healthy one gets up: %+v %v", b, h.log)
 	}
@@ -243,7 +244,7 @@ func TestSetBedMedical(t *testing.T) {
 		t.Fatal("a prisoner keeps its bed")
 	}
 	r.Hold(patient, bedID+1) // a new stay ends the old one
-	if h.bldgs[bedID].SlotOf(uint64(patient)) >= 0 {
+	if construction.BedSlot(h.bldgs[bedID], uint64(patient)) >= 0 {
 		t.Fatal("the old stay's slot is freed")
 	}
 	r.SetBedMedical(bedID, false)

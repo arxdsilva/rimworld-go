@@ -16,17 +16,12 @@ import (
 // them to a nearby table, preferring a seat pulled up to it (rest/seats.go
 // AtTable), instead of eating where the food lies.
 
-// nextToTable reports a table beside (x, y), diagonals included.
+// nextToTable reports a cardinally adjacent eating surface.
 func (g *Game) nextToTable(x, y int) bool {
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if dx == 0 && dy == 0 {
-				continue
-			}
-			bid := g.layerBldgAt(x+dx, y+dy, construction.LayerObject)
-			if b, ok := g.bldgs.Get(bid); ok && b.Kind.IsTable() {
-				return true
-			}
+	for _, d := range [][2]int{{0, 1}, {1, 0}, {0, -1}, {-1, 0}} {
+		bid := g.layerBldgAt(x+d[0], y+d[1], construction.LayerObject)
+		if b, ok := g.bldgs.Get(bid); ok && b.Kind.IsTable() {
+			return true
 		}
 	}
 	return false
@@ -40,26 +35,39 @@ func portionsFor(hunger int, st item.Stack) int {
 
 // carryToTable starts the walk from the food to a table: it picks up the
 // portions it needs and heads for a seat. It returns false (eat here) when
-// there is no table in reach or the colonist already stands at one.
+// there is no unreserved reachable chair by a table within search range.
 func (g *Game) carryToTable(id entity.EntityID, j job.Record) bool {
 	pos, _ := g.positions.Get(id)
-	if g.nextToTable(pos.X, pos.Y) {
-		return false
-	}
 	st, ok := g.stacks.Get(j.Target)
-	if !ok || st.Carrier != 0 {
+	if !ok || st.Carrier != 0 && st.Carrier != id {
 		return false
 	}
-	sx, sy, ok := g.rest.Seats.AtTable(id, st.X, st.Y) // rest/seats.go: a seat by a table
+	sx, sy, ok := g.rest.Seats.AtTable(id, pos.X, pos.Y)
 	if !ok {
 		return false
 	}
 	path, ok := g.pathTo(id, sx, sy)
-	if !ok {
+	if !ok || !g.reserve.TryTile(id, sx, sy) {
 		return false
 	}
+	if st.Carrier == id {
+		j.TX, j.TY, j.DestX, j.DestY = sx, sy, sx, sy
+		j.Path, j.PathI = path, 0
+		j.WorkLeft = needs.EatWorkTicks
+		j.Count = 1
+		j.State = job.Goto
+		if len(path) == 0 {
+			j.State = job.Do
+		}
+		g.jobs.Set(id, j)
+		return true
+	}
 	n, _ := g.need.Get(id)
-	take := min(st.Qty, portionsFor(n.Hunger, st), g.reserve.FreeFor(id, j.Target, st.Qty)) // RES-1: never another eater's portions (it holds at least one)
+	take := min(st.Qty, portionsFor(n.Hunger, st), g.reserve.FreeFor(id, j.Target, st.Qty))
+	if take <= 0 {
+		g.reserve.ReleaseTile(sx, sy)
+		return false
+	}
 	carry := j.Target
 	if st.Qty > take {
 		g.reserve.ReleaseEntity(id, j.Target) // RES-1: picked up, the rest is free for other eaters
@@ -75,7 +83,6 @@ func (g *Game) carryToTable(id entity.EntityID, j job.Record) bool {
 		st.Carrier = id
 		g.putStack(j.Target, st)
 	}
-	g.reserve.TryTile(id, sx, sy)
 	j.Carry, j.Target = carry, carry
 	j.TX, j.TY, j.DestX, j.DestY = sx, sy, sx, sy
 	j.Path, j.PathI = path, 0

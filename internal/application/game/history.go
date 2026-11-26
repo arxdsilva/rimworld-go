@@ -46,3 +46,8 @@ func (g *Game) historyViews() []HistoryEntryView {
 	}
 	return out
 }
+
+func cloneSaveHistory(h historyEntry) historyEntry {
+	h.Pawns = slices.Clone(h.Pawns)
+	return h
+}

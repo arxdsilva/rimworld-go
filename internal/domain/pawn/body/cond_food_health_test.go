@@ -52,7 +52,7 @@ func TestSynthStomachHalvesFoodPoisoning(t *testing.T) {
 	if FoodPoisonChance(&b) != 1000 || FoodPoisonChance(nil) != 1000 {
 		t.Fatal("a natural stomach keeps the chance")
 	}
-	b.SetImplant(Stomach, item.SynthStomach)
+	b.SetReplacement(Stomach, item.SynthStomach)
 	if FoodPoisonChance(&b) != 500 {
 		t.Fatal("a synth stomach halves the chance")
 	}

@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/planet"
 	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
@@ -36,17 +37,68 @@ const (
 // Mineral is one mineral a scanner finds: its lump's size (wiki) and how
 // often it comes up with no target set (original weights).
 type Mineral struct {
-	Kind     item.Kind
-	Min, Max int
-	weight   int
+	Kind               item.Kind
+	CellsMin, CellsMax int
+	Yield              int
+	weight             int
 }
 
 // Minerals are the scanner's targets, in the target cycle's order.
 func Minerals() []Mineral {
 	return []Mineral{
-		{item.Steel, 2200, 2400, 30}, {item.Plasteel, 400, 600, 10}, {item.Components, 100, 140, 15},
-		{item.Silver, 2400, 3200, 15}, {item.Gold, 320, 480, 10}, {item.Uranium, 600, 800, 10}, {item.Jade, 700, 875, 10},
+		{item.Steel, 55, 60, geology.MineYields[geology.Steel], 30},
+		{item.Plasteel, 10, 15, geology.MineYields[geology.Plasteel], 10},
+		{item.Components, 50, 70, geology.MineYields[geology.Machinery], 15},
+		{item.Silver, 60, 80, geology.MineYields[geology.Silver], 15},
+		{item.Gold, 8, 12, geology.MineYields[geology.Gold], 10},
+		{item.Uranium, 15, 20, geology.MineYields[geology.Uranium], 10},
+		{item.Jade, 20, 25, geology.MineYields[geology.Jade], 10},
 	}
+}
+
+// OreOfLump identifies the native vein for a scanner mineral.
+func OreOfLump(k item.Kind) geology.Ore {
+	switch k {
+	case item.Steel:
+		return geology.Steel
+	case item.Plasteel:
+		return geology.Plasteel
+	case item.Components:
+		return geology.Machinery
+	case item.Silver:
+		return geology.Silver
+	case item.Gold:
+		return geology.Gold
+	case item.Uranium:
+		return geology.Uranium
+	case item.Jade:
+		return geology.Jade
+	default:
+		return geology.NoOre
+	}
+}
+
+// SiteCells retains a recorded count. Older canonical saves used the former
+// per-cell yield to derive a vein from Qty; preserve that historical geometry
+// even though current mining yields have changed. Non-vein goods have no cells.
+func SiteCells(k item.Kind, qty, recorded int) int {
+	ore := OreOfLump(k)
+	if qty <= 0 || ore == geology.NoOre {
+		return 0
+	}
+	if recorded > 0 {
+		return recorded
+	}
+	yield := geology.MineYields[ore]
+	switch ore {
+	case geology.Steel:
+		yield = 20
+	case geology.Silver:
+		yield = 25
+	case geology.Gold:
+		yield = 8
+	}
+	return 1 + (qty-1)/yield
 }
 
 // hashN is the next number below n of the stream at *v.
@@ -97,7 +149,7 @@ func (o scanner) AssignScan(id entity.EntityID, tries int) bool {
 		for _, sid := range o.h.BuildingIDs() {
 			b, ok := o.h.Building(sid)
 			if !ok || b.Kind != construction.MineralScanner || b.Deconstruct || b.Forbidden || slices.Contains(tried, sid) ||
-				!o.h.Powered(sid) {
+				!o.h.Powered(sid) || !o.h.SkyClear(b) {
 				continue
 			}
 			_, spot, ok := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -126,7 +178,7 @@ func (o scanner) doScan(id entity.EntityID, j job.Record) {
 	case !ok || b.Kind != construction.MineralScanner:
 		o.end(id, j, 0)
 		return
-	case !o.h.Powered(j.Target):
+	case !o.h.Powered(j.Target) || b.Forbidden || b.Deconstruct || !o.h.SkyClear(b):
 		o.end(id, j, job.Blocked) // the power went: put off a while (the retry cooldown)
 		return
 	}
@@ -149,11 +201,11 @@ func (o scanner) doScan(id entity.EntityID, j job.Record) {
 // false when no tile in reach would do.
 func (o scanner) find(target item.Kind, b construction.Building) bool {
 	p, home := o.h.Planet(), o.h.ColonyTile()
-	o.s.finds++
+	findNo := o.s.finds + 1
 	if p == nil || home < 0 {
 		return false
 	}
-	v := o.h.Seed() ^ uint64(o.s.finds)*0xd1b54a32d192ed03 ^ 0x51e5
+	v := o.h.Seed() ^ uint64(findNo)*0xd1b54a32d192ed03 ^ 0x51e5
 	ms := Minerals()
 	m := ms[0]
 	if k := slices.IndexFunc(ms, func(m Mineral) bool { return m.Kind == target }); k >= 0 {
@@ -184,8 +236,10 @@ func (o scanner) find(target item.Kind, b construction.Building) bool {
 		return false
 	}
 	t := cands[hashN(&v, len(cands))]
-	s := Site{Tile: t, Mineral: m.Kind, Qty: m.Min + hashN(&v, m.Max-m.Min+1), Expires: o.h.Now() + SiteDays*clock.TicksPerDay}
+	cells := m.CellsMin + hashN(&v, m.CellsMax-m.CellsMin+1)
+	s := Site{Tile: t, Mineral: m.Kind, Qty: cells * m.Yield, Cells: cells, Expires: o.h.Now() + SiteDays*clock.TicksPerDay}
 	o.s.sites = append(o.s.sites, s)
+	o.s.finds = findNo
 	if !o.h.ScannerFound(t) {
 		o.h.Letter("Mineral site found", b.X, b.Y, "The long-range scanner found a lump of %d %s on tile %d. "+
 			"Send a caravan or transport pods within %d days to mine it.", s.Qty, s.Mineral, t, SiteDays)

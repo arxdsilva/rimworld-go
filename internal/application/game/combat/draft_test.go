@@ -18,7 +18,7 @@ import (
 // combat log, the raiders' mortars, IEDs set off by bullets and blasts.
 
 func (f *fakeHost) combatArmed() *Combat {
-	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Arms: fakeArms{f}, Draft: f})
+	return New(f, Roles{MortarAim: f, Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Arms: fakeArms{f}, Draft: f})
 }
 
 // TestDraftSwitchesDoNotFlap: fire at will off stops the auto attack and

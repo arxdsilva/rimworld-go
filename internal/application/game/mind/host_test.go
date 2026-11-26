@@ -23,6 +23,8 @@ type fakeHost struct {
 	now        uint64
 	x          map[entity.EntityID]int
 	dead, down map[entity.EntityID]bool
+	sleeping   map[entity.EntityID]bool
+	awakeCalls int
 	colonists  []entity.EntityID
 	prisoners  []entity.EntityID
 	mood       map[entity.EntityID]int
@@ -47,6 +49,7 @@ type fakeHost struct {
 	started           []brk
 	targets           []entity.EntityID
 	recovered         []mentalbreak.Kind
+	catharsisRecover  []mentalbreak.Kind
 	punches           []pair
 	fakeMuses         // inspiration_test.go (PRD-2)
 	fakeSmash         // tantrum_test.go (CBT-4)
@@ -54,7 +57,7 @@ type fakeHost struct {
 
 func newFake(ids ...entity.EntityID) *fakeHost {
 	f := &fakeHost{
-		x: map[entity.EntityID]int{}, dead: map[entity.EntityID]bool{}, down: map[entity.EntityID]bool{},
+		x: map[entity.EntityID]int{}, dead: map[entity.EntityID]bool{}, down: map[entity.EntityID]bool{}, sleeping: map[entity.EntityID]bool{},
 		mood: map[entity.EntityID]int{}, shift: map[entity.EntityID]int{}, breaks: map[entity.EntityID]brk{},
 		peaceful: map[entity.EntityID]bool{}, jobs: map[entity.EntityID]job.Record{}, unreachable: map[entity.EntityID]bool{},
 	}
@@ -75,7 +78,11 @@ func (f *fakeHost) Alive(id entity.EntityID) bool {
 	_, ok := f.x[id]
 	return ok && !f.dead[id]
 }
-func (f *fakeHost) Standing(id entity.EntityID) bool  { return f.Alive(id) && !f.down[id] }
+func (f *fakeHost) Standing(id entity.EntityID) bool { return f.Alive(id) && !f.down[id] }
+func (f *fakeHost) Awake(id entity.EntityID) bool {
+	f.awakeCalls++
+	return !f.sleeping[id]
+}
 func (f *fakeHost) Colonists() []entity.EntityID      { return f.colonists }
 func (f *fakeHost) Prisoners() []entity.EntityID      { return f.prisoners }
 func (f *fakeHost) Mood(id entity.EntityID) int       { return f.mood[id] }
@@ -131,8 +138,11 @@ func (f *fakeHost) Started(_ entity.EntityID, k mentalbreak.Kind, t entity.Entit
 	f.started = append(f.started, brk{k: k})
 	f.targets = append(f.targets, t)
 }
-func (f *fakeHost) Recovered(_ entity.EntityID, k mentalbreak.Kind) {
+func (f *fakeHost) Recovered(_ entity.EntityID, k mentalbreak.Kind, catharsis bool) {
 	f.recovered = append(f.recovered, k)
+	if catharsis {
+		f.catharsisRecover = append(f.catharsisRecover, k)
+	}
 }
 
 func (f *fakeHost) Job(id entity.EntityID) job.Record { return f.jobs[id] }

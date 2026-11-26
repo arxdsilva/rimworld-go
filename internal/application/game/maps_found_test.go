@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -110,7 +111,7 @@ func TestSettleSecondColony(t *testing.T) {
 		}
 		if p.Land(i) && p.Settlement[i] < 0 {
 			SetMaxColonies(g, 5)
-			if why := fleetOf(g).FoundReason(i); why == "" {
+			if why := fleetOf(g).Life().FoundReason(i); why == "" {
 				t.Fatalf("tile %d next to a settlement should be refused", i)
 			}
 			break
@@ -136,7 +137,7 @@ func TestSettleConvertsTemporaryMap(t *testing.T) {
 		t.Fatal("stash")
 	}
 	fleetOf(g).At(cid).C.Members = []uint64{uint64(ada)}
-	if why := fleetOf(g).Found(uint64(cid)); why != "" {
+	if why := fleetOf(g).Life().Found(uint64(cid)); why != "" {
 		t.Fatal(why)
 	}
 	g.Step(1)
@@ -303,6 +304,18 @@ func ambushRun(t *testing.T) uint64 {
 	m.climate = biome.DefOf(biome.TemperateForest).Climate
 	g.Step(clock.TicksPerHour)
 	clearHostiles(g, m)
+	// An injured traveller is stabilized before validating encounter repacking.
+	g.mapState = m
+	if b := g.bodies[ada]; b != nil {
+		b.TendAll(1000, uint64(g.clock.Now()))
+		for range 48 {
+			b.HealHour(func(int) int { return 0 }, body.LieHospital)
+		}
+		v := g.VitalOf(ada)
+		g.bodyChanged(ada, b, &v)
+		g.updateDowned(ada, b, &v)
+	}
+	g.mapState = g.view
 	g.Step(4 * clock.TicksPerHour)
 	meta := &g.worldSt.atlas.Maps[0]
 	if !meta.Hostile || meta.PackBy == 0 {

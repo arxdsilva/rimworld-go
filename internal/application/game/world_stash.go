@@ -8,31 +8,31 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/aging"
 	"rimworld-go/internal/application/game/axview"
+	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/letters"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/application/game/visit"
+	"rimworld-go/internal/application/game/worldpawn"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/scenario"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Pawns off the map (ENG-003, M9): a stashed colonist leaves pawnIDs and
-// loses its map components (position, job, step timing, reservations,
-// bed claim, carried things, draft, orders), so no pawnIDs-driven loop
-// sees it; its identity stays (name, needs, health, body, drugs, skills,
-// bio, mood memories, social edges, registry record, equipment), so the
-// same id comes back with the same relationships. Caravans stash their
-// members; caskets (AX-9) also prisoners and tame animals (its state in
-// the record).
+// A stashed pawn loses map-local jobs, positions and reservations while
+// preserving identity, health, skills and relationships across returns.
+// Caravans and caskets may stash colonists, prisoners and tame animals.
 
-// stashRec is one pawn off the map: its holder (a caravan, a casket), the
-// cell it left from on map Map (MAP-01), a prisoner's mark (with its
-// raider record when it travels by caravan, MAP-01) or an animal's state
-// (AX-9).
+// stashRec preserves the holder, origin, prisoner status or animal state.
 type stashRec struct {
 	ID       entity.EntityID
 	Holder   entity.EntityID
@@ -55,9 +55,7 @@ func (g *Game) isStashed(id entity.EntityID) bool {
 	return found
 }
 
-// everyoneGone reports no living colonist left under our control (wiki: Ending):
-// none on a map, on the road, in a pod or casket or due to land. Prisoners,
-// animals, the kidnapped and those who left on the ship do not count.
+// everyoneGone ignores prisoners, pets, kidnapped people and departed ships.
 func everyoneGone(g *Game) bool {
 	for _, m := range g.maps {
 		if slices.ContainsFunc(m.pawnIDs, g.alive) {
@@ -79,9 +77,7 @@ func everyoneGone(g *Game) bool {
 // wanderersTitle is the letter that announces new wanderers.
 const wanderersTitle = "New wanderers"
 
-// wanderersTick keeps the tick everyone went (MAP-19): it starts the wait
-// when the last one goes, and someone existing again ends it. A colony with
-// people only pays everyoneGone's first alive check.
+// wanderersTick starts or clears the last-colonist-gone wait.
 func wanderersTick(g *Game, now uint64) {
 	s := g.ng.setup
 	if s == nil {
@@ -196,9 +192,13 @@ func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 	}
 	rec := stashRec{ID: id, Holder: holder, X: pos.X, Y: pos.Y, Prisoner: prisoner, Map: g.id}
 	if beast != nil {
-		a := *beast
+		a := beast.State()
+		if trainingAt(g, id).Task.Source != 0 {
+			a.Path, a.PathI = nil, 0
+			a.Errand = false
+		}
 		rec.Beast = &a
-		g.removeAnimal(id)
+		g.detachAnimal(id)
 		return addStash(g, rec)
 	}
 	g.ensurePerson(id)
@@ -279,6 +279,7 @@ func dropStash(g *Game, id entity.EntityID) {
 		return
 	}
 	g.worldSt.stashed = slices.DeleteFunc(g.worldSt.stashed, func(r stashRec) bool { return r.ID == id })
+	delete(g.worldSt.worldPawnMothballed, id)
 }
 
 // putAnimal sets stashed or carried animal id back down at (x, y) as a.
@@ -289,4 +290,102 @@ func putAnimal(g *Game, id entity.EntityID, a animal.State, x, y int) {
 	g.positions.Set(id, Position{X: x, Y: y})
 	g.animals.Set(id, a)
 	g.invalidateCreatures()
+}
+
+// offMapPawns is worldpawn's view of the colony.
+type offMapPawns struct{ g *Game }
+
+func (h offMapPawns) Calendar() clock.CalendarPolicy { return h.g.clock.Calendar() }
+
+func (h offMapPawns) Stashed() []entity.EntityID {
+	if h.g.worldSt == nil {
+		return nil
+	}
+	ids := make([]entity.EntityID, len(h.g.worldSt.stashed))
+	for i, r := range h.g.worldSt.stashed {
+		ids[i] = r.ID
+	}
+	return ids
+}
+func (h offMapPawns) Owned(id entity.EntityID) bool {
+	g := h.g
+	i, ok := slices.BinarySearchFunc(g.worldSt.stashed, id, stashCmp)
+	if !ok || g.worldSt.stashed[i].Beast != nil {
+		return false
+	}
+	p := g.personOf(id)
+	return p == nil || p.Where != whereCaravan && p.Where != whereEscaped
+}
+func (h offMapPawns) Pod(id entity.EntityID) bool    { return h.g.worldSt.ax9.InTransportPod(id) }
+func (h offMapPawns) Asleep(id entity.EntityID) bool { return h.g.worldSt.ax9.Asleep(id) }
+func (h offMapPawns) Prepare() {
+	if h.g.worldSt.ax9 == nil {
+		travelOf(h.g) // tests and direct callers may enter the owner without phaseWorld first
+	}
+}
+func (h offMapPawns) Vital(id entity.EntityID) (health.Record, bool) { return h.g.vital.Get(id) }
+func (h offMapPawns) Body(id entity.EntityID) *body.Body             { return h.g.bodies[id] }
+func (h offMapPawns) EnsureBody(id entity.EntityID, v *health.Record) *body.Body {
+	return h.g.ensureBody(id, v)
+}
+func (h offMapPawns) Need(id entity.EntityID) (needs.Pair, bool) { return h.g.need.Get(id) }
+func (h offMapPawns) SetNeed(id entity.EntityID, n needs.Pair)   { h.g.need.Set(id, n) }
+func (h offMapPawns) Bio(id entity.EntityID) (pawngen.Pawn, bool) {
+	p, ok := h.g.sk.bios[id]
+	return p, ok
+}
+func (h offMapPawns) SetBio(id entity.EntityID, p pawngen.Pawn) { h.g.sk.bios[id] = p }
+func (h offMapPawns) RebuildStats(id entity.EntityID)           { h.g.rebuildStats(id) }
+func (h offMapPawns) BodyRoll(n int) int                        { return h.g.stream(streamBody).IntN(n) }
+func (h offMapPawns) MedicalRoll(n int) int                     { return h.g.stream(streamMedical).IntN(n) }
+func (h offMapPawns) NoMedicine() item.Kind                     { return noMedicine }
+func (h offMapPawns) NeedsCare(b *body.Body) bool               { return needsCare(b) }
+func (h offMapPawns) HasDisease(b *body.Body) bool              { return hasDisease(b) }
+func (h offMapPawns) Poisoned(id entity.EntityID) bool          { return h.g.poisoned(id) }
+
+func (h offMapPawns) DieMedical(id entity.EntityID, c health.Cause) { h.g.dieMedical(id, c) }
+func (h offMapPawns) ClearPatient(id entity.EntityID)               { h.g.clearPatient(id) }
+func (h offMapPawns) BodyChanged(id entity.EntityID, b *body.Body, v *health.Record) {
+	h.g.bodyChanged(id, b, v)
+}
+func (h offMapPawns) UpdateDowned(id entity.EntityID, b *body.Body, v *health.Record) {
+	h.g.updateDowned(id, b, v)
+}
+func (h offMapPawns) RollInfections(id entity.EntityID, b *body.Body, now uint64) {
+	h.g.rollInfections(id, b, now)
+}
+func (h offMapPawns) StepConds(id entity.EntityID, b *body.Body, now uint64) bool {
+	return h.g.stepConds(id, b, now)
+}
+func (h offMapPawns) StepDisease(id entity.EntityID, b *body.Body, v *health.Record, now uint64) {
+	h.g.stepDisease(id, b, v, now)
+}
+func (h offMapPawns) StepFoodPoison(id entity.EntityID, b *body.Body, v *health.Record, now uint64) {
+	h.g.stepFoodPoison(id, b, v, now)
+}
+func (h offMapPawns) StepAging(id entity.EntityID, now uint64) {
+	aging.StepIDs(agingHost(h), now, []entity.EntityID{id})
+}
+func (h offMapPawns) DevelopAging(id entity.EntityID, k body.CondKind, part int, now uint64) {
+	aging.Develop(agingHost(h), id, k, part, now)
+}
+func (h offMapPawns) LogScar(id entity.EntityID, part string) {
+	h.g.logEvent(id, logEntry{Kind: evlog.Scarred, Name: "A wound on the " + part + " healed into a scar"})
+}
+func (h offMapPawns) Heal(id entity.EntityID, v *health.Record, now uint64) { h.g.heal(id, v, now) }
+func (h offMapPawns) WakeFromAnaesthetic(id entity.EntityID, v *health.Record, now uint64) {
+	h.g.wakeFromAnaesthetic(id, v, now)
+}
+func (h offMapPawns) TickDrugs(id entity.EntityID, now uint64)    { doseOf(h.g).Tick(id, now) }
+func (h offMapPawns) DownedHunger(id entity.EntityID, now uint64) { h.g.downedHunger(id, now, false) }
+func (h offMapPawns) DecayNeeds(id entity.EntityID, n needs.Pair, now uint64) needs.Pair {
+	return h.g.decayNeeds(id, n, now)
+}
+func (h offMapPawns) DrainJoy(id entity.EntityID, now uint64)    { h.g.drainJoy(id, now) }
+func (h offMapPawns) SkillsDaily(id entity.EntityID, now uint64) { h.g.skillsDaily(id, now) }
+func (h offMapPawns) Down(id entity.EntityID, c health.Cause)    { h.g.down(id, c) }
+
+// worldPawnCandidate reports a pawn the off-map pass ticks (worldpawn).
+func worldPawnCandidate(g *Game, id entity.EntityID) bool {
+	return g.worldSt != nil && worldpawn.Candidate(offMapPawns{g}, id)
 }

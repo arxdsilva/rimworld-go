@@ -253,7 +253,7 @@ interchangeable workers.
 
 ## 3.4 Skills
 
--   [-] **Core skill set** (NG-1: 11 skills, no Artistic)
+-   [x] **Core skill set** (all 12 skills including independent Artistic; sculptures train Artistic, Bio and Dossier read models display its level/passion; v21 retains v1-v20 saves with 11 skill slots via typed migration)
     -   Shooting.
     -   Melee.
     -   Construction.
@@ -383,7 +383,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.3 Work settings
 
--   [-] **Work types** (14 live types, ties in the wiki's order: WRK-001; PLAY-020: bed rest is a per-colonist "Rest when hurt" setting, on by default, not a work column; no patient or basic column, smith and tailor inside Craft, no art: WRK-101, WRK-102)
+-   [x] **Work types** (WRK-101/102/108: all 20 Core types in canonical order, including independent Art admission and Artistic skill; stable work/command IDs and legacy priority/mask migration.)
     -   Firefight.
     -   Patient.
     -   Doctor.
@@ -478,7 +478,7 @@ This is the heart of autonomous colony behavior.
     -   drug.
     -   manufactured component.
     -   corpse/product categories.
--   [-] **Stackable items** (stack limit 1000, carry 100 per trip, merge/take, no negatives; PRD-4: `item.Kind.StackLimit` carries the wiki limit for the wave E kinds, hauling, merging and spilling stop at it; missing: the older kinds keep 1000 so saves and pins stay valid)
+-   [-] **Stackable items** (single-item kinds remain one; raw fish stacks to 25; other legacy stackable kinds retain 1000, and haul/merge/spill respect kind limits. Opt-in native per-kind book and physical-stack migration available; default 1000 retained.)
     -   Quantity.
     -   stack limit.
     -   merge/split.
@@ -510,7 +510,7 @@ This is the heart of autonomous colony behavior.
 
 -   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (STK-ST vanilla parity: corpses and chunks, rotting ones too, Normal priority, own icon; `.agents/gaps/STORAGE_GAP_ANALYSIS.md`), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
     -   Paint storage cells.
--   [x] **Storage filters** (PRD-4 then STO-2: `domain/building/zone/filter.go` tree to depth 3 with human corpses, bones, body parts and unfinished categories; `FilterRoot` allow all/clear all; 10 special toggles in `special.go` (fresh, non-deadman's apparel, smeltable, burnable, grave colonist/stranger, rotten, tainted and others) plus HP and quality ranges; vanilla defaults for new stockpiles (no corpses, bones, chunks or rotten; dumps take corpses and chunks), old zones keep their switches; copy and paste, names; stockpiles and shelves)
+-   [x] **Storage filters** (PRD-4 then STO-2: `domain/building/zone/filter.go` tree to depth 3 with human corpses, bones, body parts and unfinished categories; `FilterRoot` allow all/clear all; 10 special toggles in `special.go` (fresh, non-deadman's apparel, smeltable, burnable, grave colonist/stranger, rotten, tainted and others) plus HP and quality ranges; vanilla defaults for new stockpiles (no corpses, bones, chunks or rotten; dumps take corpses and chunks), old zones keep their switches; copy and paste, names; stockpiles and shelves) (Regression: saved item-key namespace remaps historical plugin slots, including core expansion; missing keys do not grant native permissions.)
     -   Category tree.
     -   allowed/disallowed definitions.
     -   quality/condition filters where appropriate.
@@ -578,7 +578,7 @@ This is the heart of autonomous colony behavior.
     -   Invalidate navigation/rooms/power/etc. only as needed.
 -   [x] **Repair** (builders mend damaged buildings once no raiders are standing)
     -   Damaged player structures become repair work.
--   [x] **Deconstruction** (construct work type; half the wood refunded; tile and bed claim freed)
+-   [x] **Deconstruction** (BuildingView.DeconWork exposes remaining marked labor or full unmarked kind cost; construction owns the rule; construct work type; half the wood refunded; tile and bed claim freed)
 -   [x] **Reinstall (move)** (UI-011: a reinstall frame, no materials, half the work; the same building moves with bills, fuel, owners and HP; walls, doors, floors and graves stay)
     -   Work removes building and yields appropriate salvage.
 
@@ -597,7 +597,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Floors** (buildable/deconstructable separate layer; SIM-028: may go under any furniture, not on rock, walls, fences/gates or dug graves; AX-3: every vanilla floor kind with the wiki beauty, cleanliness, flammability and walk speed (13/(13+path cost): floors 100 %, straw matting 93 %, soil 87 %), in room stats, tile beauty and the floor's pane; a floor laid over another replaces it in place once built)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
--   [-] **Roofs** (SIM-018; FOOD-6: a roof shelters pawns, animals and plants from toxic fallout; no deterioration or collapse injuries)
+-   [x] **Roofs** (SIM-018; FOOD-6 shelter, MIN-2 structural collapse and injury, repeat thick-rock collapse, native mining risk; presentation separately owned)
     -   Roof cells.
     -   roof construction/removal jobs.
     -   support rules.
@@ -686,7 +686,7 @@ This is the heart of autonomous colony behavior.
     -   Ingredient filters.
     -   nutrition conversion.
     -   work amount.
--   [x] **Food poisoning** (FOOD-4: wiki room-cleanliness and cook-skill rolls, a poisoned batch poisons all of it, fed patients roll too; FOOD-6: wiki stage effects incl. blood filtration, an eating speed factor (`body.FoodPoisonEatSpeed`, read by the eat step), a synth stomach halves the chance; MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
+-   [x] **Food poisoning** (NG-2: consumed contamination chance scales by difficulty at ingestion; explicit 0% skips RNG and leaves item poison state untouched; FOOD-4: wiki room-cleanliness and cook-skill rolls, a poisoned batch poisons all of it, fed patients roll too; FOOD-6: wiki stage effects incl. blood filtration, an eating speed factor (`body.FoodPoisonEatSpeed`, read by the eat step), a synth stomach halves the chance; MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
     -   Chance influenced by cook skill and cleanliness/conditions.
     -   Health effect and mood consequences.
 -   [x] **Butchering** (FOOD-3: body-size formula by age, missing parts and damage, species-named meat, insect and human meat, rotten corpses give leather; FOOD-6: 450 ticks of work, the butcher spot yields 70 %, default bills butcher animals only)
@@ -750,7 +750,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   Schedule-aware.
     -   Select owned/assigned bed if available.
     -   Fall back to available sleeping location.
--   [x] **Beds** (SIM-042/045, PLAY-020: partner double beds, owner assignment UI, prisoner beds, medical beds; claim on Sleep; BED-1: comfort, rest effectiveness and beauty by kind × stuff × quality, end table and dresser links, bedrolls, animal beds, forbidding)
+-   [x] **Beds** (SIM-042/045, PLAY-020: partner double beds, owner assignment UI, prisoner beds, medical beds; claim on Sleep; BED-1: comfort, rest effectiveness and beauty by kind × stuff × quality, end table and dresser links, bedrolls, animal beds, forbidding; BED-242: manual tame-animal owner, safe temporary clinical animal bed and existing lying-heal bonus)
     -   Assign ownership.
     -   sleeping slots.
     -   rest effectiveness.
@@ -823,13 +823,13 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   observed corpse/ugliness.
     -   comfort/recreation satisfaction.
     -   expectations.
--   [x] **Memory thoughts**
+-   [x] **Memory thoughts** (SIM-071: event memories use subject and expiry, per-kind stack caps and fixed-point diminishing returns, authoritative store cleanup with no mutation on read; original Kind 100 BrawlerRanged retained)
     -   Death of relation.
     -   social interaction.
     -   wedding/relationship events.
     -   combat/trauma where applicable.
     -   impressive meal/room/event equivalents.
--   [x] **Thought expiry**
+-   [x] **Thought expiry** (SIM-071: expired thoughts excluded during read without mutating saved arrays; insertion, mood step and daily/off-map memory maintenance reclaim stored expiry and labels deterministically)
     -   Memories expire deterministically after defined duration.
 
 ## 9.7 Mood
@@ -837,7 +837,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 -   [x] **Mood target**
     -   Sum baseline, expectations, thoughts, traits, health, social
         effects, environment.
--   [x] **Smoothed current mood**
+-   [x] **Smoothed current mood** (SIM-071: awake pawns approach the target every 250 ticks; sleeping/unconscious pawns keep displayed mood; a conscious bedridden patient still updates; read model reports actual and target separately)
     -   Current mood trends toward target rather than instantaneously
         matching it.
 -   [x] **Break-risk thresholds** (2026-11-20 audit: domain/pawn/mentalbreak:Thresholds; game/bio_view.go BreakAt; dossier/build.go and sheet/tips.go show tiers)
@@ -872,16 +872,16 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   prisoner-like escape behavior where relevant.
 -   [x] **Catatonic/extreme shutdown equivalent** (SIM-066: catatonic breakdown downs the pawn for its duration; it is rescued and fed like any downed patient)
     -   Pawn becomes temporarily unavailable and requires care.
--   [x] **Recovery** (break ends after its duration with a day of catharsis +30)
+-   [x] **Recovery** (SIM-071: natural break termination gives Catharsis +40 for 3 days, up to five events at 75% diminishing strength; interrupted or downed recovery grants no catharsis; old saved Mind.Calm fields remain readable while break risk follows actual mood)
     -   End state.
     -   mood catharsis/recovery thought if desired by independent
         balance.
 
 ## 10.2 Inspirations
 
--   [x] **High-mood inspiration chance** (PRD-2: mood >= 50 and Crafting or Construction >= 3, checked hourly, 1-day cooldown; mean-time curve is original tuning)
+-   [x] **High-mood inspiration chance** (PRD-2: mood >= 50, checked hourly; selection respects each inspiration's skill and eligibility rules; mean-time curve is original tuning; no separate post-use cooldown)
     -   Positive temporary state after sustained good mood.
--   [-] **Inspiration types** (PRD-2: creativity only; the other types are missing)
+-   [x] **Inspiration types** (PRD-2: creativity, recruitment, trade, taming, surgery, movement, shooting and work inspirations use native eligibility, effect, use and expiry rules; saved kind IDs preserved)
     -   Inspired creativity/quality.
     -   inspired recruitment.
     -   inspired trade.
@@ -1013,11 +1013,11 @@ treatment, and surgery are major colony-management systems.
     -   quality depends on skill, medicine, environment, capacities.
 -   [x] **Self-tend** (only when no other doctor; weaker care)
     -   Optional with reduced effectiveness.
--   [x] **Medical beds** (NG-1: the hospital bed gives 115 % healing and half the infection chance, and rescuers prefer it; PLAY-020: any bed can be marked Medical, that bed only, with no owner; healthy colonists never sleep in it; patients and rescuers prefer it; hospital beds start medical)
+-   [x] **Medical beds** (NG-1: the hospital bed gives 115 % healing and half the infection chance, and rescuers prefer it; PLAY-020: any bed can be marked Medical, that bed only, with no owner; healthy colonists never sleep in it; patients and rescuers prefer it; hospital beds start medical; BED-242: animal beds/spots may also be designated medical, with temporary clinical claims and native bed healing)
     -   Mark beds for medical use.
     -   injured/sick pawns seek treatment/rest.
 -   [x] **Bed rest** (PLAY-020: colonists in pain (healable injury 40+), with an untended wound, sick or waiting for surgery lie in bed until healed (15 or less, nothing to tend, at least 2 h), by default; a hungry patient eats and returns; SIM-064: a patient who cannot feed itself is fed by a doctor ("Feed <name>" too); no free bed retries after 6 h; self-tend in bed without another doctor; per-colonist "Rest when hurt"; no-flap tested)
--   [x] **Rescue** (PLAY-010 autonomous Doctor rescue; SIM-062 "Rescue <name>" order, drafted or not, Shift-queued; SIM-063: every downed cause but collapse-asleep, guests, allies and strangers too, a safe bed (no fire, survivable temperature; medical for a patient who needs care, else its own, else any free bed), the patient's own bed kept, a carrier downed or the patient dying drops it)
+-   [x] **Rescue** (PLAY-010 autonomous Doctor rescue; SIM-062 "Rescue <name>" order, drafted or not, Shift-queued; SIM-063: every downed cause but collapse-asleep, guests, allies and strangers too, a safe bed (no fire, survivable temperature; medical for a patient who needs care, else its own, else any free bed), the patient's own bed kept, a carrier downed or the patient dying drops it) (Regression: live patient-healing air revalidated at arrival; stale bed or spot transfers fail safely and release through the care/job owner. Ground arrival rechecks walkability, fire, bed occupancy and tile claims; reroutes via actual carrier or fails without success.)
     -   Carry downed friendly pawn to valid bed.
 
 ## 11.6 Infection
@@ -1053,7 +1053,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Biological aging** (MED-08: age drives chronic onset after wiki onset ages, rolled daily per colonist; no separate biological vs chronological age or age-based body decline beyond the conditions)
     -   Age increases.
     -   age can influence health/stat factors.
--   [x] **Age-related chronic conditions** (MED-08: bad back, cataract, frailty, dementia (confused wandering), hearing loss, artery blockage with heart attacks, carcinoma with excision; cures by spinal brace, eye/ear replacement, artificial or new heart)
+-   [x] **Age-related chronic conditions** (MED-08/MED-14: bad back, cataract, frailty, dementia, hearing loss, artery blockage and heart attacks, staged carcinoma and excision, asthma birthday incidence/treatment and Alzheimer's; intact natural organs and installed replacements modify capacity, age/condition stages, care and mood with deterministic progression)
     -   Bad back/frailty/cataract-like conditions.
     -   Data-driven health effects.
 
@@ -1061,7 +1061,7 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Operation bills** (SIM-039: install/remove implant, amputate; queue add/remove in the Health tab; MED-03 reorder; MED-06: harvest organ, install organ, euthanize, anesthetize; colonists, prisoners and guests)
     -   Add/remove scheduled medical operations.
--   [x] **Anesthesia** (MED-06: anesthetic condition, sedated 0–6 h, woozy to 12 h, wearing off to 20 h)
+-   [x] **Anesthesia** (MED-06/MED-14: persistent anesthetic condition, surgical sedative duration 45,000–75,000 ticks, phased wooziness and recovery with memory/confusion side effects; older saved anesthetic timing continues)
     -   Required for appropriate surgery.
 -   [x] **Surgery success/failure** (MED-06: wiki base by Medicine level × manipulation × sight × bed × room cleanliness × light × vitals monitor × medicine × operation factor, capped at 98 %; minor, catastrophic and ridiculous failures; death on failed heart installs; botched opinion memory (SIM-039); every operation consumes medicine within the care level)
     -   Doctor skill.
@@ -1074,9 +1074,9 @@ treatment, and surgery are major colony-management systems.
     -   harvested organ becomes item.
     -   missing vital organs can kill.
     -   transplant restores/replaces functionality.
--   [x] **Prosthetics/bionics** (SIM-039/SIM-049: peg leg, prosthetic leg/arm/foot, wooden hand, denture, hearing trumpet, glass eye, wooden nose; MED-05: servo arm/leg, optic and cochlear implants, pump heart and synth stomach at 125 %, spinal brace, valve heart 80 %, wiki efficiencies for the prosthetic arm (50 %) and wooden hand (60 %), Servo replacements research; archotech tier deferred)
-    -   Replace missing/damaged body parts with artificial parts of
-        varying efficiency.
+-   [x] **Prosthetics/bionics** (MED-14: wooden and prosthetic leg/arm/hand/foot and valve heart, servo arm/leg/jaw/tongue, synthetic stomach, optic/cochlear/acoustic implants, spinal brace, pump heart, archotech arm/leg/eye and power claw; existing serialized kinds remain compatible; manufacturing, surgery and trader stock have their own definitions)
+    -   Missing and damaged natural parts can receive replacements, which retain their own damage/healing and hit coverage; surgery can replace or recover an installed part.
+-   [x] **Core additive implants and vanilla surgery** (MED-14: BlissCircuit on brain, NerveDampener on brain, AcidFailsafe on torso, distinct from body-part Replacements; fitting/removal, surgery material recovery, trait and thought effects, acid death gear destruction; native health/inspector and migration from legacy Fitted saves; expansion-only implants remain separate)
 
 ## 11.10 Corpses
 
@@ -1233,7 +1233,7 @@ treatment, and surgery are major colony-management systems.
     -   Do until X inventory count.
 -   [x] **Ingredient radius** (PRD-1: per bill, tiles from the bench; 0 unlimited)
     -   Limit ingredient search area.
--   [x] **Ingredient filters** (PRD-1: per-bill allow/forbid of each ingredient kind the recipe accepts)
+-   [x] **Ingredient filters** (PRD-1: per-bill allow/forbid of each ingredient kind the recipe accepts) (Regression: final physical laid inputs must remain unforbidden, with atomic terminal cleanup.)
     -   Restrict materials/categories.
 -   [x] **Worker restrictions** (PRD-1: skill range and a specific colonist)
     -   Skill range/specific pawn if desired for parity.
@@ -1261,7 +1261,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.5 Art
 
--   [x] **Artistic work** (PRD-3: art bench carves small, large and grand sculptures; quality rolled from the worker's skill and inspiration (PRD-2); beauty 50/100/400 wiki times the quality factor, read by the beauty need and room stats; maker named in the generated text; `craft/art.go`)
+-   [x] **Artistic work** (PRD-3: art bench carves small, large and grand sculptures; quality and experience now use the distinct Artistic skill plus inspiration (PRD-2); beauty 50/100/400 wiki times the quality factor, read by the beauty need and room stats; maker named in the generated text; `craft/art.go`)
     -   Sculptures/art objects.
     -   quality.
     -   beauty.
@@ -1426,8 +1426,8 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Cooldown** (per weapon, `weapon.Def.Cooldown`)
 -   [x] **Shooting score inputs** (SHT-001/004: manipulation weight 8 capped at 100 %, sight 12; all 21 published curve points)
 -   [x] **First aim scales with aiming time** (SHT-102: every first warmup; melee unscaled)
--   [x] **Downed creatures in combat** (SHT-006/008: a downed creature in the path intercepts at 250 ‰ (original tuning); a downed target is ×8.5 within 3 tiles, ×0.5 from 5)
--   [x] **Friendly Fire difficulty** (SHT-007: 0..100 %, colonist shots crossing colonists; saved, v20)
+-   [x] **Downed creatures in combat** (SHT-006/008: a downed creature in the path intercepts at 100 ‰ (retained original tuning); a downed target is ×8.5 within 3 tiles, ×0.5 from 5)
+-   [x] **Friendly Fire difficulty** (SHT-007: 0..100 %, aimed colonist shots crossing colonists; default 40 %, saved v21 with v20 migration)
 -   [x] **Hit-chance card** (SHT-201/202: lines add up to the headline; any selected colonist) and **warmup ring** on the shooter (SHT-204)
 
 ## 17.5 Melee
@@ -1438,7 +1438,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Melee hit chance** (CBT-2: wiki hit curve, wiki dodge, damage x0.8-1.2)
 -   [x] **Weapon/body attacks** (CBT-2: wiki tools per melee weapon; humans fist, head, teeth; animals a second attack at original tuning)
 -   [x] **Melee cooldown**
--   [x] **Brawler effect** (SHT-104: original-named trait Scrapper, melee +4, shooting −10)
+-   [x] **Brawler effect** (SHT-104: original-named trait Scrapper, melee +4, shooting −10, ranged-weapon mood penalty and shooting passion/inspiration exclusions)
 -   [x] **Nimble effect** (SHT-105: original-named trait Light-footed, melee dodge +15, trap spring ×10 %)
 
 ## 17.6 Armor
@@ -1502,7 +1502,7 @@ children systems.
 
 -   [x] **Biome wildlife population** (SIM-023/025: per-biome wildlife density and spawn weights; start population sized to the biome's carrying capacity; arrivals below 70%, herds leave above 130%, predator cap)
     -   Spawn species appropriate to biome/climate.
--   [x] **Animal hunger/rest** (SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation; FOOD-1: daily need on the nutrition scale by size (cow 0.86, alpaca 0.44 a day), babies x0.4 and juveniles x0.75, products fill 100/50/25/0 % by saturation)
+-   [x] **Animal hunger/rest** (nine-component live animal owner, grouped home/extra-map and off-map stash/caravan/pod/flight/rope records, v21 legacy read compatibility and canonical replay hashes; SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation; FOOD-1: daily need on the nutrition scale by size (cow 0.86, alpaca 0.44 a day), babies x0.4 and juveniles x0.75, products fill 100/50/25/0 % by saturation)
     -   Simpler needs than humans.
 -   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens; SIM-038: grazers prefer fuller grass, meals scale with growth; PLAY-017: tame animals eat the nearest food their diet allows, stockpiles included, and tame predators hunt wild prey and eat it; FEED-001: the wiki diet table (kibble and pemmican for all but strict carnivores, meals for all but strict carnivores and tree eaters), animal feed before meals, only reachable food with a memory of unreachable targets, a whole-area search while starving (15/25 % band), kibble in troughs; FOOD-4: per-animal food policy, Animal feed default)
 -   [x] **Predation** (SIM-019: predators hunt prey no bigger than themselves; small-prey predators XS/S only; packs share targets)
@@ -1527,11 +1527,11 @@ children systems.
 
 ## 18.5 Training
 
--   [ ] **Trainability**
+-   [x] **Trainability** (SIM-047: explicit per-species classes gate ordinary training; native maintenance and decay persist through save and off-map return.)
 -   [x] **Obedience** (SIM-047: training steps, cooldown, master follow when drafted)
 -   [x] **Release/attack training** (SIM-047/048: obedience/guard/release training; a guard defends its master against hostiles within 5 tiles or whoever attacked the master in the last 120 ticks; a release-trained animal attacks the drafted master's target; tame wolves guard against raiders and hostile animals untrained)
--   [x] **Rescue**
--   [ ] **Hauling**
+-   [x] **Rescue** (RSC-2: Doctor carries a downed tame animal to a safe animal bed/spot, with native reservation, recovery and save/replay handling; wild animals excluded.)
+-   [x] **Hauling** (SIM-102: native advanced-species haul training, reserved pickup and stockpile delivery, interrupted-load cleanup, persisted in-flight replay; legacy three-skill save arrays unchanged. Local carry tuning 20 kg; no shelf/hopper loading.) (Regression: shared map-local availability/region cache with bounded deterministic finalists; inaccessible sources/destinations cannot mask reachable work. Target-specific claim invalidation and reservation-independent structural negatives.)
     -   Only species capable of relevant training.
 -   [x] **Training decay/maintenance** (SIM-047: skills decay)
     -   Skills can require reinforcement if matching target behavior.
@@ -1594,7 +1594,7 @@ children systems.
     -   recruit.
     -   release.
     -   execute/medical operations if allowed by game rules.
--   [x] **Resistance/recruitment difficulty** (SIM-045: opinion and mood factors x social impact)
+-   [x] **Resistance/recruitment difficulty** (SIM-045: opinion and mood factors x social impact; SIM-174: read-only ordinary chance estimate in Prisoner tab)
     -   Warden social skill and prisoner mood influence progress.
 -   [x] **Recruitment** (SIM-045: keeps relations, recruited-me opinion)
     -   Successful recruit joins player's faction.
@@ -1606,7 +1606,7 @@ children systems.
 
 ## 19.5 Other recruitment
 
--   [-] **Rescue/recovery join chance** (SIM-063: a rescued faction-less stranger asks to join on recovery, 50 % when leaving is safe, 100 % when not; Accept/Decline letter. Missing: an event that brings such strangers (transport pod crash))
+-   [x] **Rescue/recovery join chance** (SIM-063 and RSC-001: pod crash brings downed strangers; 50 % when leaving is safe, 100 % when not; Accept/Decline letter)
 -   [x] **Wanderer/migrant joins event** (SIM-046)
 -   [x] **Refugee/visitor join opportunity where part of base event (2026-11-20 audit: domain/incident: RefugeeChased, VisitorGroup, WandererJoins handled in game/incidents.go)
     set**
@@ -1623,7 +1623,7 @@ change relationships, and settlements exist on the world map.
 
 ## 20.1 Faction definitions
 
--   [-] **Faction types** (NG-1 SIM-030: settlers, clans, drifters, freebooters, swarm and the player; mechanoids act as a hostile raid source (DEF-4 R2) but are not a faction object; no ancient factions)
+-   [x] **Faction types** (SIM-030/FCT-104: ordinary seeded human factions and native hidden ancient, mechanoid and insect faction objects; distinct stable negative IDs; ActorFaction resolves actual origin, existing surface IDs preserved.)
     -   Player colony.
     -   tribal-level human factions.
     -   industrial/outlander-like factions.
@@ -1631,7 +1631,7 @@ change relationships, and settlements exist on the world map.
     -   mechanoid faction.
     -   insect faction.
     -   ancients/neutral special faction as required.
--   [-] **Faction tech level** (NG-1: neolithic or industrial; decides whether raiders carry rifles and the faction's name style; no effect on settlements or traders)
+-   [x] **Faction tech level** (tech affects raider equipment and deterministic settlement/trader stock.)
     -   Influences equipment, settlements, trader inventory, raid
         methods.
 -   [x] **Faction naming** (NG-1: original procedural faction, leader and settlement names, unique per world)
@@ -1666,7 +1666,7 @@ change relationships, and settlements exist on the world map.
 -   [x] **Trade interaction** (PLAY-024: "Trade with X" order or the radio console opens a session held by the negotiator's job)
     -   Select social-capable colonist.
     -   Open trade screen.
--   [x] **Buy/sell** (PLAY-024: settled against live counts; caravan goods dropped beside the negotiator, orbital goods by drop pod near the beacon)
+-   [x] **Buy/sell** (PLAY-024: settled against live counts and exact stack IDs; quality/material/wear priced per physical item, trader lot identity retained across save/load and carrier loss; caravan goods drop beside the negotiator, orbital goods by drop pod near the beacon)
     -   Colony stored eligible items available.
     -   Trader inventory and silver/currency.
     -   Purchased goods delivered/dropped.
@@ -1715,7 +1715,7 @@ have prerequisites, and technologies unlock buildings/gear.
     -   Intellectual skill.
     -   bench speed.
     -   room/environment modifiers as appropriate.
--   [x] **Research progress** (RSCH-1: 0.00825 points a tick x speed x bench x difficulty, fraction carried; research-complete letter with the description; no queue; saved, v9 migration keeps each project's fraction of its cost)
+-   [x] **Research progress** (research.completed event code and project field on completion letter; RSCH-1: 0.00825 points a tick x speed x bench x difficulty, fraction carried; research-complete letter with the description; no queue; saved, v9 migration keeps each project's fraction of its cost)
     -   Player selects active project.
     -   Researchers contribute points.
     -   completion unlocks content.
@@ -1810,8 +1810,8 @@ SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the
 ## 22.5 Faction settlements
 
 -   [x] **Settlement placement** (NG-1: Poisson-disc over land, capitals first, density by type and population setting)
--   [-] **Faction territory distribution** (preferred biomes and clustering near the capital; no territory ownership)
--   [ ] **Settlement trade inventory**
+-   [x] **Faction territory distribution** (MAP-26: derived land-hop territory per faction from surviving settlements, deterministic ties, no water ownership, detached on-demand WorldTerritories read model)
+-   [x] **Settlement trade inventory** (MAP-20, 2026-11-23: per-base stock, deterministic restock, cargo/price/gift settlement, historical save recovery, World inspector trade modal and UI journey)
 -   [x] **Hostile settlement attack map** (MAP-2, MAP-13: a generated compound with loot, walls and defenders who hold, engage and flee at 50 % losses; its turrets fire on us and stay hostile; compound doors are held open)
 -   [x] **Settlement destruction** (MAP-2: defeated once no defender stands; -200 goodwill and hostile on attack, +20 from the faction's enemies, the settlement leaves the planet and the map; no bases left means the faction is gone)
     -   Destroying all settlements can eliminate a faction's world
@@ -1870,19 +1870,19 @@ colonists. citeturn1search8turn1search9
 
 ## 23.3 Difficulty
 
--   [-] **Difficulty profile** (NG-1 SIM-031: six presets covering threat scale, yields, mood, adaptation, infection, revenge, weather; the disease frequency has no effect because there are no disease events; no death/downing options)
+-   [-] **Difficulty profile** (NG-2: all six public-wiki percentage presets compiled from reviewed JSON; threat/yield/mood/infection/disease/revenge settings, half-day adaptation growth and impact, actual downings/deaths, weather and food-poison scaling at ingestion. Remaining: distinct death/downing difficulty switches and additional custom options.)
     -   Threat scaling.
     -   economy/yields.
     -   disease.
     -   mood.
     -   adaptation.
     -   death/downing behavior as appropriate.
--   [x] **Custom difficulty** (NG-1: every setting editable, copy from a preset, compact codec)
+-   [x] **Custom difficulty** (NG-1/NG-2: every implemented setting editable, copy from a preset, compact codec; separate growth and impact, food poisoning 0..500%, threat 0..500%, friendly fire preserved; historical BalanceVersion 0/1 upgrades neutral multipliers while v2 retains explicit zeros)
     -   Expose major multipliers/toggles.
 
 ## 23.4 Storyteller framework
 
--   [x] **Storyteller component** (NG-1: per-storyteller `Plan` from the colony state, loss easing, peaceful days, adaptation; the legacy profile keeps first threat day 5 then every 5 to 9 days)
+-   [x] **Storyteller component** (NG-1/NG-2: per-storyteller Plan from colony state, loss easing and peaceful days; shared adaptation grows every 12 hours and charges actual downing/death events once; persists the fixed-point score and migrates legacy fractional growth; legacy profile keeps first threat day 5 then every 5 to 9 days)
     -   Reads colony state.
     -   schedules incidents.
     -   tracks cooldowns/threat pacing.
@@ -1902,7 +1902,7 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.1 Colony wealth
 
--   [x] **Wealth calculation** (EAI-014: `game/wealth.Tracker` sweeps the map in slices, one full pass an hour, 60 daily samples kept and saved; `Game.Wealth()` reads it; the History window's Wealth tab shows the history)
+-   [x] **Wealth calculation** (EAI-014: `game/wealth.Tracker` sweeps the map in slices, one full pass an hour, 60 daily samples kept and saved; `Game.Wealth()` reads it; the History window's Wealth tab shows the history; PRD-7: shared physical stack and building valuation) (Regression: all-scope caravan threat wealth uses the same physical item book value as the map.)
     -   Items.
     -   buildings.
     -   pawns/animals where appropriate.
@@ -2005,7 +2005,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Orbital trader** (2026-11-20 audit: domain/incident/incident.go OrbitalTrader; game/trade_orbital.go)
 -   [x] **Friendly visitors** (SIM-046)
 -   [x] **Wanderer joins** (SIM-046)
--   [ ] **Transport pod crash / downed stranger**
+-   [x] **Transport pod crash / downed stranger** (RSC-001: native event, actual downed victim and pod, rescue/capture and recovery path)
 -   [ ] **Resource meteorite**
 -   [ ] **Cargo pod drop**
 -   [x] **Animal joins** (SIM-025: stray joins)
@@ -2043,7 +2043,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.4 Letters/messages
 
--   [x] **Event letter system** (PLAY-018: letters kept and saved in a right-side stack with threat/caution/info/good kinds, camera jump to their place or creature, dismissed by the player; EAI-031: a letter can carry choices, shown as buttons and routed by `command.AnswerLetter`; the refugee-chased event uses them)
+-   [x] **Event letter system** (stable untranslated Code and typed Fields persist through version-21 letter saves; raids, pod raids, six diseases and completed research emit semantic fields; legacy letters derive deterministic codes and numbered argument fields; isolated read-only UI letter view; PLAY-018: letters kept and saved in a right-side stack with threat/caution/info/good kinds, camera jump to their place or creature, dismissed by the player; EAI-031: a letter can carry choices, shown as buttons and routed by `command.AnswerLetter`; the refugee-chased event uses them)
     -   Positive/neutral/negative/threat categories.
     -   Camera jump target.
     -   relevant entities.
@@ -2208,7 +2208,7 @@ relocation. citeturn2search12
 -   [x] **World pathfinding** (SIM-046: route over the rebuilt planet; MAP-09: cost is `MoveDifficulty` with roads halved)
     -   Route across world tiles.
     -   Terrain/roads affect movement.
--   [x] **Travel speed** (MAP-09: 0.06 days per difficulty point, 06:00-22:00 only, mass x2 empty to x0.5 full, mounts 1.3-2.0, roads x0.5; an empty caravan makes about 22 tiles a day; `TravelEstimate`; no weather)
+-   [x] **Travel speed** (MAP-09: 0.06 days per difficulty point, 06:00-22:00 only, mass x2 empty to x0.5 full, mounts 1.3-2.0, roads x0.5; an empty caravan makes about 22 tiles a day; `TravelEstimate`; no weather) (Regression: one eligible deduplicated hold/stash carrier roster and exact cargo load for trade, departure, split, return and recovery. Committed cargo and membership mutations refresh pace; hourly movement uses live roster/capacity.)
     -   Pawn/animal capacities.
     -   mass.
     -   terrain.
@@ -2231,7 +2231,7 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 
 ## 28.4 Caravan interactions
 
--   [-] **Visit friendly settlement** (SIM-046: one day; no trade or gifts)
+-   [x] **Visit friendly settlement** (MAP-20: a visiting caravan buys, sells or gifts actual cargo via the World inspector market; native quote, quantity and expiry validation.)
     -   Trade.
     -   gifts.
 -   [x] **Attack hostile settlement** (MAP-2, MAP-15: `AttackSettlement` from the caravan inspector or by pod, any human base, with -200 goodwill and the faction turning hostile; a non-hostile base asks for a confirmation)
@@ -2377,11 +2377,11 @@ Use original narrative text and generated names.
     -   wealth.
     -   random stock.
     -   deterministic generation.
--   [ ] **Restocking settlements**
+-   [x] **Restocking settlements** (MAP-20: durable per-settlement stock and deterministic 30-day restock shared by visiting caravans; native market persistence and old-save recovery)
     -   Inventory refreshes after time.
--   [x] **Gifts** (2026-11-20 audit: trade.Settle(..., gift) and ebiten/dialogs/comms.go Gift; game/bonds.go giftGoodwill)
+-   [x] **Gifts** (PLAY-024: physical eligible stack selected by ID, quality/material/wear goodwill per chosen item, generic goods grouped, stale/forbidden ID rejected, UI mode-switch clears selected goods; radio comms gifts and settlement goodwill retained)
     -   Give goods to faction for goodwill.
--   [ ] **Wealth-driven expectations**
+-   [x] **Wealth-driven expectations** (SIM-071: six public wiki wealth bands contribute +30/+24/+18/+12/+6/+0 to colonist/prisoner thought target, using an initial saved sample then the hourly authoritative wealth tracker; band table is shared with recreation tolerance decay)
     -   Pawn expectation thought scales with colony development.
 -   [x] **Wealth-driven threats** (EAI-013: `difficulty.ThreatPoints` weights each colonist by a wealth curve of our own, capped at `PointsCap`)
     -   Storyteller threat budget uses colony wealth plus other pacing
@@ -2461,10 +2461,10 @@ the player-facing system.
 -   [x] **Save naming/overwrite** (SAV-001, SAV-002, SAV-004: a player-chosen name checked by `savefmt.CheckName` (empty, too long, bad characters, the autosave suffix, device names), a danger confirm before replacing, several saves per colony side by side; SAV-005 Save & Quit to menu and desktop; SAV-013 asks about unsaved progress on leaving)
 -   [x] **Ironman/commitment-style save mode** (NG-1: chosen at setup and fixed; one save slot written by the game itself at each day, on return to menu, on quit and on window close; Load and developer mode disabled)
     -   Restricts ordinary save-scumming behavior if selected.
--   [x] **Schema migration** (NG-1: version 1 saves still load, with neutral legacy bios for old colonists; `migrateSave` fills newer fields (v17: wealth tracker, faction wars); SAV-021: an older save loads after a confirm that says it will be upgraded, a newer or too-old one is refused with the reason)
+-   [x] **Schema migration** (grouped animal records for every active map and off-map carrier; retained flat v21 and older Animals read compatibility, only additive grouped fields, strict record ID validation, SaveVersion remains 21; NG-1: version 1 saves still load, with neutral legacy bios for old colonists; `migrateSave` fills newer fields (v17: wealth tracker, faction wars); SAV-021: an older save loads after a confirm that says it will be upgraded, a newer or too-old one is refused with the reason)
 -   [x] **Corruption validation** (SAV-022: `game.Load` reads the gzip stream to its end so a cut or flipped file is `ErrCorrupt`; `filesave.Verifier` checks unseen files in parallel and lists a damaged one disabled with "damaged file")
 -   [x] **Safe atomic writes** (temp file + fsync + rename)
--   [x] **Save/replay deterministic equality tests** (save mid-game, load, run both in lock step: identical)
+-   [x] **Save/replay deterministic equality tests** (canonical Gob stream: one authoritative state yields identical raw/compressed save bytes under randomized map/type order; busy-colony and two-map load-save byte equality plus old-format decode; grouped animal 1,000-entity mid-save replay, extra-map/off-map corruption checks, legacy v21 migration, stable StateHash; save mid-game, load, run both in lock step: identical)
 
 ------------------------------------------------------------------------
 

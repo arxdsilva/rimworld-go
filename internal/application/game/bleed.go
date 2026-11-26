@@ -4,23 +4,18 @@
 package game
 
 import (
-	"fmt"
+	"rimworld-go/internal/application/game/viewmodel"
 
+	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Bleeding, blood loss and capacity downing (MED-01). Every open cut,
-// bite, scratch or surgical wound bleeds until a doctor tends it
-// (body/bleed.go); once an hour the medical phase walks the patients index
-// (patients.go), never every body: blood loss grows by the hour's
-// bleeding (or drains back when nothing bleeds), kills at 1000, and the
-// pawn is downed or stood up again by its capacities with hysteresis
-// (health.BodyDowns / BodyRecovered). Colonists, prisoners and raiders
-// bleed alike: a downed raider no longer dies on a timer, it bleeds out
-// unless captured and tended.
+// MED-01: untreated wounds bleed, blood loss can kill, and capacities
+// determine downing and recovery. Medical phases use the patient index.
+// The same rules apply to colonists, prisoners and raiders.
 
 // phaseMedical runs the hourly medical work: blood loss and downing, the
 // infections (infection.go), then the patients sweep, so right after it
@@ -30,7 +25,7 @@ func (g *Game) phaseMedical() {
 	g.stepOrganFailure()         // organs.go (MED-05)
 	g.stepBloodLoss()
 	g.stepCare(now)          // infection.go (MED-02): infections, races, healing
-	stepMalnutrition(g, now) // care_host_prison.go (FOOD-1)
+	stepMalnutrition(g, now) // game/diet (FOOD-1)
 	stepToxic(g, now)        // incidents.go (FOOD-6)
 	g.stepDiseases(now)      // disease.go (MED-04)
 	g.stepAging(now)         // aging.go (MED-08): chronic conditions, heart attacks, the daily onset roll
@@ -92,6 +87,9 @@ func (g *Game) standsUp(id entity.EntityID, v health.Record) bool {
 	if b == nil {
 		return v.Injury <= health.RecoverInjury
 	}
+	if _, active := b.Cond(body.CondHeartAttack); active {
+		return false // wiki: Heart attack: the attack can debilitate until it resolves
+	}
 	return health.BodyRecovered(b.Capacity(body.Consciousness), b.Capacity(body.Moving), b.Pain(), g.painShockAt(id))
 }
 
@@ -132,17 +130,10 @@ func (g *Game) bleedDeathHours(id entity.EntityID) int {
 // healthState is the Health tab's headline for a pawn with record v and
 // body b: dead, bleeding (with its rate and the time left), downed,
 // injured (open wounds or blood still to make back), or healthy.
-func healthState(v health.Record, b *body.Body) string {
-	bleed := b.BleedPerDay()
-	switch {
-	case v.Status == health.Dead:
-		return "Dead"
-	case bleed > 0:
-		return fmt.Sprintf("Bleeding %d%%/day · death in %dh", bleed/10, b.BleedDeathHours())
-	case v.Status == health.Downed:
-		return "Downed"
-	case hasOpenWound(b) || b.BloodLoss > 0:
-		return "Injured"
-	}
-	return "Healthy"
+func healthState(v health.Record, b *body.Body) string { return viewmodel.HealthState(v, b) }
+
+// stepMalnutrition keeps the native test entrypoint and delegates the
+// map-owned nutrition pass to the diet subsystem.
+func stepMalnutrition(g *Game, now uint64) {
+	diet.StepMalnutrition(agingHost{g}, now)
 }

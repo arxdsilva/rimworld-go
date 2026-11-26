@@ -142,3 +142,50 @@ The last open quest rows: offer help, site threats, reachability, rare rewards �
 - Limits: relief 509620cf9 (`idindex`, `actionview`, `mapview` buckets, `forage.Rings`); game lines 52,084 → 51,873 and the ceiling lowered to match; files 174; `Game` unchanged.
 - Kept out: the far ancient-ship ending site (decision 3, QST-180..184, the ship gap) and the crashed-pod refugee, which is an incident, not a quest (decision 5, QST-175..179).
 - Open: none in the QST rows. One follow-up: `SiteRuler` folded into `maps.Quester` once it has room.
+
+## MAP-20-core-settlement-market
+Persistent settlement markets and physical caravan trade · 2026-11-25 · this commit
+- Changed: deterministic per-settlement stock/restock, actual cargo-backed buy/sell/gift, stable physical lot IDs and live quote revalidation. Trade modal opens at a friendly settlement visit.
+- Decisions: actual quantities, location, price, expiry and goodwill checked by native owner; physical quality/material/wear preserved across transfer, carrier loss and save. No generic-only shortcut.
+- Save/HUD: typed historical market/cargo migration; real World inspector Trade action, read-only quote and typed command; no mutation from UI.
+- Boxes: vanilla **Settlement trade inventory**, **Visit friendly settlement**, **Buy/sell**, **Restocking settlements**, **Gifts** [x]; UI **Trade** [x]; MAIN_UI_SCREENS §§trade/35 wired (Split remains [-]). #11 stock item, #15 visit item, #36 Trade item, #55 Trade slice and #16 restock item implemented.
+- Open: #11 territory ownership; #15 turret-fuse audio; #36 other inspector rows; #55 Split; #16 proposed resolution with SIM-071.
+
+## MAP-24-caravan-headless-facts
+Native caravan inspector data contract · 2026-11-25 · this commit
+- Changed: WorldMap exposes the existing cargo and health plus typed travel state, native road-food milli-days, known flag, native walking speed and difficulty-1 tiles/day, movement/night-rest/demand-hold flags, and member facts keyed by stable identity. Member facts carry actual hunger/band, sampled mood with an explicit known flag, native trait-shifted threshold tier and active break.
+- Decisions: do not infer food from physical cargo or evaluate map-local thoughts at an off-map pawn's missing location. An unassigned forming caravan has no fixed speed or food budget. Threshold tier is not a new off-map break simulation. No changes to authority, save schema, RNG or travel cadence.
+- HUD: existing UI is preserved; this change supplies the read-only contract without modifying presentation or assets.
+- Boxes: Caravan World Inspector §29 **Inventory**, **Food remaining**, **Travel speed**, **Health/mood warnings**, **Rest state** [-] (native data ready; screen remains); SOCIAL_SYSTEM_CONTRACT CaravanView updated; #36 remains open for UI.
+- Open: #36 inspector presentation and #55 Split UI; the native split is covered by MAP-25.
+
+## MAP-25-native-caravan-split
+Atomic headless caravan split · 2026-11-25 · this commit
+- Changed: `command.CaravanSplit` appends a stable command kind; Target is the source caravan, Quote is the current nonzero `WorldMap().Caravans[i].Split.Quote`, Name is `travel.EncodeSplit(travel.SplitSelection{Members, Animals, Lots})`. Members/Animals are stable IDs, Lots select positive quantities at zero-based indices in the quoted Cargo slice. Unselected entries stay with the original caravan.
+- Decisions: require a living free, standing, non-breaking leader on each half; reject a forming/home caravan, unresolved demand, queued map transition, stale quote, invalid/duplicate selections or either half exceeding its own carrying capacity before spending an ID. Preserve road progress, route, home, visit/return flags and timers, talk/encounter cooldown, and the existing per-person food-days budget (aggregate member-days conserved). Stash transfer preserves prisoner roles; hold-owned and stashed animals follow their actual owners. Preserve exact item attributes and independent route arrays; derive load and mounts for each side from its assigned cargo and carriers. No new RNG, save fields, numeric balance constants or UI mutation.
+- HUD: expose detached `SplitView` (Quote, Reason, Animals with ID/species/name/owner/carries, Leaders) and the MAP-24 read model; gizmo/dialog integration remains open.
+- Limits: move pure caravan health projection to travel, use existing sorted stash lookup for carrier facts; architecture budget unchanged.
+- Boxes: MAIN_UI_SCREENS §35 ENG-003 Split [-] (native ready, presentation missing), MULTIMAP gap summary and SOCIAL_SYSTEM_CONTRACT updated; #55 partial, #36 native data ready and UI remains.
+- Open: #55 Split gizmo/dialog and action receipt presentation.
+
+## MAP-26-native-territory-projection
+Faction land territory derived from live settlements · 2026-11-25 · this commit
+- Changed: deterministic multi-source overland BFS yields faction IDs, water/unseeded islands unowned, tie by settlement order. Destroyed/defeated bases cease seeding; detached WorldTerritories read model.
+- Decisions: territory is derived, no new saved owner or per-tick scan. Original nearest-land-hop territorial rule. The UI overlay remains open.
+- Boxes: faction territory distribution done, refs #11 (persistent settlement stock already implemented).
+- Open: presentation only; wider tech fidelity tracked under #104.
+
+## MAP-09-shared-carrier-physical-wealth
+Physical caravan census and shared carrier pace · 2026-11-25 · this commit
+- Changed: caravan threat uses item.Book.StackValue times quantity; preflight and committed movement use shared eligible carrier capacity, hold/stash deduplication and exact load permille, including split, departure, return and recovery.
+- Decisions: preserve movement and food policy; unable/downed humans do not add carrying capacity (existing trade rule), all members remain riders for mount qualification. Stashed ownership wins duplicate animal identity.
+- Boxes: vanilla **Wealth calculation**, **Travel speed** [x] annotated; QST-025 and MAP-09 reviewed.
+- Open: none within this regression scope.
+
+## MAP-09-road-pace-mutation
+Road load and carrier mutation · 2026-11-25 · this commit
+- Changed: successful road demand, medical death, quest cargo mutation, pod landing, off-map gear spill and recovery refresh committed pace through one roster/load owner. Refresh before hourly movement for live capacity changes. Empty caravan cannot advance.
+- Architecture: moved native recovery admission, dead-member roster removal and map pack-up policy to maps/travel; the existing game LOC ceiling is unchanged.
+- Tests: unchanged road demand 457 to 228 and death 228 to 457; quest commit/refusal, final-member removal, pod cargo and payment/death save/replay.
+- Boxes: vanilla **Travel speed** [x] annotated; MAP-09.
+- Open: none within this native regression scope; related presentation gaps remain separate.

@@ -70,7 +70,7 @@ func (g *Game) gatesOpen(id entity.EntityID, a *animal.State) bool {
 // outside the pen it belongs in: within the handler's allowed area (the
 // animal's cell and the pen's marker), reachable, and not put off.
 func (g *Game) assignRope(id entity.EntityID) bool {
-	if !g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return penned(a) }) || !g.anyEnclosedPen() {
+	if !g.animals.AnyTame(func(_ entity.EntityID, a *animal.State) bool { return animal.Penned(a) }) || !g.anyEnclosedPen() {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
@@ -78,7 +78,7 @@ func (g *Game) assignRope(id entity.EntityID) bool {
 	bestD := 1 << 30
 	for _, aid := range g.animalIDs {
 		a := g.animals.Ref(aid)
-		if a == nil || !penned(a) || a.Dead() || a.Dormant || a.Enraged(uint64(g.clock.Now())) {
+		if a == nil || !animal.Penned(a.SnapshotRef()) || a.Dead() || a.Dormant || a.Enraged(uint64(g.clock.Now())) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(aid); taken || g.postponedFor(id, job.Rope, aid, 0, 0) {
@@ -89,10 +89,10 @@ func (g *Game) assignRope(id entity.EntityID) bool {
 		if d > bestD || d == bestD && aid > best {
 			continue
 		}
-		if m, _ := g.homePen(aid, a, ap); m != 0 {
+		if m, _ := g.homePen(aid, a.SnapshotRef(), ap); m != 0 {
 			continue // home already
 		}
-		m := g.penTarget(aid, a, ap)
+		m := g.penTarget(aid, a.SnapshotRef(), ap)
 		if m == 0 {
 			continue
 		}
@@ -123,7 +123,7 @@ func (g *Game) doRope(id entity.EntityID, j job.Record) {
 		j.State, j.Fail = st, why
 		g.jobs.Set(id, j)
 	}
-	if a == nil || !penned(a) || a.Dead() {
+	if a == nil || !animal.Penned(a.SnapshotRef()) || a.Dead() {
 		done(job.Complete, job.FailNone)
 		return
 	}
@@ -141,7 +141,7 @@ func (g *Game) doRope(id entity.EntityID, j job.Record) {
 			return
 		}
 		g.roped(j.Target, a)
-		m := g.penTarget(j.Target, a, ap)
+		m := g.penTarget(j.Target, a.SnapshotRef(), ap)
 		if m == 0 {
 			done(job.Complete, job.FailNone) // nowhere to go any more: let it be
 			return
@@ -181,7 +181,7 @@ func (g *Game) doRope(id entity.EntityID, j job.Record) {
 
 // roped: the rope is on. A leaving animal stays; the unpenned count
 // resets.
-func (g *Game) roped(id entity.EntityID, a *animal.State) {
+func (g *Game) roped(id entity.EntityID, a *animal.Live) {
 	a.Leaving, a.Mode, a.Path, a.PathI = false, animal.Wander, nil, 0
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
 	delete(g.pen.since, id)

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/animalview"
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -103,5 +104,31 @@ func TestAnimalInspectorPartLines(t *testing.T) {
 	rows := inspectorpkg.AnimalPartRows(many)
 	if len(rows) != inspectorpkg.AnimalPartRowsMax+1 || rows[len(rows)-1] != "+3 more" || rows[0] != "Tail: 1/5 HP" {
 		t.Fatalf("capped rows %q", rows)
+	}
+}
+
+// A chronic lung condition remains visible without wounds, including
+// both involved lungs and the respiratory penalty.
+func TestAnimalInspectorAsthmaWithoutInjury(t *testing.T) {
+	an := game.AnimalView{
+		Health: 100, HealthState: "Healthy", BreathingPct: 70,
+		Asthma: []animalview.Asthma{
+			{Lung: "left lung", SeverityPct: 45},
+			{Lung: "right lung", SeverityPct: 45},
+		},
+		NeedsTend: true,
+	}
+	rows := inspectorpkg.AnimalHealthRows(an)
+	joined := strings.Join(rows, " | ")
+	for _, want := range []string{
+		"Asthma (left lung) 45%", "Asthma (right lung) 45%",
+		"Breathing 70%", "Needs tending",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("asthma UI %q lacks %q", joined, want)
+		}
+	}
+	if cell := inspectorpkg.AnimalHealthCell(an); cell != "100%!" {
+		t.Fatalf("unchanged HP hides the chronic illness in the animals table: %s", cell)
 	}
 }

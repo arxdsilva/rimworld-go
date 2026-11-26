@@ -4,6 +4,7 @@
 package care
 
 import (
+	"rimworld-go/internal/domain/building/construction"
 	"strconv"
 
 	"rimworld-go/internal/domain/sim/entity"
@@ -35,7 +36,7 @@ func (p *fakePrison) PrisonBedFor(target entity.EntityID, x, y int) (entity.Enti
 	best, bestD := entity.EntityID(0), 1<<30
 	for _, bid := range p.h.bldgIDs {
 		b := p.h.bldgs[bid]
-		if !b.ForPrisoners || !b.CanClaim(uint64(target)) {
+		if !b.ForPrisoners || !construction.CanClaimBed(b, uint64(target)) {
 			continue
 		}
 		if o, taken := p.h.owners[bid]; taken && o != target {

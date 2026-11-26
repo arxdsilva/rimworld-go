@@ -14,7 +14,7 @@ import (
 
 // TestDifficultyFriendlyFireSlider (SHT-007): Custom Difficulty has a
 // Friendly fire slider over 0..100 that starts at the preset's 100 and
-// writes Settings.FriendlyFirePct; its ends are the limits.
+// writes Settings.FriendlyFire; its ends are the limits.
 func TestDifficultyFriendlyFireSlider(t *testing.T) {
 	t.Parallel()
 	sh, w := newFakeShell(t)
@@ -52,14 +52,14 @@ func TestDifficultyFriendlyFireSlider(t *testing.T) {
 	pressAt(0)
 	sh.click("modal.diff.custom.accept")
 	sh.idle()
-	if got := w.Draft().Custom.FriendlyFirePct; got != 0 {
+	if got := w.Draft().Custom.FriendlyFire; got != 0 {
 		t.Fatalf("dragged to the left end: Friendly fire %d, want 0", got)
 	}
 	sh.click("diff.customize")
 	pressAt(1)
 	sh.click("modal.diff.custom.accept")
 	sh.idle()
-	if got := w.Draft().Custom.FriendlyFirePct; got != 100 {
+	if got := w.Draft().Custom.FriendlyFire; got != 100 {
 		t.Fatalf("dragged to the right end: Friendly fire %d, want 100", got)
 	}
 }

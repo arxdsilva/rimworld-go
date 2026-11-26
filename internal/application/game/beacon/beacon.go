@@ -5,6 +5,13 @@
 // imports nothing from the game package.
 package beacon
 
+import (
+	"iter"
+
+	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/sim/entity"
+)
+
 // Diameter is a trade beacon's reach across, in cells.
 const Diameter = 15 // wiki: Orbital_trade_beacon ("15 tiles in diameter")
 
@@ -51,6 +58,20 @@ func Reach(w, h, bx, by int, blocked func(x, y int) bool, add func(i int)) {
 	for n, in := range seen {
 		if in {
 			add((by+n/side-reachR)*w + bx + n%side - reachR)
+		}
+	}
+}
+
+// Powered yields the live powered trade equipment in the original
+// building ID order. A console caller can stop at the first one.
+func Powered(ids []entity.EntityID, kind construction.Kind, building func(entity.EntityID) *construction.Building, powered func(entity.EntityID) bool) iter.Seq[entity.EntityID] {
+	return func(yield func(entity.EntityID) bool) {
+		for _, id := range ids {
+			if b := building(id); b != nil && b.Kind == kind && powered(id) {
+				if !yield(id) {
+					return
+				}
+			}
 		}
 	}
 }

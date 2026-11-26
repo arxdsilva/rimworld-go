@@ -61,8 +61,133 @@ saveState.AX8.Sleepers []rimworld-go/internal/application/game/ship.Sleeper
 saveState.AX8.Sleepers[] rimworld-go/internal/application/game/ship.Sleeper
 saveState.AX8.Sleepers[].Casket rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.AX8.Sleepers[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalFormat uint8
 saveState.AnimalIDs []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.AnimalIDs[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords []rimworld-go/internal/application/game/animalstate.Record
+saveState.AnimalRecords[] rimworld-go/internal/application/game/animalstate.Record
+saveState.AnimalRecords[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords[].State rimworld-go/internal/domain/animal.Snapshot
+saveState.AnimalRecords[].State.Feeding rimworld-go/internal/domain/animal.Feeding
+saveState.AnimalRecords[].State.Feeding.Feed rimworld-go/internal/domain/animal.FeedTarget
+saveState.AnimalRecords[].State.Feeding.Feed.ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords[].State.Feeding.Feed.Kind rimworld-go/internal/domain/animal.FeedKind = uint8
+saveState.AnimalRecords[].State.Feeding.Feed.X int
+saveState.AnimalRecords[].State.Feeding.Feed.Y int
+saveState.AnimalRecords[].State.Feeding.FeedClaim rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords[].State.Feeding.FeedLeft int
+saveState.AnimalRecords[].State.Feeding.NextFeed uint64
+saveState.AnimalRecords[].State.Handling rimworld-go/internal/domain/animal.Handling
+saveState.AnimalRecords[].State.Handling.Bond uint64
+saveState.AnimalRecords[].State.Handling.ConfusedUntil uint64
+saveState.AnimalRecords[].State.Handling.Designated bool
+saveState.AnimalRecords[].State.Handling.Master uint64
+saveState.AnimalRecords[].State.Handling.NextBondCheck uint64
+saveState.AnimalRecords[].State.Handling.NoFollow bool
+saveState.AnimalRecords[].State.Handling.TameMark bool
+saveState.AnimalRecords[].State.Handling.TameRetry uint64
+saveState.AnimalRecords[].State.Handling.TrainDecay uint64
+saveState.AnimalRecords[].State.Handling.Trained [3]uint8
+saveState.AnimalRecords[].State.Handling.Trained[] uint8
+saveState.AnimalRecords[].State.Identity rimworld-go/internal/domain/animal.Identity
+saveState.AnimalRecords[].State.Identity.Born uint64
+saveState.AnimalRecords[].State.Identity.Female bool
+saveState.AnimalRecords[].State.Identity.HasSex bool
+saveState.AnimalRecords[].State.Identity.Herd uint32
+saveState.AnimalRecords[].State.Identity.Name string
+saveState.AnimalRecords[].State.Identity.Species rimworld-go/internal/domain/animal.Species = uint8
+saveState.AnimalRecords[].State.Identity.Tame bool
+saveState.AnimalRecords[].State.Intent rimworld-go/internal/domain/animal.Intent
+saveState.AnimalRecords[].State.Intent.Cooldown int
+saveState.AnimalRecords[].State.Intent.Dormant bool
+saveState.AnimalRecords[].State.Intent.Errand bool
+saveState.AnimalRecords[].State.Intent.ExitX int
+saveState.AnimalRecords[].State.Intent.ExitY int
+saveState.AnimalRecords[].State.Intent.Leaving bool
+saveState.AnimalRecords[].State.Intent.Mode rimworld-go/internal/domain/animal.Mode = uint8
+saveState.AnimalRecords[].State.Intent.NextDecide uint64
+saveState.AnimalRecords[].State.Intent.NextThink uint64
+saveState.AnimalRecords[].State.Intent.Target rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords[].State.Medical rimworld-go/internal/domain/animal.Medical
+saveState.AnimalRecords[].State.Medical.Body rimworld-go/internal/domain/pawn/body.Body
+saveState.AnimalRecords[].State.Medical.Body.Anatomy rimworld-go/internal/domain/pawn/body.Anatomy = uint8
+saveState.AnimalRecords[].State.Medical.Body.BloodLoss int32
+saveState.AnimalRecords[].State.Medical.Body.BloodStage uint8
+saveState.AnimalRecords[].State.Medical.Body.Conds []rimworld-go/internal/domain/pawn/body.Condition
+saveState.AnimalRecords[].State.Medical.Body.Conds[] rimworld-go/internal/domain/pawn/body.Condition
+saveState.AnimalRecords[].State.Medical.Body.Conds[].Immunity int32
+saveState.AnimalRecords[].State.Medical.Body.Conds[].Kind rimworld-go/internal/domain/pawn/body.CondKind = uint8
+saveState.AnimalRecords[].State.Medical.Body.Conds[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
+saveState.AnimalRecords[].State.Medical.Body.Conds[].Rate int32
+saveState.AnimalRecords[].State.Medical.Body.Conds[].Sev int32
+saveState.AnimalRecords[].State.Medical.Body.Conds[].Since uint64
+saveState.AnimalRecords[].State.Medical.Body.Conds[].Stage uint8
+saveState.AnimalRecords[].State.Medical.Body.Conds[].TendQ int32
+saveState.AnimalRecords[].State.Medical.Body.Conds[].TendSum int32
+saveState.AnimalRecords[].State.Medical.Body.Conds[].TendUntil uint64
+saveState.AnimalRecords[].State.Medical.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
+saveState.AnimalRecords[].State.Medical.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.AnimalRecords[].State.Medical.Body.Fresh uint32
+saveState.AnimalRecords[].State.Medical.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.AnimalRecords[].State.Medical.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.AnimalRecords[].State.Medical.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.AnimalRecords[].State.Medical.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
+saveState.AnimalRecords[].State.Medical.Body.Missing uint32
+saveState.AnimalRecords[].State.Medical.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.AnimalRecords[].State.Medical.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.AnimalRecords[].State.Medical.Body.Replacements[].Damage int16
+saveState.AnimalRecords[].State.Medical.Body.Replacements[].HealAcc int32
+saveState.AnimalRecords[].State.Medical.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.AnimalRecords[].State.Medical.Body.Scale int32
+saveState.AnimalRecords[].State.Medical.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
+saveState.AnimalRecords[].State.Medical.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].At uint64
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].Bleed int32
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].Dmg int
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].HealAcc int32
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].InfectAt uint64
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].Kind rimworld-go/internal/domain/pawn/body.WoundKind = uint8
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].Permanent bool
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].Size int32
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].TendAt uint64
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].TendQ int16
+saveState.AnimalRecords[].State.Medical.Body.Wounds[].Tended bool
+saveState.AnimalRecords[].State.Motion rimworld-go/internal/domain/animal.Motion
+saveState.AnimalRecords[].State.Motion.GoalX int
+saveState.AnimalRecords[].State.Motion.GoalY int
+saveState.AnimalRecords[].State.Motion.Path []rimworld-go/internal/domain/ai/pathing.Point
+saveState.AnimalRecords[].State.Motion.PathI int
+saveState.AnimalRecords[].State.Motion.Path[] rimworld-go/internal/domain/ai/pathing.Point
+saveState.AnimalRecords[].State.Motion.Path[].X int
+saveState.AnimalRecords[].State.Motion.Path[].Y int
+saveState.AnimalRecords[].State.Motion.RetryAt uint64
+saveState.AnimalRecords[].State.Motion.StepGait rimworld-go/internal/domain/animal.Gait = uint8
+saveState.AnimalRecords[].State.Reproduction rimworld-go/internal/domain/animal.Reproduction
+saveState.AnimalRecords[].State.Reproduction.Mate rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords[].State.Reproduction.MateLeft int
+saveState.AnimalRecords[].State.Reproduction.MateUntil uint64
+saveState.AnimalRecords[].State.Reproduction.Mated int
+saveState.AnimalRecords[].State.Reproduction.Mother uint64
+saveState.AnimalRecords[].State.Reproduction.Pregnant uint64
+saveState.AnimalRecords[].State.Reproduction.Product int
+saveState.AnimalRecords[].State.Threat rimworld-go/internal/domain/animal.Threat
+saveState.AnimalRecords[].State.Threat.Attacker rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords[].State.Threat.ChargeSince uint64
+saveState.AnimalRecords[].State.Threat.ChaseWarnedAt uint64
+saveState.AnimalRecords[].State.Threat.ChaseWarnedTarget rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.AnimalRecords[].State.Threat.FleeUntil uint64
+saveState.AnimalRecords[].State.Threat.HuntSince uint64
+saveState.AnimalRecords[].State.Threat.Manhunter uint64
+saveState.AnimalRecords[].State.Threat.NextCharge uint64
+saveState.AnimalRecords[].State.Vitals rimworld-go/internal/domain/animal.Vitals
+saveState.AnimalRecords[].State.Vitals.Downed bool
+saveState.AnimalRecords[].State.Vitals.DownedTick uint64
+saveState.AnimalRecords[].State.Vitals.Food int
+saveState.AnimalRecords[].State.Vitals.Hunger uint64
+saveState.AnimalRecords[].State.Vitals.Injury int
+saveState.AnimalRecords[].State.Vitals.Rest int
+saveState.AnimalRecords[].State.Vitals.Starving uint64
 saveState.Animals []rimworld-go/internal/application/game.entry[rimworld-go/internal/domain/animal.State]
 saveState.Animals[] rimworld-go/internal/application/game.entry[rimworld-go/internal/domain/animal.State]
 saveState.Animals[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
@@ -87,7 +212,16 @@ saveState.Animals[].V.Body.Conds[].TendUntil uint64
 saveState.Animals[].V.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
 saveState.Animals[].V.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Animals[].V.Body.Fresh uint32
+saveState.Animals[].V.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.Animals[].V.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.Animals[].V.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Animals[].V.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
 saveState.Animals[].V.Body.Missing uint32
+saveState.Animals[].V.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.Animals[].V.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.Animals[].V.Body.Replacements[].Damage int16
+saveState.Animals[].V.Body.Replacements[].HealAcc int32
+saveState.Animals[].V.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Animals[].V.Body.Scale int32
 saveState.Animals[].V.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
 saveState.Animals[].V.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
@@ -211,16 +345,31 @@ saveState.BedRest.Since []rimworld-go/internal/application/game/care.Entry[uint6
 saveState.BedRest.Since[] rimworld-go/internal/application/game/care.Entry[uint64]
 saveState.BedRest.Since[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.BedRest.Since[].V uint64
+saveState.BillEdits map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/sim/command.ConfigEdit
+saveState.BillEdits{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.BillEdits{} rimworld-go/internal/domain/sim/command.ConfigEdit
+saveState.BillEdits{}.Index int
+saveState.BillEdits{}.Kind rimworld-go/internal/domain/sim/command.Kind = uint8
+saveState.BillEdits{}.Revision uint64
+saveState.BillEdits{}.Row uint64
+saveState.BillEdits{}.Tick uint64
 saveState.Bills map[rimworld-go/internal/domain/sim/entity.EntityID][]rimworld-go/internal/domain/economy/recipe.Bill
 saveState.Bills{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Bills{} []rimworld-go/internal/domain/economy/recipe.Bill
 saveState.Bills{}[] rimworld-go/internal/domain/economy/recipe.Bill
+saveState.Bills{}[].Condition rimworld-go/internal/domain/economy/item.ConditionRange
+saveState.Bills{}[].Condition.HPMax uint8
+saveState.Bills{}[].Condition.HPMin uint8
+saveState.Bills{}[].Condition.QualityMax uint8
+saveState.Bills{}[].Condition.QualityMin uint8
 saveState.Bills{}[].Done int
 saveState.Bills{}[].Forbid []rimworld-go/internal/domain/economy/item.Kind
 saveState.Bills{}[].Forbid[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Bills{}[].Identity uint64
 saveState.Bills{}[].Mode rimworld-go/internal/domain/economy/recipe.Mode = uint8
 saveState.Bills{}[].Radius int
 saveState.Bills{}[].Recipe rimworld-go/internal/domain/economy/recipe.ID = uint8
+saveState.Bills{}[].Revision uint64
 saveState.Bills{}[].SearchAt uint64
 saveState.Bills{}[].SkillMax uint8
 saveState.Bills{}[].SkillMin uint8
@@ -234,9 +383,42 @@ saveState.Bills{}[].Waiting bool
 saveState.Bills{}[].Worker rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Bills{}[].Zone uint64
 saveState.Biome rimworld-go/internal/domain/world/biome.ID = uint8
-saveState.Bios map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.Bios map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.Pawn
+saveState.Bios21 map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.Bios21{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Bios21{} rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.Bios21{}.Adulthood rimworld-go/internal/domain/pawn/backstory.ID = uint16
+saveState.Bios21{}.AgeDays int32
+saveState.Bios21{}.Childhood rimworld-go/internal/domain/pawn/backstory.ID = uint16
+saveState.Bios21{}.Conditions []rimworld-go/internal/domain/pawn/pawngen.Condition
+saveState.Bios21{}.Conditions[] rimworld-go/internal/domain/pawn/pawngen.Condition = uint8
+saveState.Bios21{}.First string
+saveState.Bios21{}.Last string
+saveState.Bios21{}.Look rimworld-go/internal/domain/pawn/look.Look
+saveState.Bios21{}.Look.Bare bool
+saveState.Bios21{}.Look.Beard uint8
+saveState.Bios21{}.Look.Build rimworld-go/internal/domain/pawn/look.Build = uint8
+saveState.Bios21{}.Look.Grey bool
+saveState.Bios21{}.Look.Hair uint8
+saveState.Bios21{}.Look.HairStyle uint8
+saveState.Bios21{}.Look.Pants uint8
+saveState.Bios21{}.Look.Sex rimworld-go/internal/domain/pawn/look.Sex = uint8
+saveState.Bios21{}.Look.Shirt uint8
+saveState.Bios21{}.Look.Skin uint8
+saveState.Bios21{}.Look.Vest bool
+saveState.Bios21{}.Look.VestCloth uint8
+saveState.Bios21{}.Nick string
+saveState.Bios21{}.Skills rimworld-go/internal/domain/pawn/skill.Set = [12]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.Bios21{}.Skills[] rimworld-go/internal/domain/pawn/skill.Skill
+saveState.Bios21{}.Skills[].Carry int16
+saveState.Bios21{}.Skills[].Level uint8
+saveState.Bios21{}.Skills[].Passion rimworld-go/internal/domain/pawn/skill.Passion = uint8
+saveState.Bios21{}.Skills[].XP int32
+saveState.Bios21{}.Temperament rimworld-go/internal/domain/pawn/pawngen.Temperament = uint8
+saveState.Bios21{}.Traits []rimworld-go/internal/domain/pawn/trait.ID
+saveState.Bios21{}.Traits[] rimworld-go/internal/domain/pawn/trait.ID = uint8
 saveState.Bios{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.Bios{} rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.Bios{} rimworld-go/internal/application/game/savelegacy.Pawn
 saveState.Bios{}.Adulthood rimworld-go/internal/domain/pawn/backstory.ID = uint16
 saveState.Bios{}.AgeDays int32
 saveState.Bios{}.Childhood rimworld-go/internal/domain/pawn/backstory.ID = uint16
@@ -258,7 +440,7 @@ saveState.Bios{}.Look.Skin uint8
 saveState.Bios{}.Look.Vest bool
 saveState.Bios{}.Look.VestCloth uint8
 saveState.Bios{}.Nick string
-saveState.Bios{}.Skills rimworld-go/internal/domain/pawn/skill.Set = [11]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.Bios{}.Skills rimworld-go/internal/application/game/savelegacy.SkillSet = [11]rimworld-go/internal/domain/pawn/skill.Skill
 saveState.Bios{}.Skills[] rimworld-go/internal/domain/pawn/skill.Skill
 saveState.Bios{}.Skills[].Carry int16
 saveState.Bios{}.Skills[].Level uint8
@@ -285,6 +467,9 @@ saveState.Bldgs[].V.Forbidden bool
 saveState.Bldgs[].V.Growth uint16
 saveState.Bldgs[].V.Hostile bool
 saveState.Bldgs[].V.Kind rimworld-go/internal/domain/building/construction.Kind = uint8
+saveState.Bldgs[].V.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Bldgs[].V.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Bldgs[].V.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
 saveState.Bldgs[].V.Medical bool
 saveState.Bldgs[].V.NoAutoRefuel bool
 saveState.Bldgs[].V.Occupant uint8
@@ -306,6 +491,10 @@ saveState.Bodies []rimworld-go/internal/application/game.entry[rimworld-go/inter
 saveState.Bodies[] rimworld-go/internal/application/game.entry[rimworld-go/internal/application/game.savedBody]
 saveState.Bodies[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Bodies[].V rimworld-go/internal/application/game.savedBody
+saveState.Bodies[].V.Added []rimworld-go/internal/domain/pawn/body.Implant
+saveState.Bodies[].V.Added[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.Bodies[].V.Added[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Bodies[].V.Added[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
 saveState.Bodies[].V.BloodLoss int32
 saveState.Bodies[].V.BloodStage uint8
 saveState.Bodies[].V.Conds []rimworld-go/internal/domain/pawn/body.Condition
@@ -326,6 +515,11 @@ saveState.Bodies[].V.Fresh uint32
 saveState.Bodies[].V.Implants [20]rimworld-go/internal/domain/economy/item.Kind
 saveState.Bodies[].V.Implants[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Bodies[].V.Missing uint32
+saveState.Bodies[].V.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.Bodies[].V.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.Bodies[].V.Replacements[].Damage int16
+saveState.Bodies[].V.Replacements[].HealAcc int32
+saveState.Bodies[].V.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Bodies[].V.Wounds []rimworld-go/internal/domain/pawn/body.Wound
 saveState.Bodies[].V.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
 saveState.Bodies[].V.Wounds[].At uint64
@@ -345,6 +539,9 @@ saveState.Breaks{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Breaks{} rimworld-go/internal/application/game.savedBreak
 saveState.Breaks{}.Kind rimworld-go/internal/domain/pawn/mentalbreak.Kind = uint8
 saveState.Breaks{}.Until uint64
+saveState.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.Calendar.DaysPerQuadrum int
+saveState.Calendar.Revision int
 saveState.Calm map[rimworld-go/internal/domain/sim/entity.EntityID]uint64
 saveState.Calm{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Calm{} uint64
@@ -451,6 +648,9 @@ saveState.ExtraMaps []rimworld-go/internal/application/game.mapSave
 saveState.ExtraMaps[] rimworld-go/internal/application/game.mapSave
 saveState.ExtraMaps[].Climate rimworld-go/internal/domain/world/temperature.Climate
 saveState.ExtraMaps[].Climate.Amplitude int
+saveState.ExtraMaps[].Climate.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.ExtraMaps[].Climate.Calendar.DaysPerQuadrum int
+saveState.ExtraMaps[].Climate.Calendar.Revision int
 saveState.ExtraMaps[].Climate.DaySwing int
 saveState.ExtraMaps[].Climate.PeakDay int
 saveState.ExtraMaps[].Climate.YearMean int
@@ -487,6 +687,7 @@ saveState.Frames[].V.Reinstall uint64
 saveState.Frames[].V.ReplaceMarked bool
 saveState.Frames[].V.Replaces rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Frames[].V.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Frames[].V.SwapNewRecipe bool
 saveState.Frames[].V.Swaps rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Frames[].V.Tint uint8
 saveState.Frames[].V.Wood int
@@ -575,6 +776,7 @@ saveState.Jobs []rimworld-go/internal/application/game.entry[rimworld-go/interna
 saveState.Jobs[] rimworld-go/internal/application/game.entry[rimworld-go/internal/domain/ai/job.Record]
 saveState.Jobs[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Jobs[].V rimworld-go/internal/domain/ai/job.Record
+saveState.Jobs[].V.BillIdentity uint64
 saveState.Jobs[].V.BillIndex int
 saveState.Jobs[].V.Carry rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Jobs[].V.Count int
@@ -606,15 +808,44 @@ saveState.Jobs[].V.WorkLeft int
 saveState.Joy map[rimworld-go/internal/domain/sim/entity.EntityID]int
 saveState.Joy{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Joy{} int
-saveState.Labor []rimworld-go/internal/application/game.entry[rimworld-go/internal/domain/ai/work.Mask]
-saveState.Labor[] rimworld-go/internal/application/game.entry[rimworld-go/internal/domain/ai/work.Mask]
+saveState.Labor []rimworld-go/internal/application/game.entry[rimworld-go/internal/application/game.legacyLaborMask]
+saveState.LaborWide []rimworld-go/internal/application/game.entry[rimworld-go/internal/domain/ai/work.Mask]
+saveState.LaborWide[] rimworld-go/internal/application/game.entry[rimworld-go/internal/domain/ai/work.Mask]
+saveState.LaborWide[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.LaborWide[].V rimworld-go/internal/domain/ai/work.Mask = uint32
+saveState.Labor[] rimworld-go/internal/application/game.entry[rimworld-go/internal/application/game.legacyLaborMask]
 saveState.Labor[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.Labor[].V rimworld-go/internal/domain/ai/work.Mask = uint16
+saveState.Labor[].V rimworld-go/internal/application/game.legacyLaborMask = uint16
 saveState.Landing []int
 saveState.Landing[] int
 saveState.LastMeal map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/economy/item.Kind
 saveState.LastMeal{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.LastMeal{} rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.LegacyFactions []rimworld-go/internal/domain/faction.Faction
+saveState.LegacyFactions[] rimworld-go/internal/domain/faction.Faction
+saveState.LegacyFactions[].Besieged bool
+saveState.LegacyFactions[].Defeated bool
+saveState.LegacyFactions[].DriftDay uint8
+saveState.LegacyFactions[].Enemies []int
+saveState.LegacyFactions[].Enemies[] int
+saveState.LegacyFactions[].Events []string
+saveState.LegacyFactions[].Events[] string
+saveState.LegacyFactions[].Goodwill int
+saveState.LegacyFactions[].History []int16
+saveState.LegacyFactions[].History[] int16
+saveState.LegacyFactions[].ID int
+saveState.LegacyFactions[].Leader rimworld-go/internal/domain/faction.Leader
+saveState.LegacyFactions[].Leader.Name string
+saveState.LegacyFactions[].Leader.Title string
+saveState.LegacyFactions[].Name string
+saveState.LegacyFactions[].Relation rimworld-go/internal/domain/faction.Relation = uint8
+saveState.LegacyFactions[].SettlementNames []string
+saveState.LegacyFactions[].SettlementNames[] string
+saveState.LegacyFactions[].Settlements []int
+saveState.LegacyFactions[].Settlements[] int
+saveState.LegacyFactions[].ThankedDay int
+saveState.LegacyFactions[].TradeRemainder uint16
+saveState.LegacyFactions[].Type rimworld-go/internal/domain/faction.Type = uint8
 saveState.Letters []rimworld-go/internal/application/game/letters.Letter
 saveState.Letters[] rimworld-go/internal/application/game/letters.Letter
 saveState.Letters[].Choices []rimworld-go/internal/application/game/letters.Choice
@@ -623,7 +854,13 @@ saveState.Letters[].Choices[].Key string
 saveState.Letters[].Choices[].Label rimworld-go/pkg/msgfmt.Text
 saveState.Letters[].Choices[].Label.Format string
 saveState.Letters[].Choices[].Label.Packed string
+saveState.Letters[].Code string
 saveState.Letters[].Demand bool
+saveState.Letters[].Fields []rimworld-go/pkg/letterdata.Field
+saveState.Letters[].Fields[] rimworld-go/pkg/letterdata.Field
+saveState.Letters[].Fields[].Kind string
+saveState.Letters[].Fields[].Name string
+saveState.Letters[].Fields[].Value string
 saveState.Letters[].Focus rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Letters[].ID uint64
 saveState.Letters[].Intro bool
@@ -651,6 +888,14 @@ saveState.Logs{}[].Name string
 saveState.Logs{}[].Other rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Logs{}[].Tick uint64
 saveState.Logs{}[].Weapon uint8
+saveState.MapClimate rimworld-go/internal/domain/world/temperature.Climate
+saveState.MapClimate.Amplitude int
+saveState.MapClimate.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.MapClimate.Calendar.DaysPerQuadrum int
+saveState.MapClimate.Calendar.Revision int
+saveState.MapClimate.DaySwing int
+saveState.MapClimate.PeakDay int
+saveState.MapClimate.YearMean int
 saveState.Mechs rimworld-go/internal/application/game/raid.MechSave
 saveState.Mechs.Hives []rimworld-go/internal/application/game/raid.Hive
 saveState.Mechs.Hives[] rimworld-go/internal/application/game/raid.Hive
@@ -661,6 +906,7 @@ saveState.Mechs.Hives[].ID rimworld-go/internal/domain/sim/entity.EntityID = uin
 saveState.Mechs.Hives[].Spread uint64
 saveState.Mechs.Hives[].X int
 saveState.Mechs.Hives[].Y int
+saveState.Mechs.InfestAfter uint64
 saveState.Mechs.Mechs map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/raid.MechRecord
 saveState.Mechs.Mechs{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Mechs.Mechs{} rimworld-go/internal/application/game/raid.MechRecord
@@ -701,7 +947,13 @@ saveState.Memories{}[].Subject uint64
 saveState.Memories{}[].Value int
 saveState.Messages []rimworld-go/internal/application/game.MessageView
 saveState.Messages[] rimworld-go/internal/application/game.MessageView
+saveState.Messages[].Code string
 saveState.Messages[].Danger bool
+saveState.Messages[].Fields []rimworld-go/pkg/letterdata.Field
+saveState.Messages[].Fields[] rimworld-go/pkg/letterdata.Field
+saveState.Messages[].Fields[].Kind string
+saveState.Messages[].Fields[].Name string
+saveState.Messages[].Fields[].Value string
 saveState.Messages[].Focus rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Messages[].Kind string
 saveState.Messages[].Letter bool
@@ -755,18 +1007,21 @@ saveState.Motion[].V.RepathWait int
 saveState.Motion[].V.StaggerUntil uint64
 saveState.Motion[].V.StepTick uint64
 saveState.Motion[].V.StepTicks int
-saveState.NG1 rimworld-go/internal/application/game.SetupState
-saveState.NG1.Adapt rimworld-go/internal/domain/difficulty.Adapter
+saveState.NG1 rimworld-go/internal/application/game/savelegacy.SetupState
+saveState.NG1.Adapt rimworld-go/internal/application/game/savelegacy.Adapter
 saveState.NG1.Adapt.Days int16
 saveState.NG1.Adapt.Value int8
 saveState.NG1.Climate rimworld-go/internal/domain/world/temperature.Climate
 saveState.NG1.Climate.Amplitude int
+saveState.NG1.Climate.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.NG1.Climate.Calendar.DaysPerQuadrum int
+saveState.NG1.Climate.Calendar.Revision int
 saveState.NG1.Climate.DaySwing int
 saveState.NG1.Climate.PeakDay int
 saveState.NG1.Climate.YearMean int
 saveState.NG1.Dead []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.NG1.Dead[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.NG1.Extreme rimworld-go/internal/application/game.extremeEvent
+saveState.NG1.Extreme rimworld-go/internal/application/game/savelegacy.Extreme
 saveState.NG1.Extreme.Cool uint64
 saveState.NG1.Extreme.Delta int
 saveState.NG1.Extreme.Kind uint8
@@ -775,6 +1030,7 @@ saveState.NG1.Factions []rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Factions[] rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Factions[].Besieged bool
 saveState.NG1.Factions[].Defeated bool
+saveState.NG1.Factions[].DriftDay uint8
 saveState.NG1.Factions[].Enemies []int
 saveState.NG1.Factions[].Enemies[] int
 saveState.NG1.Factions[].Events []string
@@ -793,6 +1049,7 @@ saveState.NG1.Factions[].SettlementNames[] string
 saveState.NG1.Factions[].Settlements []int
 saveState.NG1.Factions[].Settlements[] int
 saveState.NG1.Factions[].ThankedDay int
+saveState.NG1.Factions[].TradeRemainder uint16
 saveState.NG1.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
 saveState.NG1.IntroDone bool
 saveState.NG1.Lost bool
@@ -801,8 +1058,8 @@ saveState.NG1.Plan.AtTick uint64
 saveState.NG1.Plan.Category rimworld-go/internal/domain/storyteller.Category = uint8
 saveState.NG1.Plan.PointsPct int
 saveState.NG1.Plan.Second rimworld-go/internal/domain/storyteller.Category = uint8
-saveState.NG1.Pods []rimworld-go/internal/application/game.podState
-saveState.NG1.Pods[] rimworld-go/internal/application/game.podState
+saveState.NG1.Pods []rimworld-go/internal/application/game/savelegacy.Pod
+saveState.NG1.Pods[] rimworld-go/internal/application/game/savelegacy.Pod
 saveState.NG1.Pods[].Animals []rimworld-go/internal/domain/animal.Species
 saveState.NG1.Pods[].Animals[] rimworld-go/internal/domain/animal.Species = uint8
 saveState.NG1.Pods[].Items []rimworld-go/internal/domain/scenario.Stack
@@ -817,9 +1074,9 @@ saveState.NG1.Pods[].Pawns[] int
 saveState.NG1.Pods[].Tick uint64
 saveState.NG1.Pods[].X int
 saveState.NG1.Pods[].Y int
-saveState.NG1.Setup rimworld-go/internal/application/game.Setup
-saveState.NG1.Setup.Colonists []rimworld-go/internal/domain/pawn/pawngen.Pawn
-saveState.NG1.Setup.Colonists[] rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.NG1.Setup rimworld-go/internal/application/game/savelegacy.Setup
+saveState.NG1.Setup.Colonists []rimworld-go/internal/application/game/savelegacy.Pawn
+saveState.NG1.Setup.Colonists[] rimworld-go/internal/application/game/savelegacy.Pawn
 saveState.NG1.Setup.Colonists[].Adulthood rimworld-go/internal/domain/pawn/backstory.ID = uint16
 saveState.NG1.Setup.Colonists[].AgeDays int32
 saveState.NG1.Setup.Colonists[].Childhood rimworld-go/internal/domain/pawn/backstory.ID = uint16
@@ -841,7 +1098,7 @@ saveState.NG1.Setup.Colonists[].Look.Skin uint8
 saveState.NG1.Setup.Colonists[].Look.Vest bool
 saveState.NG1.Setup.Colonists[].Look.VestCloth uint8
 saveState.NG1.Setup.Colonists[].Nick string
-saveState.NG1.Setup.Colonists[].Skills rimworld-go/internal/domain/pawn/skill.Set = [11]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.NG1.Setup.Colonists[].Skills rimworld-go/internal/application/game/savelegacy.SkillSet = [11]rimworld-go/internal/domain/pawn/skill.Skill
 saveState.NG1.Setup.Colonists[].Skills[] rimworld-go/internal/domain/pawn/skill.Skill
 saveState.NG1.Setup.Colonists[].Skills[].Carry int16
 saveState.NG1.Setup.Colonists[].Skills[].Level uint8
@@ -850,16 +1107,18 @@ saveState.NG1.Setup.Colonists[].Skills[].XP int32
 saveState.NG1.Setup.Colonists[].Temperament rimworld-go/internal/domain/pawn/pawngen.Temperament = uint8
 saveState.NG1.Setup.Colonists[].Traits []rimworld-go/internal/domain/pawn/trait.ID
 saveState.NG1.Setup.Colonists[].Traits[] rimworld-go/internal/domain/pawn/trait.ID = uint8
-saveState.NG1.Setup.Difficulty rimworld-go/internal/domain/difficulty.Settings
+saveState.NG1.Setup.Difficulty rimworld-go/internal/application/game/savelegacy.DifficultySettings
 saveState.NG1.Setup.Difficulty.AdaptStrength int
 saveState.NG1.Setup.Difficulty.Adaptation bool
 saveState.NG1.Setup.Difficulty.AnimalRevenge int
+saveState.NG1.Setup.Difficulty.BalanceVersion uint8
 saveState.NG1.Setup.Difficulty.BigThreats bool
 saveState.NG1.Setup.Difficulty.ButcherYield int
 saveState.NG1.Setup.Difficulty.CropYield int
 saveState.NG1.Setup.Difficulty.DiseaseFreq int
 saveState.NG1.Setup.Difficulty.EscPerYear int
 saveState.NG1.Setup.Difficulty.ExtremeWeather bool
+saveState.NG1.Setup.Difficulty.FriendlyFire int
 saveState.NG1.Setup.Difficulty.FriendlyFirePct int
 saveState.NG1.Setup.Difficulty.IgnoreWealth bool
 saveState.NG1.Setup.Difficulty.Infection int
@@ -877,6 +1136,7 @@ saveState.NG1.Setup.Factions []rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Setup.Factions[] rimworld-go/internal/domain/faction.Faction
 saveState.NG1.Setup.Factions[].Besieged bool
 saveState.NG1.Setup.Factions[].Defeated bool
+saveState.NG1.Setup.Factions[].DriftDay uint8
 saveState.NG1.Setup.Factions[].Enemies []int
 saveState.NG1.Setup.Factions[].Enemies[] int
 saveState.NG1.Setup.Factions[].Events []string
@@ -895,6 +1155,7 @@ saveState.NG1.Setup.Factions[].SettlementNames[] string
 saveState.NG1.Setup.Factions[].Settlements []int
 saveState.NG1.Setup.Factions[].Settlements[] int
 saveState.NG1.Setup.Factions[].ThankedDay int
+saveState.NG1.Setup.Factions[].TradeRemainder uint16
 saveState.NG1.Setup.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
 saveState.NG1.Setup.GenVersion uint16
 saveState.NG1.Setup.GoneAt uint64
@@ -937,13 +1198,16 @@ saveState.NG1.Setup.Scenario.People int
 saveState.NG1.Setup.Scenario.Seed uint64
 saveState.NG1.Setup.Scenario.Summary string
 saveState.NG1.Setup.Scenario.Tech rimworld-go/internal/domain/faction.Tech = uint8
-saveState.NG1.Setup.Season rimworld-go/internal/application/game.Season = uint8
+saveState.NG1.Setup.Season uint8
 saveState.NG1.Setup.Seed uint64
 saveState.NG1.Setup.Site rimworld-go/internal/domain/world/site.Site
 saveState.NG1.Setup.Site.Biome rimworld-go/internal/domain/world/biome.ID = uint8
 saveState.NG1.Setup.Site.Caves bool
 saveState.NG1.Setup.Site.Climate rimworld-go/internal/domain/world/temperature.Climate
 saveState.NG1.Setup.Site.Climate.Amplitude int
+saveState.NG1.Setup.Site.Climate.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.NG1.Setup.Site.Climate.Calendar.DaysPerQuadrum int
+saveState.NG1.Setup.Site.Climate.Calendar.Revision int
 saveState.NG1.Setup.Site.Climate.DaySwing int
 saveState.NG1.Setup.Site.Climate.PeakDay int
 saveState.NG1.Setup.Site.Climate.YearMean int
@@ -967,6 +1231,9 @@ saveState.NG1.Setup.Storyteller string
 saveState.NG1.Setup.Tile int
 saveState.NG1.Setup.WandererGroups int
 saveState.NG1.Setup.World rimworld-go/internal/domain/world/planet.Params
+saveState.NG1.Setup.World.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.NG1.Setup.World.Calendar.DaysPerQuadrum int
+saveState.NG1.Setup.World.Calendar.Revision int
 saveState.NG1.Setup.World.Coverage int
 saveState.NG1.Setup.World.Factions []rimworld-go/internal/domain/faction.Slot
 saveState.NG1.Setup.World.Factions[] rimworld-go/internal/domain/faction.Slot
@@ -987,6 +1254,261 @@ saveState.NG1.Story.LastThreatDay int
 saveState.NG1.Story.Pressure bool
 saveState.NG1.Story.QuietDays int
 saveState.NG1.Story.Started bool
+saveState.NG121 rimworld-go/internal/application/game.SetupState
+saveState.NG121.Adapt rimworld-go/internal/domain/difficulty.Adapter
+saveState.NG121.Adapt.Days int16
+saveState.NG121.Adapt.GrowthCarry uint8
+saveState.NG121.Adapt.Precise bool
+saveState.NG121.Adapt.Units int32
+saveState.NG121.Adapt.Value int8
+saveState.NG121.Climate rimworld-go/internal/domain/world/temperature.Climate
+saveState.NG121.Climate.Amplitude int
+saveState.NG121.Climate.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.NG121.Climate.Calendar.DaysPerQuadrum int
+saveState.NG121.Climate.Calendar.Revision int
+saveState.NG121.Climate.DaySwing int
+saveState.NG121.Climate.PeakDay int
+saveState.NG121.Climate.YearMean int
+saveState.NG121.Dead []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.NG121.Dead[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.NG121.Extreme rimworld-go/internal/application/game.extremeEvent
+saveState.NG121.Extreme.Cool uint64
+saveState.NG121.Extreme.Delta int
+saveState.NG121.Extreme.Kind uint8
+saveState.NG121.Extreme.Until uint64
+saveState.NG121.Factions []rimworld-go/internal/domain/faction.Faction
+saveState.NG121.Factions[] rimworld-go/internal/domain/faction.Faction
+saveState.NG121.Factions[].Besieged bool
+saveState.NG121.Factions[].Defeated bool
+saveState.NG121.Factions[].DriftDay uint8
+saveState.NG121.Factions[].Enemies []int
+saveState.NG121.Factions[].Enemies[] int
+saveState.NG121.Factions[].Events []string
+saveState.NG121.Factions[].Events[] string
+saveState.NG121.Factions[].Goodwill int
+saveState.NG121.Factions[].History []int16
+saveState.NG121.Factions[].History[] int16
+saveState.NG121.Factions[].ID int
+saveState.NG121.Factions[].Leader rimworld-go/internal/domain/faction.Leader
+saveState.NG121.Factions[].Leader.Name string
+saveState.NG121.Factions[].Leader.Title string
+saveState.NG121.Factions[].Name string
+saveState.NG121.Factions[].Relation rimworld-go/internal/domain/faction.Relation = uint8
+saveState.NG121.Factions[].SettlementNames []string
+saveState.NG121.Factions[].SettlementNames[] string
+saveState.NG121.Factions[].Settlements []int
+saveState.NG121.Factions[].Settlements[] int
+saveState.NG121.Factions[].ThankedDay int
+saveState.NG121.Factions[].TradeRemainder uint16
+saveState.NG121.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
+saveState.NG121.IntroDone bool
+saveState.NG121.Lost bool
+saveState.NG121.Plan rimworld-go/internal/domain/storyteller.Decision
+saveState.NG121.Plan.AtTick uint64
+saveState.NG121.Plan.Category rimworld-go/internal/domain/storyteller.Category = uint8
+saveState.NG121.Plan.PointsPct int
+saveState.NG121.Plan.Second rimworld-go/internal/domain/storyteller.Category = uint8
+saveState.NG121.Pods []rimworld-go/internal/application/game.podState
+saveState.NG121.Pods[] rimworld-go/internal/application/game.podState
+saveState.NG121.Pods[].Animals []rimworld-go/internal/domain/animal.Species
+saveState.NG121.Pods[].Animals[] rimworld-go/internal/domain/animal.Species = uint8
+saveState.NG121.Pods[].Items []rimworld-go/internal/domain/scenario.Stack
+saveState.NG121.Pods[].Items[] rimworld-go/internal/domain/scenario.Stack
+saveState.NG121.Pods[].Items[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.NG121.Pods[].Items[].Near bool
+saveState.NG121.Pods[].Items[].Piles int
+saveState.NG121.Pods[].Items[].Qty int
+saveState.NG121.Pods[].Landed bool
+saveState.NG121.Pods[].Pawns []int
+saveState.NG121.Pods[].Pawns[] int
+saveState.NG121.Pods[].Tick uint64
+saveState.NG121.Pods[].X int
+saveState.NG121.Pods[].Y int
+saveState.NG121.Setback rimworld-go/internal/domain/difficulty.Setback
+saveState.NG121.Setback.Deaths int
+saveState.NG121.Setback.Downed int
+saveState.NG121.Setback.Wounds int
+saveState.NG121.Setup rimworld-go/internal/application/game.Setup
+saveState.NG121.Setup.Colonists []rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.NG121.Setup.Colonists[] rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.NG121.Setup.Colonists[].Adulthood rimworld-go/internal/domain/pawn/backstory.ID = uint16
+saveState.NG121.Setup.Colonists[].AgeDays int32
+saveState.NG121.Setup.Colonists[].Childhood rimworld-go/internal/domain/pawn/backstory.ID = uint16
+saveState.NG121.Setup.Colonists[].Conditions []rimworld-go/internal/domain/pawn/pawngen.Condition
+saveState.NG121.Setup.Colonists[].Conditions[] rimworld-go/internal/domain/pawn/pawngen.Condition = uint8
+saveState.NG121.Setup.Colonists[].First string
+saveState.NG121.Setup.Colonists[].Last string
+saveState.NG121.Setup.Colonists[].Look rimworld-go/internal/domain/pawn/look.Look
+saveState.NG121.Setup.Colonists[].Look.Bare bool
+saveState.NG121.Setup.Colonists[].Look.Beard uint8
+saveState.NG121.Setup.Colonists[].Look.Build rimworld-go/internal/domain/pawn/look.Build = uint8
+saveState.NG121.Setup.Colonists[].Look.Grey bool
+saveState.NG121.Setup.Colonists[].Look.Hair uint8
+saveState.NG121.Setup.Colonists[].Look.HairStyle uint8
+saveState.NG121.Setup.Colonists[].Look.Pants uint8
+saveState.NG121.Setup.Colonists[].Look.Sex rimworld-go/internal/domain/pawn/look.Sex = uint8
+saveState.NG121.Setup.Colonists[].Look.Shirt uint8
+saveState.NG121.Setup.Colonists[].Look.Skin uint8
+saveState.NG121.Setup.Colonists[].Look.Vest bool
+saveState.NG121.Setup.Colonists[].Look.VestCloth uint8
+saveState.NG121.Setup.Colonists[].Nick string
+saveState.NG121.Setup.Colonists[].Skills rimworld-go/internal/domain/pawn/skill.Set = [12]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.NG121.Setup.Colonists[].Skills[] rimworld-go/internal/domain/pawn/skill.Skill
+saveState.NG121.Setup.Colonists[].Skills[].Carry int16
+saveState.NG121.Setup.Colonists[].Skills[].Level uint8
+saveState.NG121.Setup.Colonists[].Skills[].Passion rimworld-go/internal/domain/pawn/skill.Passion = uint8
+saveState.NG121.Setup.Colonists[].Skills[].XP int32
+saveState.NG121.Setup.Colonists[].Temperament rimworld-go/internal/domain/pawn/pawngen.Temperament = uint8
+saveState.NG121.Setup.Colonists[].Traits []rimworld-go/internal/domain/pawn/trait.ID
+saveState.NG121.Setup.Colonists[].Traits[] rimworld-go/internal/domain/pawn/trait.ID = uint8
+saveState.NG121.Setup.Difficulty rimworld-go/internal/domain/difficulty.Settings
+saveState.NG121.Setup.Difficulty.AdaptGrowth int
+saveState.NG121.Setup.Difficulty.AdaptStrength int
+saveState.NG121.Setup.Difficulty.Adaptation bool
+saveState.NG121.Setup.Difficulty.AnimalRevenge int
+saveState.NG121.Setup.Difficulty.BalanceVersion uint8
+saveState.NG121.Setup.Difficulty.BigThreats bool
+saveState.NG121.Setup.Difficulty.ButcherYield int
+saveState.NG121.Setup.Difficulty.CropYield int
+saveState.NG121.Setup.Difficulty.DiseaseFreq int
+saveState.NG121.Setup.Difficulty.EscPerYear int
+saveState.NG121.Setup.Difficulty.ExtremeWeather bool
+saveState.NG121.Setup.Difficulty.FoodPoisonChance int
+saveState.NG121.Setup.Difficulty.FriendlyFire int
+saveState.NG121.Setup.Difficulty.IgnoreWealth bool
+saveState.NG121.Setup.Difficulty.Infection int
+saveState.NG121.Setup.Difficulty.MineYield int
+saveState.NG121.Setup.Difficulty.MoodOffset int
+saveState.NG121.Setup.Difficulty.PainTolerance int
+saveState.NG121.Setup.Difficulty.PeacefulDays int
+saveState.NG121.Setup.Difficulty.PredatorsHuntColonists bool
+saveState.NG121.Setup.Difficulty.QuestRewardPct int
+saveState.NG121.Setup.Difficulty.QuestThreats bool
+saveState.NG121.Setup.Difficulty.ResearchSpeed int
+saveState.NG121.Setup.Difficulty.ThreatScale int
+saveState.NG121.Setup.Difficulty.TimeEscalation bool
+saveState.NG121.Setup.Factions []rimworld-go/internal/domain/faction.Faction
+saveState.NG121.Setup.Factions[] rimworld-go/internal/domain/faction.Faction
+saveState.NG121.Setup.Factions[].Besieged bool
+saveState.NG121.Setup.Factions[].Defeated bool
+saveState.NG121.Setup.Factions[].DriftDay uint8
+saveState.NG121.Setup.Factions[].Enemies []int
+saveState.NG121.Setup.Factions[].Enemies[] int
+saveState.NG121.Setup.Factions[].Events []string
+saveState.NG121.Setup.Factions[].Events[] string
+saveState.NG121.Setup.Factions[].Goodwill int
+saveState.NG121.Setup.Factions[].History []int16
+saveState.NG121.Setup.Factions[].History[] int16
+saveState.NG121.Setup.Factions[].ID int
+saveState.NG121.Setup.Factions[].Leader rimworld-go/internal/domain/faction.Leader
+saveState.NG121.Setup.Factions[].Leader.Name string
+saveState.NG121.Setup.Factions[].Leader.Title string
+saveState.NG121.Setup.Factions[].Name string
+saveState.NG121.Setup.Factions[].Relation rimworld-go/internal/domain/faction.Relation = uint8
+saveState.NG121.Setup.Factions[].SettlementNames []string
+saveState.NG121.Setup.Factions[].SettlementNames[] string
+saveState.NG121.Setup.Factions[].Settlements []int
+saveState.NG121.Setup.Factions[].Settlements[] int
+saveState.NG121.Setup.Factions[].ThankedDay int
+saveState.NG121.Setup.Factions[].TradeRemainder uint16
+saveState.NG121.Setup.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
+saveState.NG121.Setup.GenVersion uint16
+saveState.NG121.Setup.GoneAt uint64
+saveState.NG121.Setup.MapSize int
+saveState.NG121.Setup.Preset rimworld-go/internal/domain/difficulty.Preset = uint8
+saveState.NG121.Setup.SaveMode rimworld-go/internal/domain/difficulty.SaveMode = uint8
+saveState.NG121.Setup.Scenario rimworld-go/internal/domain/scenario.Def
+saveState.NG121.Setup.Scenario.Arrival rimworld-go/internal/domain/scenario.Arrival = uint8
+saveState.NG121.Setup.Scenario.Builtin bool
+saveState.NG121.Setup.Scenario.ChooseFrom int
+saveState.NG121.Setup.Scenario.Desc string
+saveState.NG121.Setup.Scenario.Faction rimworld-go/internal/domain/faction.Type = uint8
+saveState.NG121.Setup.Scenario.Hardness uint8
+saveState.NG121.Setup.Scenario.Key string
+saveState.NG121.Setup.Scenario.Name string
+saveState.NG121.Setup.Scenario.Parts []rimworld-go/internal/domain/scenario.Part
+saveState.NG121.Setup.Scenario.Parts[] rimworld-go/internal/domain/scenario.Part
+saveState.NG121.Setup.Scenario.Parts[].Building rimworld-go/internal/domain/building/construction.Kind = uint8
+saveState.NG121.Setup.Scenario.Parts[].Chance uint8
+saveState.NG121.Setup.Scenario.Parts[].Cond rimworld-go/internal/domain/scenario.Condition = uint8
+saveState.NG121.Setup.Scenario.Parts[].EveryDays uint16
+saveState.NG121.Setup.Scenario.Parts[].FirstDay uint16
+saveState.NG121.Setup.Scenario.Parts[].Incident string
+saveState.NG121.Setup.Scenario.Parts[].Item rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.NG121.Setup.Scenario.Parts[].Kind rimworld-go/internal/domain/scenario.PartKind = uint8
+saveState.NG121.Setup.Scenario.Parts[].MaxAge uint8
+saveState.NG121.Setup.Scenario.Parts[].MinAge uint8
+saveState.NG121.Setup.Scenario.Parts[].N uint8
+saveState.NG121.Setup.Scenario.Parts[].Near bool
+saveState.NG121.Setup.Scenario.Parts[].PawnCond rimworld-go/internal/domain/pawn/pawngen.Condition = uint8
+saveState.NG121.Setup.Scenario.Parts[].Percent uint16
+saveState.NG121.Setup.Scenario.Parts[].Project rimworld-go/internal/domain/research.Project = uint8
+saveState.NG121.Setup.Scenario.Parts[].Qty int32
+saveState.NG121.Setup.Scenario.Parts[].Random bool
+saveState.NG121.Setup.Scenario.Parts[].Species rimworld-go/internal/domain/animal.Species = uint8
+saveState.NG121.Setup.Scenario.Parts[].Text string
+saveState.NG121.Setup.Scenario.Parts[].Trait rimworld-go/internal/domain/pawn/trait.ID = uint8
+saveState.NG121.Setup.Scenario.Parts[].Who rimworld-go/internal/domain/scenario.Who = uint8
+saveState.NG121.Setup.Scenario.People int
+saveState.NG121.Setup.Scenario.Seed uint64
+saveState.NG121.Setup.Scenario.Summary string
+saveState.NG121.Setup.Scenario.Tech rimworld-go/internal/domain/faction.Tech = uint8
+saveState.NG121.Setup.Season rimworld-go/internal/application/game.Season = uint8
+saveState.NG121.Setup.Seed uint64
+saveState.NG121.Setup.Site rimworld-go/internal/domain/world/site.Site
+saveState.NG121.Setup.Site.Biome rimworld-go/internal/domain/world/biome.ID = uint8
+saveState.NG121.Setup.Site.Caves bool
+saveState.NG121.Setup.Site.Climate rimworld-go/internal/domain/world/temperature.Climate
+saveState.NG121.Setup.Site.Climate.Amplitude int
+saveState.NG121.Setup.Site.Climate.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.NG121.Setup.Site.Climate.Calendar.DaysPerQuadrum int
+saveState.NG121.Setup.Site.Climate.Calendar.Revision int
+saveState.NG121.Setup.Site.Climate.DaySwing int
+saveState.NG121.Setup.Site.Climate.PeakDay int
+saveState.NG121.Setup.Site.Climate.YearMean int
+saveState.NG121.Setup.Site.Coast rimworld-go/internal/domain/world/site.Dir8Set = uint8
+saveState.NG121.Setup.Site.CoastNear uint8
+saveState.NG121.Setup.Site.HasUphill bool
+saveState.NG121.Setup.Site.Hills rimworld-go/internal/domain/world/site.Hills = uint8
+saveState.NG121.Setup.Site.Lakes uint8
+saveState.NG121.Setup.Site.Latitude int16
+saveState.NG121.Setup.Site.Rain int16
+saveState.NG121.Setup.Site.River rimworld-go/internal/domain/world/site.RiverPath
+saveState.NG121.Setup.Site.River.In rimworld-go/internal/domain/world/site.Dir8 = uint8
+saveState.NG121.Setup.Site.River.Out rimworld-go/internal/domain/world/site.Dir8 = uint8
+saveState.NG121.Setup.Site.River.Size rimworld-go/internal/domain/world/site.RiverSize = uint8
+saveState.NG121.Setup.Site.Road rimworld-go/internal/domain/world/site.Dir8Set = uint8
+saveState.NG121.Setup.Site.Settled bool
+saveState.NG121.Setup.Site.Stones []rimworld-go/internal/domain/world/geology.Stone
+saveState.NG121.Setup.Site.Stones[] rimworld-go/internal/domain/world/geology.Stone = uint8
+saveState.NG121.Setup.Site.Uphill rimworld-go/internal/domain/world/site.Dir8 = uint8
+saveState.NG121.Setup.Storyteller string
+saveState.NG121.Setup.Tile int
+saveState.NG121.Setup.WandererGroups int
+saveState.NG121.Setup.World rimworld-go/internal/domain/world/planet.Params
+saveState.NG121.Setup.World.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.NG121.Setup.World.Calendar.DaysPerQuadrum int
+saveState.NG121.Setup.World.Calendar.Revision int
+saveState.NG121.Setup.World.Coverage int
+saveState.NG121.Setup.World.Factions []rimworld-go/internal/domain/faction.Slot
+saveState.NG121.Setup.World.Factions[] rimworld-go/internal/domain/faction.Slot
+saveState.NG121.Setup.World.Factions[].Count int
+saveState.NG121.Setup.World.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
+saveState.NG121.Setup.World.Pop int
+saveState.NG121.Setup.World.Rain int
+saveState.NG121.Setup.World.SeedText string
+saveState.NG121.Setup.World.Temp int
+saveState.NG121.Setup.World.Version uint16
+saveState.NG121.StartDay int
+saveState.NG121.Story rimworld-go/internal/domain/storyteller.State
+saveState.NG121.Story.CycleDay int
+saveState.NG121.Story.Cycles int
+saveState.NG121.Story.Eased bool
+saveState.NG121.Story.LastLossDay int
+saveState.NG121.Story.LastThreatDay int
+saveState.NG121.Story.Pressure bool
+saveState.NG121.Story.QuietDays int
+saveState.NG121.Story.Started bool
 saveState.Names []rimworld-go/internal/application/game.entry[string]
 saveState.Names[] rimworld-go/internal/application/game.entry[string]
 saveState.Names[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
@@ -1019,6 +1541,7 @@ saveState.OrderQueue{}[].Cmd rimworld-go/internal/domain/sim/command.Command
 saveState.OrderQueue{}[].Cmd.Build uint8
 saveState.OrderQueue{}[].Cmd.Count int
 saveState.OrderQueue{}[].Cmd.Enabled bool
+saveState.OrderQueue{}[].Cmd.ExactLots bool
 saveState.OrderQueue{}[].Cmd.Facing uint8
 saveState.OrderQueue{}[].Cmd.Index int
 saveState.OrderQueue{}[].Cmd.Kind rimworld-go/internal/domain/sim/command.Kind = uint8
@@ -1030,6 +1553,7 @@ saveState.OrderQueue{}[].Cmd.Name string
 saveState.OrderQueue{}[].Cmd.Order rimworld-go/internal/domain/sim/command.Order = uint8
 saveState.OrderQueue{}[].Cmd.Pawn uint64
 saveState.OrderQueue{}[].Cmd.Queue bool
+saveState.OrderQueue{}[].Cmd.Quote uint64
 saveState.OrderQueue{}[].Cmd.Radius int
 saveState.OrderQueue{}[].Cmd.Recipe uint8
 saveState.OrderQueue{}[].Cmd.Seq uint64
@@ -1093,12 +1617,18 @@ saveState.PenAnimals[].Animal rimworld-go/internal/domain/sim/entity.EntityID = 
 saveState.PenAnimals[].Since uint64
 saveState.PenMarkers []rimworld-go/internal/application/game.penSave
 saveState.PenMarkers[] rimworld-go/internal/application/game.penSave
+saveState.PenMarkers[].Edit rimworld-go/internal/domain/sim/command.ConfigEdit
+saveState.PenMarkers[].Edit.Index int
+saveState.PenMarkers[].Edit.Kind rimworld-go/internal/domain/sim/command.Kind = uint8
+saveState.PenMarkers[].Edit.Revision uint64
+saveState.PenMarkers[].Edit.Row uint64
+saveState.PenMarkers[].Edit.Tick uint64
 saveState.PenMarkers[].Marker rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.PenMarkers[].Settings rimworld-go/internal/application/game.PenSettings
+saveState.PenMarkers[].Settings rimworld-go/internal/application/game/mapview.PenSettings
 saveState.PenMarkers[].Settings.AutoCut []string
 saveState.PenMarkers[].Settings.AutoCut[] string
-saveState.PenMarkers[].Settings.Species []rimworld-go/internal/application/game.PenSpecies
-saveState.PenMarkers[].Settings.Species[] rimworld-go/internal/application/game.PenSpecies
+saveState.PenMarkers[].Settings.Species []rimworld-go/internal/application/game/mapview.PenSpecies
+saveState.PenMarkers[].Settings.Species[] rimworld-go/internal/application/game/mapview.PenSpecies
 saveState.PenMarkers[].Settings.Species[].Allow bool
 saveState.PenMarkers[].Settings.Species[].Female bool
 saveState.PenMarkers[].Settings.Species[].Key string
@@ -1108,6 +1638,7 @@ saveState.Pending[] rimworld-go/internal/domain/sim/command.Command
 saveState.Pending[].Build uint8
 saveState.Pending[].Count int
 saveState.Pending[].Enabled bool
+saveState.Pending[].ExactLots bool
 saveState.Pending[].Facing uint8
 saveState.Pending[].Index int
 saveState.Pending[].Kind rimworld-go/internal/domain/sim/command.Kind = uint8
@@ -1119,6 +1650,7 @@ saveState.Pending[].Name string
 saveState.Pending[].Order rimworld-go/internal/domain/sim/command.Order = uint8
 saveState.Pending[].Pawn uint64
 saveState.Pending[].Queue bool
+saveState.Pending[].Quote uint64
 saveState.Pending[].Radius int
 saveState.Pending[].Recipe uint8
 saveState.Pending[].Seq uint64
@@ -1142,10 +1674,10 @@ saveState.Pens[].X1 int
 saveState.Pens[].X2 int
 saveState.Pens[].Y1 int
 saveState.Pens[].Y2 int
-saveState.People rimworld-go/internal/application/game.peopleSave
-saveState.People.Persons []rimworld-go/internal/application/game.personSave
-saveState.People.Persons[] rimworld-go/internal/application/game.personSave
-saveState.People.Persons[].Bio rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.People rimworld-go/internal/application/game/savelegacy.People
+saveState.People.Persons []rimworld-go/internal/application/game/savelegacy.Person
+saveState.People.Persons[] rimworld-go/internal/application/game/savelegacy.Person
+saveState.People.Persons[].Bio rimworld-go/internal/application/game/savelegacy.Pawn
 saveState.People.Persons[].Bio.Adulthood rimworld-go/internal/domain/pawn/backstory.ID = uint16
 saveState.People.Persons[].Bio.AgeDays int32
 saveState.People.Persons[].Bio.Childhood rimworld-go/internal/domain/pawn/backstory.ID = uint16
@@ -1167,7 +1699,7 @@ saveState.People.Persons[].Bio.Look.Skin uint8
 saveState.People.Persons[].Bio.Look.Vest bool
 saveState.People.Persons[].Bio.Look.VestCloth uint8
 saveState.People.Persons[].Bio.Nick string
-saveState.People.Persons[].Bio.Skills rimworld-go/internal/domain/pawn/skill.Set = [11]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.People.Persons[].Bio.Skills rimworld-go/internal/application/game/savelegacy.SkillSet = [11]rimworld-go/internal/domain/pawn/skill.Skill
 saveState.People.Persons[].Bio.Skills[] rimworld-go/internal/domain/pawn/skill.Skill
 saveState.People.Persons[].Bio.Skills[].Carry int16
 saveState.People.Persons[].Bio.Skills[].Level uint8
@@ -1180,11 +1712,56 @@ saveState.People.Persons[].DiedAt uint64
 saveState.People.Persons[].Faction int
 saveState.People.Persons[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.People.Persons[].KilledBy rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.People.Persons[].Origin rimworld-go/internal/domain/faction.Type = uint8
 saveState.People.Persons[].Parents [2]rimworld-go/internal/domain/sim/entity.EntityID
 saveState.People.Persons[].Parents[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.People.Persons[].Where uint8
 saveState.People.Seeded bool
 saveState.People.Version uint8
+saveState.People21 rimworld-go/internal/application/game.peopleSave
+saveState.People21.Persons []rimworld-go/internal/application/game.personSave
+saveState.People21.Persons[] rimworld-go/internal/application/game.personSave
+saveState.People21.Persons[].Bio rimworld-go/internal/domain/pawn/pawngen.Pawn
+saveState.People21.Persons[].Bio.Adulthood rimworld-go/internal/domain/pawn/backstory.ID = uint16
+saveState.People21.Persons[].Bio.AgeDays int32
+saveState.People21.Persons[].Bio.Childhood rimworld-go/internal/domain/pawn/backstory.ID = uint16
+saveState.People21.Persons[].Bio.Conditions []rimworld-go/internal/domain/pawn/pawngen.Condition
+saveState.People21.Persons[].Bio.Conditions[] rimworld-go/internal/domain/pawn/pawngen.Condition = uint8
+saveState.People21.Persons[].Bio.First string
+saveState.People21.Persons[].Bio.Last string
+saveState.People21.Persons[].Bio.Look rimworld-go/internal/domain/pawn/look.Look
+saveState.People21.Persons[].Bio.Look.Bare bool
+saveState.People21.Persons[].Bio.Look.Beard uint8
+saveState.People21.Persons[].Bio.Look.Build rimworld-go/internal/domain/pawn/look.Build = uint8
+saveState.People21.Persons[].Bio.Look.Grey bool
+saveState.People21.Persons[].Bio.Look.Hair uint8
+saveState.People21.Persons[].Bio.Look.HairStyle uint8
+saveState.People21.Persons[].Bio.Look.Pants uint8
+saveState.People21.Persons[].Bio.Look.Sex rimworld-go/internal/domain/pawn/look.Sex = uint8
+saveState.People21.Persons[].Bio.Look.Shirt uint8
+saveState.People21.Persons[].Bio.Look.Skin uint8
+saveState.People21.Persons[].Bio.Look.Vest bool
+saveState.People21.Persons[].Bio.Look.VestCloth uint8
+saveState.People21.Persons[].Bio.Nick string
+saveState.People21.Persons[].Bio.Skills rimworld-go/internal/domain/pawn/skill.Set = [12]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.People21.Persons[].Bio.Skills[] rimworld-go/internal/domain/pawn/skill.Skill
+saveState.People21.Persons[].Bio.Skills[].Carry int16
+saveState.People21.Persons[].Bio.Skills[].Level uint8
+saveState.People21.Persons[].Bio.Skills[].Passion rimworld-go/internal/domain/pawn/skill.Passion = uint8
+saveState.People21.Persons[].Bio.Skills[].XP int32
+saveState.People21.Persons[].Bio.Temperament rimworld-go/internal/domain/pawn/pawngen.Temperament = uint8
+saveState.People21.Persons[].Bio.Traits []rimworld-go/internal/domain/pawn/trait.ID
+saveState.People21.Persons[].Bio.Traits[] rimworld-go/internal/domain/pawn/trait.ID = uint8
+saveState.People21.Persons[].DiedAt uint64
+saveState.People21.Persons[].Faction int
+saveState.People21.Persons[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.People21.Persons[].KilledBy rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.People21.Persons[].Origin rimworld-go/internal/domain/faction.Type = uint8
+saveState.People21.Persons[].Parents [2]rimworld-go/internal/domain/sim/entity.EntityID
+saveState.People21.Persons[].Parents[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.People21.Persons[].Where uint8
+saveState.People21.Seeded bool
+saveState.People21.Version uint8
 saveState.PetNames []rimworld-go/internal/application/game.entry[string]
 saveState.PetNames[] rimworld-go/internal/application/game.entry[string]
 saveState.PetNames[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
@@ -1226,6 +1803,7 @@ saveState.PostOrders{}.Cmd rimworld-go/internal/domain/sim/command.Command
 saveState.PostOrders{}.Cmd.Build uint8
 saveState.PostOrders{}.Cmd.Count int
 saveState.PostOrders{}.Cmd.Enabled bool
+saveState.PostOrders{}.Cmd.ExactLots bool
 saveState.PostOrders{}.Cmd.Facing uint8
 saveState.PostOrders{}.Cmd.Index int
 saveState.PostOrders{}.Cmd.Kind rimworld-go/internal/domain/sim/command.Kind = uint8
@@ -1237,6 +1815,7 @@ saveState.PostOrders{}.Cmd.Name string
 saveState.PostOrders{}.Cmd.Order rimworld-go/internal/domain/sim/command.Order = uint8
 saveState.PostOrders{}.Cmd.Pawn uint64
 saveState.PostOrders{}.Cmd.Queue bool
+saveState.PostOrders{}.Cmd.Quote uint64
 saveState.PostOrders{}.Cmd.Radius int
 saveState.PostOrders{}.Cmd.Recipe uint8
 saveState.PostOrders{}.Cmd.Seq uint64
@@ -1432,6 +2011,8 @@ saveState.RockDamage map[[2]int]int
 saveState.RockDamage{key} [2]int
 saveState.RockDamage{key}[] int
 saveState.RockDamage{} int
+saveState.RoofLoss []int32
+saveState.RoofLoss[] int32
 saveState.Roofs []uint8
 saveState.Roofs[] uint8
 saveState.RoomGrid []int
@@ -1476,6 +2057,9 @@ saveState.Sense.Packs[].Pack.Items[].Stack.IngredientSpecies[] uint8
 saveState.Sense.Packs[].Pack.Items[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
 saveState.Sense.Packs[].Pack.Items[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Sense.Packs[].Pack.Items[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Sense.Packs[].Pack.Items[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
 saveState.Sense.Packs[].Pack.Items[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Sense.Packs[].Pack.Items[].Stack.Poison int16
 saveState.Sense.Packs[].Pack.Items[].Stack.Qty int
@@ -1494,6 +2078,7 @@ saveState.Sense.Packs[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = u
 saveState.Sense.Resume []rimworld-go/internal/application/game/sense.ResumeEntry
 saveState.Sense.Resume[] rimworld-go/internal/application/game/sense.ResumeEntry
 saveState.Sense.Resume[].Job rimworld-go/internal/domain/ai/job.Record
+saveState.Sense.Resume[].Job.BillIdentity uint64
 saveState.Sense.Resume[].Job.BillIndex int
 saveState.Sense.Resume[].Job.Carry rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Sense.Resume[].Job.Count int
@@ -1571,10 +2156,10 @@ saveState.Shots[].Type rimworld-go/internal/domain/combat/damage.Type = uint8
 saveState.Shots[].Weapon rimworld-go/internal/domain/combat/weapon.Kind = uint8
 saveState.Shots[].X int
 saveState.Shots[].Y int
-saveState.SkillLive rimworld-go/internal/application/game.savedSkillLive
-saveState.SkillLive.Learned map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game.savedLearn
+saveState.SkillLive rimworld-go/internal/application/game/savelegacy.SkillLive
+saveState.SkillLive.Learned map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.Learn
 saveState.SkillLive.Learned{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.SkillLive.Learned{} rimworld-go/internal/application/game.savedLearn
+saveState.SkillLive.Learned{} rimworld-go/internal/application/game/savelegacy.Learn
 saveState.SkillLive.Learned{}.Carry [11]int16
 saveState.SkillLive.Learned{}.Carry[] int16
 saveState.SkillLive.Learned{}.Day int32
@@ -1583,21 +2168,53 @@ saveState.SkillLive.Learned{}.Today[] int32
 saveState.SkillLive.Learned{}.Week [7][11]int32
 saveState.SkillLive.Learned{}.Week[] [11]int32
 saveState.SkillLive.Learned{}.Week[][] int32
-saveState.SkillLive.NeedCarry map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game.savedNeedCarry
+saveState.SkillLive.NeedCarry map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.NeedCarry
 saveState.SkillLive.NeedCarry{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.SkillLive.NeedCarry{} rimworld-go/internal/application/game.savedNeedCarry
+saveState.SkillLive.NeedCarry{} rimworld-go/internal/application/game/savelegacy.NeedCarry
 saveState.SkillLive.NeedCarry{}.Hunger int32
 saveState.SkillLive.NeedCarry{}.Joy int32
 saveState.SkillLive.NeedCarry{}.Rest int32
 saveState.SkillLive.Research int
-saveState.SkillLive.Working map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game.savedWorking
+saveState.SkillLive.Working map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.Working
 saveState.SkillLive.Working{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.SkillLive.Working{} rimworld-go/internal/application/game.savedWorking
+saveState.SkillLive.Working{} rimworld-go/internal/application/game/savelegacy.Working
 saveState.SkillLive.Working{}.Skill rimworld-go/internal/domain/pawn/skill.ID = uint8
 saveState.SkillLive.Working{}.Tick uint64
-saveState.Skills map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/pawn/skill.Set
+saveState.SkillLive21 rimworld-go/internal/application/game/savelegacy.CurrentSkillLive
+saveState.SkillLive21.Learned map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.CurrentLearn
+saveState.SkillLive21.Learned{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.SkillLive21.Learned{} rimworld-go/internal/application/game/savelegacy.CurrentLearn
+saveState.SkillLive21.Learned{}.Carry [12]int16
+saveState.SkillLive21.Learned{}.Carry[] int16
+saveState.SkillLive21.Learned{}.Day int32
+saveState.SkillLive21.Learned{}.Today [12]int32
+saveState.SkillLive21.Learned{}.Today[] int32
+saveState.SkillLive21.Learned{}.Week [7][12]int32
+saveState.SkillLive21.Learned{}.Week[] [12]int32
+saveState.SkillLive21.Learned{}.Week[][] int32
+saveState.SkillLive21.NeedCarry map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.NeedCarry
+saveState.SkillLive21.NeedCarry{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.SkillLive21.NeedCarry{} rimworld-go/internal/application/game/savelegacy.NeedCarry
+saveState.SkillLive21.NeedCarry{}.Hunger int32
+saveState.SkillLive21.NeedCarry{}.Joy int32
+saveState.SkillLive21.NeedCarry{}.Rest int32
+saveState.SkillLive21.Research int
+saveState.SkillLive21.Working map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.Working
+saveState.SkillLive21.Working{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.SkillLive21.Working{} rimworld-go/internal/application/game/savelegacy.Working
+saveState.SkillLive21.Working{}.Skill rimworld-go/internal/domain/pawn/skill.ID = uint8
+saveState.SkillLive21.Working{}.Tick uint64
+saveState.Skills map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/savelegacy.SkillSet
+saveState.Skills21 map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/pawn/skill.Set
+saveState.Skills21{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Skills21{} rimworld-go/internal/domain/pawn/skill.Set = [12]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.Skills21{}[] rimworld-go/internal/domain/pawn/skill.Skill
+saveState.Skills21{}[].Carry int16
+saveState.Skills21{}[].Level uint8
+saveState.Skills21{}[].Passion rimworld-go/internal/domain/pawn/skill.Passion = uint8
+saveState.Skills21{}[].XP int32
 saveState.Skills{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
-saveState.Skills{} rimworld-go/internal/domain/pawn/skill.Set = [11]rimworld-go/internal/domain/pawn/skill.Skill
+saveState.Skills{} rimworld-go/internal/application/game/savelegacy.SkillSet = [11]rimworld-go/internal/domain/pawn/skill.Skill
 saveState.Skills{}[] rimworld-go/internal/domain/pawn/skill.Skill
 saveState.Skills{}[].Carry int16
 saveState.Skills{}[].Level uint8
@@ -1711,6 +2328,9 @@ saveState.Stacks[].V.IngredientSpecies[] uint8
 saveState.Stacks[].V.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
 saveState.Stacks[].V.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Stacks[].V.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Stacks[].V.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Stacks[].V.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Stacks[].V.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
 saveState.Stacks[].V.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Stacks[].V.Poison int16
 saveState.Stacks[].V.Qty int
@@ -1822,7 +2442,50 @@ saveState.Trade.Aid[].Here bool
 saveState.Trade.Aid[].LeaveAt uint64
 saveState.Trade.Aid[].Leaving bool
 saveState.Trade.Caravan rimworld-go/internal/application/game.traderCaravan
+saveState.Trade.Caravan.Cargo []rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.Caravan.Cargo[] rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.Caravan.Cargo[].Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Caravan.Cargo[].Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Caravan.Cargo[].Lines[].Building uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].ID uint64
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Book uint32
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Building uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Dried bool
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Hatch int
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Poison int16
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Qty int
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Rot int
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Tame bool
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Wear int
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.X int
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Y int
+saveState.Trade.Caravan.Cargo[].Lines[].Lots[].Stack.Yield uint16
+saveState.Trade.Caravan.Cargo[].Lines[].Qty int
+saveState.Trade.Caravan.Cargo[].Owner rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravan.Cargo[].Silver int
 saveState.Trade.Caravan.Faction int
+saveState.Trade.Caravan.GroupID uint64
 saveState.Trade.Caravan.Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
 saveState.Trade.Caravan.LeaveAt uint64
 saveState.Trade.Caravan.Members []rimworld-go/internal/domain/sim/entity.EntityID
@@ -1833,10 +2496,138 @@ saveState.Trade.Caravan.Stock.Lines []rimworld-go/internal/domain/economy/trade.
 saveState.Trade.Caravan.Stock.Lines[] rimworld-go/internal/domain/economy/trade.Line
 saveState.Trade.Caravan.Stock.Lines[].Building uint8
 saveState.Trade.Caravan.Stock.Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravan.Stock.Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravan.Stock.Lines[].Lots[].ID uint64
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Book uint32
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Building uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Dried bool
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Hatch int
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Poison int16
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Qty int
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Rot int
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Tame bool
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Wear int
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.X int
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Y int
+saveState.Trade.Caravan.Stock.Lines[].Lots[].Stack.Yield uint16
 saveState.Trade.Caravan.Stock.Lines[].Qty int
+saveState.Trade.Caravan.Stock.NextLotID uint64
 saveState.Trade.Caravan.Stock.Silver int
 saveState.Trade.Caravan.Trader rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Trade.Caravan.Turned bool
+saveState.Trade.Caravans []rimworld-go/internal/application/game.traderCaravan
+saveState.Trade.Caravans[] rimworld-go/internal/application/game.traderCaravan
+saveState.Trade.Caravans[].Cargo []rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.Caravans[].Cargo[] rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.Caravans[].Cargo[].Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Caravans[].Cargo[].Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Caravans[].Cargo[].Lines[].Building uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].ID uint64
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Book uint32
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Building uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Dried bool
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Hatch int
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Poison int16
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Qty int
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Rot int
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Tame bool
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Wear int
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.X int
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Y int
+saveState.Trade.Caravans[].Cargo[].Lines[].Lots[].Stack.Yield uint16
+saveState.Trade.Caravans[].Cargo[].Lines[].Qty int
+saveState.Trade.Caravans[].Cargo[].Owner rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravans[].Cargo[].Silver int
+saveState.Trade.Caravans[].Faction int
+saveState.Trade.Caravans[].GroupID uint64
+saveState.Trade.Caravans[].Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.Trade.Caravans[].LeaveAt uint64
+saveState.Trade.Caravans[].Members []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Trade.Caravans[].Members[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravans[].Stock rimworld-go/internal/domain/economy/trade.Stock
+saveState.Trade.Caravans[].Stock.Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.Trade.Caravans[].Stock.Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Caravans[].Stock.Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Caravans[].Stock.Lines[].Building uint8
+saveState.Trade.Caravans[].Stock.Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravans[].Stock.Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].ID uint64
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Book uint32
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Building uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Dried bool
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Hatch int
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Poison int16
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Qty int
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Rot int
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Tame bool
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Wear int
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.X int
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Y int
+saveState.Trade.Caravans[].Stock.Lines[].Lots[].Stack.Yield uint16
+saveState.Trade.Caravans[].Stock.Lines[].Qty int
+saveState.Trade.Caravans[].Stock.NextLotID uint64
+saveState.Trade.Caravans[].Stock.Silver int
+saveState.Trade.Caravans[].Trader rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Caravans[].Turned bool
 saveState.Trade.Cooldowns []rimworld-go/internal/application/game.factionCooldown
 saveState.Trade.Cooldowns[] rimworld-go/internal/application/game.factionCooldown
 saveState.Trade.Cooldowns[].CD rimworld-go/internal/domain/faction.Cooldowns
@@ -1852,7 +2643,41 @@ saveState.Trade.Orbital.Stock.Lines []rimworld-go/internal/domain/economy/trade.
 saveState.Trade.Orbital.Stock.Lines[] rimworld-go/internal/domain/economy/trade.Line
 saveState.Trade.Orbital.Stock.Lines[].Building uint8
 saveState.Trade.Orbital.Stock.Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Orbital.Stock.Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Orbital.Stock.Lines[].Lots[].ID uint64
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Book uint32
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Building uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Dried bool
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Hatch int
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Poison int16
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Qty int
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Rot int
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Tame bool
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Wear int
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.X int
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Y int
+saveState.Trade.Orbital.Stock.Lines[].Lots[].Stack.Yield uint16
 saveState.Trade.Orbital.Stock.Lines[].Qty int
+saveState.Trade.Orbital.Stock.NextLotID uint64
 saveState.Trade.Orbital.Stock.Silver int
 saveState.Trade.Orbital.Until uint64
 saveState.Trade.Pods []rimworld-go/internal/application/game.tradePod
@@ -1861,6 +2686,39 @@ saveState.Trade.Pods[].Items []rimworld-go/internal/domain/economy/trade.Line
 saveState.Trade.Pods[].Items[] rimworld-go/internal/domain/economy/trade.Line
 saveState.Trade.Pods[].Items[].Building uint8
 saveState.Trade.Pods[].Items[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Pods[].Items[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Pods[].Items[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Pods[].Items[].Lots[].ID uint64
+saveState.Trade.Pods[].Items[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Pods[].Items[].Lots[].Stack.Animal uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.Book uint32
+saveState.Trade.Pods[].Items[].Lots[].Stack.Building uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Pods[].Items[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Pods[].Items[].Lots[].Stack.Dried bool
+saveState.Trade.Pods[].Items[].Lots[].Stack.Forbidden bool
+saveState.Trade.Pods[].Items[].Lots[].Stack.Hatch int
+saveState.Trade.Pods[].Items[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Pods[].Items[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Pods[].Items[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Pods[].Items[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Pods[].Items[].Lots[].Stack.Poison int16
+saveState.Trade.Pods[].Items[].Lots[].Stack.Qty int
+saveState.Trade.Pods[].Items[].Lots[].Stack.Quality uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.Rot int
+saveState.Trade.Pods[].Items[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Pods[].Items[].Lots[].Stack.Tame bool
+saveState.Trade.Pods[].Items[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Pods[].Items[].Lots[].Stack.Wear int
+saveState.Trade.Pods[].Items[].Lots[].Stack.X int
+saveState.Trade.Pods[].Items[].Lots[].Stack.Y int
+saveState.Trade.Pods[].Items[].Lots[].Stack.Yield uint16
 saveState.Trade.Pods[].Items[].Qty int
 saveState.Trade.Pods[].Landed bool
 saveState.Trade.Pods[].Reward bool
@@ -1871,10 +2729,216 @@ saveState.Trade.Requests []rimworld-go/internal/application/game.caravanRequest
 saveState.Trade.Requests[] rimworld-go/internal/application/game.caravanRequest
 saveState.Trade.Requests[].At uint64
 saveState.Trade.Requests[].Faction int
+saveState.Trade.Retired rimworld-go/internal/application/game.traderCaravan
+saveState.Trade.Retired.Cargo []rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.Retired.Cargo[] rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.Retired.Cargo[].Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Retired.Cargo[].Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Retired.Cargo[].Lines[].Building uint8
+saveState.Trade.Retired.Cargo[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Retired.Cargo[].Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].ID uint64
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Book uint32
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Building uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Dried bool
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Hatch int
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Poison int16
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Qty int
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Rot int
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Tame bool
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Wear int
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.X int
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Y int
+saveState.Trade.Retired.Cargo[].Lines[].Lots[].Stack.Yield uint16
+saveState.Trade.Retired.Cargo[].Lines[].Qty int
+saveState.Trade.Retired.Cargo[].Owner rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Retired.Cargo[].Silver int
+saveState.Trade.Retired.Faction int
+saveState.Trade.Retired.GroupID uint64
+saveState.Trade.Retired.Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.Trade.Retired.LeaveAt uint64
+saveState.Trade.Retired.Members []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Trade.Retired.Members[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Retired.Stock rimworld-go/internal/domain/economy/trade.Stock
+saveState.Trade.Retired.Stock.Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.Trade.Retired.Stock.Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Retired.Stock.Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.Retired.Stock.Lines[].Building uint8
+saveState.Trade.Retired.Stock.Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Stock.Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Retired.Stock.Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.Retired.Stock.Lines[].Lots[].ID uint64
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Book uint32
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Building uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Dried bool
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Hatch int
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Poison int16
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Qty int
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Rot int
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Tame bool
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Wear int
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.X int
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Y int
+saveState.Trade.Retired.Stock.Lines[].Lots[].Stack.Yield uint16
+saveState.Trade.Retired.Stock.Lines[].Qty int
+saveState.Trade.Retired.Stock.NextLotID uint64
+saveState.Trade.Retired.Stock.Silver int
+saveState.Trade.Retired.Trader rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.Retired.Turned bool
+saveState.Trade.RetiredCaravans []rimworld-go/internal/application/game.traderCaravan
+saveState.Trade.RetiredCaravans[] rimworld-go/internal/application/game.traderCaravan
+saveState.Trade.RetiredCaravans[].Cargo []rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.RetiredCaravans[].Cargo[] rimworld-go/internal/application/game/visit.Cargo
+saveState.Trade.RetiredCaravans[].Cargo[].Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Building uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].ID uint64
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Book uint32
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Building uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Dried bool
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Hatch int
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Poison int16
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Qty int
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Rot int
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Tame bool
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Wear int
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.X int
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Y int
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Lots[].Stack.Yield uint16
+saveState.Trade.RetiredCaravans[].Cargo[].Lines[].Qty int
+saveState.Trade.RetiredCaravans[].Cargo[].Owner rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.RetiredCaravans[].Cargo[].Silver int
+saveState.Trade.RetiredCaravans[].Faction int
+saveState.Trade.RetiredCaravans[].GroupID uint64
+saveState.Trade.RetiredCaravans[].Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.Trade.RetiredCaravans[].LeaveAt uint64
+saveState.Trade.RetiredCaravans[].Members []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Trade.RetiredCaravans[].Members[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.RetiredCaravans[].Stock rimworld-go/internal/domain/economy/trade.Stock
+saveState.Trade.RetiredCaravans[].Stock.Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.RetiredCaravans[].Stock.Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Building uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].ID uint64
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Animal uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Book uint32
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Building uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.DiedAt uint64
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Dried bool
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Forbidden bool
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Hatch int
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.HaulMarked bool
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Poison int16
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Qty int
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Quality uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Rot int
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Tame bool
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Unclaimed bool
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Wear int
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.X int
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Y int
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Lots[].Stack.Yield uint16
+saveState.Trade.RetiredCaravans[].Stock.Lines[].Qty int
+saveState.Trade.RetiredCaravans[].Stock.NextLotID uint64
+saveState.Trade.RetiredCaravans[].Stock.Silver int
+saveState.Trade.RetiredCaravans[].Trader rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Trade.RetiredCaravans[].Turned bool
 saveState.Trade.Version int
+saveState.TrainingMaintenance map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/domain/animal/training.Maintenance
+saveState.TrainingMaintenance{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.TrainingMaintenance{} rimworld-go/internal/domain/animal/training.Maintenance
+saveState.TrainingMaintenance{}.DecayAt uint64
+saveState.TrainingMaintenance{}.HaulProgress uint8
+saveState.TrainingMaintenance{}.TameLoss uint8
+saveState.TrainingMaintenance{}.Task rimworld-go/internal/domain/animal/training.HaulTask
+saveState.TrainingMaintenance{}.Task.Carry rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.TrainingMaintenance{}.Task.Qty int
+saveState.TrainingMaintenance{}.Task.Source rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.TrainingMaintenance{}.Task.Until uint64
+saveState.TrainingMaintenance{}.Task.X int
+saveState.TrainingMaintenance{}.Task.Y int
 saveState.Troughs map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game.troughState
 saveState.Troughs{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Troughs{} rimworld-go/internal/application/game.troughState
+saveState.Troughs{}.Edit rimworld-go/internal/domain/sim/command.ConfigEdit
+saveState.Troughs{}.Edit.Index int
+saveState.Troughs{}.Edit.Kind rimworld-go/internal/domain/sim/command.Kind = uint8
+saveState.Troughs{}.Edit.Revision uint64
+saveState.Troughs{}.Edit.Row uint64
+saveState.Troughs{}.Edit.Tick uint64
 saveState.Troughs{}.Filter uint8
 saveState.Troughs{}.Food map[rimworld-go/internal/domain/economy/item.Kind]int
 saveState.Troughs{}.Food{key} rimworld-go/internal/domain/economy/item.Kind = uint8
@@ -1951,6 +3015,9 @@ saveState.Turrets.Gear[].K.Held.IngredientSpecies[] uint8
 saveState.Turrets.Gear[].K.Held.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
 saveState.Turrets.Gear[].K.Held.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.Turrets.Gear[].K.Held.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Turrets.Gear[].K.Held.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.Turrets.Gear[].K.Held.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.Turrets.Gear[].K.Held.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
 saveState.Turrets.Gear[].K.Held.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Turrets.Gear[].K.Held.Poison int16
 saveState.Turrets.Gear[].K.Held.Qty int
@@ -2048,6 +3115,8 @@ saveState.Wealth.History[] rimworld-go/internal/application/game/wealth.Sample
 saveState.Wealth.History[].Tick uint64
 saveState.Wealth.History[].Value int
 saveState.Wealth.Hour uint64
+saveState.Wealth.InitialCounted bool
+saveState.Wealth.InitialValue int
 saveState.Wealth.Next uint64
 saveState.Wealth.Partial int
 saveState.Wealth.Value int
@@ -2141,6 +3210,7 @@ saveState.Wildlife.Rage.Lock{key} rimworld-go/internal/domain/sim/entity.EntityI
 saveState.Wildlife.Rage.Lock{} rimworld-go/internal/application/game/rage.Lock
 saveState.Wildlife.Rage.Lock{}.Foe rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Wildlife.Rage.Lock{}.Until uint64
+saveState.Wildlife.WeightSchema bool
 saveState.WorkCarry map[rimworld-go/internal/domain/sim/entity.EntityID]int32
 saveState.WorkCarry{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.WorkCarry{} int32
@@ -2174,7 +3244,16 @@ saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Conds[].TendUntil uint64
 saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
 saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Fresh uint32
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
 saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Missing uint32
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Replacements[].Damage int16
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Replacements[].HealAcc int32
+saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Scale int32
 saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
 saveState.World.AX9.Cargo[].Hold.Animals[].State.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
@@ -2272,6 +3351,9 @@ saveState.World.AX9.Cargo[].Hold.Items[].IngredientSpecies[] uint8
 saveState.World.AX9.Cargo[].Hold.Items[].Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
 saveState.World.AX9.Cargo[].Hold.Items[].Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Cargo[].Hold.Items[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.AX9.Cargo[].Hold.Items[].MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.World.AX9.Cargo[].Hold.Items[].MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.AX9.Cargo[].Hold.Items[].MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
 saveState.World.AX9.Cargo[].Hold.Items[].Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.AX9.Cargo[].Hold.Items[].Poison int16
 saveState.World.AX9.Cargo[].Hold.Items[].Qty int
@@ -2322,7 +3404,16 @@ saveState.World.AX9.Flights[].Load.Animals[].State.Body.Conds[].TendUntil uint64
 saveState.World.AX9.Flights[].Load.Animals[].State.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
 saveState.World.AX9.Flights[].Load.Animals[].State.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Flights[].Load.Animals[].State.Body.Fresh uint32
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
 saveState.World.AX9.Flights[].Load.Animals[].State.Body.Missing uint32
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Replacements[].Damage int16
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Replacements[].HealAcc int32
+saveState.World.AX9.Flights[].Load.Animals[].State.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Flights[].Load.Animals[].State.Body.Scale int32
 saveState.World.AX9.Flights[].Load.Animals[].State.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
 saveState.World.AX9.Flights[].Load.Animals[].State.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
@@ -2420,6 +3511,9 @@ saveState.World.AX9.Flights[].Load.Items[].IngredientSpecies[] uint8
 saveState.World.AX9.Flights[].Load.Items[].Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
 saveState.World.AX9.Flights[].Load.Items[].Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Flights[].Load.Items[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.AX9.Flights[].Load.Items[].MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.World.AX9.Flights[].Load.Items[].MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.AX9.Flights[].Load.Items[].MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
 saveState.World.AX9.Flights[].Load.Items[].Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.AX9.Flights[].Load.Items[].Poison int16
 saveState.World.AX9.Flights[].Load.Items[].Qty int
@@ -2477,7 +3571,16 @@ saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Conds[].TendUntil uint64
 saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
 saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Fresh uint32
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
 saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Missing uint32
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Replacements[].Damage int16
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Replacements[].HealAcc int32
+saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Scale int32
 saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
 saveState.World.AX9.Holds[].Hold.Animals[].State.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
@@ -2575,6 +3678,9 @@ saveState.World.AX9.Holds[].Hold.Items[].IngredientSpecies[] uint8
 saveState.World.AX9.Holds[].Hold.Items[].Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
 saveState.World.AX9.Holds[].Hold.Items[].Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Holds[].Hold.Items[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.AX9.Holds[].Hold.Items[].MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.World.AX9.Holds[].Hold.Items[].MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.AX9.Holds[].Hold.Items[].MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
 saveState.World.AX9.Holds[].Hold.Items[].Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.AX9.Holds[].Hold.Items[].Poison int16
 saveState.World.AX9.Holds[].Hold.Items[].Qty int
@@ -2628,7 +3734,16 @@ saveState.World.AX9.Roped[].Beast.State.Body.Conds[].TendUntil uint64
 saveState.World.AX9.Roped[].Beast.State.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
 saveState.World.AX9.Roped[].Beast.State.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Roped[].Beast.State.Body.Fresh uint32
+saveState.World.AX9.Roped[].Beast.State.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Roped[].Beast.State.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.AX9.Roped[].Beast.State.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.AX9.Roped[].Beast.State.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
 saveState.World.AX9.Roped[].Beast.State.Body.Missing uint32
+saveState.World.AX9.Roped[].Beast.State.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Roped[].Beast.State.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.AX9.Roped[].Beast.State.Body.Replacements[].Damage int16
+saveState.World.AX9.Roped[].Beast.State.Body.Replacements[].HealAcc int32
+saveState.World.AX9.Roped[].Beast.State.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Roped[].Beast.State.Body.Scale int32
 saveState.World.AX9.Roped[].Beast.State.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
 saveState.World.AX9.Roped[].Beast.State.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
@@ -2719,6 +3834,7 @@ saveState.World.AX9.Scans[].Scan.For rimworld-go/internal/domain/economy/item.Ki
 saveState.World.AX9.Scans[].Scan.Work int
 saveState.World.AX9.Sites []rimworld-go/internal/application/game/travel.Site
 saveState.World.AX9.Sites[] rimworld-go/internal/application/game/travel.Site
+saveState.World.AX9.Sites[].Cells int
 saveState.World.AX9.Sites[].Expires uint64
 saveState.World.AX9.Sites[].Mineral rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.AX9.Sites[].Qty int
@@ -2771,6 +3887,7 @@ saveState.World.Atlas.Next uint32
 saveState.World.Atlas.Queue []rimworld-go/internal/application/game/maps.Request
 saveState.World.Atlas.Queue[] rimworld-go/internal/application/game/maps.Request
 saveState.World.Atlas.Queue[].Caravan uint64
+saveState.World.Atlas.Queue[].Cells int
 saveState.World.Atlas.Queue[].Centre bool
 saveState.World.Atlas.Queue[].Faction int
 saveState.World.Atlas.Queue[].Kind rimworld-go/internal/application/game/maps.Kind = uint8
@@ -2825,6 +3942,50 @@ saveState.World.HuntOut[] rimworld-go/internal/application/game.huntOutRec
 saveState.World.HuntOut[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.HuntOut[].Prey rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.HuntOut[].Since uint64
+saveState.World.Link rimworld-go/internal/application/game/worldlink.Link
+saveState.World.Link.Factions []rimworld-go/internal/domain/faction.Faction
+saveState.World.Link.Factions[] rimworld-go/internal/domain/faction.Faction
+saveState.World.Link.Factions[].Besieged bool
+saveState.World.Link.Factions[].Defeated bool
+saveState.World.Link.Factions[].DriftDay uint8
+saveState.World.Link.Factions[].Enemies []int
+saveState.World.Link.Factions[].Enemies[] int
+saveState.World.Link.Factions[].Events []string
+saveState.World.Link.Factions[].Events[] string
+saveState.World.Link.Factions[].Goodwill int
+saveState.World.Link.Factions[].History []int16
+saveState.World.Link.Factions[].History[] int16
+saveState.World.Link.Factions[].ID int
+saveState.World.Link.Factions[].Leader rimworld-go/internal/domain/faction.Leader
+saveState.World.Link.Factions[].Leader.Name string
+saveState.World.Link.Factions[].Leader.Title string
+saveState.World.Link.Factions[].Name string
+saveState.World.Link.Factions[].Relation rimworld-go/internal/domain/faction.Relation = uint8
+saveState.World.Link.Factions[].SettlementNames []string
+saveState.World.Link.Factions[].SettlementNames[] string
+saveState.World.Link.Factions[].Settlements []int
+saveState.World.Link.Factions[].Settlements[] int
+saveState.World.Link.Factions[].ThankedDay int
+saveState.World.Link.Factions[].TradeRemainder uint16
+saveState.World.Link.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
+saveState.World.Link.Params rimworld-go/internal/domain/world/planet.Params
+saveState.World.Link.Params.Calendar rimworld-go/internal/domain/sim/clock.CalendarPolicy
+saveState.World.Link.Params.Calendar.DaysPerQuadrum int
+saveState.World.Link.Params.Calendar.Revision int
+saveState.World.Link.Params.Coverage int
+saveState.World.Link.Params.Factions []rimworld-go/internal/domain/faction.Slot
+saveState.World.Link.Params.Factions[] rimworld-go/internal/domain/faction.Slot
+saveState.World.Link.Params.Factions[].Count int
+saveState.World.Link.Params.Factions[].Type rimworld-go/internal/domain/faction.Type = uint8
+saveState.World.Link.Params.Pop int
+saveState.World.Link.Params.Rain int
+saveState.World.Link.Params.SeedText string
+saveState.World.Link.Params.Temp int
+saveState.World.Link.Params.Version uint16
+saveState.World.Link.Tile int
+saveState.World.Mothballed []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.World.Mothballed[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.NextVisitGroup uint64
 saveState.World.Quests rimworld-go/internal/application/game/quest.Save
 saveState.World.Quests.Cadence rimworld-go/internal/application/game/quest.Cadence
 saveState.World.Quests.Cadence.At uint64
@@ -2857,6 +4018,39 @@ saveState.World.Quests.Quests[].Parts[].Lines []rimworld-go/internal/domain/econ
 saveState.World.Quests.Quests[].Parts[].Lines[] rimworld-go/internal/domain/economy/trade.Line
 saveState.World.Quests.Quests[].Parts[].Lines[].Building uint8
 saveState.World.Quests.Quests[].Parts[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].ID uint64
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Animal uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Book uint32
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Building uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.DiedAt uint64
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Dried bool
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Forbidden bool
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Hatch int
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.HaulMarked bool
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Poison int16
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Qty int
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Quality uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Rot int
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Tame bool
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Unclaimed bool
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Wear int
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.X int
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Y int
+saveState.World.Quests.Quests[].Parts[].Lines[].Lots[].Stack.Yield uint16
 saveState.World.Quests.Quests[].Parts[].Lines[].Qty int
 saveState.World.Quests.Quests[].Parts[].Map uint32
 saveState.World.Quests.Quests[].Parts[].Pawn uint64
@@ -2873,6 +4067,39 @@ saveState.World.Quests.Quests[].Rewards[].Lines []rimworld-go/internal/domain/ec
 saveState.World.Quests.Quests[].Rewards[].Lines[] rimworld-go/internal/domain/economy/trade.Line
 saveState.World.Quests.Quests[].Rewards[].Lines[].Building uint8
 saveState.World.Quests.Quests[].Rewards[].Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].ID uint64
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Animal uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Book uint32
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Building uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.DiedAt uint64
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Dried bool
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Forbidden bool
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Hatch int
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.HaulMarked bool
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Poison int16
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Qty int
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Quality uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Rot int
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Tame bool
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Unclaimed bool
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Wear int
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.X int
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Y int
+saveState.World.Quests.Quests[].Rewards[].Lines[].Lots[].Stack.Yield uint16
 saveState.World.Quests.Quests[].Rewards[].Lines[].Qty int
 saveState.World.Quests.Quests[].Rewards[].Pawn uint64
 saveState.World.Quests.Quests[].Rewards[].SiteLoot bool
@@ -2881,6 +4108,85 @@ saveState.World.Quests.Quests[].Seed uint64
 saveState.World.Quests.Quests[].Stars uint8
 saveState.World.Quests.Quests[].State rimworld-go/internal/domain/quest.State = uint8
 saveState.World.Quests.Quests[].Target int
+saveState.World.SettlementStocks []rimworld-go/internal/application/game/maps.SettlementStock
+saveState.World.SettlementStocks[] rimworld-go/internal/application/game/maps.SettlementStock
+saveState.World.SettlementStocks[].Epoch uint64
+saveState.World.SettlementStocks[].FactionID int
+saveState.World.SettlementStocks[].Preserved []rimworld-go/internal/domain/economy/item.Stack
+saveState.World.SettlementStocks[].Preserved[] rimworld-go/internal/domain/economy/item.Stack
+saveState.World.SettlementStocks[].Preserved[].Animal uint8
+saveState.World.SettlementStocks[].Preserved[].Book uint32
+saveState.World.SettlementStocks[].Preserved[].Building uint8
+saveState.World.SettlementStocks[].Preserved[].Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.SettlementStocks[].Preserved[].DiedAt uint64
+saveState.World.SettlementStocks[].Preserved[].Dried bool
+saveState.World.SettlementStocks[].Preserved[].Forbidden bool
+saveState.World.SettlementStocks[].Preserved[].Hatch int
+saveState.World.SettlementStocks[].Preserved[].HaulMarked bool
+saveState.World.SettlementStocks[].Preserved[].IngredientSpecies [4]uint8
+saveState.World.SettlementStocks[].Preserved[].IngredientSpecies[] uint8
+saveState.World.SettlementStocks[].Preserved[].Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.World.SettlementStocks[].Preserved[].Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.SettlementStocks[].Preserved[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.SettlementStocks[].Preserved[].MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.World.SettlementStocks[].Preserved[].MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.SettlementStocks[].Preserved[].MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.SettlementStocks[].Preserved[].Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.SettlementStocks[].Preserved[].Poison int16
+saveState.World.SettlementStocks[].Preserved[].Qty int
+saveState.World.SettlementStocks[].Preserved[].Quality uint8
+saveState.World.SettlementStocks[].Preserved[].Rot int
+saveState.World.SettlementStocks[].Preserved[].Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.SettlementStocks[].Preserved[].Tame bool
+saveState.World.SettlementStocks[].Preserved[].Unclaimed bool
+saveState.World.SettlementStocks[].Preserved[].Wear int
+saveState.World.SettlementStocks[].Preserved[].X int
+saveState.World.SettlementStocks[].Preserved[].Y int
+saveState.World.SettlementStocks[].Preserved[].Yield uint16
+saveState.World.SettlementStocks[].RestockAt uint64
+saveState.World.SettlementStocks[].Stock rimworld-go/internal/domain/economy/trade.Stock
+saveState.World.SettlementStocks[].Stock.Kind rimworld-go/internal/domain/economy/trade.TraderKind = uint8
+saveState.World.SettlementStocks[].Stock.Lines []rimworld-go/internal/domain/economy/trade.Line
+saveState.World.SettlementStocks[].Stock.Lines[] rimworld-go/internal/domain/economy/trade.Line
+saveState.World.SettlementStocks[].Stock.Lines[].Building uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots []rimworld-go/internal/domain/economy/trade.Lot
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[] rimworld-go/internal/domain/economy/trade.Lot
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].ID uint64
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Animal uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Book uint32
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Building uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.DiedAt uint64
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Dried bool
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Forbidden bool
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Hatch int
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.HaulMarked bool
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.IngredientSpecies [4]uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.IngredientSpecies[] uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.MaterialBasis rimworld-go/internal/domain/economy/item.MaterialBasis
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.MaterialBasis.Primary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.MaterialBasis.Secondary rimworld-go/internal/domain/economy/item.MaterialEra = uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Poison int16
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Qty int
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Quality uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Rot int
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Tame bool
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Unclaimed bool
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Wear int
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.X int
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Y int
+saveState.World.SettlementStocks[].Stock.Lines[].Lots[].Stack.Yield uint16
+saveState.World.SettlementStocks[].Stock.Lines[].Qty int
+saveState.World.SettlementStocks[].Stock.NextLotID uint64
+saveState.World.SettlementStocks[].Stock.Silver int
+saveState.World.SettlementStocks[].Tile int
 saveState.World.Stashed []rimworld-go/internal/application/game.stashRec
 saveState.World.Stashed[] rimworld-go/internal/application/game.stashRec
 saveState.World.Stashed[].Beast rimworld-go/internal/domain/animal.State
@@ -2904,7 +4210,16 @@ saveState.World.Stashed[].Beast.Body.Conds[].TendUntil uint64
 saveState.World.Stashed[].Beast.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
 saveState.World.Stashed[].Beast.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.Stashed[].Beast.Body.Fresh uint32
+saveState.World.Stashed[].Beast.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.Stashed[].Beast.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.World.Stashed[].Beast.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.World.Stashed[].Beast.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
 saveState.World.Stashed[].Beast.Body.Missing uint32
+saveState.World.Stashed[].Beast.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.Stashed[].Beast.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.World.Stashed[].Beast.Body.Replacements[].Damage int16
+saveState.World.Stashed[].Beast.Body.Replacements[].HealAcc int32
+saveState.World.Stashed[].Beast.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
 saveState.World.Stashed[].Beast.Body.Scale int32
 saveState.World.Stashed[].Beast.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
 saveState.World.Stashed[].Beast.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
@@ -3019,6 +4334,28 @@ saveState.World.Stashed[].Raider.Warden rimworld-go/internal/domain/sim/entity.E
 saveState.World.Stashed[].X int
 saveState.World.Stashed[].Y int
 saveState.World.Version uint8
+saveState.World.VisitGroups []rimworld-go/internal/application/game/visit.Group
+saveState.World.VisitGroups[] rimworld-go/internal/application/game/visit.Group
+saveState.World.VisitGroups[].ArrivedAt uint64
+saveState.World.VisitGroups[].CampX int
+saveState.World.VisitGroups[].CampY int
+saveState.World.VisitGroups[].DefenseUntil uint64
+saveState.World.VisitGroups[].ExitX int
+saveState.World.VisitGroups[].ExitY int
+saveState.World.VisitGroups[].Faction int
+saveState.World.VisitGroups[].GiftDone bool
+saveState.World.VisitGroups[].ID uint64
+saveState.World.VisitGroups[].Kind rimworld-go/internal/application/game/visit.Kind = uint8
+saveState.World.VisitGroups[].Leader rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.VisitGroups[].LeaveAt uint64
+saveState.World.VisitGroups[].Members []rimworld-go/internal/application/game/visit.Member
+saveState.World.VisitGroups[].Members[] rimworld-go/internal/application/game/visit.Member
+saveState.World.VisitGroups[].Members[].Departed bool
+saveState.World.VisitGroups[].Members[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.VisitGroups[].Members[].Lost bool
+saveState.World.VisitGroups[].Members[].Role rimworld-go/internal/application/game/visit.Role = uint8
+saveState.World.VisitGroups[].Phase rimworld-go/internal/application/game/visit.Phase = uint8
+saveState.World.VisitGroups[].Reason rimworld-go/internal/application/game/visit.LeaveReason = uint8
 saveState.World.Visitors []rimworld-go/internal/application/game/visit.Rec
 saveState.World.Visitors[] rimworld-go/internal/application/game/visit.Rec
 saveState.World.Visitors[].Ally bool
@@ -3026,12 +4363,139 @@ saveState.World.Visitors[].Defend uint64
 saveState.World.Visitors[].Down bool
 saveState.World.Visitors[].Faction int
 saveState.World.Visitors[].Fetch rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.World.Visitors[].GroupID uint64
+saveState.World.Visitors[].Healed bool
 saveState.World.Visitors[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.World.Visitors[].LeaveAt uint64
 saveState.World.Visitors[].Leaving bool
 saveState.World.Visitors[].NoCarry bool
+saveState.World.Visitors[].Rations uint8
 saveState.World.Visitors[].RetryAt uint64
 saveState.World.Visitors[].Turned bool
+saveState.WorldAnimalRecords []rimworld-go/internal/application/game/animalstate.Record
+saveState.WorldAnimalRecords[] rimworld-go/internal/application/game/animalstate.Record
+saveState.WorldAnimalRecords[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.WorldAnimalRecords[].State rimworld-go/internal/domain/animal.Snapshot
+saveState.WorldAnimalRecords[].State.Feeding rimworld-go/internal/domain/animal.Feeding
+saveState.WorldAnimalRecords[].State.Feeding.Feed rimworld-go/internal/domain/animal.FeedTarget
+saveState.WorldAnimalRecords[].State.Feeding.Feed.ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.WorldAnimalRecords[].State.Feeding.Feed.Kind rimworld-go/internal/domain/animal.FeedKind = uint8
+saveState.WorldAnimalRecords[].State.Feeding.Feed.X int
+saveState.WorldAnimalRecords[].State.Feeding.Feed.Y int
+saveState.WorldAnimalRecords[].State.Feeding.FeedClaim rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.WorldAnimalRecords[].State.Feeding.FeedLeft int
+saveState.WorldAnimalRecords[].State.Feeding.NextFeed uint64
+saveState.WorldAnimalRecords[].State.Handling rimworld-go/internal/domain/animal.Handling
+saveState.WorldAnimalRecords[].State.Handling.Bond uint64
+saveState.WorldAnimalRecords[].State.Handling.ConfusedUntil uint64
+saveState.WorldAnimalRecords[].State.Handling.Designated bool
+saveState.WorldAnimalRecords[].State.Handling.Master uint64
+saveState.WorldAnimalRecords[].State.Handling.NextBondCheck uint64
+saveState.WorldAnimalRecords[].State.Handling.NoFollow bool
+saveState.WorldAnimalRecords[].State.Handling.TameMark bool
+saveState.WorldAnimalRecords[].State.Handling.TameRetry uint64
+saveState.WorldAnimalRecords[].State.Handling.TrainDecay uint64
+saveState.WorldAnimalRecords[].State.Handling.Trained [3]uint8
+saveState.WorldAnimalRecords[].State.Handling.Trained[] uint8
+saveState.WorldAnimalRecords[].State.Identity rimworld-go/internal/domain/animal.Identity
+saveState.WorldAnimalRecords[].State.Identity.Born uint64
+saveState.WorldAnimalRecords[].State.Identity.Female bool
+saveState.WorldAnimalRecords[].State.Identity.HasSex bool
+saveState.WorldAnimalRecords[].State.Identity.Herd uint32
+saveState.WorldAnimalRecords[].State.Identity.Name string
+saveState.WorldAnimalRecords[].State.Identity.Species rimworld-go/internal/domain/animal.Species = uint8
+saveState.WorldAnimalRecords[].State.Identity.Tame bool
+saveState.WorldAnimalRecords[].State.Intent rimworld-go/internal/domain/animal.Intent
+saveState.WorldAnimalRecords[].State.Intent.Cooldown int
+saveState.WorldAnimalRecords[].State.Intent.Dormant bool
+saveState.WorldAnimalRecords[].State.Intent.Errand bool
+saveState.WorldAnimalRecords[].State.Intent.ExitX int
+saveState.WorldAnimalRecords[].State.Intent.ExitY int
+saveState.WorldAnimalRecords[].State.Intent.Leaving bool
+saveState.WorldAnimalRecords[].State.Intent.Mode rimworld-go/internal/domain/animal.Mode = uint8
+saveState.WorldAnimalRecords[].State.Intent.NextDecide uint64
+saveState.WorldAnimalRecords[].State.Intent.NextThink uint64
+saveState.WorldAnimalRecords[].State.Intent.Target rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.WorldAnimalRecords[].State.Medical rimworld-go/internal/domain/animal.Medical
+saveState.WorldAnimalRecords[].State.Medical.Body rimworld-go/internal/domain/pawn/body.Body
+saveState.WorldAnimalRecords[].State.Medical.Body.Anatomy rimworld-go/internal/domain/pawn/body.Anatomy = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.BloodLoss int32
+saveState.WorldAnimalRecords[].State.Medical.Body.BloodStage uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds []rimworld-go/internal/domain/pawn/body.Condition
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[] rimworld-go/internal/domain/pawn/body.Condition
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].Immunity int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].Kind rimworld-go/internal/domain/pawn/body.CondKind = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].Rate int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].Sev int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].Since uint64
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].Stage uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].TendQ int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].TendSum int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Conds[].TendUntil uint64
+saveState.WorldAnimalRecords[].State.Medical.Body.Fitted []rimworld-go/internal/domain/economy/item.Kind
+saveState.WorldAnimalRecords[].State.Medical.Body.Fitted[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Fresh uint32
+saveState.WorldAnimalRecords[].State.Medical.Body.Implants []rimworld-go/internal/domain/pawn/body.Implant
+saveState.WorldAnimalRecords[].State.Medical.Body.Implants[] rimworld-go/internal/domain/pawn/body.Implant
+saveState.WorldAnimalRecords[].State.Medical.Body.Implants[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Implants[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Missing uint32
+saveState.WorldAnimalRecords[].State.Medical.Body.Replacements []rimworld-go/internal/domain/pawn/body.Replacement
+saveState.WorldAnimalRecords[].State.Medical.Body.Replacements[] rimworld-go/internal/domain/pawn/body.Replacement
+saveState.WorldAnimalRecords[].State.Medical.Body.Replacements[].Damage int16
+saveState.WorldAnimalRecords[].State.Medical.Body.Replacements[].HealAcc int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Replacements[].Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Scale int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds []rimworld-go/internal/domain/pawn/body.Wound
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[] rimworld-go/internal/domain/pawn/body.Wound
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].At uint64
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].Bleed int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].Dmg int
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].HealAcc int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].InfectAt uint64
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].Kind rimworld-go/internal/domain/pawn/body.WoundKind = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].Part rimworld-go/internal/domain/pawn/body.Part = uint8
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].Permanent bool
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].Size int32
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].TendAt uint64
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].TendQ int16
+saveState.WorldAnimalRecords[].State.Medical.Body.Wounds[].Tended bool
+saveState.WorldAnimalRecords[].State.Motion rimworld-go/internal/domain/animal.Motion
+saveState.WorldAnimalRecords[].State.Motion.GoalX int
+saveState.WorldAnimalRecords[].State.Motion.GoalY int
+saveState.WorldAnimalRecords[].State.Motion.Path []rimworld-go/internal/domain/ai/pathing.Point
+saveState.WorldAnimalRecords[].State.Motion.PathI int
+saveState.WorldAnimalRecords[].State.Motion.Path[] rimworld-go/internal/domain/ai/pathing.Point
+saveState.WorldAnimalRecords[].State.Motion.Path[].X int
+saveState.WorldAnimalRecords[].State.Motion.Path[].Y int
+saveState.WorldAnimalRecords[].State.Motion.RetryAt uint64
+saveState.WorldAnimalRecords[].State.Motion.StepGait rimworld-go/internal/domain/animal.Gait = uint8
+saveState.WorldAnimalRecords[].State.Reproduction rimworld-go/internal/domain/animal.Reproduction
+saveState.WorldAnimalRecords[].State.Reproduction.Mate rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.WorldAnimalRecords[].State.Reproduction.MateLeft int
+saveState.WorldAnimalRecords[].State.Reproduction.MateUntil uint64
+saveState.WorldAnimalRecords[].State.Reproduction.Mated int
+saveState.WorldAnimalRecords[].State.Reproduction.Mother uint64
+saveState.WorldAnimalRecords[].State.Reproduction.Pregnant uint64
+saveState.WorldAnimalRecords[].State.Reproduction.Product int
+saveState.WorldAnimalRecords[].State.Threat rimworld-go/internal/domain/animal.Threat
+saveState.WorldAnimalRecords[].State.Threat.Attacker rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.WorldAnimalRecords[].State.Threat.ChargeSince uint64
+saveState.WorldAnimalRecords[].State.Threat.ChaseWarnedAt uint64
+saveState.WorldAnimalRecords[].State.Threat.ChaseWarnedTarget rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.WorldAnimalRecords[].State.Threat.FleeUntil uint64
+saveState.WorldAnimalRecords[].State.Threat.HuntSince uint64
+saveState.WorldAnimalRecords[].State.Threat.Manhunter uint64
+saveState.WorldAnimalRecords[].State.Threat.NextCharge uint64
+saveState.WorldAnimalRecords[].State.Vitals rimworld-go/internal/domain/animal.Vitals
+saveState.WorldAnimalRecords[].State.Vitals.Downed bool
+saveState.WorldAnimalRecords[].State.Vitals.DownedTick uint64
+saveState.WorldAnimalRecords[].State.Vitals.Food int
+saveState.WorldAnimalRecords[].State.Vitals.Hunger uint64
+saveState.WorldAnimalRecords[].State.Vitals.Injury int
+saveState.WorldAnimalRecords[].State.Vitals.Rest int
+saveState.WorldAnimalRecords[].State.Vitals.Starving uint64
 saveState.Worn map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/craft.OutfitSave
 saveState.Worn{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Worn{} rimworld-go/internal/application/game/craft.OutfitSave

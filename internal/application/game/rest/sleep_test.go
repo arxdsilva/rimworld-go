@@ -169,3 +169,22 @@ func TestRestedMarksAndSave(t *testing.T) {
 	}
 	s.Import(map[entity.EntityID]bool{})
 }
+
+// The organ multiplier changes actual recovery ticks, not only the read model.
+func TestSleepRecoveryUsesBodyRestMultiplier(t *testing.T) {
+	f := newFake()
+	f.pawn(1, 0, 0)
+	f.pawn(2, 1, 0)
+	f.need[1] = needs.Pair{Hunger: needs.Full, Rest: 0}
+	f.need[2] = f.need[1]
+	f.bodyRestRate = map[entity.EntityID]int32{2: 1075}
+	s := New(f)
+	j := job.Record{Kind: job.Sleep, State: job.Do, WorkLeft: 10000}
+	for now := uint64(1); now <= 1000; now++ {
+		s.Do(1, j, now)
+		s.Do(2, j, now)
+	}
+	if f.need[2].Rest <= f.need[1].Rest {
+		t.Fatalf("healthy rest %d, synthetic-heart rest %d", f.need[1].Rest, f.need[2].Rest)
+	}
+}

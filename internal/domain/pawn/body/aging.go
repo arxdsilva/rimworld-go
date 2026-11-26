@@ -19,7 +19,7 @@ import (
 //     wiki's per-age tables are not published as numbers): onsetCurve.
 //   - Permanent kinds (bad back, cataract, frail, dementia, hearing loss)
 //     never change. A part-bound one ends when its part is replaced or
-//     lost: an optic implant over a cataract eye, a cochlear implant over
+//     lost: an optic implant over a cataract eye, a acoustic implant over
 //     a deaf ear, a spinal brace in place of the spine (DropLostAging).
 //   - Artery blockage and carcinoma grow on a closed form from their
 //     onset tick (GrowAging), at a rate drawn once from a hash of the
@@ -80,6 +80,66 @@ const microPerSev = 1000
 // blockage stage. wiki: Ailments.
 var heartAttackMTB = [...]int32{300, 200, 100, 60, 30}
 
+// AlzheimerThoughtNullification is the chance per ten thousand that a
+// condition-dependent mood thought does not register this hour.
+// wiki: Alzheimer's, 0/15/33/50% by stage.
+func AlzheimerThoughtNullification(b *Body) int {
+	if b == nil {
+		return 0
+	}
+	c, ok := b.Cond(CondAlzheimers)
+	if !ok {
+		return 0
+	}
+	chance := [...]int{0, 1500, 3300, 5000}
+	return chance[min(int(c.Stage), len(chance)-1)]
+}
+
+// AsthmaBirthdayChance interpolates the public human birthday graph
+// (wiki: Ailments#Asthma; ages 0, 16, 24, 40 at life expectancy 80).
+// Values are millionths. Scaling by species life expectancy for animals
+// preserves the existing native cross-species tuning.
+func AsthmaBirthdayChance(ageDays, lifeDays int) int {
+	if ageDays <= 0 || lifeDays <= 0 {
+		return 0
+	}
+	// Work in tenths of the lifespan without losing fractional age.
+	age, life := int64(ageDays)*10, int64(lifeDays)
+	switch {
+	case age < 2*life:
+		return int(age * 480 / (2 * life))
+	case age < 3*life:
+		return 480 + int((age-2*life)*480/life)
+	case age < 5*life:
+		return 960 + int((age-3*life)*384/(2*life))
+	default:
+		return 1344
+	}
+}
+
+// AsthmaBirthday rolls one incident at the actual biological birthday.
+func AsthmaBirthday(ageDays, lifeDays int, roll func(int) int) bool {
+	if ageDays <= 0 || ageDays%clock.DaysPerYear != 0 {
+		return false
+	}
+	chance := AsthmaBirthdayChance(ageDays, lifeDays)
+	return chance > 0 && roll(OnsetScale) < chance
+}
+
+// DevelopAsthma applies a single incident to all available breathing
+// parts (two human/most animal lungs, one snake lung).
+func DevelopAsthma(b *Body, now uint64) bool {
+	if b == nil {
+		return false
+	}
+	lungs, n := AsthmaLungs(b.Anatomy)
+	changed := false
+	for _, part := range lungs[:n] {
+		changed = b.Develop(CondAsthma, part, now) || changed
+	}
+	return changed
+}
+
 // Chronic is when an aging kind may start: from OnsetAge (wiki: Ailments,
 // the first birthday it can come on), at Base permille a year, rising by
 // Slope a year past the onset age to at most Cap (original tuning).
@@ -102,7 +162,9 @@ var chronics = []Chronic{
 	{Kind: CondDementia, OnsetAge: 69, Base: 10, Slope: 5, Cap: 120, Parts: []Part{Brain}, permanent: true},         // wiki: Ailments (69)
 	{Kind: CondHearingLoss, OnsetAge: 49, Base: 15, Slope: 6, Cap: 200, Parts: []Part{EarL, EarR}, permanent: true}, // wiki: Ailments (49)
 	{Kind: CondArteryBlockage, OnsetAge: 21, Base: 4, Slope: 2, Cap: 120, Parts: []Part{Heart}},                     // wiki: Ailments (21)
-	{Kind: CondCarcinoma, OnsetAge: 23, Base: 2, Slope: 1, Cap: 40},                                                 // wiki: Ailments (23)
+	{Kind: CondCarcinoma, OnsetAge: 23, Base: 2, Slope: 1, Cap: 40},
+	{Kind: CondAsthma, OnsetAge: 0, Parts: []Part{LungL, LungR}},                           // wiki: Ailments; birthday onset is owned by the age increment
+	{Kind: CondAlzheimers, OnsetAge: 34, Base: 3, Slope: 1, Cap: 80, Parts: []Part{Brain}}, // wiki: Alzheimer's (34); original tuning: onset chance
 }
 
 // Chronics lists the kinds that start with age (read only).
@@ -122,7 +184,7 @@ func ChronicOf(k CondKind) (Chronic, bool) {
 func IsAging(k CondKind) bool {
 	switch k {
 	case CondBadBack, CondCataract, CondFrail, CondDementia, CondHearingLoss,
-		CondArteryBlockage, CondCarcinoma, CondHeartAttack:
+		CondArteryBlockage, CondCarcinoma, CondHeartAttack, CondAsthma, CondAlzheimers:
 		return true
 	}
 	return false
@@ -158,23 +220,28 @@ func OnsetPerDay(k CondKind, age int) int32 {
 // there and natural, it has no k yet, and for an artery blockage the
 // heart is not artificial. A nil body is a whole one.
 func (b *Body) CanDevelop(k CondKind, p Part) bool {
-	if !IsAging(k) || p >= NumParts {
+	if !IsAging(k) {
 		return false
 	}
 	if b == nil {
-		return true
+		return p < NumParts
 	}
-	if b.Anatomy != Humanlike { // MED-13: aging is the humanlike body's
+	if p >= b.numParts() || b.isMissing(p) || b.blockedAbove(p) || b.condOn(k, p) {
 		return false
 	}
-	if b.isMissing(p) || b.condOn(k, p) {
-		return false
+	if b.Anatomy != Humanlike {
+		d := b.table()[p]
+		return k == CondAsthma && d.HasCap && d.Cap == Breathing
 	}
 	switch k {
 	case CondArteryBlockage, CondHeartAttack:
 		return !b.HeartAttackImmune()
 	case CondBadBack:
 		return !b.SpineBraced()
+	case CondAsthma:
+		return p == LungL || p == LungR
+	case CondAlzheimers:
+		return p == Brain
 	}
 	return true
 }
@@ -258,6 +325,8 @@ func AgingRate(c Condition, salt uint64) int32 {
 	switch c.Kind {
 	case CondArteryBlockage:
 		return arteryPerDay * between(h, arteryFactorLo, arteryFactorHi) / 1000
+	case CondAlzheimers:
+		return 3000 // wiki: Alzheimer's (0.003 severity per day)
 	case CondCarcinoma:
 		switch CarcinomaGrowth(c, salt) {
 		case Growing:
@@ -292,6 +361,15 @@ func GrowAging(c *Condition, rate int32, now uint64) bool {
 		el = now - c.Since
 	}
 	d := int64(rate) * int64(el) / (int64(clock.TicksPerDay) * microPerSev)
+	if c.Kind == CondCarcinoma {
+		// Rate tracks the cumulative treatment offset in 1/10000 severity.
+		// Its sign also persists the 30% painless phenotype.
+		offset := c.Rate
+		if offset < 0 {
+			offset = -offset - 1
+		}
+		d -= int64(offset) / 10000
+	}
 	sev := int32(min(max(int64(onsetSev(c.Kind))+d, 0), AgingDeath))
 	stage := DefOfCond(c.Kind).StageAt(sev)
 	changed := stage != c.Stage
@@ -373,16 +451,15 @@ func (b *Body) dropAgingAfter(op Operation) {
 	b.DropLostAging()
 }
 
-// StepHeartAttack advances the body's heart attack by an hour with roll
-// (Roll(n) in [0, n)): a tend given since the last step (TendSum) eases it
-// by 300 with a chance of 65 % × its quality, then it moves by −400..+600.
-// Below 0 it is over (removed: cured); at AgingDeath the heart stops
-// (dead). changed reports a change of stage or its end.
+// StepHeartAttack advances one simulation hour. Rate persists the ticks
+// remaining to the next severity change; wiki: Heart attack, random
+// 500-10000 tick intervals. Tending acts immediately at each hourly step.
 func (b *Body) StepHeartAttack(roll func(int) int) (dead, cured, changed bool) {
 	c, ok := b.Cond(CondHeartAttack)
 	if !ok {
 		return false, false, false
 	}
+	before := c.Stage
 	if c.TendSum > 0 {
 		if int32(roll(1000)) < min(heartAttackTendChance*c.TendQ/1000, 1000) {
 			c.Sev -= heartAttackTendCut
@@ -390,7 +467,17 @@ func (b *Body) StepHeartAttack(roll func(int) int) (dead, cured, changed bool) {
 		c.TendSum = 0
 	}
 	if c.Sev > 0 {
-		c.Sev += heartAttackStepLo + int32(roll(heartAttackStepSpan))
+		if c.Rate <= 0 {
+			c.Rate = int32(500 + roll(9501))
+		}
+		c.Rate -= clock.TicksPerHour
+		for c.Rate <= 0 && c.Sev > 0 && c.Sev < AgingDeath {
+			c.Sev += heartAttackStepLo + int32(roll(heartAttackStepSpan))
+			if c.Sev <= 0 || c.Sev >= AgingDeath {
+				break
+			}
+			c.Rate += int32(500 + roll(9501))
+		}
 	}
 	switch {
 	case c.Sev <= 0:
@@ -400,10 +487,8 @@ func (b *Body) StepHeartAttack(roll func(int) int) (dead, cured, changed bool) {
 		c.Sev = AgingDeath
 		return true, false, true
 	}
-	stage := DefOfCond(CondHeartAttack).StageAt(c.Sev)
-	changed = stage != c.Stage
-	c.Stage = stage
-	return false, false, changed
+	c.Stage = DefOfCond(CondHeartAttack).StageAt(c.Sev)
+	return false, false, c.Stage != before
 }
 
 // AgingStep is what an hour of aging did to a body: Died names the kind
@@ -441,14 +526,42 @@ func (b *Body) StepAging(now, salt uint64, roll func(int) int) AgingStep {
 	var faded []Part
 	for i := range b.Conds {
 		c := &b.Conds[i]
-		if c.Kind != CondArteryBlockage && c.Kind != CondCarcinoma {
+		if c.Kind == CondAsthma {
+			// wiki: Asthma. +0.25/day baseline, -0.8/day at 100% tend,
+			// min 0.1% and max 50%. Rate carries the fractional remainder.
+			delta := int32(250)
+			if c.TendQ > 0 && now < c.TendUntil {
+				delta -= 800 * c.TendQ / 1000
+			}
+			c.Rate += delta * 1000
+			next := min(max(c.Sev+c.Rate/(1000*clock.HoursPerDay), 1), 500)
+			c.Rate %= 1000 * clock.HoursPerDay
+			nextStage := DefOfCond(c.Kind).StageAt(next)
+			out.Changed = out.Changed || next != c.Sev || nextStage != c.Stage
+			c.Sev, c.Stage = next, nextStage
 			continue
+		}
+		if c.Kind != CondArteryBlockage && c.Kind != CondCarcinoma && c.Kind != CondAlzheimers {
+			continue
+		}
+		if c.Kind == CondCarcinoma && c.TendQ > 0 && now < c.TendUntil {
+			// wiki: Carcinoma, 100% tend quality slows growth by 0.0027/day.
+			// Tending is active for four days; the persisted accumulator
+			// lets growth continue from the original stable onset/hash.
+			delta := int32(27000) * c.TendQ / 1000 / clock.HoursPerDay
+			if c.Rate < 0 {
+				c.Rate -= delta
+			} else {
+				c.Rate += delta
+			}
 		}
 		out.Changed = GrowAging(c, AgingRate(*c, salt), now) || out.Changed
 		switch {
 		case c.Sev >= AgingDeath && c.Kind == CondArteryBlockage:
 			out.Died, out.DiedOn = CondArteryBlockage, c.Part
 			return out
+		case c.Kind == CondAlzheimers:
+			continue
 		case c.Sev >= AgingDeath && b.LossKills(c.Part):
 			out.Died, out.DiedOn = CondCarcinoma, c.Part
 			return out
@@ -474,4 +587,13 @@ func (b *Body) StepAging(now, salt uint64, roll func(int) int) AgingStep {
 		b.DropLostAging()
 	}
 	return out
+}
+
+// AlzheimerEvents rolls the two independent hourly risks at the current stage.
+// The medical stream supplies both rolls even when wandering triggers.
+func AlzheimerEvents(stage uint8, roll func(int) int) (wander, forget bool) {
+	i := min(int(stage), 3)
+	wanderHours := [...]int{12, 9, 7, 4}
+	forgetHours := [...]int{7 * 24, 4 * 24, 2 * 24, 19}
+	return roll(wanderHours[i]*24) == 0, roll(forgetHours[i]) == 0
 }

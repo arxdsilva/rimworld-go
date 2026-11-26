@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/body"
@@ -248,5 +249,48 @@ func TestFoodPoisoningBedRestNoFlap(t *testing.T) {
 	}
 	if n := kindChanges(g, id, 300); n > 3 {
 		t.Fatalf("job kind changed %d times in 300 ticks", n)
+	}
+}
+
+func TestFoodPoisonDifficultyScaling(t *testing.T) {
+	t.Parallel()
+	g := bareSetupGame(difficulty.Seasoned)
+	id, _ := g.SpawnNamedPawn(4, 4, "Ada")
+	meal := item.Stack{Kind: item.Meal, Qty: 1, Poison: 25}
+	for _, tc := range []struct {
+		preset difficulty.Preset
+		want   int
+	}{
+		{difficulty.Wanderer, 75},
+		{difficulty.Gentle, 125},
+		{difficulty.Settled, 188},
+		{difficulty.Seasoned, 250},
+		{difficulty.Grim, 275},
+		{difficulty.Merciless, 300},
+	} {
+		g.ng.setup.Difficulty = difficulty.Of(tc.preset)
+		if got := diet.PoisonRisk(meal, int(body.FoodPoisonChance(g.bodies[id])), g.ng.setup.Difficulty.FoodPoisonPercent()); got != tc.want {
+			t.Errorf("%s risk = %d, want %d", tc.preset, got, tc.want)
+		}
+		if meal.Poison != 25 {
+			t.Fatal("difficulty modified the saved meal")
+		}
+	}
+	s := difficulty.Of(difficulty.Seasoned)
+	s.FoodPoisonChance = 0
+	g.ng.setup.Difficulty = s
+	if got := diet.PoisonRisk(meal, 1000, s.FoodPoisonPercent()); got != 0 {
+		t.Fatalf("0%% difficulty still poisons: %d", got)
+	}
+	g.ng.setup.Difficulty = difficulty.Settings{ThreatScale: 100}
+	if got := diet.PoisonRisk(meal, 1000, g.ng.setup.Difficulty.FoodPoisonPercent()); got != 250 {
+		t.Fatalf("legacy saved setting altered poisoning risk: %d", got)
+	}
+	s = difficulty.Of(difficulty.Seasoned)
+	s.FoodPoisonChance = 0
+	g.ng.setup.Difficulty = s
+	g.rollFoodPoison(id, item.Stack{Kind: item.Meal, Poison: 1000})
+	if g.poisoned(id) {
+		t.Fatal("zero food-poison chance failed in the real eating path")
 	}
 }

@@ -43,8 +43,11 @@ const (
 	PrefixAlert        = "alert."
 	PrefixBldg         = "bldg."
 	PrefixBill         = "bill."
+	PrefixWork         = "work."
 	PrefixWorkCell     = "work.cell."
 	PrefixWorkHead     = "work.head."
+	WorkMode           = "work.mode"
+	WorkNameSort       = "work.name_sort"
 	PrefixOptions      = "options."
 	PrefixInspector    = "inspector."
 )

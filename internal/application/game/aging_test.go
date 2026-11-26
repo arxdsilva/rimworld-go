@@ -14,6 +14,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/randx"
 )
 
 // MED-08: aging and chronic conditions in the game.
@@ -62,11 +63,13 @@ func rollDays(g *Game, n int) {
 
 func TestNoChronicBeforeOnsetAge(t *testing.T) {
 	t.Parallel()
-	g, ids := agingColony(t, 3, 6, 20) // before every onset age (artery blockage: 21)
+	g, ids := agingColony(t, 3, 6, 20) // before every age-gated onset; asthma can occur at any age
 	rollDays(g, 3000)
 	for _, id := range ids {
-		if c := agingConds(g, id); len(c) != 0 {
-			t.Fatalf("a 20-year-old got %+v", c)
+		for _, c := range agingConds(g, id) {
+			if c.Kind != body.CondAsthma {
+				t.Fatalf("a 20-year-old developed an age-gated condition: %+v", c)
+			}
 		}
 	}
 	old, oids := agingColony(t, 3, 6, 85)
@@ -254,8 +257,8 @@ func TestExciseCarcinoma(t *testing.T) {
 	if _, ok := g.bodies[patient].Cond(body.CondCarcinoma); ok {
 		t.Fatal("the carcinoma is gone")
 	}
-	if n := g.countItem(item.IndustrialMedicine); n != 6 {
-		t.Fatalf("an excision uses 4 industrial medicine: %d left", n)
+	if n := g.countItem(item.IndustrialMedicine); n != 5 {
+		t.Fatalf("four surgical doses plus one routine cancer tend: %d left", n)
 	}
 }
 
@@ -271,7 +274,7 @@ func replaceWith(t *testing.T, cond body.CondKind, p body.Part, k item.Kind) []b
 	g.SpawnStack(k, 1, 2, 9)
 	queueOp(g, patient, body.InstallImplant, p, k)
 	operateAll(t, g, patient, doc)
-	if g.bodies[patient].Implant(p) != k {
+	if g.bodies[patient].ReplacementAt(p) != k {
 		t.Fatalf("the %s is fitted (%q)", k, surgeryLine(g, patient))
 	}
 	return agingConds(g, patient)
@@ -283,7 +286,7 @@ func TestCataractCuredByEyeReplacement(t *testing.T) {
 		t.Fatalf("an optic implant ends the cataract: %+v", c)
 	}
 	if c := replaceWith(t, body.CondHearingLoss, body.EarR, item.CochlearImplant); len(c) != 0 {
-		t.Fatalf("a cochlear implant ends the hearing loss: %+v", c)
+		t.Fatalf("a acoustic implant ends the hearing loss: %+v", c)
 	}
 }
 
@@ -375,6 +378,13 @@ func TestHeartAttackDownedDoesNotFlap(t *testing.T) {
 	}
 	if changes > 1 || last != health.Downed {
 		t.Fatalf("status changed %d times, ends %v", changes, last)
+	}
+	b.RemoveCond(body.CondHeartAttack)
+	v = g.VitalOf(id)
+	g.bodyChanged(id, b, &v)
+	g.updateDowned(id, b, &v)
+	if g.VitalOf(id).Status != health.Alive {
+		t.Fatal("patient remains down after the heart attack resolves")
 	}
 }
 
@@ -471,5 +481,44 @@ func TestDoctorTendsHeartAttack(t *testing.T) {
 	}
 	if !tended || g.countItem(item.IndustrialMedicine) >= 10 {
 		t.Fatalf("the doctor tends the heart attack: tended %v, medicine %d", tended, g.countItem(item.IndustrialMedicine))
+	}
+}
+
+// asthmaSuccessRoll chooses a deterministic medical stream whose next roll
+// passes the real 0.1344% birthday check. No production probability changes.
+func asthmaSuccessRoll(t *testing.T) *randx.Rand {
+	t.Helper()
+	for seed := uint64(1); seed < 20000; seed++ {
+		r := randx.New(seed)
+		if r.Clone().IntN(body.OnsetScale) < 1344 {
+			return r
+		}
+	}
+	t.Fatal("no deterministic asthma success seed")
+	return nil
+}
+
+func TestHumanAsthmaActualBirthday(t *testing.T) {
+	g, ids := agingColony(t, 45, 1, 40)
+	id := ids[0]
+	p := g.sk.bios[id]
+	p.AgeDays = 40*clock.DaysPerYear - 1
+	g.sk.bios[id] = p
+	now := uint64(2400*clock.TicksPerDay) + uint64(id%24)*clock.TicksPerHour
+	g.clock = clock.NewAt(clock.Tick(now))
+	r := asthmaSuccessRoll(t)
+	g.stream(streamMedical)
+	g.streams.m[streamMedical] = r
+	g.skillsDaily(id, now)
+	if age := g.sk.bios[id].AgeDays; age != 40*clock.DaysPerYear {
+		t.Fatalf("age %d", age)
+	}
+	b := g.bodies[id]
+	if b == nil || !asthmaOn(b, body.LungL) || !asthmaOn(b, body.LungR) {
+		t.Fatalf("birthday did not create bilateral asthma: %+v", b)
+	}
+	h := saveLoad(t, g)
+	if !asthmaOn(h.bodies[id], body.LungL) || !asthmaOn(h.bodies[id], body.LungR) {
+		t.Fatal("asthma missing after load")
 	}
 }

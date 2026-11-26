@@ -537,17 +537,17 @@ interfaces.
 
 ## 7.1 Work table
 
--   [-] **Pawn rows** (snapshot rows with display names; no portraits/status/sort in the table)
+-   [x] **Pawn rows** (WRK-103/104: snapshot names, existing portrait and highest-priority colonist status mark, sortable rows.)
     -   Name/portrait.
     -   relevant status.
     -   sortable.
--   [-] **Work-type columns** (WRK-002: 14 live columns, left to right in the order a colonist breaks ties, each header with a hover card; Warden off by default; no patient, bed rest, basic or art columns, smith and tailor inside Craft: WRK-101, WRK-102)
+-   [x] **Work-type columns** (WRK-101/102/108: all 20 Core columns in canonical order, with Art, Artistic skill/passions and native priority command.)
     -   Firefight, patient, doctor, bed rest, basic, warden, handle,
         cook, hunt, construct, grow, mine, plant cut, craft categories,
         art, haul, clean, research.
     -   Column header icon/name.
     -   Tooltip explains work category.
--   [-] **Simple priorities mode** (superseded by manual priorities; `SetWorkEnabled` still maps on/off to 3/off)
+-   [x] **Simple priorities mode** (WRK-103: checkbox editing with typed SetWorkEnabled, drag and Shift bulk changes; mode switch preserves existing numeric priorities, enabling a disabled cell sets 3.)
     -   Toggle work type on/off.
 -   [x] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency; CTL-013..015: right click lowers, Shift on a column's name changes all, dragging paints; the simple checkbox mode is WRK-103) (2026-11-20 audit: windows/work.go NextPriority/PrevPriority/WorkPriority, SetWorkPriority, Incapable check; painter drag)
     -   Priority values equivalent to 1--4.
@@ -562,7 +562,7 @@ interfaces.
 
 ## 7.2 Scaling
 
--   [ ] **Sort by name/skill/current priority**
+-   [-] **Sort by name/skill/current priority** (WRK-104: name and per-column priority sort, skill as tie-break; separate skill-only sort remains.)
 -   [ ] **Filter/search pawns**
 -   [ ] **Pin/freeze work headers**
 -   [ ] **Virtualized rows/columns**
@@ -1001,7 +1001,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy manager)
 -   [x] **Medical care** (2026-11-20 audit: internal/adapters/inbound/ebiten/windows/assign.go Medical column careButton)
 -   [x] **Allowed area where chosen UX places it** (SIM-046: Assign tab)
--   [x] **Bed ownership shortcut where useful** (SIM-042: bed owner assignment UI)
+-   [x] **Bed ownership shortcut where useful** (SIM-042: bed owner assignment UI; BED-242: animal owner picker and medical designation use the same native commands)
 
 ## 17.2 Policy manager
 
@@ -1104,7 +1104,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [x] **Obedience** (SIM-047)
 -   [x] **Release**
 -   [ ] **Rescue**
--   [ ] **Haul**
+-   [x] **Haul** (SIM-102: native allowed skill and progress; actual `SetTraining` enable/disable journey; default Docked/Floating Dossier row, Training tab, command tooltip and Animals list use active translation. Regression tests cover the native toggle, default layouts and active translation.)
 -   [x] **Current training progress** (SIM-047: steps, cooldown, decay)
 -   [ ] **Trainability/ineligible explanation**
 
@@ -1136,9 +1136,9 @@ This screen centralizes per-pawn behavioral policies.
 ## 20.1 Prisoner tab
 
 -   [x] **Prisoner status** (SIM-045: Prisoner tab)
--   [ ] **Faction**
+-   [x] **Faction** (SIM-174: the Prisoner tab reads the native faction name or hidden origin; unattributed captives are explicitly identified.)
 -   [x] **Resistance** (SIM-045)
--   [-] **Recruitment difficulty** (SIM-045: resistance only; no difficulty estimate)
+-   [x] **Recruitment difficulty** (SIM-174: 100% minus the native ordinary recruitment chance, last living warden or skill-range estimate, labeled after resistance; recruitment inspiration is an explicit exception.)
 -   [x] **Mood** (SIM-045)
 -   [x] **Health**
 -   [x] **Interaction mode** (SIM-045)
@@ -1536,16 +1536,16 @@ the player what just happened and what requires attention.
 # 29. Caravan World Inspector
 
 -   [x] **Caravan member list** (SIM-046: World tab caravan list) (2026-11-20 audit: worldview/inspector.go inspectCaravan lists each member with health; dialogs.CaravanTip/CaravanHealthNote)
--   [ ] **Inventory**
--   [ ] **Food remaining**
--   [ ] **Travel speed**
+-   [-] **Inventory** (MAP-24: native CaravanView.Cargo holds detached physical cargo; Ebiten presentation remains open.)
+-   [-] **Food remaining** (MAP-24: native FoodDays is milli-days of the road budget; FoodKnown is false while forming; Ebiten presentation remains open.)
+-   [-] **Travel speed** (MAP-24: native SpeedPermil and TilesPerDay use caravan.Speed and difficulty-1 movement; Ebiten presentation remains open.)
 -   [x] **Current route** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'Heading for', router.startRoute; routeview)
 -   [x] **Estimated arrival** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'Arrives in' via v.eta)
--   [ ] **Health/mood warnings**
--   [ ] **Rest state**
+-   [-] **Health/mood warnings** (MAP-24: native MemberFacts carries stable IDs, existing health, Hunger/Band, sampled Mood/BreakTier, explicit unknowns and ActiveBreak; Ebiten presentation remains open.)
+-   [-] **Rest state** (MAP-24: native TravelState, Moving, Resting and WaitingEncounter distinguish night rest from arrival and demand holds; Ebiten presentation remains open.)
 -   [ ] **Foraging**
 -   [x] **Reform/enter settlement actions** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'enter' gizmo + inspectMap Reform; TestJourneyWorldReformCaravan)
--   [ ] **Trade**
+-   [x] **Trade** (MAP-20: a friendly-settlement visit enables Trade; the market modal reads real cargo/stock and issues WorldCaravanTrade; native acceptance and real-input journey verified.)
 -   [x] **Attack** (2026-11-20 audit: worldview/inspector.go inspectCaravan 'attack' gizmo AttackReason; TestJourneyWorldAttackHostileBase)
 -   [x] **Settle** (2026-11-20 audit: worldview/inspector.go 'settle' gizmo command.SettleHere; TestJourneyWorldSettleHere)
 -   [x] **Return/change destination** (2026-11-20 audit: worldview/inspector.go 'travel' and 'return' gizmos; TestJourneyWorldTravelAndReturn)

@@ -99,3 +99,17 @@ FOOD close-out · 2026-10-31 · 15d641d75
 - Proof: `scenario/year_test.go` (`RIMWORLD_PROBE=1`): 4 colonists survive 60 days on their own farm; food 227 to 3305 to 2024; 439 cooked meals vs 40 survival meals. 60 days, not the full year the plan named.
 - UI (U2): Freshness rot bar on the item pane, HUD sky chip with time left, procedural sky veil, "Toxic buildup N%" lines. Gap doc all rows done; several checklist rows updated.
 - Open: a full-year run was not executed; eating capacity and any wiki value flagged "original" in FOOD-1..5.
+
+## FOOD-6-core-poison-and-peer-feeding
+Native ingestion and food admission · 2026-11-25 · this commit
+- Changed: actual ingestion applies difficulty-scaled contamination including fed patients; explicit zero avoids RNG and leaves poison state untouched. Native peer food retries use eligible physical inventory; patient/warden feeding retains real owner.
+- Decisions: no new random draw on zero; physical claims and no-flap retry preserved; food poisoning remains nonlethal.
+- Save/HUD: existing health and eating read models, poison state and legacy saves retained.
+- Boxes: vanilla **Food poisoning** [x]; AILMENTS_GAP Malnutrition row updated for doctor/warden feeding.
+- Open: none within the verified ingestion/peer-food scope.
+
+## FOOD-1-final-ingredient-admission
+Atomic final bill input admission · 2026-11-25 · this commit
+- Changed: the common final physical ingredient validation rejects a live forbidden laid stack before any deletion or product creation; ordinary job terminal cleanup handles reserved and carried sibling loads.
+- Boxes: vanilla **Ingredient filters** [x] annotated; final forbidden-ingredient regression.
+- Open: none within this regression scope.

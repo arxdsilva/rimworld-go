@@ -458,7 +458,8 @@ func (t *Turrets) holds(b construction.Building, a *Aim, now uint64, release, mi
 // are.
 func (t *Turrets) Targetable(id entity.EntityID, now uint64) bool {
 	if a, ok := t.h.Animal(id); ok {
-		return !a.Dead() && (!a.Tame || a.Enraged(now)) && (t.h.Hostile(a) || a.Enraged(now)) // a tame manhunter too (EAI-006)
+		return !a.Dead() && ((!a.Tame || a.Enraged(now)) && (t.h.Hostile(a) || a.Enraged(now)) ||
+			!a.Downed && t.h.PackEnemy(0, id))
 	}
 	return t.h.StandingRaider(id)
 }
