@@ -44,6 +44,8 @@ Columns: id, vanilla behaviour (wiki page), ours today (the state before WG-1, e
 | WG-16 | Temperature units (Options) | Celsius only; NG-1 asked for Fahrenheit; settings are at `SettingsVersion = 6` (`platform/config/settings.go:24`) | No unit choice | Options, Gameplay, "Temperature unit" (`config.Gameplay.TempUnit`, `SettingsVersion` 6 to 7, absent means Celsius), one formatter on Env, UI literals swept Option, formatter and UI sweep done (`ebiten/units`); the domain sentences (`domain/pawn/stat/stat.go:142`, `domain/scenario/catalog.go:193`) are converted at their sinks by `units.Temp.Text` (`hud/chips.go chipsIn`, wizard scenario tips, trait effects, condition picker). `SettingsVersion` is still 6 (`TempUnit` is omitempty, absent means Celsius). | WG-2 | done |
 | WG-17 | Seeds stay stable across versions | `Params.Version` (`planet/planet.go:26`) is never set by the wizard (`wizard/newgame_state.go:191`, `wizard/screen_worldgen.go:127`), so every world is v0; `Seed` xors it in (`planet/builder.go:109-112`), so any generator change would move old worlds | Unversioned generator | New worlds set `Version = 1`; generator changes are gated on `Version >= 1`. The v0 golden stays and a v1 golden is added | WG-1 | done |
 | WG-18 | Journeys | No journey for globe click, modes, legend or the Factions dialog (`ebiten/journey_*_test.go` has none for the globe) | No coverage | `journey_globe_test.go` | WG-2 | done |
+| WG-19 | Faction territory distribution (checklist 1813): preferred biomes and clustering near the capital; territory ownership | No territory ownership; globe shows no faction land | No owned land, no tint, no Territory line | `faction.Territory` nearest-seed ownership (`domain/faction/territory.go`), `planet.BuildTerritory` and the globe tint (`ebiten/globe/territory.go`), tile Territory line and `world.territory` toggle; `.agents/handoffs/WORLD.md#wg-22.5-territory-trade` | WG-22.5 | done |
+| WG-20 | Settlement trade inventory (checklist 1814) | No settlement stock; no caravan trading (spec §35 Trade missing) | No market, no trade with a settlement | `trade.Market` per settlement (`domain/economy/trade/market.go`), lazy restock, `TradeSettlement` through the trade dialog (`game/settlement`); `.agents/handoffs/WORLD.md#wg-22.5-territory-trade` | WG-22.5 | done |
 | WG-n/a-1 | Pollution (Biotech) | n/a | n/a (DLC) | None | n/a | n/a (DLC) |
 | WG-n/a-2 | Landmass and mountain sliders (Odyssey) | n/a | n/a (DLC) | None. Our slider stops stay at 5/5/3 (the wiki publishes 3, ours is a superset) | n/a | n/a (DLC) |
 | WG-n/a-3 | Landmarks and tile mutators (Odyssey; not on the wiki) | n/a | n/a (DLC) | None | n/a | n/a (DLC) |
@@ -52,11 +54,11 @@ Columns: id, vanilla behaviour (wiki page), ours today (the state before WG-1, e
 
 | | Count |
 |---|---|
-| Rows WG-01 to WG-18 | 18 |
+| Rows WG-01 to WG-20 | 20 |
 | n/a (DLC) rows | 3 |
 | Missing | 0 |
 | Partial | 0 |
-| Done | 18 |
+| Done | 20 |
 
 ## How the globe is drawn
 

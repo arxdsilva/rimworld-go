@@ -1592,7 +1592,8 @@ Manage an active world-traveling group.
 -   **Commands:** `command.CaravanReturn` (`Target` = caravan id).
 -   **States:** arrived caravans show "Waiting at destination";
     returning ones show the trip home.
--   [-] Wired: `CaravanView`, `Game.TravelEstimate` and the inspector gizmos Travel, Return, Enter (only when Arrived), Attack (any human base; a non-hostile one asks first, modal `world.attack`, naming the faction, the 200 goodwill and that it turns hostile), Settle and Reform. Missing: Trade (no caravan trading) and Split, which stays disabled ("Not yet").
+-   [-] Wired: `CaravanView`, `Game.TravelEstimate` and the inspector gizmos Travel, Return, Enter (only when Arrived), Attack (any human base; a non-hostile one asks first, modal `world.attack`, naming the faction, the 200 goodwill and that it turns hostile), Settle and Reform, and Trade: enabled when a settlement stands on the caravan's tile, with the game's reason otherwise or when that faction is hostile; it sends `command.TradeSettlement` and the world trade dialog opens (`worldview/territory.go:126`). The settlement inspector has the same Trade gizmo, using the caravan on its tile. Missing: Split, which stays disabled ("Not yet").
+- Territory (WG-22.5): the tile card's Territory line names the owning faction or "Unclaimed" (`worldview/territory.go:101`); the `world.territory` toggle (`worldview/chrome.go:99`) tints owned land on the globe. Both are read-only: the toggle sends no command. The line belongs to the tile inspector of §33; it is listed here with the trade gizmo.
 
 ------------------------------------------------------------------------
 

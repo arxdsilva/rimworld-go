@@ -1810,8 +1810,8 @@ SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the
 ## 22.5 Faction settlements
 
 -   [x] **Settlement placement** (NG-1: Poisson-disc over land, capitals first, density by type and population setting)
--   [-] **Faction territory distribution** (preferred biomes and clustering near the capital; no territory ownership)
--   [ ] **Settlement trade inventory**
+-   [x] **Faction territory distribution** (preferred biomes and clustering near the capital; WG-22.5: each faction owns the land nearest its standing settlements within a radius, ties to the lower seed index, unclaimed beyond; rebuilt when a settlement falls; globe tint, Territory line and toggle on the world view)
+-   [x] **Settlement trade inventory** (WG-22.5: each settlement keeps a saved market stocked by faction type from the world seed and restocked lazily every 10 days; a player caravan at a welcoming settlement trades through the trade dialog; hostile or fallen settlements refuse with a reason)
 -   [x] **Hostile settlement attack map** (MAP-2, MAP-13: a generated compound with loot, walls and defenders who hold, engage and flee at 50 % losses; its turrets fire on us and stay hostile; compound doors are held open)
 -   [x] **Settlement destruction** (MAP-2: defeated once no defender stands; -200 goodwill and hostile on attack, +20 from the faction's enemies, the settlement leaves the planet and the map; no bases left means the faction is gone)
     -   Destroying all settlements can eliminate a faction's world
