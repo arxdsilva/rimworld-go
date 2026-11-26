@@ -2243,7 +2243,7 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 -   [x] **Visitors of a faction turned hostile** (MAP-18: they leave as enemies, shooting back; trade closes; a letter says so)
 -   [x] **Claim a defeated base's turrets** (MAP-21, wiki: Faction base: once no defender stands, a turret is claimed, fires for us with no grid, reloads by hauler; a mini-turret can be uninstalled and then needs power)
 -   [x] **Turret fuse** (MAP-21, wiki: Mini-turret, Autocannon turret, Uranium slug turret: 50 % below 20 % health, 240 ticks, 3.9 or 5.9 tiles; autocannon and slug can't be re-installed)
--   [-] Raiders running from a sparking turret (wiki: Uranium slug turret) and the fuse's hiss: EAI-012 built the running (raiders and colonists in the blast step out to reach+2, `combat/turret_step.go`); the fuse's hiss is not built
+-   [x] **Raiders running from a sparking turret and the fuse's hiss** (wiki: Uranium slug turret): EAI-012 built the running (raiders and colonists in the blast step out to reach+2, `combat/turret_step.go`); the fuse hiss is `amb.turret_fuse_hiss`, a loop at the turret while it is Sparking (`render/cue/turret_fuse_sounds.go`, recipe in `audiogen/structure_recipes.go`)
 -   [x] **Wanderers after a launch, and the wanderer event** (MAP-22, wiki: Ending: all aboard counts as gone; a wanderer event restarts a gone colony)
 -   [x] **Arresting a visitor turns the faction** (MAP-23, wiki: Events, Factions: at most -75 goodwill on reaching the target, whatever the roll; everyone there turns)
 -   [x] **Leaving visitors carry their wounded** (MAP-23, wiki: Visitor)

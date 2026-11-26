@@ -102,8 +102,8 @@ Old saves keep settlement doors held open from before MAP-17. They aren't migrat
 | "50% chance to explode when damaged below 20% health ... spark and emit a hissing sound for 240 ticks (4 secs) before exploding, dealing 50 Bomb damage in a 3.9 tile radius" | Rolled only when destroyed, no fuse | `combat/turret_fuse.go`: one roll on the fall below 20 %, 240-tick fuse, saved. Destroyed first, it blows at once | Mini-turret |
 | Autocannon and slug turret: same chance and fuse, 5.9 tiles | **Never blew up at all**, whatever the old comment said | They do, at 5.9 | Autocannon turret, Uranium slug turret |
 | "only shoot at enemies of their faction, including manhunting animals but not animals hunting pawns" | A settlement's turret ignored manhunters | It shoots them | Mini-turret |
-| "All nearby raiders will attempt to move out of the blast radius before detonation." | No | Left out: needs raider AI of its own | Uranium slug turret |
-| "hissing sound" | No | The fuse shows as a message and a pane line, no sound or particle | Mini-turret |
+| "All nearby raiders will attempt to move out of the blast radius before detonation." | No | Raiders and colonists in the blast step out to reach+2 (EAI-012, `combat/turret_step.go`) | Uranium slug turret |
+| "hissing sound" | No | The fuse shows as a message and a pane line; a hiss loop plays at a sparking turret (`render/cue/turret_fuse_sounds.go`); no particle is built | Mini-turret |
 
 ### New wanderers (MAP-19, MAP-22)
 

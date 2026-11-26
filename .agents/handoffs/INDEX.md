@@ -133,6 +133,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | DEF-3.1-threat-weighted-raider-targeting | Threat-weighted targets audit, combat log kinds, History Threats tab and Damage taken | 2026-11-21 | [DEF.md](DEF.md#def-3.1-threat-weighted-raider-targeting) |
 | DEF-4-R1-raids-drafted-control | Raids, drafted control, IED leftovers, combat log | 2026-10-29 | [DEF.md](DEF.md#def-4-r1-raids-drafted-control) |
 | DEF-4-R2-mechanoids-ship-part | Mechanoids and the crashed ship part | 2026-10-29 | [DEF.md](DEF.md#def-4-r2-mechanoids-ship-part) |
+| DEF-15-turret-fuse-hiss | Turret fuse hiss | 2026-11-26 | [DEF.md](DEF.md#def-15-turret-fuse-hiss) |
 | DEPS-001-libraries-and-rules | Libraries at the edge, and cleaning up what we wrote by hand | 2026-11-03 | [OPS.md](OPS.md#deps-001-libraries-and-rules) |
 | DOCS-001-readme-screenshots | README with screenshots and clips | 2026-10-19 | [OPS.md](OPS.md#docs-001-readme-screenshots) |
 | DOCS-002-readme-media-refresh | README "See it move" media re-captured | 2026-10-26 | [OPS.md](OPS.md#docs-002-readme-media-refresh) |
