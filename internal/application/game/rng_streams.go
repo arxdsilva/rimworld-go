@@ -33,6 +33,8 @@ const (
 	storySalt   = 0x57021  // MAP-12: which colony a threat targets
 	roadSalt    = 0x20AD7  // MAP-08: caravan encounters
 	questSalt   = 0x9E5701 // QST-1: quest offers, kinds, stars, rewards and talks
+	// Keyed draws (#8): each one's randx.NewKeyed stage, part of the simulation.
+	opTameName, opTameRevenge uint64 = 0x7A3E1, 0x7A3E2
 )
 
 // Stream names, the RNGStreams save keys.

@@ -645,4 +645,11 @@ type Command struct {
 	// acts on the map viewed when it is applied.
 	Map    uint32
 	MapSet bool
+	// Tick is the target tick (a clock.Tick value) the command applies on;
+	// 0, or any tick already past, means as soon as possible (#8).
+	Tick uint64
+	// Seq is the sequence number the command queue stamps on submission,
+	// unique per game and ordering commands that share a Tick; the caller's
+	// value is ignored, and 0 means not stamped yet (#8).
+	Seq uint64
 }

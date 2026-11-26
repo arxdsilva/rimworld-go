@@ -6,11 +6,14 @@ package simulate
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/replay"
 )
 
 func run(t *testing.T, args ...string) string {
@@ -70,5 +73,84 @@ func TestHashLineDeterministic(t *testing.T) {
 	}
 	if c := run(t, "-seed", "2", "-ticks", "50"); lastLine(c) == lastLine(a) {
 		t.Fatalf("seed 2 hash equals seed 1: %q", lastLine(c))
+	}
+}
+
+func TestMainRecordWritesFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.replay")
+	var plain, rec, errOut bytes.Buffer
+	Main([]string{"simulate", "-ticks", "120"}, &plain, &errOut)
+	if code := Main([]string{"simulate", "-ticks", "120", "-record", path, "-every", "50"}, &rec, &errOut); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	body, extra, _ := strings.Cut(rec.String(), "replay "+path)
+	if body != plain.String() {
+		t.Fatalf("colony output changed:\n%q\n%q", body, plain.String())
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	file, err := replay.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := len(file.Checkpoints)
+	want := fmt.Sprintf(" checkpoints=%d hash=%s\n", n, file.Checkpoints[n-1].Hash)
+	if extra != want {
+		t.Fatalf("line %q, want %q", extra, want)
+	}
+}
+
+func TestMainRecordErrors(t *testing.T) {
+	var out, errOut bytes.Buffer
+	bad := filepath.Join(t.TempDir(), "no", "dir", "r.replay")
+	if code := Main([]string{"simulate", "-ticks", "3", "-record", bad}, &out, &errOut); code != 1 || errOut.Len() == 0 {
+		t.Fatalf("unwritable: exit %d err %q", code, errOut.String())
+	}
+	errOut.Reset()
+	if code := Main([]string{"simulate", "-record", bad, "-every", "-1"}, &out, &errOut); code != 2 {
+		t.Fatalf("negative every: exit %d", code)
+	}
+}
+
+// TestMainRecordRejectsOversizedMap: -record refuses a map size the replay
+// decoder would reject, before building the colony or creating the file.
+func TestMainRecordRejectsOversizedMap(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.replay")
+	for _, args := range [][]string{
+		{"-width", fmt.Sprint(replay.MaxSide + 1)},
+		{"-height", fmt.Sprint(replay.MaxSide + 1)},
+		{"-width", "0"},
+	} {
+		var out, errOut bytes.Buffer
+		argv := append([]string{"simulate", "-ticks", "1", "-record", path}, args...)
+		if code := Main(argv, &out, &errOut); code != 2 || !strings.Contains(errOut.String(), "options.") {
+			t.Fatalf("%v: exit %d err %q", args, code, errOut.String())
+		}
+		if out.Len() != 0 {
+			t.Fatalf("%v: colony ran: %q", args, out.String())
+		}
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("%v: replay file created", args)
+		}
+	}
+}
+
+// TestWriteReplayRefusesUndecodable: a recording past the decoder's
+// checkpoint limit is refused and no file is written.
+func TestWriteReplayRefusesUndecodable(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.replay")
+	f := replay.File{Version: replay.Version, Options: replay.Options{Width: 1, Height: 1}, Ticks: replay.MaxCheckpoints}
+	for i := 0; i <= replay.MaxCheckpoints; i++ {
+		f.Checkpoints = append(f.Checkpoints, replay.Checkpoint{Tick: uint64(i), Hash: "0000000000000000"})
+	}
+	var out, errOut bytes.Buffer
+	if code := writeReplay(path, f, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "checkpoints") {
+		t.Fatalf("exit %d err %q", code, errOut.String())
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("replay file created")
 	}
 }

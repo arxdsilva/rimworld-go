@@ -21,6 +21,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/msgfmt"
+	"rimworld-go/pkg/randx"
 )
 
 // Animal handling. Hunters also tame: an animal marked for taming holds
@@ -179,7 +180,8 @@ func (h herdHost) Tamed(id, aid entity.EntityID) {
 	a, _ := g.animals.Get(aid)
 	ap, _ := g.positions.Get(aid)
 	a.Tame, a.TameMark, a.Designated = true, false, false
-	a.Name = petNames[g.rng.IntN(len(petNames))]
+	k := randx.NewKeyed(g.streams.seed, uint64(g.clock.Now()), opTameName, uint64(aid), 0) // #8: keyed, not g.rng
+	a.Name = petNames[k.IntN(len(petNames))]
 	a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
 	g.message(ap.X, ap.Y, "%s tamed a %s. Its name is %s.", g.name(id), a.Species.Label(), a.Name)
 	g.logEvent(aid, logEntry{Kind: evlog.TamedBy, Other: id, Name: g.name(id)})
@@ -198,7 +200,8 @@ func (h herdHost) TameFailed(id, aid entity.EntityID) {
 	a.TameRetry = now + animal.TameRetryTicks
 	g.logEvent(aid, logEntry{Kind: evlog.ResistedTaming, Other: id, Name: g.name(id)})
 	g.logEvent(id, logEntry{Kind: evlog.FailedTame, Other: aid, Name: a.Species.Label()})
-	if g.rng.IntN(100) < g.revengePct(animal.DefOf(a.Species).TameRevenge) {
+	k := randx.NewKeyed(g.streams.seed, now, opTameRevenge, uint64(aid), 0) // #8: keyed, not g.rng
+	if k.IntN(100) < g.revengePct(animal.DefOf(a.Species).TameRevenge) {
 		rageOf(g).Enrage(aid, &a, id, now)
 	} else {
 		g.message(ap.X, ap.Y, "%s failed to tame the %s.", g.name(id), a.Species.Label())

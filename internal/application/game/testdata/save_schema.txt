@@ -374,6 +374,7 @@ saveState.Claims[].Y int
 saveState.CleanQ []int32
 saveState.CleanQ[] int32
 saveState.CleanWired bool
+saveState.CmdSeq uint64
 saveState.ColonistOrder []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.ColonistOrder[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.ContentKeys rimworld-go/internal/application/game/savefmt.Keys = map[string][]string
@@ -1031,11 +1032,13 @@ saveState.OrderQueue{}[].Cmd.Pawn uint64
 saveState.OrderQueue{}[].Cmd.Queue bool
 saveState.OrderQueue{}[].Cmd.Radius int
 saveState.OrderQueue{}[].Cmd.Recipe uint8
+saveState.OrderQueue{}[].Cmd.Seq uint64
 saveState.OrderQueue{}[].Cmd.SkillMax uint8
 saveState.OrderQueue{}[].Cmd.SkillMin uint8
 saveState.OrderQueue{}[].Cmd.Store uint8
 saveState.OrderQueue{}[].Cmd.Stuff uint8
 saveState.OrderQueue{}[].Cmd.Target uint64
+saveState.OrderQueue{}[].Cmd.Tick uint64
 saveState.OrderQueue{}[].Cmd.UnpauseAt int
 saveState.OrderQueue{}[].Cmd.Work rimworld-go/internal/domain/sim/command.WorkType = uint8
 saveState.OrderQueue{}[].Cmd.Worker uint64
@@ -1118,11 +1121,13 @@ saveState.Pending[].Pawn uint64
 saveState.Pending[].Queue bool
 saveState.Pending[].Radius int
 saveState.Pending[].Recipe uint8
+saveState.Pending[].Seq uint64
 saveState.Pending[].SkillMax uint8
 saveState.Pending[].SkillMin uint8
 saveState.Pending[].Store uint8
 saveState.Pending[].Stuff uint8
 saveState.Pending[].Target uint64
+saveState.Pending[].Tick uint64
 saveState.Pending[].UnpauseAt int
 saveState.Pending[].Work rimworld-go/internal/domain/sim/command.WorkType = uint8
 saveState.Pending[].Worker uint64
@@ -1234,11 +1239,13 @@ saveState.PostOrders{}.Cmd.Pawn uint64
 saveState.PostOrders{}.Cmd.Queue bool
 saveState.PostOrders{}.Cmd.Radius int
 saveState.PostOrders{}.Cmd.Recipe uint8
+saveState.PostOrders{}.Cmd.Seq uint64
 saveState.PostOrders{}.Cmd.SkillMax uint8
 saveState.PostOrders{}.Cmd.SkillMin uint8
 saveState.PostOrders{}.Cmd.Store uint8
 saveState.PostOrders{}.Cmd.Stuff uint8
 saveState.PostOrders{}.Cmd.Target uint64
+saveState.PostOrders{}.Cmd.Tick uint64
 saveState.PostOrders{}.Cmd.UnpauseAt int
 saveState.PostOrders{}.Cmd.Work rimworld-go/internal/domain/sim/command.WorkType = uint8
 saveState.PostOrders{}.Cmd.Worker uint64

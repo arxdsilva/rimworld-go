@@ -247,6 +247,7 @@ type saveState struct {
 	Memories   map[entity.EntityID]mood.Memories
 	Claims     []reservation.Claim
 	Pending    []command.Command
+	CmdSeq     uint64 // #8: the last command Seq issued; absent in older saves
 
 	AteAt   map[entity.EntityID]bool
 	Draft   map[entity.EntityID]bool
@@ -538,7 +539,7 @@ func encodeSave(g *Game, w io.Writer, stamp savefmt.Stamp, src modstate.Source) 
 		NoFood: g.noFood, RestedFree: g.rest.Export(), RestNeeds: g.rest.Needs.Export(), Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Worn: craft.ExportOutfits(g.apparel), Joy: g.joy,
 		PrioList: exportPrios(g.prio), Scheds: g.scheds, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
-		Breaks: map[entity.EntityID]savedBreak{}, Memories: g.memories, Pending: g.pending,
+		Breaks: map[entity.EntityID]savedBreak{}, Memories: g.memories, Pending: g.cmds.Items(), CmdSeq: g.cmds.Last(),
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt, Equip: g.equip,
 		Carrying: g.care.Carry.Export(), TendedUntil: g.care.Doctor.ExportTended(),
 		Research: g.lab.Prog.V1(), ResearchAll: g.lab.Prog.Slice(), NG1: g.exportSetupState(), ResearchCur: g.lab.Cur, ResearchSet: g.lab.Set,
@@ -728,7 +729,7 @@ func LoadContent(r io.Reader, c Content) (*Game, SaveInfo, error) {
 	remapTraits(&s, c.Traits)
 	remapResearch(&s, c.Research)
 	remapIncidents(&s, c.Incidents)
-	g.pending = s.Pending
+	g.cmds.Restore(s.Pending, s.CmdSeq) // a pre-#8 save's commands are stamped in order
 	setMap(&g.lastMeal, s.LastMeal)
 	g.craft.Bills.Import(s.Bills)  // craft/bills.go
 	g.craft.Drying.Import(s.Racks) // craft/drying.go
@@ -1270,8 +1271,8 @@ func (g *Game) migrateLegacyStone() {
 			c.Stuff = uint8(item.GraniteBlocks)
 		}
 	}
-	for i := range g.pending {
-		fix(&g.pending[i])
+	for i := range g.cmds.Items() { // in place: payload only, the envelope stays
+		fix(&g.cmds.Items()[i])
 	}
 	for _, q := range g.orderQueue { // in-place edits: order never matters
 		for i := range q {

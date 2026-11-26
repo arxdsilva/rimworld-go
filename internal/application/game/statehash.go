@@ -69,8 +69,8 @@ func normalisedFields(info SaveInfo, s *saveState) map[string]any {
 	delete(f, "BlockedBits")
 	// Bookkeeping first saved in v2 (it existed before, unsaved): hashed
 	// through its effects on the state above, so the pins taken before v2
-	// still hold. TestSaveV2RoundTripSetup checks it survives a save.
-	for _, k := range [...]string{"SkillLive", "StainDrip", "PostSweep"} {
+	// still hold (TestSaveV2RoundTripSetup); CmdSeq (#8): commands carry Seq.
+	for _, k := range [...]string{"SkillLive", "StainDrip", "PostSweep", "CmdSeq"} {
 		delete(f, k)
 	}
 	// DoorsOriented (PLAY-011) only marks the save format: door facings

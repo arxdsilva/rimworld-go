@@ -6,6 +6,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/commands"
 	"rimworld-go/internal/application/game/evlog"
 	"rimworld-go/internal/application/game/furnish"
 	"rimworld-go/internal/application/game/haul"
@@ -38,19 +39,17 @@ func (g *Game) ApplyPending() {
 }
 
 func (g *Game) phaseCommands() {
-	cmds := g.pending
-	g.pending = nil
-	var later []command.Command
-	for _, c := range cmds {
+	route := func(c command.Command) commands.Route {
 		switch m := cmdMap(g, c); {
 		case m == g.mapState:
-			g.applyOne(c)
+			return commands.Apply
 		case m != nil:
-			later = append(later, c) // another map's pass applies it (MAP-0)
+			return commands.Keep // another map's pass applies it (MAP-0)
 		}
+		return commands.Drop // its map is closed
 	}
-	if later != nil {
-		g.pending = append(later, g.pending...)
+	for _, c := range g.cmds.Take(uint64(g.clock.Now()), route) {
+		g.applyOne(c)
 	}
 }
 
