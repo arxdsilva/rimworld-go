@@ -259,3 +259,11 @@ Integrate upstream #285/#312 with Core · 2026-11-26 · this commit
 - Proof: existing save schema, v12 migration, command order, cross-map, keyed RNG, frozen ownership, replay, market, grown and scale tests pass. New scheduled exact-lot trade freezes the queue, then verifies target-tick execution, restored payload/sequence/counter and equal final state hash. The rare-payload ownership regression mutates live pending storage and submits another command after capture.
 - Boxes: preserve upstream 1.3 determinism / command ordering / replay and 19.1 Prisoner state checklist updates .
 - Open: #36/#55 and roof-risk/territory presentation remain partial.
+
+## DOCS-006-issue-template
+Issue template for every new issue · 2026-11-27 · this commit
+- Changed: the repo offers one issue template (`.github/ISSUE_TEMPLATE/issue.md`, blank issues off); `.agents/templates/ISSUE.md` gives agents the title form `<area>: <symptom>`, the eight body sections, one type label (`bug`, `debt`, `flaky`, `spec-gap`, `infra`) and how loops lanes record findings so `loops backlog` files them with that body
+- Decisions: one body source (the GitHub template), so humans and agents fill the same sections; lane findings carry the filled template as their `--ref` file, because `loops backlog` builds a finding's body from it and drops a later follow-up with the same title
+- Limits: root `AGENTS.md` budget lowered 5189 → 5173 after rewording the new-gap sentence
+- Boxes: none: process docs, no checklist, spec or gap row covers issue shape
+- Open: the 184 open findings were rewritten to this template by hand (not in this change)
