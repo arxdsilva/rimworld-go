@@ -82,6 +82,7 @@ func (p *Panel) Actions(tx, ty int) []Action {
 			return "Added 100 wood"
 		}},
 		fire("herd_crossing", "herd crossing"), fire("farm_animals", "farm animals"), fire("mad_animal", "mad animal"),
+		fire("ore_meteor", "ore meteor"), fire("supply_drop", "supply drop"), fire("sky_song", "sky song"),
 		{Label: "Raid (3 raiders)", Run: func(d Tools) string { d.Raid(3); return "Raid sent" }},
 	}
 	sel := p.sh.Selected()
