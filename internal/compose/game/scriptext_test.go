@@ -184,12 +184,23 @@ def on_event(ctx, event):
 		t.Fatal(err)
 	}
 	m2.start(g2)
-	g2.Step(clock.TicksPerDay*16 + 1)
-	found := false
-	for _, msg := range g2.World().Messages {
-		found = found || strings.Contains(msg.Text, "quadrum seen")
+	// jump (SkipTo) to the last hour before the second quadrum instead of
+	// running 16 days of a colony (~25 s under -race), then run across it
+	seen := func() bool {
+		for _, msg := range g2.World().Messages {
+			if strings.Contains(msg.Text, "quadrum seen") {
+				return true
+			}
+		}
+		return false
 	}
-	if !found {
+	g2.SkipTo(clock.DaysPerQuadrum-1, clock.HoursPerDay-1)
+	g2.Step(clock.TicksPerHour)
+	if seen() {
+		t.Fatalf("quadrum event before the quadrum: %+v", g2.World().Messages)
+	}
+	g2.Step(clock.TicksPerHour)
+	if !seen() {
 		t.Fatalf("quadrum event did not reach the plugin: %+v", g2.World().Messages)
 	}
 }

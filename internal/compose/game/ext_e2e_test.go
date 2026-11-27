@@ -304,11 +304,21 @@ func TestExtE2E(t *testing.T) {
 	})
 
 	// the quadrum and year events come once a calendar quadrum and year in:
-	// a year of an empty colony (no pawns, to keep it cheap)
+	// an empty colony (no pawns) runs its first day in full, an ordinary
+	// midnight with neither event, then jumps (SkipTo) to the last hour
+	// before each quadrum's first day and runs across it, the fourth being
+	// the new year's. Running the whole year cost ~20 s under -race in CI.
 	t.Run("AC5_quadrum_year", func(t *testing.T) {
 		t.Parallel()
 		e := newExt(t, extContent("extapi"), 5, false).start()
-		e.step(4*15*clock.TicksPerDay+2, clock.TicksPerDay)
+		e.step(clock.TicksPerDay+2, clock.TicksPerHour)
+		if e.count("ev quadrum") != 0 || e.count("ev year") != 0 {
+			t.Fatalf("an ordinary midnight fired a calendar event: %v", e.texts())
+		}
+		for q := 1; q <= clock.QuadrumsPerYear; q++ {
+			e.g.SkipTo(q*clock.DaysPerQuadrum-1, clock.HoursPerDay-1)
+			e.step(2*clock.TicksPerHour, 600)
+		}
 		if e.count("ev quadrum") != 4 || e.count("ev year") != 1 {
 			t.Fatalf("one year in: %d quadrums, %d years: %v", e.count("ev quadrum"), e.count("ev year"), e.texts())
 		}
