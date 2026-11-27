@@ -142,9 +142,9 @@ func (b Book) Total(c Category, st State, now uint64, bi biome.ID, o Odds, ok fu
 // event that is not open (its day, biome and point minimum) hands its face
 // to the filler, and a face whose event fails ok, the caller's situational
 // check, falls back round the ring of pack, manhunters and hive from
-// roll%3 (the hive only from its own first day). Cooldowns are the
-// caller's to check at fire (Def.Cooled). It is pure and deterministic;
-// ok is false when the face shows nothing.
+// roll%3 (never to a WorldObject event; the hive only from its own first
+// day). Cooldowns are the caller's to check at fire (Def.Cooled). It is
+// pure and deterministic; ok is false when the face shows nothing.
 func (b Book) PickThreat(now uint64, bi biome.ID, o Odds, roll int, ok func(ID) bool) (ID, bool) {
 	if roll < 0 || roll >= ThreatRolls {
 		return 0, false
@@ -162,7 +162,7 @@ func (b Book) PickThreat(now uint64, bi biome.ID, o Odds, roll int, ok func(ID) 
 	ring := [...]ID{PredatorPack, ManhunterPack, HiveSwarm}
 	for i := range ring {
 		alt := ring[(roll+i)%len(ring)]
-		if int(alt) >= len(list) || alt == HiveSwarm && day < list[alt].MinDay {
+		if int(alt) >= len(list) || list[alt].Target != HomeMap || alt == HiveSwarm && day < list[alt].MinDay {
 			continue
 		}
 		if ok == nil || ok(alt) {

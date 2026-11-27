@@ -114,6 +114,22 @@ func TestThreatPickRing(t *testing.T) {
 	}
 }
 
+// TestThreatPickRingTarget: the ring never falls back to an event aimed at
+// a world object (a patch moving the manhunters off the map).
+func TestThreatPickRingTarget(t *testing.T) {
+	t.Parallel()
+	b := Core()
+	b.defs = append([]Def(nil), b.defs...)
+	b.defs[ManhunterPack].Target = WorldObject
+	notRaid := func(id ID) bool { return id == PredatorPack || id == ManhunterPack }
+	if id, ok := b.PickThreat(dayTick(30), biome.TemperateForest, Odds{}, 4, notRaid); !ok || id != PredatorPack {
+		t.Errorf("ring from 1 past the world-object manhunters: %d, %v; want PredatorPack", id, ok)
+	}
+	if id, ok := b.PickThreat(dayTick(30), biome.TemperateForest, Odds{}, 4, func(id ID) bool { return id == ManhunterPack }); ok {
+		t.Errorf("only the world-object manhunters allowed: showed %d", id)
+	}
+}
+
 // TestThreatPickNoFiller: with no filler an unclaimed face shows nothing,
 // and a book too short for the ring skips what it lacks.
 func TestThreatPickNoFiller(t *testing.T) {
