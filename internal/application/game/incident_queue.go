@@ -76,7 +76,7 @@ func (g *Game) fireQueued(q incident.Queued, now uint64) {
 		}
 		return
 	}
-	if g.fireIncident(q.ID, now) {
+	if g.fireIncident(q.ID, -1, now) {
 		g.incidentFired(q.ID, now)
 	}
 }

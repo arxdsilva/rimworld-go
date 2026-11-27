@@ -84,36 +84,28 @@ func (g *Game) fireStoryThreat(now uint64) {
 		pct = 100
 	}
 	second := g.ng.plan.Second != storyteller.None
-	g.storyThreat(g.rng.IntN(raid.ThreatRolls), day, winter, pct, now)
+	g.storyThreat(g.rng.IntN(incident.ThreatRolls), day, winter, pct, now)
 	if second {
-		g.storyThreat(g.rng.IntN(raid.ThreatRolls), day, winter, pct, now)
+		g.storyThreat(g.rng.IntN(incident.ThreatRolls), day, winter, pct, now)
 	}
 	g.setPlan(storyteller.Plan(g.storyProfile(), &g.ng.story, g.rel(now), g.rng))
 }
 
-// storyThreat fires the threat a roll of the die gives, if any is allowed.
+// storyThreat fires the threat event a roll of the die shows (the book's
+// PickThreat over the colony's flags, threatOK) at the threat points times
+// pct and records it. One cooling down or unable to happen falls back as
+// the die always did: a hive swarm, and a mad animal while raids are
+// allowed, become a people raid (recorded as a raid).
 func (g *Game) storyThreat(roll, day int, winter bool, pct int, now uint64) {
-	k, ok := g.allowedThreat(roll, day, winter)
+	book, pts, rn := g.sk.content.Incidents, g.threatPoints()*pct/100, g.rel(now)
+	id, ok := book.PickThreat(rn, g.biome, incident.Odds{Points: pts, Winter: winter}, roll, g.threatOK)
 	if !ok {
 		return
 	}
-	switch k {
-	case raid.ThreatPack: // packs sized by the threat points (animal.PackSize, EAI-005), as a raid is
-		g.raid.Threats.WolfPack(g.threatPoints() * pct / 100)
-	case raid.ThreatManhunters:
-		rageOf(g).ManhunterPack(g.threatPoints() * pct / 100)
-	case raid.ThreatHive:
-		if !g.raid.Hives.Infest() { // raid/hive.go (EAI-035): no hive spot, a raid instead
-			g.storyRaid(day, pct)
-		}
-	case raid.ThreatMad:
-		if !g.madAnimal(now, false) && g.threatOK(raid.ThreatRaid) { // incidents.go
-			g.storyRaid(day, pct)
-		}
-	default:
-		if !storyMajor(g, g.threatPoints()*pct/100, now) {
-			g.storyRaid(day, pct)
-		}
+	if book.DefOf(id).Cooled(g.incidents, rn) && g.fireIncident(id, pts, now) {
+		g.incidentFired(id, now)
+	} else if (id == incident.HiveSwarm || id == incident.MadAnimal && g.threatOK(incident.Raid)) && g.storyRaid(day, pts) {
+		g.incidentFired(incident.Raid, now)
 	}
 }
 
@@ -127,48 +119,30 @@ func storyMajor(g *Game, pts int, now uint64) bool {
 			humans++
 		}
 	}
-	switch g.raid.Threats.Major(pts, humans) {
+	switch g.raid.Threats.Major(pts, humans, g.sk.content.Incidents.DefOf) {
 	case raid.MajorShipPart:
 		return g.FireIncident("crashed_ship_part")
-	case raid.MajorMechs:
-		return g.raid.Threats.MechRaid(pts, now) > 0
+	case raid.MajorMechs: // through the incident framework (in its def's season and on the home map): recorded and reported
+		if d := g.sk.content.Incidents.DefOf(incident.MechRaid); d.Target == incident.HomeMap && d.Season.Allows(g.season(now) == "Winter") && g.fireIncident(incident.MechRaid, pts, now) {
+			g.incidentFired(incident.MechRaid, now)
+			return true
+		}
 	}
 	return false
 }
 
-// allowedThreat is pickThreat filtered for the colony: a threat the
-// difficulty or scenario rules out (or a raid with no hostile faction to
-// send it) becomes a pack, manhunters or a hive swarm by the same die,
-// whichever is allowed first; ok is false when nothing is.
-func (g *Game) allowedThreat(roll, day int, winter bool) (raid.Threat, bool) {
-	k := raid.PickThreat(roll, day, winter)
-	if g.threatOK(k) {
-		return k, true
-	}
-	alts := [...]raid.Threat{raid.ThreatPack, raid.ThreatManhunters, raid.ThreatHive}
-	for i := range alts {
-		a := alts[(roll+i)%len(alts)]
-		if a == raid.ThreatHive && day < raid.HiveFirstDay {
-			continue
-		}
-		if g.threatOK(a) {
-			return a, true
-		}
-	}
-	return 0, false
-}
-
-// threatOK: the difficulty, the scenario and the factions allow threat k.
-func (g *Game) threatOK(k raid.Threat) bool {
+// threatOK: the difficulty, the scenario and the factions allow threat
+// event id (the four the die's flags rule on; any other is allowed).
+func (g *Game) threatOK(id incident.ID) bool {
 	s := g.ng.setup.Difficulty
-	switch k {
-	case raid.ThreatRaid:
+	switch id {
+	case incident.Raid:
 		return s.BigThreats && !g.incidentDisabled("raid") && hostileRaider(g)
-	case raid.ThreatHive:
+	case incident.HiveSwarm:
 		return s.BigThreats && !g.incidentDisabled("hive_swarm")
-	case raid.ThreatPack:
+	case incident.PredatorPack:
 		return s.PredatorsHuntColonists && !g.incidentDisabled("predator_pack")
-	case raid.ThreatManhunters:
+	case incident.ManhunterPack:
 		return !g.incidentDisabled("manhunter_pack")
 	}
 	return true
@@ -283,12 +257,12 @@ func weightedThreat(g *Game, b difficulty.ThreatBase, ticks uint64) int {
 	return difficulty.ThreatPointsWeighted(s, b, ticks, g.clock.Calendar().YearDays(), g.ng.adapt.Factor(s))
 }
 
-// storyRaid sends a raid from a hostile faction (unattributed when none),
-// sized by threat points times pct and the faction's own multiplier, and
-// armed by its tech level.
-func (g *Game) storyRaid(day, pct int) {
+// storyRaid sends a raid of pts threat points from a hostile faction
+// (unattributed when none), sized by the faction's own multiplier and armed
+// by its tech level; false when no raider came.
+func (g *Game) storyRaid(day, pts int) bool {
 	fi := faction.PickRaider(g.ng.factions, g.rng)
-	factionRaid(g, fi, difficulty.ScaleRaidPoints(g.threatPoints(), pct), day)
+	return factionRaid(g, fi, difficulty.ScaleRaidPoints(pts, 100), day)
 }
 
 // factionRaid sends faction fi's raid (index; -1: unattributed) at pts
@@ -382,7 +356,7 @@ func (g *Game) scheduledIncidents(now uint64) {
 func (g *Game) fireScheduled(key string, now uint64) {
 	switch key {
 	case "raid":
-		g.storyRaid(g.relDay(now), 100)
+		g.storyRaid(g.relDay(now), g.threatPoints())
 	case "predator_pack": // sized by the day's threat points (animal.PackSize, EAI-005)
 		g.raid.Threats.WolfPack(g.raidPoints(g.relDay(now)))
 	case "manhunter_pack":
@@ -505,7 +479,7 @@ func (h shipHost) Raid(mech bool) {
 	case g.hasSetup() && !g.ng.setup.Difficulty.BigThreats: // the difficulty's no big threats holds
 	case mech && g.raid.Threats.MechRaid(g.raidPoints(day), now) > 0:
 	case g.hasSetup():
-		g.storyRaid(g.relDay(now), 100) // the storyteller's raid, at its threat points
+		g.storyRaid(g.relDay(now), g.threatPoints()) // the storyteller's raid, at its threat points
 	default:
 		g.scaledRaid(day)
 	}
@@ -576,18 +550,23 @@ func wealthPart(g *Game, i, ni, nb, na int) int {
 
 // StoryDebugView is the storyteller's state for the developer overlay
 // (EAI-0): the current map's queued events, the tick the next threat is
-// due, today's threat points and the wealth.
+// due, today's threat points, the wealth, and the last threat fired
+// (Book.LastFired; zero when none) at its colony-time tick (unlike NextThreat).
 type StoryDebugView struct {
-	Queue      []incident.Queued
-	NextThreat uint64
-	Points     int
-	Wealth     int
+	Queue        []incident.Queued
+	NextThreat   uint64
+	Points       int
+	Wealth       int
+	LastThreat   incident.Def
+	LastThreatAt uint64
 }
 
 // StoryDebug is the storyteller's state now (read only).
 func (g *Game) StoryDebug() StoryDebugView {
-	return StoryDebugView{Queue: slices.Clone(g.incidents.Queue), NextThreat: g.nextThreat,
+	v := StoryDebugView{Queue: slices.Clone(g.incidents.Queue), NextThreat: g.nextThreat,
 		Points: g.raidPoints(int(uint64(g.clock.Now()) / clock.TicksPerDay)), Wealth: g.wealth.Value()}
+	v.LastThreat, v.LastThreatAt, _ = g.sk.content.Incidents.LastFired(g.incidents, incident.Threat)
+	return v
 }
 
 // adaptationMember is a living player resident or travelling member.

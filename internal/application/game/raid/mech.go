@@ -34,9 +34,6 @@ import (
 // them go beyond GuardRelease (hysteresis: no chase/return flapping).
 
 const (
-	// MechRaidMinPoints: no mechanoid raid below this many raid points.
-	// wiki: Events (the mechanoid faction's raid weight is 0 until 300).
-	MechRaidMinPoints = 300
 	// mechGroupMax caps one group. original tuning
 	mechGroupMax = 12
 	// GuardLeash and GuardRelease: a woken guard takes on colonists this

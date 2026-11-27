@@ -96,6 +96,17 @@ func TestIncidentDecodeProblems(t *testing.T) {
 		{"category unknown", "category", "unknown category", func(b map[string]any) { b["category"] = "joy" }},
 		{"biome unknown", "biomes.0", "unknown key", func(b map[string]any) { b["biomes"] = []any{"moon"} }},
 		{"helpful type", "helpful", "want a boolean", func(b map[string]any) { b["helpful"] = "yes" }},
+		{"season bad", "season", "unknown season", func(b map[string]any) { b["season"] = "spring" }},
+		{"season type", "season", "want a string", func(b map[string]any) { b["season"] = 1.0 }},
+		{"target bad", "target", "unknown target", func(b map[string]any) { b["target"] = "moon" }},
+		{"target type", "target", "want a string", func(b map[string]any) { b["target"] = true }},
+		{"min points negative", "min_points", "out of range", func(b map[string]any) { b["min_points"] = -1.0 }},
+		{"min points type", "min_points", "want a number", func(b map[string]any) { b["min_points"] = "9" }},
+		{"points pct negative", "points_pct", "out of range", func(b map[string]any) { b["points_pct"] = -5.0 }},
+		{"min points too high", "min_points", "out of range", func(b map[string]any) { b["min_points"] = float64(icMaxPoints + 1) }},
+		{"points pct too high", "points_pct", "out of range", func(b map[string]any) { b["points_pct"] = float64(icMaxPct + 1) }},
+		{"fill", "fill", "unknown field", func(b map[string]any) { b["fill"] = 8.0 }},
+		{"under raid", "under_raid", "unknown field", func(b map[string]any) { b["under_raid"] = true }},
 	}
 	for _, c := range cases {
 		body := icPlugin()
@@ -112,6 +123,80 @@ func TestIncidentDecodeProblems(t *testing.T) {
 		if _, ok := got.IDOf("moremods.good"); !ok {
 			t.Errorf("%s: good def dropped", c.name)
 		}
+	}
+}
+
+// TestPluginIncidentBudgetFields: a plugin def may set the point minimum,
+// the spend, the season and the target and stays a nature incident; one
+// without them decodes zeroes.
+func TestPluginIncidentBudgetFields(t *testing.T) {
+	t.Parallel()
+	full := icPlugin()
+	full["min_points"], full["points_pct"], full["season"], full["target"] = 250.0, 40.0, "winter", "world"
+	defs := append(EncodeIncidents(incident.Core()),
+		Def{Class: IncidentClass, Key: "moremods.full", Plugin: "moremods", Body: full},
+		Def{Class: IncidentClass, Key: "moremods.plain", Plugin: "moremods", Body: icPlugin()})
+	got, probs := DecodeIncidents(bsJSON(t, defs))
+	if len(probs) > 0 {
+		t.Fatal(probs)
+	}
+	fid, _ := got.IDOf("moremods.full")
+	pid, _ := got.IDOf("moremods.plain")
+	f, p := got.DefOf(fid), got.DefOf(pid)
+	if f.MinPoints != 250 || f.PointsPct != 40 || f.Season != incident.WinterOnly || f.Target != incident.WorldObject || f.Category != incident.Nature {
+		t.Fatalf("full def %+v", f)
+	}
+	if p.MinPoints != 0 || p.PointsPct != 0 || p.Season != incident.AnySeason || p.Target != incident.HomeMap {
+		t.Fatalf("plain def %+v", p)
+	}
+	full["season"] = "not_winter"
+	if got, _ := DecodeIncidents(bsJSON(t, defs)); got.DefOf(fid).Season != incident.NotWinter {
+		t.Fatal("not_winter")
+	}
+	full["season"], full["target"] = "any", "map"
+	if got, _ := DecodeIncidents(bsJSON(t, defs)); got.DefOf(fid).Season != incident.AnySeason || got.DefOf(fid).Target != incident.HomeMap {
+		t.Fatal("any/map")
+	}
+}
+
+// TestIncidentLikeRefusesThreatFaces: a plugin incident cannot run a threat
+// face's behaviour; the nature likes still work.
+func TestIncidentLikeRefusesThreatFaces(t *testing.T) {
+	t.Parallel()
+	try := func(like string) []Problem {
+		body := icPlugin()
+		body["like"] = like
+		_, probs := DecodeIncidents(bsJSON(t, append(EncodeIncidents(incident.Core()),
+			Def{Class: IncidentClass, Key: "moremods.x", Plugin: "moremods", Body: body})))
+		return probs
+	}
+	for _, k := range []string{"core.raid", "core.predator_pack", "core.manhunter_pack", "core.hive_swarm", "core.mech_raid"} {
+		p := try(k)
+		if len(p) != 1 || p[0].Field != "like" || !strings.Contains(p[0].Msg, "storyteller threat face") {
+			t.Errorf("%s: problems %+v", k, p)
+		}
+	}
+	for _, k := range []string{"core.mad_animal", "core.crashed_ship_part"} {
+		if p := try(k); len(p) != 0 {
+			t.Errorf("%s: %+v", k, p)
+		}
+	}
+}
+
+// TestIncidentCorePatchBudgetFields: a core patch may set the four fields.
+func TestIncidentCorePatchBudgetFields(t *testing.T) {
+	t.Parallel()
+	defs := EncodeIncidents(incident.Core())
+	for _, d := range defs {
+		if d.Key == "core.flu" {
+			d.Body["min_points"], d.Body["points_pct"], d.Body["season"], d.Body["target"] = 10.0, 20.0, "not_winter", "world"
+		}
+	}
+	b, probs := DecodeIncidents(bsJSON(t, defs))
+	flu, _ := b.IDOf("core.flu")
+	d := b.DefOf(flu)
+	if len(probs) > 0 || d.MinPoints != 10 || d.PointsPct != 20 || d.Season != incident.NotWinter || d.Target != incident.WorldObject {
+		t.Fatalf("%v %+v", probs, d)
 	}
 }
 

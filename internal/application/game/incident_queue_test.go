@@ -35,6 +35,19 @@ func TestIncidentQueueFiresAtTick(t *testing.T) {
 	}
 }
 
+// TestQueuedEventFiresThroughDispatch (#12): a queued event other than a
+// raid fires through the incident dispatch at its tick and is recorded.
+func TestQueuedEventFiresThroughDispatch(t *testing.T) {
+	t.Parallel()
+	g, _ := def4Game(t, 50, 30, 45, 25)
+	now := uint64(g.clock.Now())
+	g.QueueIncident(incident.Eclipse, now+10, 0)
+	g.Step(11)
+	if _, fired := g.incidents.Last[incident.Eclipse]; !fired || g.incidents.EclipseUntil == 0 || len(g.incidents.Queue) != 0 {
+		t.Fatalf("queued eclipse fired and recorded: last %v, until %d, queue %v", g.incidents.Last, g.incidents.EclipseUntil, g.incidents.Queue)
+	}
+}
+
 // TestQueueSurvivesSave: the queue is saved with the incident state.
 func TestQueueSurvivesSave(t *testing.T) {
 	t.Parallel()

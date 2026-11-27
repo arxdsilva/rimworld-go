@@ -18,6 +18,8 @@ const (
 	icMaxWeight = 10000
 	icMaxDays   = 3650
 	icMaxLabel  = 60 // runes
+	icMaxPoints = 100000
+	icMaxPct    = 1000
 )
 
 // incidentClass is the incident class (PLG-026).
@@ -47,6 +49,10 @@ func EncodeIncidents(b incident.Book) []Def {
 		plugin, _, _ := strings.Cut(key, ".")
 		body := map[string]any{"label": d.Name, "category": icCategory(d.Category),
 			"weight": float64(d.Weight), "cooldown": float64(d.Cooldown), "min_day": float64(d.MinDay)}
+		rcPut(body, "min_points", d.MinPoints != 0, float64(d.MinPoints))
+		rcPut(body, "points_pct", d.PointsPct != 0, float64(d.PointsPct))
+		rcPut(body, "season", d.Season != incident.AnySeason, icSeasonKey(d.Season))
+		rcPut(body, "target", d.Target != incident.HomeMap, "world")
 		if d.Like != id {
 			body["like"] = b.Key(d.Like)
 		}
@@ -64,6 +70,13 @@ func icCategory(c incident.Category) string {
 		return "threat"
 	}
 	return "nature"
+}
+
+func icSeasonKey(s incident.Season) string {
+	if s == incident.WinterOnly {
+		return "winter"
+	}
+	return "not_winter"
 }
 
 func icBiomeKeys(s biome.Set) []any {
@@ -173,6 +186,14 @@ func (id *icDecoder) field(d *incident.Def, k string, v any, isCore bool) {
 		d.Cooldown = id.num(k, v, 0, icMaxDays)
 	case "min_day":
 		d.MinDay = id.num(k, v, 0, icMaxDays)
+	case "min_points":
+		d.MinPoints = id.num(k, v, 0, icMaxPoints)
+	case "points_pct":
+		d.PointsPct = id.num(k, v, 0, icMaxPct)
+	case "season":
+		d.Season = icChoice(id, k, v, map[string]incident.Season{"any": incident.AnySeason, "winter": incident.WinterOnly, "not_winter": incident.NotWinter})
+	case "target":
+		d.Target = icChoice(id, k, v, map[string]incident.Target{"map": incident.HomeMap, "world": incident.WorldObject})
 	case "helpful":
 		d.Helpful = id.flag(k, v)
 	case "disease":
@@ -184,6 +205,21 @@ func (id *icDecoder) field(d *incident.Def, k string, v any, isCore bool) {
 	default:
 		id.fail(k, "unknown field")
 	}
+}
+
+// icChoice reads a string field that must be one of the table's names.
+func icChoice[T any](id *icDecoder, field string, v any, names map[string]T) T {
+	var zero T
+	s, ok := v.(string)
+	if !ok {
+		id.fail(field, "want a string, got %s", bsJSONType(v))
+		return zero
+	}
+	t, ok := names[s]
+	if !ok {
+		id.fail(field, "unknown %s %q", field, s)
+	}
+	return t
 }
 
 func icBiome(s string) (uint64, bool) {
@@ -220,6 +256,8 @@ func (id *icDecoder) like(v any) incident.ID {
 		id.fail("like", "unknown core incident %q (name one as core.<key>)", s)
 	case l == incident.RivalRaid:
 		id.fail("like", "core.rival_raid is queued by the story, not drawn: pick another")
+	case l >= incident.HiveSwarm && l <= incident.MechRaid:
+		id.fail("like", "%s is a storyteller threat face, not a drawn incident: pick another", s)
 	}
 	return l
 }
