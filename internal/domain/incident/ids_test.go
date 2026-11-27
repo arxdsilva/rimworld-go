@@ -22,9 +22,10 @@ func TestIDsAppendOnly(t *testing.T) {
 		"crop_blight", "eclipse", "toxic_fallout", "heat_wave", "cold_snap",
 		"volcanic_winter", "refugee_chased", "rival_raid", "traveler_group", "transport_pod_crash",
 		"hive_swarm", "predator_pack", "manhunter_pack", "raid", "mech_raid",
+		"ore_meteor", "supply_drop", "sky_song",
 	}
-	if NumIDs != 35 || len(keys) != int(NumIDs) {
-		t.Fatalf("NumIDs = %d, pinned keys %d; want 35", NumIDs, len(keys))
+	if NumIDs != 38 || len(keys) != int(NumIDs) {
+		t.Fatalf("NumIDs = %d, pinned keys %d; want 38", NumIDs, len(keys))
 	}
 	for i, k := range keys {
 		if d := DefOf(ID(i)); d.Key != k || d.ID != ID(i) {
@@ -33,6 +34,7 @@ func TestIDsAppendOnly(t *testing.T) {
 	}
 	named := map[ID]int{
 		TransportPodCrash: 29, HiveSwarm: 30, PredatorPack: 31, ManhunterPack: 32, Raid: 33, MechRaid: 34,
+		OreMeteor: 35, SupplyDrop: 36, SkySong: 37,
 	}
 	for id, n := range named {
 		if int(id) != n {

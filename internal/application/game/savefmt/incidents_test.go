@@ -63,8 +63,8 @@ func TestRemapIncidentsFollowsKeys(t *testing.T) {
 // IDs, while the core windfalls and the song's end tick are untouched.
 func TestRemapIncidentsAfterWindfallAppends(t *testing.T) {
 	t.Parallel()
-	if incident.OreMeteor != incident.TransportPodCrash+1 || incident.SkySong != incident.OreMeteor+2 {
-		t.Fatal("the windfalls are not the three IDs after TransportPodCrash")
+	if incident.OreMeteor != incident.MechRaid+1 || incident.SkySong != incident.OreMeteor+2 {
+		t.Fatal("the windfalls are not the three IDs after MechRaid")
 	}
 	old := incidentBook("p.a").Keys()
 	old = append(slices.Clone(old[:incident.OreMeteor]), old[incident.SkySong+1:]...) // the key list before the appends
