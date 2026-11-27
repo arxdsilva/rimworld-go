@@ -267,3 +267,10 @@ Issue template for every new issue · 2026-11-27 · this commit
 - Limits: root `AGENTS.md` budget lowered 5189 → 5173 after rewording the new-gap sentence
 - Boxes: none: process docs, no checklist, spec or gap row covers issue shape
 - Open: the 184 open findings were rewritten to this template by hand (not in this change)
+
+## DOCS-007-issue-priority-and-size
+Priority and size rubric for every issue · 2026-11-27 · this commit
+- Changed: `.agents/templates/ISSUE.md` gains a Priority table (P0..P3, built on the existing label meanings and MASTER_SPEC §73 milestones) and a Size table (`size: XS`..`XL`); every issue carries type, priority and size labels, and the template's Impact line states both with a reason
+- Decisions: priority keeps the four existing labels because `loops backlog` already queues by them (P0 first, unlabelled last); duplicates inherit the oldest issue's priority, loops-harness issues cap at P2 unless they fail every lane; XL means split before work
+- Boxes: none: process docs, no checklist, spec or gap row covers triage
+- Open: all open issues were labelled to this rubric on GitHub (not in this change)
