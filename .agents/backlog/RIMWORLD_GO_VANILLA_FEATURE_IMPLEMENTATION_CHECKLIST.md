@@ -1987,7 +1987,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.1 Incident framework
 
--   [-] **Incident definition** (SIM-025: `internal/domain/incident` defs with weight, cooldown, biome limits and nature-event cadence of 2 to 5 days; no category/point budget, raids and threats still use the storyteller schedule)
+-   [x] **Incident definition** (SIM-025, SIM-175: `internal/domain/incident` defs with category, weight, cooldown, biome, season, minimum points, point-spend share, map or world-object target and nature-event cadence of 2 to 5 days; a setup colony's storyteller threats are picked and fired through the framework, with the legacy die kept for legacy colonies)
     -   Category.
     -   eligibility.
     -   weight.

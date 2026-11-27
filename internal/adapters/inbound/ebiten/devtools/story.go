@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/incident"
+	"rimworld-go/internal/domain/sim/clock"
 )
 
 // StorySource is the storyteller's state for the story panel (EAI-034):
@@ -49,6 +50,7 @@ func (p *Panel) storyLines() []string {
 	default:
 		out = append(out, fmt.Sprintf("next threat: t%d (in %d ticks)", v.NextThreat, v.NextThreat-now))
 	}
+	out = append(out, lastThreatLine(v))
 	if len(v.Queue) == 0 {
 		return append(out, "queue: empty")
 	}
@@ -65,6 +67,20 @@ func (p *Panel) storyLines() []string {
 		out = append(out, row)
 	}
 	return out
+}
+
+// lastThreatLine names the storyteller's last threat, the day it fired, the
+// points it needs and the share of the points it spends.
+func lastThreatLine(v game.StoryDebugView) string {
+	d := v.LastThreat
+	if d.Key == "" {
+		return "last threat: none"
+	}
+	pct := d.PointsPct
+	if pct <= 0 {
+		pct = 100
+	}
+	return fmt.Sprintf("last threat: %s day %d · min %d pts · spends %d%%", d.Name, v.LastThreatAt/clock.TicksPerDay, d.MinPoints, pct)
 }
 
 // storySize is the story panel's size.

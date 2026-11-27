@@ -19,7 +19,8 @@
 //	on_hour(ctx)                  each in-game hour, at its first tick
 //	on_day(ctx)                   each in-game day at 00:00, before that hour's on_hour
 //	on_incident(ctx, incident)    an incident fired: incident.key ("core.herd_crossing"), incident.category ("nature", "threat");
-//	                              a raid is "core.rival_raid" (storyteller threats that are no incident are not reported yet)
+//	                              a storyteller threat reports once, category "threat", under its own key (packs,
+//	                              manhunters, hives, mad animals, mech raids, ship parts); a people raid is "core.rival_raid"
 //	on_colonist_died(ctx, name)   a colonist died
 //	on_pawns(ctx, pawns)          cadence: every tick, the colonists due on it (a tuple of pawns, id ascending)
 //	on_pawn(ctx, pawn)            cadence: every tick, once for each colonist due on it, by id

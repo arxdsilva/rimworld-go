@@ -530,3 +530,13 @@ Hidden faction identity and actual actor origin · 2026-11-25 · this commit
 - Changed: separate native hidden faction objects with stable negative IDs; SpecialFactions and ActorFaction resolve living actors and persisted origin, with no surface ID renumbering.
 - Decisions: hidden identities are not extra surface settlements. Existing tech-dependent settlement/trader stocks and raid kit ownership retained.
 - Boxes: #104 original native faction and settlement/trader tech scope.
+
+## SIM-175-incident-point-budget
+Incident point budget and threat routing · 2026-11-26 · once known
+- Changed: incident defs carry minimum points, a spend share, a season limit and a map or world-object target; ids 30-34 (hive swarm, predator pack, manhunter pack, raid, mech raid); a setup colony's storyteller threat is picked by `Book.PickThreat` and fired through `fireIncident` with the def's spend, and recorded as the last threat (saved). Raid-face ship parts and mech raids go through it too.
+- Changed: every storyteller threat reports one `on_incident` (category `threat`) under its own key; a people raid stays `core.rival_raid`, once on arrival. Mods may set `min_points`, `points_pct`, `season`, `target`.
+- Changed: the story dev overlay shows `last threat: <name> day N · min M pts · spends P%` (or `none`), from `StoryDebugView.LastThreat`.
+- Decisions: the pick is roll-for-roll equal to the old die and fallback ring (oracle-tested over 2304 cases); cooldown is checked at fire only; ids append from 30, plugin ids remap by key; no save version bump; the legacy storyteller keeps its die and legacy colonies refuse the four threat faces in `FireIncident`.
+- Limits: no player HUD line, because threats already show as letters and the dev overlay line is the read model; no assets. Game non-test lines net -1, no budget line raised.
+- Boxes: vanilla **Incident definition** [x] (checklist 25.1); gap EAI-034 note (done, unchanged).
+- Open: the ship part and mech raid nested in `raid.Threats.Major` skip cooldown and the first-day gap (pre-existing; lead to file); `fireScheduled` keeps its own key switch.

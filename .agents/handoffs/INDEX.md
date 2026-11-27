@@ -445,6 +445,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | SIM-071-core-mood-expectations | Native memories, recovery and wealth expectations | 2026-11-25 | [SIM.md](SIM.md#sim-071-core-mood-expectations) |
 | SIM-102-native-animal-hauling | Native trained animal hauling | 2026-11-25 | [SIM.md](SIM.md#sim-102-native-animal-hauling) |
 | SIM-174-prisoner-faction-recruitment | Native prisoner faction and recruitment difficulty | 2026-11-25 | [SIM.md](SIM.md#sim-174-prisoner-faction-recruitment) |
+| SIM-175-incident-point-budget | Incident point budget and threat routing | 2026-11-26 | [SIM.md](SIM.md#sim-175-incident-point-budget) |
 | SND-001-audio-runtime | Audio runtime | 2026-10-21 | [SND.md](SND.md#snd-001-audio-runtime) |
 | SND-002-audio-asset-pipeline | Audio asset pipeline | 2026-10-21 | [SND.md](SND.md#snd-002-audio-asset-pipeline) |
 | SND-003-animal-voices | Animal voices (281 ElevenLabs clips) | 2026-10-21 | [SND.md](SND.md#snd-003-animal-voices) |
