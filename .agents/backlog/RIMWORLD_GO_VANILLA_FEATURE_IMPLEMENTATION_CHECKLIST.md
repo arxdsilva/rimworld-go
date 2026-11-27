@@ -2006,15 +2006,15 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Friendly visitors** (SIM-046)
 -   [x] **Wanderer joins** (SIM-046)
 -   [x] **Transport pod crash / downed stranger** (RSC-001: native event, actual downed victim and pod, rescue/capture and recovery path)
--   [ ] **Resource meteorite**
--   [ ] **Cargo pod drop**
+-   [x] **Resource meteorite** (EAI-5: Ore meteor, incident.OreMeteor; game/windfall)
+-   [x] **Cargo pod drop** (EAI-5: Supply drop, incident.SupplyDrop, forbidden stacks; game/windfall)
 -   [x] **Animal joins** (SIM-025: stray joins)
 -   [x] **Farm animals wander in** (SIM-025)
 -   [x] **Rare self-tame animal** (SIM-025: taken a liking)
 -   [x] **Wild animal migration**
 -   [x] **Party** (SIM-042)
 -   [x] **Marriage** (SIM-042: wedding gathering)
--   [ ] **Psychic soothe-like temporary positive mood event**
+-   [x] **Psychic soothe-like temporary positive mood event** (EAI-5: Sky song, incident.SkySong + mood.SkySong, saved SongUntil, HUD chip)
     -   Original presentation/content.
 
 ## 25.3 Negative incidents

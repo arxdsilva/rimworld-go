@@ -172,6 +172,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | EAI-2-raiders | Raider sight, turret danger and indexed picks | 2026-11-09 | [DEF.md](DEF.md#eai-2-raiders) |
 | EAI-3-points-wealth-factions | Threat points, wealth, factions at war, visitors defend | 2026-11-09 | [DEF.md](DEF.md#eai-3-points-wealth-factions) |
 | EAI-4-story-and-hud | Incident queue, letter choices, message merge, positive bias, story panel, infestations | 2026-11-09 | [DEF.md](DEF.md#eai-4-story-and-hud) |
+| EAI-5-positive-incidents | Ore meteor, Supply drop and Sky song (25.2, #13) | 2026-11-26 | [DEF.md](DEF.md#eai-5-positive-incidents) |
 | ENG-001-scale-500 | Engine scale: 200 to 500 tiles a side | 2026-10-22 | [ENG.md](ENG.md#eng-001-scale-500) |
 | ENG-002-grass-batch | Grass drawn as composed tufts (PLAY-010) | 2026-10-23 | [ENG.md](ENG.md#eng-002-grass-batch) |
 | ENG-003-social-contract | Social system contract, M0 (SOCIAL_SYSTEM_CONTRACT C1–C4) | 2026-10-23 | [ENG.md](ENG.md#eng-003-social-contract) |
