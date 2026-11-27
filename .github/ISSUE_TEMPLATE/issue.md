@@ -23,7 +23,7 @@ What was seen: the failing command and its output tail, a test name, a screensho
 - Actual: …
 
 ## Impact
-Severity: blocker | high | medium | low. What it breaks or blocks, and which issues or PRs.
+Priority: P0 | P1 | P2 | P3 (reason) · Size: XS | S | M | L | XL, with the matching labels (rubric: `.agents/templates/ISSUE.md`). What it breaks or blocks, and which issues or PRs.
 
 ## Suggested fix
 1–3 bullets, or "unknown".
