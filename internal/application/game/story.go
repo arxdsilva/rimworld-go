@@ -122,8 +122,8 @@ func storyMajor(g *Game, pts int, now uint64) bool {
 	switch g.raid.Threats.Major(pts, humans, g.sk.content.Incidents.DefOf) {
 	case raid.MajorShipPart:
 		return g.FireIncident("crashed_ship_part")
-	case raid.MajorMechs: // through the incident framework: recorded and reported
-		if g.fireIncident(incident.MechRaid, pts, now) {
+	case raid.MajorMechs: // through the incident framework (in its def's season and on the home map): recorded and reported
+		if d := g.sk.content.Incidents.DefOf(incident.MechRaid); d.Target == incident.HomeMap && d.Season.Allows(g.season(now) == "Winter") && g.fireIncident(incident.MechRaid, pts, now) {
 			g.incidentFired(incident.MechRaid, now)
 			return true
 		}

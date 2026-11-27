@@ -453,3 +453,29 @@ func TestMechRaidSpendsItsShare(t *testing.T) {
 		t.Fatalf("the half share did not shrink the group: %v", cost)
 	}
 }
+
+// A raid face's mechanoid draw keeps its def's season and target: a mech
+// raid restricted to winter, or aimed at a world object, sends a people
+// raid instead in summer.
+func TestMechRaidKeepsSeasonAndTarget(t *testing.T) {
+	t.Parallel()
+	for name, edit := range map[string]func(*incident.Def){
+		"winter only":  func(d *incident.Def) { d.Season = incident.WinterOnly },
+		"world object": func(d *incident.Def) { d.Target = incident.WorldObject },
+	} {
+		b := threatBook(func(l []incident.Def) {
+			l[incident.CrashedShipPart].Weight, l[incident.MechRaid].Weight = 0, 1_000_000
+			edit(&l[incident.MechRaid])
+		})
+		g, now := threatColony(t, 3, "Summer", 20, withBook(b))
+		enrich(t, g)
+		before := len(g.raidGroups)
+		g.storyThreat(raidRoll, 20, false, 100, now)
+		if _, mech := g.incidents.Last[incident.MechRaid]; mech || g.raid.Mechs.Export() != nil {
+			t.Fatalf("%s: a mech raid came: Last %v", name, g.incidents.Last)
+		}
+		if len(g.raidGroups) != before+1 || g.incidents.Last[incident.Raid] != g.rel(now) {
+			t.Fatalf("%s: %d people raid groups, Last %v", name, len(g.raidGroups)-before, g.incidents.Last)
+		}
+	}
+}
