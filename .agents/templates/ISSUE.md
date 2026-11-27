@@ -57,6 +57,14 @@ Whoever files the issue sets all three. A loops finding arrives without them (th
 2. Write the body to a file and pass it with `--body-file` (`gh issue create`, `gh issue edit`, `loops backlog file`). Never `--body "<text>"`: the shell expands model-written text.
 3. Cite the new `#N` in the handoff's `Open:` (`HANDOFF.md`).
 
+## Checking
+
+After filing or triaging, run `python3 scripts/issue_triage.py lint` (add `--issue N` for one); it must print nothing. It checks the rules above: one type, one priority and one size label (L1-L3), `size: XL` with `tracker` and a sub-issue (L4), and, for issues created on or after 2026-11-28 or labelled `loops-finding` (older hand-filed issues are grandfathered), the title shape, the eight sections and an Impact line that agrees with the labels (L5-L7). `python3 scripts/issue_triage.py suggest` lists the label fixes the rules decide by themselves (spec-backlog priority and size from the unchecked items, duplicates, `loops:` capped at P2, finished trackers); `--apply` changes only those labels. The judgement rows of the Priority table stay with the filer. A workflow adds `needs-triage` to an open issue that fails the lint and removes it when it passes.
+
+Conventions:
+- Duplicates: comment once on the older issue C with any evidence it lacks, then `gh issue close D --duplicate-of C` and add the `duplicate` label to D.
+- A `size: XL` issue is split into L-or-smaller GitHub sub-issues; the parent keeps `size: XL`, gains `tracker`, and lanes are started with `--exclude-label tracker`.
+
 ## Loops lanes
 
 A `/loops:work` lane in backlog mode never files issues; `loops backlog` files its findings, titled by the note and with the `--ref` file as the body. So each finding is recorded as `loops run event --kind note --name finding --note "<area>: <symptom>" --ref findings/<slug>.md`, where the ref file is this template filled in (front matter removed) in the run dir. `loops backlog` reads note findings before `pr.md` Open follow-ups and drops a repeated title, so the follow-up bullet's first line repeats the note title word for word (detail goes on indented lines below it); a follow-up with no matching note is filed with no body. Reflector harness notes follow the same rule with area `loops`.

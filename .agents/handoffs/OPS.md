@@ -274,3 +274,10 @@ Priority and size rubric for every issue · 2026-11-27 · this commit
 - Decisions: priority keeps the four existing labels because `loops backlog` already queues by them (P0 first, unlabelled last); duplicates inherit the oldest issue's priority, loops-harness issues cap at P2 unless they fail every lane; XL means split before work
 - Boxes: none: process docs, no checklist, spec or gap row covers triage
 - Open: all open issues were labelled to this rubric on GitHub (not in this change)
+
+## DOCS-008-issue-triage-script
+Repeatable issue lint and label suggestions · 2026-11-27 · this commit
+- Changed: `scripts/issue_triage.py` lints open issues against `ISSUE.md` (L1-L7) and proposes label fixes from fixed rules (R1-R4; `--apply` touches only R1/R3 labels); `issue-triage.yml` adds or clears `needs-triage` on issue events and runs the script's tests on PRs
+- Decisions: stdlib only and sorted output so two runs agree; L5-L7 skip issues created before 2026-11-28 unless `loops-finding` (older issues were hand-filed before the template); R2/R4 only propose, closing stays with a human; fixtures carry `subIssues`/`subIssuesOpen` so tests need no network
+- Boxes: none: process tooling, no checklist, spec or gap row covers issue triage
+- Open: the issues the live lint flags are not fixed in this change

@@ -1,0 +1,45 @@
+name: issue-triage
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, reopened]
+  pull_request:
+    paths:
+      - "scripts/issue_triage*.py"
+      - "scripts/test_issue_triage.py"
+      - "scripts/testdata/issue_triage/**"
+
+permissions:
+  contents: read
+
+jobs:
+  lint-issue:
+    # Flags an open issue that breaks .agents/templates/ISSUE.md with `needs-triage`
+    # and clears it once the lint passes. Label changes made with GITHUB_TOKEN do not
+    # trigger this workflow again, so it cannot loop.
+    if: github.event_name == 'issues' && github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint the issue
+        run: |
+          if python3 scripts/issue_triage.py lint --repo "$GH_REPO" --issue "$ISSUE_NUMBER"; then
+            gh issue edit "$ISSUE_NUMBER" --remove-label needs-triage || true
+          else
+            gh issue edit "$ISSUE_NUMBER" --add-label needs-triage
+          fi
+
+  test-script:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests
+        run: python3 scripts/test_issue_triage.py
