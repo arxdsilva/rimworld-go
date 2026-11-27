@@ -74,7 +74,7 @@ func classesWith(tex Textures, caps capsByPlugin) []class {
 			}
 			return probs
 		},
-	}, itemClassWith(tex), recipeClass(), traitClass(), researchClass(), incidentClass(), statModClass(caps), thoughtClass()}
+	}, itemClassWith(tex), recipeClass(), traitClass(), researchClass(), incidentClass(), thoughtClass(), statModClass(caps)}
 }
 
 // Classes are the moddable class names, in the order their books are built.
