@@ -2745,20 +2745,20 @@ allowing arbitrary mutation of internal Go functions.
 
 ## 38.1 Stable extension API
 
--   [ ] **Plugin API version**
--   [ ] **Capability declaration**
--   [-] **Read-only world query API** (Starlark ctx: tick, day, hour, season, colonists, wealth, item counts, `ctx.pawns()`/`ctx.pawn(id)` batched colonist reads; missing: other entity kinds, map and world queries)
+-   [x] **Plugin API version** (2026-11-27: `pluginapi.Version`/`MinVersion` 1; `modding/order.go` `CheckManifest`; `TestCheckManifestAPIAndCaps`, `TestResolveRefusesNewerAPI`, `TestExtE2E/AC1_API_version`)
+-   [x] **Capability declaration** (2026-11-27: closed set of 13 in `application/pluginapi`; legacy plugins default to query, commands, events with a warning; deny by default in `starlarkhost/caps.go`, `TestCapsTableComplete`; shown on the Plugins screen, `TestDetailAPICaps`; `TestExtE2E/AC2_capabilities`)
+-   [x] **Read-only world query API** (2026-11-27: ctx tick, day, hour, season, colonists, wealth, item counts, `ctx.pawns()`/`ctx.pawn(id)`, plus `ctx.animals()`, `ctx.buildings()`, `ctx.map`, `ctx.world`, each list capped at 256 rows, home map while viewing another: `starlarkhost/query.go`, `scripting/gameread`, `TestExtCallsHomeMapWhileViewingAnother`, `TestExtE2E/AC3_world_queries`)
 -   [x] **Command submission API** (2026-11-20 audit: application/scripting/scripting.go commands ScriptMessage, ScriptSpawn, letter via Enqueue with 16 per call limit)
--   [ ] **Definition registration hooks**
--   [-] **Event subscription** (Starlark hooks `on_hour`, `on_day`, `on_incident`, `on_colonist_died`, cadence hooks `on_pawns`/`on_pawn`; missing: most 38.2 events)
--   [ ] **Custom validation hooks**
--   [ ] **Custom UI panels/actions where safe**
--   [ ] **Custom incident behavior**
--   [ ] **Custom job/intent providers**
--   [ ] **Custom stat modifiers**
--   [ ] **Custom health-effect behavior**
--   [ ] **Custom recipe/building components**
--   [ ] **Custom world-generation hooks**
+-   [x] **Definition registration hooks** (2026-11-27: `register_defs()` builds through `modding.BuildWith` like a defs file; `starlarkhost/defs.go`, `modding/scriptdefs.go`; `TestExtE2E/AC4_register_defs`)
+-   [x] **Event subscription** (2026-11-27: `on_hour`, `on_day`, `on_incident`, `on_colonist_died`, cadence hooks, and `EVENTS` plus `on_event` for quadrum, year, research_done, recipe_done, map_generated; `starlarkhost/events.go`; `TestExtE2E/AC5_events`, `AC5_quadrum_year`)
+-   [x] **Custom validation hooks** (2026-11-27: `validate_defs(defs)` at load and `validate_command(ctx, cmd)` for build, add_bill, research, prioritize, draft; `starlarkhost/behaviour.go`, `defs.go`; `TestExtE2E/AC6_validate_defs`, `AC6_validate_command`)
+-   [x] **Custom UI panels/actions where safe** (2026-11-27: `panel(ctx)` hourly, at most 12 lines and 4 actions, `windows/plugin_panels.go`, `on_action` via `ScriptAction`; `TestExtE2E/AC7_panels_and_actions`)
+-   [x] **Custom incident behavior** (2026-11-27: `run_incident(ctx, incident)` for a plugin's own incident defs; `starlarkhost/behaviour.go`; `TestExtE2E/AC8_run_incident`)
+-   [x] **Custom job/intent providers** (2026-11-27: `ctx.order(pawn_id, order, x, y)` with a closed set of seven orders, once per pawn per 600 ticks; `starlarkhost/orders.go`; `TestExtScriptOrderNoFlap`, `TestExtE2E/AC9_script_orders`)
+-   [x] **Custom stat modifiers** (2026-11-27: `stat_mod` defs, add and mul permille, last layer of the stat sheet; `domain/pawn/stat/statmod`, `modding/class_statmod.go`; `TestExtStatModsSurviveLoad`, `TestExtE2E/AC10_stat_mods`)
+-   [-] **Custom health-effect behavior** (2026-11-27: `stat_mod` conditioned on `injured` or a bio condition key, `TestExtE2E/AC11_health_condition`; left: new health conditions and per-tick health effects)
+-   [-] **Custom recipe/building components** (2026-11-27: `recipe_done` event and `ctx.place` to add output, `TestExtE2E/AC12_recipe_done`; left: building components, modding has no building def class)
+-   [-] **Custom world-generation hooks** (2026-11-27: `map_generated` once for a new game's home map before its first tick, `ctx.place` seeded with `ctx.rand`, `TestExtE2E/AC13_map_generated`; left: terrain, biome and planet tweaks, later-generated maps)
 
 ## 38.2 Event hooks
 
@@ -2769,11 +2769,11 @@ Expose typed, deterministic semantic hooks such as:
 -   [ ] Damage resolved.
 -   [ ] Job started/completed/failed.
 -   [ ] Building constructed/destroyed.
--   [ ] Item produced/consumed.
--   [ ] Research completed.
+-   [-] Item produced/consumed. (2026-11-27: `recipe_done` for home-map crafts only, `TestExtE2E/AC12_recipe_done`; other production and consumption are not delivered)
+-   [x] Research completed. (2026-11-27: `research_done` event, `application/game/research.go`; `TestExtE2E/AC5_events`)
 -   [ ] Incident started/resolved.
 -   [ ] Relationship changed.
--   [ ] New day/quadrum/year.
+-   [x] New day/quadrum/year. (2026-11-27: `on_day` and the quadrum and year events, `application/game/scripts.go` `scriptClock`; `TestExtE2E/AC5_quadrum_year`)
 -   [ ] Caravan entered/left.
 -   [ ] Faction goodwill changed.
 

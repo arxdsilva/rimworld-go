@@ -1,0 +1,10 @@
+{
+  "id": "extapi_badcap",
+  "name": "Extension API fixture (unknown capability)",
+  "authors": ["rimworld-go"],
+  "version": "1.0.0",
+  "game": ["0.1"],
+  "api": 1,
+  "capabilities": ["query", "teleport"],
+  "description": "Declares a capability that does not exist: refused."
+}

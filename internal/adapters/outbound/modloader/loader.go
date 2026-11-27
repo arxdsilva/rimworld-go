@@ -122,6 +122,9 @@ func readPlugin(dir, name string) modding.Plugin {
 	return pl
 }
 
+// maxCapabilities caps the "capabilities" list of one manifest.
+const maxCapabilities = 32
+
 func trim(s []string, n int) ([]string, int) {
 	if len(s) > n {
 		s = s[:n]
@@ -145,6 +148,10 @@ func (r *reader) manifest() {
 	if err != nil {
 		field, msg := describe(b, err, dec)
 		r.problem(file, field, msg, false)
+		return
+	}
+	if len(m.Capabilities) > maxCapabilities {
+		r.problem(file, "capabilities", fmt.Sprintf("too many capabilities (%d, at most %d)", len(m.Capabilities), maxCapabilities), false)
 		return
 	}
 	r.pl.Manifest = m

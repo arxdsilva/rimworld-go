@@ -10,6 +10,7 @@ import (
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
 	"rimworld-go/internal/adapters/outbound/modloader"
+	"rimworld-go/internal/adapters/outbound/starlarkhost"
 	appgame "rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/contentid"
 	"rimworld-go/internal/application/game/savefmt"
@@ -34,7 +35,7 @@ type runContent struct {
 func (c runContent) game() appgame.Content {
 	cat := c.catalog
 	return appgame.Content{Backstories: cat.Backstories, Recipes: cat.Recipes, Traits: cat.Traits,
-		Research: cat.Research, Incidents: cat.Incidents, Items: cat.Items, Sources: sources(cat.Defs)}
+		Research: cat.Research, Incidents: cat.Incidents, Items: cat.Items, Sources: sources(cat.Defs), StatMods: cat.StatMods}
 }
 
 // sources is who added or patched each def a plugin touched (PLG-072).
@@ -137,7 +138,7 @@ func buildContent(src modding.Source, enabled []string, version string) runConte
 			found = nil
 		}
 	}
-	cat, probs := modding.Build(found, enabled, version)
+	cat, probs := modding.BuildWith(found, enabled, version, starlarkhost.NewDefs())
 	text, lp := pluginText(found, cat)
 	probs = append(probs, lp...)
 	for _, p := range probs {
@@ -164,7 +165,10 @@ func (c runContent) view() plugins.View {
 		m := p.Manifest
 		r := plugins.Row{ID: m.ID, Name: m.Name, Version: m.Version, Description: m.Description, URL: m.URL,
 			Authors: m.Authors, Requires: m.Requires, After: m.After, Before: m.Before, Conflicts: m.Conflicts,
-			Locales: modding.PluginLocales(p)}
+			Locales: modding.PluginLocales(p), HasWasm: len(p.Wasm) > 0}
+		r.API = max(m.API, 1)
+		caps, legacy := modding.CapsOf(m)
+		r.Caps, r.LegacyCaps = caps.Names(), legacy
 		if i, ok := placed[m.ID]; ok && m.ID != modding.Core {
 			r.Loaded, r.Position, r.Reason = true, i, c.catalog.Order.Loaded[i].Reason
 		}

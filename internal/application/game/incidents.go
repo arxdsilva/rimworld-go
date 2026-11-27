@@ -276,6 +276,9 @@ func (g *Game) fireIncident(id incident.ID, pts int, now uint64) (fired bool) {
 	if id != incident.RivalRaid && id != incident.Raid {
 		defer scriptFired(g, id, &fired) // retain the original event key; raids notify on arrival
 	}
+	if scriptReplaced(g, id, now) { // scripts.go: the plugin's run_incident took its place
+		return true
+	}
 	d := g.sk.content.Incidents.DefOf(id) // a plugin incident's own def, its own share
 	if pts < 0 && d.Category == incident.Threat {
 		pts = g.queuePoints(now) // a dev hook or the queue: today's threat points

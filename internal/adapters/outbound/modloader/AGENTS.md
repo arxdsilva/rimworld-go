@@ -11,6 +11,7 @@ Finds plugins on disk and reads them into the plain trees `application/modding` 
 - Every read goes through an `os.Root` per plugin: a path or symlink leaving the folder is a problem, never a read. Caps: 4 MiB per file, 2,000 data files (scripts, `.wasm` and textures included) and 32 MiB of data per plugin (`TestPluginDataTotalIsCapped`).
 - An unreadable manifest still lists the plugin (id and name = folder name) with its problem; JSON errors carry line and column.
 - No global state, no goroutines.
+- The manifest's `capabilities` list is capped at 32 entries (`maxCapabilities`, `loader.go`); a longer list is a problem. The length of one name is not capped here (follow-up, not yet filed).
 
 ## Tests
 `loader_test.go` (temp-dir fixtures: caps, symlinks, bad JSON, ordering), `example_test.go` (the shipped `mods/example_frontier` builds with no problem; disabled it changes nothing).

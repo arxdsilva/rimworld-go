@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"rimworld-go/internal/application/game/postpone"
+	"rimworld-go/internal/application/scripting"
 
 	"rimworld-go/internal/application/game/landing"
 	"rimworld-go/internal/application/game/mapview"
@@ -72,6 +73,8 @@ func (g *Game) generate(seed uint64, at site.Site) generation.Result {
 	for _, p := range res.Plants {
 		_, _ = g.spawnPlant(p.Species, p.X, p.Y, p.Growth)
 	}
+	// a new game's home map: map_generated fires once extensions are set (scripts.go)
+	g.scripts.gen = scripting.MapGen{Seed: seed, W: g.grid.Width(), H: g.grid.Height(), Biome: biome.DefOf(g.biome).Key}
 	return res
 }
 

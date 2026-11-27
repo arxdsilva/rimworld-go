@@ -27,6 +27,22 @@ const (
 	numConditions
 )
 
+// Key is the condition's stable namespaced key, the one a stat_mod's
+// condition names ("core.old_fracture"); "" for none or an unknown one.
+func (c Condition) Key() string {
+	switch c {
+	case OldFracture:
+		return "core.old_fracture"
+	case Nearsighted:
+		return "core.nearsighted"
+	case HandTremor:
+		return "core.hand_tremor"
+	case Exhausted:
+		return "core.exhausted"
+	}
+	return ""
+}
+
 // Temperament mirrors the game's idle temperament (Wanderer, Social,
 // Homebody) so the domain can choose it from traits.
 type Temperament uint8

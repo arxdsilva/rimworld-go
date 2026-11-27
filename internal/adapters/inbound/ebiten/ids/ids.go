@@ -67,6 +67,10 @@ const (
 	TabAssign    = "tab.assign"
 	TabFactions  = "tab.factions"
 	TabQuests    = "tab.quests"
+	TabPlugins   = "tab.plugins"
+
+	// PluginAction is a plugin panel's button; a trailing "plugin.action".
+	PluginAction = "plugins.act."
 
 	// The Quests window (QST-3). A trailing "." takes the quest id; Accept
 	// takes "<id>.<option>" (option -1 for a quest without a choice).

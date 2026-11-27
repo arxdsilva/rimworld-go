@@ -1,0 +1,5 @@
+{
+  "stat_mod": [
+    {"name": "undeclared", "stat": "work_speed", "mul": 500}
+  ]
+}

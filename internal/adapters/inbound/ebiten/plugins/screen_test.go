@@ -4,13 +4,14 @@
 package plugins
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
-	"strings"
-
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -407,5 +408,85 @@ func TestDetailReadsStatsOnce(t *testing.T) {
 	h.idle()
 	if n != 1 {
 		t.Fatalf("Stats called %d times in one frame", n)
+	}
+}
+
+// The detail shows the plugin API and capabilities for the legacy,
+// explicit, empty, undeclared and Wasm cases.
+func TestDetailAPICaps(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		edit func(*Row)
+		want []string
+		not  []string
+	}{
+		{"legacy", func(r *Row) { r.LegacyCaps, r.Caps = true, []string{"query", "commands", "events"} },
+			[]string{"Plugin API: none declared", "Capabilities: query, commands, events (legacy default)"}, nil},
+		{"explicit", func(r *Row) { r.API, r.Caps = 1, []string{"query", "ui"} },
+			[]string{"Plugin API: 1", "Capabilities: query, ui"}, []string{"(legacy default)"}},
+		{"empty", func(r *Row) { r.API = 1 }, []string{"Plugin API: 1", "Capabilities: none"}, nil},
+		{"wasm", func(r *Row) { r.API, r.Caps, r.HasWasm = 1, []string{"query"}, true },
+			[]string{"(capabilities are not enforced for Wasm scripts yet)"}, nil},
+		{"refused", func(r *Row) { r.Loaded = false; r.API = 9 }, []string{"Plugin API: 9", "Capabilities: none"}, nil},
+	}
+	for _, c := range cases {
+		s := New(&fakeShell{})
+		v := twoPlugins()
+		r := v.Rows[0]
+		c.edit(&r)
+		var texts []string
+		for _, l := range s.detailLines(v, r, nil, nil) {
+			texts = append(texts, l.text)
+		}
+		for _, w := range c.want {
+			if !slices.Contains(texts, w) {
+				t.Errorf("%s: detail lacks %q: %q", c.name, w, texts)
+			}
+		}
+		for _, w := range c.not {
+			if slices.ContainsFunc(texts, func(x string) bool { return strings.Contains(x, w) }) {
+				t.Errorf("%s: detail has %q: %q", c.name, w, texts)
+			}
+		}
+	}
+}
+
+// At the smallest window the detail of a plugin with everything set
+// (API, legacy capabilities, Wasm, locales, a stat and a problem) loses
+// no line to the pane's foot.
+func TestDetailFitsTheMinimumWindow(t *testing.T) {
+	t.Parallel()
+	s := New(&fakeShell{})
+	v := twoPlugins()
+	r := v.Rows[0]
+	r.API, r.LegacyCaps, r.HasWasm = 1, true, true
+	r.Caps = []string{"query", "commands", "events"}
+	r.Locales = []string{"pt-BR", "de"}
+	stats := []ModStat{{Plugin: r.ID, File: "a.wasm", Fuel: 1234567, Calls: 3, Pages: 16}}
+	sw, sh := uikit.MinSetupW, uikit.MinSetupH
+	box := detailRect(bodyRect(sw, sh))
+	_, dropped := layoutLines(box, s.detailLines(v, r, map[string]bool{r.ID: true}, stats))
+	if dropped != 0 {
+		t.Errorf("%d detail lines are cut off at the minimum %dx%d", dropped, sw, sh)
+	}
+}
+
+// Painting stops at the first part that does not fit: a short line after
+// a dropped tall one is not placed, and every later part counts as dropped.
+func TestLayoutStopsAtTheFirstOverflow(t *testing.T) {
+	t.Parallel()
+	lh := float32(gfx.LineH(gfx.Body))
+	box := gfx.Rect{W: 400, H: 2*pad + 2*lh + lh/2}
+	long := strings.Repeat("word ", 200)
+	lines := []line{{text: "a", st: gfx.Body}, {text: long, st: gfx.Body}, {text: "b", st: gfx.Body}}
+	got, dropped := layoutLines(box, lines)
+	for _, p := range got {
+		if p.text == "b" {
+			t.Fatal("a short line was placed after the overflow")
+		}
+	}
+	if len(got) != 2 || dropped < 2 {
+		t.Errorf("placed %d, dropped %d", len(got), dropped)
 	}
 }

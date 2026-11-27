@@ -1,0 +1,6 @@
+{
+  "stat_mod": [
+    {"name": "slow", "stat": "move_speed", "mul": 800},
+    {"name": "hurt", "stat": "mood_offset", "add": -10, "injured": true}
+  ]
+}

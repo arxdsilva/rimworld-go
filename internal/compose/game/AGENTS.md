@@ -24,5 +24,9 @@ Any third-party module: Ebitengine calls go through `Display` (`internal/adapter
 - Scripted plugins interleave in load order across runtimes (`TestMuxInterleavesPluginsInLoadOrder`); save, load and continue equals a continuous run (`TestTallyContinueEqualsContinuous`); a new game or load after a game equals one on a fresh mux (`TestNewGameAfterGame`, `TestLoadAfterGame`).
 - A nil concrete adapter (`*Engine`, `*Tracker`, `*Checker`) never goes into a port: the port stays nil.
 
+## Extension API wiring
+- `content.go` builds the content with the script hooks (`modding.BuildWith`) and `scriptmux.go` hands the game the plugins' capabilities and the `gameread.New` readers; the Starlark host serves the extension points, the Wasm host none.
+- `TestExtE2E` (`ext_e2e_test.go`, fixtures `testdata/extapi/`, about 24 s under `-race`) proves each extension point through a real game: API refusal, capabilities, queries, defs, events, validation, panels and actions, incidents, orders, stat mods, and a deterministic state hash.
+
 ## Notes
 `Run` ends the process with `log.Fatal` on a bad `-biome`, `-graphics` or `-render-scale`, a window error or a failed capture, as `cmd/game` did.

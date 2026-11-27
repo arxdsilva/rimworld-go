@@ -1,0 +1,10 @@
+{
+  "id": "extapi_nocap",
+  "name": "Extension API fixture (undeclared capabilities)",
+  "authors": ["rimworld-go"],
+  "version": "1.0.0",
+  "game": ["0.1"],
+  "api": 1,
+  "capabilities": ["query", "commands", "events"],
+  "description": "Uses events, hooks and calls it did not declare."
+}

@@ -12,10 +12,14 @@ import (
 	"rimworld-go/internal/application/game/idindex"
 	"rimworld-go/internal/application/game/modstate"
 	"rimworld-go/internal/application/scripting"
+	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -28,17 +32,56 @@ import (
 // compose takes it. Starlark keeps no state; the index rebuilds on use.
 type scriptRun struct {
 	host   scripting.Host
+	ext    scripting.Extensions // the run-time extension points (nil: none)
 	kinds  map[string]item.Kind // item key -> kind, built on first use
 	pawns  idindex.Buckets      // home colonists by cadence bucket (pawnIndex)
 	state  modstate.Source      // nil: no Wasm mod state to save
 	loaded []modstate.Blob      // the loaded save's kept blobs, until taken
 	notes  []modstate.Note      // what checking them dropped, until taken
+	panels []scripting.Panel    // the last hourly panels (never saved)
+	// ordered: the pawns given a script order on visit orderAt (one each, from any hook or
+	// plugin); a visit's orders apply in one tick's batch, so a new visit clears it. Not saved.
+	ordered []entity.EntityID
+	orderAt uint64
+	gen     scripting.MapGen // a new game's home map, until map_generated fires (W 0: none)
 }
 
 // UseScripts sets the scripts g runs (nil: none). The composition root
 // sets it on a loaded save; a new game takes Config.Scripts. A function,
 // not a method: Game is over its method budget.
 func UseScripts(g *Game, h scripting.Host) { g.scripts.host = h }
+
+// UseExtensions sets the plugins' run-time extension points g calls (nil:
+// none). The composition root sets it beside UseScripts, after the
+// host's queries; on a new game the first set fires map_generated, once.
+func UseExtensions(g *Game, x scripting.Extensions) {
+	g.scripts.ext = x
+	if gen := g.scripts.gen; x != nil && gen.W > 0 {
+		g.scripts.gen = scripting.MapGen{}
+		emitEvent(g, scripting.Event{Kind: scripting.MapGenerated, Tick: uint64(g.clock.Now()), Map: gen})
+	}
+}
+
+// BuildingCounts is how many buildings of each kind stand on g's home
+// map, kind ascending, at most scripting.MaxQueryRows rows: one pass over
+// the home map's building index.
+func BuildingCounts(g *Game) []scripting.BuildingCount {
+	var n [256]int // construction.Kind is a byte
+	home := g.maps[0]
+	for _, id := range home.bldgIDs {
+		if b := home.bldgs.Ref(id); b != nil {
+			n[b.Kind]++
+		}
+	}
+	var out []scripting.BuildingCount
+	for k, c := range n {
+		if c > 0 {
+			out = append(out, scripting.BuildingCount{Kind: construction.Kind(k).String(), Count: c})
+		}
+	}
+	slices.SortFunc(out, func(a, b scripting.BuildingCount) int { return strings.Compare(a.Kind, b.Kind) })
+	return out[:min(len(out), scripting.MaxQueryRows)]
+}
 
 // UseModState sets where a real save reads the Wasm mods' state (nil:
 // none). StateHash never asks it.
@@ -108,13 +151,144 @@ func pawnIndex(g *Game) *idindex.Buckets {
 	return b
 }
 
-// scriptClock runs on_day at 00:00 and on_hour every hour (phases.go: a
-// colony system at each hour's first tick).
+// scriptClock runs, at each hour's first tick (phases.go: a colony
+// system), in this order: on_day at 00:00; then the quadrum event on a
+// quadrum's first day, then the year event on a year's; on_hour; then the
+// panels, refreshed.
 func scriptClock(g *Game, now uint64) {
-	if clock.DateAt(clock.Tick(now)).Hour == 0 {
+	if d := clock.DateAtPolicy(clock.Tick(now), g.clock.Calendar()); d.Hour == 0 {
 		fireScripts(g, scripting.Event{Hook: scripting.OnDay, Tick: now})
+		if d.Day == 0 {
+			emitEvent(g, scripting.Event{Kind: scripting.Quadrum, Tick: now})
+			if d.Quadrum == 0 {
+				emitEvent(g, scripting.Event{Kind: scripting.Year, Tick: now})
+			}
+		}
 	}
 	fireScripts(g, scripting.Event{Hook: scripting.OnHour, Tick: now})
+	scriptPanels(g, now)
+}
+
+// scriptPanels replaces the panels with the plugins' hourly answer; with
+// no panel hook left, none stand.
+func scriptPanels(g *Game, now uint64) {
+	x := g.scripts.ext
+	if x == nil || !x.HasPanels() {
+		if g.scripts.panels != nil {
+			g.scripts.panels = nil
+			g.viewGen++
+		}
+		return
+	}
+	var ps []scripting.Panel
+	scriptCall(g, scripting.Event{Tick: now}, func(ev scripting.Event, w *scriptWorld) (res scripting.Result) {
+		ps, res = x.Panels(ev, w, w)
+		return res
+	})
+	g.scripts.panels = ps
+	g.viewGen++ // view cache (indexes.go): WorldView.PluginPanels
+}
+
+// pluginPanelViews is the panels as WorldView shows them (nil: none).
+func pluginPanelViews(ps []scripting.Panel) []PluginPanelView {
+	if len(ps) == 0 {
+		return nil
+	}
+	out := make([]PluginPanelView, len(ps))
+	for i, p := range ps {
+		v := PluginPanelView{Plugin: p.Plugin, Title: p.Title, Lines: slices.Clone(p.Lines)}
+		for _, a := range p.Actions {
+			v.Actions = append(v.Actions, PluginActionView{ID: a.ID, Label: a.Label})
+		}
+		out[i] = v
+	}
+	return out
+}
+
+// emitEvent hands ev to the plugins subscribed to its kind (none: no
+// call at all).
+func emitEvent(g *Game, ev scripting.Event) {
+	x := g.scripts.ext
+	if x == nil || !x.Subscribed(ev.Kind) {
+		return
+	}
+	scriptCall(g, ev, func(ev scripting.Event, w *scriptWorld) scripting.Result { return x.Event(ev, w, w) })
+}
+
+// scriptVetoKind is the kind name a script reads for the player commands
+// validate_command sees; "" for any other.
+func scriptVetoKind(k command.Kind) string {
+	switch k {
+	case command.DesignateBuild:
+		return "build"
+	case command.AddBill:
+		return "add_bill"
+	case command.SetResearch:
+		return "research"
+	case command.Prioritize:
+		return "prioritize"
+	case command.DraftPawn:
+		return "draft"
+	}
+	return ""
+}
+
+// scriptVetoed asks the validating plugins about player command c
+// (applyOne, first); a reason drops c and posts "Plugin <id>: <reason>".
+// Script commands are not in the set, so they are never asked about.
+func scriptVetoed(g *Game, c command.Command) bool {
+	x := g.scripts.ext
+	if x == nil || !x.Validates() {
+		return false
+	}
+	kind := scriptVetoKind(c.Kind)
+	if kind == "" {
+		return false
+	}
+	v := scripting.CommandView{Kind: kind, Pawn: c.Pawn, X: c.X, Y: c.Y}
+	switch c.Kind {
+	case command.DesignateBuild:
+		v.Name = construction.Kind(c.Build).String()
+	case command.AddBill:
+		v.Name = g.sk.content.Recipes.Key(recipe.ID(c.Recipe))
+	case command.SetResearch:
+		v.Name = g.sk.content.Research.Key(research.Project(c.Build))
+	}
+	var plugin, reason string
+	scriptCall(g, scripting.Event{Tick: uint64(g.clock.Now())}, func(ev scripting.Event, w *scriptWorld) (res scripting.Result) {
+		plugin, reason, res = x.ValidateCommand(v, ev, w, w)
+		return res
+	})
+	if reason == "" {
+		return false
+	}
+	hx, hy := g.home()
+	g.post(MessageView{Tick: uint64(g.clock.Now()), X: hx, Y: hy, Text: fmt.Sprintf("Plugin %s: %s", plugin, reason)})
+	return true
+}
+
+// scriptReplaced runs plugin incident id's run_incident (fireIncident,
+// before its like's behaviour); true when the plugin took its place.
+func scriptReplaced(g *Game, id incident.ID, now uint64) bool {
+	x, b := g.scripts.ext, g.sk.content.Incidents
+	if x == nil || !x.RunsIncidents() || b.Like(id) == id {
+		return false
+	}
+	var replaced bool
+	scriptCall(g, scripting.Event{Tick: now, Incident: scriptIncidentOf(b, id)}, func(ev scripting.Event, w *scriptWorld) (res scripting.Result) {
+		res, replaced = x.RunIncident(ev, w, w)
+		return res
+	})
+	return replaced
+}
+
+// scriptIncidentOf is incident id as a script sees it.
+func scriptIncidentOf(b incident.Book, id incident.ID) scripting.Incident {
+	cat := "nature"
+	if b.DefOf(id).Category == incident.Threat {
+		cat = "threat"
+	}
+	return scripting.Incident{Key: b.Key(id), Category: cat}
 }
 
 // scriptFired runs on_incident for incident id once fireIncident made it
@@ -130,13 +304,8 @@ func scriptIncident(g *Game, id incident.ID) {
 	if g.scripts.host == nil {
 		return
 	}
-	b := g.sk.content.Incidents
-	cat := "nature"
-	if b.DefOf(id).Category == incident.Threat {
-		cat = "threat"
-	}
 	fireScripts(g, scripting.Event{Hook: scripting.OnIncident, Tick: uint64(g.clock.Now()),
-		Incident: scripting.Incident{Key: b.Key(id), Category: cat}})
+		Incident: scriptIncidentOf(g.sk.content.Incidents, id)})
 }
 
 // scriptDied runs on_colonist_died for id, who just died (dieBy): only
@@ -148,17 +317,33 @@ func scriptDied(g *Game, id entity.EntityID) {
 	fireScripts(g, scripting.Event{Hook: scripting.OnColonistDied, Tick: uint64(g.clock.Now()), Name: g.name(id)})
 }
 
-// fireScripts runs ev's hooks against the home map and queues their
-// commands through Enqueue, for the home map, like the player's. A script
-// the host disabled is reported with a message.
+// fireScripts runs ev's hooks (scriptCall).
 func fireScripts(g *Game, ev scripting.Event) {
+	scriptCall(g, ev, func(ev scripting.Event, w *scriptWorld) scripting.Result { return g.scripts.host.Fire(ev, w, w) })
+}
+
+// scriptCall is the one way into the plugins, on the simulation owner:
+// call runs against the home map (whatever is viewed) with ev carrying the
+// game's seed; its commands are queued through Enqueue for the home map,
+// like the player's, and a script it disabled is reported with a message.
+// A ScriptOrder is kept only from a cadence hook, stamped with that
+// visit's tick (applyScript checks the order visit against it); a script
+// cannot press a panel button (ScriptAction is dropped).
+func scriptCall(g *Game, ev scripting.Event, call func(ev scripting.Event, w *scriptWorld) scripting.Result) scripting.Result {
 	cur := g.mapState
 	g.mapState = g.maps[0]
 	defer func() { g.mapState = cur }()
 	ev.Seed = g.streams.seed
 	w := &scriptWorld{g: g, now: ev.Tick}
-	res := g.scripts.host.Fire(ev, w, w)
+	res := call(ev, w)
+	cadence := ev.Hook == scripting.OnPawns || ev.Hook == scripting.OnPawn
 	for _, c := range res.Commands {
+		if c.Kind == command.ScriptAction || c.Kind == command.ScriptOrder && !cadence {
+			continue
+		}
+		if c.Kind == command.ScriptOrder {
+			c.Target = ev.Tick
+		}
 		c.Map, c.MapSet = g.mapState.id, true
 		g.Enqueue(c)
 	}
@@ -171,11 +356,26 @@ func fireScripts(g *Game, ev scripting.Event) {
 		g.post(MessageView{Tick: ev.Tick, X: x, Y: y,
 			Text: fmt.Sprintf("Plugin %s: script %s stopped and is off for this run (%s). See Plugins > Problems.", p.Plugin, where, p.Msg)})
 	}
+	return res
 }
 
-// applyScript applies a script's command (tick.go) on the home map.
+// applyScript applies a script's command (tick.go) on the home map, and
+// a panel's ScriptAction on whichever map the player sent it from.
 func applyScript(g *Game, c command.Command) {
 	switch c.Kind {
+	case command.ScriptOrder:
+		scriptOrder(g, c)
+	case command.ScriptPlace:
+		k, ok := scriptKind(g, c.Name)
+		if ok && c.Count > 0 && g.grid.InBounds(c.X, c.Y) && cellStandable(g, c.X, c.Y) {
+			g.dropStack(k, min(c.Count, scripting.MaxSpawn), c.X, c.Y)
+		}
+	case command.ScriptAction:
+		plugin, action, _ := strings.Cut(c.Name, "\n")
+		if x := g.scripts.ext; x != nil && panelHas(g.scripts.panels, plugin, action) {
+			ev := scripting.Event{Tick: uint64(g.clock.Now()), Plugin: plugin, Action: action}
+			scriptCall(g, ev, func(ev scripting.Event, w *scriptWorld) scripting.Result { return x.Act(ev, w, w) })
+		}
 	case command.ScriptMessage:
 		x, y := g.home()
 		m := MessageView{Tick: uint64(g.clock.Now()), X: x, Y: y, Text: c.Name}
@@ -194,6 +394,63 @@ func applyScript(g *Game, c command.Command) {
 		x, y := g.home()
 		g.dropStack(k, min(c.Count, scripting.MaxSpawn), x, y)
 	}
+}
+
+// panelHas reports that plugin's last panel offers action id.
+func panelHas(ps []scripting.Panel, plugin, id string) bool {
+	for _, p := range ps {
+		if p.Plugin == plugin && slices.ContainsFunc(p.Actions, func(a scripting.PanelAction) bool { return a.ID == id }) {
+			return true
+		}
+	}
+	return false
+}
+
+// scriptOrderDue reports that ScriptOrder c may act: it was queued on
+// its pawn's order visit (the stamped tick is a cadence visit of the pawn
+// and one in scripting.OrderEvery of them, and the first order of that
+// visit, so a pawn takes at most one script order per
+// OrderEvery*PawnEvery ticks), the pawn is a home colonist not in a
+// mental break, and the order is in the closed set.
+func scriptOrderDue(g *Game, c command.Command) bool {
+	id, at := entity.EntityID(c.Pawn), c.Target
+	if at/scripting.PawnEvery%scripting.OrderEvery != 0 || !cadence.Due(at, scripting.PawnEvery, cadence.OffPawnScripts, id) {
+		return false
+	}
+	if at == g.scripts.orderAt && slices.Contains(g.scripts.ordered, id) {
+		return false
+	}
+	switch c.Order {
+	case command.OrderHaul, command.OrderCut, command.OrderMine, command.OrderHarvest, command.OrderChopWood, command.OrderSleep, command.OrderEat:
+	default:
+		return false
+	}
+	_, breaking := g.breaks[id]
+	return !breaking && homeColonist(g, id) && g.alive(id)
+}
+
+// scriptOrder gives a due pawn its script order, checked like a
+// player's prioritize (forcedJob) with a refusal silent; a job the pawn
+// already runs (same kind and target) is left alone, so re-sending it
+// never restarts it.
+func scriptOrder(g *Game, c command.Command) {
+	if !scriptOrderDue(g, c) {
+		return
+	}
+	id := entity.EntityID(c.Pawn)
+	if s := &g.scripts; c.Target != s.orderAt {
+		s.ordered, s.orderAt = s.ordered[:0], c.Target
+	}
+	g.scripts.ordered = append(g.scripts.ordered, id)
+	rec, why := g.forcedJob(id, c.Order, c.X, c.Y, 0)
+	if why != "" {
+		return
+	}
+	if j, ok := g.jobs.Get(id); ok && j.Kind == rec.Kind && j.State != job.Fail && j.State != job.Complete &&
+		j.Target == rec.Target && (rec.Target != 0 || j.DestX == rec.DestX && j.DestY == rec.DestY) {
+		return
+	}
+	g.prioritize(id, c.Order, c.X, c.Y, 0)
 }
 
 // scriptKind is the item kind of key: the run's item book's.

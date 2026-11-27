@@ -35,6 +35,12 @@ type Manifest struct {
 	After       []string `json:"after"`     // load after these when enabled
 	Before      []string `json:"before"`    // load before these when enabled
 	Conflicts   []string `json:"conflicts"` // never enabled together
+	// API is the plugin API version it is written for (pluginapi.Version);
+	// 0 means it declares none.
+	API int `json:"api"`
+	// Capabilities are the pluginapi capability names it asks for; nil
+	// (absent) means the legacy set, an empty list none (CapsOf).
+	Capabilities []string `json:"capabilities"`
 }
 
 // File is one decoded JSON file of a plugin.

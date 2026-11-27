@@ -181,6 +181,7 @@ func (l *Lab) finish(x, y int) {
 	}
 	l.h.Letter("Research complete: "+d.Label, text, x, y)
 	l.Set, l.Carry = false, 0
+	l.h.Finished(l.book().Key(l.Cur))
 }
 
 // CostOf is project p's cost to this colony, percent of its base cost

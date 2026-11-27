@@ -1,0 +1,10 @@
+{
+  "id": "extapi_newer",
+  "name": "Extension API fixture (newer API)",
+  "authors": ["rimworld-go"],
+  "version": "1.0.0",
+  "game": ["0.1"],
+  "api": 2,
+  "capabilities": ["query", "commands"],
+  "description": "Needs plugin API 2, which this game does not have: refused."
+}

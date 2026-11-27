@@ -32,7 +32,10 @@ type fakeHost struct {
 	researcher      bool
 	started, worked int
 	book            proj.Book // the run's projects (zero: core)
+	finished        []string  // Finished keys, in order
 }
+
+func (f *fakeHost) Finished(key string) { f.finished = append(f.finished, key) }
 
 func newFake() *fakeHost {
 	return &fakeHost{bldgs: map[entity.EntityID]construction.Building{}, off: map[entity.EntityID]bool{}, temp: 210,

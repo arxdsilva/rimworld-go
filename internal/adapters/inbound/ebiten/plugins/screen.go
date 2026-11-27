@@ -104,6 +104,22 @@ func (s *Screen) footer(sh int, backID string) float32 {
 // rowH is a list row: two lines of body text.
 func rowH() float32 { return float32(2*gfx.LineH(gfx.Body)) + 10 }
 
+// bodyRect is the content area of a window sw by sh.
+func bodyRect(sw, sh int) gfx.Rect {
+	return gfx.Rect{X: margin, Y: top, W: float32(sw - 2*margin), H: float32(sh-footerUp-gap) - top}
+}
+
+// listRect is the list column of body, right of the checkboxes.
+func listRect(body gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: body.X + checkW, Y: body.Y, W: min(520, body.W*0.45), H: body.H}
+}
+
+// detailRect is the detail pane of body, right of the list.
+func detailRect(body gfx.Rect) gfx.Rect {
+	list := listRect(body)
+	return gfx.Rect{X: list.Right() + gap, Y: body.Y, W: body.Right() - list.Right() - gap, H: body.H}
+}
+
 // declareList is the Plugin Manager: the list on the left with its
 // checkboxes, the selected plugin's detail on the right.
 func (s *Screen) declareList(sw, sh int) {
@@ -119,21 +135,20 @@ func (s *Screen) declareList(sw, sh int) {
 		s.overList = true
 		s.sh.Do(ports.Push{Screen: ports.ScreenPluginProblems})
 	}
-	body := gfx.Rect{X: margin, Y: top, W: float32(sw - 2*margin), H: float32(sh-footerUp-gap) - top}
+	body := bodyRect(sw, sh)
 	if len(v.Rows) == 0 {
 		s.declareEmpty(body, v)
 		return
 	}
 	s.sel = max(0, min(s.sel, len(v.Rows)-1))
-	listW := min(520, body.W*0.45)
-	list := gfx.Rect{X: body.X + checkW, Y: body.Y, W: listW, H: body.H}
-	k.Panel(gfx.Rect{X: body.X, Y: body.Y, W: checkW + listW, H: body.H}) // under the boxes and the rows
+	list := listRect(body)
+	k.Panel(gfx.Rect{X: body.X, Y: body.Y, W: checkW + list.W, H: body.H}) // under the boxes and the rows
 	s.declareChecks(v, list)
 	on := s.enabledNow()
 	k.List(ListID, list, len(v.Rows), &s.sel, uikit.ListSpec{RowH: rowH(), Draw: func(dst *ebiten.Image, i int, row gfx.Rect, hover, selected bool) {
 		s.drawRow(dst, v, i, row, hover, selected, on)
 	}})
-	detail := gfx.Rect{X: list.Right() + gap, Y: body.Y, W: body.Right() - list.Right() - gap, H: body.H}
+	detail := detailRect(body)
 	var stats []ModStat
 	if v.Stats != nil {
 		stats = v.Stats() // once per frame (PLG-063)
@@ -254,6 +269,7 @@ func (s *Screen) detailLines(v View, r Row, on map[string]bool, stats []ModStat)
 	dim := gfx.WithColor(gfx.Body, uikit.TextDim)
 	out := []line{{text: r.Name, st: gfx.WithColor(gfx.Large, uikit.Heading)}}
 	out = append(out, line{text: s.sh.Tf("%s · version %s · by %s", r.ID, r.Version, s.listOr(r.Authors)), st: dim})
+	out = append(out, s.apiLines(r, dim)...)
 	if r.Description != "" {
 		out = append(out, line{text: r.Description, st: gfx.Body})
 	}
@@ -286,6 +302,28 @@ func (s *Screen) detailLines(v View, r Row, on map[string]bool, stats []ModStat)
 			continue
 		}
 		out = append(out, problemLine(s.sh, p))
+	}
+	return out
+}
+
+// apiLines are the plugin API version and the capabilities the host grants
+// (read-only): "none declared" without an API, the legacy default marked,
+// and a note when Wasm scripts are not yet held to them.
+func (s *Screen) apiLines(r Row, dim gfx.TextStyle) []line {
+	api := s.sh.T("none declared")
+	if r.API > 0 {
+		api = strconv.Itoa(r.API)
+	}
+	caps := s.listOr(r.Caps)
+	if r.LegacyCaps {
+		caps = s.sh.Tf("%s (legacy default)", caps)
+	}
+	out := []line{
+		{text: s.sh.Tf("Plugin API: %s", api), st: gfx.Body},
+		{text: s.sh.Tf("Capabilities: %s", caps), st: gfx.Body},
+	}
+	if r.HasWasm {
+		out = append(out, line{text: s.sh.T("(capabilities are not enforced for Wasm scripts yet)"), st: dim})
 	}
 	return out
 }
@@ -343,28 +381,49 @@ func (s *Screen) declareDetail(v View, r Row, box gfx.Rect, on map[string]bool, 
 	paintLines(k, box, lines)
 }
 
-// paintLines queues wrapped lines inside box, stopping at its foot.
-func paintLines(k *uikit.Kit, box gfx.Rect, lines []line) {
-	k.Queue(func(dst *ebiten.Image) {
-		x, y := float64(box.X+pad), float64(box.Y+pad)
-		w := float64(box.W - 2*pad)
-		for _, l := range lines {
-			st := l.st
-			if st.Size == 0 {
-				st = gfx.Body
-			}
-			lh := gfx.LineH(st)
-			if l.text == "" {
-				y += lh / 2
+// placed is one wrapped part of a line at its y.
+type placed struct {
+	text string
+	st   gfx.TextStyle
+	y    float64
+}
+
+// layoutLines wraps lines to box and places them from its top; dropped
+// counts the wrapped parts that do not fit above its foot.
+func layoutLines(box gfx.Rect, lines []line) (out []placed, dropped int) {
+	y := float64(box.Y + pad)
+	w := float64(box.W - 2*pad)
+	full := false // painting stops at the first part that overflows
+	for _, l := range lines {
+		st := l.st
+		if st.Size == 0 {
+			st = gfx.Body
+		}
+		lh := gfx.LineH(st)
+		if l.text == "" {
+			y += lh / 2
+			continue
+		}
+		for _, part := range gfx.WrapPx(l.text, st, w) {
+			if full || y+lh > float64(box.Bottom()-pad) {
+				full = true
+				dropped++
 				continue
 			}
-			for _, part := range gfx.WrapPx(l.text, st, w) {
-				if y+lh > float64(box.Bottom()-pad) {
-					return
-				}
-				gfx.Text(dst, part, x, y, st)
-				y += lh
-			}
+			out = append(out, placed{part, st, y})
+			y += lh
+		}
+	}
+	return out, dropped
+}
+
+// paintLines queues wrapped lines inside box, stopping at its foot.
+func paintLines(k *uikit.Kit, box gfx.Rect, lines []line) {
+	parts, _ := layoutLines(box, lines)
+	x := float64(box.X + pad)
+	k.Queue(func(dst *ebiten.Image) {
+		for _, p := range parts {
+			gfx.Text(dst, p.text, x, p.y, p.st)
 		}
 	})
 }

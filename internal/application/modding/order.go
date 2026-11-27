@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+
+	"rimworld-go/internal/application/pluginapi"
 )
 
 const manifestFile = "plugin.json"
@@ -100,6 +102,31 @@ func CheckManifest(m Manifest) []Problem {
 	checkIDList("conflicts", m.Conflicts, false)
 	if m.URL != "" && !strings.HasPrefix(m.URL, "https://") && !strings.HasPrefix(m.URL, "http://") {
 		add("url", "url must start with https:// or http://")
+	}
+	out = append(out, checkAPI(m, plugin)...)
+	return out
+}
+
+// checkAPI checks the plugin API version and capability names (PLG-api).
+func checkAPI(m Manifest, plugin string) []Problem {
+	var out []Problem
+	add := func(field, msg string, warn bool) {
+		out = append(out, Problem{Plugin: plugin, File: manifestFile, Field: field, Msg: msg, Warn: warn})
+	}
+	switch {
+	case m.API == 0:
+		add("api", "declares no plugin API version; treated as 1", true)
+	case m.API > pluginapi.Version:
+		add("api", fmt.Sprintf("needs plugin API %d; this game has %d", m.API, pluginapi.Version), false)
+	case m.API < pluginapi.MinVersion:
+		add("api", fmt.Sprintf("plugin API %d is not supported; this game runs %d to %d", m.API, pluginapi.MinVersion, pluginapi.Version), false)
+	}
+	_, unknown, dup := pluginapi.Parse(m.Capabilities)
+	for _, n := range unknown {
+		add("capabilities", fmt.Sprintf("unknown capability %q", n), false)
+	}
+	for _, n := range dup {
+		add("capabilities", fmt.Sprintf("capability %q is listed twice", n), true)
 	}
 	return out
 }

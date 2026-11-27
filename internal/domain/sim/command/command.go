@@ -480,6 +480,15 @@ const (
 	// SetBillRange sets the condition range for bill Index at X,Y.
 	// Mode selects BillRangeHP or BillRangeQuality; X2,Y2 are inclusive bounds.
 	SetBillRange
+	// Plugin extension commands (application/scripting), on the colony's
+	// home map; appended so no existing kind's number moves.
+	// ScriptOrder asks colonist Pawn to take player order Order at X,Y,
+	// checked like a player's prioritize; a refusal does nothing.
+	ScriptOrder
+	// ScriptPlace drops Count items of key Name ("core.wood") at X,Y.
+	ScriptPlace
+	// ScriptAction runs a plugin panel's action: Name is "plugin\naction".
+	ScriptAction
 )
 
 const (

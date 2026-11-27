@@ -29,6 +29,7 @@ import (
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
+	"rimworld-go/internal/domain/pawn/stat/statmod"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -261,6 +262,9 @@ func (g *Game) rebuildStats(id entity.EntityID) {
 		return
 	}
 	layers := append(pawngen.StatLayers(p, traitsOf(g)), g.difficultyMods(), gearfacts.Mods(gm), bodyMods(key))
+	if sm := g.sk.content.StatMods; len(sm.Defs) > 0 { // the plugins' stat_mods, last
+		layers = append(layers, sm.Layer(statFacts(g, p, key)))
+	}
 	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(backstoriesOf(g), traitsOf(g)), traits: p.Traits, body: key, bodyAim: bodyAimOf(bk), gear: gm}
 	fx.neutral = fx.sheet == stat.Base()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
@@ -271,6 +275,22 @@ func (g *Game) rebuildStats(id entity.EntityID) {
 		}
 	}
 	g.sk.stats[id] = fx
+}
+
+// statFacts is what a stat_mod's condition reads of p: its trait and
+// bio condition keys, and injured when its body moves a stat (key is not
+// healthy). Each changes only where the sheet is rebuilt: a new bio
+// (giveBio), a stat-moving body change (bodyChanged) and every load
+// (importBios, body import).
+func statFacts(g *Game, p pawngen.Pawn, key bodyStatKey) statmod.Facts {
+	f := statmod.Facts{Injured: key != healthyStatKey}
+	for _, t := range p.Traits {
+		f.Traits = append(f.Traits, traitsOf(g).Key(t))
+	}
+	for _, c := range p.Conditions {
+		f.Conditions = append(f.Conditions, c.Key())
+	}
+	return f
 }
 
 // rebuildAllStats rebuilds every sheet (difficulty change; SETUP calls it
