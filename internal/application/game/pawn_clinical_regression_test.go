@@ -53,7 +53,7 @@ func TestCaptivityThoughtOnce(t *testing.T) {
 		}
 	}
 	if count != 1 {
-		t.Fatalf("imprisoned count=%d total=%d expected one thought=%d", count, total, mood.DefOf(mood.Imprisoned).Value)
+		t.Fatalf("imprisoned count=%d total=%d expected one thought=%d", count, total, mood.Core().DefOf(mood.Imprisoned).Value)
 	}
 }
 func TestPrisonerMoodConsumer(t *testing.T) {

@@ -6,6 +6,6 @@
   "game": ["0.1"],
   "api": 1,
   "capabilities": ["query", "commands", "events"],
-  "description": "An example plugin that shows how plugins work. It adds frontier backstories (two share an abstract template), a Trail-wise trait, a slat carpet you can lash at a crafting spot once Slat weaving is researched, trail bells cast from steel at a workbench (a smelter takes them back), a frontier hoedown event, a Portuguese (pt-BR) translation of its text and a small script that posts a note every fifth day. It also patches the game's own content: a backstory, the Sunny trait, straw carpets (quicker to sew), carpet research (cheaper), wool (worth a little more) and herd crossings (more common).",
+  "description": "An example plugin that shows how plugins work. It adds frontier backstories (two share an abstract template), a Trail-wise trait, a slat carpet you can lash at a crafting spot once Slat weaving is researched, trail bells cast from steel at a workbench (a smelter takes them back), a frontier hoedown event, a Portuguese (pt-BR) translation of its text and a small script that posts a note every fifth day. It also patches the game's own content: a backstory, the Sunny trait, straw carpets (quicker to sew), carpet research (cheaper), wool (worth a little more), herd crossings (more common) and the sting of sleeping outside (a little milder).",
   "url": "https://github.com/arxdsilva/rimworld-go"
 }

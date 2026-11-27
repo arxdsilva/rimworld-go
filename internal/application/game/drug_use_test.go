@@ -128,10 +128,10 @@ func TestDrugTipsyThoughtDecaysThenHangover(t *testing.T) {
 	}
 	found := false
 	for _, th := range g.Snapshot()[0].Thoughts {
-		found = found || th.Label == mood.DefOf(mood.Drunk).Label
+		found = found || th.Label == mood.Core().DefOf(mood.Drunk).Label
 	}
 	if !found {
-		t.Fatalf("Needs tab thoughts %+v lack %q", g.Snapshot()[0].Thoughts, mood.DefOf(mood.Drunk).Label)
+		t.Fatalf("Needs tab thoughts %+v lack %q", g.Snapshot()[0].Thoughts, mood.Core().DefOf(mood.Drunk).Label)
 	}
 	if len(doseOf(g).Lines(id)) == 0 {
 		t.Fatal("the Health tab shows the alcohol line")

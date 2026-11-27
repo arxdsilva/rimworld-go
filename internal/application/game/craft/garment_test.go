@@ -75,25 +75,25 @@ func TestOutfitSaveAndLegacy(t *testing.T) {
 func TestOutfitThoughts(t *testing.T) {
 	t.Parallel()
 	var o Outfit
-	if ts := o.AppendThoughts(nil); ts != nil {
+	if ts := o.AppendThoughts(mood.Core(), nil); ts != nil {
 		t.Fatal("bare: no thoughts")
 	}
 	o.On[item.Body] = Piece{Kind: item.Duster, Stuff: item.Cloth} // 200 HP
-	if ts := o.AppendThoughts(nil); ts != nil {
+	if ts := o.AppendThoughts(mood.Core(), nil); ts != nil {
 		t.Fatal("fine clothes: no thoughts")
 	}
 	o.On[item.Body].Wear = 100 // 50 %: ratty
-	ts := o.AppendThoughts(nil)
+	ts := o.AppendThoughts(mood.Core(), nil)
 	if len(ts) != 1 || ts[0].Kind != mood.RattyApparel || ts[0].Value != -3 {
 		t.Fatalf("ratty %v", ts)
 	}
 	o.On[item.Head] = Piece{Kind: item.Tuque, Stuff: item.Cloth, Wear: 70} // 10 of 80: tattered
-	ts = o.AppendThoughts(nil)
+	ts = o.AppendThoughts(mood.Core(), nil)
 	if len(ts) != 1 || ts[0].Kind != mood.TatteredApparel || ts[0].Value != -5 {
 		t.Fatalf("tattered (the worst piece) %v", ts)
 	}
 	o = o.Taint(7)
-	ts = o.AppendThoughts(nil)
+	ts = o.AppendThoughts(mood.Core(), nil)
 	if len(ts) != 2 || ts[1].Kind != mood.TaintedApparel || ts[1].Value != -8 {
 		t.Fatalf("two tainted %v", ts)
 	}

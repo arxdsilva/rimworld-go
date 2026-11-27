@@ -306,10 +306,10 @@ func missingPart(b *body.Body) bool {
 // bodyThoughts are id's body state thoughts: missing a part (no implant in
 // its place). Being disfigured has no thought of its own (others see it).
 func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
-	ts := g.apparel[id].AppendThoughts(nil) // craft/garment.go (PRD-2): ratty, tattered and tainted apparel
+	book := thoughtsOf(g)
+	ts := g.apparel[id].AppendThoughts(book, nil) // craft/garment.go (PRD-2): ratty, tattered and tainted apparel
 	if b := g.bodies[id]; b != nil && body.HasImplant(b, body.Brain, item.BlissCircuit) {
-		d := mood.DefOf(mood.BlissCircuit)
-		ts = append(ts, mood.Thought{Kind: mood.BlissCircuit, Label: d.Label, Value: d.Value})
+		ts = book.AppendActive(ts, nil, mood.BlissCircuit)
 	}
 	if bio, ok := g.bioFor(id); ok {
 		count := 0
@@ -321,8 +321,7 @@ func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
 	if !missingPart(g.bodies[id]) {
 		return ts
 	}
-	d := mood.DefOf(mood.MissingPart)
-	return append(ts, mood.Thought{Kind: mood.MissingPart, Label: d.Label, Value: d.Value})
+	return book.AppendActive(ts, nil, mood.MissingPart)
 }
 
 // conditionRows fills the Health tab's condition rows (MED-02) and lets

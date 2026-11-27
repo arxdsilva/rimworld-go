@@ -195,16 +195,16 @@ func TestAteThoughts(t *testing.T) {
 		{meal(item.NutrientPasteMeal, item.InsectMeat), false, -7, []mood.Kind{mood.AtePaste, mood.AteInsectMeatCooked}},
 	}
 	for i, c := range cases {
-		ts := AppendAte(nil, c.st, c.cannibal)
+		ts := AppendAte(mood.Core(), nil, c.st, c.cannibal)
 		var kinds []mood.Kind
 		for _, x := range ts {
 			kinds = append(kinds, x.Kind)
 		}
-		if AteMood(c.st, c.cannibal) != c.want || !reflect.DeepEqual(kinds, c.kinds) {
-			t.Errorf("case %d %s: mood %d %v, want %d %v", i, c.st.Kind, AteMood(c.st, c.cannibal), kinds, c.want, c.kinds)
+		if AteMood(mood.Core(), c.st, c.cannibal) != c.want || !reflect.DeepEqual(kinds, c.kinds) {
+			t.Errorf("case %d %s: mood %d %v, want %d %v", i, c.st.Kind, AteMood(mood.Core(), c.st, c.cannibal), kinds, c.want, c.kinds)
 		}
 	}
-	if ts := AppendAte(nil, meal(item.HumanMeat), true); ts[1].Label != cannibalRaw || ts[1].Value != 20 {
+	if ts := AppendAte(mood.Core(), nil, meal(item.HumanMeat), true); ts[1].Label != cannibalRaw || ts[1].Value != 20 {
 		t.Fatalf("a cannibal relishes it: %+v", ts)
 	}
 }
@@ -215,7 +215,7 @@ func TestAteThoughts(t *testing.T) {
 func TestScoreWeighsTasteAndWalk(t *testing.T) {
 	t.Parallel()
 	var b Book
-	p := b.Picker(1, false, false)
+	p := b.Picker(mood.Core(), 1, false, false)
 	st := func(k item.Kind) *item.Stack { return &item.Stack{Kind: k, Qty: 1} }
 	if p.Score(st(item.LavishMeal), 60) <= p.Score(st(item.Meal), 0) {
 		t.Fatal("a lavish meal is worth a walk")
@@ -237,10 +237,10 @@ func TestScoreWeighsTasteAndWalk(t *testing.T) {
 		t.Fatal("a person never eats hay; a carcass only when desperate")
 	}
 	b.Apply(command.Command{Kind: command.SetFoodPolicy, Pawn: 1, Index: Nothing}, fakeEaters)
-	if b.Picker(1, false, false).Takes(st(item.Meal)) || !b.Picker(1, true, false).Takes(st(item.Meal)) || !b.Picker(1, true, false).Takes(&item.Stack{Kind: item.CorpseAnimal, Qty: 1}) {
+	if b.Picker(mood.Core(), 1, false, false).Takes(st(item.Meal)) || !b.Picker(mood.Core(), 1, true, false).Takes(st(item.Meal)) || !b.Picker(mood.Core(), 1, true, false).Takes(&item.Stack{Kind: item.CorpseAnimal, Qty: 1}) {
 		t.Fatal("the policy holds unless malnourished")
 	}
-	if b.Picker(2, false, true).Score(st(item.HumanMeat), 0) <= b.Picker(2, false, false).Score(st(item.HumanMeat), 0) {
+	if b.Picker(mood.Core(), 2, false, true).Score(st(item.HumanMeat), 0) <= b.Picker(mood.Core(), 2, false, false).Score(st(item.HumanMeat), 0) {
 		t.Fatal("a cannibal rates human flesh higher")
 	}
 }
@@ -291,7 +291,7 @@ func (r ruled) Rules() gameplay.Settings { return r.s }
 func TestScorePrefersSpoiling(t *testing.T) {
 	t.Parallel()
 	var b Book
-	p := b.Picker(1, false, false).Under(ruled{})
+	p := b.Picker(mood.Core(), 1, false, false).Under(ruled{})
 	day := clock.TicksPerDay
 	if SpoilBonus(0) != 0 || SpoilBonus(3*day) != 0 || SpoilBonus(4*day) != 0 {
 		t.Fatal("no bonus for food that keeps or has days to spare")
@@ -318,7 +318,7 @@ func TestScorePrefersSpoiling(t *testing.T) {
 func TestScoreOffKeepsOldBonus(t *testing.T) {
 	t.Parallel()
 	var b Book
-	off := b.Picker(1, false, false).Under(ruled{gameplay.Settings{}.With(gameplay.SpoilingMeals, false)})
+	off := b.Picker(mood.Core(), 1, false, false).Under(ruled{gameplay.Settings{}.With(gameplay.SpoilingMeals, false)})
 	fresh := &item.Stack{Kind: item.Meal, Qty: 1}
 	two := &item.Stack{Kind: item.Meal, Qty: 1, Rot: item.Meal.ShelfTicks() - 2*clock.TicksPerDay}
 	soon := &item.Stack{Kind: item.Meal, Qty: 1, Rot: item.Meal.ShelfTicks() - 1000}
@@ -334,7 +334,7 @@ func BenchmarkPickerScore(b *testing.B) {
 	st := &item.Stack{Kind: item.Meal, Qty: 1, Rot: item.Meal.ShelfTicks() - clock.TicksPerDay}
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		p := bk.Picker(1, false, false).Under(ruled{})
+		p := bk.Picker(mood.Core(), 1, false, false).Under(ruled{})
 		_ = p.Takes(st)
 		_ = p.Score(st, i&63)
 	}

@@ -446,7 +446,7 @@ func TestSocialMoodSmoothing(t *testing.T) {
 	g.stepMood(a)
 	start := g.moodOf(a)
 	for range 5 {
-		g.memories[a] = g.memories[a].Add(mood.Catharsis, socNow(g))
+		g.memories[a] = mood.Core().Add(g.memories[a], mood.Catharsis, socNow(g))
 	}
 	target := mood.Level(g.thoughts(a))
 	if target <= start+5 {

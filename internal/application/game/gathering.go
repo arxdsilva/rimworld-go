@@ -187,7 +187,7 @@ func (h gatherHearts) AddJoy(id entity.EntityID, n int) {
 	addRecreation(h.g, id, n)
 }
 func (h gatherHearts) Remember(id entity.EntityID, t mood.Kind, other entity.EntityID, now uint64) {
-	h.g.memories[id] = h.g.memories[id].AddFor(t, uint64(other), now)
+	h.g.memories[id] = thoughtsOf(h.g).AddFor(h.g.memories[id], t, uint64(other), now)
 }
 
 type gatherTidings struct{ g *Game }

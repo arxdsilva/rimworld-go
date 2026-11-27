@@ -32,11 +32,10 @@ func (g *Game) socialThoughts(id entity.EntityID) []mood.Thought {
 		return out
 	}
 	if v := partnerMood(g.opinion(id, p)); v != 0 {
-		out = append(out, mood.Thought{Kind: mood.PartnerOpinion, Label: mood.DefOf(mood.PartnerOpinion).Label, Value: v})
+		out = append(out, mood.Thought{Kind: mood.PartnerOpinion, Label: thoughtsOf(g).DefOf(mood.PartnerOpinion).Label, Value: v})
 	}
 	if g.sleptAlone(id, p) {
-		d := mood.DefOf(mood.SleptAlone)
-		out = append(out, mood.Thought{Kind: mood.SleptAlone, Label: d.Label, Value: d.Value})
+		out = thoughtsOf(g).AppendActive(out, nil, mood.SleptAlone)
 	}
 	return out
 }

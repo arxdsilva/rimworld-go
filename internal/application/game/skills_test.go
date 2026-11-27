@@ -405,7 +405,7 @@ func TestTraitMoodAndBreakOffsets(t *testing.T) {
 	for _, id := range []entity.EntityID{base, fussy} {
 		g.remember(id, mood.SleptOutside)
 	}
-	if d := g.moodOf(fussy) - m; d != 2*mood.DefOf(mood.SleptOutside).Value {
+	if d := g.moodOf(fussy) - m; d != 2*mood.Core().DefOf(mood.SleptOutside).Value {
 		t.Errorf("fussy slept-outside %d", d)
 	}
 	if g.breakOffset(sunny) != 6 || g.breakOffset(gloom) != -6 {

@@ -34,7 +34,7 @@ func (h peerMealHost) BesideSpot(id entity.EntityID, x, y int) (int, int, bool) 
 func (h peerMealHost) InArea(id entity.EntityID, x, y int) bool { return h.g.inArea(id, x, y) }
 func (h peerMealHost) Picker(id entity.EntityID) diet.Picker {
 	g := h.g
-	return g.sk.diet.Picker(id, body.Malnutrition(g.bodies[id]) > 0, cannibal(g, id)).Under(dietEaters{g})
+	return g.sk.diet.Picker(thoughtsOf(g), id, body.Malnutrition(g.bodies[id]) > 0, cannibal(g, id)).Under(dietEaters{g})
 }
 
 type peerTransferHost struct{ peerMealHost }

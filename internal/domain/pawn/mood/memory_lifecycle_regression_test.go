@@ -14,8 +14,8 @@ func TestForgetExpired(t *testing.T) {
 	}
 }
 func TestGriefNotConditional(t *testing.T) {
-	m := Memories(nil).AddLabeledUntil(Grief, 42, -20, "grief", 0, 100)
-	got := NullifyConditional(AppendActiveAt(nil, m, 10), 10000, 1, 42, 1)
+	m := cb.AddLabeledUntil(nil, Grief, 42, -20, "grief", 0, 100)
+	got := NullifyConditional(cb.AppendActiveAt(nil, m, 10), 10000, 1, 42, 1)
 	if len(got) != 1 {
 		t.Fatalf("unexpired event memory disappeared from active thoughts: got=%+v saved=%+v", got, m)
 	}

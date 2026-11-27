@@ -145,7 +145,7 @@ func (g *Game) bondMemory(bond uint64, id entity.EntityID, k mood.Kind) {
 	if bio, _ := g.personBio(c); social.ExemptFromGrief(bio.Traits) {
 		return
 	}
-	g.memories[c] = g.memories[c].AddFor(k, uint64(id), uint64(g.clock.Now()))
+	g.memories[c] = thoughtsOf(g).AddFor(g.memories[c], k, uint64(id), uint64(g.clock.Now()))
 }
 
 // bondThoughts are pawn id's bond state thoughts: glad to be its bonded
@@ -168,19 +168,14 @@ func (g *Game) bondThoughts(id entity.EntityID) []mood.Thought {
 	}
 	var out []mood.Thought
 	if master {
-		out = append(out, stateThought(mood.BondedMaster))
+		out = thoughtsOf(g).AppendActive(out, nil, mood.BondedMaster)
 	}
 	if kept {
 		if bio, _ := g.personBio(id); !social.ExemptFromGrief(bio.Traits) {
-			out = append(out, stateThought(mood.BondedNotMaster))
+			out = thoughtsOf(g).AppendActive(out, nil, mood.BondedNotMaster)
 		}
 	}
 	return out
-}
-
-func stateThought(k mood.Kind) mood.Thought {
-	d := mood.DefOf(k)
-	return mood.Thought{Kind: k, Label: d.Label, Value: d.Value}
 }
 
 // onAnimalDied is called from killAnimal before the animal is removed;

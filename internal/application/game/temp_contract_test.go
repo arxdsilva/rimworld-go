@@ -132,12 +132,12 @@ func TestTempContractConditionsMoodsIncidents(t *testing.T) {
 	}
 	for k, v := range map[mood.Kind]int{mood.Chilly: -4, mood.Shivering: -8, mood.NumbingCold: -12, mood.AbsolutelyFreezing: -16,
 		mood.Sweaty: -4, mood.Overheated: -8, mood.Baking: -12, mood.BlisteringHot: -16, mood.Naked: -6} {
-		if d := mood.DefOf(k); d.Value != v || d.Label == "" || d.Duration != 0 {
+		if d := mood.Core().DefOf(k); d.Value != v || d.Label == "" || d.Duration != 0 {
 			t.Errorf("mood %d: %+v, want %d", k, d, v)
 		}
 	}
-	if mood.DefOf(mood.Chilly).Group == 0 || mood.DefOf(mood.Chilly).Group != mood.DefOf(mood.AbsolutelyFreezing).Group ||
-		mood.DefOf(mood.Sweaty).Group == mood.DefOf(mood.Chilly).Group {
+	if mood.Core().DefOf(mood.Chilly).Group == 0 || mood.Core().DefOf(mood.Chilly).Group != mood.Core().DefOf(mood.AbsolutelyFreezing).Group ||
+		mood.Core().DefOf(mood.Sweaty).Group == mood.Core().DefOf(mood.Chilly).Group {
 		t.Error("each ladder is one group (its rungs never stack)")
 	}
 	g := NewColony(Config{Seed: 3, Width: 30, Height: 30})

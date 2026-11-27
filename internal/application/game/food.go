@@ -271,7 +271,7 @@ func (g *Game) markRipeHarvest(id entity.EntityID) {
 // policy, taste and distance; a malnourished eater takes anything).
 func (g *Game) bestFood(id, eater entity.EntityID) (best entity.EntityID, bx, by, score int) {
 	pos, _ := g.positions.Get(id)
-	pick := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)).Under(dietEaters{g})
+	pick := g.sk.diet.Picker(thoughtsOf(g), eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)).Under(dietEaters{g})
 	for _, iid := range g.itemIDs {
 		st := g.stacks.Ref(iid) // read only: nothing below changes the store
 		if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden && !g.breaking(id) || !pick.Takes(st) ||
@@ -296,7 +296,7 @@ func (g *Game) bestFood(id, eater entity.EntityID) (best entity.EntityID, bx, by
 // whose meal scores higher (STO-2).
 func mealFor(g *Game, id, eater entity.EntityID) (food entity.EntityID, x, y int, paste bool) {
 	best, bx, by, score := g.bestFood(id, eater)
-	pick, meal := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)).Under(dietEaters{g}), item.Stack{Kind: item.NutrientPasteMeal}
+	pick, meal := g.sk.diet.Picker(thoughtsOf(g), eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)).Under(dietEaters{g}), item.Stack{Kind: item.NutrientPasteMeal}
 	if !pick.Allows(meal.Kind) || best != 0 && pick.Score(&meal, 0) <= score {
 		return best, bx, by, false // even at the door paste would lose
 	}

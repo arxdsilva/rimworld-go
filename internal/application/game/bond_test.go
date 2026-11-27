@@ -296,7 +296,7 @@ func TestBondGriefOnlyForBondedOwner(t *testing.T) {
 	if bondMemCount(g, ada, mood.BondedDied) != 1 || bondMemCount(g, bo, mood.BondedDied) != 0 {
 		t.Fatalf("grief: ada %v, bo %v", g.memories[ada], g.memories[bo])
 	}
-	if d := mood.DefOf(mood.BondedDied); d.Value != -8 || d.Duration != 20*60000 {
+	if d := mood.Core().DefOf(mood.BondedDied); d.Value != -8 || d.Duration != 20*60000 {
 		t.Fatalf("bonded died def %+v", d)
 	}
 	// a cold-hearted owner does not grieve

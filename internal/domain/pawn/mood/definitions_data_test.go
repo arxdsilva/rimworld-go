@@ -79,7 +79,7 @@ func TestDefinitionsMatchReviewedData(t *testing.T) {
 	}
 	for band := expectations.ExtremelyLow; band <= expectations.SkyHigh; band++ {
 		kind := ExpectationsExtremelyLow + Kind(band)
-		if got, want := DefOf(kind).Value, band.Effects().MoodBonus; got != want {
+		if got, want := cb.DefOf(kind).Value, band.Effects().MoodBonus; got != want {
 			t.Fatalf("wealth-band mood %d changed: %d, want %d", band, got, want)
 		}
 	}

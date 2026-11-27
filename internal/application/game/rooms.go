@@ -159,7 +159,7 @@ func (g *Game) RoomInfo(x, y int) (RoomView, bool) {
 // --- thoughts and mood ---------------------------------------------
 
 func (g *Game) remember(id entity.EntityID, k mood.Kind) {
-	g.memories[id] = g.memories[id].Add(k, uint64(g.clock.Now()))
+	g.memories[id] = thoughtsOf(g).Add(g.memories[id], k, uint64(g.clock.Now()))
 }
 
 func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
@@ -190,7 +190,7 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	case needs.Ravenous:
 		states = append(states, mood.Ravenous)
 	case needs.Malnourished: // its mood by the malnutrition stage
-		dst = append(dst, mood.Thought{Kind: mood.Malnourished, Label: mood.DefOf(mood.Malnourished).Label, Value: body.MalnourishedMood(body.Malnutrition(g.bodies[id]))})
+		dst = append(dst, mood.Thought{Kind: mood.Malnourished, Label: thoughtsOf(g).DefOf(mood.Malnourished).Label, Value: body.MalnourishedMood(body.Malnutrition(g.bodies[id]))})
 	}
 	if n.Tired() {
 		states = append(states, mood.Tired)
@@ -225,9 +225,9 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	if g.incidents.Fallout(uint64(g.clock.Now())) && !g.roofAt(pos.X, pos.Y).Roofed() { // FOOD-6, wiki: Toxic fallout
 		states = append(states, mood.ToxicFallout)
 	}
-	ts := g.traitThoughts(id, mood.AppendActiveAt(dst, g.memories[id], uint64(g.clock.Now()), states...))
+	ts := g.traitThoughts(id, thoughtsOf(g).AppendActiveAt(dst, g.memories[id], uint64(g.clock.Now()), states...))
 	ts = append(ts, g.bodyThoughts(id)...)
-	ts = append(ts, doseOf(g).Thoughts(id)...)
+	ts = append(ts, doseOf(g).Thoughts(thoughtsOf(g), id)...)
 	ts = append(ts, g.socialThoughts(id)...)
 	if chance := body.AlzheimerThoughtNullification(g.bodies[id]); chance > 0 {
 		ts = mood.NullifyConditional(ts, chance, g.streams.seed, uint64(id), uint64(g.clock.Now())/clock.TicksPerHour)
@@ -249,8 +249,9 @@ func (g *Game) moodOf(id entity.EntityID) int {
 // skips it), and rolls the food poisoning (food_poison.go).
 func (g *Game) afterEat(id entity.EntityID, st item.Stack, fed bool) {
 	var buf [3]diet.Thought
-	for _, t := range diet.AppendAte(buf[:0], st, cannibal(g, id)) {
-		g.memories[id] = g.memories[id].AddLabeled(t.Kind, 0, t.Value, t.Label, uint64(g.clock.Now()))
+	book := thoughtsOf(g)
+	for _, t := range diet.AppendAte(book, buf[:0], st, cannibal(g, id)) {
+		g.memories[id] = book.AddLabeled(g.memories[id], t.Kind, 0, t.Value, t.Label, uint64(g.clock.Now()))
 	}
 	switch pos, _ := g.positions.Get(id); {
 	case fed:

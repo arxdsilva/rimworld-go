@@ -1,0 +1,8 @@
+[
+  {
+    "op": "set",
+    "target": "thought/core.slept_outside",
+    "path": "value",
+    "value": -2
+  }
+]

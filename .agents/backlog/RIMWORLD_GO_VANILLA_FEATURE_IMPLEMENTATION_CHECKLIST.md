@@ -2652,7 +2652,7 @@ hints. citeturn0search2
 -   [x] **Definition registry** (PLG-024: frozen per-class books in `modding.Catalog`, namespaced keys, dense indexes)
     -   Namespaced stable IDs.
     -   Immutable after game start.
--   [-] **Definition classes** (PLG-024, PLG-025: backstory and recipe; the rest one class per change, PLG-026)
+-   [-] **Definition classes** (PLG-024, PLG-025: backstory and recipe; thought: core patch only, plugin-added refused, open: F1; the rest one class per change, PLG-026)
     -   Item.
     -   material.
     -   terrain.

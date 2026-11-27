@@ -904,7 +904,7 @@ func (g *Game) organHarvested(surgeon, donor entity.EntityID, part body.Part) {
 		if v, ok := g.vital.Get(pid); !ok || v.Status == health.Dead {
 			continue
 		}
-		g.memories[pid] = g.memories[pid].AddFor(know, 0, now)
+		g.memories[pid] = thoughtsOf(g).AddFor(g.memories[pid], know, 0, now)
 	}
 	if colonistDonor {
 		return

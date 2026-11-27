@@ -35,7 +35,7 @@ type runContent struct {
 func (c runContent) game() appgame.Content {
 	cat := c.catalog
 	return appgame.Content{Backstories: cat.Backstories, Recipes: cat.Recipes, Traits: cat.Traits,
-		Research: cat.Research, Incidents: cat.Incidents, Items: cat.Items, Sources: sources(cat.Defs), StatMods: cat.StatMods}
+		Research: cat.Research, Incidents: cat.Incidents, Items: cat.Items, Sources: sources(cat.Defs), StatMods: cat.StatMods, Thoughts: cat.Thoughts}
 }
 
 // sources is who added or patched each def a plugin touched (PLG-072).
@@ -65,7 +65,8 @@ func sources(defs []modding.Def) map[string]appgame.Source {
 // save is the content a save header records: fingerprint and load order.
 func (c runContent) save() savefmt.Content {
 	return contentid.Of(c.catalog.IDs(), contentid.Books{Backstories: c.catalog.Backstories, Recipes: c.catalog.Recipes,
-		Traits: c.catalog.Traits, Research: c.catalog.Research, Incidents: c.catalog.Incidents, Items: c.catalog.Items})
+		Traits: c.catalog.Traits, Research: c.catalog.Research, Incidents: c.catalog.Incidents, Items: c.catalog.Items,
+		Thoughts: c.catalog.Thoughts})
 }
 
 // loadContent reads the plugin folders and builds the catalog for the

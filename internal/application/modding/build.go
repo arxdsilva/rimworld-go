@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/stat/statmod"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/research"
 )
@@ -29,6 +30,7 @@ type Catalog struct {
 	Incidents   incident.Book
 	Items       item.Book
 	StatMods    statmod.Book // the stat_mod class (W1-modding-build decodes it)
+	Thoughts    mood.Book
 	Defs        []Def        // every typed def after inheritance and patches
 }
 
@@ -72,7 +74,7 @@ func classesWith(tex Textures, caps capsByPlugin) []class {
 			}
 			return probs
 		},
-	}, itemClassWith(tex), recipeClass(), traitClass(), researchClass(), incidentClass(), statModClass(caps)}
+	}, itemClassWith(tex), recipeClass(), traitClass(), researchClass(), incidentClass(), statModClass(caps), thoughtClass()}
 }
 
 // Classes are the moddable class names, in the order their books are built.

@@ -418,8 +418,8 @@ func moodLifted(t *testing.T) (*Game, entity.EntityID) {
 	g, id := drugColony(t)
 	stack(t, g, item.Beer, 3, 4, 2)
 	applyNow(g, command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(id), Mode: uint8(drug.MoodLift)})
-	g.joy[id] = 7000                                                            // not bored: the lift doesn't ask
-	g.memories[id] = g.memories[id].Add(mood.GotMarried, uint64(g.clock.Now())) // on the way up
+	g.joy[id] = 7000                                                                         // not bored: the lift doesn't ask
+	g.memories[id] = mood.Core().Add(g.memories[id], mood.GotMarried, uint64(g.clock.Now())) // on the way up
 	g.Step(1)
 	return g, id
 }
