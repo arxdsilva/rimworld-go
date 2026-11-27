@@ -228,8 +228,9 @@ func (b Book) appendActive(out []Thought, m Memories, now uint64, checkExpiry bo
 	var counts [numKinds]uint8
 	var weights, totals [numKinds]int64
 	var shown [numKinds]int
+	var seen pairFilter
 	t := b.table()
-	for _, x := range m {
+	for i, x := range m {
 		if checkExpiry && x.Expires <= now {
 			continue
 		}
@@ -238,16 +239,23 @@ func (b Book) appendActive(out []Thought, m Memories, now uint64, checkExpiry bo
 		if x.Value != 0 {
 			v = x.Value
 		}
-		if x.Kind < numKinds && d.StackLimit > 1 {
+		if x.Kind < numKinds && d.StackLimit == 1 {
+			// One memory per kind and subject: an old save written under a
+			// higher patched limit reads the extras as zero. The filter of
+			// kinds and subjects seen spares a new pair the scan.
+			if seen.add(x.Kind, x.Subject) && heldBefore(m, i, now, checkExpiry) {
+				v = 0
+			}
+		} else if x.Kind < numKinds {
 			k := x.Kind
 			if counts[k] >= d.StackLimit {
 				v = 0 // tolerate old saves with more memories than today's cap
 			} else {
-				w := weights[k]
-				if w == 0 {
-					w = stackPrecision
-				} else {
-					w = w * int64(d.StackFactor) / 1000
+				// the first memory starts at full weight; a weight decayed
+				// to zero stays zero
+				w := stackPrecision
+				if counts[k] > 0 {
+					w = weights[k] * int64(d.StackFactor) / 1000
 				}
 				weights[k] = w
 				totals[k] += int64(v) * w
@@ -267,4 +275,29 @@ func (b Book) appendActive(out []Thought, m Memories, now uint64, checkExpiry bo
 		out = append(out, Thought{Kind: k, Label: d.Label, Value: d.Value})
 	}
 	return out
+}
+
+// pairFilter is a fixed-size filter of kind and subject pairs.
+type pairFilter [64]uint64
+
+// add records the pair and reports whether it may have been added before
+// (false: certainly new).
+func (f *pairFilter) add(k Kind, subject uint64) bool {
+	h := (uint64(k)<<56 ^ subject) * 0x9E3779B97F4A7C15 >> 52 // 4096 bits
+	word, bit := h>>6, uint64(1)<<(h&63)
+	had := f[word]&bit != 0
+	f[word] |= bit
+	return had
+}
+
+// heldBefore reports whether a memory before m[i], live at now when
+// checkExpiry, has m[i]'s kind and subject.
+func heldBefore(m Memories, i int, now uint64, checkExpiry bool) bool {
+	x := m[i]
+	for _, y := range m[:i] {
+		if y.Kind == x.Kind && y.Subject == x.Subject && (!checkExpiry || y.Expires > now) {
+			return true
+		}
+	}
+	return false
 }

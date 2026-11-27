@@ -182,6 +182,92 @@ func TestStackPatchesFollowTheBook(t *testing.T) {
 	}
 }
 
+// A save written under a higher stack limit and loaded under a patched
+// limit of one reads one memory per kind and subject: extras count zero,
+// other subjects keep their own slot, and an expired copy frees it.
+func TestStackLimitOneCapsOverCapSavesPerSubject(t *testing.T) {
+	t.Parallel()
+	one := patched(t, KindWords, func(tu *Tuning) { tu.StackLimit = 1 })
+	v := one.DefOf(KindWords).Value
+	long := Memories{
+		{Kind: KindWords, Subject: 1, Expires: 9},
+		{Kind: KindWords, Subject: 1, Expires: 9},
+		{Kind: KindWords, Subject: 2, Expires: 9},
+		{Kind: KindWords, Subject: 1, Expires: 9},
+	}
+	ts := one.AppendActiveAt(nil, long, 0)
+	if want := []int{v, 0, v, 0}; ts[0].Value != want[0] || ts[1].Value != want[1] || ts[2].Value != want[2] || ts[3].Value != want[3] {
+		t.Fatalf("per-subject cap at limit 1: %+v, want values %v", ts, want)
+	}
+	expired := Memories{{Kind: KindWords, Subject: 1, Expires: 3}, {Kind: KindWords, Subject: 1, Expires: 9}}
+	if ts := one.AppendActiveAt(nil, expired, 5); len(ts) != 1 || ts[0].Value != v {
+		t.Fatalf("an expired copy must not take the slot: %+v", ts)
+	}
+}
+
+// The limit-1 repeat filter only skips a scan, never changes a value: two
+// thousand memories (enough pairs to collide in the filter) in a fixed
+// shuffled order, with repeats and expired copies, read as a plain
+// earlier-copy scan says.
+func TestStackLimitOneFilterMatchesScan(t *testing.T) {
+	t.Parallel()
+	kinds := []Kind{Grief, KindWords}
+	one := patched(t, KindWords, func(tu *Tuning) { tu.StackLimit = 1 })
+	var m Memories
+	for i := range 2000 {
+		m = append(m, Memory{
+			Kind:    kinds[i%len(kinds)],
+			Subject: uint64(i*7919%331) + 1<<40*uint64(i/1000), // non-ascending, repeats
+			Value:   -(i%9 + 1),
+			Expires: uint64(5 + i%5), // read at 6: two in five expired
+		})
+	}
+	ts := one.AppendActiveAt(nil, m, 6)
+	j, repeats := 0, 0
+	for i, x := range m {
+		if x.Expires <= 6 {
+			continue
+		}
+		want := x.Value
+		for _, y := range m[:i] {
+			if y.Kind == x.Kind && y.Subject == x.Subject && y.Expires > 6 {
+				want, repeats = 0, repeats+1
+				break
+			}
+		}
+		if ts[j].Value != want {
+			t.Fatalf("memory %d %+v reads %d, want %d", i, x, ts[j].Value, want)
+		}
+		j++
+	}
+	if j != len(ts) || repeats < 100 {
+		t.Fatalf("%d thoughts for %d live memories, %d repeats", len(ts), j, repeats)
+	}
+}
+
+// A weight that decays to zero keeps contributing nothing; only the first
+// memory of a stack starts at full weight.
+func TestStackWeightDecayedToZeroStaysZero(t *testing.T) {
+	t.Parallel()
+	b := patched(t, KindWords, func(tu *Tuning) { tu.StackLimit, tu.StackFactor = 20, 1 })
+	v := b.DefOf(KindWords).Value
+	var m Memories
+	for i := range 8 {
+		m = append(m, Memory{Kind: KindWords, Subject: uint64(i + 1), Expires: 9})
+	}
+	ts := b.Active(m)
+	sum := 0
+	for i, x := range ts {
+		sum += x.Value
+		if i > 0 && x.Value != 0 {
+			t.Fatalf("memory %d restarted at full weight: %+v", i, ts)
+		}
+	}
+	if ts[0].Value != v || sum != v {
+		t.Fatalf("stack total %d (first %d), want %d", sum, ts[0].Value, v)
+	}
+}
+
 func TestStatesOnlyFastPathMatchesSlowPath(t *testing.T) {
 	t.Parallel()
 	states := []Kind{Hungry, Tired, Imprisoned, Cold, Bored}
