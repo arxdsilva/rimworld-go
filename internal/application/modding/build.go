@@ -11,8 +11,8 @@ import (
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
-	"rimworld-go/internal/domain/pawn/stat/statmod"
 	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/stat/statmod"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/research"
 )
@@ -31,7 +31,7 @@ type Catalog struct {
 	Items       item.Book
 	StatMods    statmod.Book // the stat_mod class (W1-modding-build decodes it)
 	Thoughts    mood.Book
-	Defs        []Def        // every typed def after inheritance and patches
+	Defs        []Def // every typed def after inheritance and patches
 }
 
 // IDs is the load order's plugin ids, core first: what a save records.
