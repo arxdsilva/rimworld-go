@@ -78,7 +78,36 @@ const (
 	RivalRaid
 	TravelerGroup
 	TransportPodCrash
+	// The storyteller's threats (SIM-019, SIM-025, Threat pool). Their order
+	// is load-bearing as well as saved: walked in ID order, the threat defs
+	// lay out the faces of the threat die (Book.PickThreat).
+	HiveSwarm
+	PredatorPack
+	ManhunterPack
+	Raid
+	MechRaid
 	NumIDs
+)
+
+// ThreatRolls is the number of faces on the storyteller's threat die.
+const ThreatRolls = 8
+
+// Season limits an event to part of the year. The zero value allows any.
+type Season uint8
+
+const (
+	AnySeason Season = iota
+	WinterOnly
+	NotWinter
+)
+
+// Target is what an event acts on. The zero value is the colony's home
+// map.
+type Target uint8
+
+const (
+	HomeMap Target = iota
+	WorldObject
 )
 
 // Def is an event's definition. Weights and cooldowns are our own.
@@ -102,15 +131,36 @@ type Def struct {
 	// event, the core event a plugin's names (PLG-026). Code that switches on
 	// an event reads Like; odds, cooldowns and messages keep ID.
 	Like ID
+	// MinPoints is the fewest threat points the event needs (0: none).
+	MinPoints int
+	// PointsPct is the percent of the threat points the event spends (0:
+	// all of them; Spend).
+	PointsPct int
+	// Season limits the event to part of the year (zero: any).
+	Season Season
+	// Target is what the event acts on (zero: the home map). No map pick
+	// chooses a WorldObject event.
+	Target Target
+	// Fill makes a threat event the die's filler: it takes every face, up
+	// to Fill, that no open event before it claims (0: not a filler).
+	Fill int
+	// UnderRaid: the event is drawn only inside the raid face's split
+	// between the big threats, never by Pick or PickThreat; its Weight is
+	// its split weight.
+	UnderRaid bool
 }
 
 // Odds scales two families' weights, percent (FullFreq keeps the
 // catalogue's): diseases by the difficulty's disease frequency, climate
 // events (IsClimate) by the wizard's Extreme weather. Helpful narrows the
-// draw to the helpful events (Def.Helpful; EAI-033).
+// draw to the helpful events (Def.Helpful; EAI-033). Points (the threat
+// points at hand) and Winter feed the threat events' point minimums and
+// seasons.
 type Odds struct {
 	Disease, Climate int
 	Helpful          bool
+	Points           int
+	Winter           bool
 }
 
 var (
@@ -150,10 +200,12 @@ var defs = [NumIDs]Def{
 	// PLAY-024: original tuning (.agents/handoffs/PLAY.md#play024_plan).
 	TraderCaravan: {Key: "trader_caravan", Name: "Trader caravan", Category: Nature, Helpful: true, Weight: 14, Cooldown: 9, MinDay: 4},
 	OrbitalTrader: {Key: "orbital_trader", Name: "Orbital trader", Category: Nature, Helpful: true, Weight: 12, Cooldown: 7, MinDay: 6},
-	// DEF-4, wiki: Events (base weight 2.00 against a raid's 7.40; it
-	// needs 400 raid points, the game's own check). Cooldown and first day
-	// are original tuning (the wiki gives none).
-	CrashedShipPart: {Key: "crashed_ship_part", Name: "Crashed ship part", Category: Threat, Weight: 2, Cooldown: 15, MinDay: 10},
+	// DEF-4, wiki: Events (base weight 2.00 against a raid's 7.40, for each
+	// of two ship parts: the one here takes both, 40 against Raid's 74 in the
+	// raid face's split; it needs 400 raid points, the game's own check).
+	// Cooldown and first day are original tuning (the wiki gives none).
+	CrashedShipPart: {Key: "crashed_ship_part", Name: "Crashed ship part", Category: Threat, Weight: 40, Cooldown: 15, MinDay: 10,
+		MinPoints: 400, UnderRaid: true},
 	// FOOD-2, wiki: Events (chance 2.5 against the solar flare's 1.5, so 10
 	// against our flare's 6; it does not recur for 30 days). The first day
 	// is original tuning.
@@ -175,6 +227,17 @@ var defs = [NumIDs]Def{
 	// EAI-031: original tuning, a few a year, once the colony has a footing.
 	RefugeeChased: {Key: "refugee_chased", Name: "Refugee chased", Category: Nature, Weight: 3, Cooldown: 30, MinDay: 12},
 	RivalRaid:     {Key: "rival_raid", Name: "Rival raid", Category: Threat},
+	// SIM-019 and SIM-025: the threat die's faces. A threat's Weight counts
+	// its faces (of ThreatRolls): a hive swarm 1 from day 12, a predator
+	// pack 4 in winter, a manhunter pack 2 outside it from day 8; the raid
+	// fills the rest. Raid's and the UnderRaid events' weights split the
+	// raid face instead (wiki: Events, a raid weighs 7.4; the mechanoids
+	// raid from 300 points).
+	HiveSwarm:     {Key: "hive_swarm", Name: "Hive swarm", Category: Threat, Weight: 1, MinDay: 12},
+	PredatorPack:  {Key: "predator_pack", Name: "Predator pack", Category: Threat, Weight: 4, Season: WinterOnly},
+	ManhunterPack: {Key: "manhunter_pack", Name: "Manhunter pack", Category: Threat, Weight: 2, Season: NotWinter, MinDay: 8},
+	Raid:          {Key: "raid", Name: "Raid", Category: Threat, Weight: 74, Fill: ThreatRolls},
+	MechRaid:      {Key: "mech_raid", Name: "Mechanoid raid", Category: Threat, Weight: 1, MinPoints: 300, UnderRaid: true},
 }
 
 func init() {
@@ -250,8 +313,42 @@ func (d Def) Allowed(st State, now uint64, b biome.ID) bool {
 	if day < d.MinDay || d.Not.Has(b) || d.Biomes != 0 && !d.Biomes.Has(b) {
 		return false
 	}
+	return d.Cooled(st, now)
+}
+
+// open reports whether d's day, biome, season and point minimum are met
+// (not its cooldown).
+func (d Def) open(day int, b biome.ID, o Odds) bool {
+	return day >= d.MinDay && !d.Not.Has(b) && (d.Biomes == 0 || d.Biomes.Has(b)) &&
+		o.Points >= d.MinPoints && d.Season.Allows(o.Winter)
+}
+
+// Cooled reports whether d's cooldown has run out by tick now (true when
+// it never fired): the cooldown half of Allowed.
+func (d Def) Cooled(st State, now uint64) bool {
 	last, fired := st.Last[d.ID]
 	return !fired || now >= last+uint64(d.Cooldown)*clock.TicksPerDay
+}
+
+// Spend is the threat points d spends of points: all of them, or its
+// PointsPct percent of them.
+func (d Def) Spend(points int) int {
+	if d.PointsPct <= 0 {
+		return points
+	}
+	return points * d.PointsPct / 100
+}
+
+// Allows reports whether an event limited to s may happen while it is
+// winter (or not).
+func (s Season) Allows(winter bool) bool {
+	switch s {
+	case WinterOnly:
+		return winter
+	case NotWinter:
+		return !winter
+	}
+	return true
 }
 
 // FullFreq is the disease frequency (percent) at which diseases keep
@@ -343,7 +440,8 @@ func totalOdds(list []Def, c Category, st State, now uint64, b biome.ID, o Odds,
 func eligible(list []Def, c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) []Def {
 	var out []Def
 	for _, d := range list {
-		if d.Category == c && (!o.Helpful || d.Helpful) && d.WeightOdds(o) > 0 && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
+		if d.Category == c && (!o.Helpful || d.Helpful) && d.WeightOdds(o) > 0 && d.Target == HomeMap && !d.UnderRaid &&
+			o.Points >= d.MinPoints && d.Season.Allows(o.Winter) && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
 			out = append(out, d)
 		}
 	}
