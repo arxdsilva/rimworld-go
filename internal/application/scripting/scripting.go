@@ -1,92 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Arthur Rodrigues Xavier da Silva
 
-// Package scripting is the port plugins' scripts run behind (PLG-060): the
-// simulation owner calls a Host at fixed points of the tick and gets typed
-// commands back, which it queues through Enqueue like a player's. The
-// runtime (Starlark) lives in an outbound adapter
-// (adapters/outbound/starlarkhost).
-//
-// # Writing a script
-//
-// A plugin's scripts are the files scripts/**.star in its folder, in the
-// Starlark language (a small, deterministic dialect of Python). Every file
-// is a module run once at start; its globals are then frozen, so a script
-// keeps no state between calls: state lives in the game. Hooks are
-// top-level functions a file defines; every file's hooks run, files in
-// path order, plugins in load order:
-//
-//	on_hour(ctx)                  each in-game hour, at its first tick
-//	on_day(ctx)                   each in-game day at 00:00, before that hour's on_hour
-//	on_incident(ctx, incident)    an incident fired: incident.key ("core.herd_crossing"), incident.category ("nature", "threat");
-//	                              in a setup colony a storyteller threat reports once, category "threat", under its own
-//	                              key (packs, manhunters, hives, mad animals, mech raids, ship parts); a people raid is
-//	                              "core.rival_raid"; a legacy colony (no setup) reports only its people raids and ship parts
-//	on_colonist_died(ctx, name)   a colonist died
-//	on_pawns(ctx, pawns)          cadence: every tick, the colonists due on it (a tuple of pawns, id ascending)
-//	on_pawn(ctx, pawn)            cadence: every tick, once for each colonist due on it, by id
-//
-// The cadence hooks see each living home colonist once per PawnEvery (60)
-// ticks: the colonists are split into buckets and each tick has its bucket
-// of due colonists, so no tick visits them all. On a tick the hooks run in
-// this order: on_day, on_hour, every plugin's on_pawns, then every
-// plugin's on_pawn for each due colonist, plugins in load order and files
-// in path order. A tick with no colonist due calls neither.
-//
-// ctx reads the colony (read only):
-//
-//	ctx.tick        the simulation tick
-//	ctx.day         the colony day (0 on the landing day)
-//	ctx.hour        the hour of the day, 0-23
-//	ctx.season      "spring", "summer", "fall" or "winter" (the map's own calendar)
-//	ctx.colonists   living colonists
-//	ctx.wealth      the colony's wealth
-//	ctx.count(key)  how many of item key ("core.wood") lie on the home map
-//	ctx.rand(n)     a number in [0, n): the same seed, tick, plugin and call give the same number
-//	ctx.pawns()     every living (alive or downed) colonist of the home map, a tuple of pawns, id ascending
-//	ctx.pawn(id)    the home colonist with that id, or None
-//
-// ctx.colonists counts the home map's colonists and those away in
-// caravans; ctx.pawns() lists the home map's only. A pawn (from ctx.pawns,
-// ctx.pawn or a cadence hook's argument) has these fields:
-//
-//	pawn.id        the colonist's id, stable for the run
-//	pawn.name      the colonist's name
-//	pawn.x, pawn.y the cell the colonist stands on
-//	pawn.food      0-100, the HUD's food bar
-//	pawn.rest      0-100, the HUD's rest bar
-//	pawn.mood      0-100, the colonist bar's smoothed mood
-//	pawn.downed    True when the colonist is down
-//	pawn.drafted   True when the colonist is drafted
-//
-// ctx.pawns() reads every colonist each time it is called: inside a
-// cadence hook, which runs on every tick, use the pawns or pawn argument
-// instead, which hold only the due colonists.
-//
-// and acts only by queueing commands, applied on the next tick:
-//
-//	ctx.message(text)             a message to the player
-//	ctx.letter(title, text)       a letter in the letter stack
-//	ctx.spawn(key, count)         count items of key dropped at the colony's drop spot (1-MaxSpawn)
-//
-// load("other.star", "name") loads another file of the same plugin's
-// scripts folder (paths relative to the scripts folder); nothing else can
-// be loaded. There is no time, file, network or thread access; print does
-// nothing.
-//
-// # Budgets
-//
-// A call (and a file's first run) may take MaxSteps Starlark steps and
-// queue MaxCommands commands; texts are at most MaxText bytes. A script
-// that fails, runs over or breaks a rule is disabled for the rest of the
-// run: the Plugins screen lists the problem and the game posts a message.
-//
-// on_pawns is one call per file with the budgets of any other hook. A
-// file's on_pawn calls on one tick share one budget: MaxSteps steps and
-// MaxCommands commands across all the due colonists' calls. The shared
-// budget is all or nothing: a call that fails or runs over disables the
-// file and drops every command its on_pawn calls queued on that tick.
-// A broken script never stops the game.
 package scripting
 
 import "rimworld-go/internal/domain/sim/command"
@@ -121,23 +35,18 @@ const (
 	OnPawn  // cadence: one call per due colonist
 )
 
+// hookNames are the hooks' function names, by value.
+var hookNames = [...]string{
+	OnHour: "on_hour", OnDay: "on_day", OnIncident: "on_incident",
+	OnColonistDied: "on_colonist_died", OnPawns: "on_pawns", OnPawn: "on_pawn",
+}
+
 // String is the hook's function name.
 func (h Hook) String() string {
-	switch h {
-	case OnHour:
-		return "on_hour"
-	case OnDay:
-		return "on_day"
-	case OnIncident:
-		return "on_incident"
-	case OnColonistDied:
-		return "on_colonist_died"
-	case OnPawns:
-		return "on_pawns"
-	case OnPawn:
-		return "on_pawn"
+	if int(h) >= len(hookNames) {
+		return ""
 	}
-	return ""
+	return hookNames[h]
 }
 
 // Hooks lists every hook.
@@ -155,6 +64,17 @@ type Event struct {
 	// Pawns are OnPawns' and OnPawn's due colonists, id ascending. The
 	// host does not keep the slice after Fire.
 	Pawns []Pawn
+	// Kind is an Extensions.Event's event (0 for a Hook's Fire).
+	Kind EventKind
+	// Plugin and Action name a ScriptAction's plugin and panel action
+	// (PanelSource.Act), or the plugin a call is for.
+	Plugin, Action string
+	// Research is ResearchDone's project key.
+	Research string
+	// Recipe is RecipeDone's craft.
+	Recipe Craft
+	// Map is MapGenerated's map.
+	Map MapGen
 }
 
 // Pawn is a colonist as a script sees it.

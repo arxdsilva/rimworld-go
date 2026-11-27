@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/application/game/modstate"
 	"rimworld-go/internal/application/modding"
 	"rimworld-go/internal/application/scripting"
+	"rimworld-go/internal/application/scripting/gameread"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -63,7 +64,8 @@ func newScriptMux(ps []modding.Plugin, o wasmhost.Options) *scriptMux {
 	}
 	for _, p := range ps {
 		if len(p.Scripts) > 0 {
-			sp := starlarkhost.Plugin{ID: p.Manifest.ID}
+			caps, legacy := modding.CapsOf(p.Manifest)
+			sp := starlarkhost.Plugin{ID: p.Manifest.ID, Caps: caps, Declared: !legacy}
 			for _, b := range p.Scripts {
 				sp.Files = append(sp.Files, starlarkhost.File{Path: b.Path, Src: b.Data})
 			}
@@ -173,10 +175,29 @@ func (m *scriptMux) start(g *appgame.Game) {
 	m.attach(g)
 }
 
-// attach sets the mux on g as its scripts and its mod state source.
+// attach sets the mux on g as its scripts and its mod state source, and
+// the Starlark segments as its extension points. The queries come first,
+// so a map_generated handler (fired by UseExtensions on a new game) reads
+// the new game's facts.
 func (m *scriptMux) attach(g *appgame.Game) {
 	appgame.UseScripts(g, m.host())
 	appgame.UseModState(g, m.source())
+	if len(m.stars) > 0 {
+		q := gameread.New(g)
+		for _, h := range m.stars {
+			h.UseQueries(q)
+		}
+	}
+	appgame.UseExtensions(g, m.extensions())
+}
+
+// extensions is the Starlark segments as g's extension points; a literal
+// nil with none, so a run without them keeps today's tick path.
+func (m *scriptMux) extensions() scripting.Extensions {
+	if len(m.stars) == 0 {
+		return nil
+	}
+	return &starExt{hosts: m.stars, after: m.refresh}
 }
 
 // host is m as g's scripts; nil with no segment.
@@ -310,6 +331,10 @@ func (m *scriptMux) Late() []plugins.Problem {
 		for _, p := range h.Problems() {
 			out = append(out, plugins.Problem{Plugin: p.Plugin, File: p.File, Field: lineOf(p.Line),
 				Msg: "script turned off for this run: " + p.Msg})
+		}
+		for _, p := range h.Warnings() {
+			out = append(out, plugins.Problem{Plugin: p.Plugin, File: p.File, Field: lineOf(p.Line),
+				Msg: p.Msg, Warn: true})
 		}
 	}
 	if m.wasm != nil {

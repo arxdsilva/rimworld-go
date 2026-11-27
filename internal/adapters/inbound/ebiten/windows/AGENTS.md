@@ -40,6 +40,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - Coverage 18.1 % (ARCH-005 row); the windows run mostly through the root journey tests.
 
 ## Notes
+- `plugin_panels.go` is the in-colony "Plugins" main tab window: it draws the panels plugins' `panel(ctx)` hooks return (read-only text and at most 4 actions) and sends a pressed action as a typed `ScriptAction` command; it never calls a script (`plugin_panels_test.go`). Panels are empty after a load until the next in-game hour.
 - `App.ng` stays on App because `Env.Planet` reads it.
 - The wizard-to-factions glue stays in the root.
 - Lowest coverage among the feature packages: add tests with any change to a window's click handling.

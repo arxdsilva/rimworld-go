@@ -5,15 +5,37 @@ package starlarkhost
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
 
+	"rimworld-go/internal/application/pluginapi"
 	"rimworld-go/internal/application/scripting"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/pkg/randx"
 )
+
+var _ starlark.HasAttrs = (*ctxValue)(nil)
+
+// baseAttrs are the query and command attributes every ctx serves (the
+// legacy set); queryAttr and orderAttr serve the extension groups.
+var baseAttrs = map[string]func(c *call) starlark.Value{
+	"tick":      func(c *call) starlark.Value { return starlark.MakeUint64(c.ev.Tick) },
+	"day":       func(c *call) starlark.Value { return starlark.MakeInt(c.w.Day()) },
+	"hour":      func(c *call) starlark.Value { return starlark.MakeInt(c.w.Hour()) },
+	"season":    func(c *call) starlark.Value { return starlark.String(c.w.Season()) },
+	"colonists": func(c *call) starlark.Value { return starlark.MakeInt(c.w.Colonists()) },
+	"wealth":    func(c *call) starlark.Value { return starlark.MakeInt(c.w.Wealth()) },
+	"count":     func(c *call) starlark.Value { return starlark.NewBuiltin("count", c.count) },
+	"rand":      func(c *call) starlark.Value { return starlark.NewBuiltin("rand", c.rand) },
+	"message":   func(c *call) starlark.Value { return starlark.NewBuiltin("message", c.message) },
+	"letter":    func(c *call) starlark.Value { return starlark.NewBuiltin("letter", c.letter) },
+	"spawn":     func(c *call) starlark.Value { return starlark.NewBuiltin("spawn", c.spawn) },
+	"pawns":     func(c *call) starlark.Value { return starlark.NewBuiltin("pawns", c.pawns) },
+	"pawn":      func(c *call) starlark.Value { return starlark.NewBuiltin("pawn", c.pawn) },
+}
 
 // call is one hook call's state: what it read, drew and queued. It lives
 // for the call only.
@@ -23,8 +45,11 @@ type call struct {
 	rng  randx.Keyed
 	cmds []command.Command
 	pr   scripting.PawnReader
-	all  starlark.Tuple // ctx.pawns(), built on first use
-	what string         // names the command budget in an overrun
+	all  starlark.Tuple    // ctx.pawns(), built on first use
+	what string            // names the command budget in an overrun
+	hook string            // the hook's function name ("on_pawn", "panel", …)
+	caps pluginapi.Set     // the module's plugin's granted set
+	q    scripting.Queries // the world capability's readers
 }
 
 // newCall keys the call's rand stream on (seed, tick, plugin and file,
@@ -47,10 +72,7 @@ func (c *call) args(ev scripting.Event) starlark.Tuple {
 	ctx := &ctxValue{c: c}
 	switch ev.Hook {
 	case scripting.OnIncident:
-		inc := starlarkstruct.FromStringDict(starlark.String("incident"), starlark.StringDict{
-			"key": starlark.String(ev.Incident.Key), "category": starlark.String(ev.Incident.Category)})
-		inc.Freeze()
-		return starlark.Tuple{ctx, inc}
+		return starlark.Tuple{ctx, incidentValue(ev.Incident)}
 	case scripting.OnColonistDied:
 		return starlark.Tuple{ctx, starlark.String(ev.Name)}
 	case scripting.OnPawns:
@@ -59,10 +81,15 @@ func (c *call) args(ev scripting.Event) starlark.Tuple {
 	return starlark.Tuple{ctx}
 }
 
+// incidentValue is on_incident's and run_incident's incident argument, a
+// frozen struct of key and category.
+func incidentValue(inc scripting.Incident) starlark.Value {
+	return frozenStruct("incident", starlark.StringDict{
+		"key": starlark.String(inc.Key), "category": starlark.String(inc.Category)})
+}
+
 // ctxValue is the script's ctx: read-only queries and the command calls.
 type ctxValue struct{ c *call }
-
-var _ starlark.HasAttrs = (*ctxValue)(nil)
 
 func (v *ctxValue) String() string        { return "<ctx>" }
 func (v *ctxValue) Type() string          { return "ctx" }
@@ -70,39 +97,29 @@ func (v *ctxValue) Freeze()               {}
 func (v *ctxValue) Truth() starlark.Bool  { return starlark.True }
 func (v *ctxValue) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable: ctx") }
 
-var ctxAttrs = []string{"colonists", "count", "day", "hour", "letter", "message", "pawn", "pawns", "rand", "season", "spawn", "tick", "wealth"}
+// AttrNames is every attribute ctx serves, sorted: the base table and
+// the groups' lists.
+func (v *ctxValue) AttrNames() []string {
+	names := slices.Concat(slices.Collect(maps.Keys(baseAttrs)), queryAttrs, orderAttrs)
+	slices.Sort(names)
+	return names
+}
 
-func (v *ctxValue) AttrNames() []string { return append([]string(nil), ctxAttrs...) }
-
+// Attr checks name first (allowed), then serves it from the base table,
+// then the world queries, then the orders.
 func (v *ctxValue) Attr(name string) (starlark.Value, error) {
 	c := v.c
-	switch name {
-	case "tick":
-		return starlark.MakeUint64(c.ev.Tick), nil
-	case "day":
-		return starlark.MakeInt(c.w.Day()), nil
-	case "hour":
-		return starlark.MakeInt(c.w.Hour()), nil
-	case "season":
-		return starlark.String(c.w.Season()), nil
-	case "colonists":
-		return starlark.MakeInt(c.w.Colonists()), nil
-	case "wealth":
-		return starlark.MakeInt(c.w.Wealth()), nil
-	case "count":
-		return starlark.NewBuiltin("count", c.count), nil
-	case "rand":
-		return starlark.NewBuiltin("rand", c.rand), nil
-	case "message":
-		return starlark.NewBuiltin("message", c.message), nil
-	case "letter":
-		return starlark.NewBuiltin("letter", c.letter), nil
-	case "spawn":
-		return starlark.NewBuiltin("spawn", c.spawn), nil
-	case "pawns":
-		return starlark.NewBuiltin("pawns", c.pawns), nil
-	case "pawn":
-		return starlark.NewBuiltin("pawn", c.pawn), nil
+	if err := c.allowed(name); err != nil {
+		return nil, err
+	}
+	if f, ok := baseAttrs[name]; ok {
+		return f(c), nil
+	}
+	if val, ok := c.queryAttr(name); ok {
+		return val, nil
+	}
+	if val, ok := c.orderAttr(name); ok {
+		return val, nil
 	}
 	return nil, nil // no such attribute
 }

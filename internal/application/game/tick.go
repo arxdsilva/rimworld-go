@@ -70,6 +70,9 @@ func cmdMap(g *Game, c command.Command) *mapState {
 }
 
 func (g *Game) applyOne(c command.Command) {
+	if scriptVetoed(g, c) { // scripts.go: a plugin's validate_command
+		return
+	}
 	if g.fogRefuses(c) { // fog_view.go: no walking into the dark
 		return
 	}
@@ -270,7 +273,7 @@ func (g *Game) applyOne(c command.Command) {
 		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
 	case command.DevStartFire:
 		g.devStartFire(c.X, c.Y) // fire.go (PLAY-015)
-	case command.ScriptMessage, command.ScriptSpawn:
+	case command.ScriptMessage, command.ScriptSpawn, command.ScriptOrder, command.ScriptPlace, command.ScriptAction:
 		applyScript(g, c) // scripts.go (PLG-060)
 	case command.SetDoorHoldOpen, command.SetMortarTarget, command.ClearMortarTarget, command.SetTurretHold:
 		if g.combat.Orders.Apply(c) { // combat/orders.go (DEF-3): doors, turrets, mortars

@@ -8,10 +8,12 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"rimworld-go/internal/application/pluginapi"
 )
 
 func mf(id string, edit ...func(*Manifest)) Manifest {
-	m := Manifest{ID: id, Name: "Name " + id, Version: "1.0", Game: []string{"0.1"}}
+	m := Manifest{ID: id, Name: "Name " + id, Version: "1.0", Game: []string{"0.1"}, API: 1}
 	for _, e := range edit {
 		e(&m)
 	}
@@ -114,6 +116,85 @@ func TestCheckManifestProblems(t *testing.T) {
 				t.Fatalf("got %+v, want plugin %q field %q", p, c.plugin, c.field)
 			}
 		})
+	}
+}
+
+func TestCheckManifestAPIAndCaps(t *testing.T) {
+	cases := []struct {
+		name  string
+		edit  func(*Manifest)
+		field string // "" for no problem
+		warn  bool
+		msg   string
+	}{
+		{"api 1", func(m *Manifest) {}, "", false, ""},
+		{"api absent", func(m *Manifest) { m.API = 0 }, "api", true, "declares no plugin API version; treated as 1"},
+		{"api 2", func(m *Manifest) { m.API = 2 }, "api", false, "needs plugin API 2; this game has 1"},
+		{"api -1", func(m *Manifest) { m.API = -1 }, "api", false, "not supported"},
+		{"caps nil", func(m *Manifest) { m.Capabilities = nil }, "", false, ""},
+		{"caps empty", func(m *Manifest) { m.Capabilities = []string{} }, "", false, ""},
+		{"caps valid", func(m *Manifest) { m.Capabilities = []string{"query", "ui"} }, "", false, ""},
+		{"caps unknown", func(m *Manifest) { m.Capabilities = []string{"query", "root"} }, "capabilities", false, `"root"`},
+		{"caps dup", func(m *Manifest) { m.Capabilities = []string{"query", "query"} }, "capabilities", true, "listed twice"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := CheckManifest(mf("abc", c.edit))
+			if c.field == "" {
+				if len(got) != 0 {
+					t.Fatalf("want none, got %v", got)
+				}
+				return
+			}
+			if len(got) != 1 {
+				t.Fatalf("want 1 problem, got %v", got)
+			}
+			p := got[0]
+			if p.Field != c.field || p.Warn != c.warn || p.File != "plugin.json" || p.Plugin != "abc" || !strings.Contains(p.Msg, c.msg) {
+				t.Fatalf("got %+v, want field %q warn %v msg ~%q", p, c.field, c.warn, c.msg)
+			}
+		})
+	}
+}
+
+func TestResolveRefusesNewerAPI(t *testing.T) {
+	found := []Manifest{
+		mf("newer", func(m *Manifest) { m.API = 2 }),
+		mf("badcap", func(m *Manifest) { m.Capabilities = []string{"nope"} }),
+		mf("legacy", func(m *Manifest) { m.API = 0 }),
+		mf("dependant", req("newer")),
+	}
+	o, probs := Resolve(found, []string{"newer", "badcap", "legacy", "dependant"}, "0.1")
+	if got := ids(o); !reflect.DeepEqual(got, []string{"core", "legacy"}) {
+		t.Fatalf("loaded %v, want core and legacy", got)
+	}
+	if !anyContains(msgFor(probs, "newer"), "needs plugin API 2; this game has 1") {
+		t.Errorf("no api refusal: %v", probs)
+	}
+	if !anyContains(msgFor(probs, "badcap"), `unknown capability "nope"`) {
+		t.Errorf("no capability refusal: %v", probs)
+	}
+	var warns []Problem
+	for _, p := range probs {
+		if p.Plugin == "legacy" {
+			warns = append(warns, p)
+		}
+	}
+	if len(warns) != 1 || !warns[0].Warn || warns[0].Msg != "declares no plugin API version; treated as 1" {
+		t.Errorf("legacy wants one warning, got %v", warns)
+	}
+}
+
+func TestCapsOf(t *testing.T) {
+	if s, legacy := CapsOf(Manifest{}); !legacy || s != pluginapi.Legacy() {
+		t.Errorf("nil caps = %v %v, want legacy", s, legacy)
+	}
+	if s, legacy := CapsOf(Manifest{Capabilities: []string{}}); legacy || s != 0 {
+		t.Errorf("empty caps = %v %v, want none", s, legacy)
+	}
+	s, legacy := CapsOf(Manifest{Capabilities: []string{"ui", "query", "bogus"}})
+	if legacy || !s.Has(pluginapi.UI) || !s.Has(pluginapi.Query) || s.Has(pluginapi.Events) {
+		t.Errorf("declared caps = %v %v", s.Names(), legacy)
 	}
 }
 

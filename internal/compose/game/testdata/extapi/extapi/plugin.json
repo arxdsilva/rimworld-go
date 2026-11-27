@@ -1,0 +1,10 @@
+{
+  "id": "extapi",
+  "name": "Extension API fixture",
+  "authors": ["rimworld-go"],
+  "version": "1.0.0",
+  "game": ["0.1"],
+  "api": 1,
+  "capabilities": ["query", "commands", "events", "world", "defs", "validate", "ui", "incidents", "stats", "health", "recipes", "worldgen"],
+  "description": "End-to-end fixture: every extension point of plugin API 1 except jobs."
+}

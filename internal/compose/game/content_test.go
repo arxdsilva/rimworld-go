@@ -11,8 +11,10 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/plugins"
 	"rimworld-go/internal/adapters/outbound/modloader"
 	"rimworld-go/internal/application/game/contentid"
+	"rimworld-go/internal/application/modding"
 	"rimworld-go/internal/domain/pawn/backstory"
 )
 
@@ -100,4 +102,70 @@ func TestSaveFromPluginRunNamesTheMissingPlugin(t *testing.T) {
 	if len(same) != 1 || same[0].Notice != "" {
 		t.Fatalf("the same plugin set gives a notice: %+v", same)
 	}
+}
+
+type memSource []modding.Plugin
+
+func (s memSource) Plugins() ([]modding.Plugin, error) { return s, nil }
+
+const registerTrait = `
+def register_defs():
+    return {"trait": [{"name": "scripted_calm", "label": "Scripted calm", "desc": "{name} is calm.",
+                       "group": "calm", "mods": [{"stat": "move_speed", "mul": 1100}], "rarity": 2}]}
+`
+
+func scriptedPlugin(id string, caps []string, src string) modding.Plugin {
+	m := modding.Manifest{ID: id, Name: id, Version: "1.0.0", Authors: []string{"t"}, Game: []string{"0.1"}, Description: "d", Capabilities: caps}
+	if caps != nil {
+		m.API = 1
+	}
+	return modding.Plugin{Dir: id, Manifest: m, Scripts: []modding.Blob{{Path: "scripts/main.star", Data: []byte(src)}}}
+}
+
+// C2: a plugin's register_defs reaches the catalog through buildContent
+// (and so the game's books); without the defs capability it does not.
+func TestBuildContentScriptDefs(t *testing.T) {
+	base := buildContent(nil, nil, "0.1.35").game().Traits.Len()
+	on := buildContent(memSource{scriptedPlugin("sd", []string{"defs"}, registerTrait)}, []string{"sd"}, "0.1.35")
+	if len(on.problems) != 0 {
+		t.Fatalf("problems: %v", on.problems)
+	}
+	if got := on.game().Traits.Len(); got != base+1 {
+		t.Fatalf("traits %d, want %d", got, base+1)
+	}
+	off := buildContent(memSource{scriptedPlugin("sd", []string{"query"}, registerTrait)}, []string{"sd"}, "0.1.35")
+	if got := off.game().Traits.Len(); got != base {
+		t.Fatalf("without defs: traits %d, want %d", got, base)
+	}
+}
+
+// C3: rows carry the API and the capabilities; a manifest without them is
+// the legacy set at API 1.
+func TestViewRowsAPICaps(t *testing.T) {
+	src := memSource{
+		scriptedPlugin("legacy", nil, "x = 1\n"),
+		scriptedPlugin("decl", []string{"commands", "query"}, "x = 1\n"),
+		wasmOnly("wasm"),
+	}
+	v := buildContent(src, []string{"legacy", "decl", "wasm"}, "0.1.35").view()
+	rows := map[string]plugins.Row{}
+	for _, r := range v.Rows {
+		rows[r.ID] = r
+	}
+	if r := rows["legacy"]; r.API != 1 || !r.LegacyCaps || !slices.Equal(r.Caps, []string{"query", "commands", "events"}) || r.HasWasm {
+		t.Fatalf("legacy row %+v", r)
+	}
+	if r := rows["decl"]; r.API != 1 || r.LegacyCaps || !slices.Equal(r.Caps, []string{"query", "commands"}) {
+		t.Fatalf("declared row %+v", r)
+	}
+	if !rows["wasm"].HasWasm {
+		t.Fatalf("wasm row %+v", rows["wasm"])
+	}
+}
+
+func wasmOnly(id string) modding.Plugin {
+	p := scriptedPlugin(id, nil, "")
+	p.Scripts = nil
+	p.Wasm = []modding.Blob{{Path: "scripts/a.wasm", Data: []byte{0}}}
+	return p
 }

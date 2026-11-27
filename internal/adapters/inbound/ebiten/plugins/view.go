@@ -65,6 +65,10 @@ type Row struct {
 	Loaded                              bool     // it loads this run
 	Position                            int      // its place in the load order, the game being 0 (Loaded only)
 	Reason                              string   // why it sits there (Loaded only)
+	API                                 int      // the plugin API it declares (0: none, read as 1)
+	Caps                                []string // its granted capabilities, canonical order
+	LegacyCaps                          bool     // it declares none: Caps is the legacy set
+	HasWasm                             bool     // it has Wasm scripts, whose capabilities are not enforced yet
 }
 
 // Problem is one diagnostic with its provenance.

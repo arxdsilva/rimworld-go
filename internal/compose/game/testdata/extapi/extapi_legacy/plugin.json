@@ -1,0 +1,8 @@
+{
+  "id": "extapi_legacy",
+  "name": "Extension API fixture (legacy)",
+  "authors": ["rimworld-go"],
+  "version": "1.0.0",
+  "game": ["0.1"],
+  "description": "A plugin written before the plugin API: no api and no capabilities field."
+}

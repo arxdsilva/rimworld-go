@@ -24,6 +24,10 @@ Domain books (`domain/pawn/backstory`, `domain/economy/recipe`) and their key he
 ## Tests
 `order_test.go` (determinism under shuffles), `defs_test.go`, `inherit_test.go`, `patch_test.go`, `tree_test.go`, `class_backstory_test.go` (round trip), `build_test.go` (core kept, unknown class, read problems, release tags). The shipped example plugin is built in `adapters/outbound/modloader/example_test.go`.
 
+## Extension API
+- `CheckManifest` (`order.go`) reads the manifest's `api` and `capabilities` through `application/pluginapi`: api outside 1..1 or an unknown capability refuses the plugin, a repeated one warns, none declared is legacy (`TestCheckManifestAPIAndCaps`, `TestResolveRefusesNewerAPI`). `Resolve` refuses a newer api.
+- `BuildWith` (`build.go`) takes the script hooks: `register_defs` results are defs files of the plugin (`scriptdefs.go`), `validate_defs` problems join the build's. The `stat_mod` class (`class_statmod.go`) decodes into `Catalog.StatMods`.
+
 ## Scripting (PLG-060)
 - Plugins' `scripts/**.star` run in Starlark behind `application/scripting.Host`; the runtime is `adapters/outbound/starlarkhost`. Hooks, ctx queries and commands are documented in the `scripting` package comment and `mods/example_frontier/scripts/README.md`.
 - Hooks run on the simulation owner in load order; scripts act only through typed commands (`ScriptMessage`, `ScriptSpawn`) via Enqueue; `rand` is a pure function of seed, tick, plugin and call. A script that errors or passes its step budget is turned off for the run with a problem.

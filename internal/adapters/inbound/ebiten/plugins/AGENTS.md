@@ -22,6 +22,8 @@ The Plugin Manager (PLG-070, MAIN_UI §45), its load-order explanation (PLG-071,
 - Disable is refused, with the reason, for a problem naming no plugin, core, or a plugin already off. Copy is not offered: the client has no system clipboard.
 - Navigation goes through `ports.Push`/`ports.Back`; Escape is the root's Back. Show plugin goes back when the problems view sits on the list, else pushes the list.
 
+- The detail shows a plugin's plugin API and its capabilities (`apiLines`, `screen.go`; legacy plugins show the default set) (`TestDetailAPICaps`).
+
 ## Tests
 - `screen_test.go`: `fakeShell` with a kit driven frame by frame and a navigator; toggles, states, empty state, Disable rules, Show plugin, the §46 detail.
 - Root journeys `TestJourneyPluginsToggle`, `TestJourneyPluginsProblemsNotice`, `TestJourneyPluginsEmpty` (`journey_plugins_test.go`).

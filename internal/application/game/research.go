@@ -6,6 +6,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/letters"
 	rlab "rimworld-go/internal/application/game/research"
+	"rimworld-go/internal/application/scripting"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -120,6 +121,9 @@ func (h researchHost) Letter(title, text string, x, y int) {
 }
 func (h researchHost) Changed()                { h.g.viewGen++ }                  // view cache (indexes.go)
 func (h researchHost) Projects() research.Book { return h.g.sk.content.Research } // the run's (PLG-026)
+func (h researchHost) Finished(key string) { // research_done (scripts.go)
+	emitEvent(h.g, scripting.Event{Kind: scripting.ResearchDone, Tick: uint64(h.g.clock.Now()), Research: key})
+}
 
 func (g *Game) buildLocked(k construction.Kind) bool {
 	return g.lab.LockedBy("build:"+k.String()) != ""

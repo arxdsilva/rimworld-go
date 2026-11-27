@@ -11,7 +11,7 @@ import (
 )
 
 func plugin(id string, defs, patches any) Plugin {
-	p := Plugin{Manifest: Manifest{ID: id, Name: id, Version: "1", Game: []string{"0.1"}}}
+	p := Plugin{Manifest: Manifest{ID: id, Name: id, Version: "1", Game: []string{"0.1"}, API: 1}}
 	if defs != nil {
 		p.Defs = []File{{Path: "defs/a.json", Data: defs}}
 	}

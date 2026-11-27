@@ -330,16 +330,17 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 		s.fail(id, j, job.Blocked) // PRD-3: no room beside the bench for the sculpture
 		return
 	}
-	stored := s.finish(id, j, b, d)
+	out := s.finish(id, j, b, d)
 	j.Carry, j.Route = 0, nil
 	bl.Done++
 	bills[j.BillIndex] = bl
 	s.bills.list[j.Dest] = bills
 	j.State = job.Complete
 	h.SetJob(id, j)
-	if stored {
+	if out > 0 {
 		s.store(id, j, bl, d)
 	}
+	h.Crafted(id, d, out, b.X, b.Y)
 }
 
 // tidyFirst offers a clean with the last load in, before the first work tick
@@ -392,9 +393,9 @@ func (s *Shop) fetch(id entity.EntityID, j job.Record, bl recipe.Bill, d recipe.
 
 // finish turns the carried ingredient (and those laid on the bench) into
 // the bill's product: a batch on the rack, a cremation, or the output
-// (and extra) on the work spot. stored: an output was dropped there for
-// the bill's store mode to deal with.
-func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building, d recipe.Def) (stored bool) {
+// (and extra) on the work spot. out is the output dropped there (0:
+// none), for the bill's store mode to deal with.
+func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building, d recipe.Def) (out int) {
 	h := s.h
 	switch {
 	case d.Dry:
@@ -402,18 +403,18 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 			s.drying.racks[j.Dest] = Batch{Kind: st.Kind, Qty: st.Qty, Rot: st.Rot, Left: st.Kind.DryTicks()}
 		}
 		h.DeleteItem(j.Carry)
-		return false
+		return 0
 	case d.Ferment: // PRD-4: poured into the barrel (ferment.go)
 		if st, ok := h.Stack(j.Carry); ok {
 			s.drying.pour(j.Dest, st, j.DestX, j.DestY)
 		}
 		h.DeleteItem(j.Carry)
-		return false
+		return 0
 	case d.ID == recipe.Cremate:
 		h.Cremate(j.Dest, j.Carry, d) // burns the body and its wood
-		return false
+		return 0
 	case d.Builds != 0:
-		return false // PRD-3: art.make set the sculpture down and used the materials
+		return 0 // PRD-3: art.make set the sculpture down and used the materials
 	}
 	food := s.ingredients(j, d)   // FOOD-4: read before the ingredients go
 	for _, rid := range j.Route { // PRD-1: the other ingredients, laid on the bench
@@ -469,7 +470,7 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	if extra > 0 {
 		h.DropStack(d.Extra, extra, j.DestX, j.DestY)
 	}
-	return out > 0
+	return max(out, 0)
 }
 
 // ingredients is the product of food bill j (recipe d) with the raw food

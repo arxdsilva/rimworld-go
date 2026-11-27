@@ -5,6 +5,7 @@ package craft
 
 import (
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/pkg/randx"
 )
@@ -22,6 +23,11 @@ type fakeMakers struct {
 	outfits  map[entity.EntityID]Outfit
 	pos      map[entity.EntityID][2]int
 	set      int // SetStack calls
+	crafted  []crafted
+}
+
+func (f *fakeHost) Crafted(worker entity.EntityID, d recipe.Def, count, x, y int) {
+	f.crafted = append(f.crafted, crafted{worker, d.ID, count, x, y})
 }
 
 func (f *fakeHost) Roll(n int) int {

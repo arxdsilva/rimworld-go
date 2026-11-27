@@ -193,6 +193,8 @@ type (
 	Storage struct{ *Set }
 	// Quests is the Quests tab: the offers, the active and the ended quests.
 	Quests struct{ *Set }
+	// PluginPanels is the Plugins tab: the plugins' panels and their buttons.
+	PluginPanels struct{ *Set }
 )
 
 func (w *Set) Work() Work         { return Work{w} }
@@ -204,6 +206,8 @@ func (w *Set) History() History   { return History{w} }
 func (w *Set) Factions() Factions { return Factions{w} }
 func (w *Set) Storage() Storage   { return Storage{w} }
 func (w *Set) Quests() Quests     { return Quests{w} }
+
+func (w *Set) PluginPanels() PluginPanels { return PluginPanels{w} }
 
 func (w *Set) kit() *uikit.Kit { return w.sh.Kit() }
 

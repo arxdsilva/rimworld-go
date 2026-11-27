@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
+	"rimworld-go/internal/domain/pawn/stat/statmod"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/research"
 )
@@ -27,7 +28,8 @@ type Catalog struct {
 	Research    research.Book
 	Incidents   incident.Book
 	Items       item.Book
-	Defs        []Def // every typed def after inheritance and patches
+	StatMods    statmod.Book // the stat_mod class (W1-modding-build decodes it)
+	Defs        []Def        // every typed def after inheritance and patches
 }
 
 // IDs is the load order's plugin ids, core first: what a save records.
@@ -55,11 +57,11 @@ type class struct {
 }
 
 // classes are the moddable classes, in the order their books are built.
-func classes() []class { return classesWith(nil) }
+func classes() []class { return classesWith(nil, nil) }
 
 // classesWith are the classes reading plugin textures through tex. Items
 // come before recipes: a recipe may name a plugin item (PLG-026).
-func classesWith(tex Textures) []class {
+func classesWith(tex Textures, caps capsByPlugin) []class {
 	return []class{{
 		name: BackstoryClass,
 		core: func() []Def { return EncodeBackstories(backstory.Core()) },
@@ -70,7 +72,7 @@ func classesWith(tex Textures) []class {
 			}
 			return probs
 		},
-	}, itemClassWith(tex), recipeClass(), traitClass(), researchClass(), incidentClass()}
+	}, itemClassWith(tex), recipeClass(), traitClass(), researchClass(), incidentClass(), statModClass(caps)}
 }
 
 // Classes are the moddable class names, in the order their books are built.
@@ -94,6 +96,14 @@ func Classes() []string {
 // dependencies fail does not load (see Resolve). Every problem names its
 // plugin, file, def and field.
 func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Problem) {
+	return BuildWith(found, enabled, gameVersion, nil)
+}
+
+// BuildWith is Build with the plugins' script registrations and def
+// validations from sd (nil: none). A registered def travels as if it were
+// in the plugin's own defs files. A plugin whose capabilities lack defs is
+// never asked to register, nor one without validate to validate.
+func BuildWith(found []Plugin, enabled []string, gameVersion string, sd ScriptDefs) (Catalog, []Problem) {
 	manifests := make([]Manifest, len(found))
 	byID := make(map[string]int, len(found))
 	for i, p := range found {
@@ -112,6 +122,7 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 	}
 	probs = append(probs, rp...)
 	cat := Catalog{Order: order}
+	caps := make(capsByPlugin, len(order.Loaded))
 
 	var defs []Def
 	for _, c := range classes() {
@@ -124,6 +135,9 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 		}
 		p := found[byID[placed.ID]] // Resolve loads only ids installed once
 		cat.Plugins = append(cat.Plugins, p.Manifest)
+		caps[placed.ID], _ = CapsOf(p.Manifest)
+		p, regp := register(sd, p, caps[placed.ID])
+		probs = append(probs, regp...)
 		d, dp := CollectDefs(p)
 		defs = append(defs, d...)
 		probs = append(probs, dp...)
@@ -136,8 +150,10 @@ func Build(found []Plugin, enabled []string, gameVersion string) (Catalog, []Pro
 	probs = append(probs, ip...)
 	defs, ap := Apply(defs, ops, order.Has)
 	probs = append(probs, ap...)
+	defs, vp := validate(sd, order.Loaded, caps, defs)
+	probs = append(probs, vp...)
 
-	for _, c := range classesWith(TexturesOf(found)) {
+	for _, c := range classesWith(TexturesOf(found), caps) {
 		typed, kp := keepCore(c, defs, ops)
 		probs = append(probs, kp...)
 		probs = append(probs, c.decode(&cat, typed)...)

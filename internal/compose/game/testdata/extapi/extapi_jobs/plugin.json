@@ -1,0 +1,10 @@
+{
+  "id": "extapi_jobs",
+  "name": "Extension API fixture (jobs)",
+  "authors": ["rimworld-go"],
+  "version": "1.0.0",
+  "game": ["0.1"],
+  "api": 1,
+  "capabilities": ["commands", "events", "jobs"],
+  "description": "Orders every due colonist to haul."
+}

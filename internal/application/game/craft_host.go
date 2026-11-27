@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/application/game/mapview"
 	"rimworld-go/internal/application/game/postpone"
+	"rimworld-go/internal/application/scripting"
 
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
@@ -263,6 +264,17 @@ func (h craftCrafters) Name(id entity.EntityID) string {
 type craftMakers struct{ g *Game }
 
 func (h craftMakers) Roll(n int) int { return h.g.stream(streamCraft).IntN(n) }
+
+// Crafted tells the plugins of a bill finished on the home map
+// (recipe_done; scripts.go): a craft on another map has no cell there.
+func (h craftMakers) Crafted(worker entity.EntityID, d recipe.Def, count, x, y int) {
+	g := h.g
+	if x := g.scripts.ext; x == nil || !x.Subscribed(scripting.RecipeDone) || g.mapState != g.maps[0] {
+		return
+	}
+	emitEvent(g, scripting.Event{Kind: scripting.RecipeDone, Tick: uint64(g.clock.Now()), Recipe: scripting.Craft{
+		Key: g.sk.content.Recipes.Key(d.ID), Product: g.sk.content.Items.Key(d.Output), Count: count, Worker: uint64(worker), X: x, Y: y}})
+}
 func (h craftMakers) UseInspiration(id entity.EntityID) bool {
 	return h.g.mind.Inspire.Use(id, mind.Creativity)
 }

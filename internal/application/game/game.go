@@ -115,8 +115,20 @@ type StoredResourceView = mapview.StoredResourceView
 const FacilityEndTable = viewmodel.FacilityEndTable
 const FacilityDresser = viewmodel.FacilityDresser
 
+// PluginPanelView is one plugin's panel as the Plugins window shows it.
+type PluginPanelView struct {
+	Plugin, Title string
+	Lines         []string
+	Actions       []PluginActionView
+}
+
+// PluginActionView is a panel's button; pressing it sends a ScriptAction.
+type PluginActionView struct{ ID, Label string }
+
 // WorldView is the non-pawn read model for HUD and the map.
 type WorldView struct {
+	// PluginPanels are the plugins' panels, refreshed hourly (W1-game).
+	PluginPanels []PluginPanelView
 	// Gameplay is the colony's habit rules (CSE); the Habits tab shows it.
 	Gameplay gameplay.Settings
 	// Biome is the map's setting: display name and key (SIM-023).
@@ -1044,7 +1056,8 @@ func (g *Game) World() WorldView {
 func (g *Game) world() WorldView {
 	bd := biome.DefOf(g.biome)
 	w := WorldView{
-		Biome: bd.Name, BiomeKey: bd.Key,
+		PluginPanels: pluginPanelViews(g.scripts.panels), // scripts.go: hourly
+		Biome:        bd.Name, BiomeKey: bd.Key,
 		OutdoorTemp: int(g.climate.Outdoor(g.clock.Now())),
 		IndoorTemp:  int(g.climate.Indoor(g.clock.Now())),
 		Season:      g.season(uint64(g.clock.Now())),

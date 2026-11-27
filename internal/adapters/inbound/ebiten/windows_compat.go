@@ -280,6 +280,7 @@ func (a *App) historyTabUI(sw, sh int) {
 func (a *App) factionsTabUI(sw, sh int) {
 	a.tabWidget(sw, sh, ids.TabFactions, false, a.win.Factions().Toggle)
 	a.tabWidget(sw, sh, ids.TabQuests, false, a.win.Quests().Toggle) // QST-138
+	a.tabWidget(sw, sh, ids.TabPlugins, false, a.win.PluginPanels().Toggle)
 }
 func (a *App) worldTabUI(sw, sh int) { a.tabWidget(sw, sh, ids.TabWorld, false, a.world.Toggle) }
 
@@ -292,8 +293,6 @@ func (a *App) mainWindowUI(sw, sh int) {
 	a.tabWidget(sw, sh, ids.TabAnimals, true, a.win.ToggleAnimals)
 	a.win.Declare()
 }
-
-// ---- the kit window's shim
 
 // ---- window wrappers
 

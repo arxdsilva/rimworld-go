@@ -38,6 +38,7 @@ var hudTabSpecs = []struct {
 	{ids.TabWildlife, "Wildlife", input.TabWildlife, ""},
 	{ids.TabResearch, "Research", input.TabResearch, ""},
 	{ids.TabQuests, "Quests", input.TabQuests, ""}, // QST-138, UIS-041
+	{ids.TabPlugins, "Plugins", "", ""},            // the plugins' panels (shown always: the window has an empty state)
 	{ids.TabWorld, "World", input.TabWorld, ""},
 	{ids.TabHistory, "History", input.TabHistory, "tab_history"},
 	{ids.TabFactions, "Factions", "", "tab_factions"},

@@ -122,11 +122,11 @@ func (h hudHost) TabOn(id string) bool {
 		return a.win.KitID() == windows.ColFacModalID
 	case ids.TabQuests:
 		return a.win.KitID() == windows.QuestsModalID
+	case ids.TabPlugins:
+		return a.win.KitID() == windows.PluginPanelsModalID
 	}
 	return false
 }
-
-// ---- aliases
 
 // ---- converting shims (lowercase-field copies for the root tests)
 

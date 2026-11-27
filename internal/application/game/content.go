@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
+	"rimworld-go/internal/domain/pawn/stat/statmod"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/research"
 )
@@ -22,6 +23,8 @@ type Content struct {
 	Research    research.Book
 	Incidents   incident.Book
 	Items       item.Book
+	// StatMods are the stat_mod defs, the last layer of a stat sheet.
+	StatMods statmod.Book
 	// Sources names the plugins behind each plugin-touched def (PLG-072),
 	// keyed SourceKey(class, key); a core def no plugin touched is absent.
 	Sources map[string]Source

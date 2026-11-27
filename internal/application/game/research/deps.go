@@ -80,6 +80,8 @@ type Colony interface {
 	// Projects is the run's research book (core's plus the plugins',
 	// PLG-026): costs, prerequisites and unlocks come from it.
 	Projects() proj.Book
+	// Finished is told project key's completion, once, after its letter.
+	Finished(key string)
 }
 
 // Pawn is a researcher's research speed inputs (wiki: Research speed):

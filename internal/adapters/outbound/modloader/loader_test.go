@@ -313,3 +313,30 @@ func TestDuplicateIDAcrossRoots(t *testing.T) {
 		t.Fatal("same dir")
 	}
 }
+
+// The manifest takes "api" and "capabilities"; a list over the cap is a
+// problem and the manifest is not kept.
+func TestManifestAPIFields(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "ok/plugin.json", `{"id":"okp","name":"Ok","version":"1.0","api":1,"capabilities":["query","ui"]}`)
+	var many []string
+	for i := 0; i < 33; i++ {
+		many = append(many, `"query"`)
+	}
+	write(t, root, "big/plugin.json", `{"id":"bigp","name":"Big","version":"1.0","api":1,"capabilities":[`+strings.Join(many, ",")+`]}`)
+	var okP, bigP modding.Plugin
+	for _, p := range load(t, root) {
+		switch filepath.Base(p.Dir) {
+		case "ok":
+			okP = p
+		case "big":
+			bigP = p
+		}
+	}
+	if okP.Manifest.API != 1 || !reflect.DeepEqual(okP.Manifest.Capabilities, []string{"query", "ui"}) || len(okP.Problems) != 0 {
+		t.Errorf("ok plugin = %+v", okP)
+	}
+	if !hasProblem(bigP, "plugin.json", "too many capabilities") {
+		t.Errorf("33 capabilities not refused: %+v", bigP.Problems)
+	}
+}

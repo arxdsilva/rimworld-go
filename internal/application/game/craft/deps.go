@@ -195,6 +195,11 @@ type Makers interface {
 	// UseInspiration ends id's creativity inspiration and reports whether
 	// it had one: the thing it makes rolls inspired.
 	UseInspiration(id entity.EntityID) bool
+	// Crafted: worker finished a bill of recipe d at the bench on (x, y),
+	// making count of its output (0 when a rack, a barrel, a pyre or a
+	// sculpture took it). Called once per finished bill, after its
+	// products are down.
+	Crafted(worker entity.EntityID, d recipe.Def, count, x, y int)
 }
 
 // Weathering is what rot and deterioration read and write (PRD-2), and
