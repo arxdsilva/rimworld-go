@@ -185,19 +185,19 @@ func (t *Threats) Settle(grp *Group, tech faction.Tech, points int) {
 // map's biome and season, as many as threat points buy (animal.PackSize,
 // EAI-005; two at least), in from an edge: pack hunters where the biome
 // has them, else any predator it has (a lone hunter's kind forms a pack
-// too).
-func (t *Threats) WolfPack(points int) {
+// too). It reports whether any came.
+func (t *Threats) WolfPack(points int) bool {
 	s, ok := t.w.PickSpecies(func(s animal.Species) bool { return animal.DefOf(s).Pack })
 	if !ok {
 		s, ok = t.w.PickSpecies(packHunter)
 	}
 	if !ok {
-		return
+		return false
 	}
 	n := max(animal.PackSize(points, s), 2) // a pack: two at least
 	ex, ey, ok := t.w.EdgeTile()
 	if !ok {
-		return
+		return false
 	}
 	spawned := 0
 	for i := 0; i < n; i++ {
@@ -218,6 +218,7 @@ func (t *Threats) WolfPack(points int) {
 	if spawned > 0 {
 		t.h.Threat("Starving predators", ex, ey, "A pack of %d starving %s is prowling near the colony.", spawned, t.w.Plural(s))
 	}
+	return spawned > 0
 }
 
 // packHunter: a predator that may come as a starving pack (never a

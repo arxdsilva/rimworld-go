@@ -14,6 +14,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // The threat die's faces (incident.Book.PickThreat over core's defs): a
@@ -477,5 +478,39 @@ func TestMechRaidKeepsSeasonAndTarget(t *testing.T) {
 		if len(g.raidGroups) != before+1 || g.incidents.Last[incident.Raid] != g.rel(now) {
 			t.Fatalf("%s: %d people raid groups, Last %v", name, len(g.raidGroups)-before, g.incidents.Last)
 		}
+	}
+}
+
+// A predator pack with no dry map edge to come in from has not fired: it
+// is not recorded, reports no on_incident and the dev hook says so (no
+// fallback comes, as the die always did).
+func TestPredatorPackNoneSpawnedNotFired(t *testing.T) {
+	t.Parallel()
+	f := &fakeScripts{}
+	g, now := threatColony(t, 3, "Winter", 20, func(cfg *Config) { cfg.Scripts = f })
+	w, h := g.grid.Width(), g.grid.Height()
+	for x := range w {
+		for y := range h {
+			if x == 0 || y == 0 || x == w-1 || y == h-1 {
+				g.terr.Set(x, y, terrain.ShallowWater)
+			}
+		}
+	}
+	if _, _, ok := g.edgeTile(); ok {
+		t.Fatal("setup: a dry edge tile is left")
+	}
+	f.events = nil
+	before := len(g.animalIDs)
+	g.storyThreat(packRoll, 20, true, 100, now)
+	if _, ok := g.incidents.Last[incident.PredatorPack]; ok || len(g.animalIDs) != before {
+		t.Fatalf("no pack came but it fired: Last %v, %d animals", g.incidents.Last, len(g.animalIDs)-before)
+	}
+	for _, ev := range f.events {
+		if ev.Hook == scripting.OnIncident {
+			t.Fatalf("on_incident %+v for a pack that never came", ev.Incident)
+		}
+	}
+	if g.FireIncident("predator_pack") {
+		t.Fatal("the dev hook reported a pack that never came")
 	}
 }

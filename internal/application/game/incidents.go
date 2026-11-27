@@ -317,8 +317,7 @@ func (g *Game) fireIncident(id incident.ID, pts int, now uint64) (fired bool) {
 	case incident.CrashedShipPart: // raid/shippart.go (DEF-4): the day's raid points; d's share (a plugin's own when it likes this)
 		return g.raid.Ships.Crash(d.Spend(g.raidPoints(int(now/clock.TicksPerDay))), now)
 	case incident.PredatorPack: // the story's threats (story.go): packs sized by the points (animal.PackSize, EAI-005)
-		g.raid.Threats.WolfPack(pts)
-		return true
+		return g.raid.Threats.WolfPack(pts)
 	case incident.ManhunterPack:
 		rageOf(g).ManhunterPack(pts)
 		return true
