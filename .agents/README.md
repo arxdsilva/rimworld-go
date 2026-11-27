@@ -110,6 +110,7 @@ Claude discovers them by description; Cursor and Codex open the router first. A 
 | `HANDOFF.md` | One ledger section per finished task |
 | `TASK_PACKET.md` | The task packet established before coding |
 | `PACKAGE_AGENTS.md` | A nested `<pkg>/AGENTS.md` |
+| `ISSUE.md` | Every new GitHub issue: title, the body in `/.github/ISSUE_TEMPLATE/issue.md`, labels, loops findings |
 
 ## 8. Hooks (`hooks/`)
 
