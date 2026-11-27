@@ -102,7 +102,7 @@ func TestMealMoods(t *testing.T) {
 	g.afterEat(bo, item.Stack{Kind: item.Meal, Qty: 1}, true)
 	for _, k := range []mood.Kind{mood.AteRaw, mood.AteMeal, mood.AteWithoutTable, mood.AteAtTable} {
 		if _, ok := memValue(g, bo, k); ok {
-			t.Errorf("berries and a simple meal fed in bed leave no %s", mood.DefOf(k).Label)
+			t.Errorf("berries and a simple meal fed in bed leave no %s", mood.Core().DefOf(k).Label)
 		}
 	}
 }

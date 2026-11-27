@@ -81,7 +81,7 @@ func TestMoodFromEatingAndSleeping(t *testing.T) {
 	if !labels["ate raw food"] || !labels["ate without a table"] {
 		t.Fatalf("thoughts = %+v", p.Thoughts)
 	}
-	if p.Mood >= mood.Base+mood.DefOf(mood.ExpectationsForWealth(g.Wealth())).Value || p.MoodLabel == "" {
+	if p.Mood >= mood.Base+mood.Core().DefOf(mood.ExpectationsForWealth(g.Wealth())).Value || p.MoodLabel == "" {
 		t.Fatalf("raw food outdoors should lower mood: %d %s", p.Mood, p.MoodLabel)
 	}
 	// a fine meal at a table cheers them up (FOOD-4: the wiki's +5; a

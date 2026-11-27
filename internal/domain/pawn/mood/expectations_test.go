@@ -29,7 +29,7 @@ func TestExpectationsWealthBoundaries(t *testing.T) {
 		if k := ExpectationsForWealth(tc.wealth); k != tc.kind {
 			t.Errorf("wealth %d: kind %d, want %d", tc.wealth, k, tc.kind)
 		}
-		if d := DefOf(tc.kind); d.Value != tc.value || d.Duration != 0 || d.Label == "" {
+		if d := cb.DefOf(tc.kind); d.Value != tc.value || d.Duration != 0 || d.Label == "" {
 			t.Errorf("wealth %d: def %+v", tc.wealth, d)
 		}
 	}

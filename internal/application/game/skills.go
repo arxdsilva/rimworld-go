@@ -76,6 +76,9 @@ func backstoriesOf(g *Game) backstory.Book { return g.sk.content.Backstories }
 // traitsOf is the run's trait book (core's when no plugin adds any).
 func traitsOf(g *Game) trait.Book { return g.sk.content.Traits }
 
+// thoughtsOf is the run's thought book (core's when no plugin patches any).
+func thoughtsOf(g *Game) mood.Book { return g.sk.content.Thoughts }
+
 // barColonists is who stands on the colonist bar: every open map's colonists,
 // maps in id order (Colonists' order, the bar's default).
 func barColonists(g *Game) []entity.EntityID {

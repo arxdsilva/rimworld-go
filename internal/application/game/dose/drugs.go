@@ -441,7 +441,7 @@ func (d Drugs) Lines(id entity.EntityID) []Line {
 }
 
 // Thoughts are id's drug state thoughts (tipsy, high, withdrawal).
-func (d Drugs) Thoughts(id entity.EntityID) []mood.Thought {
+func (d Drugs) Thoughts(b mood.Book, id entity.EntityID) []mood.Thought {
 	s := (*d.states)[id]
 	if s == nil {
 		return nil
@@ -450,5 +450,5 @@ func (d Drugs) Thoughts(id entity.EntityID) []mood.Thought {
 	if len(ks) == 0 {
 		return nil
 	}
-	return mood.Active(nil, ks...)
+	return b.Active(nil, ks...)
 }

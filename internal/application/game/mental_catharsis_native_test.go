@@ -32,7 +32,7 @@ func TestInterruptedMentalBreakCatharsisInRealGame(t *testing.T) {
 	if !hasCatharsis() || g.Breaking(id) != "" {
 		t.Fatal("interrupted Berserk must clear its break and grant catharsis")
 	}
-	g.clock.Advance(int(mood.DefOf(mood.Catharsis).Duration))
+	g.clock.Advance(int(mood.Core().DefOf(mood.Catharsis).Duration))
 	g.mind.Force(id, mentalbreak.Catatonic)
 	g.clock.Advance(5 * clock.TicksPerDay)
 	// Natural catatonic recovery follows the same catharsis decision,

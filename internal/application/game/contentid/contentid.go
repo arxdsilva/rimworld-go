@@ -24,6 +24,7 @@ import (
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/drug"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/quest"
 	"rimworld-go/internal/domain/research"
@@ -46,6 +47,7 @@ type Books struct {
 	Research    research.Book
 	Incidents   incident.Book
 	Items       itemkind.Book // its kinds' keys: the items agent adds their defs (PLG-026)
+	Thoughts    mood.Book
 }
 
 // Of is a run's content (PLG-043, PLG-050): plugins is the load order
@@ -97,7 +99,24 @@ func registries(books Books) []list {
 	if l := itemList(books.Items); len(l.items) > 0 { // core's own add nothing: its fingerprint stays (PLG-026)
 		lists = append(lists, l)
 	}
+	if l := thoughtList(books.Thoughts); len(l.items) > 0 { // core's own add nothing
+		lists = append(lists, l)
+	}
 	return lists
+}
+
+// thoughtList is the thoughts a plugin patched: each kind whose tuning
+// differs from the game's own.
+func thoughtList(b mood.Book) list {
+	l := list{name: "thought"}
+	core := mood.Core()
+	for i := range b.Len() {
+		k := mood.Kind(i) // #nosec G115 -- i < Len() <= numKinds, fits Kind
+		if d := b.DefOf(k); d != core.DefOf(k) {
+			l.items = append(l.items, item{b.Key(k), fmt.Sprintf("%+v", d)})
+		}
+	}
+	return l
 }
 
 // itemList is the item kinds plugins added or patched: every plugin

@@ -182,7 +182,7 @@ func TaintedMood(n int) int { return taintedMood[min(max(n, 0), len(taintedMood)
 // AppendThoughts appends the outfit's mood thoughts to ts: the worst
 // piece's wear (ratty or tattered, wiki: Apparel) and the tainted
 // pieces. A pawn in fine, clean clothes appends nothing.
-func (o Outfit) AppendThoughts(ts []mood.Thought) []mood.Thought {
+func (o Outfit) AppendThoughts(b mood.Book, ts []mood.Thought) []mood.Thought {
 	worst, tainted := item.Fine, 0
 	for _, p := range o.On {
 		if p.Kind == 0 {
@@ -195,19 +195,19 @@ func (o Outfit) AppendThoughts(ts []mood.Thought) []mood.Thought {
 	}
 	switch worst {
 	case item.Tattered:
-		ts = appendThought(ts, mood.TatteredApparel, 0)
+		ts = appendThought(b, ts, mood.TatteredApparel, 0)
 	case item.Ratty:
-		ts = appendThought(ts, mood.RattyApparel, 0)
+		ts = appendThought(b, ts, mood.RattyApparel, 0)
 	}
 	if tainted > 0 {
-		ts = appendThought(ts, mood.TaintedApparel, TaintedMood(tainted))
+		ts = appendThought(b, ts, mood.TaintedApparel, TaintedMood(tainted))
 	}
 	return ts
 }
 
 // appendThought appends thought k with its def's value, or v when set.
-func appendThought(ts []mood.Thought, k mood.Kind, v int) []mood.Thought {
-	d := mood.DefOf(k)
+func appendThought(b mood.Book, ts []mood.Thought, k mood.Kind, v int) []mood.Thought {
+	d := b.DefOf(k)
 	if v == 0 {
 		v = d.Value
 	}

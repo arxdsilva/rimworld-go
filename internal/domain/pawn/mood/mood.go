@@ -216,21 +216,6 @@ const day = uint64(clock.TicksPerDay)
 // needHour is how long a need thought outlasts its last refresh (BED-3).
 const needHour = uint64(clock.TicksPerHour)
 
-// DefOf returns the thought definition.
-func DefOf(k Kind) Def {
-	if k >= numKinds {
-		return Def{}
-	}
-	d := defs[k]
-	if d.StackLimit == 0 {
-		d.StackLimit = 1
-	}
-	if d.StackFactor == 0 {
-		d.StackFactor = 1000
-	}
-	return d
-}
-
 // Base is mood with no thoughts.
 const Base = 32
 
@@ -252,78 +237,18 @@ type Memory struct {
 // Memories holds a pawn's timed thoughts; subject-specific kinds may stack.
 type Memories []Memory
 
-// Add remembers k at tick now, replacing an existing one of the same kind
-// and any other thought of the same group.
-func (m Memories) Add(k Kind, now uint64) Memories {
-	d := DefOf(k)
-	if d.StackLimit > 1 {
-		return m.AddLabeledUntil(k, 0, 0, "", now, now+d.Duration)
-	}
-	m = m.compactFor(k, d.Group, now)
-	for i := range m {
-		if m[i].Kind == k {
-			m[i].Expires = now + d.Duration
-			return m
-		}
-	}
-	return append(m, Memory{Kind: k, Expires: now + d.Duration})
-}
-
-func (m Memories) compactFor(k Kind, group uint8, now uint64) Memories {
+// compactFor drops expired memories and others of k's group, in place.
+func (b Book) compactFor(m Memories, k Kind, group uint8, now uint64) Memories {
 	out := m[:0]
+	t := b.table()
 	for _, x := range m {
-		if x.Expires <= now || group != groupNone && x.Kind != k && DefOf(x.Kind).Group == group {
+		if x.Expires <= now || group != groupNone && x.Kind != k && defIn(t, x.Kind).Group == group {
 			continue
 		}
 		out = append(out, x)
 	}
 	clear(m[len(out):])
 	return out
-}
-
-// AddFor remembers k about subject at tick now. Memories of the same kind
-// and subject stack up to Def.StackLimit; beyond it the oldest is
-// refreshed. Group replacement works as in Add.
-func (m Memories) AddFor(k Kind, subject uint64, now uint64) Memories {
-	return m.AddLabeled(k, subject, 0, "", now)
-}
-
-// AddValue is AddFor with a computed mood effect (grief and the like).
-func (m Memories) AddValue(k Kind, subject uint64, value int, now uint64) Memories {
-	return m.AddLabeled(k, subject, value, "", now)
-}
-
-// AddLabeled is AddValue with the line's own label ("": the def's).
-func (m Memories) AddLabeled(k Kind, subject uint64, value int, label string, now uint64) Memories {
-	return m.AddLabeledUntil(k, subject, value, label, now, now+DefOf(k).Duration)
-}
-
-// AddLabeledUntil records an event with an explicit expiry tick.
-func (m Memories) AddLabeledUntil(k Kind, subject uint64, value int, label string, now, expires uint64) Memories {
-	d := DefOf(k)
-	m = m.compactFor(k, d.Group, now)
-	n, oldest := 0, -1
-	for i := range m {
-		if m[i].Kind != k || d.StackLimit == 1 && m[i].Subject != subject {
-			continue
-		}
-		n++
-		if oldest < 0 || m[i].Expires < m[oldest].Expires {
-			oldest = i
-		}
-	}
-	fresh := Memory{Kind: k, Expires: expires, Subject: subject, Value: value, Label: label}
-	if n >= int(d.StackLimit) && oldest >= 0 {
-		if d.StackLimit == 1 {
-			m[oldest] = fresh
-			return m
-		}
-		// The refreshed event is newest; stacking weights follow event order.
-		copy(m[oldest:], m[oldest+1:])
-		m[len(m)-1] = fresh
-		return m
-	}
-	return append(m, fresh)
 }
 
 // Approach moves the displayed mood (milli-points) toward the target over
@@ -356,10 +281,11 @@ const (
 // ForgetGroupOf drops memories in k's group (e.g. room quality after a
 // night in an ordinary room).
 func (m Memories) ForgetGroupOf(k Kind) Memories {
-	g := DefOf(k).Group
+	core := Core()
+	g := core.DefOf(k).Group
 	out := m[:0]
 	for _, x := range m {
-		if g == groupNone || DefOf(x.Kind).Group != g {
+		if g == groupNone || core.DefOf(x.Kind).Group != g {
 			out = append(out, x)
 		}
 	}
@@ -440,22 +366,6 @@ func NullifyConditional(thoughts []Thought, chance int, seed, pawn, hour uint64)
 	return thoughts[:n]
 }
 
-// Active lists memories plus current state thoughts.
-func Active(m Memories, states ...Kind) []Thought {
-	return AppendActive(nil, m, states...)
-}
-
-// AppendActive appends Active(m, states...) to out.
-func AppendActive(out []Thought, m Memories, states ...Kind) []Thought {
-	return appendActive(out, m, 0, false, states...)
-}
-
-// AppendActiveAt lists thoughts whose memories are still active at now.
-// It leaves the backing memory slice untouched.
-func AppendActiveAt(out []Thought, m Memories, now uint64, states ...Kind) []Thought {
-	return appendActive(out, m, now, true, states...)
-}
-
 const stackPrecision int64 = 1_000_000_000
 
 func stackRounded(v int64) int {
@@ -463,50 +373,6 @@ func stackRounded(v int64) int {
 		return -int((-v + stackPrecision/2) / stackPrecision)
 	}
 	return int((v + stackPrecision/2) / stackPrecision)
-}
-
-func appendActive(out []Thought, m Memories, now uint64, checkExpiry bool, states ...Kind) []Thought {
-	var counts [numKinds]uint8
-	var weights, totals [numKinds]int64
-	var shown [numKinds]int
-	for _, x := range m {
-		if checkExpiry && x.Expires <= now {
-			continue
-		}
-		d := DefOf(x.Kind)
-		v := d.Value
-		if x.Value != 0 {
-			v = x.Value
-		}
-		if x.Kind < numKinds && d.StackLimit > 1 {
-			k := x.Kind
-			if counts[k] >= d.StackLimit {
-				v = 0 // tolerate old saves with more memories than today's cap
-			} else {
-				w := weights[k]
-				if w == 0 {
-					w = stackPrecision
-				} else {
-					w = w * int64(d.StackFactor) / 1000
-				}
-				weights[k] = w
-				totals[k] += int64(v) * w
-				n := stackRounded(totals[k])
-				v, shown[k] = n-shown[k], n
-				counts[k]++
-			}
-		}
-		label := d.Label
-		if x.Label != "" {
-			label = x.Label
-		}
-		out = append(out, Thought{Kind: x.Kind, Label: label, Value: v, Memory: true})
-	}
-	for _, k := range states {
-		d := DefOf(k)
-		out = append(out, Thought{Kind: k, Label: d.Label, Value: d.Value})
-	}
-	return out
 }
 
 // Level sums thoughts onto Base and clamps to 0..100.

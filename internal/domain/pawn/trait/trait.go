@@ -336,10 +336,10 @@ func (d Def) Effects() string {
 		parts = append(parts, d.Note)
 	}
 	for _, k := range sortedKinds(d.ThoughtScale) {
-		parts = append(parts, "\""+mood.DefOf(k).Label+"\" x"+pct(int(d.ThoughtScale[k])))
+		parts = append(parts, "\""+mood.Core().DefOf(k).Label+"\" x"+pct(int(d.ThoughtScale[k])))
 	}
 	for _, k := range sortedKinds(d.AddThought) {
-		parts = append(parts, "\""+mood.DefOf(k).Label+"\" "+sign(int(d.AddThought[k])))
+		parts = append(parts, "\""+mood.Core().DefOf(k).Label+"\" "+sign(int(d.AddThought[k])))
 	}
 	for _, s := range sortedSkills(d.WorkSpeed) {
 		parts = append(parts, s.Label()+" speed "+sign(int(d.WorkSpeed[s]))+"%")
@@ -423,7 +423,7 @@ func AppendImplantThoughts(dst []mood.Thought, traits []ID, implants int) []mood
 		default:
 			continue
 		}
-		d := mood.DefOf(kind)
+		d := mood.Core().DefOf(kind)
 		dst = append(dst, mood.Thought{Kind: kind, Label: d.Label, Value: ImplantMood(id, implants)})
 	}
 	return dst
@@ -451,14 +451,15 @@ func ApplyThoughts(tb Book, ids []ID, ts []mood.Thought, passion skill.Passion, 
 			}
 		}
 	}
+	// These kinds are code-valued (mood.CodeValued), so core's def is the run's.
 	switch passion {
 	case skill.Minor:
-		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.DefOf(mood.LovesWork).Label, Value: mood.DefOf(mood.LovesWork).Value})
+		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.Core().DefOf(mood.LovesWork).Label, Value: mood.Core().DefOf(mood.LovesWork).Value})
 	case skill.Major:
-		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.DefOf(mood.LovesWork).Label, Value: 4})
+		ts = append(ts, mood.Thought{Kind: mood.LovesWork, Label: mood.Core().DefOf(mood.LovesWork).Label, Value: 4})
 	}
 	if off != 0 {
-		ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: mood.DefOf(mood.Difficulty).Label, Value: off})
+		ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: mood.Core().DefOf(mood.Difficulty).Label, Value: off})
 	}
 	return ts
 }

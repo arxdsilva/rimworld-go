@@ -138,7 +138,7 @@ func TestCaptureCarriesDownedRaiderToPrisonBed(t *testing.T) {
 	if v, ok := g.Prisoner(rid); !ok || !v.ForPrisonersBed || v.Mode != uint8(prisoner.Recruit) || v.Resistance <= 0 {
 		t.Fatalf("Prisoner(%d) = %+v %v", rid, v, ok)
 	}
-	if !slices.ContainsFunc(pv.Thoughts, func(th ThoughtView) bool { return th.Label == mood.DefOf(mood.Imprisoned).Label }) {
+	if !slices.ContainsFunc(pv.Thoughts, func(th ThoughtView) bool { return th.Label == mood.Core().DefOf(mood.Imprisoned).Label }) {
 		t.Fatalf("a prisoner thinks it is imprisoned: %+v", pv.Thoughts)
 	}
 	// it no longer bleeds out

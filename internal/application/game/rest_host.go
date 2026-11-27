@@ -212,11 +212,11 @@ func (h restRooms) Tile(x, y int) rest.Tile {
 type restEvents struct{ g *Game }
 
 func (h restEvents) RememberWith(id entity.EntityID, k mood.Kind, o entity.EntityID) {
-	h.g.memories[id] = h.g.memories[id].AddFor(k, uint64(o), uint64(h.g.clock.Now()))
+	h.g.memories[id] = thoughtsOf(h.g).AddFor(h.g.memories[id], k, uint64(o), uint64(h.g.clock.Now()))
 }
 func (h restEvents) Remember(id entity.EntityID, k mood.Kind) { h.g.remember(id, k) }
 func (h restEvents) RememberValue(id entity.EntityID, k mood.Kind, v int, label string) {
-	h.g.memories[id] = h.g.memories[id].AddLabeled(k, 0, v, label, uint64(h.g.clock.Now()))
+	h.g.memories[id] = thoughtsOf(h.g).AddLabeled(h.g.memories[id], k, 0, v, label, uint64(h.g.clock.Now()))
 }
 func (h restEvents) ForgetGroup(id entity.EntityID, k mood.Kind) {
 	h.g.memories[id] = h.g.memories[id].ForgetGroupOf(k)

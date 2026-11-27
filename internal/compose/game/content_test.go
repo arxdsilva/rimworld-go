@@ -4,6 +4,7 @@
 package game
 
 import (
+	"os"
 	"path/filepath"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	appgame "rimworld-go/internal/application/game"
@@ -16,6 +17,7 @@ import (
 	"rimworld-go/internal/application/game/contentid"
 	"rimworld-go/internal/application/modding"
 	"rimworld-go/internal/domain/pawn/backstory"
+	"rimworld-go/internal/domain/pawn/mood"
 )
 
 // The shipped example plugin, enabled, reaches the game's books and the
@@ -168,4 +170,58 @@ func wasmOnly(id string) modding.Plugin {
 	p.Scripts = nil
 	p.Wasm = []modding.Blob{{Path: "scripts/a.wasm", Data: []byte{0}}}
 	return p
+}
+
+// C9: the composition root hands the catalog's thought book to the game.
+// Disabled, the book is core's and the save hash is core's; the example
+// plugin enabled softens sleeping outside, names itself as the patcher and
+// moves the hash.
+func TestGameWiresThoughtBook(t *testing.T) {
+	src := modloader.New(filepath.Join("..", "..", "..", "mods"))
+	off := buildContent(src, nil, "0.1.35")
+	if off.save().Hash != contentid.Current().Hash {
+		t.Fatalf("disabled hash = %d", off.save().Hash)
+	}
+	core := mood.Core()
+	for i := range core.Len() {
+		if got, want := off.game().Thoughts.DefOf(mood.Kind(i)), core.DefOf(mood.Kind(i)); got != want {
+			t.Fatalf("disabled: %s = %+v, want %+v", core.Key(mood.Kind(i)), got, want)
+		}
+	}
+	on := buildContent(src, []string{"example_frontier"}, "0.1.35")
+	g := on.game()
+	if v := g.Thoughts.DefOf(mood.SleptOutside).Value; v != -2 {
+		t.Fatalf("enabled: slept outside = %d, want -2", v)
+	}
+	if s := g.Sources["thought/core.slept_outside"]; !slices.Equal(s.PatchedBy, []string{"example_frontier"}) {
+		t.Fatalf("sources = %+v", s)
+	}
+	if on.save().Hash == contentid.Current().Hash {
+		t.Fatal("the patched thought left the hash at core's")
+	}
+}
+
+// A plugin's own thought is refused, yet its def is still found in Sources.
+func TestFixtureThoughtIsListed(t *testing.T) {
+	dir := t.TempDir()
+	root := filepath.Join(dir, "fixture")
+	if err := os.MkdirAll(filepath.Join(root, "defs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		"plugin.json":        `{"id":"fixture","name":"Fixture","authors":["t"],"version":"1.0.0","game":["0.1"],"description":"d"}`,
+		"defs/thoughts.json": `{"thought":[{"name":"x","label":"hi","value":1,"duration":100}]}`,
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c := buildContent(modloader.New(dir), []string{"fixture"}, "0.1.35")
+	if _, ok := c.game().Sources["thought/fixture.x"]; !ok {
+		t.Fatalf("thought/fixture.x not in Sources: %v (problems %v)", c.game().Sources, c.problems)
+	}
+	if c.game().Thoughts.Len() != mood.Core().Len() {
+		t.Fatalf("book grew to %d", c.game().Thoughts.Len())
+	}
 }

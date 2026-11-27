@@ -21,7 +21,7 @@ func BenchmarkAppendActiveAtRepeatedKind(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				benchThoughts = AppendActiveAt(dst[:0], memories, 1000)
+				benchThoughts = cb.AppendActiveAt(dst[:0], memories, 1000)
 			}
 		})
 	}
@@ -46,7 +46,7 @@ func BenchmarkMemoryGroupReplacement(b *testing.B) {
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					copy(work, source)
-					benchMemories = work[:n].Add(SleptInBed, 1000)
+					benchMemories = cb.Add(work[:n], SleptInBed, 1000)
 				}
 			})
 			b.Run("AddFor", func(b *testing.B) {
@@ -54,7 +54,7 @@ func BenchmarkMemoryGroupReplacement(b *testing.B) {
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					copy(work, source)
-					benchMemories = work[:n].AddFor(SleptInBed, 99, 1000)
+					benchMemories = cb.AddFor(work[:n], SleptInBed, 99, 1000)
 				}
 			})
 			b.Run("Forget", func(b *testing.B) {
@@ -80,7 +80,7 @@ func BenchmarkAppendActiveAtNoDecay(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				benchThoughts = AppendActiveAt(dst[:0], memories, 1000)
+				benchThoughts = cb.AppendActiveAt(dst[:0], memories, 1000)
 			}
 		})
 	}
@@ -98,7 +98,23 @@ func BenchmarkMemoryInsertWithExpired(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				copy(work, src)
-				benchMemories = work[:n].AddFor(Insulted, 9, 1000)
+				benchMemories = cb.AddFor(work[:n], Insulted, 9, 1000)
+			}
+		})
+	}
+}
+
+// BenchmarkAppendActiveStatesOnly is the no-memory path every pawn without
+// thoughts takes: it must not allocate.
+func BenchmarkAppendActiveStatesOnly(b *testing.B) {
+	states := []Kind{Hungry, Tired, Cold, Bored, Imprisoned}
+	for _, n := range []int{1, 5} {
+		b.Run(fmt.Sprintf("%d", n), func(b *testing.B) {
+			dst := make([]Thought, 0, n)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				benchThoughts = cb.AppendActiveAt(dst[:0], nil, 1000, states[:n]...)
 			}
 		})
 	}

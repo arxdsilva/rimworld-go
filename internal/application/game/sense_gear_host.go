@@ -99,7 +99,7 @@ func (h senseGear) Free(id entity.EntityID) bool {
 func (h senseGear) Hunger(id entity.EntityID) int  { n, _ := h.g.need.Get(id); return n.Hunger }
 func (h senseGear) Hungry(id entity.EntityID) bool { n, _ := h.g.need.Get(id); return n.Hungry() }
 func (h senseGear) Allows(id entity.EntityID, k item.Kind) bool {
-	return h.g.sk.diet.Picker(id, false, cannibal(h.g, id)).Allows(k)
+	return h.g.sk.diet.Picker(thoughtsOf(h.g), id, false, cannibal(h.g, id)).Allows(k)
 }
 func (h senseGear) StoreCell(id entity.EntityID, st item.Stack) (int, int, bool) {
 	return h.g.haulDest(id, st, 0) // haul_priority.go
@@ -116,7 +116,7 @@ func (h senseGear) Lay(id, stack entity.EntityID) {
 // NearestMeal looks within mealReach tiles through the food index.
 func (h senseGear) NearestMeal(id entity.EntityID) (best entity.EntityID, bx, by int, ok bool) {
 	g, pos := h.g, h.g.positions.Ref(id)
-	pick, bestD := g.sk.diet.Picker(id, false, cannibal(g, id)), 1<<30
+	pick, bestD := g.sk.diet.Picker(thoughtsOf(g), id, false, cannibal(g, id)), 1<<30
 	g.food().items.Each(pos.X, pos.Y, mealReach, func(iid entity.EntityID) bool {
 		st := g.stacks.Ref(iid)
 		if st == nil || !sense.IsMeal(st.Kind) || st.Qty <= 0 || st.Forbidden || !pick.Allows(st.Kind) || g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {

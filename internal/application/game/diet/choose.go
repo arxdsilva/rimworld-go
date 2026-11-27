@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/gameplay"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -48,6 +49,7 @@ type Picker struct {
 	menu      Menu
 	desperate bool
 	cannibal  bool
+	thoughts  mood.Book
 	flat      bool // CSE-015 off: the old flat bonus for food about to spoil
 }
 
@@ -62,8 +64,8 @@ func (p Picker) Under(r Ruler) Picker {
 }
 
 // Picker is person id's food chooser.
-func (b *Book) Picker(id entity.EntityID, desperate, cannibal bool) Picker {
-	return Picker{menu: b.Menu(id, false), desperate: desperate, cannibal: cannibal}
+func (b *Book) Picker(th mood.Book, id entity.EntityID, desperate, cannibal bool) Picker {
+	return Picker{menu: b.Menu(id, false), desperate: desperate, cannibal: cannibal, thoughts: th}
 }
 
 // Takes reports st is food the person may eat: edible by people (never
@@ -78,7 +80,7 @@ func (p Picker) Takes(st *item.Stack) bool {
 
 // Score is the optimality of eating from st d tiles away (higher first).
 func (p Picker) Score(st *item.Stack, d int) int {
-	s := optimalBase - d + moodWorth(AteMood(*st, p.cannibal))
+	s := optimalBase - d + moodWorth(AteMood(p.thoughts, *st, p.cannibal))
 	switch st.Kind {
 	case item.Kibble, item.CorpseAnimal:
 		s -= desperatePenalty

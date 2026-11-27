@@ -25,10 +25,12 @@ var guardExts = map[string]bool{
 	".yaml": true, ".txt": true, ".json": true, ".mdc": true, ".toml": true,
 }
 
-// Directories never scanned: VCS data, build output and vendored code.
+// Directories never scanned: VCS data, build output, vendored code and the
+// loops tool's local run state (.loops: git-ignored except config.json, whose
+// settings name no agent paths).
 var guardSkipDirs = map[string]bool{
 	".git": true, "bin": true, "dist": true, "node_modules": true,
-	"third_party": true, ".venv": true,
+	"third_party": true, ".venv": true, ".loops": true,
 }
 
 type guardFile struct {

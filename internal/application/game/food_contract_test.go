@@ -117,7 +117,7 @@ func TestFoodContractBuildingsAndKinds(t *testing.T) {
 		mood.AteHumanMeat: -20, mood.ButcheredHuman: -6, mood.ObservedButchery: -6, mood.Ravenous: -12,
 		mood.Malnourished: -20, mood.AteInsectMeat: -6, mood.AteRaw: -7, mood.AtePaste: -4, mood.AteWithoutTable: -3,
 		mood.AteHumanMeatCooked: -15, mood.AteInsectMeatCooked: -3} { // FOOD-4: wiki: Food, Human meat, Insect meat
-		if d := mood.DefOf(k); d.Value != v || d.Label == "" {
+		if d := mood.Core().DefOf(k); d.Value != v || d.Label == "" {
 			t.Errorf("mood %d: %q %d, want %d", k, d.Label, d.Value, v)
 		}
 	}

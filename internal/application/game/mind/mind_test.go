@@ -113,7 +113,7 @@ func TestInterruptedBreakDoesNotForceImmunity(t *testing.T) {
 	for f.now < open {
 		toCheck(f, 1)
 	}
-	if open >= mood.DefOf(mood.Catharsis).Duration || !m.Tick(1, job.Record{}) {
+	if open >= mood.Core().DefOf(mood.Catharsis).Duration || !m.Tick(1, job.Record{}) {
 		t.Fatal("a low mood pawn must remain susceptible to a new break after the retry window")
 	}
 }

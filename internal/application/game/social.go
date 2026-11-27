@@ -270,7 +270,7 @@ func (g *Game) applyInteraction(a, b entity.EntityID, k social.Interaction, now 
 		}
 	}
 	if eff.HasMood {
-		g.memories[b] = g.memories[b].AddFor(eff.Mood, uint64(a), now)
+		g.memories[b] = thoughtsOf(g).AddFor(g.memories[b], eff.Mood, uint64(a), now)
 	}
 	lk := socialLogKind(k)
 	var topic uint8

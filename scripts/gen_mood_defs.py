@@ -75,6 +75,24 @@ for idx, row in enumerate(rows):
     lines.append(f"\t{row['kind']}: {{Label: {label}, Value: {val}, Duration: {duration(row['duration'])}, Group: {group}, StackLimit: {limit}, StackFactor: {factor}}},")
     ordered.append(row["kind"])
 lines.append("}")
+
+def snake(name):
+    name = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+
+# keys are the stable namespaced names ("core.<key>") plugins patch by.
+key_of = [snake(n) for n in ordered]
+for kind, key in zip(ordered, key_of):
+    if re.fullmatch(r"[a-z][a-z0-9_]*", key) is None:
+        raise ValueError(f"{kind}: key {key!r} is not lower snake case")
+if len(set(key_of)) != len(key_of):
+    raise ValueError("thought keys are not unique")
+lines.append("")
+lines.append("// keys are each thought's stable key, the lower snake case of its Kind.")
+lines.append("var keys = [numKinds]string{")
+for kind, key in zip(ordered, key_of):
+    lines.append(f"\t{kind}: {json.dumps(key)},")
+lines.append("}")
 (directory / "defs_generated.go").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 subprocess.run(["gofmt", "-w", str(directory / "defs_generated.go")], check=True)

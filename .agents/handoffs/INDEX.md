@@ -330,6 +330,7 @@ One row per handoff section. Open the ledger at `#<lowercased ID>`. A new task a
 | PLG-7-wasm-second-runtime-candidate | Second scripting runtime: WebAssembly on wazero named as the candidate | 2026-11-20 | [MOD.md](MOD.md#plg-7-wasm-second-runtime-candidate) |
 | PLG-8-wasm-wazero-spike | WebAssembly on wazero spike: second scripting runtime behind the same port, not wired | 2026-11-20 | [MOD.md](MOD.md#plg-8-wasm-wazero-spike) |
 | PLG-026-saved-filter-identity | Historical saved plugin filter identity | 2026-11-25 | [MOD.md](MOD.md#plg-026-saved-filter-identity) |
+| PLG-026-thought-class | Thoughts: core patch only; plugin-added thoughts refused | 2026-11-26 | [MOD.md](MOD.md#plg-026-thought-class) |
 | PLG-063-wasm-wiring | Wasm mods run in real games | 2026-11-21 | [MOD.md](MOD.md#plg-063-wasm-wiring) |
 | PLG-064-stable-plugin-extension-api | Stable plugin extension API: versioned manifest, capabilities and extension points | 2026-11-27 | [MOD.md](MOD.md#plg-064-stable-plugin-extension-api) |
 | PRD-0-craft-package | The craft package and the quality domain | 2026-10-29 | [BASE.md](BASE.md#prd-0-craft-package) |

@@ -143,8 +143,8 @@ func (g *Game) tryRomance(a, b entity.EntityID, now uint64) bool {
 	if int32(g.stream(streamSocial).IntN(1000)) >= chance {
 		g.addOpinionMemory(a, b, social.MemRebuffedMe, now)
 		g.addOpinionMemory(b, a, social.MemFailedRomance, now)
-		g.memories[a] = g.memories[a].AddFor(mood.RebuffedMood, uint64(b), now)
-		g.memories[b] = g.memories[b].AddFor(mood.HadToRebuff, uint64(a), now)
+		g.memories[a] = thoughtsOf(g).AddFor(g.memories[a], mood.RebuffedMood, uint64(b), now)
+		g.memories[b] = thoughtsOf(g).AddFor(g.memories[b], mood.HadToRebuff, uint64(a), now)
 		p.Rebuff(now)
 		g.setPair(a, b, p)
 		return true
@@ -170,7 +170,7 @@ func (g *Game) cheatedOn(victim, cheater, other entity.EntityID, now uint64) {
 		return
 	}
 	g.addOpinionMemory(victim, cheater, social.MemCheatedOnMe, now)
-	g.memories[victim] = g.memories[victim].AddFor(mood.CheatedOn, uint64(cheater), now)
+	g.memories[victim] = thoughtsOf(g).AddFor(g.memories[victim], mood.CheatedOn, uint64(cheater), now)
 	pawnLetterf(g, letters.Caution, "Affair", victim, "%s has been cheating on %s with %s.",
 		g.personName(cheater), g.personName(victim), g.personName(other))
 }
@@ -194,7 +194,7 @@ func (g *Game) breakUp(a, b entity.EntityID, now uint64) bool {
 	p.NextRomanceAt = max(p.NextRomanceAt, now+social.BreakupGrace) // reconcile cooldown
 	g.setPair(a, b, p)
 	g.addOpinionMemory(b, a, mem, now)
-	g.memories[b] = g.memories[b].AddFor(md, uint64(a), now)
+	g.memories[b] = thoughtsOf(g).AddFor(g.memories[b], md, uint64(a), now)
 	g.addSocialLog(a, b, logBreakup, 0, now)
 	na, nb := g.personName(a), g.personName(b)
 	if divorce {
@@ -219,7 +219,7 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 		g.setPair(a, b, p)
 		g.addOpinionMemory(a, b, social.MemRejectedMyProposal, now)
 		g.addOpinionMemory(b, a, social.MemIRejectedProposal, now)
-		g.memories[a] = g.memories[a].AddFor(mood.ProposalRejected, uint64(b), now)
+		g.memories[a] = thoughtsOf(g).AddFor(g.memories[a], mood.ProposalRejected, uint64(b), now)
 		pawnLetterf(g, letters.Caution, "Proposal rejected", a, "%s proposed to %s and was turned down.", g.personName(a), g.personName(b))
 		return true
 	}

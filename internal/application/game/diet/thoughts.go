@@ -29,40 +29,40 @@ const (
 // berries), raw human meat -20 or a meal with it -15 (a cannibal +20 and
 // +15), raw insect meat -6 or a meal with it -3. Where the colonist ate
 // (a table) is the caller's.
-func AppendAte(dst []Thought, st item.Stack, cannibal bool) []Thought {
+func AppendAte(b mood.Book, dst []Thought, st item.Stack, cannibal bool) []Thought {
 	k := st.Kind
 	switch {
 	case k == item.LavishMeal:
-		dst = append(dst, def(mood.AteLavishMeal))
+		dst = append(dst, def(b, mood.AteLavishMeal))
 	case k == item.FineMeal:
-		dst = append(dst, def(mood.AteFineMeal))
+		dst = append(dst, def(b, mood.AteFineMeal))
 	case k == item.NutrientPasteMeal:
-		dst = append(dst, def(mood.AtePaste))
+		dst = append(dst, def(b, mood.AtePaste))
 	case k == item.Kibble:
-		dst = append(dst, def(mood.AteKibble))
+		dst = append(dst, def(b, mood.AteKibble))
 	case k.Raw() && !k.RawPenaltyFree():
-		dst = append(dst, def(mood.AteRaw))
+		dst = append(dst, def(b, mood.AteRaw))
 	}
 	switch {
 	case k == item.HumanMeat:
-		dst = append(dst, flip(mood.AteHumanMeat, cannibal, cannibalRaw))
+		dst = append(dst, flip(b, mood.AteHumanMeat, cannibal, cannibalRaw))
 	case !k.Raw() && st.HasIngredient(item.HumanMeat):
-		dst = append(dst, flip(mood.AteHumanMeatCooked, cannibal, cannibalCooked))
+		dst = append(dst, flip(b, mood.AteHumanMeatCooked, cannibal, cannibalCooked))
 	}
 	switch {
 	case k == item.InsectMeat:
-		dst = append(dst, def(mood.AteInsectMeat))
+		dst = append(dst, def(b, mood.AteInsectMeat))
 	case !k.Raw() && st.HasIngredient(item.InsectMeat):
-		dst = append(dst, def(mood.AteInsectMeatCooked))
+		dst = append(dst, def(b, mood.AteInsectMeatCooked))
 	}
 	return dst
 }
 
-func def(k mood.Kind) Thought { return Thought{Kind: k, Value: mood.DefOf(k).Value} }
+func def(b mood.Book, k mood.Kind) Thought { return Thought{Kind: k, Value: b.DefOf(k).Value} }
 
 // flip is kind k's thought, turned to delight for a cannibal.
-func flip(k mood.Kind, cannibal bool, label string) Thought {
-	t := def(k)
+func flip(b mood.Book, k mood.Kind, cannibal bool, label string) Thought {
+	t := def(b, k)
 	if cannibal {
 		t.Value, t.Label = -t.Value, label
 	}
@@ -70,10 +70,10 @@ func flip(k mood.Kind, cannibal bool, label string) Thought {
 }
 
 // AteMood is the summed mood effect of the thoughts eating from st gives.
-func AteMood(st item.Stack, cannibal bool) int {
+func AteMood(b mood.Book, st item.Stack, cannibal bool) int {
 	var buf [3]Thought
 	sum := 0
-	for _, t := range AppendAte(buf[:0], st, cannibal) {
+	for _, t := range AppendAte(b, buf[:0], st, cannibal) {
 		sum += t.Value
 	}
 	return sum

@@ -73,7 +73,7 @@ func (g *Game) canGrieve(c entity.EntityID) bool {
 // addGrief gives c a grief thought about subject lasting days, shown as
 // label ("": the def's).
 func (g *Game) addGrief(c, subject entity.EntityID, d social.GriefDef, label string, now uint64) {
-	g.memories[c] = g.memories[c].AddLabeledUntil(mood.Grief, uint64(subject), d.Mood, label, now, now+uint64(d.Days)*clock.TicksPerDay)
+	g.memories[c] = thoughtsOf(g).AddLabeledUntil(g.memories[c], mood.Grief, uint64(subject), d.Mood, label, now, now+uint64(d.Days)*clock.TicksPerDay)
 }
 
 // grieve gives every tie of id its grief (lost: missing, not dead) and,
