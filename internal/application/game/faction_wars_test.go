@@ -94,7 +94,7 @@ func TestEnemyRaidBeatenThanks(t *testing.T) {
 	warsOf(fs, x, y)
 	before := fs[y].Goodwill
 	beat := func() {
-		g.storyRaid(20, 200)
+		g.storyRaid(20, g.threatPoints()*200/100)
 		for _, id := range slices.Clone(g.raiderIDs) {
 			g.removeRaider(id)
 		}

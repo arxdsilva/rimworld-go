@@ -628,7 +628,7 @@ func TestScheduledAndDisabledIncidents(t *testing.T) {
 	// and a disabled threat is never picked
 	for roll := 0; roll < raid.ThreatRolls; roll++ {
 		for _, winter := range []bool{false, true} {
-			if k, ok := g.allowedThreat(roll, 30, winter); ok && k == raid.ThreatManhunters {
+			if k, ok := storyPick(g, roll, 30, winter); ok && k == incident.ManhunterPack {
 				t.Fatal("disabled manhunter pack picked")
 			}
 		}
@@ -760,7 +760,7 @@ func TestRaidsAttributedToFaction(t *testing.T) {
 	hostileOnly(g.ng.factions, idx)
 	f := &g.ng.factions[idx]
 	before := f.Goodwill
-	g.storyRaid(20, 400)
+	g.storyRaid(20, g.threatPoints()*400/100)
 	grp := g.raidGroups[len(g.raidGroups)-1]
 	if grp.Faction != idx+1 || grp.Size == 0 {
 		t.Fatalf("raid group %+v, want faction %d", grp, idx+1)
@@ -798,14 +798,21 @@ func TestRaidsAttributedToFaction(t *testing.T) {
 	}
 }
 
+// storyPick is the threat event roll of the die shows on colony day day
+// (the book's PickThreat over the colony's flags).
+func storyPick(g *Game, roll, day int, winter bool) (incident.ID, bool) {
+	o := incident.Odds{Points: g.threatPoints(), Winter: winter}
+	return g.sk.content.Incidents.PickThreat(uint64(day)*clock.TicksPerDay, g.biome, o, roll, g.threatOK)
+}
+
 func TestNoHostileFactionConvertsRaid(t *testing.T) {
 	t.Parallel()
 	g := buildSetup(t, setupFor(t, "ember_clan", nil))
 	hostileOnly(g.ng.factions, -1)
 	for roll := 0; roll < raid.ThreatRolls; roll++ {
 		for _, winter := range []bool{false, true} {
-			k, ok := g.allowedThreat(roll, 30, winter)
-			if !ok || k == raid.ThreatRaid {
+			k, ok := storyPick(g, roll, 30, winter)
+			if !ok || k == incident.Raid {
 				t.Fatalf("roll %d winter %v: %v %v", roll, winter, k, ok)
 			}
 		}
@@ -814,7 +821,7 @@ func TestNoHostileFactionConvertsRaid(t *testing.T) {
 	g.ng.setup.Difficulty = difficulty.Of(difficulty.Wanderer)
 	hostileOnly(g.ng.factions, 0)
 	for roll := 0; roll < raid.ThreatRolls; roll++ {
-		if k, ok := g.allowedThreat(roll, 30, true); ok && k != raid.ThreatManhunters && k != raid.ThreatMad {
+		if k, ok := storyPick(g, roll, 30, true); ok && k != incident.ManhunterPack && k != incident.MadAnimal {
 			t.Fatalf("wanderer roll %d: %v", roll, k)
 		}
 	}

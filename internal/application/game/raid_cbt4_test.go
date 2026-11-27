@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/health"
 	raiddef "rimworld-go/internal/domain/raid"
 	"rimworld-go/internal/domain/sim/clock"
@@ -278,7 +279,7 @@ func TestMechBashesShutDoor(t *testing.T) {
 func TestMechDropPods(t *testing.T) {
 	t.Parallel()
 	g, _ := def4Game(t, 50, 40, 25, 20)
-	if n := g.raid.Mechs.Raid(raid.MechRaidMinPoints, raiddef.DropPodCentre, uint64(g.clock.Now())); n == 0 {
+	if n := g.raid.Mechs.Raid(incident.DefOf(incident.MechRaid).MinPoints, raiddef.DropPodCentre, uint64(g.clock.Now())); n == 0 {
 		t.Fatal("pods planned")
 	}
 	falling := 0

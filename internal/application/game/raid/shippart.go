@@ -30,9 +30,6 @@ import (
 // (no scan of the map); the blight sweeps a 24th of its disc an hour.
 
 const (
-	// ShipPartMinPoints: no ship part below this many raid points. wiki:
-	// Events (crashed ship parts need 400 raid points).
-	ShipPartMinPoints = 400
 	// shipCheckEvery paces the wake check. original tuning
 	shipCheckEvery = 60
 	// guardWake: a colonist this close to a sleeping guard wakes the group.
