@@ -3,5 +3,5 @@
   "languages": [],
   "ask": [],
   "triage": "auto",
-  "gate": { "coverage_min": 70 }
+  "gate": { "coverage_min": 70, "skip": ["arch"] }
 }

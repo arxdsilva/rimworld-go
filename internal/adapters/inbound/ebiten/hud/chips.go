@@ -125,6 +125,17 @@ func SkyChip(event string, ends, now uint64) (StatusChip, bool) {
 	return StatusChip{Capitalize1(event) + left, Capitalize1(event) + "\nA sky event is under way.", uikit.Warning}, true
 }
 
+// SongChip is the sky song's condition line ("Sky song, 3.0 h left") with
+// its hover card; ok is false unless it plays (ends > now; 0 is none). ends
+// is WorldView.SkySongEnds, now the current simulation tick.
+func SongChip(ends, now uint64) (StatusChip, bool) {
+	if ends <= now {
+		return StatusChip{}, false
+	}
+	hours := float64(ends-now) / float64(clock.TicksPerHour)
+	return StatusChip{fmt.Sprintf("Sky song, %.1f h left", hours), "Sky song\nA soft tone rings down from the open sky. Every colonist feels a little lighter until it fades.", uikit.LetterGood}, true
+}
+
 // Capitalize1 upper-cases the first letter of s.
 func Capitalize1(s string) string {
 	if s == "" {

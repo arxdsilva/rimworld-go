@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/application/game/visit"
+	"rimworld-go/internal/application/game/windfall"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -21,10 +22,12 @@ import (
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/msgfmt"
@@ -215,7 +218,7 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 	id = g.sk.content.Incidents.Like(id) // a plugin incident runs its like's checks (PLG-026)
 	switch id {
 	case incident.Party, incident.VisitorGroup, incident.TravelerGroup, incident.WandererJoins, incident.TraderCaravan, incident.OrbitalTrader,
-		incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter:
+		incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter, incident.OreMeteor, incident.SupplyDrop, incident.SkySong:
 		if !primary(g) {
 			return false
 		}
@@ -265,6 +268,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return true
 	case incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter: // TEMP-2: the season's temperature
 		return climateFits(g, id, now) // weather_ng1.go
+	case incident.OreMeteor, incident.SupplyDrop, incident.SkySong: // #13 windfalls (game/windfall)
+		return windfallOf(g).Fits(id, now)
 	}
 	return false
 }
@@ -344,6 +349,8 @@ func (g *Game) fireIncident(id incident.ID, pts int, now uint64) (fired bool) {
 			g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letters.Caution, Text: text + patchedNote(g.sk.content, id)})
 		}
 		return ok
+	case incident.OreMeteor, incident.SupplyDrop, incident.SkySong: // #13 windfalls (game/windfall)
+		return windfallOf(g).Fire(id, now)
 	}
 	return false
 }
@@ -926,4 +933,61 @@ func crashPod(g *Game, now uint64) bool {
 	g.hurtAs(id, health.DownedInjury+10, 0, body.Cut, health.CauseInjury)
 	g.post(MessageView{Tick: now, X: x, Y: y, Focus: id, Letter: true, Title: "Transport pod crash", Kind: letters.Info, Msg: msgfmt.Of("A transport pod crashed. %s lies injured nearby.", g.name(id))})
 	return true
+}
+
+// windfallHost is windfall.Host over the game (#13): a thin view, so no
+// method is added to Game; windfallOf builds a Windfall per call on g.rng.
+type windfallHost struct{ g *Game }
+
+func windfallOf(g *Game) windfall.Windfall { return windfall.New(windfallHost{g}, g.rng) }
+
+func (h windfallHost) Home() (int, int)                 { return h.g.home() }
+func (h windfallHost) Colonists() int                   { return h.g.standingColonists() }
+func (h windfallHost) Rock(x, y int, ore geology.Ore)   { mapsPop(h).LumpVein(x, y, ore) }
+func (h windfallHost) SongEnds(now uint64) uint64       { return h.g.incidents.SongView(now) }
+func (h windfallHost) StartSong(now, ticks uint64) bool { return h.g.incidents.StartSong(now, ticks) }
+func (h windfallHost) Drop(k item.Kind, qty, x, y int) {
+	h.g.dropStackOf(item.Stack{Kind: k, Qty: qty, Forbidden: true}, x, y)
+}
+func (h windfallHost) DropFree(x, y int, t [][2]int) bool {
+	return h.g.podFree(x, y, t) && h.open(x, y)
+}
+
+// open: unzoned, unroofed, no item.
+func (h windfallHost) open(x, y int) bool {
+	_, z := h.g.zones.At(x, y)
+	return !z && !h.g.roofAt(x, y).Roofed() && h.g.itemAt(x, y) == 0
+}
+
+// MeteorFree: 2 inside the edges, open dry ground (no plant, no blocker),
+// unroofed, unzoned, no item, no building or frame on the cell or beside
+// it (a rock beside a door would re-orient it), no creature within 1.
+func (h windfallHost) MeteorFree(x, y int) bool {
+	g := h.g
+	if x < 2 || y < 2 || x >= g.grid.Width()-2 || y >= g.grid.Height()-2 || !mapsPop(h).LumpFree(x, y) || !h.open(x, y) {
+		return false
+	}
+	for c := range 9 { // the cell and its 8 neighbours, every layer
+		for l := range construction.Layer(numLayers) {
+			if nx, ny := x+c%3-1, y+c/3-1; g.layerBldgAt(nx, ny, l) != 0 || g.layerFrameAt(nx, ny, l) != 0 {
+				return false
+			}
+		}
+	}
+	_, _, near := g.nearestWhere(x, y, 1, ckAll, nil)
+	return !near
+}
+
+// Cheer gives the colonists at home (no prisoners or guests) the sky song
+// memory until the song ends.
+func (h windfallHost) Cheer(now, until uint64) int {
+	ids := h.g.homeColonists()
+	for _, id := range ids {
+		h.g.memories[id] = h.g.memories[id].AddLabeledUntil(mood.SkySong, 0, 0, "", now, until)
+	}
+	return len(ids)
+}
+
+func (h windfallHost) Letter(title string, x, y int, format string, args ...any) {
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), X: x, Y: y, Letter: true, Title: title, Kind: letters.Good, Msg: msgfmt.Of(format, args...)})
 }

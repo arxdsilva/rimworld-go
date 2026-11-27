@@ -77,6 +77,11 @@ func TestDefinitionsMatchReviewedData(t *testing.T) {
 			t.Errorf("id %d (%s): generated %+v, data %+v", id, row.Kind, got, want)
 		}
 	}
+	// #13: the sky song is a positive remembered thought (its real expiry
+	// comes from AddLabeledUntil).
+	if sky := DefOf(SkySong); SkySong != 114 || sky.Value != 6 || sky.Duration == 0 {
+		t.Fatalf("sky song %d: %+v, want id 114, value 6, remembered", SkySong, sky)
+	}
 	for band := expectations.ExtremelyLow; band <= expectations.SkyHigh; band++ {
 		kind := ExpectationsExtremelyLow + Kind(band)
 		if got, want := DefOf(kind).Value, band.Effects().MoodBonus; got != want {

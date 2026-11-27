@@ -234,4 +234,6 @@ var defs = [numKinds]Def{
 	RecreationSatisfied: {Label: "recreation satisfied", Value: 5, Duration: 0, Group: groupNone, StackLimit: 0, StackFactor: 0},
 	// wiki: Thoughts (SIM-071)
 	FatalOrganHarvest: {Label: "died from organ removal", Value: -6, Duration: 6 * day, Group: groupNone, StackLimit: 5, StackFactor: 750},
+	// original tuning
+	SkySong: {Label: "lifted by the sky song", Value: 6, Duration: 2 * day, Group: groupNone, StackLimit: 0, StackFactor: 0},
 }

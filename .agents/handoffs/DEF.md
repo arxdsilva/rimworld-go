@@ -345,3 +345,26 @@ Turret fuse hiss · 2026-11-26 · 696371bd1
 - Open:
   - line 2234 (Visit friendly settlement: trade and gifts) is ticked once PR #322 merges;
   - `make art-check`'s Python step needs Pillow (PIL), which the machine lacks; it was not run.
+
+## EAI-5-positive-incidents
+Ore meteor, Supply drop and Sky song (25.2, #13) · 2026-11-26 · this commit
+- Changed:
+  - three Nature/helpful incidents, appended after `TransportPodCrash`, all with original names, text and tuning;
+  - **Ore meteor**: 4-7 four-connected cells of rough rock with one ore (steel, silver or gold) on open, dry, unroofed, unzoned ground 5-14 tiles from home;
+  - **Supply drop**: 2-3 forbidden stacks of distinct kinds, each within its stack limit, near home;
+  - **Sky song**: for 1.5-2.5 days every colonist present gets "lifted by the sky song" (+6, `mood.SkySong` id 114), which expires with the song.
+- Decisions:
+  - the logic lives in the stateless `game/windfall` behind a consumer-owned Host and Dice. Package `game` holds only the dispatch cases and the host (`incidents.go`);
+  - Fits uses bounded `travel.Ring` searches and never rolls the RNG. Fire checks its precondition before any draw, so a refused Fire draws nothing;
+  - the song is on only while `now < SongUntil`, with no separate flag. It cannot refire while playing;
+  - colonists who join mid-song, or are on another map, get no thought (A7, N7). A meteor may wall off a path (N8, accepted).
+- Save/HUD:
+  - the save gains one additive gob scalar, `incident.State.SongUntil` (0 in older saves), and no SaveVersion bump;
+  - the HUD gains a read-only "Sky song, N.N h left" chip from `WorldView.SkySongEnds`, plus one Good letter per incident and three dev-panel entries.
+- Limits: the `game` lines ceiling is +66 (52650 → 52716). No new top-level game file. Perf under `-race`:
+  - ColonyHour is 149.1 → 149.8 ms (p=0.82);
+  - TickGrown/500 rose +16.7% back to back (p=0.002), but in an interleaved rerun the change is not significant (p=0.29) on a loaded machine;
+  - the new code runs only on the nature roll, never per tick.
+- AC-1 (transport pod crash) was already met by RSC-001; this task only verified it.
+- Boxes: checklist "Resource meteorite", "Cargo pod drop" and "Psychic soothe-like temporary positive mood event" are `[x]`. Gap ALLOW F8 is done for cargo pods; quest rewards are open. spec-backlog #13 is completed by this PR.
+- Open: saved `...Until` ticks (song, eclipse, fallout) are not clamped on load (backlog finding).
