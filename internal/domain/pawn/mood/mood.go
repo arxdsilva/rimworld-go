@@ -168,6 +168,7 @@ const (
 	RecreationDeprived
 	RecreationSatisfied
 	FatalOrganHarvest
+	SkySong // #13, append only, saved
 	numKinds
 )
 

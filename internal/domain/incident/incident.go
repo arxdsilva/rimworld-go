@@ -86,6 +86,10 @@ const (
 	ManhunterPack
 	Raid
 	MechRaid
+	// #13 (Nature pool, windfall.go): ore meteor, supply drop, sky song.
+	OreMeteor
+	SupplyDrop
+	SkySong
 	NumIDs
 )
 
@@ -238,6 +242,9 @@ var defs = [NumIDs]Def{
 	ManhunterPack: {Key: "manhunter_pack", Name: "Manhunter pack", Category: Threat, Weight: 2, Season: NotWinter, MinDay: 8},
 	Raid:          {Key: "raid", Name: "Raid", Category: Threat, Weight: 74, Fill: ThreatRolls},
 	MechRaid:      {Key: "mech_raid", Name: "Mechanoid raid", Category: Threat, Weight: 1, MinPoints: 300, UnderRaid: true},
+	OreMeteor:     {Key: "ore_meteor", Name: "Ore meteor", Category: Nature, Helpful: true, Weight: 4, Cooldown: 30, MinDay: 10},  // original tuning (#13)
+	SupplyDrop:    {Key: "supply_drop", Name: "Supply drop", Category: Nature, Helpful: true, Weight: 5, Cooldown: 20, MinDay: 6}, // original tuning (#13)
+	SkySong:       {Key: "sky_song", Name: "Sky song", Category: Nature, Helpful: true, Weight: 4, Cooldown: 30, MinDay: 8},       // original tuning (#13)
 }
 
 func init() {
@@ -264,6 +271,9 @@ type State struct {
 	// EclipseUntil and FalloutUntil (FOOD-6, sky.go) are the absolute
 	// ticks the eclipse and the toxic fallout end (0: none; older saves).
 	EclipseUntil, FalloutUntil uint64
+	// SongUntil (#13, windfall.go) is the absolute end tick of the sky
+	// song; 0: none, older saves.
+	SongUntil uint64
 	// Climate (TEMP-2, climate.go) is the climate event under way, from
 	// the absolute tick ClimateFrom to ClimateUntil (0: none).
 	Climate                   ID

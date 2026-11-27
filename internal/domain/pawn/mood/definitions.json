@@ -1252,5 +1252,16 @@
     "stack_limit": 5,
     "stack_factor": 750,
     "source": "wiki: Thoughts"
+  },
+  {
+    "id": 114,
+    "kind": "SkySong",
+    "label": "lifted by the sky song",
+    "value": 6,
+    "duration": "2d",
+    "group": "groupNone",
+    "stack_limit": 0,
+    "stack_factor": 0,
+    "source": "original tuning"
   }
 ]
