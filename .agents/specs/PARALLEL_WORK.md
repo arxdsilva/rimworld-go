@@ -96,7 +96,7 @@ contract (spec §, read models, stubs) → **producers in parallel** (domain/sim
 
 1. `go build ./...`
 2. `make fmt` (must print nothing), `make vet`, `make lint`
-3. `go test -race -count=1 ./...`
+3. `go test -race -count=1` on the phase's changed packages, plus the importers of any exported API it changed; `./...` once, after the last phase (§5b)
 4. Determinism: `make test-golden` (TestScaleGolden, six 20 000-tick colonies pinned by state hash, under -race in its own package `internal/application/game/scalegolden`); the other hash, golden and same-seed tests run under -race in step 3
 5. `make art-check` when art changed
 6. `bin/benchmark` against the baseline when the sim or a hot path changed
@@ -124,6 +124,19 @@ Notes:
 - **Clearing rows by hand:** the user can clear a failed or stopped row sooner with `x` in `/tasks`.
 - **Explore and Plan agents are one-shot.** Size their prompt to finish in one go.
 - **Running-agent limit:** the user's Claude Code settings set `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=30` (the Claude Code default is 20); a session started before that line keeps the old limit. `make agent-budget` can still be stricter.
+
+## 5b. loops runs: check what changed, run the full suite once (user decision, 2026-11-27)
+
+A loops lane has a 4-hour limit. Across four lanes that hit it, the test check ran 7 to 13 times per run, for 35 to 150 minutes of test time. The game package alone takes about 27 minutes under `-race` with coverage. The arch check failed on every run with problems already on `main`. These rules apply to every loops run, including the lanes of `/loops:backlog`.
+
+| Do | Don't |
+| --- | --- |
+| Leave loops' generic arch check skipped (`.loops/config.json` `gate.skip: ["arch"]`). `make arch` (`internal/arch`, run in the test step) is this repo's arch check | Re-enable it, or investigate its failures: they are problems already on `main` (#398, #404) |
+| During waves and QA, run `loops gate --pkgs <changed packages>`, plus the importers of any exported API the change touched, with `GOFLAGS=-p=2` | Run `loops gate` over `./...` after each wave, each QA round or each fix |
+| QA verifiers re-run only the tests behind the claim they verify | Re-run the whole suite to verify one claim |
+| Run the full `loops gate` once, after the last source change and before the product phase, with `GOFLAGS='-p=2 -timeout=40m'` (the game package takes about 27 minutes under `-race` with coverage, past the default 10-minute test timeout) | Run the full gate before a commit you know is coming, or more than once without a source change in between |
+| After a fix found by the full gate, re-run only the packages the fix touched, then the full gate once more | Restart the whole run's checks after a docs, ledger or PR-text change |
+| Open the PR as soon as the full gate is green; keep reflection short | Spend the rest of the 4 hours in reflect after the PR is open |
 
 ## 6. Pick the cheapest competent model
 

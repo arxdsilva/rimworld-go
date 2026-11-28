@@ -105,3 +105,11 @@ Post-#409 fixes: clean-room names, weakened tests, old-save training decay · 20
 - Limits: `internal/application/game` sits at its 52650-line ceiling, so the next addition goes in a sub-package or needs a budget decision.
 - Boxes: none, because these fixes restore guards and policy behind boxes #409 already ticked.
 - Open: renaming the inspiration identifiers (`GoFrenzy`, `ShootFrenzy`, `WorkFrenzy`) and the wealth-expectation tier labels is the user's call; #411 (breaks cleared through `g.breaks` skip the cooldown); #412 (no HUD row for the cooldown).
+
+## ENG-013-loops-lane-gates
+Shorter loops lanes: skip loops' generic arch check, scope the per-phase test gates · 2026-11-27
+- Changed: `.loops/config.json` sets `gate.skip: ["arch"]`. loops' generic arch check failed on every lane with problems already on `main` (#398, #404); `make arch` stays the repo's arch check and runs in the test step.
+- Changed: `PARALLEL_WORK.md` gate 3 runs the race tests on the phase's changed packages (plus importers of a changed exported API) and `./...` once after the last phase. New §5b holds the loops rules: scoped `loops gate --pkgs` during waves and QA, one full gate with `GOFLAGS='-p=2 -timeout=40m'` before the product phase, short reflection. Root `AGENTS.md` points to §5b; its byte budget drops to 5169.
+- Decisions: user decision 2026-11-27, from lane timings: QA was 45% of lane time, and the full test check ran 7 to 13 times per lane (35 to 150 minutes of test time).
+- Boxes: none.
+- Open: #449 (game package tests are slow under `-race` with coverage).
